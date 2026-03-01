@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/meter-values-event.schema.json",
+  "title": "MeterValuesEvent",
+  "description": "Periodic or on-demand meter readings reported by a station during an active session.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "bayId",
+    "sessionId",
+    "timestamp",
+    "values"
+  ],
+  "properties": {
+    "bayId": {
+      "$ref": "../common/bay-id.schema.json"
+    },
+    "sessionId": {
+      "$ref": "../common/session-id.schema.json"
+    },
+    "timestamp": {
+      "$ref": "../common/timestamp.schema.json"
+    },
+    "values": {
+      "$ref": "../common/meter-values.schema.json"
+    }
+  }
+}

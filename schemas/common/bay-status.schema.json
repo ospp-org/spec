@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/common/bay-status.schema.json",
+  "title": "Bay Status",
+  "description": "Current operational status of a service bay",
+  "type": "string",
+  "enum": [
+    "Available",
+    "Reserved",
+    "Occupied",
+    "Finishing",
+    "Faulted",
+    "Unavailable",
+    "Unknown"
+  ]
+}

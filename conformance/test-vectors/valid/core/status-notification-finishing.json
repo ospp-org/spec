@@ -1,0 +1,12 @@
+{
+  "bayId": "bay_c3d4e5f6a7b8",
+  "bayNumber": 3,
+  "status": "Finishing",
+  "previousStatus": "Occupied",
+  "services": [
+    {
+      "serviceId": "svc_basic",
+      "available": false
+    }
+  ]
+}

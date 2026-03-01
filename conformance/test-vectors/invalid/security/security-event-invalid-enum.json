@@ -1,0 +1,7 @@
+{
+  "eventId": "sec_a1b2c3d4e5f6",
+  "type": "DdosAttack",
+  "severity": "Critical",
+  "timestamp": "2026-02-15T10:30:00.000Z",
+  "details": {}
+}

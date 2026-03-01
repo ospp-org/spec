@@ -1,0 +1,15 @@
+{
+  "offlineTxId": "otx_a1b2c3d4e5f6a7b8",
+  "bayId": "bay_a1b2c3d4e5f6",
+  "serviceId": "svc_basic",
+  "startedAt": "2026-02-15T10:00:00.000Z",
+  "endedAt": "2026-02-15T10:05:00.000Z",
+  "durationSeconds": 300,
+  "creditsCharged": 50,
+  "receipt": {
+    "data": "eyJvdHgiOiJvdHhfYTFiMmMzZDRlNWY2YTdiOCIsImJheSI6ImJheV9hMWIyYzNkNGU1ZjYiLCJzdmMiOiJzdmNfYmFzaWNfd2FzaCIsImR1ciI6MzAwLCJjcmVkaXRzIjo1MH0=",
+    "signature": "MEUCIQC7rJHL0tVPj3K2fNqr5vQ7bXz1Uf0XkJmYVwPaLEygPwIgWjFnR9kX3lH8YTmVpN7sA2cU6K+dB5hGvE4jCmQ7kA=",
+    "signatureAlgorithm": "ECDSA-P256-SHA256"
+  },
+  "txCounter": 1
+}

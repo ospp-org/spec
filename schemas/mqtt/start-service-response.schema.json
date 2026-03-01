@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/start-service-response.schema.json",
+  "title": "StartServiceResponse",
+  "description": "Station response to a StartServiceRequest, indicating whether the service was successfully started.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "Accepted",
+        "Rejected"
+      ],
+      "description": "Result of the start service request."
+    },
+    "errorCode": {
+      "type": "integer",
+      "description": "Numeric error code. Present when status is Rejected."
+    },
+    "errorText": {
+      "type": "string",
+      "maxLength": 128,
+      "description": "Human-readable error description. Present when status is Rejected."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "Rejected" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["errorCode", "errorText"]
+      }
+    }
+  ]
+}

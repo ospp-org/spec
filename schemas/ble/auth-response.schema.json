@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/ble/auth-response.schema.json",
+  "title": "AuthResponse",
+  "description": "Authentication response sent by the station to the app via BLE characteristic FFF4 (Notify). Indicates whether the authentication handshake was accepted or rejected.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "result"
+  ],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "AuthResponse",
+      "description": "Message type discriminator"
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "Accepted",
+        "Rejected"
+      ],
+      "description": "Outcome of the authentication attempt"
+    },
+    "sessionKeyConfirmation": {
+      "type": "string",
+      "maxLength": 1024,
+      "description": "HMAC confirmation of shared session key, present when result is Accepted"
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "Human-readable rejection reason code, present when result is Rejected"
+    },
+    "errorCode": {
+      "type": "integer",
+      "description": "Numeric error code, present when result is Rejected"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "result": { "const": "Accepted" } },
+        "required": ["result"]
+      },
+      "then": {
+        "required": ["sessionKeyConfirmation"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "result": { "const": "Rejected" } },
+        "required": ["result"]
+      },
+      "then": {
+        "required": ["reason", "errorCode"]
+      }
+    }
+  ]
+}

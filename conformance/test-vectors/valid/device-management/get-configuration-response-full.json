@@ -1,0 +1,25 @@
+{
+  "configuration": [
+    {
+      "key": "HeartbeatIntervalSeconds",
+      "value": "30",
+      "readonly": false
+    },
+    {
+      "key": "MeterValuesInterval",
+      "value": "15",
+      "readonly": false
+    },
+    {
+      "key": "MaxSessionDurationSeconds",
+      "value": "600",
+      "readonly": false
+    },
+    {
+      "key": "OfflineModeEnabled",
+      "value": "true",
+      "readonly": false
+    }
+  ],
+  "unknownKeys": []
+}

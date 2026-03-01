@@ -1,0 +1,20 @@
+{
+  "stationId": "stn_c3d4e5f6a7b8",
+  "firmwareVersion": "2.3.1",
+  "stationModel": "SSP-3000",
+  "stationVendor": "AcmeCorp",
+  "serialNumber": "SN-2025-005678",
+  "bayCount": 2,
+  "uptimeSeconds": 0,
+  "pendingOfflineTransactions": 0,
+  "timezone": "Asia/Tokyo",
+  "bootReason": "ScheduledReset",
+  "capabilities": {
+    "bleSupported": false,
+    "offlineModeSupported": false,
+    "meterValuesSupported": true
+  },
+  "networkInfo": {
+    "connectionType": "Ethernet"
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/ble/start-service-response.schema.json",
+  "title": "StartServiceResponse",
+  "description": "Response to a start service request, sent by the station to the app via BLE characteristic FFF4 (Notify). Confirms or rejects the service start.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "result"
+  ],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "StartServiceResponse",
+      "description": "Message type discriminator"
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "Accepted",
+        "Rejected"
+      ],
+      "description": "Outcome of the start service request"
+    },
+    "sessionId": {
+      "$ref": "../common/session-id.schema.json",
+      "description": "Local session identifier assigned by the station, present when result is Accepted"
+    },
+    "offlineTxId": {
+      "$ref": "../common/offline-tx-id.schema.json",
+      "description": "Offline transaction identifier, present when result is Accepted"
+    },
+    "errorCode": {
+      "type": "integer",
+      "description": "Numeric error code, present when result is Rejected"
+    },
+    "errorText": {
+      "type": "string",
+      "maxLength": 128,
+      "description": "Human-readable error description, present when result is Rejected"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "result": { "const": "Accepted" } },
+        "required": ["result"]
+      },
+      "then": {
+        "required": ["sessionId", "offlineTxId"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "result": { "const": "Rejected" } },
+        "required": ["result"]
+      },
+      "then": {
+        "required": ["errorCode", "errorText"]
+      }
+    }
+  ]
+}

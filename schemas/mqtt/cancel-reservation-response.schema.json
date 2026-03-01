@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/cancel-reservation-response.schema.json",
+  "title": "CancelReservationResponse",
+  "description": "Station response to a CancelReservationRequest, indicating whether the reservation was successfully cancelled.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "Accepted",
+        "Rejected"
+      ],
+      "description": "Result of the reservation cancellation request."
+    },
+    "errorCode": {
+      "type": "integer",
+      "description": "Numeric error code. Present when status is Rejected."
+    },
+    "errorText": {
+      "type": "string",
+      "maxLength": 128,
+      "description": "Human-readable error description. Present when status is Rejected."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "Rejected" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["errorCode", "errorText"]
+      }
+    }
+  ]
+}

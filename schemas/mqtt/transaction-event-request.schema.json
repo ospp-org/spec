@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/transaction-event-request.schema.json",
+  "title": "TransactionEventRequest",
+  "description": "MQTT message sent by a station to report a completed offline transaction for server-side reconciliation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "offlineTxId",
+    "offlinePassId",
+    "userId",
+    "bayId",
+    "serviceId",
+    "startedAt",
+    "endedAt",
+    "durationSeconds",
+    "creditsCharged",
+    "receipt",
+    "txCounter"
+  ],
+  "properties": {
+    "offlineTxId": {
+      "$ref": "../common/offline-tx-id.schema.json"
+    },
+    "offlinePassId": {
+      "$ref": "../common/offline-pass-id.schema.json"
+    },
+    "userId": {
+      "$ref": "../common/user-id.schema.json"
+    },
+    "bayId": {
+      "$ref": "../common/bay-id.schema.json"
+    },
+    "serviceId": {
+      "$ref": "../common/service-id.schema.json"
+    },
+    "startedAt": {
+      "$ref": "../common/timestamp.schema.json"
+    },
+    "endedAt": {
+      "$ref": "../common/timestamp.schema.json"
+    },
+    "durationSeconds": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "creditsCharged": {
+      "$ref": "../common/credit-amount.schema.json"
+    },
+    "receipt": {
+      "$ref": "../common/receipt.schema.json"
+    },
+    "txCounter": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "meterValues": {
+      "$ref": "../common/meter-values.schema.json"
+    }
+  }
+}

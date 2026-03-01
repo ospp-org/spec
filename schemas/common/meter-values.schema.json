@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/common/meter-values.schema.json",
+  "title": "Meter Values",
+  "description": "Resource consumption meter readings for a service session",
+  "type": "object",
+  "properties": {
+    "liquidMl": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Liquid consumption in milliliters"
+    },
+    "consumableMl": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Consumable material usage in milliliters"
+    },
+    "energyWh": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Energy consumption in watt-hours"
+    }
+  },
+  "additionalProperties": false
+}

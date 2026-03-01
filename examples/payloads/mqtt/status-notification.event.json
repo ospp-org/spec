@@ -1,0 +1,16 @@
+{
+  "bayId": "bay_a1b2c3d4",
+  "bayNumber": 1,
+  "previousStatus": "Available",
+  "status": "Occupied",
+  "services": [
+    {
+      "serviceId": "svc_eco",
+      "available": false
+    },
+    {
+      "serviceId": "svc_standard",
+      "available": true
+    }
+  ]
+}

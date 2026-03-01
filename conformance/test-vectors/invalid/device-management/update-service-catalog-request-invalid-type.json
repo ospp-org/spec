@@ -1,0 +1,11 @@
+{
+  "catalogVersion": 20260201,
+  "services": [
+    {
+      "serviceId": "svc_basic",
+      "serviceName": "Basic Service",
+      "pricingType": "PerMinute",
+      "available": true
+    }
+  ]
+}

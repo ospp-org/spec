@@ -1,0 +1,51 @@
+name: Validate JSON Schemas
+
+on:
+  push:
+    paths:
+      - 'schemas/**'
+  pull_request:
+    paths:
+      - 'schemas/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install ajv-cli
+        run: npm install -g ajv-cli@5 ajv-formats@3
+
+      - name: Validate common schemas
+        run: |
+          # Common schemas cross-reference each other (e.g., error-response → timestamp).
+          # Compile each with all OTHER common schemas as -r to resolve $ref without
+          # triggering "already exists" errors from including self in the -r glob.
+          for schema in schemas/common/*.schema.json; do
+            echo "Validating $schema..."
+            refs=""
+            for ref in schemas/common/*.schema.json; do
+              [ "$ref" = "$schema" ] && continue
+              refs="$refs -r $ref"
+            done
+            ajv compile -s "$schema" $refs --spec=draft2020 -c ajv-formats
+          done
+
+      - name: Validate MQTT schemas
+        run: |
+          for schema in schemas/mqtt/*.schema.json; do
+            echo "Validating $schema..."
+            ajv compile -s "$schema" -r "schemas/common/*.schema.json" --spec=draft2020 -c ajv-formats
+          done
+
+      - name: Validate BLE schemas
+        run: |
+          for schema in schemas/ble/*.schema.json; do
+            echo "Validating $schema..."
+            ajv compile -s "$schema" -r "schemas/common/*.schema.json" --spec=draft2020 -c ajv-formats
+          done

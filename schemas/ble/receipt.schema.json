@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/ble/receipt.schema.json",
+  "title": "Receipt",
+  "description": "Transaction receipt read from the station via BLE characteristic FFF6 (Read). Contains the complete record of a completed service session for offline reconciliation.",
+  "type": "object",
+  "required": [
+    "offlineTxId",
+    "bayId",
+    "serviceId",
+    "startedAt",
+    "endedAt",
+    "durationSeconds",
+    "creditsCharged",
+    "receipt",
+    "txCounter"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "offlineTxId": {
+      "$ref": "../common/offline-tx-id.schema.json"
+    },
+    "bayId": {
+      "$ref": "../common/bay-id.schema.json"
+    },
+    "serviceId": {
+      "$ref": "../common/service-id.schema.json"
+    },
+    "startedAt": {
+      "$ref": "../common/timestamp.schema.json",
+      "description": "ISO 8601 timestamp when the service started"
+    },
+    "endedAt": {
+      "$ref": "../common/timestamp.schema.json",
+      "description": "ISO 8601 timestamp when the service ended"
+    },
+    "durationSeconds": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Total duration of the service in seconds"
+    },
+    "creditsCharged": {
+      "$ref": "../common/credit-amount.schema.json"
+    },
+    "meterValues": {
+      "$ref": "../common/meter-values.schema.json",
+      "description": "Final meter readings from the completed service"
+    },
+    "receipt": {
+      "$ref": "../common/receipt.schema.json"
+    },
+    "txCounter": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Monotonically increasing transaction counter for chain integrity"
+    }
+  }
+}

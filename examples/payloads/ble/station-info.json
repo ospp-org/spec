@@ -1,0 +1,8 @@
+{
+  "stationId": "stn_a1b2c3d4",
+  "stationModel": "SSP-3000",
+  "firmwareVersion": "1.2.3",
+  "bayCount": 3,
+  "bleProtocolVersion": "0.1.0",
+  "connectivity": "Offline"
+}

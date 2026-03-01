@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/ble/service-status.schema.json",
+  "title": "ServiceStatus",
+  "description": "Real-time service status update sent by the station to the app via BLE characteristic FFF5 (Notify). Provides ongoing progress of an active service session.",
+  "type": "object",
+  "required": [
+    "bayId",
+    "status",
+    "sessionId",
+    "elapsedSeconds",
+    "remainingSeconds"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "bayId": {
+      "$ref": "../common/bay-id.schema.json"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["Starting", "Running", "Complete", "ReceiptReady", "Error"],
+      "description": "Current lifecycle status of the service session"
+    },
+    "sessionId": {
+      "$ref": "../common/session-id.schema.json",
+      "description": "Session identifier of the active service"
+    },
+    "elapsedSeconds": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of seconds elapsed since the service started"
+    },
+    "remainingSeconds": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Estimated number of seconds remaining for the service"
+    },
+    "meterValues": {
+      "$ref": "../common/meter-values.schema.json",
+      "description": "Optional real-time meter readings from the station hardware"
+    }
+  }
+}

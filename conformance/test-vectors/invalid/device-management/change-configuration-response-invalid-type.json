@@ -1,0 +1,9 @@
+{
+  "results": [
+    {
+      "key": "HeartbeatIntervalSeconds",
+      "status": "Accepted",
+      "errorCode": "not_a_number"
+    }
+  ]
+}

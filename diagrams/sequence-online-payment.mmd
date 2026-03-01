@@ -1,0 +1,58 @@
+%% OSPP Online Session Flow (Most Common Path)
+%% Reference: spec/04-flows.md, Section 3; examples/flows/02-online-session.md
+
+sequenceDiagram
+    autonumber
+
+    actor User as 📱 Mobile App
+    participant Server as 🖥️ Server
+    participant Broker as 📡 MQTT Broker
+    participant Station as ⚙️ Station
+
+    Note over User,Station: Prerequisites: Station booted, bays Available, user authenticated
+
+    %% Session initiation
+    User->>Server: POST /sessions (bayId, serviceId, durationSeconds)
+    Server->>Server: Verify credits/payment
+    Server-->>User: 201 Created (sessionId, status: "Pending")
+
+    %% StartService via MQTT
+    Server->>Broker: PUBLISH ospp/v1/stations/{station_id}/to-station
+    Broker->>Station: StartService REQUEST [MSG-005]
+    Station->>Station: Validate bay, activate hardware
+    Station-->>Broker: StartService RESPONSE (Accepted)
+    Broker-->>Server: PUBLISH ospp/v1/stations/{station_id}/to-server
+    Server-->>User: Push notification: "Session started"
+
+    %% Bay status change
+    Station->>Broker: StatusNotification EVENT (Occupied)
+    Broker->>Server: StatusNotification [MSG-009]
+
+    %% Meter values (periodic)
+    rect rgb(240, 248, 255)
+        Note over Station,Server: Every MeterValuesInterval (default 15s)
+        Station->>Broker: MeterValues EVENT [MSG-010]
+        Broker->>Server: MeterValues (liquidMl, consumableMl, energyWh)
+        Server-->>User: Real-time usage update
+    end
+
+    %% Session stop
+    User->>Server: POST /sessions/{id}/stop
+    Server->>Broker: PUBLISH StopService REQUEST [MSG-006]
+    Broker->>Station: StopService REQUEST
+    Station->>Station: Deactivate hardware, calculate final values
+    Station-->>Broker: StopService RESPONSE (Accepted, meterValues, creditsCharged)
+    Broker-->>Server: StopService RESPONSE
+
+    %% Finishing → Available
+    Station->>Broker: StatusNotification EVENT (Finishing)
+    Broker->>Server: StatusNotification [MSG-009]
+
+    Station->>Broker: StatusNotification EVENT (Available)
+    Broker->>Server: StatusNotification [MSG-009]
+
+    %% Final billing
+    Server->>Server: Calculate final cost, refund unused credits
+    Server-->>User: Push notification: "Session complete" + receipt
+
+    Note over User,Station: Bay returns to Available, ready for next session

@@ -1,0 +1,8 @@
+{
+  "keys": [
+    {
+      "key": "HeartbeatIntervalSeconds",
+      "value": "30"
+    }
+  ]
+}

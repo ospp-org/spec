@@ -1,0 +1,74 @@
+name: Validate Example Payloads
+
+on:
+  push:
+    paths:
+      - 'schemas/**'
+      - 'examples/payloads/**'
+  pull_request:
+    paths:
+      - 'schemas/**'
+      - 'examples/payloads/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install ajv-cli
+        run: npm install -g ajv-cli@5 ajv-formats@3
+
+      - name: Validate MQTT payloads
+        run: |
+          REFS="-r schemas/common/*.schema.json"
+          OPTS="--spec=draft2020 -c ajv-formats"
+
+          for action in boot-notification heartbeat authorize-offline-pass reserve-bay cancel-reservation \
+                        start-service stop-service transaction-event change-configuration get-configuration \
+                        reset update-firmware get-diagnostics set-maintenance-mode update-service-catalog; do
+            for type in request response; do
+              schema="schemas/mqtt/${action}-${type}.schema.json"
+              example="examples/payloads/mqtt/${action}.${type}.json"
+              if [ -f "$schema" ] && [ -f "$example" ]; then
+                echo "Validating $example against $schema"
+                ajv validate -s "$schema" $REFS -d "$example" $OPTS
+              fi
+            done
+          done
+
+          for action in status-notification connection-lost security-event firmware-status-notification diagnostics-notification; do
+            schema="schemas/mqtt/${action}.schema.json"
+            example="examples/payloads/mqtt/${action}.event.json"
+            if [ -f "$schema" ] && [ -f "$example" ]; then
+              echo "Validating $example against $schema"
+              ajv validate -s "$schema" $REFS -d "$example" $OPTS
+            fi
+          done
+
+          ajv validate -s schemas/mqtt/meter-values-event.schema.json $REFS -d examples/payloads/mqtt/meter-values.event.json $OPTS
+
+      - name: Validate BLE payloads
+        run: |
+          REFS="-r schemas/common/*.schema.json"
+          OPTS="--spec=draft2020 -c ajv-formats"
+
+          for msg in station-info available-services hello challenge offline-auth-request \
+                     server-signed-auth start-service-request start-service-response \
+                     stop-service-request stop-service-response receipt; do
+            schema="schemas/ble/${msg}.schema.json"
+            example="examples/payloads/ble/${msg}.json"
+            if [ -f "$schema" ] && [ -f "$example" ]; then
+              echo "Validating $example against $schema"
+              ajv validate -s "$schema" $REFS -d "$example" $OPTS
+            fi
+          done
+
+          ajv validate -s schemas/ble/auth-response.schema.json $REFS -d examples/payloads/ble/auth-response.accepted.json $OPTS
+          ajv validate -s schemas/ble/auth-response.schema.json $REFS -d examples/payloads/ble/auth-response.rejected.json $OPTS
+          ajv validate -s schemas/ble/service-status.schema.json $REFS -d examples/payloads/ble/service-status.running.json $OPTS
+          ajv validate -s schemas/ble/service-status.schema.json $REFS -d examples/payloads/ble/service-status.receipt-ready.json $OPTS

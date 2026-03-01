@@ -1,0 +1,28 @@
+{
+  "type": "OfflineAuthRequest",
+  "offlinePass": {
+    "passId": "opass_a1b2c3d4e5f6a7b8",
+    "sub": "sub_user1234abcdef",
+    "deviceId": "d7e8f9a0b1c2d3e4f5a6b7c8",
+    "issuedAt": "2026-02-10T08:00:00.000Z",
+    "expiresAt": "2026-02-17T08:00:00.000Z",
+    "policyVersion": 1,
+    "revocationEpoch": 0,
+    "offlineAllowance": {
+      "maxTotalCredits": 500,
+      "maxUses": 5,
+      "maxCreditsPerTx": 200,
+      "allowedServiceTypes": [
+        "svc_basic"
+      ]
+    },
+    "constraints": {
+      "minIntervalSec": 300,
+      "stationOfflineWindowHours": 24,
+      "stationMaxOfflineTx": 50
+    },
+    "signatureAlgorithm": "ECDSA-P256-SHA256",
+    "signature": "MEUCIQC8rJHL0tVPj3K2fNqr5vQ7bXz1Uf0XkJmYVwPaLEygPwIgWjFnR9kX3lH8YTmVpN7sA2cU6K+dB5hGvE4jCmQ7kNc="
+  },
+  "counter": 0
+}

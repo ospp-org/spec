@@ -1,0 +1,78 @@
+%% OSPP Error Recovery Flow — Station Reconnection After Disconnect
+%% Reference: spec/04-flows.md, Section 9; examples/flows/10-error-recovery.md
+
+sequenceDiagram
+    autonumber
+
+    participant Station as ⚙️ Station
+    participant Broker as 📡 MQTT Broker
+    participant Server as 🖥️ Server
+
+    Note over Station,Server: Normal operation — station connected, sessions active
+
+    %% Disconnection
+    rect rgb(255, 235, 238)
+        Note over Station,Server: ⚠️ Connection Lost
+        Station--xBroker: TCP connection drops
+        Broker->>Server: ConnectionLost EVENT (LWT) [MSG-011]
+        Server->>Server: Mark station offline<br/>Start recovery timer (300s)
+
+        Note over Server: Server-side handling
+        Server->>Server: Mark all bays as Unknown
+        Server->>Server: Alert operators (push/email)
+        Server->>Server: Suspend active sessions<br/>(grace period running)
+    end
+
+    %% Station buffers messages while offline
+    rect rgb(255, 243, 224)
+        Note over Station: Station continues operating offline
+        Station->>Station: Buffer MeterValues to persistent storage
+        Station->>Station: Buffer StatusNotifications
+        Station->>Station: Complete active sessions (if possible)
+        Station->>Station: Buffer TransactionEvents
+        Note over Station: Exponential backoff reconnection attempts<br/>1s → 2s → 4s → 8s → 16s → 30s cap
+    end
+
+    %% Reconnection
+    rect rgb(232, 245, 233)
+        Note over Station,Server: ✅ Reconnection (e.g., after 45 seconds)
+        Station->>Broker: MQTT CONNECT (mTLS, clean_start=false)
+        Broker-->>Station: CONNACK (session present)
+
+        %% Boot notification
+        Station->>Broker: BootNotification REQUEST [MSG-001]
+        Note right of Station: bootReason: "ErrorRecovery"<br/>pendingOfflineTransactions: 3
+        Broker->>Server: BootNotification REQUEST
+        Server-->>Broker: BootNotification RESPONSE (Accepted)
+        Broker-->>Station: BootNotification RESPONSE
+        Server->>Server: Cancel recovery timer<br/>Mark station online
+    end
+
+    %% Status reconciliation
+    rect rgb(225, 245, 254)
+        Note over Station,Server: Phase 1 — Status Reconciliation
+        Station->>Broker: StatusNotification EVENT (Bay 1: Available)
+        Broker->>Server: StatusNotification [MSG-009]
+        Station->>Broker: StatusNotification EVENT (Bay 2: Available)
+        Broker->>Server: StatusNotification [MSG-009]
+        Station->>Broker: StatusNotification EVENT (Bay 3: Faulted)
+        Broker->>Server: StatusNotification [MSG-009]
+        Server->>Server: Reconcile bay states<br/>Resolve Unknown → actual state
+    end
+
+    %% Buffered message replay
+    rect rgb(243, 229, 245)
+        Note over Station,Server: Phase 2 — Buffered Message Replay (FIFO order)
+        Station->>Broker: MeterValues EVENT (buffered, t=10:02:30)
+        Broker->>Server: MeterValues [MSG-010]
+        Station->>Broker: MeterValues EVENT (buffered, t=10:03:30)
+        Broker->>Server: MeterValues [MSG-010]
+        Station->>Broker: TransactionEvent REQUEST (offlineTxId, receipt, txCounter)
+        Broker->>Server: TransactionEvent [MSG-007]
+        Server->>Server: Validate receipt signature + txCounter sequence
+        Server-->>Broker: TransactionEvent RESPONSE (Accepted)
+        Broker-->>Station: TransactionEvent RESPONSE
+    end
+
+    Note over Station,Server: Station fully recovered — normal operation resumes
+    Note over Server: Reconciliation complete<br/>Billing updated, operator notified

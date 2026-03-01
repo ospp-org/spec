@@ -1,0 +1,8 @@
+{
+  "firmwareUrl": "https://firmware.acmecorp.com/ssp/releases/v3.0.1/firmware.bin",
+  "firmwareVersion": "3.0.1",
+  "checksum": "sha256:a3f7b2c1d8e9046f5a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f",
+  "signature": "MEUCIQC7x2kR9wPz5mNvHp3LdFbYqT1sXcA0jKe6fZoWnBgUIQIgRtM4vN8hJpLyD3kWm0aOxCqFb5sE7nGdT2fYiJwKxQ==",
+  "forceDowngrade": true,
+  "scheduledAt": "2026-03-15T02:00:00.000Z"
+}

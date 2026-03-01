@@ -1,0 +1,47 @@
+name: Bug Report
+description: Report a spec ambiguity, schema error, broken example, or missing field
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Specification text (spec/)
+        - JSON Schema (schemas/)
+        - Example payload (examples/)
+        - Conformance test (conformance/)
+        - Implementor's guide (guides/)
+        - Diagrams (diagrams/)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: Location
+      description: File path and section/line number
+      placeholder: "e.g., spec/03-messages.md Section 4.2, line 312"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the bug, ambiguity, or inconsistency
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should the spec/schema/example say instead?
+
+  - type: input
+    id: version
+    attributes:
+      label: OSPP Version
+      placeholder: "1.0.0-draft.1"

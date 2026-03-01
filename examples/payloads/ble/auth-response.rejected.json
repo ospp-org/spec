@@ -1,0 +1,6 @@
+{
+  "type": "AuthResponse",
+  "result": "Rejected",
+  "reason": "OFFLINE_PASS_EXPIRED",
+  "errorCode": 2003
+}

@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/boot-notification-request.schema.json",
+  "title": "BootNotificationRequest",
+  "description": "Sent by a station to the server after boot to register itself, report firmware/hardware info, and declare capabilities.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "stationId",
+    "firmwareVersion",
+    "stationModel",
+    "stationVendor",
+    "serialNumber",
+    "bayCount",
+    "uptimeSeconds",
+    "pendingOfflineTransactions",
+    "timezone",
+    "bootReason",
+    "capabilities",
+    "networkInfo"
+  ],
+  "properties": {
+    "stationId": {
+      "$ref": "../common/station-id.schema.json"
+    },
+    "firmwareVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "maxLength": 32,
+      "description": "Semantic version of the station firmware."
+    },
+    "stationModel": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Model identifier of the station hardware."
+    },
+    "stationVendor": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Name of the station manufacturer."
+    },
+    "serialNumber": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "Unique serial number of the station unit."
+    },
+    "bayCount": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of service bays available at this station."
+    },
+    "uptimeSeconds": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Seconds elapsed since the station last booted."
+    },
+    "pendingOfflineTransactions": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of offline transactions queued for synchronization."
+    },
+    "timezone": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "IANA timezone identifier of the station (e.g. 'Europe/London')."
+    },
+    "bootReason": {
+      "type": "string",
+      "enum": [
+        "PowerOn",
+        "Watchdog",
+        "FirmwareUpdate",
+        "ManualReset",
+        "ScheduledReset",
+        "ErrorRecovery"
+      ],
+      "description": "Reason the station booted."
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bleSupported",
+        "offlineModeSupported",
+        "meterValuesSupported"
+      ],
+      "properties": {
+        "bleSupported": {
+          "type": "boolean",
+          "description": "Whether the station supports BLE communication."
+        },
+        "offlineModeSupported": {
+          "type": "boolean",
+          "description": "Whether the station supports offline session authorization."
+        },
+        "meterValuesSupported": {
+          "type": "boolean",
+          "description": "Whether the station supports reporting meter values."
+        },
+        "deviceManagementSupported": {
+          "type": "boolean",
+          "description": "Whether the station supports the Device Management profile (configuration, firmware update, diagnostics, remote commands)."
+        }
+      },
+      "description": "Feature flags indicating station capabilities."
+    },
+    "networkInfo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "connectionType"
+      ],
+      "properties": {
+        "connectionType": {
+          "type": "string",
+          "enum": [
+            "Ethernet",
+            "Wifi",
+            "Cellular"
+          ],
+          "description": "Type of network connection used by the station."
+        },
+        "signalStrength": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Signal strength in dBm, or null if not applicable (e.g. Ethernet)."
+        }
+      },
+      "description": "Current network connection details."
+    }
+  }
+}

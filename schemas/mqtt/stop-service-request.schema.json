@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/stop-service-request.schema.json",
+  "title": "StopServiceRequest",
+  "description": "Sent by the server to a station to stop an active service session on a specific bay.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "sessionId",
+    "bayId"
+  ],
+  "properties": {
+    "sessionId": {
+      "$ref": "../common/session-id.schema.json",
+      "description": "Identifier of the session to stop."
+    },
+    "bayId": {
+      "$ref": "../common/bay-id.schema.json",
+      "description": "Identifier of the bay where the service is running."
+    }
+  }
+}

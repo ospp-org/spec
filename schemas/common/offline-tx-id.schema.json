@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/common/offline-tx-id.schema.json",
+  "title": "Offline Transaction ID",
+  "description": "Unique identifier for an offline transaction, prefixed with otx_",
+  "type": "string",
+  "pattern": "^otx_[a-f0-9]{8,}$",
+  "minLength": 12,
+  "maxLength": 64
+}

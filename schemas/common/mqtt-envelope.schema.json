@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/common/mqtt-envelope.schema.json",
+  "title": "MQTT Envelope",
+  "description": "Standard wrapper for all OSPP MQTT messages, providing routing, versioning, and optional integrity verification",
+  "type": "object",
+  "required": [
+    "messageId",
+    "messageType",
+    "action",
+    "timestamp",
+    "source",
+    "protocolVersion",
+    "payload"
+  ],
+  "properties": {
+    "messageId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "Unique identifier for this message, used for correlation and deduplication"
+    },
+    "messageType": {
+      "type": "string",
+      "enum": ["Request", "Response", "Event"],
+      "description": "The type of message: REQUEST for commands, RESPONSE for replies, EVENT for notifications"
+    },
+    "action": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "The action name identifying which operation this message relates to"
+    },
+    "timestamp": {
+      "$ref": "timestamp.schema.json",
+      "description": "UTC timestamp when this message was created"
+    },
+    "source": {
+      "type": "string",
+      "enum": ["Server", "Station"],
+      "description": "The origin of this message. Most messages use the literal sender ('station' for station-originated, 'server' for server-originated). For ConnectionLost (LWT), the source is 'server' because the broker-side infrastructure detects the disconnection and publishes the retained will message."
+    },
+    "protocolVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "maxLength": 32,
+      "description": "Semantic version of the OSPP protocol"
+    },
+    "payload": {
+      "type": "object",
+      "description": "The action-specific payload; validated by individual message schemas"
+    },
+    "mac": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "description": "Optional base64-encoded HMAC for message integrity verification"
+    }
+  },
+  "additionalProperties": false
+}

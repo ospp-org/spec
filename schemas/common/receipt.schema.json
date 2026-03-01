@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/common/receipt.schema.json",
+  "title": "Receipt",
+  "description": "Cryptographically signed receipt proving a completed service session transaction",
+  "type": "object",
+  "required": [
+    "data",
+    "signature",
+    "signatureAlgorithm"
+  ],
+  "properties": {
+    "data": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "description": "Base64-encoded canonical JSON of receipt data"
+    },
+    "signature": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "description": "Base64-encoded ECDSA P-256 signature"
+    },
+    "signatureAlgorithm": {
+      "type": "string",
+      "const": "ECDSA-P256-SHA256",
+      "description": "Signature algorithm used to sign the receipt"
+    }
+  },
+  "additionalProperties": false
+}

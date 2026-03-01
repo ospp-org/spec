@@ -1,0 +1,22 @@
+{
+  "offlineTxId": "otx_d4e5f6a7",
+  "offlinePassId": "opass_a8b9c0d1e2f3",
+  "userId": "sub_9a8b7c6d",
+  "bayId": "bay_a1b2c3d4",
+  "serviceId": "svc_eco",
+  "startedAt": "2026-02-13T09:52:00.000Z",
+  "endedAt": "2026-02-13T09:56:45.000Z",
+  "durationSeconds": 285,
+  "creditsCharged": 48,
+  "receipt": {
+    "data": "eyJ0eElkIjoib3R4X2Q0ZTVmNmE3IiwiY3JlZGl0cyI6NDh9",
+    "signature": "MEUCIQDtjLkM5bXhZA1rQ7vYzN0cBpL2hUwF9jD6tG3nKm4xRgIgWpRf8sT2aHb3cKdV5eYnM6jLqNwO7xPzU1iS0kA9vE=",
+    "signatureAlgorithm": "ECDSA-P256-SHA256"
+  },
+  "txCounter": 5,
+  "meterValues": {
+    "liquidMl": 42800,
+    "consumableMl": 470,
+    "energyWh": 138
+  }
+}

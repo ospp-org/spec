@@ -1,0 +1,6 @@
+{
+  "status": "Failed",
+  "firmwareVersion": "3.0.1",
+  "progress": 72,
+  "errorText": "Checksum verification failed after download, expected sha256:a3f7b2c1 but computed sha256:e8d9c0b1"
+}

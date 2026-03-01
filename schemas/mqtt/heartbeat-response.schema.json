@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/heartbeat-response.schema.json",
+  "title": "HeartbeatResponse",
+  "description": "Server response to a station heartbeat, providing the current server time for clock synchronization.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "serverTime"
+  ],
+  "properties": {
+    "serverTime": {
+      "$ref": "../common/timestamp.schema.json"
+    }
+  }
+}

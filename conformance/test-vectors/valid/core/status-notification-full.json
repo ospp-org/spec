@@ -1,0 +1,22 @@
+{
+  "bayId": "bay_d4e5f6a7b8c9d0e1",
+  "bayNumber": 3,
+  "status": "Faulted",
+  "previousStatus": "Available",
+  "services": [
+    {
+      "serviceId": "svc_premium",
+      "available": false
+    },
+    {
+      "serviceId": "svc_deluxe",
+      "available": false
+    },
+    {
+      "serviceId": "svc_auxiliary",
+      "available": true
+    }
+  ],
+  "errorCode": 5008,
+  "errorText": "SENSOR_FAILURE"
+}

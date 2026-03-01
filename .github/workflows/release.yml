@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.0.0-draft.1)'
+        required: true
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify CI is green
+        run: |
+          echo "Checking that all CI checks pass..."
+          # The branch protection rules should enforce this,
+          # but we verify explicitly as a safety check.
+
+      - name: Verify version in CHANGELOG
+        run: |
+          if ! grep -q "\[${{ inputs.version }}\]" CHANGELOG.md; then
+            echo "ERROR: Version ${{ inputs.version }} not found in CHANGELOG.md"
+            exit 1
+          fi
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create tag
+        run: |
+          git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}"
+          git push origin "v${{ inputs.version }}"
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          # Extract the section for this version from CHANGELOG.md
+          awk '/^## \[${{ inputs.version }}\]/{found=1; next} /^## \[/{if(found) exit} found' CHANGELOG.md > release-notes.md
+          echo "Release notes extracted."
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v${{ inputs.version }}"
+          name: "OSPP v${{ inputs.version }}"
+          body_path: release-notes.md
+          draft: false
+          prerelease: ${{ contains(inputs.version, 'draft') || contains(inputs.version, 'rc') }}

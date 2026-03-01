@@ -1,0 +1,4 @@
+{
+  "certificateType": "StationCertificate",
+  "certificate": "-----BEGIN CERTIFICATE-----\nMIICpDCCAYwCFBx7z2gR9wPz5mNvHp3LdFbYqT1sMA0GCSqGSIb3DQEBCwUA\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA\n-----END CERTIFICATE-----"
+}

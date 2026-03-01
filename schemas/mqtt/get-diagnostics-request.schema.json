@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/get-diagnostics-request.schema.json",
+  "title": "GetDiagnosticsRequest",
+  "description": "Request to collect and upload station diagnostics to a remote URL.",
+  "type": "object",
+  "required": ["uploadUrl"],
+  "additionalProperties": false,
+  "properties": {
+    "uploadUrl": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://",
+      "maxLength": 2048,
+      "description": "HTTPS URL for diagnostics upload (PUT)"
+    },
+    "startTime": {
+      "$ref": "../common/timestamp.schema.json"
+    },
+    "endTime": {
+      "$ref": "../common/timestamp.schema.json"
+    }
+  }
+}

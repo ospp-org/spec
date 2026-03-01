@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/common/timestamp.schema.json",
+  "title": "Timestamp",
+  "description": "ISO 8601 UTC timestamp with millisecond precision",
+  "type": "string",
+  "format": "date-time",
+  "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+}

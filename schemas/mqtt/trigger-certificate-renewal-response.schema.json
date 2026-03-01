@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/trigger-certificate-renewal-response.schema.json",
+  "title": "TriggerCertificateRenewalResponse",
+  "description": "Station confirms or rejects a server-triggered certificate renewal.",
+  "type": "object",
+  "required": ["status"],
+  "additionalProperties": false,
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["Accepted", "Rejected"]
+    },
+    "errorCode": {
+      "type": "integer",
+      "description": "Error code when status is Rejected"
+    },
+    "errorText": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "Error description when status is Rejected"
+    }
+  }
+}

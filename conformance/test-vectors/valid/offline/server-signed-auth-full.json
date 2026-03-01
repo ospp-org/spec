@@ -1,0 +1,5 @@
+{
+  "type": "ServerSignedAuth",
+  "signedAuthorization": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzdWJfcHJlbWl1bVVzZXI0MiIsInNlc3MiOiJzZXNzX2YxZTJkM2M0YjVhNiIsImJheSI6ImJheV9hMWIyYzNkNGU1ZjYiLCJzdmMiOiJzdmNfcHJlbWl1bV93YXNoIiwiaWF0IjoxNzA3MDQ4MDAwfQ.ZWQyNTUxOV9zaWduYXR1cmVfNjRfYnl0ZXNfZm9yX3NlcnZlcl9zaWduZWRfYXV0aG9yaXphdGlvbg==",
+  "sessionId": "sess_f1e2d3c4b5a6f7e8d9c0"
+}

@@ -1,0 +1,11 @@
+{
+  "bayId": "bay_a1b2c3d4e5f6",
+  "bayNumber": 1,
+  "status": "Broken",
+  "services": [
+    {
+      "serviceId": "svc_basic",
+      "available": true
+    }
+  ]
+}

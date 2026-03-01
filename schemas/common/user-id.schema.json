@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/common/user-id.schema.json",
+  "title": "User ID",
+  "description": "Unique identifier for a user (OIDC subject identifier), prefixed with sub_",
+  "type": "string",
+  "pattern": "^sub_[a-zA-Z0-9]+$",
+  "minLength": 5,
+  "maxLength": 64
+}

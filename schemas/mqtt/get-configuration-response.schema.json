@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/get-configuration-response.schema.json",
+  "title": "GetConfigurationResponse",
+  "description": "Response containing the requested configuration entries and any unknown keys.",
+  "type": "object",
+  "required": ["configuration"],
+  "additionalProperties": false,
+  "properties": {
+    "configuration": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "value", "readonly"],
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "readonly": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "unknownKeys": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 256
+      }
+    }
+  }
+}

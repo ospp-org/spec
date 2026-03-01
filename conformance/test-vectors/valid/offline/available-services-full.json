@@ -1,0 +1,43 @@
+{
+  "catalogVersion": "2.1",
+  "bays": [
+    {
+      "bayId": "bay_a1b2c3d4e5f6",
+      "bayNumber": 1,
+      "status": "Available",
+      "services": [
+        {
+          "serviceId": "svc_basic",
+          "serviceName": "Basic Service",
+          "pricingType": "PerMinute",
+          "priceCreditsPerMinute": 10,
+          "priceLocalPerMinute": 50,
+          "available": true
+        },
+        {
+          "serviceId": "svc_premium",
+          "serviceName": "Premium Service",
+          "pricingType": "Fixed",
+          "priceCreditsFixed": 200,
+          "priceLocalFixed": 1000,
+          "available": true
+        }
+      ]
+    },
+    {
+      "bayId": "bay_f6e5d4c3b2a1",
+      "bayNumber": 2,
+      "status": "Occupied",
+      "services": [
+        {
+          "serviceId": "svc_auxiliary",
+          "serviceName": "Auxiliary Program",
+          "pricingType": "PerMinute",
+          "priceCreditsPerMinute": 5,
+          "priceLocalPerMinute": 25,
+          "available": false
+        }
+      ]
+    }
+  ]
+}

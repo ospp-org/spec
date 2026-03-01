@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/common/service-item.schema.json",
+  "title": "Service Item",
+  "description": "A service entry in the station's service catalog with pricing information",
+  "type": "object",
+  "required": [
+    "serviceId",
+    "serviceName",
+    "pricingType",
+    "available"
+  ],
+  "properties": {
+    "serviceId": {
+      "$ref": "service-id.schema.json",
+      "description": "Unique identifier for this service"
+    },
+    "serviceName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Human-readable name of the service"
+    },
+    "pricingType": {
+      "type": "string",
+      "enum": ["PerMinute", "Fixed"],
+      "description": "How this service is priced"
+    },
+    "priceCreditsPerMinute": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Price in credits per minute (applicable when pricingType is PerMinute)"
+    },
+    "priceCreditsFixed": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Fixed price in credits (applicable when pricingType is fixed)"
+    },
+    "priceLocalPerMinute": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Optional price in local-currency minor units per minute"
+    },
+    "priceLocalFixed": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Optional fixed price in local-currency minor units"
+    },
+    "available": {
+      "type": "boolean",
+      "description": "Whether this service is currently available for use"
+    }
+  },
+  "additionalProperties": false
+}

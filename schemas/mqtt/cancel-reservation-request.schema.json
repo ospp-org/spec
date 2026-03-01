@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/cancel-reservation-request.schema.json",
+  "title": "CancelReservationRequest",
+  "description": "Sent by the server to a station to cancel a previously made bay reservation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "bayId",
+    "reservationId"
+  ],
+  "properties": {
+    "bayId": {
+      "$ref": "../common/bay-id.schema.json",
+      "description": "Identifier of the bay whose reservation is being cancelled."
+    },
+    "reservationId": {
+      "$ref": "../common/reservation-id.schema.json",
+      "description": "Identifier of the reservation to cancel."
+    }
+  }
+}

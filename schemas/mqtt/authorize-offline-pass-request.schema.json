@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/authorize-offline-pass-request.schema.json",
+  "title": "AuthorizeOfflinePassRequest",
+  "description": "Sent by the station to the server to validate an offline pass presented via BLE, including chain integrity fields for replay protection.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "offlinePassId",
+    "offlinePass",
+    "deviceId",
+    "counter",
+    "bayId",
+    "serviceId"
+  ],
+  "properties": {
+    "offlinePassId": {
+      "$ref": "../common/offline-pass-id.schema.json",
+      "description": "Unique identifier of the offline pass."
+    },
+    "offlinePass": {
+      "$ref": "../common/offline-pass.schema.json",
+      "description": "The offline pass payload containing authorization data."
+    },
+    "deviceId": {
+      "$ref": "../common/device-id.schema.json",
+      "description": "Identifier of the mobile device presenting the offline pass."
+    },
+    "counter": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonic usage counter for replay protection."
+    },
+    "bayId": {
+      "$ref": "../common/bay-id.schema.json",
+      "description": "Identifier of the bay where the service is requested."
+    },
+    "serviceId": {
+      "$ref": "../common/service-id.schema.json",
+      "description": "Identifier of the service being requested."
+    }
+  }
+}

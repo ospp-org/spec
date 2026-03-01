@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/change-configuration-response.schema.json",
+  "title": "ChangeConfigurationResponse",
+  "description": "Response to a change-configuration request with per-key status. If any key is Rejected or NotSupported, the station MUST NOT apply any changes (atomic all-or-nothing).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["results"],
+  "properties": {
+    "results": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Per-key results in the same order as the request keys array",
+      "items": {
+        "type": "object",
+        "required": ["key", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Configuration key name (echoed from request)"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Accepted",
+              "RebootRequired",
+              "Rejected",
+              "NotSupported"
+            ],
+            "description": "Result for this key"
+          },
+          "errorCode": {
+            "type": "integer",
+            "description": "OSPP error code (present when status is Rejected or NotSupported)"
+          },
+          "errorText": {
+            "type": "string",
+            "maxLength": 128,
+            "description": "Machine-readable error name (present when status is Rejected or NotSupported)"
+          }
+        }
+      }
+    }
+  }
+}

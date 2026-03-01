@@ -1,0 +1,29 @@
+{
+  "catalogVersion": "2026-02-13-01",
+  "services": [
+    {
+      "serviceId": "svc_eco",
+      "serviceName": "Eco Program",
+      "pricingType": "PerMinute",
+      "priceCreditsPerMinute": 10,
+      "priceLocalPerMinute": 50,
+      "available": true
+    },
+    {
+      "serviceId": "svc_standard",
+      "serviceName": "Standard Program",
+      "pricingType": "PerMinute",
+      "priceCreditsPerMinute": 8,
+      "priceLocalPerMinute": 40,
+      "available": true
+    },
+    {
+      "serviceId": "svc_deluxe",
+      "serviceName": "Deluxe Program",
+      "pricingType": "Fixed",
+      "priceCreditsFixed": 15,
+      "priceLocalFixed": 75,
+      "available": true
+    }
+  ]
+}

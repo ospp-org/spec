@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/common/offline-pass-id.schema.json",
+  "title": "Offline Pass ID",
+  "description": "Unique identifier for an offline pass, prefixed with opass_",
+  "type": "string",
+  "pattern": "^opass_[a-f0-9]{8,}$",
+  "minLength": 14,
+  "maxLength": 64
+}

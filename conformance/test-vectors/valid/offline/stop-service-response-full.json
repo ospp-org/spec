@@ -1,0 +1,6 @@
+{
+  "type": "StopServiceResponse",
+  "result": "Accepted",
+  "actualDurationSeconds": 287,
+  "creditsCharged": 48
+}

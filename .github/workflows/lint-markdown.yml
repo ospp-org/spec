@@ -1,0 +1,32 @@
+name: Lint Markdown
+
+on:
+  push:
+    paths:
+      - '**/*.md'
+  pull_request:
+    paths:
+      - '**/*.md'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install markdownlint-cli
+        run: npm install -g markdownlint-cli@0.43.0
+
+      - name: Lint specification
+        run: |
+          markdownlint \
+            --disable MD013 MD033 MD041 MD024 MD036 \
+            spec/*.md \
+            guides/*.md \
+            CONTRIBUTING.md \
+            README.md \
+            CHANGELOG.md

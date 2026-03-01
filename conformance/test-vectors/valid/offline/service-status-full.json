@@ -1,0 +1,12 @@
+{
+  "bayId": "bay_f6e5d4c3b2a10987",
+  "status": "Complete",
+  "sessionId": "sess_f1e2d3c4b5a6f7e8",
+  "elapsedSeconds": 300,
+  "remainingSeconds": 0,
+  "meterValues": {
+    "liquidMl": 15200,
+    "consumableMl": 350,
+    "energyWh": 1200
+  }
+}

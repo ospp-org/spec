@@ -1,0 +1,9 @@
+{
+  "vendorId": "AcmeCorp",
+  "dataId": "SetLEDColor",
+  "data": {
+    "bayId": "bay_c1d2e3f4a5b6",
+    "color": "#00FF00",
+    "brightness": 80
+  }
+}

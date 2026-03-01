@@ -1,0 +1,33 @@
+name: Spec Clarification
+description: Request clarification on ambiguous or unclear normative text
+labels: ["clarification"]
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Spec Location
+      placeholder: "e.g., spec/06-security.md Section 4.1"
+    validations:
+      required: true
+
+  - type: textarea
+    id: text
+    attributes:
+      label: Current Text
+      description: Quote the ambiguous text
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What is unclear? What are the possible interpretations?
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested Clarification
+      description: How would you reword the text?

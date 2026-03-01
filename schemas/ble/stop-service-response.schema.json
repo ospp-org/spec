@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/ble/stop-service-response.schema.json",
+  "title": "StopServiceResponse",
+  "description": "Response to a stop service request, sent by the station to the app via BLE characteristic FFF4 (Notify). Confirms or rejects the service stop and provides final usage data.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "result"
+  ],
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "StopServiceResponse",
+      "description": "Message type discriminator"
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "Accepted",
+        "Rejected"
+      ],
+      "description": "Outcome of the stop service request"
+    },
+    "actualDurationSeconds": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Actual duration the service ran in seconds, present when result is Accepted"
+    },
+    "creditsCharged": {
+      "$ref": "../common/credit-amount.schema.json",
+      "description": "Total credits charged for the service, present when result is Accepted"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "result": { "const": "Accepted" } },
+        "required": ["result"]
+      },
+      "then": {
+        "required": ["actualDurationSeconds", "creditsCharged"]
+      }
+    }
+  ]
+}

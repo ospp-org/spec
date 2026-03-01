@@ -1,0 +1,22 @@
+{
+  "results": [
+    {
+      "key": "HeartbeatIntervalSeconds",
+      "status": "Accepted"
+    },
+    {
+      "key": "MeterValuesInterval",
+      "status": "RebootRequired"
+    },
+    {
+      "key": "FirmwareVersion",
+      "status": "Rejected",
+      "errorCode": 5108,
+      "errorText": "CONFIGURATION_KEY_READONLY"
+    },
+    {
+      "key": "UnknownVendorKey",
+      "status": "NotSupported"
+    }
+  ]
+}

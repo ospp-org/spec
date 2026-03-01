@@ -1,0 +1,5 @@
+{
+  "status": "Rejected",
+  "errorCode": 3016,
+  "errorText": "ACTIVE_SESSIONS_PRESENT"
+}

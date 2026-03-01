@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/status-notification.schema.json",
+  "title": "StatusNotification",
+  "description": "Station notification reporting the current status of a bay and the availability of its services.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "bayId",
+    "bayNumber",
+    "status",
+    "services"
+  ],
+  "properties": {
+    "bayId": {
+      "$ref": "../common/bay-id.schema.json"
+    },
+    "bayNumber": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "$ref": "../common/bay-status.schema.json"
+    },
+    "previousStatus": {
+      "$ref": "../common/bay-status.schema.json"
+    },
+    "services": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "serviceId",
+          "available"
+        ],
+        "properties": {
+          "serviceId": {
+            "$ref": "../common/service-id.schema.json"
+          },
+          "available": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "errorCode": {
+      "type": "integer"
+    },
+    "errorText": {
+      "type": "string",
+      "maxLength": 128
+    }
+  }
+}

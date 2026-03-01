@@ -1,0 +1,58 @@
+%% OSPP Bay State Machine
+%% Reference: spec/05-state-machines.md, Section 1
+%% Each bay on a station MUST be in exactly one of these 7 states
+
+stateDiagram-v2
+    [*] --> Unknown : Power on / reboot
+
+    Unknown --> Available : StatusNotification (healthy)
+    Unknown --> Faulted : StatusNotification (fault detected)
+    Unknown --> Unavailable : StatusNotification (maintenance mode)
+
+    Available --> Reserved : ReserveBay accepted
+    Available --> Occupied : StartService accepted<br/>(no reservation)
+    Available --> Faulted : Hardware error detected
+    Available --> Unavailable : SetMaintenanceMode ON
+
+    Reserved --> Occupied : StartService by<br/>reservation holder
+    Reserved --> Available : Reservation expires<br/>or CancelReservation
+    Reserved --> Faulted : Hardware error detected
+
+    Occupied --> Finishing : StopService accepted<br/>or duration elapsed
+    Occupied --> Faulted : Hardware error detected
+
+    Finishing --> Available : Cleanup complete
+    Finishing --> Faulted : Error during cleanup
+
+    Faulted --> Available : Fault cleared<br/>(automatic reset)
+    Faulted --> Unavailable : SetMaintenanceMode ON<br/>(manual intervention)
+
+    Unavailable --> Available : SetMaintenanceMode OFF<br/>(maintenance complete)
+
+    %% Connection lost transitions (any → Unknown)
+    Available --> Unknown : LWT / connection lost
+    Reserved --> Unknown : LWT / connection lost
+    Occupied --> Unknown : LWT / connection lost
+    Finishing --> Unknown : LWT / connection lost
+    Faulted --> Unknown : LWT / connection lost
+    Unavailable --> Unknown : LWT / connection lost
+
+    note right of Unknown
+        Initial state after boot
+        Resolves on first StatusNotification
+    end note
+
+    note right of Occupied
+        Active session in progress
+        MeterValues being reported
+    end note
+
+    note left of Faulted
+        Error codes: 5000-5009
+        Operator notification sent
+    end note
+
+    note left of Unavailable
+        Administrative disable
+        No sessions accepted
+    end note

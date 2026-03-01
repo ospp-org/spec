@@ -1,0 +1,11 @@
+{
+  "eventId": "sec_a1b2c3d4e5f60008",
+  "type": "HardwareFault",
+  "severity": "Critical",
+  "timestamp": "2026-03-01T16:45:00.000Z",
+  "details": {
+    "bayId": "bay_d4e5f6a7b8c9d0e1",
+    "errorCode": 5003,
+    "errorDescription": "Pump overcurrent detected on bay 3"
+  }
+}

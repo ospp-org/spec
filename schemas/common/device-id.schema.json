@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/common/device-id.schema.json",
+  "title": "Device ID",
+  "description": "Unique mobile device identifier",
+  "type": "string",
+  "minLength": 1,
+  "maxLength": 64
+}

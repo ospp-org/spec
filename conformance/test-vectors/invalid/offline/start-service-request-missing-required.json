@@ -1,0 +1,5 @@
+{
+  "type": "StartServiceRequest",
+  "bayId": "bay_a1b2c3d4e5f6",
+  "serviceId": "svc_basic"
+}

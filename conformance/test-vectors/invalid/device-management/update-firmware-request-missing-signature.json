@@ -1,0 +1,5 @@
+{
+  "firmwareUrl": "https://firmware.acmecorp.com/ssp/releases/v2.4.0/firmware.bin",
+  "firmwareVersion": "2.4.0",
+  "checksum": "sha256:9b74c9897bac770ffc029102a200c5de3541990e5df32e4f52e18e7e85c9f608"
+}

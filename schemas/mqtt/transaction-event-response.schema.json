@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/transaction-event-response.schema.json",
+  "title": "TransactionEventResponse",
+  "description": "Server response acknowledging a transaction event reported by a station.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "Accepted",
+        "Duplicate",
+        "Rejected",
+        "RetryLater"
+      ]
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 256
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "Rejected" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["reason"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "Duplicate" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["reason"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "RetryLater" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["reason"]
+      }
+    }
+  ]
+}

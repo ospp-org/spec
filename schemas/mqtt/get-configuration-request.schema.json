@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/get-configuration-request.schema.json",
+  "title": "GetConfigurationRequest",
+  "description": "Request to retrieve configuration keys from the station. If keys is empty or absent, all keys are returned.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "keys": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 256
+      }
+    }
+  }
+}

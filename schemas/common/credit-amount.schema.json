@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/common/credit-amount.schema.json",
+  "title": "Credit Amount",
+  "description": "Credit amount in atomic units (integer, no floating point)",
+  "type": "integer",
+  "minimum": 0
+}

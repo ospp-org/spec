@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/trigger-message-request.schema.json",
+  "title": "TriggerMessageRequest",
+  "description": "Request from the server to trigger the station to send a specific message immediately.",
+  "type": "object",
+  "required": ["requestedMessage"],
+  "additionalProperties": false,
+  "properties": {
+    "requestedMessage": {
+      "type": "string",
+      "enum": [
+        "BootNotification",
+        "StatusNotification",
+        "MeterValues",
+        "Heartbeat",
+        "DiagnosticsNotification",
+        "FirmwareStatusNotification",
+        "SecurityEvent",
+        "SignCertificate"
+      ]
+    },
+    "bayId": {
+      "type": "string",
+      "description": "Bay identifier for bay-specific messages (StatusNotification, MeterValues). Optional."
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "status": "Accepted",
+  "serverTime": "2026-02-13T10:05:30.000Z",
+  "heartbeatIntervalSec": 60,
+  "configuration": {
+    "MeterValuesInterval": "10",
+    "MaxOfflineTransactions": "50",
+    "Locale": "ro-RO"
+  },
+  "sessionKey": "dGhpcyBpcyBhIGJhc2U2NCBlbmNvZGVkIHNlc3Npb24ga2V5IQ=="
+}

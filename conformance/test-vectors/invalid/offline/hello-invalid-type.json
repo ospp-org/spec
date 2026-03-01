@@ -1,0 +1,6 @@
+{
+  "type": "Hello",
+  "deviceId": 12345,
+  "appNonce": "dGhpcyBpcyBhIDMyLWJ5dGUgcmFuZG9tIG5vbmNlIQ==",
+  "appVersion": "1.0.0"
+}

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/change-configuration-request.schema.json",
+  "title": "ChangeConfigurationRequest",
+  "description": "Request to change one or more configuration keys on the station. The station MUST apply ALL keys atomically or NONE.",
+  "type": "object",
+  "required": ["keys"],
+  "additionalProperties": false,
+  "properties": {
+    "keys": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "description": "Array of configuration key-value pairs to set atomically",
+      "items": {
+        "type": "object",
+        "required": ["key", "value"],
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Configuration key name"
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "New value as string (station parses to appropriate type)"
+          }
+        }
+      }
+    }
+  }
+}

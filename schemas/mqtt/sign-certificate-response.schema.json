@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/sign-certificate-response.schema.json",
+  "title": "SignCertificateResponse",
+  "description": "Server acknowledges receipt of a CSR for processing.",
+  "type": "object",
+  "required": ["status"],
+  "additionalProperties": false,
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["Accepted", "Rejected"]
+    },
+    "errorCode": {
+      "type": "integer",
+      "description": "Error code when status is Rejected"
+    },
+    "errorText": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "Error description when status is Rejected"
+    }
+  }
+}

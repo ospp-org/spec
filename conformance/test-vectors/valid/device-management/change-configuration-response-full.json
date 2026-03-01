@@ -1,0 +1,14 @@
+{
+  "results": [
+    {
+      "key": "OfflinePassPublicKey",
+      "status": "Accepted"
+    },
+    {
+      "key": "RevocationEpoch",
+      "status": "Rejected",
+      "errorCode": 5108,
+      "errorText": "CONFIGURATION_KEY_READONLY"
+    }
+  ]
+}

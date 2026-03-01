@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/update-firmware-response.schema.json",
+  "title": "UpdateFirmwareResponse",
+  "description": "Response to an update-firmware request indicating whether the station accepted the update.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "Accepted",
+        "Rejected"
+      ]
+    },
+    "errorCode": {
+      "type": "integer"
+    },
+    "errorText": {
+      "type": "string",
+      "maxLength": 128
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "Rejected" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["errorCode", "errorText"]
+      }
+    }
+  ]
+}

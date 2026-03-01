@@ -1,0 +1,12 @@
+{
+  "eventId": "sec_a1b2c3d4e5f60003",
+  "type": "UnauthorizedAccess",
+  "severity": "Warning",
+  "timestamp": "2026-03-01T09:30:00.000Z",
+  "details": {
+    "action": "ChangeConfiguration",
+    "requiredRole": "Operator",
+    "sourceIp": "192.168.1.200",
+    "description": "Configuration change attempted without Operator role"
+  }
+}

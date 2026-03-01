@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/common/service-id.schema.json",
+  "title": "Service ID",
+  "description": "Unique identifier for a service type, prefixed with svc_",
+  "type": "string",
+  "pattern": "^svc_[a-z0-9_]+$",
+  "minLength": 5,
+  "maxLength": 64
+}

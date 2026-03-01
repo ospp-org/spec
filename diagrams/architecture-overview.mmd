@@ -1,0 +1,58 @@
+%% OSPP Architecture Overview
+%% Renders on GitHub when included in a Markdown file via ```mermaid block
+
+graph TB
+    subgraph "End Users"
+        APP["📱 Mobile App<br/>(iOS / Android)"]
+        WEB["🌐 Web Browser<br/>(QR Payment)"]
+    end
+
+    subgraph "Central System"
+        SERVER["🖥️ Server<br/>(CSMS)"]
+        BROKER["📡 MQTT Broker<br/>(MQTT 5.0)"]
+        PG["💳 Payment Gateway"]
+        DB[("🗄️ Database")]
+    end
+
+    subgraph "Station Site"
+        CTRL["⚙️ Station Controller<br/>(ESP32 / RPi)"]
+        BLE["📶 BLE Radio<br/>(4.2+ LESC)"]
+        BAY1["🚿 Bay 1<br/>eco, standard, deluxe"]
+        BAY2["🚿 Bay 2<br/>eco, standard"]
+        BAYН["🚿 Bay N<br/>..."]
+    end
+
+    %% Online path: App/Web → Server
+    APP -->|"HTTPS REST<br/>JWT Auth"| SERVER
+    WEB -->|"HTTPS REST<br/>Session Token"| SERVER
+
+    %% Server ↔ Broker ↔ Station (MQTT)
+    SERVER <-->|"MQTT 5.0<br/>Internal"| BROKER
+    BROKER <-->|"MQTT 5.0<br/>mTLS / TLS 1.3<br/>QoS 1"| CTRL
+
+    %% Payment Gateway → Server (webhooks)
+    PG -->|"Webhook<br/>HMAC-SHA512"| SERVER
+    SERVER -->|"Payment API<br/>HTTPS"| PG
+
+    %% Server ↔ Database
+    SERVER <--> DB
+
+    %% BLE offline path (dashed)
+    APP -. "BLE GATT<br/>AES-CCM-128 (LESC)" .-> BLE
+    BLE -. "BLE GATT<br/>Receipts" .-> APP
+
+    %% Station internals
+    BLE --- CTRL
+    CTRL --- BAY1
+    CTRL --- BAY2
+    CTRL --- BAYН
+
+    %% Styling
+    style SERVER fill:#e8f5e9,stroke:#2e7d32
+    style BROKER fill:#fff3e0,stroke:#ef6c00
+    style CTRL fill:#e1f5fe,stroke:#0277bd
+    style BLE fill:#f3e5f5,stroke:#7b1fa2
+    style PG fill:#fce4ec,stroke:#c62828
+    style DB fill:#f5f5f5,stroke:#616161
+    style APP fill:#e3f2fd,stroke:#1565c0
+    style WEB fill:#e3f2fd,stroke:#1565c0

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/set-maintenance-mode-request.schema.json",
+  "title": "SetMaintenanceModeRequest",
+  "description": "Request to enable or disable maintenance mode on the station. If bayId is absent, applies to all bays.",
+  "type": "object",
+  "required": ["enabled"],
+  "additionalProperties": false,
+  "properties": {
+    "bayId": {
+      "$ref": "../common/bay-id.schema.json"
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 500
+    }
+  }
+}

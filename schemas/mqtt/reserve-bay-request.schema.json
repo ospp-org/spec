@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/reserve-bay-request.schema.json",
+  "title": "ReserveBayRequest",
+  "description": "Sent by the server to a station to reserve a specific bay for an upcoming session.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "bayId",
+    "reservationId",
+    "expirationTime",
+    "sessionSource"
+  ],
+  "properties": {
+    "bayId": {
+      "$ref": "../common/bay-id.schema.json",
+      "description": "Identifier of the bay to reserve."
+    },
+    "reservationId": {
+      "$ref": "../common/reservation-id.schema.json",
+      "description": "Unique identifier for this reservation."
+    },
+    "expirationTime": {
+      "$ref": "../common/timestamp.schema.json",
+      "description": "UTC timestamp after which the reservation expires automatically."
+    },
+    "sessionSource": {
+      "type": "string",
+      "enum": [
+        "MobileApp",
+        "WebPayment"
+      ],
+      "description": "Origin of the session that triggered the reservation."
+    }
+  }
+}

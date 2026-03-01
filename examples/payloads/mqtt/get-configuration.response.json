@@ -1,0 +1,20 @@
+{
+  "configuration": [
+    {
+      "key": "HeartbeatIntervalSeconds",
+      "value": "60",
+      "readonly": false
+    },
+    {
+      "key": "BLEAdvertisingEnabled",
+      "value": "true",
+      "readonly": false
+    },
+    {
+      "key": "FirmwareVersion",
+      "value": "1.2.3",
+      "readonly": true
+    }
+  ],
+  "unknownKeys": []
+}

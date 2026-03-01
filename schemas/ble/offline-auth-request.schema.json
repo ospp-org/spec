@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/ble/offline-auth-request.schema.json",
+  "title": "OfflineAuthRequest",
+  "description": "Offline authentication request sent by the app to the station via BLE characteristic FFF3 (Write). Used when the phone is offline (Partial B strategy) and the station must validate the offline pass.",
+  "type": "object",
+  "required": [
+    "type",
+    "offlinePass",
+    "counter",
+    "sessionProof"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "OfflineAuthRequest",
+      "description": "Message type discriminator"
+    },
+    "offlinePass": {
+      "$ref": "../common/offline-pass.schema.json"
+    },
+    "counter": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonically increasing counter for replay protection"
+    },
+    "sessionProof": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "description": "HMAC proof binding request to session key"
+    }
+  }
+}

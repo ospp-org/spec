@@ -1,0 +1,6 @@
+{
+  "bayId": "bay_a1b2c3d4",
+  "reservationId": "rsv_e5f6a7b8",
+  "expirationTime": "2026-02-13T10:10:30.000Z",
+  "sessionSource": "WebPayment"
+}

@@ -1,0 +1,14 @@
+{
+  "eventId": "sec_a1b2c3d4e5f6",
+  "type": "MacVerificationFailure",
+  "severity": "Critical",
+  "timestamp": "2026-02-13T10:20:04.800Z",
+  "details": {
+    "messageId": "msg_f5a6b7c8-d9e0-1234-abcd-567890123def",
+    "action": "StartService",
+    "expectedMac": "SEFDS0UtU0hBMjU2LWV4cGVjdGVkLW1hYy12YWx1ZS1iYXNlNjQ=",
+    "receivedMac": "SEFDS0UtU0hBMjU2LXJlY2VpdmVkLW1hYy12YWx1ZS1iYXNlNjQ=",
+    "receivedAt": "2026-02-13T10:20:04.800Z",
+    "sourceIp": "192.168.1.100"
+  }
+}

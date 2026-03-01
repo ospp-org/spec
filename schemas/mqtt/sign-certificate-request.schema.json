@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/sign-certificate-request.schema.json",
+  "title": "SignCertificateRequest",
+  "description": "Station submits a PEM-encoded CSR for certificate signing by the server CA.",
+  "type": "object",
+  "required": ["certificateType", "csr"],
+  "additionalProperties": false,
+  "properties": {
+    "certificateType": {
+      "type": "string",
+      "enum": ["StationCertificate", "MQTTClientCertificate"],
+      "description": "Type of certificate being requested"
+    },
+    "csr": {
+      "type": "string",
+      "pattern": "^-----BEGIN CERTIFICATE REQUEST-----",
+      "maxLength": 8192,
+      "description": "PEM-encoded PKCS#10 Certificate Signing Request"
+    }
+  }
+}

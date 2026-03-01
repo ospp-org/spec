@@ -1,0 +1,13 @@
+# OSPP Protocol Specification — Code Owners
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Specification
+/spec/                    @ospp-org/maintainers
+/schemas/                 @ospp-org/maintainers
+/conformance/             @ospp-org/maintainers
+/guides/                  @ospp-org/maintainers
+/examples/                @ospp-org/maintainers
+
+# Infrastructure
+/.github/                 @ospp-org/maintainers
+*.md                      @ospp-org/maintainers

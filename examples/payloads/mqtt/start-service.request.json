@@ -1,0 +1,12 @@
+{
+  "sessionId": "sess_f7e8d9c0",
+  "bayId": "bay_a1b2c3d4",
+  "serviceId": "svc_eco",
+  "durationSeconds": 300,
+  "sessionSource": "MobileApp",
+  "reservationId": "rsv_e5f6a7b8",
+  "params": {
+    "temperature": 35,
+    "pressure": 80
+  }
+}

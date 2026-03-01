@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/heartbeat-request.schema.json",
+  "title": "HeartbeatRequest",
+  "description": "Heartbeat REQUEST has an empty payload. Station identity is derived from the MQTT topic and mTLS certificate.",
+  "type": "object",
+  "properties": {},
+  "additionalProperties": false
+}

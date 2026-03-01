@@ -1,0 +1,32 @@
+{
+  "offlinePassId": "opass_a8b9c0d1e2f3",
+  "offlinePass": {
+    "passId": "opass_a8b9c0d1e2f3",
+    "sub": "sub_9a8b7c6d",
+    "deviceId": "dev_android_abc123",
+    "issuedAt": "2026-02-13T09:50:00.000Z",
+    "expiresAt": "2026-02-13T10:50:00.000Z",
+    "policyVersion": 1,
+    "revocationEpoch": 42,
+    "offlineAllowance": {
+      "maxTotalCredits": 200,
+      "maxUses": 5,
+      "maxCreditsPerTx": 50,
+      "allowedServiceTypes": [
+        "svc_eco",
+        "svc_standard"
+      ]
+    },
+    "constraints": {
+      "minIntervalSec": 60,
+      "stationOfflineWindowHours": 24,
+      "stationMaxOfflineTx": 50
+    },
+    "signatureAlgorithm": "ECDSA-P256-SHA256",
+    "signature": "MEUCIQC7xRbV2nKp8TjG4mFwZkQa3LdY9vNxHs0pWbTfK2gJwIgS3kM5dX8eA1rQ7vYzN0cBpL2hUwF9jD6tG3nKm4xRs0="
+  },
+  "deviceId": "dev_android_abc123",
+  "counter": 5,
+  "bayId": "bay_a1b2c3d4",
+  "serviceId": "svc_eco"
+}

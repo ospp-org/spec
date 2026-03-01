@@ -1,0 +1,37 @@
+{
+  "catalogVersion": "2026.03.2",
+  "services": [
+    {
+      "serviceId": "svc_basic",
+      "serviceName": "Basic Service",
+      "pricingType": "PerMinute",
+      "priceCreditsPerMinute": 5,
+      "priceLocalPerMinute": 150,
+      "available": true
+    },
+    {
+      "serviceId": "svc_premium",
+      "serviceName": "Premium Service Plus",
+      "pricingType": "PerMinute",
+      "priceCreditsPerMinute": 8,
+      "priceLocalPerMinute": 250,
+      "available": true
+    },
+    {
+      "serviceId": "svc_deluxe",
+      "serviceName": "Deluxe Program",
+      "pricingType": "Fixed",
+      "priceCreditsFixed": 25,
+      "priceLocalFixed": 750,
+      "available": true
+    },
+    {
+      "serviceId": "svc_auxiliary",
+      "serviceName": "Auxiliary Service",
+      "pricingType": "PerMinute",
+      "priceCreditsPerMinute": 4,
+      "priceLocalPerMinute": 120,
+      "available": false
+    }
+  ]
+}

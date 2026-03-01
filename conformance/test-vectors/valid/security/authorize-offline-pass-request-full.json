@@ -1,0 +1,33 @@
+{
+  "offlinePassId": "opass_e7f8a9b0c1d2e3f4",
+  "offlinePass": {
+    "passId": "opass_e7f8a9b0c1d2e3f4",
+    "sub": "sub_user42xyz",
+    "deviceId": "device-pixel-8-pro-042",
+    "issuedAt": "2026-02-14T12:30:00.000Z",
+    "expiresAt": "2026-02-15T12:30:00.000Z",
+    "policyVersion": 3,
+    "revocationEpoch": 7,
+    "offlineAllowance": {
+      "maxTotalCredits": 1000,
+      "maxUses": 5,
+      "maxCreditsPerTx": 300,
+      "allowedServiceTypes": [
+        "svc_basic",
+        "svc_premium",
+        "svc_deluxe"
+      ]
+    },
+    "constraints": {
+      "minIntervalSec": 600,
+      "stationOfflineWindowHours": 48,
+      "stationMaxOfflineTx": 100
+    },
+    "signatureAlgorithm": "ECDSA-P256-SHA256",
+    "signature": "YjRlNWY2YTdiOGM5ZDBlMWYyYTNiNGM1ZDZlN2Y4YTliMGMxZDJlM2Y0YTViNmM3ZDhlOWYw"
+  },
+  "deviceId": "device-pixel-8-pro-042",
+  "counter": 3,
+  "bayId": "bay_f9e8d7c6b5a4",
+  "serviceId": "svc_premium"
+}

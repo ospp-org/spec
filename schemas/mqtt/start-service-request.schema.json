@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/start-service-request.schema.json",
+  "title": "StartServiceRequest",
+  "description": "Sent by the server to a station to start a service on a specific bay.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "sessionId",
+    "bayId",
+    "serviceId",
+    "durationSeconds",
+    "sessionSource"
+  ],
+  "properties": {
+    "sessionId": {
+      "$ref": "../common/session-id.schema.json",
+      "description": "Unique identifier for this service session."
+    },
+    "bayId": {
+      "$ref": "../common/bay-id.schema.json",
+      "description": "Identifier of the bay where the service will run."
+    },
+    "serviceId": {
+      "$ref": "../common/service-id.schema.json",
+      "description": "Identifier of the service program to start."
+    },
+    "durationSeconds": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Authorized duration of the service in seconds."
+    },
+    "sessionSource": {
+      "type": "string",
+      "enum": [
+        "MobileApp",
+        "WebPayment"
+      ],
+      "description": "Origin of the session request."
+    },
+    "reservationId": {
+      "$ref": "../common/reservation-id.schema.json",
+      "description": "Associated reservation identifier, if the bay was pre-reserved."
+    },
+    "params": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Optional service-specific parameters (e.g. temperature, pressure)."
+    }
+  }
+}

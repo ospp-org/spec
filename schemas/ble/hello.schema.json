@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/ble/hello.schema.json",
+  "title": "Hello",
+  "description": "Hello message sent by the mobile app to the station via BLE characteristic FFF3 (Write). Initiates the authentication handshake.",
+  "type": "object",
+  "required": [
+    "type",
+    "deviceId",
+    "appNonce",
+    "appVersion"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "Hello",
+      "description": "Message type discriminator"
+    },
+    "deviceId": {
+      "$ref": "../common/device-id.schema.json"
+    },
+    "appNonce": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "description": "Base64-encoded 32-byte random nonce"
+    },
+    "appVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "maxLength": 32,
+      "description": "Semantic version of the mobile application"
+    }
+  }
+}

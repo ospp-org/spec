@@ -1,0 +1,9 @@
+{
+  "configuration": [
+    {
+      "key": "HeartbeatIntervalSeconds",
+      "value": "30",
+      "readonly": "yes"
+    }
+  ]
+}

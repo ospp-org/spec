@@ -1,0 +1,92 @@
+name: Validate Test Vectors
+
+on:
+  push:
+    paths:
+      - 'conformance/test-vectors/**'
+      - 'schemas/**'
+  pull_request:
+    paths:
+      - 'conformance/test-vectors/**'
+      - 'schemas/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install ajv-cli
+        run: npm install -g ajv-cli@5 ajv-formats@3
+
+      - name: Validate valid test vectors (must pass)
+        run: |
+          shopt -s globstar nullglob
+          failed=0
+          for f in conformance/test-vectors/valid/**/*.json; do
+            # Extract schema path from the filename convention
+            dir=$(basename "$(dirname "$f")")
+            base=$(basename "$f" .json)
+            # Try to find matching schema
+            schema_name=$(echo "$base" | sed 's/-minimal$//' | sed 's/-full$//' | sed 's/-[0-9]*$//')
+            # Prefer BLE schemas for offline test vectors to avoid MQTT/BLE name collisions
+            if [[ "$dir" == "offline" ]]; then
+              schema="schemas/ble/${schema_name}.schema.json"
+              if [ ! -f "$schema" ]; then
+                schema="schemas/mqtt/${schema_name}.schema.json"
+              fi
+            else
+              schema="schemas/mqtt/${schema_name}.schema.json"
+              if [ ! -f "$schema" ]; then
+                schema="schemas/ble/${schema_name}.schema.json"
+              fi
+            fi
+            if [ ! -f "$schema" ]; then
+              echo "SKIP: No schema found for $f"
+              continue
+            fi
+            if ajv validate -s "$schema" -r "schemas/common/*.schema.json" -d "$f" --spec=draft2020 -c ajv-formats 2>/dev/null; then
+              echo "PASS: $f"
+            else
+              echo "FAIL: $f"
+              failed=1
+            fi
+          done
+          exit $failed
+
+      - name: Validate invalid test vectors (must fail)
+        run: |
+          shopt -s globstar nullglob
+          errors=0
+          for f in conformance/test-vectors/invalid/**/*.json; do
+            dir=$(basename "$(dirname "$f")")
+            base=$(basename "$f" .json)
+            schema_name=$(echo "$base" | sed 's/-missing-.*$//' | sed 's/-invalid-.*$//' | sed 's/-extra-.*$//' | sed 's/-additional-.*$//')
+            # Prefer BLE schemas for offline test vectors to avoid MQTT/BLE name collisions
+            if [[ "$dir" == "offline" ]]; then
+              schema="schemas/ble/${schema_name}.schema.json"
+              if [ ! -f "$schema" ]; then
+                schema="schemas/mqtt/${schema_name}.schema.json"
+              fi
+            else
+              schema="schemas/mqtt/${schema_name}.schema.json"
+              if [ ! -f "$schema" ]; then
+                schema="schemas/ble/${schema_name}.schema.json"
+              fi
+            fi
+            if [ ! -f "$schema" ]; then
+              echo "SKIP: No schema found for $f"
+              continue
+            fi
+            if ajv validate -s "$schema" -r "schemas/common/*.schema.json" -d "$f" --spec=draft2020 -c ajv-formats 2>/dev/null; then
+              echo "FAIL (should have been rejected): $f"
+              errors=1
+            else
+              echo "PASS (correctly rejected): $f"
+            fi
+          done
+          exit $errors

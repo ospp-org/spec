@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/ble/start-service-request.schema.json",
+  "title": "StartServiceRequest",
+  "description": "Request to start a service, sent by the app to the station via BLE characteristic FFF3 (Write).",
+  "type": "object",
+  "required": [
+    "type",
+    "bayId",
+    "serviceId",
+    "requestedDurationSeconds"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "StartServiceRequest",
+      "description": "Message type discriminator"
+    },
+    "bayId": {
+      "$ref": "../common/bay-id.schema.json"
+    },
+    "serviceId": {
+      "$ref": "../common/service-id.schema.json"
+    },
+    "requestedDurationSeconds": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Requested service duration in seconds"
+    }
+  }
+}

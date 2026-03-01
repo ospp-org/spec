@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/trigger-certificate-renewal-request.schema.json",
+  "title": "TriggerCertificateRenewalRequest",
+  "description": "Server instructs the station to initiate a certificate renewal by generating a new keypair and CSR.",
+  "type": "object",
+  "required": ["certificateType"],
+  "additionalProperties": false,
+  "properties": {
+    "certificateType": {
+      "type": "string",
+      "enum": ["StationCertificate", "MQTTClientCertificate"],
+      "description": "Type of certificate to renew"
+    }
+  }
+}

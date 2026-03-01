@@ -1,0 +1,67 @@
+name: Protocol Change Request (PCR)
+description: Propose a new message, field, profile, or behavior change
+labels: ["pcr"]
+body:
+  - type: dropdown
+    id: category
+    attributes:
+      label: Change Category
+      options:
+        - Editorial (typo, clarification)
+        - Minor (new optional field, new error code)
+        - Major (new message, behavior change)
+        - Breaking (required field change, wire format change)
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: 1-2 sentences describing the proposed change
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Why is this change needed? What problem does it solve?
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: affected
+    attributes:
+      label: Affected Components
+      options:
+        - label: Spec chapter(s)
+        - label: JSON Schema(s)
+        - label: Example payload(s)
+        - label: Flow document(s)
+        - label: Conformance test(s)
+        - label: Implementor's guide
+
+  - type: checkboxes
+    id: implementations
+    attributes:
+      label: Affected Implementations
+      options:
+        - label: Station (SSP)
+        - label: Server (CSMS)
+        - label: User Agent (App/Web)
+        - label: MQTT Broker configuration
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Describe the proposed change in detail. Include wire format changes if applicable.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What other approaches were considered?

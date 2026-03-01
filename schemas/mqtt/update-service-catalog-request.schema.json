@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/update-service-catalog-request.schema.json",
+  "title": "UpdateServiceCatalogRequest",
+  "description": "Request to update the station's service catalog with a new set of available services.",
+  "type": "object",
+  "required": ["catalogVersion", "services"],
+  "additionalProperties": false,
+  "properties": {
+    "catalogVersion": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "services": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "../common/service-item.schema.json"
+      }
+    }
+  }
+}

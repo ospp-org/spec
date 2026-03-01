@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/diagnostics-notification.schema.json",
+  "title": "DiagnosticsNotification",
+  "description": "Notification from the station reporting diagnostics collection and upload progress.",
+  "type": "object",
+  "required": ["status"],
+  "additionalProperties": false,
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["Collecting", "Uploading", "Uploaded", "Failed"]
+    },
+    "progress": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "fileName": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "errorText": {
+      "type": "string",
+      "maxLength": 128
+    }
+  }
+}

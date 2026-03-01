@@ -1,0 +1,12 @@
+{
+  "status": "Accepted",
+  "serverTime": "2026-02-13T10:00:00.250Z",
+  "heartbeatIntervalSec": 30,
+  "configuration": {
+    "RevocationEpoch": "42",
+    "MaxSessionDurationSeconds": "600",
+    "BLEAdvertisingEnabled": "true",
+    "MeterValuesInterval": "15"
+  },
+  "sessionKey": "dGFwbHktc2Vzc2lvbi1rZXktMjAyNi0wMi0xM1QxMDowMDowMC4wMDBa"
+}

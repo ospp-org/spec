@@ -1,0 +1,12 @@
+{
+  "eventId": "sec_a1b2c3d4e5f60004",
+  "type": "OfflinePassRejected",
+  "severity": "Warning",
+  "timestamp": "2026-03-01T10:45:00.000Z",
+  "details": {
+    "offlinePassId": "opass_f1e2d3c4b5a69788",
+    "failedCheck": "OFFLINE_PASS_EXPIRED",
+    "passExpiresAt": "2026-02-28T18:00:00.000Z",
+    "stationTime": "2026-03-01T10:44:59.000Z"
+  }
+}

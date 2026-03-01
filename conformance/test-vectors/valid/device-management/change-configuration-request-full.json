@@ -1,0 +1,12 @@
+{
+  "keys": [
+    {
+      "key": "OfflinePassPublicKey",
+      "value": "BPkKbjX3z4k5Q2cR7vN8wLmO1pA6sD9fG0hJ2kL4mN5oP7qR8sT9uV0wX1yZ2a3b4c5d6e7f8g9h0="
+    },
+    {
+      "key": "RevocationEpoch",
+      "value": "5"
+    }
+  ]
+}

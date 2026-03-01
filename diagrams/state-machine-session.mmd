@@ -1,0 +1,56 @@
+%% OSPP Session Lifecycle State Machine
+%% Reference: spec/05-state-machines.md, Section 2
+
+stateDiagram-v2
+    [*] --> Pending : Session initiated<br/>(user requests session)
+
+    Pending --> Authorized : Payment/credits verified
+    Pending --> Failed : Payment declined<br/>Insufficient funds
+
+    Authorized --> Active : StartService accepted<br/>by station
+    Authorized --> Failed : StartService rejected<br/>or timeout (10s)
+
+    Active --> Stopping : StopService requested<br/>(user, server, or timer)
+    Active --> Failed : Hardware fault<br/>Connection lost (after grace period)
+
+    Stopping --> Completed : Station confirms stop<br/>Final MeterValues received
+    Stopping --> Failed : Stop timeout (10s)<br/>Station unresponsive
+
+    Completed --> [*]
+    Failed --> [*]
+
+    state Pending {
+        [*] --> VerifyingPayment
+        VerifyingPayment --> CreditCheck : Wallet payment
+        VerifyingPayment --> CardCapture : Card payment
+    }
+
+    state Active {
+        [*] --> Dispensing
+        Dispensing --> Dispensing : MeterValues<br/>(every MeterValuesInterval (default 15s))
+    }
+
+    note right of Pending
+        Timeout: 10s
+        No service delivered yet
+    end note
+
+    note right of Active
+        MeterValues reported periodically
+        Max duration: configurable (default 600s)
+        Implementation detail: actual substates
+        (VerifyingPayment, CreditCheck, CardCapture,
+        Dispensing) vary by station type and payment
+        processor. These are illustrative, not normative.
+    end note
+
+    note right of Completed
+        Receipt generated
+        Wallet debited for actual usage
+        Unused credits refunded
+    end note
+
+    note right of Failed
+        Refund initiated if payment was captured
+        Partial refund based on last MeterValues
+    end note

@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/common/offline-pass.schema.json",
+  "title": "Offline Pass",
+  "description": "Cryptographically signed pass authorizing offline service sessions with spending and usage constraints",
+  "type": "object",
+  "required": [
+    "passId",
+    "sub",
+    "deviceId",
+    "issuedAt",
+    "expiresAt",
+    "policyVersion",
+    "revocationEpoch",
+    "offlineAllowance",
+    "constraints",
+    "signatureAlgorithm",
+    "signature"
+  ],
+  "properties": {
+    "passId": {
+      "$ref": "offline-pass-id.schema.json",
+      "description": "Unique identifier for this offline pass"
+    },
+    "sub": {
+      "$ref": "user-id.schema.json",
+      "description": "User subject identifier the pass is issued to"
+    },
+    "deviceId": {
+      "$ref": "device-id.schema.json",
+      "description": "Device this pass is bound to"
+    },
+    "issuedAt": {
+      "$ref": "timestamp.schema.json",
+      "description": "When this pass was issued"
+    },
+    "expiresAt": {
+      "$ref": "timestamp.schema.json",
+      "description": "When this pass expires"
+    },
+    "policyVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Version of the offline policy used to generate this pass"
+    },
+    "revocationEpoch": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Revocation epoch; stations reject passes with epoch lower than their stored minimum"
+    },
+    "offlineAllowance": {
+      "type": "object",
+      "description": "Spending and usage limits for this offline pass",
+      "required": [
+        "maxTotalCredits",
+        "maxUses",
+        "maxCreditsPerTx",
+        "allowedServiceTypes"
+      ],
+      "properties": {
+        "maxTotalCredits": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum total credits that can be spent across all offline transactions"
+        },
+        "maxUses": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum number of offline transactions allowed"
+        },
+        "maxCreditsPerTx": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum credits per single offline transaction"
+        },
+        "allowedServiceTypes": {
+          "type": "array",
+          "items": {
+            "$ref": "service-id.schema.json"
+          },
+          "minItems": 1,
+          "description": "Service types permitted for offline use"
+        }
+      },
+      "additionalProperties": false
+    },
+    "constraints": {
+      "type": "object",
+      "description": "Operational constraints for offline sessions",
+      "required": [
+        "minIntervalSec",
+        "stationOfflineWindowHours",
+        "stationMaxOfflineTx"
+      ],
+      "properties": {
+        "minIntervalSec": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Minimum interval in seconds between consecutive offline transactions"
+        },
+        "stationOfflineWindowHours": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum hours a station can operate in offline mode"
+        },
+        "stationMaxOfflineTx": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum offline transactions a station will accept before requiring sync"
+        }
+      },
+      "additionalProperties": false
+    },
+    "signatureAlgorithm": {
+      "type": "string",
+      "const": "ECDSA-P256-SHA256",
+      "description": "Algorithm used to sign the offline pass"
+    },
+    "signature": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "description": "ECDSA P-256 base64-encoded signature over the pass fields"
+    }
+  },
+  "additionalProperties": false
+}

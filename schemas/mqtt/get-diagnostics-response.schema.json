@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/get-diagnostics-response.schema.json",
+  "title": "GetDiagnosticsResponse",
+  "description": "Response to a get-diagnostics request indicating whether diagnostics collection was accepted.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "Accepted",
+        "Rejected"
+      ]
+    },
+    "fileName": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "errorCode": {
+      "type": "integer"
+    },
+    "errorText": {
+      "type": "string",
+      "maxLength": 128
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "Accepted" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["fileName"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "Rejected" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["errorCode", "errorText"]
+      }
+    }
+  ]
+}

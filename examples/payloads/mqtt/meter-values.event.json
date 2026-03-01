@@ -1,0 +1,10 @@
+{
+  "bayId": "bay_a1b2c3d4",
+  "sessionId": "sess_f7e8d9c0",
+  "timestamp": "2026-02-13T10:12:30.000Z",
+  "values": {
+    "liquidMl": 22100,
+    "consumableMl": 250,
+    "energyWh": 75
+  }
+}

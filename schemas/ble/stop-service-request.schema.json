@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/ble/stop-service-request.schema.json",
+  "title": "StopServiceRequest",
+  "description": "Request to stop an active service, sent by the app to the station via BLE characteristic FFF3 (Write).",
+  "type": "object",
+  "required": [
+    "type",
+    "bayId",
+    "sessionId"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "StopServiceRequest",
+      "description": "Message type discriminator"
+    },
+    "bayId": {
+      "$ref": "../common/bay-id.schema.json"
+    },
+    "sessionId": {
+      "$ref": "../common/session-id.schema.json",
+      "description": "Session identifier of the active service to stop"
+    }
+  }
+}

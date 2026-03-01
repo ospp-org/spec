@@ -1,0 +1,21 @@
+{
+  "stationId": "stn_e5f6a7b8c9d0",
+  "firmwareVersion": "2.3.1",
+  "stationModel": "SSP-3000",
+  "stationVendor": "AcmeCorp",
+  "serialNumber": "SN-2025-007890",
+  "bayCount": 2,
+  "uptimeSeconds": 0,
+  "pendingOfflineTransactions": 1,
+  "timezone": "Europe/London",
+  "bootReason": "ErrorRecovery",
+  "capabilities": {
+    "bleSupported": true,
+    "offlineModeSupported": true,
+    "meterValuesSupported": true
+  },
+  "networkInfo": {
+    "connectionType": "Cellular",
+    "signalStrength": -78
+  }
+}

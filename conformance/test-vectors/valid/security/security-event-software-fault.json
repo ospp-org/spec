@@ -1,0 +1,11 @@
+{
+  "eventId": "sec_a1b2c3d4e5f60009",
+  "type": "SoftwareFault",
+  "severity": "Critical",
+  "timestamp": "2026-03-01T03:12:00.000Z",
+  "details": {
+    "errorCode": 5101,
+    "firmwareVersion": "2.3.1",
+    "description": "Watchdog timer expired, station restarted"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "type": "AuthResponse",
+  "result": "Rejected",
+  "sessionKeyConfirmation": "aG1hY19jb25maXJtYXRpb25fb2Zfc2hhcmVkX3Nlc3Npb25fa2V5",
+  "reason": "OFFLINE_PASS_EXPIRED",
+  "errorCode": 2003
+}

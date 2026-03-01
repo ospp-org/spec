@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/security-event.schema.json",
+  "title": "SecurityEvent",
+  "description": "Security-related event reported by a station, used for alerting and audit logging.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eventId",
+    "type",
+    "severity",
+    "timestamp",
+    "details"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^sec_[a-f0-9]{8,}$",
+      "minLength": 12,
+      "maxLength": 64
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "MacVerificationFailure",
+        "CertificateError",
+        "UnauthorizedAccess",
+        "OfflinePassRejected",
+        "TamperDetected",
+        "BruteForceAttempt",
+        "FirmwareIntegrityFailure",
+        "FirmwareDowngradeAttempt",
+        "HardwareFault",
+        "SoftwareFault",
+        "ClockSkew"
+      ]
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "Critical",
+        "Error",
+        "Warning",
+        "Info"
+      ]
+    },
+    "timestamp": {
+      "$ref": "../common/timestamp.schema.json"
+    },
+    "details": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

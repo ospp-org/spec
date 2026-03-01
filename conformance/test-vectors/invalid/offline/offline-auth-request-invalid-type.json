@@ -1,0 +1,6 @@
+{
+  "type": "OfflineAuthRequest",
+  "offlinePass": "not-an-object",
+  "counter": 0,
+  "sessionProof": "dGhpcyBpcyBhbiBobWFjIHByb29mIGZvciB0aGUgc2Vzc2lvbg=="
+}

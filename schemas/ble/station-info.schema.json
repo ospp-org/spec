@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/ble/station-info.schema.json",
+  "title": "StationInfo",
+  "description": "Station information broadcast via BLE characteristic FFF1 (Read). Contains static and semi-static metadata about the self-service station.",
+  "type": "object",
+  "required": [
+    "stationId",
+    "stationModel",
+    "firmwareVersion",
+    "bayCount",
+    "bleProtocolVersion",
+    "connectivity"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "stationId": {
+      "$ref": "../common/station-id.schema.json"
+    },
+    "stationModel": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Model identifier of the station hardware"
+    },
+    "firmwareVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "maxLength": 32,
+      "description": "Semantic version of the station firmware"
+    },
+    "bayCount": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of service bays available at this station"
+    },
+    "bleProtocolVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "maxLength": 32,
+      "description": "Semantic version of the BLE protocol supported by the station"
+    },
+    "connectivity": {
+      "type": "string",
+      "enum": ["Online", "Offline"],
+      "description": "Current network connectivity status of the station"
+    }
+  }
+}

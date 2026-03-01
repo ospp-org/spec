@@ -1,0 +1,10 @@
+{
+  "status": "Accepted",
+  "actualDurationSeconds": 245,
+  "creditsCharged": 500,
+  "meterValues": {
+    "liquidMl": 12500,
+    "consumableMl": 350,
+    "energyWh": 180
+  }
+}

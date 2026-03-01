@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/update-firmware-request.schema.json",
+  "title": "UpdateFirmwareRequest",
+  "description": "Request to update the station firmware from a remote URL.",
+  "type": "object",
+  "required": ["firmwareUrl", "firmwareVersion", "checksum", "signature"],
+  "additionalProperties": false,
+  "properties": {
+    "firmwareUrl": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://",
+      "maxLength": 2048,
+      "description": "HTTPS URL to download firmware binary"
+    },
+    "firmwareVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "maxLength": 32
+    },
+    "checksum": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "SHA-256 hex digest of firmware binary"
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/=]+$",
+      "maxLength": 512,
+      "description": "ECDSA P-256 signature of firmware image, base64-encoded"
+    },
+    "forceDowngrade": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, override anti-downgrade protection and allow installing an older firmware version"
+    },
+    "scheduledAt": {
+      "$ref": "../common/timestamp.schema.json"
+    }
+  }
+}

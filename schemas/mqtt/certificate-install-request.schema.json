@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/certificate-install-request.schema.json",
+  "title": "CertificateInstallRequest",
+  "description": "Server delivers a signed certificate and optional CA chain to the station.",
+  "type": "object",
+  "required": ["certificateType", "certificate"],
+  "additionalProperties": false,
+  "properties": {
+    "certificateType": {
+      "type": "string",
+      "enum": ["StationCertificate", "MQTTClientCertificate"],
+      "description": "Type of certificate being installed"
+    },
+    "certificate": {
+      "type": "string",
+      "pattern": "^-----BEGIN CERTIFICATE-----",
+      "maxLength": 16384,
+      "description": "PEM-encoded signed X.509 certificate"
+    },
+    "caCertificateChain": {
+      "type": "string",
+      "pattern": "^-----BEGIN CERTIFICATE-----",
+      "maxLength": 32768,
+      "description": "PEM-encoded CA certificate chain (intermediate + root), concatenated"
+    }
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/stop-service-response.schema.json",
+  "title": "StopServiceResponse",
+  "description": "Station response to a StopServiceRequest, reporting actual usage and charges when the service is successfully stopped.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "Accepted",
+        "Rejected"
+      ],
+      "description": "Result of the stop service request."
+    },
+    "actualDurationSeconds": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Actual duration the service ran in seconds. Present when status is Accepted."
+    },
+    "creditsCharged": {
+      "$ref": "../common/credit-amount.schema.json",
+      "description": "Credits charged for the completed session. Present when status is Accepted."
+    },
+    "meterValues": {
+      "$ref": "../common/meter-values.schema.json",
+      "description": "Optional metering data collected during the session."
+    },
+    "errorCode": {
+      "type": "integer",
+      "description": "Numeric error code. Present when status is Rejected."
+    },
+    "errorText": {
+      "type": "string",
+      "maxLength": 128,
+      "description": "Human-readable error description. Present when status is Rejected."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "Accepted" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["actualDurationSeconds", "creditsCharged"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "Rejected" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["errorCode", "errorText"]
+      }
+    }
+  ]
+}

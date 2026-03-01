@@ -1,0 +1,4 @@
+{
+  "status": "Accepted",
+  "unknownField": "should be rejected by additionalProperties"
+}

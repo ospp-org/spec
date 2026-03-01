@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/ble/server-signed-auth.schema.json",
+  "title": "ServerSignedAuth",
+  "description": "Server-signed authorization delivered by the app to the station via BLE characteristic FFF3 (Write). Used when the station is offline (Partial A strategy) and the server signs the authorization for the app to relay.",
+  "type": "object",
+  "required": [
+    "type",
+    "signedAuthorization",
+    "sessionId"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "ServerSignedAuth",
+      "description": "Message type discriminator"
+    },
+    "signedAuthorization": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "description": "Base64-encoded server-signed ECDSA P-256 authorization blob"
+    },
+    "sessionId": {
+      "$ref": "../common/session-id.schema.json"
+    }
+  }
+}

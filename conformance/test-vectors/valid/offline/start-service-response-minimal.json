@@ -1,0 +1,6 @@
+{
+  "type": "StartServiceResponse",
+  "result": "Accepted",
+  "sessionId": "sess_a1b2c3d4e5f6",
+  "offlineTxId": "otx_a1b2c3d4"
+}

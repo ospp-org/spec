@@ -1,0 +1,20 @@
+{
+  "offlineTxId": "otx_e4d3c2b1a0f9e8d7c6b5",
+  "bayId": "bay_f6e5d4c3b2a10987",
+  "serviceId": "svc_premium",
+  "startedAt": "2026-02-15T14:30:00.000Z",
+  "endedAt": "2026-02-15T14:45:00.000Z",
+  "durationSeconds": 900,
+  "creditsCharged": 200,
+  "meterValues": {
+    "liquidMl": 45600,
+    "consumableMl": 1200,
+    "energyWh": 3500
+  },
+  "receipt": {
+    "data": "eyJvdHgiOiJvdHhfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJiYXkiOiJiYXlfZjZlNWQ0YzNiMmExMDk4NyIsInN2YyI6InN2Y19wcmVtaXVtX3dhc2giLCJkdXIiOjkwMCwiY3JlZGl0cyI6MjAwLCJ3YXRlck1sIjo0NTYwMH0=",
+    "signature": "MEQCIHKl7vFjR9p8XkBwLm5sNtYzQ1UrW3gHaJcVdO6bPf0TAiB+Lm9nR8kX2lH7YSmUpM6rA1bT5J9dC4gFuD3iBlP6jA=",
+    "signatureAlgorithm": "ECDSA-P256-SHA256"
+  },
+  "txCounter": 8
+}

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/authorize-offline-pass-response.schema.json",
+  "title": "AuthorizeOfflinePassResponse",
+  "description": "Server response to an AuthorizeOfflinePassRequest, granting or denying the offline pass authorization.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "Accepted",
+        "Rejected"
+      ],
+      "description": "Result of the offline pass authorization."
+    },
+    "sessionId": {
+      "$ref": "../common/session-id.schema.json",
+      "description": "Assigned session identifier. Present when status is Accepted."
+    },
+    "durationSeconds": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Authorized service duration in seconds. Present when status is Accepted."
+    },
+    "creditsAuthorized": {
+      "$ref": "../common/credit-amount.schema.json",
+      "description": "Number of credits authorized for this session. Present when status is Accepted."
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "Human-readable rejection reason. Present when status is Rejected."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "Accepted" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["sessionId", "durationSeconds", "creditsAuthorized"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "Rejected" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["reason"]
+      }
+    }
+  ]
+}

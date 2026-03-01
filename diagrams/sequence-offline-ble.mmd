@@ -1,0 +1,80 @@
+%% OSPP Full Offline BLE Session Flow
+%% Reference: spec/04-flows.md, Section 5a; examples/flows/04-full-offline-session.md
+%% Scenario: Both phone and station are offline (no MQTT, no internet)
+
+sequenceDiagram
+    autonumber
+
+    actor User as 📱 Mobile App
+    participant BLE as 📶 BLE Radio
+    participant Station as ⚙️ Station Controller
+
+    Note over User,Station: Prerequisites: User has valid OfflinePass (pre-armed), station has no MQTT
+
+    %% BLE Discovery
+    rect rgb(243, 229, 245)
+        Note over User,Station: Phase 1 — BLE Discovery & Connection
+        User->>User: Scan for BLE advertisements
+        BLE-->>User: Advertisement (stationId, stationName)
+        User->>BLE: GATT Connect
+        BLE-->>User: Connected (MTU negotiated)
+        User->>BLE: Read FFF1 (Station Info)
+        BLE-->>User: {stationId, firmwareVersion, capabilities}
+        User->>BLE: Read FFF2 (Available Services)
+        BLE-->>User: {bays: [{bayId, status, services}]}
+    end
+
+    %% Handshake
+    rect rgb(232, 245, 233)
+        Note over User,Station: Phase 2 — ECDH Handshake
+        User->>BLE: Write FFF3: Hello {deviceId, appNonce}
+        BLE-->>User: Notify FFF4: Challenge {stationNonce, stationConnectivity: "Offline"}
+        Note over User: Detects full offline scenario
+        User->>User: Derive session key (HKDF-SHA256)
+    end
+
+    %% OfflinePass Authorization
+    rect rgb(255, 243, 224)
+        Note over User,Station: Phase 3 — OfflinePass Authorization
+        User->>BLE: Write FFF3: OfflineAuthRequest
+        Note right of User: {offlinePass, counter, sessionProof}
+        Station->>Station: Validate OfflinePass (10 checks)
+        Note over Station: 1.Signature 2.Expiry 3.Epoch<br/>4.Device 5.Station 6.MaxUses<br/>7.MaxCredits 8.PerTx 9.Rate 10.Counter
+        BLE-->>User: Notify FFF4: AuthResponse {result: "Accepted"}
+    end
+
+    %% Service Start
+    rect rgb(225, 245, 254)
+        Note over User,Station: Phase 4 — Service Delivery
+        User->>BLE: Write FFF3: StartServiceRequest {bayId, serviceId, durationSeconds}
+        Station->>Station: Activate hardware
+        BLE-->>User: Notify FFF4: StartServiceResponse {result: "Accepted"}
+    end
+
+    %% Metering via BLE notifications
+    rect rgb(240, 248, 255)
+        Note over Station,User: Every 5 seconds — BLE notifications
+        loop Service Status Updates
+            BLE-->>User: Notify FFF5: {status: "Running", meterValues, elapsedSec, remainingSec}
+            User->>User: Update UI with real-time consumption
+        end
+    end
+
+    %% Service Stop
+    User->>BLE: Write FFF3: StopServiceRequest {bayId, sessionId}
+    Station->>Station: Deactivate hardware, generate receipt
+    BLE-->>User: Notify FFF4: StopServiceResponse {result: "Accepted", meterValues}
+
+    %% Receipt
+    rect rgb(252, 228, 236)
+        Note over User,Station: Phase 5 — Receipt & Disconnect
+        BLE-->>User: Notify FFF5: {status: "ReceiptReady"}
+        User->>BLE: Read FFF6 (Receipt)
+        BLE-->>User: {receipt: {data, signature, signatureAlgorithm: "ECDSA-P256-SHA256"}}
+        User->>User: Store receipt + offline tx locally
+        User->>BLE: Disconnect
+    end
+
+    Note over User,Station: Transaction stored locally on both sides
+    Note over Station: When MQTT reconnects → TransactionEvent sent to server
+    Note over User: When internet returns → App syncs offline tx with server

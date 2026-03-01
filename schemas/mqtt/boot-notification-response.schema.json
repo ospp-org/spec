@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/boot-notification-response.schema.json",
+  "title": "BootNotificationResponse",
+  "description": "Server response to a BootNotificationRequest, indicating acceptance, rejection, or pending status along with operational parameters.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "serverTime",
+    "heartbeatIntervalSec"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "Accepted",
+        "Rejected",
+        "Pending"
+      ],
+      "description": "Result of the boot notification registration."
+    },
+    "serverTime": {
+      "$ref": "../common/timestamp.schema.json",
+      "description": "Server UTC timestamp for station clock synchronization."
+    },
+    "heartbeatIntervalSec": {
+      "type": "integer",
+      "minimum": 10,
+      "maximum": 3600,
+      "description": "Interval in seconds at which the station must send heartbeats."
+    },
+    "retryInterval": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Seconds to wait before retrying. Required when status is Rejected or Pending."
+    },
+    "configuration": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Optional key-value configuration pairs pushed to the station."
+    },
+    "sessionKey": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "description": "Base64-encoded 32-byte HMAC session key for message authentication."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "Rejected" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["retryInterval"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "Pending" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["retryInterval"]
+      }
+    }
+  ]
+}

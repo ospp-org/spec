@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/reset-request.schema.json",
+  "title": "ResetRequest",
+  "description": "Request to perform a soft or hard reset of the station.",
+  "type": "object",
+  "required": ["type"],
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": ["Soft", "Hard"]
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/connection-lost.schema.json",
+  "title": "ConnectionLost",
+  "description": "MQTT Last Will and Testament message published by the broker when a station disconnects unexpectedly.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "stationId",
+    "reason"
+  ],
+  "properties": {
+    "stationId": {
+      "$ref": "../common/station-id.schema.json"
+    },
+    "reason": {
+      "type": "string",
+      "const": "UnexpectedDisconnect"
+    }
+  }
+}

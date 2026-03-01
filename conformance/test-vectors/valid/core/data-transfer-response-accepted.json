@@ -1,0 +1,7 @@
+{
+  "status": "Accepted",
+  "data": {
+    "cpuTemp": 42,
+    "uptime": 86400
+  }
+}

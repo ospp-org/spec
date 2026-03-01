@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/certificate-install-response.schema.json",
+  "title": "CertificateInstallResponse",
+  "description": "Station confirms or rejects the installation of a signed certificate.",
+  "type": "object",
+  "required": ["status"],
+  "additionalProperties": false,
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["Accepted", "Rejected"]
+    },
+    "certificateSerialNumber": {
+      "type": "string",
+      "maxLength": 128,
+      "description": "Serial number of the newly installed certificate (when Accepted)"
+    },
+    "errorCode": {
+      "type": "integer",
+      "description": "Error code when status is Rejected"
+    },
+    "errorText": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "Error description when status is Rejected"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/trigger-message-response.schema.json",
+  "title": "TriggerMessageResponse",
+  "description": "Response to a TriggerMessage request indicating whether the station will send the requested message.",
+  "type": "object",
+  "required": ["status"],
+  "additionalProperties": false,
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["Accepted", "Rejected", "NotImplemented"]
+    }
+  }
+}

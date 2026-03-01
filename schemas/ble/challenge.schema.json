@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/ble/challenge.schema.json",
+  "title": "Challenge",
+  "description": "Challenge message sent by the station to the app via BLE characteristic FFF4 (Notify). Part of the authentication handshake, provides the station nonce and connectivity status.",
+  "type": "object",
+  "required": [
+    "type",
+    "stationNonce",
+    "stationConnectivity"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "Challenge",
+      "description": "Message type discriminator"
+    },
+    "stationNonce": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "description": "Base64-encoded 32-byte random nonce"
+    },
+    "stationConnectivity": {
+      "type": "string",
+      "enum": ["Online", "Offline"],
+      "description": "Current network connectivity status of the station"
+    },
+    "availableServices": {
+      "type": "array",
+      "description": "Optional snapshot of service availability included with the challenge",
+      "items": {
+        "type": "object",
+        "required": [
+          "bayId",
+          "serviceId",
+          "available"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "bayId": {
+            "$ref": "../common/bay-id.schema.json"
+          },
+          "serviceId": {
+            "$ref": "../common/service-id.schema.json"
+          },
+          "available": {
+            "type": "boolean",
+            "description": "Whether this service is currently available"
+          }
+        }
+      }
+    }
+  }
+}

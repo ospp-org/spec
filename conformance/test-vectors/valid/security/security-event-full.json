@@ -1,0 +1,17 @@
+{
+  "eventId": "sec_f9e8d7c6b5a43210",
+  "type": "TamperDetected",
+  "severity": "Critical",
+  "timestamp": "2026-02-15T14:22:31.456Z",
+  "details": {
+    "stationId": "stn_a1b2c3d4e5f6",
+    "bayId": "bay_d4e5f6a7b8c9",
+    "description": "Physical enclosure breach detected on bay 2",
+    "sensorId": "tamper_sw_02",
+    "previousState": "sealed",
+    "currentState": "breached",
+    "offlinePassId": "opass_e7f8a9b0c1d2e3f4",
+    "deviceId": "device-pixel-8-pro-042",
+    "ipAddress": "192.168.1.105"
+  }
+}
