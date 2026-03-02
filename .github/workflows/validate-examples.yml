@@ -5,10 +5,12 @@ on:
     paths:
       - 'schemas/**'
       - 'examples/payloads/**'
+      - '.github/workflows/validate-examples.yml'
   pull_request:
     paths:
       - 'schemas/**'
       - 'examples/payloads/**'
+  workflow_dispatch:
 
 jobs:
   validate:
@@ -20,55 +22,89 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install ajv-cli
-        run: npm install -g ajv-cli@5 ajv-formats@3
+      - name: Install dependencies
+        run: npm install ajv ajv-formats
 
-      - name: Validate MQTT payloads
+      - name: Validate all example payloads
         run: |
-          REFS="-r schemas/common/*.schema.json"
-          OPTS="--spec=draft2020 -c ajv-formats"
+          node << 'SCRIPT'
+          const Ajv = require('ajv/dist/2020');
+          const addFormats = require('ajv-formats');
+          const fs = require('fs');
+          const path = require('path');
 
-          for action in boot-notification heartbeat authorize-offline-pass reserve-bay cancel-reservation \
-                        start-service stop-service transaction-event change-configuration get-configuration \
-                        reset update-firmware get-diagnostics set-maintenance-mode update-service-catalog; do
-            for type in request response; do
-              schema="schemas/mqtt/${action}-${type}.schema.json"
-              example="examples/payloads/mqtt/${action}.${type}.json"
-              if [ -f "$schema" ] && [ -f "$example" ]; then
-                echo "Validating $example against $schema"
-                ajv validate -s "$schema" $REFS -d "$example" $OPTS
-              fi
-            done
-          done
+          const ajv = new Ajv({ strict: false, allErrors: true });
+          addFormats(ajv);
 
-          for action in status-notification connection-lost security-event firmware-status-notification diagnostics-notification; do
-            schema="schemas/mqtt/${action}.schema.json"
-            example="examples/payloads/mqtt/${action}.event.json"
-            if [ -f "$schema" ] && [ -f "$example" ]; then
-              echo "Validating $example against $schema"
-              ajv validate -s "$schema" $REFS -d "$example" $OPTS
-            fi
-          done
+          // Load all common schemas as refs
+          for (const f of fs.readdirSync('schemas/common').filter(f => f.endsWith('.schema.json'))) {
+            ajv.addSchema(JSON.parse(fs.readFileSync(path.join('schemas/common', f), 'utf8')));
+          }
 
-          ajv validate -s schemas/mqtt/meter-values-event.schema.json $REFS -d examples/payloads/mqtt/meter-values.event.json $OPTS
+          // Cache compiled validators by schema path to avoid duplicate $id errors
+          const cache = new Map();
+          function getValidator(schemaPath) {
+            if (cache.has(schemaPath)) return cache.get(schemaPath);
+            const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+            const v = ajv.compile(schema);
+            cache.set(schemaPath, v);
+            return v;
+          }
 
-      - name: Validate BLE payloads
-        run: |
-          REFS="-r schemas/common/*.schema.json"
-          OPTS="--spec=draft2020 -c ajv-formats"
+          let pass = 0, fail = 0;
 
-          for msg in station-info available-services hello challenge offline-auth-request \
-                     server-signed-auth start-service-request start-service-response \
-                     stop-service-request stop-service-response receipt; do
-            schema="schemas/ble/${msg}.schema.json"
-            example="examples/payloads/ble/${msg}.json"
-            if [ -f "$schema" ] && [ -f "$example" ]; then
-              echo "Validating $example against $schema"
-              ajv validate -s "$schema" $REFS -d "$example" $OPTS
-            fi
-          done
+          function validate(schemaPath, dataPath) {
+            if (!fs.existsSync(schemaPath) || !fs.existsSync(dataPath)) return;
+            const v = getValidator(schemaPath);
+            const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+            if (v(data)) {
+              console.log('PASS ' + dataPath);
+              pass++;
+            } else {
+              console.error('FAIL ' + dataPath + ': ' + ajv.errorsText(v.errors));
+              fail++;
+            }
+          }
 
-          ajv validate -s schemas/ble/auth-response.schema.json $REFS -d examples/payloads/ble/auth-response.accepted.json $OPTS
-          ajv validate -s schemas/ble/auth-response.schema.json $REFS -d examples/payloads/ble/auth-response.rejected.json $OPTS
-          ajv validate -s schemas/ble/service-status.schema.json $REFS -d examples/payloads/ble/service-status.running.json $OPTS
-          ajv validate -s schemas/ble/service-status.schema.json $REFS -d examples/payloads/ble/service-status.receipt-ready.json $OPTS
+          // MQTT request/response pairs
+          const actions = [
+            'boot-notification', 'heartbeat', 'authorize-offline-pass',
+            'reserve-bay', 'cancel-reservation', 'start-service', 'stop-service',
+            'transaction-event', 'change-configuration', 'get-configuration',
+            'reset', 'update-firmware', 'get-diagnostics', 'set-maintenance-mode',
+            'update-service-catalog'
+          ];
+          for (const a of actions) {
+            for (const t of ['request', 'response']) {
+              validate('schemas/mqtt/' + a + '-' + t + '.schema.json', 'examples/payloads/mqtt/' + a + '.' + t + '.json');
+            }
+          }
+
+          // MQTT events
+          const events = [
+            'status-notification', 'connection-lost', 'security-event',
+            'firmware-status-notification', 'diagnostics-notification'
+          ];
+          for (const e of events) {
+            validate('schemas/mqtt/' + e + '.schema.json', 'examples/payloads/mqtt/' + e + '.event.json');
+          }
+          validate('schemas/mqtt/meter-values-event.schema.json', 'examples/payloads/mqtt/meter-values.event.json');
+
+          // BLE payloads
+          const ble = [
+            'station-info', 'available-services', 'hello', 'challenge',
+            'offline-auth-request', 'server-signed-auth',
+            'start-service-request', 'start-service-response',
+            'stop-service-request', 'stop-service-response', 'receipt'
+          ];
+          for (const m of ble) {
+            validate('schemas/ble/' + m + '.schema.json', 'examples/payloads/ble/' + m + '.json');
+          }
+          validate('schemas/ble/auth-response.schema.json', 'examples/payloads/ble/auth-response.accepted.json');
+          validate('schemas/ble/auth-response.schema.json', 'examples/payloads/ble/auth-response.rejected.json');
+          validate('schemas/ble/service-status.schema.json', 'examples/payloads/ble/service-status.running.json');
+          validate('schemas/ble/service-status.schema.json', 'examples/payloads/ble/service-status.receipt-ready.json');
+
+          console.log('\nTotal: ' + (pass + fail) + ' checked, ' + pass + ' PASS, ' + fail + ' FAIL');
+          if (fail > 0) process.exit(1);
+          SCRIPT
