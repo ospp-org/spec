@@ -83,34 +83,7 @@ service was delivered (below the 50% threshold), Alice receives a full refund.
 }
 ```
 
-### 2. Station -> Server: StatusNotification EVENT (Occupied -> Faulted)
-
-**MQTT Topic:** `ospp/v1/stations/stn_a1b2c3d4/to-server`
-
-```json
-{
-  "messageId": "msg_c2s_ff660002",
-  "messageType": "Event",
-  "action": "StatusNotification",
-  "timestamp": "2026-02-13T10:17:01.000Z",
-  "source": "Station",
-  "protocolVersion": "0.1.0",
-  "mac": "b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
-  "payload": {
-    "bayId": "bay_c1d2e3f4a5b6",
-    "bayNumber": 1,
-    "status": "Faulted",
-    "previousStatus": "Occupied",
-    "services": [
-      { "serviceId": "svc_eco", "available": false }
-    ],
-    "errorCode": 5001,
-    "errorText": "PUMP_SYSTEM"
-  }
-}
-```
-
-### 3. Station -> Server: SessionEnded EVENT (Session Interrupted)
+### 2. Station -> Server: SessionEnded EVENT (Session Interrupted)
 
 **MQTT Topic:** `ospp/v1/stations/stn_a1b2c3d4/to-server`
 
@@ -142,7 +115,7 @@ SessionEnded is an EVENT (fire-and-forget) — no response is sent by the server
 
 ---
 
-### 4. Station -> Server: StatusNotification EVENT (Session Interrupted)
+### 3. Station -> Server: StatusNotification EVENT (Session Interrupted)
 
 **MQTT Topic:** `ospp/v1/stations/stn_a1b2c3d4/to-server`
 
@@ -172,22 +145,27 @@ SessionEnded is an EVENT (fire-and-forget) — no response is sent by the server
 
 StatusNotification is an EVENT (fire-and-forget) — no response is sent by the server.
 
-### 5. Server Internal: Session State Transition & Refund Calculation
+### 4. Server Internal: Session State Transition & Refund Calculation
 
 ```
 Session sess_f7e8d9c0 state: active -> failed
 Reason: hardware_fault (5001 PUMP_SYSTEM)
 
+Billing data source: SessionEnded EVENT [MSG-040] (received at 10:17:01.000)
+  - actualDurationSeconds: 120  (from SessionEnded payload)
+  - creditsCharged:        20   (from SessionEnded payload)
+
 Refund calculation:
-  - Total charged:     50 credits
+  - Pre-authorized:    50 credits
+  - Station charged:   20 credits (from SessionEnded)
   - Planned duration:  300 seconds
-  - Actual duration:   120 seconds
+  - Actual duration:   120 seconds (from SessionEnded)
   - Delivery ratio:    120 / 300 = 0.40 (40%)
-  - Policy:            delivery < 50% -> full refund
-  - Refund amount:     50 credits (100%)
+  - Policy:            delivery < 50% -> full refund (override creditsCharged)
+  - Refund amount:     50 credits (100% of pre-authorized)
 ```
 
-### 6. Server -> App: Session Failed Notification (via WebSocket / Push)
+### 5. Server -> App: Session Failed Notification (via WebSocket / Push)
 
 ```json
 {
@@ -223,7 +201,7 @@ Refund calculation:
 }
 ```
 
-### 7. Server -> Operator Dashboard: Critical Alert
+### 6. Server -> Operator Dashboard: Critical Alert
 
 ```json
 {

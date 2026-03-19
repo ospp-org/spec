@@ -46,7 +46,7 @@ Messages are referenced as **[MSG-XXX]** corresponding to the numbering in [Chap
 | MSG-017 | FirmwareStatusNotification | MSG-037 | StopServiceResponse |
 | MSG-018 | GetDiagnostics | MSG-038 | ServiceStatus (FFF5) |
 | MSG-019 | DiagnosticsNotification | MSG-039 | Receipt (FFF6) |
-| MSG-020 | SetMaintenanceMode | | |
+| MSG-020 | SetMaintenanceMode | MSG-040 | SessionEnded |
 
 ### Diagram Notation
 

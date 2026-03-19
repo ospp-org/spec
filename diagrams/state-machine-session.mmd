@@ -11,9 +11,9 @@ stateDiagram-v2
     Authorized --> Failed : StartService rejected<br/>or timeout (10s)
 
     Active --> Stopping : StopService requested<br/>(user, server, or timer)
-    Active --> Failed : Hardware fault<br/>Connection lost (after grace period)
+    Active --> Failed : Hardware fault (SessionEnded EVENT [MSG-040])<br/>Connection lost (after grace period)
 
-    Stopping --> Completed : Station confirms stop<br/>Final MeterValues received
+    Stopping --> Completed : Station confirms stop<br/>StopService RESPONSE (user stop)<br/>or SessionEnded EVENT [MSG-040] (timer expiry)
     Stopping --> Failed : Stop timeout (10s)<br/>Station unresponsive
 
     Completed --> [*]

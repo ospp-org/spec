@@ -314,9 +314,15 @@ When you receive a **StartService REQUEST**:
 4. Send StartService RESPONSE with `status: "Accepted"`
 5. Send StatusNotification EVENT (`status: "Occupied"`)
 6. Send periodic MeterValues EVENTs (default every 15s)
-7. When timer expires or StopService arrives:
+7. When StopService arrives (server-initiated stop):
    - Deactivate hardware
-   - Send StopService RESPONSE with actual duration, credits charged, meter values
+   - Send StopService RESPONSE with `actualDurationSeconds`, `creditsCharged`, `meterValues`
+   - Send StatusNotification `Finishing` (wind-down cycle, actuator retraction)
+   - Send StatusNotification `Available` (ready for next user)
+
+8. When timer expires (autonomous stop):
+   - Deactivate hardware
+   - Send SessionEnded EVENT [MSG-040] with `reason: "TimerExpired"`, `actualDurationSeconds`, `creditsCharged`, `meterValues`
    - Send StatusNotification `Finishing` (wind-down cycle, actuator retraction)
    - Send StatusNotification `Available` (ready for next user)
 
@@ -683,12 +689,20 @@ QoS: 1 (always)
 
 **On session completion:**
 
-When you receive StopService RESPONSE (or the session timer expires):
+When you receive StopService RESPONSE (user-initiated stop):
 
-1. Calculate final billing using your implementation-specific pricing logic based on `actualDurationSeconds`
+1. Calculate final billing: `creditsCharged = ceil(actualDurationSeconds / 60 * priceCreditsPerMinute)`
 2. Refund unused portion: `refund = preAuthAmount - creditsCharged`
 3. Update session to `completed`
 4. Update bay status to `Available`
+
+When you receive SessionEnded EVENT [MSG-040] (timer expiry or hardware fault):
+
+1. Use `creditsCharged` provided directly by the station — do not recalculate
+2. Refund unused portion: `refund = preAuthAmount - creditsCharged`
+3. For `reason: "Fault"`: apply refund policy (if `actualDurationSeconds < 0.5 * durationSeconds` → full refund, override `creditsCharged` to 0)
+4. Update session to `completed` (timer expiry) or `failed` (fault)
+5. Update bay status to `Available` (timer expiry) or `Faulted` (fault)
 
 ### 3.5 Web Payment Flow
 
