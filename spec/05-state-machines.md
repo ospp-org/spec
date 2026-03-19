@@ -77,9 +77,9 @@ stateDiagram-v2
 | Reservation expires | Reserved | Available | `expirationTime` reached without StartService | Station releases bay, sends StatusNotification |
 | CancelReservation [MSG-004] accepted | Reserved | Available | Valid `reservationId` matches active reservation | Station releases bay, sends StatusNotification |
 | StopService [MSG-006] accepted | Occupied | Finishing | Session is active on this bay | Station begins hardware wind-down, sends StatusNotification |
-| Service duration elapsed | Occupied | Finishing | `durationSeconds` timer expires | Station auto-stops service, sends TransactionEvent [MSG-007] `Ended`, sends StatusNotification |
+| Service duration elapsed | Occupied | Finishing | `durationSeconds` timer expires | Station auto-stops service, sends StatusNotification |
 | Post-session cleanup complete | Finishing | Available | Hardware wind-down finished (hardware off, actuator retracted) | Station sends StatusNotification; bay is ready for next session |
-| Hardware error detected | Available, Reserved, Occupied, Finishing | Faulted | Station detects hardware fault (actuator, fluid, consumable, electrical, or emergency stop) | Station sends StatusNotification with `errorCode` (5001-5009); if Occupied, sends TransactionEvent `Ended` with `reason: "fault"` |
+| Hardware error detected | Available, Reserved, Occupied, Finishing | Faulted | Station detects hardware fault (actuator, fluid, consumable, electrical, or emergency stop) | Station sends StatusNotification with `errorCode` (5001-5009) |
 | Fault cleared | Faulted | Available | Automatic reset or operator clears fault | Station sends StatusNotification |
 | SetMaintenanceMode ON [MSG-020] | Available, Faulted | Unavailable | Operator initiates maintenance | Station sends StatusNotification |
 | SetMaintenanceMode OFF [MSG-020] | Unavailable | Available | Operator completes maintenance | Station sends StatusNotification |
@@ -103,7 +103,7 @@ Any state transition not explicitly listed in section 1.3 is invalid. If the ser
 
 ## 2. Session State Machine
 
-The session state machine governs the lifecycle of a single service session from initiation through completion or failure. Sessions are managed primarily by the server, with the station reporting transitions via TransactionEvent [MSG-007] and responding to StartService/StopService commands.
+The session state machine governs the lifecycle of a single service session from initiation through completion or failure. Sessions are managed primarily by the server, with the station reporting bay transitions via StatusNotification [MSG-009] and stop confirmations via StopService Response [MSG-006] and responding to StartService/StopService commands.
 
 ### 2.1 State Diagram
 
@@ -149,7 +149,7 @@ stateDiagram-v2
 | StartService accepted | Authorized | Active | Station responds with `status: "Accepted"` | Server records session start time, begins MeterValues tracking |
 | StartService rejected | Authorized | Failed | Station responds with `status: "Rejected"` or 10s timeout | Server initiates refund, notifies user with error code |
 | StopService requested | Active | Stopping | User stops session, server sends StopService, or `durationSeconds` timer elapses | Server sends StopService [MSG-006] to station; if duration elapsed, station auto-transitions |
-| Station confirms stop | Stopping | Completed | Station sends TransactionEvent [MSG-007] with final `meterValues` | Server calculates final cost, generates receipt, updates wallet |
+| Station confirms stop | Stopping | Completed | Station sends StopService Response [MSG-006] with `actualDurationSeconds`, `creditsCharged`, and final `meterValues` | Server calculates final cost, generates receipt, updates wallet |
 | Stop timeout | Stopping | Failed | 10 seconds elapse without station confirmation | Server marks session as failed, initiates partial refund based on last known MeterValues |
 | Hardware fault | Active | Failed | Station sends StatusNotification with `Faulted` for the session bay | Server marks session as failed, initiates refund for unused portion |
 | Connection lost | Active | Failed | ConnectionLost [MSG-011] received and station does not reconnect within `ConnectionLostGracePeriod` (default: 300s) | Server marks session as failed after grace period; on reconnect, reconciles via TransactionEvent |

@@ -35,7 +35,7 @@ service was delivered (below the 50% threshold), Alice receives a full refund.
 | 10:17:00.200 | Station hardware protection triggers -- pump power cut |
 | 10:17:00.500 | Station sends SecurityEvent (hardware_fault, PUMP_SYSTEM) |
 | 10:17:01.000 | Station sends StatusNotification (Occupied -> Faulted) |
-| 10:17:01.500 | Station sends TransactionEvent REQUEST (session interrupted) |
+| 10:17:01.500 | Station sends StatusNotification EVENT (session interrupted) |
 | 10:17:02.000 | Server processes session interruption |
 | 10:17:02.500 | Server calculates refund: 40% delivered < 50% -> full refund |
 | 10:17:03.000 | Server credits 50 credits to Alice's wallet |
@@ -110,7 +110,7 @@ service was delivered (below the 50% threshold), Alice receives a full refund.
 }
 ```
 
-### 3. Station -> Server: TransactionEvent REQUEST (Session Interrupted)
+### 3. Station -> Server: StatusNotification EVENT (Session Interrupted)
 
 **MQTT Topic:** `ospp/v1/stations/stn_a1b2c3d4/to-server`
 
