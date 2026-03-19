@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/session-ended-event.schema.json",
+  "title": "SessionEnded",
+  "description": "Station notification reporting the autonomous end of a session due to timer expiry or hardware fault.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "sessionId",
+    "bayId",
+    "reason",
+    "actualDurationSeconds",
+    "creditsCharged"
+  ],
+  "properties": {
+    "sessionId": {
+      "$ref": "../common/session-id.schema.json"
+    },
+    "bayId": {
+      "$ref": "../common/bay-id.schema.json"
+    },
+    "reason": {
+      "type": "string",
+      "enum": ["TimerExpired", "Fault"]
+    },
+    "actualDurationSeconds": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "creditsCharged": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "meterValues": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "liquidMl": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "consumableMl": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "energyWh": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

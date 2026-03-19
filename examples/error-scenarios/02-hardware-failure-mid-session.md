@@ -34,8 +34,8 @@ service was delivered (below the 50% threshold), Alice receives a full refund.
 | 10:17:00.000 | Pump current spikes to 8.2A (threshold: 6A) |
 | 10:17:00.200 | Station hardware protection triggers -- pump power cut |
 | 10:17:00.500 | Station sends SecurityEvent (hardware_fault, PUMP_SYSTEM) |
-| 10:17:01.000 | Station sends StatusNotification (Occupied -> Faulted) |
-| 10:17:01.500 | Station sends StatusNotification EVENT (session interrupted) |
+| 10:17:01.000 | Station sends SessionEnded EVENT (reason: Fault, actualDurationSeconds: 120, creditsCharged: 20) |
+| 10:17:01.500 | Station sends StatusNotification EVENT (bay: Occupied → Faulted) |
 | 10:17:02.000 | Server processes session interruption |
 | 10:17:02.500 | Server calculates refund: 40% delivered < 50% -> full refund |
 | 10:17:03.000 | Server credits 50 credits to Alice's wallet |
@@ -110,7 +110,39 @@ service was delivered (below the 50% threshold), Alice receives a full refund.
 }
 ```
 
-### 3. Station -> Server: StatusNotification EVENT (Session Interrupted)
+### 3. Station -> Server: SessionEnded EVENT (Session Interrupted)
+
+**MQTT Topic:** `ospp/v1/stations/stn_a1b2c3d4/to-server`
+
+```json
+{
+  "messageId": "msg_c2s_ff660003",
+  "messageType": "Event",
+  "action": "SessionEnded",
+  "timestamp": "2026-02-13T10:17:01.000Z",
+  "source": "Station",
+  "protocolVersion": "0.1.0",
+  "mac": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+  "payload": {
+    "sessionId": "sess_f7e8d9c0",
+    "bayId": "bay_c1d2e3f4a5b6",
+    "reason": "Fault",
+    "actualDurationSeconds": 120,
+    "creditsCharged": 20,
+    "meterValues": {
+      "liquidMl": 18000,
+      "consumableMl": 200,
+      "energyWh": 60
+    }
+  }
+}
+```
+
+SessionEnded is an EVENT (fire-and-forget) — no response is sent by the server.
+
+---
+
+### 4. Station -> Server: StatusNotification EVENT (Session Interrupted)
 
 **MQTT Topic:** `ospp/v1/stations/stn_a1b2c3d4/to-server`
 
@@ -140,7 +172,7 @@ service was delivered (below the 50% threshold), Alice receives a full refund.
 
 StatusNotification is an EVENT (fire-and-forget) — no response is sent by the server.
 
-### 4. Server Internal: Session State Transition & Refund Calculation
+### 5. Server Internal: Session State Transition & Refund Calculation
 
 ```
 Session sess_f7e8d9c0 state: active -> failed
@@ -155,7 +187,7 @@ Refund calculation:
   - Refund amount:     50 credits (100%)
 ```
 
-### 5. Server -> App: Session Failed Notification (via WebSocket / Push)
+### 6. Server -> App: Session Failed Notification (via WebSocket / Push)
 
 ```json
 {
@@ -191,7 +223,7 @@ Refund calculation:
 }
 ```
 
-### 6. Server -> Operator Dashboard: Critical Alert
+### 7. Server -> Operator Dashboard: Critical Alert
 
 ```json
 {

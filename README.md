@@ -174,6 +174,9 @@ Each profile defines a subset of protocol actions. Implementations declare which
 | 19 | DiagnosticsNotification | Station → Server | EVENT | — |
 | 20 | SetMaintenanceMode | Server → Station | REQ/RES | 30s |
 | 21 | UpdateServiceCatalog | Server → Station | REQ/RES | 30s |
+| 40 | SessionEnded | Station → Server | EVENT | — | *(autonomous session termination — timer expiry or fault)*
+
+> **Note:** MSG-022–039 are security and BLE messages listed separately below.
 
 **13 BLE Messages:** StationInfo (FFF1), AvailableServices (FFF2), HELLO, CHALLENGE, OfflineAuthRequest, ServerSignedAuth, AuthResponse, START/StopServiceRequest/RESPONSE, ServiceStatus (FFF5), Receipt (FFF6)
 

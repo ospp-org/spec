@@ -1061,7 +1061,89 @@ Reports consumption telemetry during an active session. Sent at the interval con
 
 ---
 
-### 5.4 ConnectionLost
+### 5.4 SessionEnded
+
+| Property | Value |
+|----------|-------|
+| **Direction** | Station → Server |
+| **Transport** | MQTT |
+| **Message Type** | EVENT |
+| **Topic** | `ospp/v1/stations/{station_id}/to-server` |
+| **Trigger** | Session ends autonomously on station (timer expiry or hardware fault) |
+| **Expected Response** | None (EVENT — fire-and-forget) |
+| **Timeout** | N/A |
+| **Idempotency** | Yes — duplicate SessionEnded for same `sessionId` MUST be ignored by server |
+| **Message Expiry** | 30 seconds |
+
+Reports the end of a session that was terminated autonomously by the station, without a server-initiated StopService command. Sent in two cases:
+
+1. **Timer expiry:** The `durationSeconds` timer elapsed and the station auto-stopped the service.
+2. **Hardware fault:** A hardware fault occurred during an active session and the station auto-stopped the service.
+
+The server MUST use the `actualDurationSeconds`, `creditsCharged`, and `meterValues` fields from this event for final billing. The server MUST NOT rely solely on StatusNotification for billing calculations when this event is expected.
+
+This message is NOT sent when the session is stopped by a server-initiated StopService command — in that case, billing data is returned in the StopService RESPONSE [MSG-006].
+
+#### Payload
+
+| Field | Type | Required | Description |
+|-------|------|:--------:|-------------|
+| `sessionId` | string | Yes | Session identifier (`sess_{uuid}`) |
+| `bayId` | string | Yes | Bay identifier (`bay_{uuid}`) |
+| `reason` | string | Yes | Why the session ended — see enum below |
+| `actualDurationSeconds` | integer | Yes | Actual service duration in seconds |
+| `creditsCharged` | integer | Yes | Total credits charged |
+| `meterValues` | object | No | Final meter readings (when meters available) |
+| `meterValues.liquidMl` | integer | No | Total liquid consumed in milliliters |
+| `meterValues.consumableMl` | integer | No | Total consumable consumed in milliliters |
+| `meterValues.energyWh` | integer | No | Total energy consumed in watt-hours |
+
+**`reason` enum values:**
+
+| Value | Description |
+|-------|-------------|
+| `TimerExpired` | Session `durationSeconds` elapsed; station auto-stopped |
+| `Fault` | Hardware fault detected during active session; station auto-stopped |
+
+#### Example
+
+**Timer expiry:**
+```json
+{
+  "sessionId": "sess_a1b2c3d4",
+  "bayId": "bay_c1d2e3f4a5b6",
+  "reason": "TimerExpired",
+  "actualDurationSeconds": 300,
+  "creditsCharged": 50,
+  "meterValues": {
+    "liquidMl": 45200,
+    "consumableMl": 500,
+    "energyWh": 150
+  }
+}
+```
+
+**Hardware fault:**
+```json
+{
+  "sessionId": "sess_a1b2c3d4",
+  "bayId": "bay_c1d2e3f4a5b6",
+  "reason": "Fault",
+  "actualDurationSeconds": 127,
+  "creditsCharged": 21,
+  "meterValues": {
+    "liquidMl": 18900,
+    "consumableMl": 210,
+    "energyWh": 63
+  }
+}
+```
+
+> **Note:** SessionEnded is always followed by StatusNotification [MSG-009] reporting the new bay state (`Finishing` → `Available` for timer expiry, or `Faulted` for hardware fault). The server MUST process SessionEnded before acting on the subsequent StatusNotification.
+
+---
+
+### 5.5 ConnectionLost
 
 | Property | Value |
 |----------|-------|
@@ -1107,7 +1189,7 @@ This is the **Last Will and Testament (LWT)** message, pre-configured by the sta
 
 ---
 
-### 5.5 SecurityEvent
+### 5.6 SecurityEvent
 
 | Property | Value |
 |----------|-------|

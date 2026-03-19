@@ -149,9 +149,10 @@ stateDiagram-v2
 | StartService accepted | Authorized | Active | Station responds with `status: "Accepted"` | Server records session start time, begins MeterValues tracking |
 | StartService rejected | Authorized | Failed | Station responds with `status: "Rejected"` or 10s timeout | Server initiates refund, notifies user with error code |
 | StopService requested | Active | Stopping | User stops session, server sends StopService, or `durationSeconds` timer elapses | Server sends StopService [MSG-006] to station; if duration elapsed, station auto-transitions |
-| Station confirms stop | Stopping | Completed | Station sends StopService Response [MSG-006] with `actualDurationSeconds`, `creditsCharged`, and final `meterValues` | Server calculates final cost, generates receipt, updates wallet |
+| Station confirms stop | Stopping | Completed | Station sends StopService Response [MSG-006] with `actualDurationSeconds`, `creditsCharged`, and final `meterValues` (user-initiated stop) | Server calculates final cost, generates receipt, updates wallet |
+| Timer elapsed | Stopping | Completed | Station sends SessionEnded EVENT [MSG-040] with `reason: TimerExpired`, `actualDurationSeconds`, `creditsCharged`, and final `meterValues` | Server uses station-provided billing data, generates receipt, updates wallet |
 | Stop timeout | Stopping | Failed | 10 seconds elapse without station confirmation | Server marks session as failed, initiates partial refund based on last known MeterValues |
-| Hardware fault | Active | Failed | Station sends StatusNotification with `Faulted` for the session bay | Server marks session as failed, initiates refund for unused portion |
+| Hardware fault | Active | Failed | Station sends SessionEnded EVENT [MSG-040] with `reason: Fault`, followed by StatusNotification `Faulted` [MSG-009] | Server uses station-provided billing data, applies refund policy (if < 50% duration delivered → full refund) |
 | Connection lost | Active | Failed | ConnectionLost [MSG-011] received and station does not reconnect within `ConnectionLostGracePeriod` (default: 300s) | Server marks session as failed after grace period; on reconnect, reconciles via TransactionEvent |
 
 ### 2.4 Timeouts

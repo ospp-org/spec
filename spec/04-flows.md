@@ -799,10 +799,12 @@ sequenceDiagram
     else Timer expiry
         Note over SSP: durationSeconds reached
         SSP->>SSP: Auto-stop hardware
+        SSP->>Server: SessionEnded EVENT [MSG-040]
+        Note right of SSP: {reason: TimerExpired, actualDurationSeconds, creditsCharged, meterValues}
     end
 
-    SSP->>Server: StatusNotification (Finishing) [MSG-009]
     Note over SSP: Hardware wind-down
+    SSP->>Server: StatusNotification (Finishing) [MSG-009]
     SSP->>Server: StatusNotification (Available) [MSG-009]
 
     Server->>Server: Calculate final billing
@@ -816,10 +818,10 @@ sequenceDiagram
 1. **Trigger:** User taps "Stop" in App, or session timer expires on SSP, or Server sends StopService
 2. If user-initiated: **App** sends `POST /sessions/{id}/stop` → **Server** sends **StopService REQUEST** [MSG-006]
 3. **SSP** deactivates hardware, calculates actual duration and credits charged
-4. **SSP** sends **StopService RESPONSE** [MSG-006] with `actualDurationSeconds`, `creditsCharged`, final `meterValues`
+4. **SSP** sends **StopService RESPONSE** [MSG-006] with `actualDurationSeconds`, `creditsCharged`, final `meterValues` (user-initiated stop only). For timer expiry, **SSP** sends **SessionEnded EVENT** [MSG-040] with `reason: "TimerExpired"`, `actualDurationSeconds`, `creditsCharged`, final `meterValues` instead — server uses these values for billing.
 5. **SSP** sends **StatusNotification** [MSG-009] `Finishing` (hardware winding down)
 6. **SSP** sends **StatusNotification** [MSG-009] `Available` (bay ready for next user)
-7. **Server** calculates final billing: `creditsCharged = ceil(actualDurationSeconds / 60 * priceCreditsPerMinute)`
+7. **Server** processes billing: for user-initiated stop, calculates `creditsCharged = ceil(actualDurationSeconds / 60 * priceCreditsPerMinute)` using data from StopService RESPONSE; for timer expiry, uses `creditsCharged` provided directly by the station in SessionEnded EVENT [MSG-040]
 8. **Server** adjusts wallet — refunds the difference between pre-authorized amount and actual charge
 9. **Server** transitions session to `completed`
 10. **App** receives completion status on next poll
@@ -835,7 +837,7 @@ sequenceDiagram
 
 ### Alternative Paths
 
-**A1 — Hardware error during session:** SSP detects a hardware fault → auto-stops → sends StatusNotification `Faulted` [MSG-009]. Server applies pro-rated billing (if < 50% duration delivered → full refund).
+**A1 — Hardware error during session:** SSP detects a hardware fault → auto-stops → sends **SessionEnded EVENT** [MSG-040] with `reason: "Fault"`, followed by StatusNotification `Faulted` [MSG-009]. Server uses `creditsCharged` from SessionEnded for billing and applies refund policy (if < 50% duration delivered → full refund).
 
 **A2 — MQTT disconnect during session:** SSP continues the service (does NOT stop the service). On reconnection, SSP re-boots (BootNotification [MSG-001]) and reports the session outcome.
 
