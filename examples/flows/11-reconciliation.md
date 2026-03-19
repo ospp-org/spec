@@ -202,7 +202,7 @@ The first offline transaction. Alice used bay 1 around 10:30, using a BLE Offlin
   "protocolVersion": "0.1.0",
   "payload": {
     "offlineTxId": "otx_a1b2c3d4",
-    "offlinePassId": "opass_alice_001",
+    "offlinePassId": "opass_a1c3e500b2d4",
     "userId": "sub_alice2026",
     "bayId": "bay_c1d2e3f4a5b6",
     "serviceId": "svc_eco",
@@ -270,7 +270,7 @@ The second offline transaction. Bob used bay 2 around 12:15, using the Standard 
   "protocolVersion": "0.1.0",
   "payload": {
     "offlineTxId": "otx_e5f6a7b8d9c0",
-    "offlinePassId": "opass_bob_003",
+    "offlinePassId": "opass_b0b30030c1d2",
     "userId": "sub_bob2026",
     "bayId": "bay_a2b3c4d5e6f7",
     "serviceId": "svc_standard",
@@ -337,7 +337,7 @@ Alice returned for a second session at bay 3 around 13:10. Same OfflinePass, dif
   "protocolVersion": "0.1.0",
   "payload": {
     "offlineTxId": "otx_a9b0c1d2e3f4",
-    "offlinePassId": "opass_alice_001",
+    "offlinePassId": "opass_a1c3e500b2d4",
     "userId": "sub_alice2026",
     "bayId": "bay_d5e6f7a8b9c0",
     "serviceId": "svc_eco",

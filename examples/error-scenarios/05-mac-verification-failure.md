@@ -58,8 +58,9 @@ itself).
   "timestamp": "2026-02-13T15:00:00.000Z",
   "mac": "e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4",
   "payload": {
-    "key": "HeartbeatIntervalSeconds",
-    "value": "60"
+    "keys": [
+      { "key": "HeartbeatIntervalSeconds", "value": "60" }
+    ]
   }
 }
 ```
@@ -76,8 +77,9 @@ HMAC-SHA256(
     "protocolVersion": "0.1.0",
     "timestamp": "2026-02-13T15:00:00.000Z",
     "payload": {
-      "key": "HeartbeatIntervalSeconds",
-      "value": "60"
+      "keys": [
+        { "key": "HeartbeatIntervalSeconds", "value": "60" }
+      ]
     }
   })
 ) = e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4
@@ -99,8 +101,9 @@ contains the original value.
   "timestamp": "2026-02-13T15:00:00.000Z",
   "mac": "e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4",
   "payload": {
-    "key": "HeartbeatIntervalSeconds",
-    "value": "3600"
+    "keys": [
+      { "key": "HeartbeatIntervalSeconds", "value": "3600" }
+    ]
   }
 }
 ```
@@ -124,8 +127,9 @@ MAC Verification for message msg_s2c_pp660001:
         "protocolVersion": "0.1.0",
         "timestamp": "2026-02-13T15:00:00.000Z",
         "payload": {
-          "key": "HeartbeatIntervalSeconds",
-          "value": "3600"              <-- tampered value
+          "keys": [
+            { "key": "HeartbeatIntervalSeconds", "value": "3600" }
+          ]
         }
       })
     ) = 7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8
@@ -153,7 +157,7 @@ MAC Verification for message msg_s2c_pp660001:
   "timestamp": "2026-02-13T15:00:01.200Z",
   "mac": "b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3",
   "payload": {
-    "eventId": "sec_pp660001a1b2",
+    "eventId": "sec_cc660001a1b2",
     "type": "MacVerificationFailure",
     "severity": "Critical",
     "timestamp": "2026-02-13T15:00:01.200Z",
@@ -186,9 +190,14 @@ MAC Verification for message msg_s2c_pp660001:
   "timestamp": "2026-02-13T15:00:01.500Z",
   "mac": "c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4",
   "payload": {
-    "status": "Rejected",
-    "errorCode": 1012,
-    "errorText": "MAC_VERIFICATION_FAILED"
+    "results": [
+      {
+        "key": "HeartbeatIntervalSeconds",
+        "status": "Rejected",
+        "errorCode": 1012,
+        "errorText": "MAC_VERIFICATION_FAILED"
+      }
+    ]
   }
 }
 ```
@@ -212,7 +221,7 @@ failure counter reaches the threshold of 3 within the 60-second window:
   "timestamp": "2026-02-13T15:00:45.000Z",
   "mac": "d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5",
   "payload": {
-    "eventId": "sec_pp660004c3d4",
+    "eventId": "sec_cc660004c3d4",
     "type": "MacVerificationFailure",
     "severity": "Critical",
     "timestamp": "2026-02-13T15:00:45.000Z",
@@ -226,13 +235,13 @@ failure counter reaches the threshold of 3 within the 60-second window:
       "failuresInWindow": 3,
       "windowSeconds": 60,
       "windowStart": "2026-02-13T14:59:45.000Z",
-      "windowEnd": "2026-02-13T15:00:45.000Z"
-    },
-    "stationAction": {
-      "rejectAllIncoming": true,
-      "rejectUntil": "2026-02-13T15:05:45.000Z",
-      "lockoutDurationSeconds": 300,
-      "requireKeyRotation": true
+      "windowEnd": "2026-02-13T15:00:45.000Z",
+      "stationAction": {
+        "rejectAllIncoming": true,
+        "rejectUntil": "2026-02-13T15:05:45.000Z",
+        "lockoutDurationSeconds": 300,
+        "requireKeyRotation": true
+      }
     }
   }
 }
