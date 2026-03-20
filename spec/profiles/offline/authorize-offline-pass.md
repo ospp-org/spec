@@ -110,7 +110,8 @@ The server **MUST** perform all of the following checks in order. Processing **M
         "stationOfflineWindowHours": 24,
         "stationMaxOfflineTx": 50
       },
-      "signature": "MEUCIQC7xRbV2nKp8TjG4mFwZkQa3LdY9vNxHs0pWbTfK2gJwIgS3kM5dX8eA1rQ7vYzN0cBpL2hUwF9jD6tG3nKm4xRs0="
+      "signature": "MEUCIQC7xRbV2nKp8TjG4mFwZkQa3LdY9vNxHs0pWbTfK2gJwIgS3kM5dX8eA1rQ7vYzN0cBpL2hUwF9jD6tG3nKm4xRs0=",
+      "signatureAlgorithm": "ECDSA-P256-SHA256"
     },
     "deviceId": "dev_android_abc123",
     "counter": 5,

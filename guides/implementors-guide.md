@@ -81,7 +81,13 @@ Every MQTT message is wrapped in an **envelope**:
   "timestamp": "2026-01-30T12:00:00.000Z",
   "source": "Server",
   "protocolVersion": "0.1.0",
-  "payload": { },
+  "payload": {
+    "sessionId": "sess_a1b2c3d4",
+    "bayId": "bay_c1d2e3f4a5b6",
+    "serviceId": "svc_eco",
+    "durationSeconds": 300,
+    "sessionSource": "MobileApp"
+  },
   "mac": "Base64-HMAC-SHA256..."
 }
 ```

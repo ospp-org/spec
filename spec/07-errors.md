@@ -73,7 +73,7 @@ Every error — whether in an MQTT RESPONSE, BLE AuthResponse, or REST API respo
 
 ### 2.1 MQTT Error Response
 
-When a station or server rejects a REQUEST, it MUST respond with a RESPONSE message containing `"status": "Rejected"` and an `error` object.
+When a station or server rejects a REQUEST, it MUST respond with a RESPONSE message containing `status: "Rejected"`, `errorCode`, and `errorText`. Individual message schemas define the exact payload structure.
 
 ```json
 {
@@ -85,15 +85,8 @@ When a station or server rejects a REQUEST, it MUST respond with a RESPONSE mess
   "protocolVersion": "0.1.0",
   "payload": {
     "status": "Rejected",
-    "error": {
-      "errorCode": 3001,
-      "errorText": "BAY_BUSY",
-      "errorDescription": "Bay bay_c1d2e3f4a5b6 is currently occupied by session sess_a1b2c3d4.",
-      "severity": "Warning",
-      "recoverable": true,
-      "recommendedAction": "Wait for the current session to complete or select a different bay.",
-      "timestamp": "2026-01-30T12:05:00.123Z"
-    }
+    "errorCode": 3001,
+    "errorText": "BAY_BUSY"
   }
 }
 ```
