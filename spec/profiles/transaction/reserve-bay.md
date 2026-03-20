@@ -53,7 +53,7 @@ Created --> Active --> Consumed (by StartService)
 
 1. The station **MUST** validate that the `bayId` exists; if not, it **MUST** respond with `3005 BAY_NOT_FOUND`.
 2. The station **MUST** validate that the bay is in `Available` state. If the bay is `Occupied` or `Finishing`, it **MUST** respond with `3001 BAY_BUSY`. If the bay is already `Reserved`, it **MUST** respond with `3014 BAY_RESERVED`.
-3. If the bay is in `Faulted` or transitioning state, the station **MUST** respond with `3002 BAY_NOT_READY`.
+3. If the bay is in `Unknown`, `Faulted`, or transitioning state, the station **MUST** respond with `3002 BAY_NOT_READY`.
 4. If the bay is in `Unavailable` state due to maintenance, the station **MUST** respond with `3011 BAY_MAINTENANCE`.
 5. On acceptance, the station **MUST** respond with `status: "Accepted"` and transition the bay to `Reserved`.
 
@@ -62,7 +62,7 @@ Created --> Active --> Consumed (by StartService)
 | Code | errorText | Severity | Description |
 |:----:|----------------------|:--------:|-----------------------------------------------|
 | 3001 | `BAY_BUSY` | Warning | Bay is currently occupied by an active session. |
-| 3002 | `BAY_NOT_READY` | Warning | Bay is in `Faulted` or transitioning state. |
+| 3002 | `BAY_NOT_READY` | Warning | Bay is in `Unknown`, `Faulted`, or transitioning state. |
 | 3005 | `BAY_NOT_FOUND` | Error | `bayId` does not match any bay on this station. |
 | 3011 | `BAY_MAINTENANCE` | Warning | Bay is in maintenance mode. |
 | 3014 | `BAY_RESERVED` | Warning | Bay already has an active reservation. |
