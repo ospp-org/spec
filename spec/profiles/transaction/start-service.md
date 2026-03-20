@@ -42,7 +42,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 ## 6. Processing Rules
 
 1. The station **MUST** validate that the `bayId` exists; if not, it **MUST** respond with `3005 BAY_NOT_FOUND`.
-2. The station **MUST** validate that the bay is in `Available` or `Reserved` state. If the bay is `Occupied` or `Finishing`, it **MUST** respond with `3001 BAY_BUSY`. If the bay is `Faulted` or transitioning, it **MUST** respond with `3002 BAY_NOT_READY`.
+2. The station **MUST** validate that the bay is in `Available` or `Reserved` state. If the bay is `Occupied` or `Finishing`, it **MUST** respond with `3001 BAY_BUSY`. If the bay is `Faulted`, `Unknown`, or transitioning, it **MUST** respond with `3002 BAY_NOT_READY`.
 3. If the bay has an active reservation held by a different `reservationId`, the station **MUST** respond with `3014 BAY_RESERVED`.
 4. If the bay is in `Unavailable` state due to maintenance, the station **MUST** respond with `3011 BAY_MAINTENANCE`.
 5. The station **MUST** validate that the `serviceId` exists in its service catalog. If not, it **MUST** respond with `3004 INVALID_SERVICE`.
