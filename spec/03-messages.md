@@ -1,6 +1,6 @@
 # Chapter 03 — Message Catalog
 
-> **Status:** Draft | **OSPP Version:** 0.1.0-draft.1
+> **Status:** Draft | **OSPP Version:** 0.2.1
 
 This chapter is the normative reference for **every message** in the OSPP protocol. Each message is documented with its complete payload schema, metadata, and example.
 
@@ -194,6 +194,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
 | `retryInterval` | integer | Cond. | Seconds to wait before retry (REQUIRED when `Rejected` or `Pending`) |
 | `configuration` | object | No | Key-value pairs to apply immediately (see [Chapter 08](08-configuration.md)) |
 | `sessionKey` | string | Cond. | Base64-encoded 32-byte HMAC session key (REQUIRED when `MessageSigningMode` is `"critical"` or `"all"`) |
+| `supportedVersions` | array | Cond. | Protocol versions supported by server. Array of semver strings (e.g., `["0.1.0", "0.2.0"]`). REQUIRED when `Rejected` with error `1007 PROTOCOL_VERSION_MISMATCH`. |
 
 **`status` behavior:**
 
@@ -265,6 +266,18 @@ The station MAY include a human-readable name configurable via `StationName` (se
   "serverTime": "2026-01-30T12:00:00.123Z",
   "heartbeatIntervalSec": 30,
   "retryInterval": 60
+}
+```
+
+**RESPONSE (Rejected — protocol version mismatch):**
+
+```json
+{
+  "status": "Rejected",
+  "serverTime": "2026-01-30T12:00:00.123Z",
+  "heartbeatIntervalSec": 30,
+  "retryInterval": 60,
+  "supportedVersions": ["0.1.0", "0.2.0"]
 }
 ```
 

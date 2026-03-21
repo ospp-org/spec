@@ -1,6 +1,6 @@
 # Chapter 02 — Transport
 
-> **Status:** Draft | **OSPP Version:** 0.1.0-draft.1
+> **Status:** Draft | **OSPP Version:** 0.2.1
 
 OSPP defines three transport layers for communication between participants. Each transport serves a distinct channel with its own security model, reliability guarantees, and failure modes.
 

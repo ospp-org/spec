@@ -45,6 +45,15 @@
       "minLength": 1,
       "maxLength": 1024,
       "description": "Base64-encoded 32-byte HMAC session key for message authentication."
+    },
+    "supportedVersions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^\\d+\\.\\d+\\.\\d+$"
+      },
+      "minItems": 1,
+      "description": "Protocol versions supported by server. Required when Rejected with 1007 PROTOCOL_VERSION_MISMATCH."
     }
   },
   "allOf": [

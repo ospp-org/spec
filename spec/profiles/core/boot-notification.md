@@ -74,7 +74,7 @@ The station **MUST NOT** process any incoming commands until it receives an `Acc
 |-------------------------------------|---------------------|-----------------------------------------------|
 | Station ID not recognized by server | `2001 STATION_NOT_REGISTERED` | Server responds with `Rejected`. Station **SHOULD** enter provisioning mode. |
 | Invalid message format | `1005 INVALID_MESSAGE_FORMAT` | Server drops the message. Station does not receive a response and retries after timeout. |
-| Protocol version mismatch | `1007 PROTOCOL_VERSION_MISMATCH` | Server responds with `Rejected`. Station **MUST** await firmware update. |
+| Protocol version mismatch | `1007 PROTOCOL_VERSION_MISMATCH` | Server responds with `Rejected` and includes `supportedVersions` array listing compatible protocol versions. Station **MUST** await firmware update. |
 | Server internal error | `6001 SERVER_INTERNAL_ERROR` | Server responds with `Rejected` and `retryInterval`. Station retries. |
 
 ## 7. Examples

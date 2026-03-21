@@ -76,6 +76,24 @@ Verify that a station sends BootNotification as the first message after establis
 35. Wait 60 seconds (fixed retry delay per spec).
 36. Verify that the station retries BootNotification.
 
+### Part E — Protocol Version Mismatch (1007)
+
+37. Reboot the station.
+38. Observe BootNotification is sent.
+39. Send a server response with `Rejected` status and `supportedVersions`:
+    ```json
+    {
+      "status": "Rejected",
+      "serverTime": "2026-01-15T10:02:00.000Z",
+      "heartbeatIntervalSec": 30,
+      "retryInterval": 300,
+      "supportedVersions": ["0.1.0", "0.2.0"]
+    }
+    ```
+40. Verify that the station enters limited mode (same as Part B Rejected).
+41. Verify that the station does NOT retry BootNotification — error `1007` is non-recoverable (`recoverable: false`). The station MUST await firmware update.
+42. Verify that the station logs or stores the `supportedVersions` array for diagnostic purposes.
+
 ## Expected Results
 
 1. The very first message after MQTT connect is BootNotification — no other action precedes it.
@@ -88,6 +106,7 @@ Verify that a station sends BootNotification as the first message after establis
 8. After Rejected, the station retries BootNotification at the specified `retryInterval`.
 9. After Pending, the station enters a restricted state (same as Rejected), does not send other messages, does not process server commands, and retries BootNotification at `retryInterval`.
 10. On timeout, the station retries after 60 seconds.
+11. After Rejected with `supportedVersions` (1007), the station enters limited mode and does NOT retry BootNotification (non-recoverable error).
 
 ## Failure Criteria
 
@@ -98,3 +117,4 @@ Verify that a station sends BootNotification as the first message after establis
 5. Station does not adopt the server-provided `heartbeatIntervalSec` (Heartbeat sent at a different cadence).
 6. LWT is absent from the MQTT CONNECT packet.
 7. Station does not send StatusNotification for all bays after Accepted.
+8. Station retries BootNotification after receiving Rejected with `1007 PROTOCOL_VERSION_MISMATCH` (non-recoverable — station MUST NOT retry).

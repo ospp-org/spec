@@ -1,6 +1,6 @@
 # Chapter 07 — Error Codes & Resilience
 
-> **Status:** Draft | **OSPP Version:** 0.1.0-draft.1
+> **Status:** Draft | **OSPP Version:** 0.2.1
 
 This chapter defines the complete error taxonomy for the OSPP protocol, including the error code registry, standard error response format, retry policies, circuit breaker patterns, and graceful degradation behavior.
 
@@ -209,7 +209,7 @@ Transport errors cover network connectivity, protocol negotiation, message forma
 | 1004 | `CERTIFICATE_ERROR` | Critical | false | X.509 certificate is expired, revoked, self-signed, or has an invalid chain. | Station: enter provisioning mode for certificate renewal. Server: reject connection, alert operator. |
 | 1005 | `INVALID_MESSAGE_FORMAT` | Error | false | Received message is not valid JSON, is missing required envelope fields, or has invalid field types. | Log the malformed message. Do NOT retry — sender must fix the message. |
 | 1006 | `UNKNOWN_ACTION` | Warning | false | Received message has an `action` field that is not recognized by this implementation. | Respond with REJECTED. Sender should verify protocol version and action name. |
-| 1007 | `PROTOCOL_VERSION_MISMATCH` | Error | false | The `protocolVersion` in the received message has a different MAJOR version than supported. | Log error. Station: await firmware update for new protocol version. Server: reject, respond with supported version. |
+| 1007 | `PROTOCOL_VERSION_MISMATCH` | Error | false | The `protocolVersion` in the received message has a different MAJOR version than supported. | Log error. Station: await firmware update for new protocol version. Server: reject with `Rejected` status and include `supportedVersions` array in BootNotification RESPONSE. |
 | 1008 | `BLE_RADIO_ERROR` | Warning | true | BLE radio hardware or GATT stack error (advertising failure, connection drop, MTU negotiation failure). | Reset BLE stack. If persistent, disable BLE and report via SecurityEvent [MSG-012]. |
 | 1009 | `DNS_RESOLUTION_FAILED` | Error | true | Cannot resolve the MQTT broker hostname via DNS. | Retry after 30s. Verify DNS server configuration. Fall back to IP address if configured. |
 | 1010 | `MESSAGE_TIMEOUT` | Warning | true | Expected RESPONSE was not received within the action-specific timeout period. | Retry per the action's retry policy (see §5). If max retries exhausted, escalate to ERROR. |

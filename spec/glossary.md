@@ -1,6 +1,6 @@
 # Glossary
 
-> **Status:** Draft | **OSPP Version:** 0.1.0-draft.1
+> **Status:** Draft | **OSPP Version:** 0.2.1
 
 This glossary provides normative definitions for all terms used throughout the OSPP
 specification. Where a definition involves a requirement, normative language

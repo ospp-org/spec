@@ -8,6 +8,44 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.2.1] — 2026-03-21
+
+### Added
+- `supportedVersions` field in BootNotification RESPONSE payload — array of semver strings listing protocol versions the server supports. REQUIRED when `Rejected` with error `1007 PROTOCOL_VERSION_MISMATCH`.
+- Test vector: `boot-notification-response-rejected-version-mismatch.json`
+- TC-CORE-001 Part E: protocol version mismatch test scenario (non-recoverable rejection with `supportedVersions`)
+
+### Fixed
+- Error code `1007 PROTOCOL_VERSION_MISMATCH` remediation now explicitly references `supportedVersions` array in BootNotification RESPONSE
+- `VERSIONING.md` protocol version negotiation section clarified with `supportedVersions` mechanism
+- `spec/profiles/core/boot-notification.md` error table updated for 1007
+- `guides/implementors-guide.md` BootNotification handling step 3 now documents version mismatch rejection with `supportedVersions`
+
+---
+
+## [0.2.0] — 2026-03-20
+
+### Added
+- **SessionEnded EVENT** (MSG-040) — new station-to-server EVENT for autonomous session termination (timer expiry or hardware fault). Schema: `schemas/mqtt/session-ended-event.schema.json`
+- `reason` enum values: `TimerExpired`, `Fault`
+- Session SM transitions in `05-state-machines.md`: `Timer elapsed → Completed` and `Hardware fault → Failed` now reference SessionEnded EVENT [MSG-040]
+- Flow §6 sequence diagram and happy path updated with SessionEnded for timer expiry path
+- Implementors guide: station-side step 8 (timer expiry) and server-side SessionEnded handler
+- Session state diagram (`diagrams/state-machine-session.mmd`) updated with SessionEnded references
+- Error scenario 02 (hardware failure mid-session) updated with SessionEnded EVENT and billing data source
+- Conformance test case TC-TX-007: autonomous session termination (timer expiry + hardware fault)
+- MSG-040 added to master message index table in `04-flows.md`
+
+### Fixed
+- 5 authoring errors in `05-state-machines.md` — incorrect TransactionEvent references in online session contexts replaced with StatusNotification, StopService Response, or SessionEnded
+- Error scenario 02 heading: "TransactionEvent REQUEST" corrected to "StatusNotification EVENT"
+- `StartService` [MSG-005]: bay in `Unknown` state now explicitly returns `3002 BAY_NOT_READY`
+- `ReserveBay` [MSG-003]: bay in `Unknown` state now explicitly returns `3002 BAY_NOT_READY`
+- `07-errors.md`: `3002 BAY_NOT_READY` description updated to include `Unknown` state
+- Pre-existing example validation errors corrected in `examples/flows/11-reconciliation.md` (3 `offlinePassId` values), `examples/error-scenarios/05-mac-verification-failure.md` (ChangeConfiguration payloads, SecurityEvent eventIds, stationAction nesting), `guides/implementors-guide.md`, `spec/06-security.md`, `spec/07-errors.md`, `spec/profiles/device-management/update-firmware.md`, `spec/profiles/offline/authorize-offline-pass.md`
+
+---
+
 ## [0.1.0-draft.1] — 2026-02-16
 
 ### Added

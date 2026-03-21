@@ -1,7 +1,7 @@
 # OSPP Known Issues
 
 **Date:** 2026-02-27
-**Protocol Version:** 0.1.0-draft.1
+**Protocol Version:** 0.2.1
 **Status:** All issues resolved
 **Source:** ospp_audit_v2.md (post-correction audit)
 

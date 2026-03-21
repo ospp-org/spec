@@ -2,7 +2,7 @@
 
 > **For:** Developers building OSPP-compatible stations, servers, or user agents
 > **Level:** Practical guide, not formal spec. Read this first, then the spec chapters.
-> **Spec Version:** 0.1.0-draft.1
+> **Spec Version:** 0.2.1
 
 ---
 
@@ -651,7 +651,7 @@ QoS: 1 (always)
 
 1. Look up the station by `stationId`
 2. If unknown → respond `Rejected` with error `2001 STATION_NOT_REGISTERED`
-3. Validate protocol version compatibility
+3. Validate protocol version compatibility — if the station's `protocolVersion` has a different MAJOR version than the server supports, respond `Rejected` with error `1007 PROTOCOL_VERSION_MISMATCH` and include `supportedVersions` array (e.g., `["0.1.0", "0.2.0"]`)
 4. Generate a 32-byte random session key (for HMAC signing)
 5. Respond `Accepted` with:
    - `serverTime` (ISO 8601 UTC) — station syncs its clock to this
@@ -1241,4 +1241,4 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 
 ---
 
-*This guide covers OSPP 0.1.0-draft.1. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*
+*This guide covers OSPP 0.2.1. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*

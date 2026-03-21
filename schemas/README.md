@@ -1,6 +1,6 @@
 # OSPP JSON Schemas
 
-> **Schema Version:** 0.1.0-draft.1 | **JSON Schema Draft:** 2020-12
+> **Schema Version:** 0.2.1 | **JSON Schema Draft:** 2020-12
 
 This directory contains JSON Schema definitions for every message in the OSPP protocol. Schemas are generated from the normative message catalog in [Chapter 03 — Message Catalog](../spec/03-messages.md).
 
