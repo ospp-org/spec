@@ -1,6 +1,6 @@
 # Chapter 00 — Introduction
 
-> **Status:** Draft | **OSPP Version:** 0.2.1
+> **Status:** Draft | **OSPP Version:** 0.2.4
 
 This chapter establishes the purpose, scope, and conventions for the Open Self-Service Point Protocol (OSPP) specification. It identifies the target audience, defines how normative language is used throughout the document, describes notation and formatting conventions, and provides the normative and informative reference bibliography.
 
@@ -229,3 +229,6 @@ The following documents provide additional context and prior art. They are not n
 | 0.1.0-draft.1 | 2026-02-13 | OSPP Authors | Initial public draft. |
 | 0.2.0 | 2026-03-20 | OSPP Authors | SessionEnded EVENT (MSG-040), Unknown bay state handling, TransactionEvent authoring fixes, example validation fixes. |
 | 0.2.1 | 2026-03-21 | OSPP Authors | `supportedVersions` in BootNotification RESPONSE for protocol version negotiation (1007). |
+| 0.2.2 | 2026-03-22 | OSPP Authors | Update all `protocolVersion` example values from 0.1.0 to 0.2.1. |
+| 0.2.3 | 2026-03-22 | OSPP Authors | Add SessionEnded EVENT to HMAC signing table in 06-security.md. |
+| 0.2.4 | 2026-03-22 | OSPP Authors | Reclassify SessionEnded as HMAC-signed (YES) — contains billing data. |

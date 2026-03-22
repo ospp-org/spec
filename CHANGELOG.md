@@ -8,6 +8,39 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.2.4] — 2026-03-22
+
+### Fixed
+- Reclassify SessionEnded EVENT as HMAC-signed (**YES**) in `06-security.md` §5.6 — contains `creditsCharged` used directly for online billing at timer expiry, sole billing source when no StopService command is issued
+- Update signing count: 32 of 47 signed, 15 exempt (was 31 of 47, 16 exempt)
+- Update `guides/implementors-guide.md` signing counts
+
+---
+
+## [0.2.3] — 2026-03-22
+
+### Added
+- SessionEnded EVENT added to HMAC signing table in `06-security.md` §5.6 (row 19)
+- Rows renumbered 20–46 → 21–47 to accommodate new entry
+
+### Fixed
+- Signing table summary updated from 46 to 47 message types
+- `guides/implementors-guide.md` signing counts updated
+
+---
+
+## [0.2.2] — 2026-03-22
+
+### Fixed
+- Update all `protocolVersion` values from `"0.1.0"` to `"0.2.1"` in 172 JSON examples across 44 files
+- Update all `bleProtocolVersion` values from `"0.1.0"` to `"0.2.1"` in 11 examples across 8 files
+- Update `ProtocolVersion` configuration key default from `"0.1.0"` to `"0.2.1"` in `08-configuration.md`
+- Update conformance test assertions for `ProtocolVersion` in TC-DM-006 and TC-DM-009
+- Update canonical form example in `06-security.md`
+- Update `VERSIONING.md` example version string
+
+---
+
 ## [0.2.1] — 2026-03-21
 
 ### Added

@@ -1,0 +1,7 @@
+{
+  "sessionId": "sess_a1b2c3d4e5f6",
+  "bayId": "bay_c1d2e3f4a5b6",
+  "reason": "TimerExpired",
+  "actualDurationSeconds": "three hundred",
+  "creditsCharged": 50
+}

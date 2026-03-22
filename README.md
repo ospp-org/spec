@@ -1,6 +1,6 @@
 # OSPP — Open Self-Service Point Protocol
 
-[![Version: 0.2.1](https://img.shields.io/badge/version-0.2.1-blue)]()
+[![Version: 0.2.1](https://img.shields.io/badge/version-0.2.4-blue)]()
 [![Status: Draft](https://img.shields.io/badge/status-draft-orange)]()
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![Messages: 34](https://img.shields.io/badge/messages-34-green)]()
