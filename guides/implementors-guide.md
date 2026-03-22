@@ -266,10 +266,10 @@ HMAC-SHA256 signing is controlled by the `MessageSigningMode` configuration key.
 | Mode | Behavior | Use Case |
 |------|----------|----------|
 | `None` | No HMAC signing | Development/testing only |
-| `Critical` **(default)** | HMAC on security-sensitive messages only (31 of 47) | Production deployments |
+| `Critical` **(default)** | HMAC on security-sensitive messages only (32 of 47) | Production deployments |
 | `All` | HMAC on all messages (except BootNotification REQUEST and LWT) | High-security deployments |
 
-The default mode `Critical` signs only security-sensitive messages (31 of 47). Non-critical messages like Heartbeat, MeterValues, and StatusNotification are exempt unless mode is set to `All`. BootNotification REQUEST and ConnectionLost (LWT) are always exempt regardless of mode.
+The default mode `Critical` signs only security-sensitive messages (32 of 47). Non-critical messages like Heartbeat, MeterValues, and StatusNotification are exempt unless mode is set to `All`. BootNotification REQUEST and ConnectionLost (LWT) are always exempt regardless of mode.
 
 When HMAC is required for a message, include a `mac` field:
 
@@ -1108,7 +1108,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 
 ### Security
 
-- [ ] **[MUST]** HMAC-SHA256 signing per `MessageSigningMode` (default `Critical`: 31 of 47 messages; `All`: every message except BootNotification REQUEST and LWT)
+- [ ] **[MUST]** HMAC-SHA256 signing per `MessageSigningMode` (default `Critical`: 32 of 47 messages; `All`: every message except BootNotification REQUEST and LWT)
 - [ ] **[MUST]** Canonical JSON for HMAC: sorted keys (recursive), compact, UTF-8
 - [ ] **[MUST]** Constant-time HMAC comparison (timing-safe)
 - [ ] **[MUST]** Session key from BootNotification RESPONSE, stored in RAM only

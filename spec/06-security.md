@@ -676,7 +676,7 @@ Messages are classified as **critical** (HMAC required) or **exempt** (HMAC not 
 | 16 | Heartbeat RES | Server → Station | **NO** | Time sync only. |
 | 17 | StatusNotification | Station → Server | **NO** | Informational, high frequency. |
 | 18 | MeterValues | Station → Server | **NO** | Informational, high frequency. |
-| 19 | SessionEnded EVENT | Station → Server | **NO** | Billing data only — server uses for reconciliation, not a command. Financial record handled via TransactionEvent. |
+| 19 | SessionEnded EVENT | Station → Server | **YES** | Contains `creditsCharged` used directly for online billing at timer expiry — sole billing source when no StopService command is issued. |
 | 20 | ConnectionLost (LWT) | Broker → Server | **NO** | Broker-generated. Station cannot pre-sign. |
 | 21 | SecurityEvent | Station → Server | **NO** | Station-originated report, not a command. |
 | 22 | ChangeConfiguration REQ | Server → Station | **YES** | Modifies station behavior. |
@@ -706,7 +706,7 @@ Messages are classified as **critical** (HMAC required) or **exempt** (HMAC not 
 | 46 | TriggerMessage REQ | Server → Station | **YES** | Server command that triggers station behavior. |
 | 47 | TriggerMessage RES | Station → Server | **YES** | Confirms trigger accepted. |
 
-**Summary:** 31 of 47 message types require HMAC in `Critical` mode, 16 are exempt. The exempt messages (BootNotification REQ, Heartbeat, StatusNotification, MeterValues, SessionEnded, ConnectionLost, SecurityEvent, GetConfiguration, GetDiagnostics, FirmwareStatusNotification, DiagnosticsNotification, DataTransfer) represent ~70% of message *volume* in normal operation.
+**Summary:** 32 of 47 message types require HMAC in `Critical` mode, 15 are exempt. The exempt messages (BootNotification REQ, Heartbeat, StatusNotification, MeterValues, ConnectionLost, SecurityEvent, GetConfiguration, GetDiagnostics, FirmwareStatusNotification, DiagnosticsNotification, DataTransfer) represent ~70% of message *volume* in normal operation.
 
 #### Mode `None`
 
