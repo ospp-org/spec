@@ -676,36 +676,37 @@ Messages are classified as **critical** (HMAC required) or **exempt** (HMAC not 
 | 16 | Heartbeat RES | Server → Station | **NO** | Time sync only. |
 | 17 | StatusNotification | Station → Server | **NO** | Informational, high frequency. |
 | 18 | MeterValues | Station → Server | **NO** | Informational, high frequency. |
-| 19 | ConnectionLost (LWT) | Broker → Server | **NO** | Broker-generated. Station cannot pre-sign. |
-| 20 | SecurityEvent | Station → Server | **NO** | Station-originated report, not a command. |
-| 21 | ChangeConfiguration REQ | Server → Station | **YES** | Modifies station behavior. |
-| 22 | ChangeConfiguration RES | Station → Server | **YES** | Confirms configuration applied. |
-| 23 | GetConfiguration REQ | Server → Station | **NO** | Read-only query. |
-| 24 | GetConfiguration RES | Station → Server | **NO** | Read-only response. |
-| 25 | Reset REQ | Server → Station | **YES** | Reboots station. Availability impact. |
-| 26 | Reset RES | Station → Server | **YES** | Confirms reset accepted. |
-| 27 | UpdateFirmware REQ | Server → Station | **YES** | Supply chain security critical. |
-| 28 | UpdateFirmware RES | Station → Server | **YES** | Confirms update accepted. |
-| 29 | FirmwareStatusNotification | Station → Server | **NO** | Informational progress. |
-| 30 | GetDiagnostics REQ | Server → Station | **NO** | Non-financial. |
-| 31 | GetDiagnostics RES | Station → Server | **NO** | Non-financial. |
-| 32 | DiagnosticsNotification | Station → Server | **NO** | Informational progress. |
-| 33 | SetMaintenanceMode REQ | Server → Station | **YES** | Changes operational state. |
-| 34 | SetMaintenanceMode RES | Station → Server | **YES** | Confirms maintenance mode change. |
-| 35 | UpdateServiceCatalog REQ | Server → Station | **YES** | Modifies pricing/services. |
-| 36 | UpdateServiceCatalog RES | Station → Server | **YES** | Confirms catalog applied. |
-| 37 | SignCertificate REQ | Station → Server | **YES** | Certificate material — security critical. |
-| 38 | SignCertificate RES | Server → Station | **YES** | Certificate material — security critical. |
-| 39 | CertificateInstall REQ | Server → Station | **YES** | Certificate material — security critical. |
-| 40 | CertificateInstall RES | Station → Server | **YES** | Certificate material — security critical. |
-| 41 | TriggerCertificateRenewal REQ | Server → Station | **YES** | Certificate management command. |
-| 42 | TriggerCertificateRenewal RES | Station → Server | **YES** | Confirms renewal initiated. |
-| 43 | DataTransfer REQ | Bidirectional | **NO** | Vendor data — not critical by default. Signed in `All` mode only. |
-| 44 | DataTransfer RES | Bidirectional | **NO** | Vendor data response. Signed in `All` mode only. |
-| 45 | TriggerMessage REQ | Server → Station | **YES** | Server command that triggers station behavior. |
-| 46 | TriggerMessage RES | Station → Server | **YES** | Confirms trigger accepted. |
+| 19 | SessionEnded EVENT | Station → Server | **NO** | Billing data only — server uses for reconciliation, not a command. Financial record handled via TransactionEvent. |
+| 20 | ConnectionLost (LWT) | Broker → Server | **NO** | Broker-generated. Station cannot pre-sign. |
+| 21 | SecurityEvent | Station → Server | **NO** | Station-originated report, not a command. |
+| 22 | ChangeConfiguration REQ | Server → Station | **YES** | Modifies station behavior. |
+| 23 | ChangeConfiguration RES | Station → Server | **YES** | Confirms configuration applied. |
+| 24 | GetConfiguration REQ | Server → Station | **NO** | Read-only query. |
+| 25 | GetConfiguration RES | Station → Server | **NO** | Read-only response. |
+| 26 | Reset REQ | Server → Station | **YES** | Reboots station. Availability impact. |
+| 27 | Reset RES | Station → Server | **YES** | Confirms reset accepted. |
+| 28 | UpdateFirmware REQ | Server → Station | **YES** | Supply chain security critical. |
+| 29 | UpdateFirmware RES | Station → Server | **YES** | Confirms update accepted. |
+| 30 | FirmwareStatusNotification | Station → Server | **NO** | Informational progress. |
+| 31 | GetDiagnostics REQ | Server → Station | **NO** | Non-financial. |
+| 32 | GetDiagnostics RES | Station → Server | **NO** | Non-financial. |
+| 33 | DiagnosticsNotification | Station → Server | **NO** | Informational progress. |
+| 34 | SetMaintenanceMode REQ | Server → Station | **YES** | Changes operational state. |
+| 35 | SetMaintenanceMode RES | Station → Server | **YES** | Confirms maintenance mode change. |
+| 36 | UpdateServiceCatalog REQ | Server → Station | **YES** | Modifies pricing/services. |
+| 37 | UpdateServiceCatalog RES | Station → Server | **YES** | Confirms catalog applied. |
+| 38 | SignCertificate REQ | Station → Server | **YES** | Certificate material — security critical. |
+| 39 | SignCertificate RES | Server → Station | **YES** | Certificate material — security critical. |
+| 40 | CertificateInstall REQ | Server → Station | **YES** | Certificate material — security critical. |
+| 41 | CertificateInstall RES | Station → Server | **YES** | Certificate material — security critical. |
+| 42 | TriggerCertificateRenewal REQ | Server → Station | **YES** | Certificate management command. |
+| 43 | TriggerCertificateRenewal RES | Station → Server | **YES** | Confirms renewal initiated. |
+| 44 | DataTransfer REQ | Bidirectional | **NO** | Vendor data — not critical by default. Signed in `All` mode only. |
+| 45 | DataTransfer RES | Bidirectional | **NO** | Vendor data response. Signed in `All` mode only. |
+| 46 | TriggerMessage REQ | Server → Station | **YES** | Server command that triggers station behavior. |
+| 47 | TriggerMessage RES | Station → Server | **YES** | Confirms trigger accepted. |
 
-**Summary:** 31 of 46 message types require HMAC in `Critical` mode, 15 are exempt. The exempt messages (BootNotification REQ, Heartbeat, StatusNotification, MeterValues, ConnectionLost, SecurityEvent, GetConfiguration, GetDiagnostics, FirmwareStatusNotification, DiagnosticsNotification, DataTransfer) represent ~70% of message *volume* in normal operation.
+**Summary:** 31 of 47 message types require HMAC in `Critical` mode, 16 are exempt. The exempt messages (BootNotification REQ, Heartbeat, StatusNotification, MeterValues, SessionEnded, ConnectionLost, SecurityEvent, GetConfiguration, GetDiagnostics, FirmwareStatusNotification, DiagnosticsNotification, DataTransfer) represent ~70% of message *volume* in normal operation.
 
 #### Mode `None`
 
