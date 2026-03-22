@@ -71,7 +71,7 @@ Uploading (60%) -> Failed (errorText: "HTTP PUT returned 503 Service Unavailable
   "action": "DiagnosticsNotification",
   "timestamp": "2026-02-13T10:27:00.000Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Uploading",
     "progress": 60,
@@ -89,7 +89,7 @@ Uploading (60%) -> Failed (errorText: "HTTP PUT returned 503 Service Unavailable
   "action": "DiagnosticsNotification",
   "timestamp": "2026-02-13T10:29:00.000Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Uploaded",
     "fileName": "diag_stn_a1b2c3d4_20260212_20260213.tar.gz"
@@ -106,7 +106,7 @@ Uploading (60%) -> Failed (errorText: "HTTP PUT returned 503 Service Unavailable
   "action": "DiagnosticsNotification",
   "timestamp": "2026-02-13T10:28:30.000Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Failed",
     "fileName": "diag_stn_a1b2c3d4_20260212_20260213.tar.gz",

@@ -55,7 +55,7 @@ timestamp. The station rejects the offline authentication with error code
   "stationModel": "SSP-3000",
   "firmwareVersion": "2.4.1",
   "bayCount": 3,
-  "bleProtocolVersion": "0.1.0",
+  "bleProtocolVersion": "0.2.1",
   "connectivity": "Offline"
 }
 ```

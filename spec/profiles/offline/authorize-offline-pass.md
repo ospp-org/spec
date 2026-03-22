@@ -88,7 +88,7 @@ The server **MUST** perform all of the following checks in order. Processing **M
   "action": "AuthorizeOfflinePass",
   "timestamp": "2026-02-13T10:05:12.340Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "offlinePassId": "opass_a8b9c0d1e2f3",
     "offlinePass": {
@@ -130,7 +130,7 @@ The server **MUST** perform all of the following checks in order. Processing **M
   "action": "AuthorizeOfflinePass",
   "timestamp": "2026-02-13T10:05:12.580Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Accepted",
     "sessionId": "sess_f7e8d9c0",
@@ -149,7 +149,7 @@ The server **MUST** perform all of the following checks in order. Processing **M
   "action": "AuthorizeOfflinePass",
   "timestamp": "2026-02-13T10:05:12.580Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Rejected",
     "reason": "OfflinePass revocation epoch (38) is below the current server epoch (42). The pass has been batch-revoked."

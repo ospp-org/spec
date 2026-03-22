@@ -71,7 +71,7 @@ The Heartbeat request has an **empty payload** (`{}`). The station identity is d
   "action": "Heartbeat",
   "timestamp": "2026-02-13T10:16:00.000Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {}
 }
 ```
@@ -85,7 +85,7 @@ The Heartbeat request has an **empty payload** (`{}`). The station identity is d
   "action": "Heartbeat",
   "timestamp": "2026-02-13T10:16:00.150Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "serverTime": "2026-02-13T10:16:00.150Z"
   }

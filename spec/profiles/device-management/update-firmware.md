@@ -100,7 +100,7 @@ If the watchdog timer expires and automatic rollback fails (e.g., both firmware 
   "action": "UpdateFirmware",
   "timestamp": "2026-02-13T10:24:00.000Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "firmwareUrl": "https://firmware.example.com/station/v1.3.0.bin",
     "firmwareVersion": "1.3.0",
@@ -120,7 +120,7 @@ If the watchdog timer expires and automatic rollback fails (e.g., both firmware 
   "action": "UpdateFirmware",
   "timestamp": "2026-02-13T10:24:00.200Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Accepted"
   }
@@ -136,7 +136,7 @@ If the watchdog timer expires and automatic rollback fails (e.g., both firmware 
   "action": "UpdateFirmware",
   "timestamp": "2026-02-13T10:24:00.200Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Rejected",
     "errorCode": 5016,

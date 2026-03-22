@@ -65,7 +65,7 @@ When the station has active sessions at the time of a Reset request:
   "action": "Reset",
   "timestamp": "2026-02-13T10:23:00.000Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "type": "Soft"
   }
@@ -81,7 +81,7 @@ When the station has active sessions at the time of a Reset request:
   "action": "Reset",
   "timestamp": "2026-02-13T10:23:00.150Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Accepted"
   }
@@ -97,7 +97,7 @@ When the station has active sessions at the time of a Reset request:
   "action": "Reset",
   "timestamp": "2026-02-13T10:23:00.000Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "type": "Hard"
   }
@@ -113,7 +113,7 @@ When the station has active sessions at the time of a Reset request:
   "action": "Reset",
   "timestamp": "2026-02-13T10:23:00.150Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Rejected",
     "errorCode": 3016,

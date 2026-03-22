@@ -70,7 +70,7 @@ When maintenance mode is disabled, the bay **MUST** return to `Available` status
   "action": "SetMaintenanceMode",
   "timestamp": "2026-02-13T10:28:00.000Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "bayId": "bay_a1b2c3d4e5f6",
     "enabled": true,
@@ -88,7 +88,7 @@ When maintenance mode is disabled, the bay **MUST** return to `Available` status
   "action": "SetMaintenanceMode",
   "timestamp": "2026-02-13T10:28:00.200Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Accepted"
   }
@@ -104,7 +104,7 @@ When maintenance mode is disabled, the bay **MUST** return to `Available` status
   "action": "SetMaintenanceMode",
   "timestamp": "2026-02-13T14:00:00.000Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "bayId": "bay_a1b2c3d4e5f6",
     "enabled": false
@@ -121,7 +121,7 @@ When maintenance mode is disabled, the bay **MUST** return to `Available` status
   "action": "SetMaintenanceMode",
   "timestamp": "2026-02-13T10:28:00.200Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Rejected",
     "errorCode": 3001,

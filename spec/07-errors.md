@@ -82,7 +82,7 @@ When a station or server rejects a REQUEST, it MUST respond with a RESPONSE mess
   "action": "StartService",
   "timestamp": "2026-01-30T12:05:00.000Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Rejected",
     "errorCode": 3001,
@@ -109,7 +109,7 @@ Stations MAY send unsolicited error reports as EVENT messages (no response expec
   "action": "SecurityEvent",
   "timestamp": "2026-01-30T12:10:00.000Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "eventId": "sec_a1b2c3d4e5f6",
     "type": "HardwareFault",

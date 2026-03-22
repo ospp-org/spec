@@ -55,7 +55,7 @@ The station sends its periodic heartbeat, reporting its current time so the serv
   "action": "Heartbeat",
   "timestamp": "2026-02-13T10:00:00.000Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {}
 }
 ```
@@ -71,7 +71,7 @@ The station sends its periodic heartbeat, reporting its current time so the serv
   "action": "Heartbeat",
   "timestamp": "2026-02-13T10:00:00.150Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "serverTime": "2026-02-13T10:00:00.150Z"
   }
@@ -103,7 +103,7 @@ Exactly 30 seconds later, the station sends its second heartbeat. The station's 
   "action": "Heartbeat",
   "timestamp": "2026-02-13T10:00:30.000Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {}
 }
 ```
@@ -119,7 +119,7 @@ Exactly 30 seconds later, the station sends its second heartbeat. The station's 
   "action": "Heartbeat",
   "timestamp": "2026-02-13T10:00:30.120Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "serverTime": "2026-02-13T10:00:30.120Z"
   }
@@ -141,7 +141,7 @@ Third heartbeat arrives on time. The CPU temperature has risen slightly (still w
   "action": "Heartbeat",
   "timestamp": "2026-02-13T10:01:00.000Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {}
 }
 ```
@@ -157,7 +157,7 @@ Third heartbeat arrives on time. The CPU temperature has risen slightly (still w
   "action": "Heartbeat",
   "timestamp": "2026-02-13T10:01:00.130Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "serverTime": "2026-02-13T10:01:00.130Z"
   }
@@ -193,7 +193,7 @@ The MQTT broker detects the disconnection via the TCP keepalive timeout and publ
   "action": "ConnectionLost",
   "timestamp": "2026-02-13T10:01:08.000Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "stationId": "stn_a1b2c3d4",
     "reason": "UnexpectedDisconnect"

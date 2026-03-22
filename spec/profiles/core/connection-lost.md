@@ -91,7 +91,7 @@ When a previously disconnected station reconnects:
   "action": "ConnectionLost",
   "timestamp": "2026-02-13T10:18:45.000Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "stationId": "stn_a1b2c3d4e5f6",
     "reason": "UnexpectedDisconnect"

@@ -1,7 +1,7 @@
 {
   "_comment": "Sample conformance report format — see conformance/README.md for details",
   "reportVersion": "0.1.0-draft.1",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "complianceLevel": "Core",
   "stationInfo": {
     "vendor": "ExampleVendor",

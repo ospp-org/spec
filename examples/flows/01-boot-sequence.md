@@ -118,7 +118,7 @@ LWT payload pre-configured at connect time:
   "action": "ConnectionLost",
   "timestamp": "2026-02-13T10:00:02.300Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "stationId": "stn_a1b2c3d4",
     "reason": "UnexpectedDisconnect"
@@ -157,7 +157,7 @@ The station publishes its registration message to the server.
   "action": "BootNotification",
   "timestamp": "2026-02-13T10:00:02.800Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "stationId": "stn_a1b2c3d4",
     "stationModel": "SSP-3000",
@@ -199,7 +199,7 @@ The server validates the station: certificate matches the registered station ID,
   "action": "BootNotification",
   "timestamp": "2026-02-13T10:00:03.100Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Accepted",
     "serverTime": "2026-02-13T10:00:03.100Z",
@@ -236,7 +236,7 @@ The station reports each bay's current status. Bay 1 is clean and operational af
   "action": "StatusNotification",
   "timestamp": "2026-02-13T10:00:03.300Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "bayId": "bay_c1d2e3f4a5b6",
     "bayNumber": 1,
@@ -263,7 +263,7 @@ The station reports each bay's current status. Bay 1 is clean and operational af
   "action": "StatusNotification",
   "timestamp": "2026-02-13T10:00:03.400Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "bayId": "bay_a2b3c4d5e6f7",
     "bayNumber": 2,
@@ -290,7 +290,7 @@ The station reports each bay's current status. Bay 1 is clean and operational af
   "action": "StatusNotification",
   "timestamp": "2026-02-13T10:00:03.500Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "bayId": "bay_d5e6f7a8b9c0",
     "bayNumber": 3,
@@ -325,7 +325,7 @@ Thirty seconds after boot completes, the station sends its first heartbeat.
   "action": "Heartbeat",
   "timestamp": "2026-02-13T10:00:33.600Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {}
 }
 ```
@@ -339,7 +339,7 @@ Thirty seconds after boot completes, the station sends its first heartbeat.
   "action": "Heartbeat",
   "timestamp": "2026-02-13T10:00:33.800Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "serverTime": "2026-02-13T10:00:33.800Z"
   }

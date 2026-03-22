@@ -60,7 +60,7 @@ The Station Info characteristic provides read-only station metadata. The app **S
   "stationModel": "SSP-3000",
   "firmwareVersion": "1.2.3",
   "bayCount": 3,
-  "bleProtocolVersion": "0.1.0",
+  "bleProtocolVersion": "0.2.1",
   "connectivity": "Online"
 }
 ```

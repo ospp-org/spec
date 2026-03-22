@@ -134,7 +134,7 @@ The station's meter reading cycle fires every 5 seconds. Since MQTT is disconnec
     "action": "MeterValues",
     "timestamp": "2026-02-13T10:03:05.000Z",
     "source": "Station",
-    "protocolVersion": "0.1.0",
+    "protocolVersion": "0.2.1",
     "payload": {
       "sessionId": "sess_f7e8d9c0",
       "bayId": "bay_c1d2e3f4a5b6",
@@ -181,7 +181,7 @@ The station's meter reading cycle fires every 5 seconds. Since MQTT is disconnec
     "action": "MeterValues",
     "timestamp": "2026-02-13T10:03:10.000Z",
     "source": "Station",
-    "protocolVersion": "0.1.0",
+    "protocolVersion": "0.2.1",
     "payload": {
       "sessionId": "sess_f7e8d9c0",
       "bayId": "bay_c1d2e3f4a5b6",
@@ -241,7 +241,7 @@ After any reconnection, the station sends a BootNotification to re-announce itse
   "action": "BootNotification",
   "timestamp": "2026-02-13T10:03:15.400Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "stationId": "stn_a1b2c3d4",
     "stationModel": "SSP-3000",
@@ -281,7 +281,7 @@ The server recognizes this as a reconnection (not a cold boot) based on `bootRea
   "action": "BootNotification",
   "timestamp": "2026-02-13T10:03:15.600Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Accepted",
     "serverTime": "2026-02-13T10:03:15.600Z",
@@ -321,7 +321,7 @@ The station replays all buffered messages in chronological order. The server ide
   "action": "StatusNotification",
   "timestamp": "2026-02-13T10:03:00.500Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "bayId": "bay_c1d2e3f4a5b6",
     "bayNumber": 1,
@@ -347,7 +347,7 @@ The station replays all buffered messages in chronological order. The server ide
   "action": "MeterValues",
   "timestamp": "2026-02-13T10:03:05.000Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "sessionId": "sess_f7e8d9c0",
     "bayId": "bay_c1d2e3f4a5b6",
@@ -372,7 +372,7 @@ The station replays all buffered messages in chronological order. The server ide
   "action": "MeterValues",
   "timestamp": "2026-02-13T10:03:10.000Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "sessionId": "sess_f7e8d9c0",
     "bayId": "bay_c1d2e3f4a5b6",
@@ -397,7 +397,7 @@ The station replays all buffered messages in chronological order. The server ide
   "action": "StatusNotification",
   "timestamp": "2026-02-13T10:03:16.400Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "bayId": "bay_c1d2e3f4a5b6",
     "bayNumber": 1,
@@ -446,7 +446,7 @@ From this point, the station sends live MeterValues at the normal 5-second inter
   "action": "MeterValues",
   "timestamp": "2026-02-13T10:03:20.000Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "sessionId": "sess_f7e8d9c0",
     "bayId": "bay_c1d2e3f4a5b6",

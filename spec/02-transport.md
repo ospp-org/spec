@@ -275,7 +275,7 @@ The station MUST configure an LWT message at MQTT CONNECT time:
   "action": "ConnectionLost",
   "timestamp": "2026-01-30T12:00:00.000Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "stationId": "stn_a1b2c3d4",
     "reason": "UnexpectedDisconnect"

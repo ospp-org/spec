@@ -86,7 +86,7 @@ The app establishes a BLE connection and reads the StationInfo characteristic.
   "stationModel": "SSP-3000",
   "firmwareVersion": "1.2.3",
   "bayCount": 2,
-  "bleProtocolVersion": "0.1.0",
+  "bleProtocolVersion": "0.2.1",
   "connectivity": "Online"
 }
 ```
@@ -269,7 +269,7 @@ Because the station is online (`stationConnectivity: "Online"`), it does NOT per
   "action": "AuthorizeOfflinePass",
   "timestamp": "2026-02-13T15:10:06.000Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "offlinePassId": "opass_a8b9c0d1e2f3",
     "offlinePass": {
@@ -337,7 +337,7 @@ All checks pass. The server:
   "action": "AuthorizeOfflinePass",
   "timestamp": "2026-02-13T15:10:06.800Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Accepted",
     "sessionId": "sess_d5e6f7a8b9c0",
@@ -415,7 +415,7 @@ Since the station is online, it also reports the session start to the server via
   "action": "StatusNotification",
   "timestamp": "2026-02-13T15:10:08.000Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "bayId": "bay_a2b3c4d5e6f7",
     "bayNumber": 2,
@@ -516,7 +516,7 @@ Meanwhile, the station also sends periodic MQTT MeterValues [MSG-010] to the ser
   "action": "MeterValues",
   "timestamp": "2026-02-13T15:11:08.000Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "bayId": "bay_a2b3c4d5e6f7",
     "sessionId": "sess_d5e6f7a8b9c0",
@@ -575,7 +575,7 @@ Since the station is online, it reports the bay status change in real-time:
   "action": "StatusNotification",
   "timestamp": "2026-02-13T15:14:08.200Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "bayId": "bay_a2b3c4d5e6f7",
     "bayNumber": 2,
@@ -668,7 +668,7 @@ After the hardware wind-down, Bay 2 returns to `Available`:
   "action": "StatusNotification",
   "timestamp": "2026-02-13T15:14:10.000Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "bayId": "bay_a2b3c4d5e6f7",
     "bayNumber": 2,

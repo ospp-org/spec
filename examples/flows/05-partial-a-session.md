@@ -83,7 +83,7 @@ The app establishes a BLE connection and reads the StationInfo characteristic.
   "stationModel": "SSP-3000",
   "firmwareVersion": "1.2.3",
   "bayCount": 2,
-  "bleProtocolVersion": "0.1.0",
+  "bleProtocolVersion": "0.2.1",
   "connectivity": "Offline"
 }
 ```

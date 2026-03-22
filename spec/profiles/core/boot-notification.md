@@ -88,7 +88,7 @@ The station **MUST NOT** process any incoming commands until it receives an `Acc
   "action": "BootNotification",
   "timestamp": "2026-02-13T10:00:00.000Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "stationId": "stn_a1b2c3d4e5f6",
     "firmwareVersion": "1.2.3",
@@ -123,7 +123,7 @@ The station **MUST NOT** process any incoming commands until it receives an `Acc
   "action": "BootNotification",
   "timestamp": "2026-02-13T10:00:00.250Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Accepted",
     "serverTime": "2026-02-13T10:00:00.250Z",

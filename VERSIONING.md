@@ -20,7 +20,7 @@ During `0.x` development, breaking changes MAY occur between minor versions. Eac
 
 ## Protocol Version Negotiation
 
-The message envelope contains a `protocolVersion` field (e.g., `"0.1.0"`).
+The message envelope contains a `protocolVersion` field (e.g., `"0.2.1"`).
 
 At boot, the station sends its supported version in `BootNotification`. If versions are compatible (same MAJOR), the server responds with `Accepted`. If versions are incompatible (different MAJOR), the server MUST reject with error code `1007` (`PROTOCOL_VERSION_MISMATCH`) and include the `supportedVersions` array in the BootNotification RESPONSE, listing all protocol versions the server supports (e.g., `["0.1.0", "0.2.0"]`). The station MUST NOT retry and MUST await a firmware update.
 

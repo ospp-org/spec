@@ -93,7 +93,7 @@ The app connects to the station over BLE. The BLE connection state transitions: 
   "stationModel": "SSP-3000",
   "firmwareVersion": "2.4.1",
   "bayCount": 3,
-  "bleProtocolVersion": "0.1.0",
+  "bleProtocolVersion": "0.2.1",
   "connectivity": "Offline"
 }
 ```
@@ -630,7 +630,7 @@ When the station regains MQTT connectivity, it performs the reconciliation flow 
   "action": "TransactionEvent",
   "timestamp": "2026-02-14T08:15:00.000Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "offlineTxId": "otx_a3b4c5d6e7f8",
     "offlinePassId": "opass_a8b9c0d1e2f3",
@@ -665,7 +665,7 @@ When the station regains MQTT connectivity, it performs the reconciliation flow 
   "action": "TransactionEvent",
   "timestamp": "2026-02-14T08:15:00.500Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Accepted"
   }

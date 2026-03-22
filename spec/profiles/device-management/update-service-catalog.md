@@ -77,7 +77,7 @@ The station **MUST** reject the catalog if any service entry fails validation.
   "action": "UpdateServiceCatalog",
   "timestamp": "2026-02-13T10:29:00.000Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "catalogVersion": "2026-02-13-01",
     "services": [
@@ -119,7 +119,7 @@ The station **MUST** reject the catalog if any service entry fails validation.
   "action": "UpdateServiceCatalog",
   "timestamp": "2026-02-13T10:29:00.350Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Accepted",
     "previousCatalogVersion": "2026-01-15-03"
@@ -136,7 +136,7 @@ The station **MUST** reject the catalog if any service entry fails validation.
   "action": "UpdateServiceCatalog",
   "timestamp": "2026-02-13T10:29:00.350Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Rejected",
     "errorCode": 5023,

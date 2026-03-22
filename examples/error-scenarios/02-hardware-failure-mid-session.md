@@ -56,7 +56,7 @@ service was delivered (below the 50% threshold), Alice receives a full refund.
   "action": "SecurityEvent",
   "timestamp": "2026-02-13T10:17:00.500Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "mac": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1",
   "payload": {
     "eventId": "sec_ff660001a1b2",
@@ -94,7 +94,7 @@ service was delivered (below the 50% threshold), Alice receives a full refund.
   "action": "SessionEnded",
   "timestamp": "2026-02-13T10:17:01.000Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "mac": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
   "payload": {
     "sessionId": "sess_f7e8d9c0",
@@ -126,7 +126,7 @@ SessionEnded is an EVENT (fire-and-forget) — no response is sent by the server
   "action": "StatusNotification",
   "timestamp": "2026-02-13T10:17:01.500Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "mac": "c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3",
   "payload": {
     "bayId": "bay_c1d2e3f4a5b6",

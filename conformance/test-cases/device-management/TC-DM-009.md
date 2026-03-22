@@ -65,7 +65,7 @@ Verify that the station correctly handles GetConfiguration requests for all keys
     - `value: "30"` (default)
     - `readonly: false`
 13. Verify `ProtocolVersion`:
-    - `value: "0.1.0"`
+    - `value: "0.2.1"`
     - `readonly: true`
 14. Verify `TimeZone`:
     - `value: "UTC"` (default)

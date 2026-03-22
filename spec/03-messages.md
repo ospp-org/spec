@@ -217,7 +217,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
   "action": "BootNotification",
   "timestamp": "2026-01-30T12:00:00.000Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "stationId": "stn_a1b2c3d4",
     "firmwareVersion": "1.2.3",
@@ -1190,7 +1190,7 @@ This is the **Last Will and Testament (LWT)** message, pre-configured by the sta
   "action": "ConnectionLost",
   "timestamp": "2026-01-30T12:00:00.000Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "stationId": "stn_a1b2c3d4",
     "reason": "UnexpectedDisconnect"
@@ -2290,7 +2290,7 @@ The app SHOULD read StationInfo immediately after connecting to verify the stati
 | `stationModel` | string | Yes | Hardware model name |
 | `firmwareVersion` | string | Yes | Current firmware version (semver) |
 | `bayCount` | integer | Yes | Number of service bays |
-| `bleProtocolVersion` | string | Yes | BLE protocol version (e.g., `"0.1.0"`) |
+| `bleProtocolVersion` | string | Yes | BLE protocol version (e.g., `"0.2.1"`) |
 | `connectivity` | string | Yes | `"Online"` (MQTT connected) or `"Offline"` (MQTT disconnected) |
 
 #### Example
@@ -2301,7 +2301,7 @@ The app SHOULD read StationInfo immediately after connecting to verify the stati
   "stationModel": "SSP-3000",
   "firmwareVersion": "1.2.3",
   "bayCount": 3,
-  "bleProtocolVersion": "0.1.0",
+  "bleProtocolVersion": "0.2.1",
   "connectivity": "Offline"
 }
 ```

@@ -56,7 +56,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
   "action": "CancelReservation",
   "timestamp": "2026-02-13T10:09:15.000Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "bayId": "bay_a1b2c3d4",
     "reservationId": "rsv_e5f6a7b8"
@@ -73,7 +73,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
   "action": "CancelReservation",
   "timestamp": "2026-02-13T10:09:15.120Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Accepted"
   }
@@ -89,7 +89,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
   "action": "CancelReservation",
   "timestamp": "2026-02-13T10:09:15.120Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Rejected",
     "errorCode": 3012,

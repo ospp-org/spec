@@ -85,7 +85,7 @@ A station MUST support all keys in the required profiles. A station that adverti
 | `ReconnectBackoffMax` | integer | `30` | RW | Dynamic | 30--3600 | Maximum reconnect backoff delay in seconds (see [Chapter 02](02-transport.md), Section 4.5). |
 | `StationName` | string | `""` | RW | Static | max 100 chars | Human-readable station name for display in management dashboards. |
 | `TimeZone` | string | `"UTC"` | RW | Static | IANA tz | IANA timezone identifier (e.g., `"Europe/London"`). Used for local time display and time-based policies. |
-| `ProtocolVersion` | string | `"0.1.0"` | R | Static | -- | OSPP protocol version supported by the station. ReadOnly; the station firmware determines this value. |
+| `ProtocolVersion` | string | `"0.2.1"` | R | Static | -- | OSPP protocol version supported by the station. ReadOnly; the station firmware determines this value. |
 | `FirmwareVersion` | string | -- | R | Static | -- | Current firmware version in semver format (e.g., `"1.2.3"`). ReadOnly; updated only via firmware update. |
 | `BootRetryInterval` | integer | `30` | RW | Dynamic | 10--600 | Retry interval in seconds when BootNotification is rejected or pending. |
 | `StatusNotificationInterval` | integer | `0` | RW | Dynamic | 0--3600 | Interval in seconds for periodic StatusNotification events. 0 disables periodic notifications (only state-change-triggered). |
@@ -324,7 +324,7 @@ The following table provides a consolidated reference of all standard configurat
 | 3 | `ReconnectBackoffMax` | integer | `30` | RW | Dynamic | Core |
 | 4 | `StationName` | string | `""` | RW | Static | Core |
 | 5 | `TimeZone` | string | `"UTC"` | RW | Static | Core |
-| 6 | `ProtocolVersion` | string | `"0.1.0"` | R | Static | Core |
+| 6 | `ProtocolVersion` | string | `"0.2.1"` | R | Static | Core |
 | 7 | `FirmwareVersion` | string | -- | R | Static | Core |
 | 8 | `BootRetryInterval` | integer | `30` | RW | Dynamic | Core |
 | 9 | `StatusNotificationInterval` | integer | `0` | RW | Dynamic | Core |

@@ -69,7 +69,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
   "action": "StopService",
   "timestamp": "2026-02-13T10:14:58.000Z",
   "source": "Server",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "sessionId": "sess_f7e8d9c0",
     "bayId": "bay_a1b2c3d4"
@@ -86,7 +86,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
   "action": "StopService",
   "timestamp": "2026-02-13T10:14:58.420Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Accepted",
     "actualDurationSeconds": 298,
@@ -109,7 +109,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
   "action": "StopService",
   "timestamp": "2026-02-13T10:14:58.420Z",
   "source": "Station",
-  "protocolVersion": "0.1.0",
+  "protocolVersion": "0.2.1",
   "payload": {
     "status": "Rejected",
     "errorCode": 3006,

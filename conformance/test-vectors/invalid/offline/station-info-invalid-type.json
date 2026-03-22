@@ -3,6 +3,6 @@
   "stationModel": "SSP-3000",
   "firmwareVersion": "1.0.0",
   "bayCount": "two",
-  "bleProtocolVersion": "0.1.0",
+  "bleProtocolVersion": "0.2.1",
   "connectivity": "Online"
 }
