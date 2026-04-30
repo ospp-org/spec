@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/provisioning-response.schema.json",
+  "title": "ProvisioningResponse",
+  "description": "HTTP 200 response body returned by the server's provisioning endpoint (POST /api/v1/stations/provision) per Chapter 04 — Protocol Flows §2. Contains the station's signed identity, trust anchors, server signing key, and the MQTT connection parameters required to bootstrap the operational mTLS session described in Chapter 02 — Transport §1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "stationId",
+    "bayIds",
+    "clientCert",
+    "caCert",
+    "serverVerifyKey",
+    "mqttConfig"
+  ],
+  "properties": {
+    "stationId": {
+      "$ref": "common/station-id.schema.json",
+      "description": "Server-assigned station identifier. MUST equal the CN in the issued client certificate (Chapter 06 — Security §4.4)."
+    },
+    "bayIds": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 255,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "common/bay-id.schema.json"
+      },
+      "description": "Server-assigned bay identifiers belonging to this station. Maximum bay count per controller is 255 (Chapter 01 — Architecture §4.2)."
+    },
+    "clientCert": {
+      "type": "string",
+      "minLength": 100,
+      "maxLength": 8192,
+      "pattern": "^-----BEGIN CERTIFICATE-----[\\s\\S]+-----END CERTIFICATE-----\\s*$",
+      "description": "PEM-encoded X.509 client certificate signed by the Station CA. ECDSA P-256, Subject CN = stationId, EKU clientAuth, validity ≤ 1 year (Chapter 06 — Security §4.4)."
+    },
+    "caCert": {
+      "type": "string",
+      "minLength": 100,
+      "maxLength": 32768,
+      "pattern": "^-----BEGIN CERTIFICATE-----[\\s\\S]+-----END CERTIFICATE-----\\s*$",
+      "description": "PEM-encoded CA chain (Station CA, optionally followed by Root CA) used by the station to validate the broker's server certificate during mTLS. May contain multiple concatenated PEM blocks."
+    },
+    "serverVerifyKey": {
+      "type": "string",
+      "minLength": 100,
+      "maxLength": 4096,
+      "pattern": "^-----BEGIN (PUBLIC|EC PUBLIC) KEY-----[\\s\\S]+-----END (PUBLIC|EC PUBLIC) KEY-----\\s*$",
+      "description": "PEM-encoded ECDSA P-256 server signing public key used by the station to verify OfflinePass and ServerSignedAuth signatures (Chapter 06 — Security §4.2 §6.1 §6.7)."
+    },
+    "mqttConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "brokerHost",
+        "brokerPort",
+        "brokerUri",
+        "clientIdTemplate",
+        "topicPrefix",
+        "qosLevel",
+        "keepAliveSeconds",
+        "cleanStart",
+        "sessionExpirySeconds",
+        "tlsVersion",
+        "mqttVersion"
+      ],
+      "properties": {
+        "brokerHost": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253,
+          "pattern": "^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*|((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))$",
+          "description": "MQTT broker hostname (RFC 1035 FQDN) or IPv4 address. The station MUST be able to resolve this from its deployed network."
+        },
+        "brokerPort": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "default": 8883,
+          "description": "MQTT broker TCP port. Chapter 02 — Transport §1.4 mandates port 8883 for MQTT-over-TLS. Plaintext MQTT (1883) MUST NOT be used in any environment."
+        },
+        "brokerUri": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 512,
+          "pattern": "^mqtts://[^\\s/:]+:[1-9][0-9]{0,4}$",
+          "description": "Convenience pre-formatted broker URI. The mqtts:// scheme is REQUIRED — plaintext mqtt:// MUST NOT be used (Chapter 02 — Transport §1.4)."
+        },
+        "clientIdTemplate": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "default": "{stationId}",
+          "description": "MQTT 5.0 Client ID template. The station substitutes {stationId} with its own stationId before sending CONNECT. The resulting Client ID MUST equal the CN in the station's TLS client certificate (Chapter 02 — Transport §1.2 / Chapter 06 — Security §3.3)."
+        },
+        "topicPrefix": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)*$",
+          "default": "ospp/v1",
+          "description": "MQTT topic namespace prefix. The station composes its publish/subscribe topics as {topicPrefix}/stations/{stationId}/{to-server|to-station}. The v1 segment is a topic namespace, NOT the OSPP protocol version (Chapter 02 — Transport §2.2)."
+        },
+        "qosLevel": {
+          "type": "integer",
+          "enum": [1],
+          "default": 1,
+          "description": "MQTT Quality of Service level for OSPP messages. Chapter 02 — Transport §3.1 mandates QoS 1 for ALL OSPP messages (at-least-once delivery, defense for billing-critical traffic). QoS 0 MUST NOT be used; QoS 2 is not currently used by the protocol."
+        },
+        "keepAliveSeconds": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 65535,
+          "default": 30,
+          "description": "MQTT 5.0 Keep Alive interval the station MUST use on CONNECT. Chapter 02 — Transport §1.2 specifies 30 seconds (broker disconnects after 45s of silence using a 1.5x multiplier)."
+        },
+        "cleanStart": {
+          "type": "boolean",
+          "const": false,
+          "default": false,
+          "description": "MQTT 5.0 Clean Start flag. Chapter 02 — Transport §1.2 mandates false so persistent sessions retain queued messages across brief disconnects. This is REQUIRED for the buffered-offline-message guarantees described in Chapter 01 — Architecture §6.5."
+        },
+        "sessionExpirySeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295,
+          "default": 3600,
+          "description": "MQTT 5.0 Session Expiry Interval (seconds). Chapter 02 — Transport §1.2 specifies 3600 (1 hour) — broker retains undelivered QoS 1 messages and subscriptions for this duration after a station disconnect."
+        },
+        "tlsVersion": {
+          "type": "string",
+          "enum": ["1.3"],
+          "default": "1.3",
+          "description": "Minimum TLS version. Chapter 06 — Security §4.1 / Chapter 02 — Transport §1.3 mandate TLS 1.3 only. TLS 1.2 fallback MUST NOT be permitted; TLS 0-RTT MUST NOT be enabled."
+        },
+        "mqttVersion": {
+          "type": "string",
+          "const": "5.0",
+          "default": "5.0",
+          "description": "MQTT protocol version the broker speaks. Chapter 02 — Transport §1.1 mandates MQTT 5.0; MQTT 3.1.1 is NOT supported."
+        },
+        "lastWillTopic": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[a-zA-Z0-9_/{}+-]+$",
+          "description": "OPTIONAL Last Will and Testament topic template. When present the station SHOULD publish a ConnectionLost LWT (MSG-011) on this topic at MQTT CONNECT. The {stationId} placeholder, if present, is substituted by the station. Defaults to {topicPrefix}/stations/{stationId}/to-server when omitted (Chapter 02 — Transport §4.3)."
+        }
+      },
+      "description": "MQTT 5.0 broker connection parameters. Defaults align with Chapter 02 — Transport §1.2 normative values; servers SHOULD NOT advertise values that contradict §1.2 (the schema rejects QoS≠1, cleanStart≠false, mqttVersion≠5.0, tlsVersion≠1.3 to enforce this)."
+    }
+  }
+}

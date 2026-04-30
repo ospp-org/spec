@@ -1,6 +1,6 @@
 # OSPP JSON Schemas
 
-> **Schema Version:** 0.2.4 | **JSON Schema Draft:** 2020-12
+> **Schema Version:** 0.2.5 | **JSON Schema Draft:** 2020-12
 
 This directory contains JSON Schema definitions for every message in the OSPP protocol. Schemas are generated from the normative message catalog in [Chapter 03 — Message Catalog](../spec/03-messages.md).
 
@@ -10,13 +10,14 @@ This directory contains JSON Schema definitions for every message in the OSPP pr
 
 ```
 schemas/
-├── common/          17 shared type definitions ($ref targets)
-├── mqtt/            46 MQTT message payload schemas
-├── ble/             13 BLE message schemas
-└── README.md        This file
+├── common/                              17 shared type definitions ($ref targets)
+├── mqtt/                                46 MQTT message payload schemas
+├── ble/                                 13 BLE message schemas
+├── provisioning-response.schema.json    HTTP provisioning response (Flow §2)
+└── README.md                            This file
 ```
 
-**Total: 76 schema files.**
+**Total: 77 schema files.**
 
 ---
 
@@ -43,6 +44,16 @@ Shared definitions referenced by message schemas via `$ref`.
 | [`receipt.schema.json`](common/receipt.schema.json) | object | ECDSA P-256 signed receipt (data + signature + algorithm) |
 | [`service-item.schema.json`](common/service-item.schema.json) | object | Service catalog entry with dual pricing (credits + local currency) |
 | [`mqtt-envelope.schema.json`](common/mqtt-envelope.schema.json) | object | MQTT message envelope (messageId, messageType, action, timestamp, source, protocolVersion, payload, mac) |
+
+---
+
+## HTTP Schemas (top-level)
+
+Schemas for HTTP request/response bodies that fall outside the MQTT envelope. These payloads run before the operational MQTT session is established or carry transport-agnostic content.
+
+| File | Endpoint | Direction | Spec Reference |
+|------|----------|-----------|----------------|
+| [`provisioning-response.schema.json`](provisioning-response.schema.json) | `POST /api/v1/stations/provision` | Server → Station | [04-flows.md §2](../spec/04-flows.md#2-station-provisioning) |
 
 ---
 
@@ -262,5 +273,6 @@ if (!valid) {
 | Spec Chapter | Schema Coverage |
 |--------------|----------------|
 | [03 — Message Catalog](../spec/03-messages.md) | All 39 messages → 76 schema files (REQUEST + RESPONSE + EVENT + common types) |
-| [02 — Transport](../spec/02-transport.md) | `common/mqtt-envelope.schema.json` |
+| [02 — Transport](../spec/02-transport.md) | `common/mqtt-envelope.schema.json` (envelope), `provisioning-response.schema.json` (MQTT connection parameters returned by provisioning) |
+| [04 — Protocol Flows](../spec/04-flows.md) | `provisioning-response.schema.json` (Flow §2) |
 | [06 — Security](../spec/06-security.md) | `common/offline-pass.schema.json`, `common/receipt.schema.json` |

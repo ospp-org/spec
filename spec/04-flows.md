@@ -1,6 +1,6 @@
 # Chapter 04 — Protocol Flows
 
-> **Status:** Draft | **OSPP Version:** 0.2.4
+> **Status:** Draft | **OSPP Version:** 0.2.5
 
 This chapter documents every end-to-end protocol flow as a sequence of messages defined in [Chapter 03 — Message Catalog](03-messages.md). Each flow includes preconditions, a Mermaid sequence diagram, numbered happy-path steps, alternative paths, error paths, and postconditions.
 
@@ -234,7 +234,7 @@ sequenceDiagram
 5. SSP generates a TLS key pair (ECDSA P-256) and produces a Certificate Signing Request (CSR) with CN = `stn_{station_id}`
 6. SSP generates an ECDSA P-256 key pair for offline receipt signing (private key never leaves the device)
 7. SSP sends `POST /api/v1/stations/provision` with the provisioning token, serial number, bay count, TLS CSR, and receipt-signing public key
-8. Server validates the token (not expired, not used), signs the CSR with the Station CA, and returns: `stationId`, `bayIds[]`, signed client certificate, CA certificate chain, server ECDSA P-256 verify key, and MQTT broker configuration
+8. Server validates the token (not expired, not used), signs the CSR with the Station CA, and returns the provisioning response per [`provisioning-response.schema.json`](../schemas/provisioning-response.schema.json) — see schema for the canonical field set and constraints (`stationId`, `bayIds[]`, `clientCert`, `caCert`, `serverVerifyKey`, and the `mqttConfig` block: broker host/port/URI, client-ID template, topic prefix, QoS level, keep-alive, clean-start, session-expiry, TLS version, MQTT version, optional LWT topic). Defaults align with the normative MQTT connection parameters in [Chapter 02 — Transport §1.2](02-transport.md#12-connection-parameters)
 9. SSP stores all credentials and configuration in NVS, marks itself as provisioned
 10. SSP exits provisioning mode and reboots
 11. SSP proceeds to [Station Boot & Registration (Flow §1)](#1-station-boot--registration)

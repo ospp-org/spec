@@ -40,6 +40,17 @@ for schema in "$SCHEMA_DIR"/ble/*.schema.json; do
   fi
 done
 
+# Top-level schemas: HTTP/transport-agnostic payloads (e.g. provisioning-response)
+echo "  Top-level schemas..."
+shopt -s nullglob
+for schema in "$SCHEMA_DIR"/*.schema.json; do
+  if ! npx ajv compile -s "$schema" -r "$SCHEMA_DIR/common/*.schema.json" --spec=draft2020 -c ajv-formats 2>/dev/null; then
+    echo "FAIL: $schema"
+    ERRORS=$((ERRORS + 1))
+  fi
+done
+shopt -u nullglob
+
 if [ "$ERRORS" -eq 0 ]; then
   echo "All schemas valid."
 else
