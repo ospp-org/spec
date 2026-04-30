@@ -425,7 +425,7 @@ This section describes the end-to-end provisioning journey of an OSPP station, f
 3. **Station identity:** A `stationId` is allocated (format: `stn_` + 8+ hex characters) and embedded in firmware or secure storage.
 4. **Client certificate:** The manufacturer generates a Certificate Signing Request (CSR) using the on-chip private key. The operator CA signs the CSR, producing the station's X.509 client certificate (CN = `stn_{station_id}`).
 
-> **Runtime alternative.** Manufacturing-time enrollment is one valid pre-boot pattern. Operators that issue certificates at runtime instead — e.g., field-installed stations without manufacturer CA infrastructure — SHOULD use the flow defined in [04-flows.md §2 (Station Provisioning)](04-flows.md#2-station-provisioning). That section is authoritative for the HTTP runtime path; both patterns are admissible under §7.0's "implementation-specific" classification.
+> **Runtime alternative.** Manufacturing-time enrollment is one valid pre-boot pattern. Operators that issue certificates at runtime instead — e.g., field-installed stations without manufacturer CA infrastructure — SHOULD use the flow defined in [04-flows.md §2 (Station Provisioning)](04-flows.md#2-station-provisioning). That section is authoritative for the HTTP runtime path; both patterns are admissible under §7's "out-of-band" classification (see leading paragraph).
 
 ### 7.2 Physical Configuration
 

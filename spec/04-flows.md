@@ -215,7 +215,7 @@ sequenceDiagram
 
     alt Token valid
         Server->>Server: Validate token, sign CSR
-        Server-->>SSP: 200 OK {stationId, bayIds, clientCert, caCert, serverVerifyKey, mqttConfig}
+        Server-->>SSP: 200 OK ProvisioningResponse (per schemas/provisioning-response.schema.json)
         Note over SSP: Store all in NVS
         Note over SSP: Exit provisioning mode → reboot
         Note over SSP: Proceed to Boot Flow [§1]
