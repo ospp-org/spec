@@ -239,6 +239,11 @@ sequenceDiagram
 10. SSP exits provisioning mode and reboots
 11. SSP proceeds to [Station Boot & Registration (Flow §1)](#1-station-boot--registration)
 
+### Consumption Requirements
+
+- The station MUST use `mqttConfig.brokerUri` from the provisioning response as the MQTT connection target on every connect attempt. If the field is absent, the station MAY use a pre-configured fallback URL.
+- Other `mqttConfig` fields follow the same MUST/MAY pattern: when present in the provisioning response, the station MUST honor them (`brokerHost`, `brokerPort`, `tlsVersion`, `qosLevel`, `cleanStart`, `mqttVersion`, `clientIdTemplate`, `topicPrefix`, `keepAliveSeconds`); when absent, the station MAY use pre-configured defaults.
+
 ### Error Paths
 
 | Error | Cause | SSP Action |
