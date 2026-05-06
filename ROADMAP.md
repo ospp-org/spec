@@ -7,10 +7,11 @@
 | v0.1.0 | Protocol specification published | Initial public draft with full message catalog, schemas, and test vectors |
 | v0.2.0 | SessionEnded EVENT + Unknown bay state | New message for autonomous session termination, authoring fixes, example validation |
 | v0.2.1 | Version negotiation fix | `supportedVersions` field in BootNotification RESPONSE for protocol version mismatch |
-| v0.3.0 | Online authorization + device model | RFID/NFC credential verification, local auth list, inventory reporting |
-| v0.4.0 | First station implementation | Embedded firmware reference implementation |
-| v0.5.0 | End-to-end testing complete | Full integration testing across MQTT, BLE, and offline flows |
-| v0.6.0 | Pilot deployment | Field testing with real hardware and users |
+| v0.3.0 | Provisioning trust anchor split + brokerUri MUST | Schema rename `caCert` → `stationCaChain`, new optional `brokerRootCa`, normative MUST on `mqttConfig.brokerUri` consumption |
+| v0.4.0 | Online authorization + device model | RFID/NFC credential verification, local auth list, inventory reporting |
+| v0.5.0 | First station implementation | Embedded firmware reference implementation |
+| v0.6.0 | End-to-end testing complete | Full integration testing across MQTT, BLE, and offline flows |
+| v0.7.0 | Pilot deployment | Field testing with real hardware and users |
 | v1.0.0 | Stable release | Backwards compatibility commitment begins |
 
 ---
@@ -59,7 +60,30 @@
 - `guides/implementors-guide.md` BootNotification handling updated for version mismatch
 - `spec/profiles/core/boot-notification.md` error table updated
 
-## v0.3.0 (Planned)
+## v0.3.0 (Delivered)
+
+### Provisioning trust anchor split + brokerUri MUST consumption
+
+Status: shipped 2026-05-06.
+
+Purpose: resolve a load-bearing semantic ambiguity in the provisioning response schema and close §17.4a's open consumption mandate.
+
+### Changes
+
+- **BREAKING — schema rename:** `caCert` → `stationCaChain` in `provisioning-response.schema.json`. The former field's description claimed station→broker validation purpose, but its content (Station CA + Root CA) was the chain used for broker→station validation. Renaming clarifies actual purpose; wire payload unchanged.
+- **Added — schema field:** new optional `brokerRootCa` in `provisioning-response.schema.json`. Trust anchor used by the station to validate the broker's TLS server certificate. Permits PROD-A (private CA broker certs) and PROD-B (publicly-trusted CA broker certs) deployments with single station firmware. When present, station MUST use as trust anchor; when absent, station MAY use system trust store.
+- **Added — normative MUST:** station MUST use `response.mqttConfig.brokerUri` as the MQTT connection target when the field is present in the provisioning response. MAY use pre-configured fallback when absent. Same MUST/MAY pattern extended to sibling `mqttConfig` fields.
+
+### Out of scope (deferred to follow-up implementations)
+
+- csms-server: populate `brokerRootCa` in provisioning response, rename `caCert` → `stationCaChain`.
+- ts-station-simulator: persist `brokerRootCa` from provisioning response, consume as trust anchor at connect time, consume `mqttConfig.brokerUri` from response.
+
+### Migration
+
+See [CHANGELOG.md](CHANGELOG.md) `[0.3.0]` entry.
+
+## v0.4.0 (Planned)
 
 ### Online Authorization
 
@@ -87,7 +111,7 @@
 - **Reconciliation backpressure:** Specify batch size and flow control for offline TransactionEvent upload on reconnect (e.g., 50 events per batch, server-side acknowledgment before next batch)
 - **Error code 2002 split:** Split `2002 OFFLINE_PASS_INVALID` into separate codes for ECDSA signature failure vs. device binding mismatch for improved machine-readable diagnostics
 
-## v0.4.0 (Future)
+## v0.5.0 (Future)
 
 - Smart Charging profile (if EV charging scope)
 - Real-time cost updates
