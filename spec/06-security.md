@@ -178,7 +178,7 @@ OSPP uses **channel-specific authentication** — each communication channel has
 **Requirements:**
 - The station MUST present a valid X.509 client certificate signed by the OSPP Station CA.
 - The broker MUST verify the station certificate against the OSPP trust chain (Root CA → Station CA → Station Cert).
-- The station MUST verify the broker's server certificate.
+- The station MUST verify the broker's server certificate. If the provisioning response includes `brokerRootCa`, the station MUST use it as the trust anchor for this verification; otherwise, the station MAY use its system trust store.
 - The broker MUST extract the CN from the client certificate and use it for **topic ACL enforcement** (see §3.3).
 - TLS session resumption is RECOMMENDED for reconnection performance. **0-RTT MUST NOT be used** (replay risk).
 
@@ -403,6 +403,7 @@ Server Signing Key (ECDSA P-256, server-side HSM)
 - Station CA public certificate is distributed during provisioning.
 - Station certificates are issued during provisioning ([Flow §2](04-flows.md#2-station-provisioning)).
 - Server signing public key is distributed via provisioning and ChangeConfiguration [MSG-013].
+- Broker server CA trust anchor is delivered via the provisioning response `brokerRootCa` field when the broker uses a private CA hierarchy. The station uses its system trust store when this field is absent (broker uses publicly-trusted CA hierarchy).
 
 ### 4.3 Key Management Lifecycle
 

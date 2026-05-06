@@ -9,7 +9,7 @@
     "stationId",
     "bayIds",
     "clientCert",
-    "caCert",
+    "stationCaChain",
     "serverVerifyKey",
     "mqttConfig"
   ],
@@ -35,12 +35,19 @@
       "pattern": "^-----BEGIN CERTIFICATE-----[\\s\\S]+-----END CERTIFICATE-----\\s*$",
       "description": "PEM-encoded X.509 client certificate signed by the Station CA. ECDSA P-256, Subject CN = stationId, EKU clientAuth, validity ≤ 1 year (Chapter 06 — Security §4.4)."
     },
-    "caCert": {
+    "stationCaChain": {
       "type": "string",
       "minLength": 100,
       "maxLength": 32768,
       "pattern": "^-----BEGIN CERTIFICATE-----[\\s\\S]+-----END CERTIFICATE-----\\s*$",
-      "description": "PEM-encoded CA chain (Station CA, optionally followed by Root CA) used by the station to validate the broker's server certificate during mTLS. May contain multiple concatenated PEM blocks."
+      "description": "PEM-encoded Station CA chain (Station CA, optionally followed by Root CA) used by the broker to verify the station's client certificate during mTLS. May contain multiple concatenated PEM blocks."
+    },
+    "brokerRootCa": {
+      "type": "string",
+      "minLength": 100,
+      "maxLength": 32768,
+      "pattern": "^-----BEGIN CERTIFICATE-----[\\s\\S]+-----END CERTIFICATE-----\\s*$",
+      "description": "PEM-encoded trust anchor (Root CA, or Root + intermediate chain) used by the station to validate the broker's TLS server certificate during mTLS. OPTIONAL: when present, station MUST use as trust anchor; when absent, station MAY use system trust store. May contain multiple concatenated PEM blocks."
     },
     "serverVerifyKey": {
       "type": "string",
