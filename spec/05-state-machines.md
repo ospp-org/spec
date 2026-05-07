@@ -167,6 +167,18 @@ stateDiagram-v2
 | Session inactivity | `SessionTimeout` config key (see §8 Configuration) | Yes | If no MeterValues or user interaction within the timeout period, session transitions to `Stopping` |
 | Connection lost grace | `ConnectionLostGracePeriod` config key (default: 300s) | Yes | If station reconnects within grace period, session continues; otherwise transitions to `Failed` |
 
+### 2.5 Per-Session Sequence Number (seqNo) and Crash Resilience
+
+For stations that emit the optional per-session `seqNo` field on session-scoped EVENTs (MeterValues, SessionEnded — see [`02-transport.md §3.2`](02-transport.md)), the following rules apply to the Session FSM:
+
+1. **Persistence before publish.** Before publishing a session-scoped EVENT carrying `seqNo`, the station MUST persist the new `seqNo` value (alongside the corresponding `sessionId`) to non-volatile storage. The persistence write MUST complete before the MQTT publish call returns to the application layer. This guarantees that the station does not "forget" an emitted value across a power loss.
+2. **Resume on reboot during Active or Stopping state.** If the station reboots while a session is in `Active` or `Stopping` state and the prior persisted state is recoverable, the station MUST resume the session with the same `sessionId` and the next `seqNo` equal to `(persisted_seqNo + 1)`. The first MeterValues emitted post-reboot uses this resumed counter.
+3. **Orphan on unrecoverable reboot.** If the station cannot recover the prior session state from non-volatile storage (corrupted record, missing fields, or any failure to deserialize), it MUST treat the prior session as **orphaned**. The station MUST NOT emit further events for the orphaned `sessionId`. If a new session begins on the same bay after recovery, the station MUST allocate a fresh `sessionId` (allocated by the server in the next StartService).
+4. **No `sessionId` reuse across reboot.** A station MUST NOT reuse a `sessionId` value across station reboot under any circumstances. The `sessionId` is allocated per-session by the server and consumed by the station; if the prior session's record is lost, the station emits a new session under a new identifier rather than continuing the old one. Servers MAY rely on this guarantee to detect orphaned sessions: a session in `Active` state with no further events for which a fresh `sessionId` later appears on the same bay is an orphaned session.
+5. **finalSeqNo on terminal events.** When the session reaches a terminal state via SessionEnded EVENT or StopService RESPONSE, the station MUST set `finalSeqNo` (if it has emitted any `seqNo`-bearing events) to the highest `seqNo` emitted in the session — including the `seqNo` carried on this terminal event itself when the terminal event is SessionEnded. Servers use `finalSeqNo` to discard late stale MeterValues for the same `sessionId` per [`02-transport.md §3.2`](02-transport.md).
+
+These requirements are consistent with the existing `txCounter` persistence rule in [`profiles/transaction/transaction-event.md §7.1`](profiles/transaction/transaction-event.md), which mandates atomic NVS persistence for the offline counter. The online `seqNo` and offline `txCounter` are independent counters with parallel persistence semantics.
+
 ---
 
 ## 3. Reservation State Machine

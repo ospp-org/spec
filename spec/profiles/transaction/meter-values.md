@@ -21,6 +21,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 | `sessionId` | string | Yes | Active session identifier (`sess_` prefix). |
 | `timestamp` | string | Yes | ISO 8601 UTC timestamp of the reading. |
 | `values` | object | Yes | Meter readings (see section 4). |
+| `seqNo` | integer | No | Optional per-session monotonic counter starting at 0, incrementing by 1 per session-scoped EVENT (MeterValues, SessionEnded). When emitted, MUST follow the ordering and gap-detection rules in [`02-transport.md §3.2`](../../02-transport.md) and the NVS persistence rules in [`05-state-machines.md §2.5`](../../05-state-machines.md). |
 
 ## 4. Meter Value Types
 

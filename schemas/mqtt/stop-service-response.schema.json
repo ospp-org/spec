@@ -38,6 +38,11 @@
       "type": "string",
       "maxLength": 128,
       "description": "Human-readable error description. Present when status is Rejected."
+    },
+    "finalSeqNo": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Optional canonical session-final marker — the highest seqNo emitted for this session by the station. Present when status is Accepted and the station has emitted at least one session-scoped EVENT (MeterValues) with seqNo. Servers MUST discard any MeterValues with seqNo > finalSeqNo received after this StopService RESPONSE for the same sessionId. See spec/02-transport.md §3.2."
     }
   },
   "allOf": [

@@ -23,6 +23,11 @@
     },
     "values": {
       "$ref": "../common/meter-values.schema.json"
+    },
+    "seqNo": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Optional per-session monotonic counter starting at 0, incrementing by 1 for each session-scoped EVENT (MeterValues, SessionEnded). See spec/02-transport.md §3.2 for ordering rules and spec/05-state-machines.md §2.5 for NVS persistence requirements."
     }
   }
 }

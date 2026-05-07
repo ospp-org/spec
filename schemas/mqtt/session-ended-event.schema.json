@@ -48,6 +48,16 @@
           "minimum": 0
         }
       }
+    },
+    "seqNo": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Optional per-session monotonic counter (matches the running seqNo of the last MeterValues emitted for the session). See spec/02-transport.md §3.2."
+    },
+    "finalSeqNo": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Optional canonical session-final marker — the highest seqNo emitted for this session. Servers MUST discard any MeterValues with seqNo > finalSeqNo received after this SessionEnded event for the same sessionId. See spec/02-transport.md §3.2."
     }
   }
 }

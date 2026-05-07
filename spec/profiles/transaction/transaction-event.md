@@ -75,6 +75,8 @@ Each offline transaction includes a monotonic `txCounter` for ordering and gap d
 - The `txCounter` is included in the signed receipt data, ensuring its integrity is protected by the receipt signature.
 - The server verifies that received `txCounter` values form a contiguous sequence with no gaps. Gaps indicate missing transactions and are flagged as a HIGH-severity fraud signal.
 
+> **`txCounter` vs `seqNo`:** The offline `txCounter` (per-pass, per-station) and the online per-session `seqNo` defined in [`02-transport.md §3.2`](../../02-transport.md) are independent counters with distinct scopes. `txCounter` orders offline transactions across the station's full offline log; `seqNo` orders session-scoped EVENTs within a single online session. A station may simultaneously increment `txCounter` for a freshly completed offline transaction queued for reconciliation and `seqNo` for an unrelated active online session. Both counters MUST be persisted to NVS before the corresponding message is published.
+
 ### 7.2 Deduplication
 
 The server **MUST** deduplicate transactions using the `offlineTxId` field. If a transaction with the same `offlineTxId` already exists, the server **MUST** respond with `Duplicate` regardless of payload differences.

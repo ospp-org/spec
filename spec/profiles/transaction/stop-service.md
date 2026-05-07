@@ -28,6 +28,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 | `actualDurationSeconds` | integer | Actual service duration in seconds (minimum 0). |
 | `creditsCharged` | integer | Final credits charged for the session. |
 | `meterValues` | object | Final meter readings (optional, see MeterValues). |
+| `finalSeqNo` | integer | Optional canonical session-final marker — the highest per-session `seqNo` emitted by the station for this session. When present, servers MUST discard MeterValues with `seqNo > finalSeqNo` received subsequently for the same `sessionId`. See [`02-transport.md §3.2`](../../02-transport.md). |
 
 ## 5. Response Payload (Rejected)
 

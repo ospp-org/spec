@@ -706,9 +706,16 @@ When you receive SessionEnded EVENT [MSG-040] (timer expiry or hardware fault):
 
 1. Use `creditsCharged` provided directly by the station — do not recalculate
 2. Refund unused portion: `refund = preAuthAmount - creditsCharged`
-3. For `reason: "Fault"`: apply refund policy (if `actualDurationSeconds < 0.5 * durationSeconds` → full refund, override `creditsCharged` to 0)
+3. For `reason: "Fault"`: apply refund policy (if `actualDurationSeconds < 0.5 * durationSeconds` → full refund, override `creditsCharged` to 0). The < 50% override applies only to `reason: "Fault"` — it does not apply to `TimerExpired` (the user received the booked duration regardless of meter values).
 4. Update session to `completed` (timer expiry) or `failed` (fault)
 5. Update bay status to `Available` (timer expiry) or `Faulted` (fault)
+
+**Per-session `seqNo` handling (when station emits the optional field):**
+
+- Track the running `seqNo` per `sessionId`. On consecutive session-scoped EVENTs (MeterValues, SessionEnded), verify that `seqNo` increments by exactly `1`.
+- On detected gap, log a warning and continue processing. If the missing `seqNo` range crosses the `< 50% duration delivered` billing-milestone boundary (refund policy at [`04-flows.md §6`](../spec/04-flows.md)), flag the session for HIGH-severity reconciliation audit.
+- When you receive a `finalSeqNo` (on StopService RESPONSE or SessionEnded EVENT), record it for the session. Subsequently, discard any MeterValues for the same `sessionId` whose `seqNo > finalSeqNo` — these are stale events that flushed after the stop was processed (e.g., from a station-side retransmission queue).
+- If `seqNo` is absent on incoming EVENTs (v0.3.0 stations), fall back to `timestamp` ordering as before. The seqNo handling is purely additive — its absence does not change processing behavior.
 
 ### 3.5 Web Payment Flow
 
