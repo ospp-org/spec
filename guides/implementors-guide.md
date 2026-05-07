@@ -702,13 +702,15 @@ When you receive StopService RESPONSE (user-initiated stop):
 3. Update session to `completed`
 4. Update bay status to `Available`
 
-When you receive SessionEnded EVENT [MSG-040] (timer expiry or hardware fault):
+When you receive SessionEnded EVENT [MSG-040], switch on `reason`:
 
-1. Use `creditsCharged` provided directly by the station — do not recalculate
-2. Refund unused portion: `refund = preAuthAmount - creditsCharged`
-3. For `reason: "Fault"`: apply refund policy (if `actualDurationSeconds < 0.5 * durationSeconds` → full refund, override `creditsCharged` to 0). The < 50% override applies only to `reason: "Fault"` — it does not apply to `TimerExpired` (the user received the booked duration regardless of meter values).
-4. Update session to `completed` (timer expiry) or `failed` (fault)
-5. Update bay status to `Available` (timer expiry) or `Faulted` (fault)
+1. **`TimerExpired`** — Session ran to its booked timer. Charge full `creditsCharged` from event. No < 50% override (user received the booked duration). Refund: `refund = preAuthAmount - creditsCharged`. Session → `completed`. Bay → `Available`.
+2. **`Fault`** — Hardware fault during session. Charge `creditsCharged` from event UNLESS `actualDurationSeconds < 0.5 * durationSeconds` — in that case override `creditsCharged` to 0 and refund 100%. Session → `failed`. Bay → `Faulted`.
+3. **`Local`** (v0.4.0+) — User manually stopped at the station. Treat identically to a user-initiated StopService for billing purposes: charge pro-rated `creditsCharged` from event, refund the unused portion. Session → `completed`. Bay → `Available`.
+4. **`LocalOutOfCredit`** (v0.4.0+) — Offline credit pool exhausted mid-session. Station MUST emit `creditsCharged: 0`; if a non-zero value arrives, log a CRITICAL anomaly and override to 0 server-side. Refund 100% of the pre-authorized amount. Session → `completed`. Bay → `Available`.
+5. **`Deauthorized`** (v0.4.0+) — Offline pass revoked mid-session. Station MUST emit `creditsCharged: 0`. Refund 100% of pre-auth. Flag the session record for security review (mid-session revocation usually indicates fraud or compromise). Session → `failed`. Bay → `Available`.
+
+Note: `creditsCharged` from the station is **advisory** — the server is the authoritative billing engine and applies the active tariff (see [Billing Authority in `04-flows.md`](../spec/04-flows.md)).
 
 **Per-session `seqNo` handling (when station emits the optional field):**
 

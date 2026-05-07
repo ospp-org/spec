@@ -21,7 +21,8 @@
     },
     "reason": {
       "type": "string",
-      "enum": ["TimerExpired", "Fault"]
+      "enum": ["TimerExpired", "Fault", "Local", "LocalOutOfCredit", "Deauthorized"],
+      "description": "Why the session ended autonomously. TimerExpired: durationSeconds elapsed. Fault: hardware fault detected. Local: user manually stopped at the station (e.g., physical Stop button). LocalOutOfCredit: offline credit pool exhausted mid-session. Deauthorized: offline pass revoked mid-session via RevocationEpoch bump. See spec/03-messages.md §5.4 for full descriptions and spec/04-flows.md §6 for refund policy per reason."
     },
     "actualDurationSeconds": {
       "type": "integer",

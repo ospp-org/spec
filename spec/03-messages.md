@@ -1089,10 +1089,13 @@ Reports consumption telemetry during an active session. Sent at the interval con
 | **Idempotency** | Yes — duplicate SessionEnded for same `sessionId` MUST be ignored by server |
 | **Message Expiry** | **Never expires** (Critical event — see [`02-transport.md §5.1`](02-transport.md)) |
 
-Reports the end of a session that was terminated autonomously by the station, without a server-initiated StopService command. Sent in two cases:
+Reports the end of a session that was terminated autonomously by the station, without a server-initiated StopService command. Sent in any of the following cases:
 
 1. **Timer expiry:** The `durationSeconds` timer elapsed and the station auto-stopped the service.
 2. **Hardware fault:** A hardware fault occurred during an active session and the station auto-stopped the service.
+3. **Local user stop:** The user manually stopped the session at the station (e.g., pressed the physical Stop button on the bay).
+4. **Offline credit exhausted:** The station was operating in offline mode and the user's offline credit pool reached zero mid-session, forcing an immediate stop.
+5. **Mid-session deauthorization:** The user's offline pass was revoked (e.g., via a `RevocationEpoch` bump propagated through ChangeConfiguration) while the session was active; the station MUST stop the service when it detects the revocation.
 
 The server MUST use the `actualDurationSeconds`, `creditsCharged`, and `meterValues` fields from this event for final billing. The server MUST NOT rely solely on StatusNotification for billing calculations when this event is expected.
 
@@ -1118,8 +1121,15 @@ This message is NOT sent when the session is stopped by a server-initiated StopS
 
 | Value | Description |
 |-------|-------------|
-| `TimerExpired` | Session `durationSeconds` elapsed; station auto-stopped |
-| `Fault` | Hardware fault detected during active session; station auto-stopped |
+| `TimerExpired` | Session `durationSeconds` elapsed; station auto-stopped. |
+| `Fault` | Hardware fault detected during active session; station auto-stopped. |
+| `Local` | User manually stopped the session at the station (e.g., physical Stop button on the bay, station UI). Distinguishes operator-initiated termination at the station from a server-routed StopService. |
+| `LocalOutOfCredit` | Offline credit pool exhausted mid-session — `OfflinePass.maxTotalCredits` would be exceeded by the next meter reading or by elapsed time, forcing the station to stop. Session MUST be billed at zero (no valid credits available). |
+| `Deauthorized` | Offline pass revoked while the session was active — typically a `RevocationEpoch` bump propagated through ChangeConfiguration that invalidates the pass under which the session was authorized. Session MUST be billed at zero. |
+
+> **Version note:** The `reason` enum was extended in v0.4.0 from `["TimerExpired", "Fault"]` to add `Local`, `LocalOutOfCredit`, and `Deauthorized`. v0.3.0 servers do not recognize these values and will reject SessionEnded messages containing them with a JSON-schema validation error. Pre-launch deployment of v0.4.0 requires coordinated station + server upgrade. Mixed-version production deployments are not supported in v0.4.0; future minor versions will revisit backwards-compat strategy (e.g., per-message envelope `protocolVersion` discrimination, BootNotification capability negotiation) as the ecosystem matures.
+
+> **Reasons not in v0.4.0:** `Remote` (server-initiated stop) is intentionally excluded — server-initiated stops produce a StopService RESPONSE [MSG-006] which already carries final billing data; emitting both StopService RESPONSE and SessionEnded for the same stop would force double-emission ambiguity. Remote-stop semantics belong in a dedicated flow refactor. `EnergyLimitReached` is deferred to a future version pending consumable-meter implementation maturity.
 
 #### Example
 

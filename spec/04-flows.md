@@ -869,8 +869,12 @@ This separation ensures that a misconfigured or compromised station cannot overc
 | Station NACK on StartService | Full | 100% |
 | All retry attempts fail | Full | 100% |
 | ACK_TIMEOUT (no response) | Full | 100% |
-| Hardware error during active | Partial (pro-rated) | Based on time used |
+| Hardware error during active (SessionEnded `reason=Fault`) | Partial (pro-rated) | Based on time used |
 | Station offline during active | Partial (pro-rated) | Based on time used |
+| User manual stop at station (SessionEnded `reason=Local`) | Partial (pro-rated) | Based on time used (charge `creditsCharged` from event) |
+| Offline credit exhausted mid-session (SessionEnded `reason=LocalOutOfCredit`) | Full | 100% (no charge — `creditsCharged` MUST be 0) |
+| Offline pass revoked mid-session (SessionEnded `reason=Deauthorized`) | Full | 100% (no charge — session not billable; `creditsCharged` MUST be 0) |
+| Timer ran to completion (SessionEnded `reason=TimerExpired`) | None | Charge full pre-authorized amount (user received the booked duration regardless of meter values) |
 | If < 50% duration delivered AND reason=`Fault` | Full | 100% (override pro-rate) |
 
 > **Refund scope clarification:** The `< 50% duration delivered` override applies **only** when SessionEnded reason is `Fault`. It does **not** apply to `TimerExpired` sessions: a session that runs to its booked timer is billed for the full pre-authorized duration regardless of meter values, because the user received the time they paid for. The override formula is `actualDurationSeconds < 0.5 * durationSeconds`, evaluated against the booked `durationSeconds` from StartService.
