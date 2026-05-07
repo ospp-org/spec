@@ -1,6 +1,6 @@
 # Chapter 00 — Introduction
 
-> **Status:** Draft | **OSPP Version:** 0.2.4
+> **Status:** Draft | **OSPP Version:** 0.4.0
 
 This chapter establishes the purpose, scope, and conventions for the Open Self-Service Point Protocol (OSPP) specification. It identifies the target audience, defines how normative language is used throughout the document, describes notation and formatting conventions, and provides the normative and informative reference bibliography.
 
@@ -232,3 +232,6 @@ The following documents provide additional context and prior art. They are not n
 | 0.2.2 | 2026-03-22 | OSPP Authors | Update all `protocolVersion` example values from 0.1.0 to 0.2.1. |
 | 0.2.3 | 2026-03-22 | OSPP Authors | Add SessionEnded EVENT to HMAC signing table in 06-security.md. |
 | 0.2.4 | 2026-03-22 | OSPP Authors | Reclassify SessionEnded as HMAC-signed (YES) — contains billing data. |
+| 0.2.5 | 2026-04-30 | OSPP Authors | `provisioning-response.schema.json` (top-level HTTP schema) for `POST /api/v1/stations/provision` response body. |
+| 0.3.0 | 2026-05-06 | OSPP Authors | Provisioning trust anchors split (`stationCaChain` + `brokerRootCa`); normative MUST that station consumes `mqttConfig.brokerUri`. |
+| 0.4.0 | 2026-05-07 | OSPP Authors | Brief Q comprehensive patches: CSMS as cost authority, <50% refund scope clarified, OSPP Session Retention Horizon (24h), MeterValues + SessionEnded message-expiry, OSPP Canonical Form formalized (§4.8), per-session seqNo + finalSeqNo + NVS persistence, SessionEnded reason vocabulary extended (Local, LocalOutOfCredit, Deauthorized). |
