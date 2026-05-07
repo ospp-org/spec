@@ -43,7 +43,7 @@ An **OfflinePass** is a server-signed credential that authorizes a user to start
 
 The server signs the OfflinePass using ECDSA P-256 with SHA-256 (FIPS 186-4). The signing process is as follows:
 
-1. **Canonical JSON serialization** -- all fields of the OfflinePass (excluding `signature` and `signatureAlgorithm`) are serialized to a canonical JSON string. Keys **MUST** be sorted lexicographically, and no extraneous whitespace **MUST** be present.
+1. **Canonical JSON serialization** -- all fields of the OfflinePass (excluding `signature` and `signatureAlgorithm`) are serialized using the **OSPP Canonical Form** defined in [`06-security.md §4.8`](../../06-security.md). The canonicalization is applied recursively across the whole pass body; the resulting UTF-8 byte sequence is the input to the SHA-256 + ECDSA-P256 signing primitive in step 2.
 2. **ECDSA P-256 signing** -- the SHA-256 digest of the canonical JSON byte sequence is signed using the server's ECDSA P-256 private key.
 3. **Base64 encoding** -- the resulting DER-encoded signature is Base64-encoded and placed in the `signature` field.
 4. **Verification** -- the station verifies the signature using the server's ECDSA P-256 public key, which is provisioned during BootNotification or via ChangeConfiguration. The station **MUST** reject any pass that fails signature verification with error `2002 OFFLINE_PASS_INVALID`.

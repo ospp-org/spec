@@ -14,7 +14,7 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 1024,
-      "description": "Base64-encoded canonical JSON of receipt data"
+      "description": "Base64-encoded OSPP Canonical Form of the receipt_fields object (offlineTxId, bayId, serviceId, startedAt, endedAt, durationSeconds, creditsCharged, meterValues, txCounter). See spec/06-security.md §4.8 for the canonicalization algorithm and §6.2 for the signing process."
     },
     "signature": {
       "type": "string",

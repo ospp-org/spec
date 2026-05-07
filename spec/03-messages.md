@@ -62,6 +62,7 @@ Each message below includes:
 - All timestamps are **ISO 8601 UTC with milliseconds** (e.g., `"2026-01-30T12:00:00.000Z"`)
 - All identifiers follow the pattern `{type}_{uuid}` (e.g., `stn_a1b2c3d4`, `bay_c1d2e3f4a5b6`)
 - Integer units are documented in the Description column
+- Canonical JSON serialization for cryptographic operations (HMAC, ECDSA receipt signing, OfflinePass signing) follows the **OSPP Canonical Form** defined in [`06-security.md §4.8`](06-security.md). All signature primitives in OSPP — present and future — MUST use this single canonical form.
 
 ---
 

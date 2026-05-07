@@ -567,6 +567,59 @@ To support legitimate rollback scenarios (e.g., reverting a faulty update), the 
 
 If firmware installation fails and rollback to the previous version also fails, the station **MUST** enter `Faulted` state, send a SecurityEvent [MSG-012] with `type: FirmwareIntegrityFailure` and `severity: Critical`, and await manual intervention via physical access. The station **MUST NOT** attempt to continue normal operation with potentially corrupted firmware.
 
+### 4.8 OSPP Canonical Form
+
+OSPP defines a single deterministic JSON serialization — the **OSPP Canonical Form** — used wherever a JSON value must be reduced to a stable byte sequence for cryptographic operations (HMAC-SHA256 of MQTT messages in §5, ECDSA-P256 of transaction receipts in §6.2, ECDSA-P256 of OfflinePass payloads in [`profiles/offline/offline-pass.md`](profiles/offline/offline-pass.md), and any future signature primitive). All OSPP cryptographic flows that compute a signature or MAC over a JSON value **MUST** use this form.
+
+#### 4.8.1 Algorithm
+
+Given a JSON value `V`:
+
+1. **Recursively sort object keys** at every nesting level using lexicographic byte ordering of the UTF-8 encoded key strings. Array element order is preserved (arrays are not reordered).
+2. **Serialize compactly**: emit the JSON without any insignificant whitespace (no spaces, tabs, or newlines between tokens). Field separators are `,` and `:` only.
+3. **Use canonical scalar forms**:
+    - Strings: emit as JSON strings with the minimal required escaping (control characters, `"`, `\`). Other characters MUST be emitted literally — JSON escape sequences (e.g., `A`) MUST NOT be used for characters that do not require escaping.
+    - Integers: emit without leading zeros, without a leading `+`, and without a trailing decimal point.
+    - Booleans / null: emit as `true`, `false`, `null`.
+    - OSPP messages do not currently use floating-point numbers in fields subject to canonicalization; if added in a future version, IEEE 754 number serialization rules will be defined here.
+4. **Encode as UTF-8 bytes**. The resulting byte sequence is the canonical form.
+
+#### 4.8.2 Worked Example
+
+Input JSON value (key order non-canonical):
+
+```json
+{
+  "protocolVersion": "0.2.1",
+  "messageId": "cmd_550e8400",
+  "action": "StartService",
+  "payload": {
+    "sessionId": "sess_a1b2c3d4",
+    "bayId": "bay_c1d2e3f4a5b6",
+    "durationSeconds": 300
+  }
+}
+```
+
+OSPP Canonical Form (sorted keys, compact, UTF-8):
+
+```
+{"action":"StartService","messageId":"cmd_550e8400","payload":{"bayId":"bay_c1d2e3f4a5b6","durationSeconds":300,"sessionId":"sess_a1b2c3d4"},"protocolVersion":"0.2.1"}
+```
+
+The canonical byte sequence is then fed into HMAC-SHA256 (§5), SHA-256-then-ECDSA-P256 (§6.2), or any other signature primitive that requires deterministic input.
+
+#### 4.8.3 Relationship to RFC 8785 (JCS)
+
+OSPP Canonical Form is **materially similar to RFC 8785 JCS but does not require Unicode NFKC normalization** of string content. For payloads where string content is restricted to ASCII (the dominant case for OSPP messages — UUIDs, ISO 8601 timestamps, `PascalCase` enum values, identifier strings), implementations that target RFC 8785 JCS produce output identical to OSPP Canonical Form.
+
+OSPP does not pin RFC 8785 normatively because:
+
+- Existing OSPP message vocabulary is ASCII-only; Unicode normalization adds implementation cost without observable behavior.
+- IEEE 754 number serialization rules from JCS apply only to floating-point numbers, which OSPP does not use in canonicalized fields today.
+
+A future OSPP version MAY adopt RFC 8785 strictly if message vocabulary is extended with non-ASCII strings or floating-point numbers.
+
 ---
 
 ## 5. Message Integrity — HMAC-SHA256
@@ -595,13 +648,12 @@ When `MessageSigningMode` is `Critical` or `All`, applicable MQTT messages MUST 
 
 ### 5.3 Canonical Form
 
-To compute the HMAC, the message MUST first be reduced to **canonical form**:
+To compute the HMAC, the message MUST first be reduced to canonical form:
 
-1. Take the complete message JSON object
-2. **Remove** the `mac` field if present
-3. **Sort all keys** alphabetically at every nesting level (recursive)
-4. Serialize as **compact JSON** (no whitespace)
-5. Encode as **UTF-8** bytes
+1. **Remove** the `mac` field from the message envelope if present (HMAC-specific — the MAC field cannot be part of the input that produces it).
+2. Apply the **OSPP Canonical Form** algorithm defined in §4.8 to the resulting object.
+
+The output is a UTF-8 byte sequence suitable for HMAC-SHA256 input.
 
 **Example:**
 
@@ -820,7 +872,7 @@ Every offline transaction produces a cryptographically signed receipt, ensuring 
 ```
 1. receipt_fields = {offlineTxId, bayId, serviceId, startedAt, endedAt,
                      durationSeconds, creditsCharged, meterValues, txCounter}
-2. receipt_data  = canonical_json(receipt_fields)      // sorted keys, compact
+2. receipt_data  = OSPP_Canonical_Form(receipt_fields)  // see §4.8
 3. data_bytes    = base64_encode(receipt_data)
 4. digest        = SHA-256(data_bytes)
 5. signature     = ECDSA-P256-Sign(station_private_key, digest)  // RFC 6979 deterministic nonces
@@ -830,6 +882,8 @@ Every offline transaction produces a cryptographically signed receipt, ensuring 
      signatureAlgorithm: "ECDSA-P256-SHA256"
    }
 ```
+
+> **Note:** The 9 fields listed in `receipt_fields` are the only fields canonicalized for signing. The receipt envelope's `data`, `signature`, and `signatureAlgorithm` fields are **not** part of the signed input — they are the output container produced by the signing process. Implementations MUST NOT include them in the canonicalized receipt body.
 
 > **Note:** The `txCounter` field is included in the signed receipt data to enable gap detection during reconciliation. The server can verify monotonically increasing counters and detect missing transactions (e.g., counter 5 → 7 indicates a missing transaction) without requiring a hash chain.
 
