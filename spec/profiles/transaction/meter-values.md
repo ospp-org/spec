@@ -55,6 +55,8 @@ The meter value reporting interval is controlled by the `MeterValuesInterval` co
 
 ## 6. Processing Rules
 
+> **Message expiry:** MeterValues events use the **Periodic reporting** expiry category (Station Max Age 60s, MQTT Expiry Interval 120s) — see [`02-transport.md §5.1`](../../02-transport.md). Loss of individual MeterValues events is acceptable: the data is regenerable from the final readings carried in the StopService RESPONSE or SessionEnded EVENT, and from periodic readings before/after the missing one. Stale events (older than the Station Max Age at receipt) MUST be discarded.
+
 1. The server **MUST** accept MeterValues events without sending a response (fire-and-forget).
 2. The server **SHOULD** forward meter data to subscribed clients (mobile app, web dashboard) for real-time display.
 3. The server **SHOULD** store cumulative meter values for billing reconciliation and analytics.

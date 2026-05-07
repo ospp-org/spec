@@ -362,7 +362,8 @@ OSPP uses MQTT 5.0 **Message Expiry Interval** to prevent stale commands from be
 | **Management commands** | Reset, ChangeConfiguration, GetConfiguration, SetMaintenanceMode, UpdateServiceCatalog | 60s | 120s |
 | **Long-running commands** | UpdateFirmware, GetDiagnostics | 300s | 600s |
 | **Certificate renewal** | SignCertificate, CertificateInstall, TriggerCertificateRenewal | 30s | 60s |
-| **Critical events** | BootNotification, TransactionEvent, SecurityEvent, ConnectionLost (LWT) | — | **Never expires** |
+| **Periodic reporting** | MeterValues | 60s | 120s |
+| **Critical events** | BootNotification, TransactionEvent, SessionEnded, SecurityEvent, ConnectionLost (LWT) | — | **Never expires** |
 
 > **Note:** UpdateServiceCatalog overrides the management-command default with a 60-second MQTT Expiry (see [Chapter 03](03-messages.md), Appendix B).
 
@@ -376,6 +377,7 @@ The following messages MUST NOT have a Message Expiry Interval set:
 
 - **BootNotification** — always relevant, contains station identity
 - **TransactionEvent** — offline transaction reconciliation data must never be lost
+- **SessionEnded** — sole billing source for autonomous session termination (timer expiry, hardware fault, and other autonomous reasons); loss would cause irreversible billing data discrepancy
 - **SecurityEvent** — security incidents must always be delivered
 - **ConnectionLost (LWT)** — disconnect detection must always be delivered
 

@@ -1086,7 +1086,7 @@ Reports consumption telemetry during an active session. Sent at the interval con
 | **Expected Response** | None (EVENT — fire-and-forget) |
 | **Timeout** | N/A |
 | **Idempotency** | Yes — duplicate SessionEnded for same `sessionId` MUST be ignored by server |
-| **Message Expiry** | 30 seconds |
+| **Message Expiry** | **Never expires** (Critical event — see [`02-transport.md §5.1`](02-transport.md)) |
 
 Reports the end of a session that was terminated autonomously by the station, without a server-initiated StopService command. Sent in two cases:
 
