@@ -1095,6 +1095,8 @@ Reports the end of a session that was terminated autonomously by the station, wi
 
 The server MUST use the `actualDurationSeconds`, `creditsCharged`, and `meterValues` fields from this event for final billing. The server MUST NOT rely solely on StatusNotification for billing calculations when this event is expected.
 
+The server is the authoritative billing engine; the station's `creditsCharged` value is advisory and the server applies the active tariff to produce the final invoice. See [Billing Authority in `04-flows.md`](04-flows.md) for the normative statement of this separation.
+
 This message is NOT sent when the session is stopped by a server-initiated StopService command — in that case, billing data is returned in the StopService RESPONSE [MSG-006].
 
 #### Payload

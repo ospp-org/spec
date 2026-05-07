@@ -818,6 +818,20 @@ sequenceDiagram
     Server-->>App: {status: completed, duration, creditsCharged}
 ```
 
+### Billing Authority
+
+The **CSMS (server) is the authoritative billing engine** for all sessions. The station's role is to report raw resource counters (`actualDurationSeconds`, `creditsCharged`, `meterValues`); the server applies the active tariff, reconciles the values against the pre-authorization, and produces the final invoice or wallet adjustment.
+
+The following rules are normative:
+
+- The station **MUST NOT** be the source of truth for monetary cost. The `creditsCharged` field reported by the station is **advisory** — it represents the station's estimate based on the service rate active at session start.
+- The server **MUST** recompute final billing using the actual duration and the tariff in force when the session ran, regardless of the station-reported `creditsCharged`. Implementations MAY accept the station value as-is when it matches the server-side recomputation; they MUST NOT accept it blindly when it diverges.
+- For sessions that end via `StopService` RESPONSE [MSG-006], the server uses the response's `actualDurationSeconds` (and `meterValues` when relevant) as billing input.
+- For sessions that end autonomously via `SessionEnded` EVENT [MSG-040] (timer expiry or hardware fault), the server uses the event's `actualDurationSeconds` as billing input and applies the refund policy described below.
+- Tariff lookup, currency conversion, tax handling, and any operator-specific pricing rules are server-side concerns. Stations remain unaware of the priced amount in user-facing currency.
+
+This separation ensures that a misconfigured or compromised station cannot overcharge a user, and that pricing changes can be deployed server-side without firmware updates.
+
 ### Happy Path (Online)
 
 1. **Trigger:** User taps "Stop" in App, or session timer expires on SSP, or Server sends StopService
@@ -857,7 +871,9 @@ sequenceDiagram
 | ACK_TIMEOUT (no response) | Full | 100% |
 | Hardware error during active | Partial (pro-rated) | Based on time used |
 | Station offline during active | Partial (pro-rated) | Based on time used |
-| If < 50% duration delivered | Full | 100% (override pro-rate) |
+| If < 50% duration delivered AND reason=`Fault` | Full | 100% (override pro-rate) |
+
+> **Refund scope clarification:** The `< 50% duration delivered` override applies **only** when SessionEnded reason is `Fault`. It does **not** apply to `TimerExpired` sessions: a session that runs to its booked timer is billed for the full pre-authorized duration regardless of meter values, because the user received the time they paid for. The override formula is `actualDurationSeconds < 0.5 * durationSeconds`, evaluated against the booked `durationSeconds` from StartService.
 
 ### Postconditions
 

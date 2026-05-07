@@ -379,6 +379,29 @@ The following messages MUST NOT have a Message Expiry Interval set:
 - **SecurityEvent** — security incidents must always be delivered
 - **ConnectionLost (LWT)** — disconnect detection must always be delivered
 
+### 5.3 OSPP Session Retention Horizon
+
+The **OSPP Session Retention Horizon** defines how long a station MUST retain records of completed sessions for billing audit, idempotency, and reconciliation purposes. It is a normative concept distinct from the MQTT 5.0 Session Expiry Interval (§1.2, 1 hour) and from the transport-level deduplication window (§3.3, 1000 IDs or 1 hour).
+
+| Property | Value |
+|----------|-------|
+| **Horizon** | **24 hours** |
+| **Applies to** | Records of sessions that have reached a terminal state (Completed, Failed, Faulted) |
+| **Required of** | Every station |
+| **Distinct from** | MQTT Session Expiry Interval (transport-layer); messageId dedup window (transport-layer) |
+
+A station **MUST** retain, for at least 24 hours after a session reaches a terminal state:
+
+- The `sessionId`, `bayId`, terminal `actualDurationSeconds`, terminal `creditsCharged`, and final `meterValues` (when applicable) for the session.
+- The cached **StopService RESPONSE** [MSG-006] payload, so that duplicate StopService REQUESTs received within the horizon return the same payload (idempotent). Beyond the horizon, the station MAY return the cached response, or MAY treat the request as targeting an unknown session and return `3006 SESSION_NOT_FOUND`.
+- The cached **SessionEnded** EVENT [MSG-040] payload, so that retransmissions on reconnection (after extended outage) carry the original terminal values.
+
+The horizon is **independent of MQTT session lifetime** — a station that disconnects, expires its MQTT session (1 hour), reconnects, and reboots its MQTT session MUST still retain OSPP session records for the full 24-hour horizon. This typically implies non-volatile storage of the session-completion log.
+
+**Rationale:** 1 hour is too short — it spans the same window as MQTT session expiry, leaving no margin for late StopService duplicates after extended network outage or for billing-audit lookups by users who consult their wallet history hours after a session. 24 hours provides the operational margin without imposing significant storage cost (one record per completed session).
+
+**Cross-references:** `spec/profiles/transaction/README.md §4.3` (StopService idempotency) and `spec/profiles/transaction/stop-service.md §6` (Processing Rules) require retention for at least this horizon.
+
 ---
 
 ## 6. Access Control (ACL)

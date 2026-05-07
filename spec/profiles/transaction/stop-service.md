@@ -48,6 +48,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 7. The station **SHOULD** include final `meterValues` in the response if metering is supported.
 8. After successfully stopping the service, the station **MUST** transition the bay from `Occupied` to `Finishing` and then to `Available` once hardware shutdown is confirmed.
 9. If hardware deactivation fails, the station **MUST** still respond with `Accepted` (the stop was processed) but **SHOULD** report the hardware fault via a SecurityEvent.
+10. After successfully responding `Accepted` to a StopService REQUEST, the station **MUST** retain the cached RESPONSE payload (including `actualDurationSeconds`, `creditsCharged`, and final `meterValues`) for at least the **OSPP Session Retention Horizon** (24 hours — see [`02-transport.md §5.3`](../../02-transport.md)). Duplicate StopService REQUESTs targeting the same `sessionId` within the horizon **MUST** return the same cached RESPONSE without re-running the stop logic. Beyond the horizon, the station **MAY** return the cached RESPONSE, or **MAY** respond with `3006 SESSION_NOT_FOUND`. Final `creditsCharged` is **advisory** — the server is the authoritative billing engine (see [Billing Authority in `04-flows.md`](../../04-flows.md)).
 
 ## 7. Error Codes
 

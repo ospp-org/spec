@@ -89,7 +89,7 @@ All six actions in this profile are REQUIRED for OSPP compliance at Standard lev
 ### 4.3 Idempotency
 
 - **StartService**: duplicate requests with the same `sessionId` MUST return the same `Accepted` response without restarting hardware.
-- **StopService**: duplicate requests for an already-stopped session MUST return the previous `Accepted` response with the final `actualDurationSeconds` and `creditsCharged`.
+- **StopService**: duplicate requests for an already-stopped session MUST return the previous `Accepted` response with the final `actualDurationSeconds` and `creditsCharged`. The station MUST retain the cached response for at least the **OSPP Session Retention Horizon** (24 hours — see [`02-transport.md §5.3`](../../02-transport.md)). Beyond the horizon, the station MAY return the cached response, or MAY treat the request as targeting an unknown session and return `3006 SESSION_NOT_FOUND`. Final billing values returned in the cached response are advisory only — see [Billing Authority](../../04-flows.md) for the server's role as the authoritative billing engine.
 - **ReserveBay**: duplicate requests for an already-reserved bay MUST return `3014 BAY_RESERVED`.
 - **CancelReservation**: cancelling an already-cancelled reservation MUST return `Accepted` (idempotent success). An expired reservation MUST return `3013 RESERVATION_EXPIRED`.
 - **TransactionEvent**: the server MUST deduplicate by `offlineTxId` and respond with `Duplicate`.
