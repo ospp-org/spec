@@ -49,7 +49,7 @@ SecurityEvent is sent by the station to report security-relevant incidents to th
 ## 6. Processing Rules
 
 1. The station **MUST** generate a SecurityEvent for every security-relevant incident, including but not limited to the event types listed in section 4.
-2. The station **MUST** assign a unique `eventId` to each event using the format `sec_` followed by at least 8 hexadecimal characters.
+2. The station **MUST** assign a unique `eventId` to each event using the format `sec_` followed by at least 8 hexadecimal characters. The `eventId` **MUST** be assigned at the moment the incident is detected and **MUST** remain stable across every subsequent transmission of the same logical incident, including QoS 1 retransmissions and buffered replays after a connectivity-loss window (see rule 5). Re-using the same `eventId` for retried emissions of the same incident is the basis on which the server's dedup-by-`eventId` contract (`profiles/security/README.md` §3) operates; assigning a fresh `eventId` per transmission attempt **MUST NOT** occur and would constitute a protocol-level dedup-defeat.
 3. The `timestamp` **MUST** reflect the time the incident was detected on the station, not the time the message is sent.
 4. The `details` object **SHOULD** include all context relevant to the incident. For `MacVerificationFailure`, this **SHOULD** include the `messageId`, `action`, and the expected vs. received MAC values. For `OfflinePassRejected`, this **SHOULD** include the `offlinePassId` and the validation check that failed.
 5. SecurityEvent is fire-and-forget -- the server does not send a response. If MQTT delivery is delayed (e.g., station is temporarily disconnected), the station **SHOULD** buffer the event for transmission upon reconnection.

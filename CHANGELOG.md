@@ -8,6 +8,30 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.4.1] — 2026-06-04
+
+Focused tightening of the SecurityEvent dedup contract — closes one implicit-but-unstated stability rule in the SecurityEvent profile and one SHOULD-level conformance gap in the AuthorizeOfflinePass profile. Both amendments make existing implicit rules explicit and normative; no wire-format change, no schema change, no conformance-test change required. Compliant stations and servers see no behavior change; non-compliant implementations that previously slipped through the SHOULD-level rules now have a clear MUST-level contract to conform to.
+
+### Changed
+
+- **spec:** `profiles/security/security-event.md` §6.2 — added normative **MUST** that the `eventId` assigned at incident detection **MUST** remain stable across all subsequent transmissions and buffered replays of the same logical incident. Closes the implicit-but-unstated stability requirement on which the server's dedup-by-`eventId` contract (`profiles/security/README.md` §3) relies. A fresh `eventId` per transmission attempt is now explicitly forbidden as a protocol-level dedup-defeat. No behavior change for compliant stations.
+
+- **spec:** `profiles/offline/authorize-offline-pass.md` §6.7 — upgraded the server-side SecurityEvent emit from **SHOULD** to **MUST** for signature verification failures (check #1) and counter-replay failures (check #5). Made explicit that these are the only two cases in which the server itself emits a SecurityEvent on behalf of a station-presented credential — other `Rejected` outcomes (expiry, epoch revocation, station mismatch, usage limits, rate limit) are policy decisions, not security incidents, and **MUST NOT** be emitted as SecurityEvents by the server. Added normative requirements on the emitted SecurityEvent: `type` **MUST** be `OfflinePassRejected` (from the spec-defined enum in `security-event.md` §4); `eventId` **MUST** be deterministically derived from the originating REQUEST's `messageId` so that N distinct authorization REQUESTs produce N distinct audit rows (preserving attack-attempt visibility — an attacker probing different forged signatures or replaying the same credential across multiple stations is recorded as N incidents, not collapsed to one); recommended SHA-256-based derivation provided. True QoS 1 retransmits of the same REQUEST collapse via the transport-layer dedup at `02-transport.md` §3.3 before reaching the handler; the audit-layer dedup is defense-in-depth for cases beyond the transport dedup window.
+
+- **spec:** version cascade `0.4.0` → `0.4.1` across all spec chapter headers, guides, conformance docs, READMEs, and badges, matching the v0.4.0 cascade convention.
+
+### Flagged as known follow-ups (not in this release)
+
+- `profiles/core/session-ended.md` profile is missing entirely — the `SessionEnded` action is referenced from `04-flows.md`, the SessionEndReason vocabulary was extended in v0.4.0 (Item 8), and crash-resilience rules were added in v0.4.0 (`05-state-machines.md §2.5`), but no dedicated profile markdown exists. To be authored in a future release.
+
+- Server-originated `FraudDetected` SecurityEvent type — when a server detects fraud via offline-tx reconciliation scoring, no SecurityEvent currently records the **incident** (the server's **reaction** — auto-disable of offline mode, revocation of active passes — is an administrative action and out of scope for SecurityEvent; the incident itself currently has no spec-defined SecurityEvent representation). A new server-originated type and emit rule will be considered in a future release.
+
+### Migration
+
+- No coordinated upgrade required. v0.4.0 implementations interoperate with v0.4.1 implementations on the wire (no schema or message-shape changes). The amendments tighten existing soft rules into hard requirements that compliant implementations already satisfy.
+
+---
+
 ## [0.4.0] — 2026-05-07
 
 Comprehensive patch covering 8 spec gaps surfaced by the Phase 0.5 + 0.6 OSPP investigation. Five clarifications/structural changes, one verified-stale (no work needed), two architectural extensions. Pre-launch context (no field deployments) reframes the prior backwards-compat mandate as post-launch only — Items 7 (SessionEnded expiry) and 8 (reason vocabulary) ship as strict, coordinated-upgrade changes; future minor cycles will revisit backwards-compat strategy as the ecosystem matures.

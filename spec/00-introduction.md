@@ -1,6 +1,6 @@
 # Chapter 00 — Introduction
 
-> **Status:** Draft | **OSPP Version:** 0.4.0
+> **Status:** Draft | **OSPP Version:** 0.4.1
 
 This chapter establishes the purpose, scope, and conventions for the Open Self-Service Point Protocol (OSPP) specification. It identifies the target audience, defines how normative language is used throughout the document, describes notation and formatting conventions, and provides the normative and informative reference bibliography.
 
@@ -235,3 +235,4 @@ The following documents provide additional context and prior art. They are not n
 | 0.2.5 | 2026-04-30 | OSPP Authors | `provisioning-response.schema.json` (top-level HTTP schema) for `POST /api/v1/stations/provision` response body. |
 | 0.3.0 | 2026-05-06 | OSPP Authors | Provisioning trust anchors split (`stationCaChain` + `brokerRootCa`); normative MUST that station consumes `mqttConfig.brokerUri`. |
 | 0.4.0 | 2026-05-07 | OSPP Authors | Brief Q comprehensive patches: CSMS as cost authority, <50% refund scope clarified, OSPP Session Retention Horizon (24h), MeterValues + SessionEnded message-expiry, OSPP Canonical Form formalized (§4.8), per-session seqNo + finalSeqNo + NVS persistence, SessionEnded reason vocabulary extended (Local, LocalOutOfCredit, Deauthorized). |
+| 0.4.1 | 2026-06-04 | OSPP Authors | SecurityEvent dedup contract tightening: `security-event.md` §6.2 normative MUST for `eventId` stability across QoS-1 retransmits and buffered replays; `authorize-offline-pass.md` §6.7 SHOULD→MUST with negative-space clause (only checks #1 and #5 emit; other Rejected outcomes MUST NOT), `type` MUST be `OfflinePassRejected`, and `eventId` MUST be deterministically derived from the originating REQUEST's `messageId` (preserves per-attempt visibility for forgery probing and cross-station replay attempts). |

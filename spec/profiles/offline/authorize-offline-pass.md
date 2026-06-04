@@ -61,7 +61,27 @@ The server **MUST** perform all of the following checks in order. Processing **M
 4. On `Accepted`: the station **MUST** store the `sessionId`, `durationSeconds`, and `creditsAuthorized`, then proceed with service activation. The station **MUST** relay the acceptance result back to the app via the BLE AuthResponse.
 5. On `Rejected`: the station **MUST NOT** start any service. The station **MUST** relay the rejection back to the app via the BLE AuthResponse with the appropriate error code.
 6. If no response is received within 15 seconds, the station **MUST** treat the request as timed out (error `1010 MESSAGE_TIMEOUT`) and **MAY** fall back to local validation if the Offline profile is supported.
-7. The server **SHOULD** log a SecurityEvent for any signature verification failure (check #1) or counter replay (check #5).
+7. The server **MUST** log a SecurityEvent for any signature verification failure (check #1) or counter replay (check #5). This is the only case in which the server itself emits a SecurityEvent on behalf of a station-presented credential; other `Rejected` outcomes (expiry, epoch revocation, station mismatch, usage limits, rate limit) are policy decisions, not security incidents, and **MUST NOT** be emitted as SecurityEvents by the server.
+
+    The emitted SecurityEvent **MUST** conform to the SecurityEvent profile (`profiles/security/security-event.md`) with the following constraints:
+
+    a. The `type` **MUST** be `OfflinePassRejected` (from the spec-defined enum in `security-event.md` §4).
+
+    b. The `eventId` **MUST** be deterministically derived from the originating REQUEST's `messageId` (not from the underlying credential identifier), so that every distinct authorization REQUEST that fails check #1 or check #5 produces a distinct `eventId`. This preserves attack-attempt visibility: N attempts carried by N distinct REQUESTs (e.g. an attacker probing different forged signatures, or replaying the same credential across multiple stations) produce N distinct audit rows. True wire-level retransmits — QoS 1 redelivery of the same REQUEST with the same `messageId` — are collapsed by transport-layer dedup (`02-transport.md` §3.3) before this handler executes; the audit dedup at this layer is a defense-in-depth for cases where the transport dedup window has elapsed (`02-transport.md` §3.3: ≥1000 messageIds or ≥1 hour).
+
+       Recommended derivation (SHA-256 of a domain-separated input, truncated to 16 hex characters, prefixed with `sec_`):
+
+       - Check #1 (signature verification failure):
+         `eventId = "sec_" || lowerhex(SHA-256("ospp:authorize_offline_pass:check_1:" || messageId))[0:16]`
+
+       - Check #5 (counter replay):
+         `eventId = "sec_" || lowerhex(SHA-256("ospp:authorize_offline_pass:check_5:" || messageId))[0:16]`
+
+       Implementations **MAY** use a different derivation scheme provided that (i) the resulting `eventId` matches the `sec_` + hexadecimal format from `security-event.md` §6.2, (ii) the derivation is deterministic for the same originating `messageId` and check number, (iii) distinct `messageId`s produce distinct `eventId`s (i.e. the derivation is collision-resistant in the relevant domain), and (iv) the derivation is documented in the implementation's deployment manifest.
+
+    c. The `details` object **SHOULD** include `offlinePassId`, the failed check number, the rejection `errorCode` (`2002` for signature; `2005` for counter replay), the originating `messageId`, and — for check #5 — the rejected `counter` value and the server's known `lastSeenCounter`, for forensic reconstruction. The `messageId` in `details` allows operators to correlate the audit row back to the originating REQUEST, since the `eventId` is a hash and not a human-readable reference.
+
+    d. The `timestamp` field **MUST** reflect when the validation failure was detected by the server, not when the offending REQUEST was originally sent by the station.
 
 ## 7. Error Codes
 
