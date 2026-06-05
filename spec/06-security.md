@@ -1,6 +1,6 @@
 # Chapter 06 — Security
 
-> **Status:** Draft | **OSPP Version:** 0.4.1
+> **Status:** Draft | **OSPP Version:** 0.4.2
 
 This chapter defines the complete security model for the OSPP protocol, covering threat analysis, authentication, authorization, cryptographic requirements, message integrity, offline security, anti-abuse mechanisms, and data protection.
 
@@ -865,37 +865,52 @@ The station MUST perform all 10 checks when validating an OfflinePass locally (F
 
 ### 6.2 Transaction Receipt Signing — ECDSA P-256
 
-Every offline transaction produces a cryptographically signed receipt, ensuring non-repudiation and tamper detection during reconciliation.
+Every offline transaction produces a cryptographically signed receipt, ensuring non-repudiation, tamper detection, and reconcile-time identity binding (pass / user / device) during reconciliation.
 
 #### Signing Process
 
 ```
-1. receipt_fields = {offlineTxId, bayId, serviceId, startedAt, endedAt,
+1. receipt_fields = {offlineTxId, offlinePassId, userId, deviceId,
+                     bayId, serviceId, startedAt, endedAt,
                      durationSeconds, creditsCharged, meterValues, txCounter}
-2. receipt_data  = OSPP_Canonical_Form(receipt_fields)  // see §4.8
-3. data_bytes    = base64_encode(receipt_data)
-4. digest        = SHA-256(data_bytes)
-5. signature     = ECDSA-P256-Sign(station_private_key, digest)  // RFC 6979 deterministic nonces
-6. receipt = {
+   // `meterValues` is OMITTED from the canonical body when not present in the
+   // transaction payload (see Note 4 below). All other 11 fields are REQUIRED.
+2. receipt_data = OSPP_Canonical_Form(receipt_fields)  // see §4.8
+3. digest       = SHA-256(receipt_data)                // hash the canonical bytes directly
+4. signature    = ECDSA-P256-Sign(station_private_key, digest)  // RFC 6979 deterministic nonces
+5. receipt = {
      data:               base64(receipt_data),
      signature:          base64(signature),
      signatureAlgorithm: "ECDSA-P256-SHA256"
    }
 ```
 
-> **Note:** The 9 fields listed in `receipt_fields` are the only fields canonicalized for signing. The receipt envelope's `data`, `signature`, and `signatureAlgorithm` fields are **not** part of the signed input — they are the output container produced by the signing process. Implementations MUST NOT include them in the canonicalized receipt body.
+> **Note 1 (v0.4.2):** The digest is computed over the **canonical bytes** (`receipt_data`), NOT over the base64-encoded form. Base64 is the wire encoding for the `receipt.data` field only; it is not part of the cryptographic input. Implementations MUST NOT hash `base64(receipt_data)`. Prior pseudocode (carried since v0.2.x) inadvertently hashed the base64 form; v0.4.2 aligns the spec with the implementation-level behavior shared by csms-server `EcdsaService` and the OSPP receipt-signing path. See CHANGELOG (M) fix.
 
-> **Note:** The `txCounter` field is included in the signed receipt data to enable gap detection during reconciliation. The server can verify monotonically increasing counters and detect missing transactions (e.g., counter 5 → 7 indicates a missing transaction) without requiring a hash chain.
+> **Note 2:** The 11 mandatory fields listed in `receipt_fields` (plus `meterValues` when present — see Note 4) are the only fields canonicalized for signing. The receipt envelope's `data`, `signature`, and `signatureAlgorithm` fields are **not** part of the signed input — they are the output container produced by the signing process. Implementations MUST NOT include them in the canonicalized receipt body.
+
+> **Note 3:** The `txCounter` field is included in the signed receipt data to enable gap detection during reconciliation. The server can verify monotonically increasing counters and detect missing transactions (e.g., counter 5 → 7 indicates a missing transaction) without requiring a hash chain.
+
+> **Note 4 (v0.4.2):** `meterValues` is signed **when present** in the transaction payload and **omitted from the canonical body when absent** — implementations MUST NOT emit an empty `meterValues: {}` object into the canonical form (doing so would change the canonical bytes and break signature verification on the server). The server-side verifier reconstructs the canonical body conditionally on `meterValues` presence, matching the station's omit-when-absent behavior.
+
+> **Note 5 (v0.4.2):** `offlinePassId`, `userId`, and `deviceId` are signed to provide cryptographic binding of the receipt to the offline pass, the user, and the device — not merely envelope claims. The server's reconcile-time re-validation gate (`profiles/offline/reconciliation.md` §6) cross-checks these signed values against the TransactionEvent envelope (for `offlinePassId` and `userId`) and against the pass record's `device_id` field (for `deviceId`). This closes the cross-station-replay attack class where a station could wrap an authentic receipt with arbitrary pass / user / device claims in the envelope.
+
+> **Firmware-timing note (v0.4.2 migration):** Firmware MUST sign per the v0.4.2 `receipt_fields` definition and the canonical-bytes digest rule from initial integration. Receipts signed under the v0.4.1 9-field shape OR with the v0.4.1 base64-hash rule will fail server-side signature verification (`2002 OFFLINE_PASS_INVALID`) or reconcile-time cross-checks (`2017 OFFLINE_RECEIPT_MISMATCH`). The v0.4.1 → v0.4.2 stack upgrade is a coordinated break — pre-launch context (no v0.4.1 firmware deployments) makes the wire-format + digest-rule expansion clean.
 
 #### Verification (Server-Side)
 
 During reconciliation ([Flow §10](04-flows.md#10-offline--online-reconciliation)), the server verifies each receipt:
 
+```
 1. Look up the station's ECDSA P-256 public key (received during provisioning)
-2. Decode `receipt.data` from Base64
-3. Compute `digest = SHA-256(receipt.data)`
-4. Verify `receipt.signature` against `digest` using the station's public key
+2. canonical_bytes = base64_decode(receipt.data)   // decode wire encoding
+3. digest          = SHA-256(canonical_bytes)      // hash the canonical bytes (NOT the receipt.data field directly)
+4. Verify(receipt.signature, digest, stationPublicKey) using ECDSA-P256
 5. If verification fails → CRITICAL alert, flag transaction for investigation
+                          (errorCode 2002 OFFLINE_PASS_INVALID at reconcile-time)
+```
+
+The cross-check semantics on the verified canonical body (`receipt_fields` decoded from `canonical_bytes`) are defined in `profiles/offline/reconciliation.md` §6 (Reconcile-Time Re-validation Gate) checks #1, #2, #3, #6.
 
 ### 6.3 Signed Counter — Transaction Ordering and Gap Detection
 

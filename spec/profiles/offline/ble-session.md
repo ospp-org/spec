@@ -1,6 +1,6 @@
 # BLE Session Lifecycle
 
-> **Status:** Draft
+> **Status:** Draft | **OSPP Version:** 0.4.2
 
 ## 1. Starting a Service
 

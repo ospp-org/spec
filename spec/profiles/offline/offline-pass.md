@@ -1,6 +1,6 @@
 # OfflinePass Structure
 
-> **Status:** Draft
+> **Status:** Draft | **OSPP Version:** 0.4.2
 
 ## 1. Overview
 
@@ -12,6 +12,7 @@ An **OfflinePass** is a server-signed credential that authorizes a user to start
 |----------------------|----------|----------|-----------------------------------------------|
 | `passId` | string | Yes | Unique pass identifier (`opass_` prefix). |
 | `sub` | string | Yes | User subject identifier the pass is issued to (`sub_` prefix). |
+| `organization_id` | string | Yes | Issuing organization identifier (`org_<uuid>`). Bounds the pass to a specific operator/tenant; enforced at reconcile-time (`reconciliation.md` §6 check #7). The server writes this from the authorizing REST request's organization context at issuance time. |
 | `deviceId` | string | Yes | Bound device identifier (prevents sharing across devices). |
 | `issuedAt` | string | Yes | ISO 8601 timestamp of when the pass was issued. |
 | `expiresAt` | string | Yes | ISO 8601 timestamp of when the pass expires. Maximum validity is 24 hours from `issuedAt`. |
@@ -105,7 +106,8 @@ The OfflinePass provides the following security guarantees:
 | **Revocable** | `revocationEpoch` | All passes can be batch-revoked by incrementing the global epoch (check #3). |
 | **Usage-limited** | `maxUses`, `maxTotalCredits` | The pass limits the total number of sessions and credits that can be consumed (checks #6, #7). |
 | **Rate-limited** | `minIntervalSec` | Prevents rapid consecutive use that could indicate abuse (check #9). |
-| **Station-scoped** | Station ID validation | When station-scoped, the pass is only valid at specific stations (check #5). |
+| **Station-scoped** | Station ID validation | When the pass's `allowed_station_ids` is non-empty, the pass is only valid at the listed stations. Enforced at authorize-time per `authorize-offline-pass.md` §5 check #5 AND at reconcile-time per `reconciliation.md` §6 check #8. |
+| **Org-scoped** | Organization binding via `organization_id` | The pass is bound to its issuing organization (`organization_id`). At reconcile-time the server enforces that the reporting station belongs to the same organization (`reconciliation.md` §6 check #7). This applies to ALL passes — scoped and unscoped. An "unscoped" pass (`allowed_station_ids` `null` or `[]`) means "any station of the issuing organization," not "any station globally." |
 | **Replay-protected** | Monotonic counter | The `counter` field in OfflineAuthRequest prevents replaying the same pass presentation (check #10). |
 
 ## 8. Related Schemas

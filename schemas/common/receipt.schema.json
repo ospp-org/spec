@@ -14,7 +14,7 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 1024,
-      "description": "Base64-encoded OSPP Canonical Form of the receipt_fields object (offlineTxId, bayId, serviceId, startedAt, endedAt, durationSeconds, creditsCharged, meterValues, txCounter). See spec/06-security.md §4.8 for the canonicalization algorithm and §6.2 for the signing process."
+      "description": "Base64-encoded OSPP Canonical Form (spec/06-security.md §4.8) of the canonical ReceiptData body — see receipt-data.schema.json (11 required fields plus meterValues when present; up to 12 signed fields). Signed by the station's ECDSA P-256 private key over the canonical bytes directly (per 06-security.md §6.2 v0.4.2; NOT over the base64 form)."
     },
     "signature": {
       "type": "string",

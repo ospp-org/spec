@@ -1,6 +1,6 @@
 # BLE Transport
 
-> **Status:** Draft
+> **Status:** Draft | **OSPP Version:** 0.4.2
 
 ## 1. Hardware Requirements
 
@@ -216,6 +216,9 @@ The Receipt characteristic provides a signed transaction receipt after service c
 | Field | Type | Required | Description |
 |------------------|---------|----------|-----------------------------------------------|
 | `offlineTxId` | string | Yes | Offline transaction identifier. |
+| `offlinePassId` | string | Yes | OfflinePass identifier used to authorize this service (`opass_<uuid>`). Matches the value signed into `receipt.data`. (v0.4.2) |
+| `userId` | string | Yes | User subject identifier (`sub_<id>`). Matches the value signed into `receipt.data`. (v0.4.2) |
+| `deviceId` | string | Yes | Device identifier from the BLE Hello / OfflinePass binding. Matches the value signed into `receipt.data`. (v0.4.2) |
 | `bayId` | string | Yes | Bay where service was delivered. |
 | `serviceId` | string | Yes | Service that was delivered. |
 | `startedAt` | string | Yes | ISO 8601 timestamp of service start. |

@@ -1,6 +1,6 @@
 # Offline Transaction Reconciliation
 
-> **Status:** Draft
+> **Status:** Draft | **OSPP Version:** 0.4.2
 
 ## 1. Overview
 
@@ -13,7 +13,7 @@ The reconciliation sync follows this ordered flow:
 1. **Station reconnects** and sends a BootNotification with `pendingOfflineTransactions` > 0.
 2. **Server acknowledges** with `Accepted`. The server notes the pending count and prepares for incoming offline transaction events.
 3. **Station sends TransactionEvent(Ended)** for each offline transaction, ordered by `txCounter` (ascending). Each event includes the full offline payload: `offlineTxId`, `offlinePassId`, `userId`, `bayId`, `serviceId`, timing data, `creditsCharged`, signed `receipt`, `txCounter`, and optional `meterValues`.
-4. **Server processes each event** -- performs deduplication, txCounter gap detection, receipt signature verification, and fraud scoring. The server responds with `Accepted` for each valid event.
+4. **Server processes each event** -- performs (a) deduplication (§3), (b) txCounter gap detection (§4), (c) receipt signature verification (§5), (d) **reconcile-time re-validation gate (§6)**, and (e) fraud scoring (§7). The server responds with `Accepted` for each valid event. Any gate failure (§6) produces a `Rejected` response with the listed error code and emits a SecurityEvent.
 5. **Station marks synced transactions** as reconciled in its local storage. Successfully synced transactions **MAY** be purged from local storage after 72 hours.
 
 **Retry logic:** If the station does not receive a response within 30 seconds for any TransactionEvent, it **MUST** retry with exponential backoff (initial 5s, max 60s (offline batch reconciliation -- optimized for throughput), up to 10 retries). If all retries fail, the station **MUST** retain the transaction and attempt sync on the next successful connection.
@@ -61,19 +61,98 @@ The server verifies the ECDSA-P256-SHA256 signature on each offline transaction 
 3. The server verifies the `receipt.signature` (Base64-decoded) against the reconstructed payload using ECDSA-P256-SHA256.
 4. **Invalid signatures** are a CRITICAL-severity fraud signal. The server **MUST** immediately flag the transaction, log a SecurityEvent (`type: "OfflinePassRejected"`), and **MAY** disable offline mode for the affected station until manual investigation is complete.
 
-## 6. Fraud Detection
+## 6. Reconcile-Time Re-validation Gate
+
+Before fraud scoring (§7) and wallet reconciliation (§8), the server **MUST** apply a deterministic **hard-reject gate** to every TransactionEvent. This gate is distinct from fraud scoring: it consists of confirmed security-property violations (not probabilistic signals), and each failure **MUST** result in `Rejected` status, no persistence, no wallet debit, and a `SecurityEvent` emission (per §6.3). The gate runs after receipt signature verification (§5) and before fraud scoring (§7).
+
+### 6.1 Check List
+
+The server **MUST** apply the 11 checks below in the listed dependency-ordered canonical order. Processing **MUST** stop at the first failure. Checks #1–#3 reference only envelope-vs-signed-body fields and do not require pass resolution; they may run before the DB lookup. Check #4 resolves the pass and gates all pass-derived checks (#5–#11).
+
+| # | Check | Failure Condition | Error Code |
+|:--:|---|---|---|
+| 1 | **Receipt-envelope `offlineTxId` cross-check** | The `offlineTxId` decoded from the signed `receipt.data` ≠ the envelope's `offlineTxId`. | `2017 OFFLINE_RECEIPT_MISMATCH` (`details.field="offlineTxId"`) |
+| 2 | **Receipt-envelope `offlinePassId` cross-check** | The `offlinePassId` decoded from the signed `receipt.data` ≠ the envelope's `offlinePassId`. | `2017 OFFLINE_RECEIPT_MISMATCH` (`details.field="offlinePassId"`) |
+| 3 | **Receipt-envelope `userId` cross-check** | The `userId` decoded from the signed `receipt.data` ≠ the envelope's `userId`. | `2017 OFFLINE_RECEIPT_MISMATCH` (`details.field="userId"`) |
+| 4 | **Pass-found** | The envelope's `offlinePassId` does not resolve to a row in the server's `offline_passes` store. (Storage-layer FK enforcement provides a second guard; see §6.5.) | `2002 OFFLINE_PASS_INVALID` |
+| 5 | **Pass-user match** | The resolved pass's `user_id` ≠ the resolved envelope `userId`. | `2016 OFFLINE_USER_MISMATCH` |
+| 6 | **Receipt-pass `deviceId` cross-check** | The `deviceId` decoded from the signed `receipt.data` ≠ the resolved pass's `device_id`. | `2017 OFFLINE_RECEIPT_MISMATCH` (`details.field="deviceId"`) |
+| 7 | **Org binding** | The resolved pass's `organization_id` ≠ the reporting station's `organization_id`. This check applies to ALL passes — scoped and unscoped. | `2015 OFFLINE_ORG_MISMATCH` |
+| 8 | **Station binding (scoped passes only)** | If the pass's `allowed_station_ids` is non-empty, the reporting station's `stationId` MUST be a member. If `allowed_station_ids` is `null` or `[]`, this check is skipped — see §6.2 on "unscoped" semantics. | `2006 OFFLINE_STATION_MISMATCH` |
+| 9 | **Pass not expired at transaction time** | The pass's `expiresAt` MUST be greater than the envelope's `endedAt` timestamp. The transaction's claimed completion time MUST fall within the pass's validity window. | `2003 OFFLINE_PASS_EXPIRED` (severity `Error`, non-recoverable at reconcile-time — see `07-errors.md` §3.2 context note) |
+| 10 | **Revocation epoch** | The pass's `revocation_epoch` MUST be greater than or equal to the server's current `RevocationEpoch`. | `2004 OFFLINE_EPOCH_REVOKED` |
+| 11 | **Individual revocation** | The pass's `is_revoked` flag MUST be `false`. | `2014 OFFLINE_PASS_REVOKED` |
+
+### 6.2 Station Binding Format and Unscoped Semantics
+
+**Format (check #8).** `allowed_station_ids` stores **business station IDs** — the `stn_<hex>` form the station uses to identify itself in the MQTT envelope and BootNotification (the same identifier referenced throughout the OSPP identity scheme) — NOT server-internal UUIDs. The check #8 membership test compares the envelope's `stationId` (already a business ID on the wire) by **string equality** against the entries in `allowed_station_ids`. Implementations MUST NOT convert either side to UUID before comparison; both sides are business IDs. (A server may internally resolve the envelope `stationId` to a UUID for downstream persistence, but the gate-check comparison is against the business-ID array as stored.)
+
+**Unscoped semantics.** A pass with `allowed_station_ids = null` or `allowed_station_ids = []` is **unscoped**. Unscoped passes are valid at **any station of the issuing organization** — bounded by the Org binding check (§6.1 #7), NOT by globally any station. Implementations MUST treat `null` and `[]` identically (semantic equivalence); both skip check #8 (station binding) but remain subject to check #7 (org binding).
+
+This semantic prevents "unscoped" from becoming a cross-organization hole: an unscoped pass issued by org-A is valid at any of org-A's stations but rejected at org-B's stations.
+
+### 6.3 SecurityEvent Emission
+
+Each gate failure on checks #1, #2, #3, #5, #6, #7, #8, #9, #10, #11 **MUST** emit an `OfflinePassRejected` SecurityEvent. Check #4 (pass-found) **SHOULD** emit a SecurityEvent — the storage-layer FK may already have rejected the INSERT attempt; implementations MAY suppress the application-layer emission when the FK has fired to avoid double-emission noise.
+
+The emitted SecurityEvent **MUST** conform to the SecurityEvent profile (`profiles/security/security-event.md`) with the following constraints (mirroring `authorize-offline-pass.md` §6.7 v0.4.1 pattern):
+
+a. The `type` **MUST** be `OfflinePassRejected` (from the spec-defined enum in `security-event.md` §4).
+
+b. The `eventId` **MUST** be deterministically derived from the originating TransactionEvent REQUEST's `messageId` (not from the underlying `offlinePassId` or `offlineTxId`), so that every distinct gate failure on a distinct REQUEST produces a distinct audit row. True wire-level retransmits (QoS 1 redelivery of the same REQUEST with the same `messageId`) are collapsed by transport-layer dedup (`02-transport.md` §3.3) before this handler executes; the audit dedup at this layer is defense-in-depth for cases beyond the transport dedup window.
+
+   Recommended derivation (parameterized over the failed check number `N`, `1 ≤ N ≤ 11`):
+
+   ```
+   eventId = "sec_" || lowerhex(SHA-256("ospp:reconcile_tx:check_" || N || ":" || messageId))[0:16]
+   ```
+
+   Implementations **MAY** use a different derivation scheme provided the four conformance properties from `authorize-offline-pass.md` §6.7 are satisfied: (i) `sec_` + 16-hex-character format per `security-event.md` §6.2; (ii) determinism for the same `(messageId, N)` pair; (iii) collision-resistance across distinct `messageId`s; (iv) documented derivation in the implementation's deployment manifest.
+
+c. The `details` object **SHOULD** include `offlinePassId`, the failed check number, the rejection `errorCode`, the originating `messageId`, and check-specific forensic context:
+   - Checks #1/#2/#3/#6 (`OFFLINE_RECEIPT_MISMATCH`): `details.field` (which signed field mismatched), `details.signedValue`, `details.expectedValue`.
+   - Check #5 (`OFFLINE_USER_MISMATCH`): `passUserId`, `envelopeUserId`.
+   - Check #7 (`OFFLINE_ORG_MISMATCH`): `passOrganizationId`, `stationOrganizationId`.
+   - Check #8 (`OFFLINE_STATION_MISMATCH`): `passAllowedStationIds`, `reportingStationId`.
+   - Check #9 (`OFFLINE_PASS_EXPIRED`, reconcile-context): `passExpiresAt`, `txEndedAt`, `driftSeconds`, `details.context: "reconcile"`.
+   - Check #10 (`OFFLINE_EPOCH_REVOKED`): `passRevocationEpoch`, `serverCurrentEpoch`.
+   - Check #11 (`OFFLINE_PASS_REVOKED`): `passRevokedAt` (if present).
+
+d. The `timestamp` field **MUST** reflect when the gate check failed at the server, not when the originating REQUEST was sent by the station.
+
+### 6.4 Response
+
+On any gate failure the server **MUST** respond with:
+
+```json
+{
+  "status": "Rejected",
+  "errorCode": <code from §6.1>,
+  "errorText": "<corresponding errorText from 07-errors.md §3.2>",
+  "reason": "<short human-readable reason; full forensic detail in the SecurityEvent>"
+}
+```
+
+The station, on receiving `Rejected`, **MUST NOT** retry the same TransactionEvent. The transaction is permanently rejected at the server; the station MAY flag it for manual investigation.
+
+### 6.5 Storage-Layer FK Enforcement (Pass-Found Belt-and-Suspenders)
+
+Implementations SHOULD enforce `offline_transactions.offline_pass_id` → `offline_passes.id` via a database foreign key. This provides a second guard against fabricated `offlinePassId` values that bypass check #4. Where the FK is enforced at the storage layer, the FK rejects the INSERT attempt before any partial write; check #4's application-layer rejection produces the clean wire-level `2002 OFFLINE_PASS_INVALID` response. SecurityEvent emission for check #4 is `SHOULD` (not `MUST`) — implementations MAY suppress the application-layer emission when the FK has already caught the attempt.
+
+## 7. Fraud Detection
 
 The server **MUST** apply a fraud scoring model to each reconciled offline transaction. The following signals contribute to the fraud score:
 
-| Signal | Severity | Score | Description |
-|------------------------------------------|----------|:-----:|-----------------------------------------------|
-| Invalid receipt signature | Critical | 100 | Receipt was not signed by the station's key. Immediate flag. |
-| txCounter gap | High | 80 | Missing transactions in the counter sequence. |
-| Expired pass used | Low | 20 | Pass `expiresAt` was before the transaction timestamp. May indicate clock drift. |
-| Credits exceed `maxCreditsPerTx` | Medium | 50 | Transaction charged more than the pass allows per session. |
-| Rapid consecutive transactions | Medium | 40 | Transactions spaced less than `minIntervalSec` apart. |
-| Usage beyond `maxUses` | Medium | 50 | More transactions than `maxUses` for the same pass. |
-| Credits beyond `maxTotalCredits` | Medium | 50 | Cumulative credits exceed the pass limit. |
+| Signal                                  | Severity | Score | Description |
+|-----------------------------------------|----------|:-----:|-------------|
+| Invalid receipt signature               | Critical | 100   | Receipt was not signed by the station's key. Immediate flag. |
+| txCounter gap                           | High     | 80    | Missing transactions in the counter sequence. |
+| Credits exceed `maxCreditsPerTx`        | Medium   | 50    | Transaction charged more than the pass allows per session. |
+| Rapid consecutive transactions          | Medium   | 40    | Transactions spaced less than `minIntervalSec` apart. |
+| Usage beyond `maxUses`                  | Medium   | 50    | More transactions than `maxUses` for the same pass. |
+| Credits beyond `maxTotalCredits`        | Medium   | 50    | Cumulative credits exceed the pass limit. |
+
+> **Note (v0.4.2):** "Expired pass used" was removed from this table — expiry is now a hard-reject gate check (§6 check #9, errorCode `2003 OFFLINE_PASS_EXPIRED`). A pass that expired before `tx.endedAt` indicates either a station clock-drift bug or a transaction retained beyond the pass's 24-hour validity window — both are deterministic policy violations, not probabilistic fraud signals.
 
 **Scoring thresholds:**
 
@@ -83,7 +162,7 @@ The server **MUST** apply a fraud scoring model to each reconciled offline trans
 | 50 -- 99 | **Automatic:** flag for manual operator review within 24 hours. Continue accepting transactions but log enhanced audit data. |
 | < 50 | **Automatic:** log and accept. No immediate action required. |
 
-## 7. Wallet Reconciliation
+## 8. Wallet Reconciliation
 
 After a transaction passes fraud scoring, the server debits the user's wallet:
 
@@ -93,7 +172,7 @@ After a transaction passes fraud scoring, the server debits the user's wallet:
 4. The user is notified of the charges upon the next app open or push notification.
 5. If the user's balance goes negative, the server **MUST** trigger a top-up reminder. The user's account **MAY** be restricted from future offline pass issuance until the balance is positive.
 
-## 8. Conflict Resolution
+## 9. Conflict Resolution
 
 The following edge cases require special handling:
 
@@ -105,7 +184,7 @@ The following edge cases require special handling:
 | Station replaced/reset between offline period and sync | **Use hardware serial number for identity.** If the station's `stationId` matches but the serial number differs (detected via BootNotification), the server **MUST** flag all pending offline transactions from the old serial for manual review. |
 | Station offline window exceeded | If the station has been offline for longer than `stationOfflineWindowHours`, the server **SHOULD** accept the transactions but flag them for enhanced review. |
 
-## 9. Example (TransactionEvent for Offline Reconciliation)
+## 10. Example (TransactionEvent for Offline Reconciliation)
 
 ```json
 {
@@ -140,7 +219,7 @@ The following edge cases require special handling:
 }
 ```
 
-## 10. Related Schemas
+## 11. Related Schemas
 
 - TransactionEvent Request: [`transaction-event-request.schema.json`](../../../schemas/mqtt/transaction-event-request.schema.json)
 - TransactionEvent Response: [`transaction-event-response.schema.json`](../../../schemas/mqtt/transaction-event-response.schema.json)

@@ -8,6 +8,60 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.4.2] — 2026-06-05
+
+Closes the Phase-3 offline reconcile-time validation gap surfaced post-Phase-3-persist-fix, and folds in the (M) signing-vs-verification inconsistency carried since v0.2.x. The reconciliation profile previously mandated only 4 server actions (dedup, counter-gap, receipt-sig, fraud-scoring) and was silent on re-validation of the offline pass at TransactionEvent time. Mature peer protocol (OCPP 1.6 §4.8 / OCPP 2.0.1 E01.FR.11/FR.12) mandates CSMS re-validation. This release adds a deterministic "Reconcile-Time Re-validation Gate" between receipt-sig verification and fraud-scoring, closes the cross-station replay + cross-organization replay + revoked-after-issuance + fabricated-pass + receipt-payload-tampering + expired-pass-as-fraud-signal gaps, expands the canonically-signed `receipt_fields` to bind the pass / user / device cryptographically, and fixes §6.2 signing pseudocode to hash the canonical bytes directly (matching every existing implementation; closing the (M) base64-vs-canonical interop hole before firmware integration).
+
+Pre-launch context: prod has 0 offline_passes and 0 offline_transactions; no firmware deployments yet. This release is a coordinated upgrade — same shape as v0.3.0 → v0.4.0 SessionEnded vocabulary break. Firmware integration is sequenced after this release to ship against the post-amendment signing format and BLE FFF6 wrapper once, not retrofit.
+
+### Added
+
+- **spec:** `profiles/offline/reconciliation.md` §6 (NEW) "Reconcile-Time Re-validation Gate" — deterministic hard-reject checks applied after receipt signature verification (§5) and before fraud scoring (§7). 11 checks in dependency-ordered canonical order: receipt-envelope cross-checks on envelope-only fields (offlineTxId, offlinePassId, userId) → pass-found → pass-derived checks (pass-user match, signed-deviceId vs pass.device_id, org binding, station binding, expiry, revocation epoch, individual revocation). All failures emit `OfflinePassRejected` SecurityEvent with deterministic `eventId` derived from REQUEST `messageId` per check, mirroring v0.4.1 authorize-time pattern (§6.7).
+- **spec:** `profiles/offline/offline-pass.md` §2 — new field `organization_id` (required) on the OfflinePass. Bounds the pass to the issuing organization; enforced at reconcile-time §6 check #7.
+- **spec:** `profiles/offline/offline-pass.md` §7 (UPDATED) — "Station-scoped" property clarified to enforce at BOTH authorize-time AND reconcile-time. New "Org-scoped" property row defining organization binding. "Unscoped" semantics: `allowed_station_ids` `null` or `[]` means "any station of the issuing organization" — bounded by org binding, NOT globally any station.
+- **error codes:** `07-errors.md` §3.2 — four new codes in the 2xxx range:
+  - `2014 OFFLINE_PASS_REVOKED` (Error, non-recoverable) — individual revocation (`is_revoked`), distinct from `2004 OFFLINE_EPOCH_REVOKED` (batch)
+  - `2015 OFFLINE_ORG_MISMATCH` (Error, non-recoverable) — pass-org ≠ station-org
+  - `2016 OFFLINE_USER_MISMATCH` (Error, non-recoverable) — pass.user_id ≠ envelope.userId
+  - `2017 OFFLINE_RECEIPT_MISMATCH` (Critical, non-recoverable) — signed receipt body field ≠ corresponding cross-check target; `details.field` identifies which of `offlineTxId`, `offlinePassId`, `userId`, `deviceId` mismatched
+- **schema:** NEW `schemas/common/receipt-data.schema.json` — canonical body that gets serialized via OSPP Canonical Form (§4.8) and base64-encoded into `receipt.data` for ECDSA P-256 signing. 11 required fields + `meterValues` optional (when present); up to 12 signed fields.
+
+### Changed
+
+- **spec:** `06-security.md` §6.2 — **(M) fix:** signing pseudocode rewritten to hash the canonical bytes directly (`digest = SHA-256(receipt_data)`), dropping the prior base64 intermediate. Verification pseudocode clarified to decode-then-hash the canonical bytes (matching the new signing definition). Both sides now converge on canonical-bytes hash, aligning the spec with `EcdsaService` (csms-server + ts-simulator share the same `Ospp\Protocol\Crypto\EcdsaService` from `ospp-sdk-php`) and every other existing implementation. Closes the long-standing (M) interop hole; firmware integrating v0.4.2 will compute the same digest as the server. No implementation changes required.
+- **spec:** `06-security.md` §6.2 — `receipt_fields` expanded from 9 fields to **up to 12 fields**: `{offlineTxId, offlinePassId, userId, deviceId, bayId, serviceId, startedAt, endedAt, durationSeconds, creditsCharged, meterValues, txCounter}`. The three new identity fields (`offlinePassId`, `userId`, `deviceId`) are signed to provide cryptographic binding of the receipt to the pass, the user, and the device — not merely envelope claims. `meterValues` remains optional (when present in the transaction payload, it is signed; when absent, it is omitted from the canonical body — implementations MUST NOT sign an empty `meterValues` object). New firmware-timing paragraph: firmware MUST sign per the v0.4.2 receipt_fields definition and the canonical-bytes digest rule from initial integration.
+- **spec:** `profiles/offline/reconciliation.md` §2 step 4 — updated server-side processing list from "deduplication, txCounter gap detection, receipt signature verification, and fraud scoring" to include reconcile-time re-validation gate between sig verification and fraud scoring.
+- **spec:** `profiles/offline/reconciliation.md` §7 (renumbered from §6) Fraud Detection — "Expired pass used" signal REMOVED (was Low, 20pt). Expiry is now a hard-reject gate check (§6 check #9, errorCode `2003 OFFLINE_PASS_EXPIRED`, severity `Error` and recoverable=`false` at reconcile-time per the context note in `07-errors.md` §3.2). Remaining 6 fraud signals unchanged.
+- **spec:** `profiles/offline/reconciliation.md` §8/§9/§10/§11 — mechanical renumber from §7/§8/§9/§10 (Wallet Reconciliation, Conflict Resolution, Example, Related Schemas).
+- **error codes:** `07-errors.md` §3.2 — `2003 OFFLINE_PASS_EXPIRED` row retained as-is for the authorize-time semantic (Warning, recoverable=true). Added a context note: at reconcile-time (`profiles/offline/reconciliation.md` §6 gate check #9) the same code is emitted with effective severity `Error`, recoverable=`false`, and SHOULD carry `details.context: "reconcile"` for log clarity.
+- **error codes:** `07-errors.md` §1.1 — "2xxx Authentication & Authorization Errors" count updated from 14 to 18 codes. Total updated from 102 to 106 standard error codes.
+- **error codes:** `07-errors.md` §4 (Error Code Usage per Message) — TransactionEvent row extended with the new codes + 2003 + 2006. Appendix A Quick Reference updated.
+- **schema:** `schemas/common/receipt.schema.json` `data` field description — updated to reference the new `receipt-data.schema.json` and the canonical 11-required + meterValues-optional shape.
+- **schema:** `schemas/ble/receipt.schema.json` — `offlinePassId`, `userId`, `deviceId` added to the BLE FFF6 outer wrapper required+properties. Firmware emits the final v0.4.2 wrapper on first integration; no second wire-break.
+- **spec:** `profiles/offline/ble-transport.md` §8 Receipt (FFF6) — field table updated to include `offlinePassId`, `userId`, `deviceId` rows matching the BLE schema.
+- **spec / schema / conformance / guides:** version cascade `0.4.1` → `0.4.2` across all spec chapter headers, profile sub-page headers (reconciliation, authorize-offline-pass, offline-pass, ble-transport, ble-session, ble-handshake), guides, conformance docs, READMEs.
+
+### Fixed
+
+- **spec:** `06-security.md` §6.2 (M) — see "Changed" entry above. Carried since v0.2.x; closed here because v0.4.2 already opens §6.2 for receipt_fields expansion. Firmware integrating v0.4.1 would have signed `SHA-256(base64(canonical))` while csms-server `EcdsaService` computes `SHA-256(canonical)` — interop break at first integration. The fix aligns spec to the de facto implementation behavior (csms-server + ts-simulator share the same `Ospp\Protocol\Crypto\EcdsaService`); no implementation changes required.
+
+### Flagged as known follow-ups (not in this release)
+
+- Server-originated `FraudDetected` SecurityEvent type — already flagged in v0.4.1; unchanged.
+
+### Migration
+
+This release requires a **coordinated v0.4.1 → v0.4.2 stack upgrade**:
+
+1. **Receipt signing format expansion AND canonical-bytes hash (`06-security.md` §6.2):** firmware MUST (a) sign all 11 required fields plus `meterValues` when present per the new `receipt_fields`, (b) compute the digest over the **canonical bytes directly**, not over the base64-encoded form. Receipts signed under the prior v0.4.1 pseudocode (9-field set, or SHA-256 of base64) will fail signature verification AND the reconcile-time receipt-envelope cross-checks. The server MUST reject such receipts with `2002 OFFLINE_PASS_INVALID` (sig fail) or `2017 OFFLINE_RECEIPT_MISMATCH` (cross-check fail).
+2. **Issuance MUST populate `pass.organization_id`** — implementations of the offline-pass issuance path MUST write the issuing organization's id to each new pass. Pre-launch context (no historical passes on prod) — no grace period.
+3. **Reconcile-time gate adoption** — server implementations MUST apply the 11 gate checks per `reconciliation.md` §6 before fraud scoring. No transaction may persist if any gate check fails.
+4. **BLE FFF6 wrapper** — firmware emits `offlinePassId`, `userId`, `deviceId` at the BLE outer wrapper alongside the signed inner.
+
+Pre-launch context (no firmware deployments; prod `offline_passes` and `offline_transactions` rows = 0) makes the coordinated break clean — no historical receipts to grandfather. The firmware integration sequence is: (a) spec push 0.4.2, (b) server adoption, (c) UAT proof through simulator (negative cases for each gate check), (d) prod deploy, (e) firmware development against the post-amendment server, (f) firmware integration. Order chosen so firmware signs the final format on its first integration run.
+
+---
+
 ## [0.4.1] — 2026-06-04
 
 Focused tightening of the SecurityEvent dedup contract — closes one implicit-but-unstated stability rule in the SecurityEvent profile and one SHOULD-level conformance gap in the AuthorizeOfflinePass profile. Both amendments make existing implicit rules explicit and normative; no wire-format change, no schema change, no conformance-test change required. Compliant stations and servers see no behavior change; non-compliant implementations that previously slipped through the SHOULD-level rules now have a clear MUST-level contract to conform to.

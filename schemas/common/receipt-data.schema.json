@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/common/receipt-data.schema.json",
+  "title": "ReceiptData",
+  "description": "Canonical body serialized via OSPP Canonical Form (spec/06-security.md §4.8) and base64-encoded into the receipt.data field for ECDSA P-256 signing. Per 06-security.md §6.2 v0.4.2. 11 required fields plus meterValues (optional, signed when present, omitted from the canonical body when absent). Up to 12 signed fields total. The digest signed by the station's private key is SHA-256 over the canonical bytes directly (NOT over the base64 form).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "offlineTxId",
+    "offlinePassId",
+    "userId",
+    "deviceId",
+    "bayId",
+    "serviceId",
+    "startedAt",
+    "endedAt",
+    "durationSeconds",
+    "creditsCharged",
+    "txCounter"
+  ],
+  "properties": {
+    "offlineTxId":      { "$ref": "./offline-tx-id.schema.json" },
+    "offlinePassId":    { "$ref": "./offline-pass-id.schema.json" },
+    "userId":           { "$ref": "./user-id.schema.json" },
+    "deviceId":         { "type": "string", "minLength": 1, "maxLength": 128, "description": "Device identifier from the BLE Hello / OfflinePass binding. Cryptographically binds the receipt to the device that authorized the pass." },
+    "bayId":            { "$ref": "./bay-id.schema.json" },
+    "serviceId":        { "$ref": "./service-id.schema.json" },
+    "startedAt":        { "$ref": "./timestamp.schema.json" },
+    "endedAt":          { "$ref": "./timestamp.schema.json" },
+    "durationSeconds":  { "type": "integer", "minimum": 1 },
+    "creditsCharged":   { "$ref": "./credit-amount.schema.json" },
+    "meterValues":      { "$ref": "./meter-values.schema.json", "description": "Final meter readings. OPTIONAL — when present in the transaction payload, MUST be signed; when absent, MUST be omitted from the canonical body (implementations MUST NOT serialize an empty meterValues:{} or meterValues:null)." },
+    "txCounter":        { "type": "integer", "minimum": 1 }
+  }
+}

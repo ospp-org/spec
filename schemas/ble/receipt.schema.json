@@ -2,10 +2,13 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/ble/receipt.schema.json",
   "title": "Receipt",
-  "description": "Transaction receipt read from the station via BLE characteristic FFF6 (Read). Contains the complete record of a completed service session for offline reconciliation.",
+  "description": "Transaction receipt read from the station via BLE characteristic FFF6 (Read). Contains the complete record of a completed service session for offline reconciliation. v0.4.2: outer wrapper includes offlinePassId / userId / deviceId for symmetry with the signed inner body (06-security.md §6.2 receipt_fields).",
   "type": "object",
   "required": [
     "offlineTxId",
+    "offlinePassId",
+    "userId",
+    "deviceId",
     "bayId",
     "serviceId",
     "startedAt",
@@ -19,6 +22,20 @@
   "properties": {
     "offlineTxId": {
       "$ref": "../common/offline-tx-id.schema.json"
+    },
+    "offlinePassId": {
+      "$ref": "../common/offline-pass-id.schema.json",
+      "description": "OfflinePass identifier used to authorize this service. Matches the value signed into receipt.data per 06-security.md §6.2 (v0.4.2)."
+    },
+    "userId": {
+      "$ref": "../common/user-id.schema.json",
+      "description": "User subject identifier. Matches the value signed into receipt.data per 06-security.md §6.2 (v0.4.2)."
+    },
+    "deviceId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Device identifier from the BLE Hello / OfflinePass binding. Matches the value signed into receipt.data per 06-security.md §6.2 (v0.4.2)."
     },
     "bayId": {
       "$ref": "../common/bay-id.schema.json"

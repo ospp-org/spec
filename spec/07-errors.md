@@ -1,6 +1,6 @@
 # Chapter 07 — Error Codes & Resilience
 
-> **Status:** Draft | **OSPP Version:** 0.4.1
+> **Status:** Draft | **OSPP Version:** 0.4.2
 
 This chapter defines the complete error taxonomy for the OSPP protocol, including the error code registry, standard error response format, retry policies, circuit breaker patterns, and graceful degradation behavior.
 
@@ -19,7 +19,7 @@ Error codes are organized into six functional categories. Each category occupies
 | Range | Category | Tier | Count | Description |
 |:------|----------|:----:|:-----:|-------------|
 | 1000–1999 | **Transport Errors** | Protocol | 15 | Network, protocol, message format, and message integrity errors |
-| 2000–2999 | **Authentication & Authorization Errors** | Protocol | 14 | Identity verification, credential validation, and access control |
+| 2000–2999 | **Authentication & Authorization Errors** | Protocol | 18 | Identity verification, credential validation, and access control |
 | 3000–3999 | **Session & Bay Errors** | Application | 17 | Bay state, session lifecycle, reservation, and service errors |
 | 4000–4999 | **Payment & Credit Errors** | Application | 14 | Wallet balance, payment processing, refunds, offline credit limits, and certificate management |
 | 5000–5999 | **Station Hardware & Software Errors** | Application | 34 | Physical hardware faults and embedded software errors |
@@ -32,7 +32,7 @@ Error codes are organized into six functional categories. Each category occupies
 - **Application tier** (3000–6999): Errors related to business logic, state violations, hardware conditions, and server-side processing. These errors indicate that the message was received and understood, but the requested operation could not be completed. Application-tier errors are handled by the application layer.
 - **Vendor tier** (9000–9999): Reserved for implementation-specific error codes. Vendors **MUST** document their vendor error codes separately.
 
-**Total: 102 standard error codes.**
+**Total: 106 standard error codes.**
 
 ### 1.2 Severity Levels
 
@@ -238,6 +238,14 @@ Authentication errors cover identity verification (mTLS, JWT, BLE handshake, Off
 | 2011 | `SESSION_TOKEN_EXPIRED` | Warning | true | Web payment session token (UUID v4) has exceeded its 10-minute TTL. | Browser: restart the payment flow from the QR code scan. |
 | 2012 | `SESSION_TOKEN_INVALID` | Error | false | Web payment session token is not found in Redis or has an invalid format. | Browser: restart the payment flow. Do not retry with the same token. |
 | 2013 | `BLE_AUTH_FAILED` | Error | false | BLE challenge-response authentication failed. The session key derivation or session proof is invalid. | App: disconnect and retry the BLE handshake. If persistent, report to the server when online. |
+| 2014 | `OFFLINE_PASS_REVOKED` | Error | false | OfflinePass `is_revoked` flag is `true` — the pass has been individually revoked (typically due to device replacement or user-initiated revoke). Distinct from `2004 OFFLINE_EPOCH_REVOKED` (batch revocation by epoch bump). | App: request a new OfflinePass. Server: log SecurityEvent [MSG-012] with `type: "OfflinePassRejected"`. The original pass is permanently dead; the device must obtain a new one. |
+| 2015 | `OFFLINE_ORG_MISMATCH` | Error | false | OfflinePass `organization_id` does not match the reporting station's `organization_id`. The pass was issued for a different operator/tenant. Distinct from `2006 OFFLINE_STATION_MISMATCH` (which checks `allowed_station_ids` membership for scoped passes within the same organization). | Server: log SecurityEvent [MSG-012] with `type: "OfflinePassRejected"`. Cross-organization use is not permitted. The pass holder must request a pass scoped to the operator they wish to transact with. |
+| 2016 | `OFFLINE_USER_MISMATCH` | Error | false | OfflinePass `user_id` does not match the `userId` carried in the TransactionEvent envelope. The pass is bound to a different user than the one claimed by the station. | Server: log SecurityEvent [MSG-012] with `type: "OfflinePassRejected"`. Indicates either a station bug, station-side state corruption, or a deliberate user-id forgery. |
+| 2017 | `OFFLINE_RECEIPT_MISMATCH` | Critical | false | One or more of the cryptographically signed fields in `receipt.data` (`offlineTxId`, `offlinePassId`, `userId`, or `deviceId`) does not match the corresponding cross-check target (the TransactionEvent envelope for `offlineTxId` / `offlinePassId` / `userId`; the resolved pass record's `device_id` for `deviceId`). The signature itself verified, but the signed payload disagrees with the envelope's claim or the pass's device binding. | Server: log SecurityEvent [MSG-012] with `type: "OfflinePassRejected"`. The `details.field` element identifies the mismatched field (`offlineTxId` / `offlinePassId` / `userId` / `deviceId`); `details.signedValue` and `details.expectedValue` carry the forensic pair. This is a strong indicator of envelope tampering or station-side state corruption. |
+
+> **Note on `2003 OFFLINE_PASS_EXPIRED` context-dependent semantics (v0.4.2):**
+> At **authorize-time** (`profiles/offline/authorize-offline-pass.md` §5 check #2 / `offline-pass.md` §4 check #2): severity = `Warning`, recoverable = `true`. The app retries with a fresh pass.
+> At **reconcile-time** (`profiles/offline/reconciliation.md` §6 gate check #9): the same error code is emitted with effective severity `Error`, recoverable = `false`. The transaction is in the past — no retry is possible. The station has a clock-drift bug to fix or has retained an offline transaction beyond the pass's 24-hour validity window. Servers SHOULD include `details.context: "reconcile"` on the reconcile-time emission for log clarity.
 
 ### 3.3 Session & Bay Errors (3xxx)
 
@@ -376,7 +384,7 @@ This table maps which error codes can appear in the RESPONSE or rejection of eac
 | Heartbeat [MSG-008] | 1005, 1010, 5106, 6001 |
 | StatusNotification [MSG-009] | *(EVENT — no RESPONSE, but may carry 5xxx error details in payload)* |
 | MeterValues [MSG-010] | *(EVENT — no RESPONSE)* |
-| TransactionEvent [MSG-007] | **2002**, **2004**, 1005, 3015, 6001 |
+| TransactionEvent [MSG-007] | **2002**, **2003**, **2004**, **2006**, **2014**, **2015**, **2016**, **2017**, 1005, 3015, 6001 |
 | AuthorizeOfflinePass [MSG-002] | **2002**, **2003**, **2004**, **2005**, **2006**, 1005, 4002, 4003, 4004, 6001 |
 | FirmwareStatusNotification [MSG-017] | *(EVENT — no RESPONSE)* |
 | DiagnosticsNotification [MSG-019] | *(EVENT — no RESPONSE)* |
@@ -751,6 +759,10 @@ Vendors MAY define custom error codes in the **9000–9999** range for proprieta
 | 2011 | `SESSION_TOKEN_EXPIRED` | Warning | A |
 | 2012 | `SESSION_TOKEN_INVALID` | Error | A |
 | 2013 | `BLE_AUTH_FAILED` | Error | A |
+| 2014 | `OFFLINE_PASS_REVOKED` | Error | A |
+| 2015 | `OFFLINE_ORG_MISMATCH` | Error | A |
+| 2016 | `OFFLINE_USER_MISMATCH` | Error | A |
+| 2017 | `OFFLINE_RECEIPT_MISMATCH` | Critical | A |
 | 3000 | `SESSION_GENERIC` | Error | S |
 | 3001 | `BAY_BUSY` | Warning | S |
 | 3002 | `BAY_NOT_READY` | Warning | S |
