@@ -8,6 +8,39 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.5.0] — 2026-06-06
+
+Lockstep re-synchronization release. The three OSPP repositories (`spec`, `ospp-sdk-php`, `sdk-ts`) drifted out of step through `0.4.x` — `spec` shipped the v0.4.2 Reconcile-Time Gate without matching SDK releases, `ospp-sdk-php` consumed `v0.4.2`/`v0.4.3` for SDK-internal fixes unrelated to spec, and `sdk-ts` stagnated at `v0.4.0`. The next protocol-affecting change (TransactionEventResponse status enum addition) would have collided on `0.4.3` across spec + ospp-sdk-php. v0.5.0 deliberately re-syncs all three to a single version number; see [ADR-001 — Cross-Repository Lockstep Versioning From 0.5.0](adr/ADR-001-cross-repo-lockstep-versioning.md) for the convention going forward.
+
+The wire-affecting change in this release is small and additive: the `TransactionEventResponse.status` enum gains `Deferred`, closing the literal spec gap where `reconciliation.md §4.2:52` mandated the server "MUST flag the gap and defer reconciliation" but the response schema admitted only `Accepted / Duplicate / Rejected / RetryLater`. csms-server already emits `Deferred` on the wire; the schema was the missing piece.
+
+### Added
+
+- **schema:** `transaction-event-response.schema.json` `status` enum extended from `[Accepted, Duplicate, Rejected, RetryLater]` to add `Deferred`, with the same conditional-`reason`-required rule the other three non-`Accepted` values carry. The wire payload for `Deferred` is `{status, reason}` only; per-gap arithmetic (`counterGapExpected`, `counterGapReceived`, `counterGapSize`) flows into the `§6.3` `SecurityEvent.details` object, NOT into the wire response.
+- **spec:** `reconciliation.md §4.1` step 4 + `§4.2` step 4 — the wire response on a `txCounter` gap is now stated explicitly as `status: "Deferred"` + a `reason`. `§4.2` step 4 also articulates the `Deferred`-vs-`RetryLater` distinction (operator-manual unblock vs. transient-backoff-retry) and the re-arrival rule: a previously-`Deferred` `offlineTxId` continues to return `Deferred` without re-emitting the `§4.2:52` SecurityEvent.
+- **conformance:** `test-vectors/valid/transaction/transaction-event-response-deferred.json` — a positive vector for the new enum value.
+- **process:** `adr/ADR-001-cross-repo-lockstep-versioning.md` — formalizes the cross-repo lockstep convention from `0.5.0` forward.
+
+### Fixed
+
+- **spec:** `reconciliation.md §6.3` + `§6.5` — gate-emit-before-INSERT ordering for check #4 (pass-found). Prior wording (v0.4.2) made check #4 the odd one out (SHOULD emit, MAY suppress when FK has fired); that suppression case described a scenario the conforming reconciliation path cannot reach, because the emit happens at the gate-rejection point BEFORE any INSERT is attempted. `§6.3` now states the same MUST + before-INSERT ordering for all 11 checks; `§6.5` (retitled "Belt-and-Suspenders for Non-Gate Paths", was "Pass-Found Belt-and-Suspenders") restructures to make the storage-layer FK's role explicit: it guards code paths that BYPASS the §6 gate (direct DB writes, admin tooling, batch importers), not the conforming reconciliation path. Implementation note: csms-server already emits at handler boundary before any INSERT — the spec wording now matches the de-facto behavior.
+
+### Changed
+
+- **spec / schema / conformance / guides:** version cascade `0.4.2` → `0.5.0` across all spec chapter headers, profile sub-page headers (reconciliation, authorize-offline-pass, offline-pass, ble-transport, ble-session, ble-handshake), guides (Implementor's Guide), and conformance docs. Status anchors only — historical "(v0.4.2)" feature references in note bodies, table cells, and `00-introduction.md` history rows remain as-is.
+
+### Migration
+
+- **csms-server:** none required — the `Deferred` wire value was already being emitted (this release closes the spec gap, not the implementation gap). Outbound schema-validator log noise on `Deferred` responses (logged via `MessageDispatcher.php:151`, non-blocking) goes silent once `ospp/protocol` updates to `v0.5.0`.
+- **csms-app / firmware:** the next-gen station MUST treat `Deferred` as "do not auto-resend"; the offline transaction sits in the station's outbox awaiting operator-manual unblock or the missing in-sequence transactions, not exponential backoff. A station that mis-treats `Deferred` as `RetryLater` will re-send the same transaction and re-trigger the `§4.2:52` gap-SecurityEvent path; the server's re-arrival branch returns `Deferred` again without re-emitting, but the client-side behavior is wrong.
+
+### Coordinated with
+
+- `ospp-sdk-php` `v0.5.0` — `TransactionEventStatus::DEFERRED` enum case + `CAPABILITY_NOT_SUPPORTED` + `httpStatus` mapping carry-over from the orphaned `v0.4.3`.
+- `sdk-ts` `v0.5.0` — `TransactionEventResponse` discriminated union gains a `Deferred` variant; first release since `v0.4.0`.
+
+---
+
 ## [0.4.2] — 2026-06-05
 
 Closes the Phase-3 offline reconcile-time validation gap surfaced post-Phase-3-persist-fix, and folds in the (M) signing-vs-verification inconsistency carried since v0.2.x. The reconciliation profile previously mandated only 4 server actions (dedup, counter-gap, receipt-sig, fraud-scoring) and was silent on re-validation of the offline pass at TransactionEvent time. Mature peer protocol (OCPP 1.6 §4.8 / OCPP 2.0.1 E01.FR.11/FR.12) mandates CSMS re-validation. This release adds a deterministic "Reconcile-Time Re-validation Gate" between receipt-sig verification and fraud-scoring, closes the cross-station replay + cross-organization replay + revoked-after-issuance + fabricated-pass + receipt-payload-tampering + expired-pass-as-fraud-signal gaps, expands the canonically-signed `receipt_fields` to bind the pass / user / device cryptographically, and fixes §6.2 signing pseudocode to hash the canonical bytes directly (matching every existing implementation; closing the (M) base64-vs-canonical interop hole before firmware integration).
