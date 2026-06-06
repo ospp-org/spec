@@ -15,7 +15,8 @@
         "Accepted",
         "Duplicate",
         "Rejected",
-        "RetryLater"
+        "RetryLater",
+        "Deferred"
       ]
     },
     "reason": {
@@ -45,6 +46,15 @@
     {
       "if": {
         "properties": { "status": { "const": "RetryLater" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["reason"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "Deferred" } },
         "required": ["status"]
       },
       "then": {

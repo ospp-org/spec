@@ -1,0 +1,4 @@
+{
+  "status": "Deferred",
+  "reason": "Transaction counter gap detected: expected 7, received 9 (gap size 2). Reconciliation deferred until operator-manual unblock per spec §4.2:52."
+}

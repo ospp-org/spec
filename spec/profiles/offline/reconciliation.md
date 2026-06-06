@@ -40,7 +40,7 @@ The station maintains a monotonically increasing transaction counter per station
 1. The counter starts at 1 for the first offline transaction after a station boot or sync.
 2. The counter increments by exactly 1 for each subsequent offline transaction.
 3. The server verifies that received `txCounter` values form a contiguous sequence with no gaps.
-4. **Gaps in the counter** indicate missing transactions -- this is a HIGH-severity fraud signal. The server **MUST** flag the gap and defer reconciliation of subsequent transactions until the missing ones are received or the gap is manually resolved.
+4. **Gaps in the counter** indicate missing transactions -- this is a HIGH-severity fraud signal. The server **MUST** flag the gap and defer reconciliation of subsequent transactions until the missing ones are received or the gap is manually resolved. The wire response on this path is `status: "Deferred"` (see §4.2 step 4).
 
 ### 4.2 txCounter Gap Detection
 
@@ -49,7 +49,16 @@ The server detects missing offline transactions by monitoring `txCounter` contin
 1. For each station, the server tracks the last successfully reconciled `txCounter` value.
 2. When a TransactionEvent arrives, the server compares its `txCounter` to `lastReconciledCounter + 1`.
 3. If `txCounter` equals `lastReconciledCounter + 1`, the sequence is intact and the server proceeds normally.
-4. If `txCounter` is greater than `lastReconciledCounter + 1`, the server **MUST** flag the gap, log a SecurityEvent, and defer reconciliation of subsequent transactions until the missing ones are received or the gap is manually resolved.
+4. If `txCounter` is greater than `lastReconciledCounter + 1`, the server **MUST** flag the gap, log a SecurityEvent, and defer reconciliation of subsequent transactions until the missing ones are received or the gap is manually resolved. The wire response **MUST** be:
+
+   ```json
+   {
+     "status": "Deferred",
+     "reason": "<short human-readable explanation referencing the gap>"
+   }
+   ```
+
+   `Deferred` is distinct from `RetryLater` in semantics: `RetryLater` directs the station to back off and re-send the same transaction (transient server condition); `Deferred` directs the station that the transaction is held server-side pending operator-manual unblock or arrival of the missing in-sequence transactions, and the station **MUST NOT** auto-resend the same offline transaction. Re-arrivals of a previously-deferred `offlineTxId` **MUST** continue to return `Deferred` (without re-emitting the `§4.2:52` SecurityEvent) until the operator-manual unblock occurs.
 5. If `txCounter` is less than or equal to `lastReconciledCounter`, the server **MUST** treat it as a duplicate or replay and respond with `Duplicate`.
 
 ## 5. Receipt Signature Verification
