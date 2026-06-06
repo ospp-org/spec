@@ -93,7 +93,7 @@ This semantic prevents "unscoped" from becoming a cross-organization hole: an un
 
 ### 6.3 SecurityEvent Emission
 
-Each gate failure on checks #1, #2, #3, #5, #6, #7, #8, #9, #10, #11 **MUST** emit an `OfflinePassRejected` SecurityEvent. Check #4 (pass-found) **SHOULD** emit a SecurityEvent — the storage-layer FK may already have rejected the INSERT attempt; implementations MAY suppress the application-layer emission when the FK has fired to avoid double-emission noise.
+Each gate failure on checks #1–#11 **MUST** emit an `OfflinePassRejected` SecurityEvent. The emission occurs at the gate-rejection point — **before** any persistence attempt — for all 11 checks, including check #4 (pass-found). The storage-layer FK described in §6.5 is a defense-in-depth guard for **non-gate code paths** (direct DB writes, admin tooling, batch importers) and never co-fires with the gate's emission on the conforming reconciliation path.
 
 The emitted SecurityEvent **MUST** conform to the SecurityEvent profile (`profiles/security/security-event.md`) with the following constraints (mirroring `authorize-offline-pass.md` §6.7 v0.4.1 pattern):
 
@@ -135,9 +135,13 @@ On any gate failure the server **MUST** respond with:
 
 The station, on receiving `Rejected`, **MUST NOT** retry the same TransactionEvent. The transaction is permanently rejected at the server; the station MAY flag it for manual investigation.
 
-### 6.5 Storage-Layer FK Enforcement (Pass-Found Belt-and-Suspenders)
+### 6.5 Storage-Layer FK Enforcement (Belt-and-Suspenders for Non-Gate Paths)
 
-Implementations SHOULD enforce `offline_transactions.offline_pass_id` → `offline_passes.id` via a database foreign key. This provides a second guard against fabricated `offlinePassId` values that bypass check #4. Where the FK is enforced at the storage layer, the FK rejects the INSERT attempt before any partial write; check #4's application-layer rejection produces the clean wire-level `2002 OFFLINE_PASS_INVALID` response. SecurityEvent emission for check #4 is `SHOULD` (not `MUST`) — implementations MAY suppress the application-layer emission when the FK has already caught the attempt.
+Implementations **SHOULD** enforce `offline_transactions.offline_pass_id` → `offline_passes.id` via a database foreign key. This is a defense-in-depth guard for code paths that **bypass** the §6 reconciliation gate — direct DB writes, admin tooling, batch importers, or any future ingress that lands rows in `offline_transactions` without traversing the application-layer Reconciler.
+
+Ordering on the conforming reconciliation path is unambiguous: gate check #4 (pass-found) **MUST** emit its `OfflinePassRejected` SecurityEvent and return the §6.4 `2002 OFFLINE_PASS_INVALID` response **before** any INSERT is attempted. The FK never fires on the gate's path — there is no INSERT for it to reject. The "double-emission" concern that motivated earlier `SHOULD/MAY-suppress` wording (carried since v0.4.2) does not apply: the gate's emit and the FK's reject are mutually exclusive on a given REQUEST.
+
+The FK's value materializes only when something other than the gate is the entry point. When the FK fires there, it rejects the partial write at the storage layer; whatever code path triggered it is responsible for its own audit emission (the application-layer Reconciler is not in the call stack).
 
 ## 7. Fraud Detection
 
