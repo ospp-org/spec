@@ -1,5 +1,8 @@
 {
   "offlineTxId": "otx_e4d3c2b1a0f9e8d7c6b5",
+  "offlinePassId": "opass_e4d3c2b1a0f9e8d7",
+  "userId": "sub_e4d3c2b1a0f9e8d7c6b5a4938271e4d3",
+  "deviceId": "dev_e4d3c2b1",
   "bayId": "bay_f6e5d4c3b2a10987",
   "serviceId": "svc_premium",
   "startedAt": "2026-02-15T14:30:00.000Z",

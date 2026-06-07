@@ -42,8 +42,8 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 
 | Field | Type | Required | Description |
 |------------|---------|----------|-----------------------------------------------|
-| `status` | string | Yes | `Accepted`, `Duplicate`, `Rejected`, or `RetryLater`. |
-| `reason` | string | Cond. | Human-readable explanation. Required when `status` is `Rejected`, `Duplicate`, or `RetryLater`. |
+| `status` | string | Yes | `Accepted`, `Duplicate`, `Rejected`, `RetryLater`, or `Deferred`. |
+| `reason` | string | Cond. | Human-readable explanation. Required when `status` is `Rejected`, `Duplicate`, `RetryLater`, or `Deferred`. |
 
 ### 5.1 Response Status Values
 
@@ -53,6 +53,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 | `Duplicate` | Transaction already exists (matched by `offlineTxId`). Station **MUST** delete local copy. |
 | `Rejected` | Transaction is invalid (bad receipt, revoked pass). Station **MUST** flag for manual review. |
 | `RetryLater` | Server is temporarily unable to process. Station **MUST** retry after backoff. |
+| `Deferred` | Server detected a `txCounter` gap and is holding the transaction server-side pending arrival of the missing in-sequence transactions or operator-manual unblock. Station **MUST NOT** auto-resend; see [`reconciliation.md §4.2`](../offline/reconciliation.md) for the full state machine. |
 
 ## 6. Processing Rules
 
@@ -62,6 +63,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 4. On `Accepted` or `Duplicate`: the station **MUST** delete the transaction from its local offline log.
 5. On `Rejected`: the station **MUST** mark the transaction as rejected in its local log and **MUST NOT** retry. The station **SHOULD** report the rejection via a SecurityEvent if the `reason` indicates credential issues.
 6. On `RetryLater`: the station **MUST** retry with exponential backoff (initial 5s, cap 300s (online retry scenario -- server responds RetryLater)). The station **MUST NOT** skip the transaction or proceed to the next.
+7. On `Deferred`: the server has detected a `txCounter` gap and is holding the transaction pending arrival of the missing in-sequence transactions or operator-manual unblock (see [`reconciliation.md §4.2`](../offline/reconciliation.md)). The station **MUST NOT** auto-resend the same `offlineTxId` (this is the key behavioural distinction from `RetryLater`) and **MUST NOT** delete the local copy. The station **MAY** proceed to send the next pending transaction; re-arrivals of the same `offlineTxId` (e.g., a queued retry from before the wire-response was processed) **MUST** be expected to continue returning `Deferred` until the gap is resolved upstream.
 7. The server **MUST** validate the `receipt.signature` against the station's known ECDSA public key. If verification fails, the server **MUST** respond with `Rejected`.
 8. The server **MUST** validate the `txCounter` sequence for gap detection. If the counter is not contiguous with the server's record of the previous transaction, the server **SHOULD** accept the transaction but flag it for reconciliation audit.
 

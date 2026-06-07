@@ -8,6 +8,69 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## Unreleased — prose & conformance alignment to v0.5.0 schemas (no wire change, no bump)
+
+Post-Wave-3 consistency audit identified 4 documentation/conformance
+gaps where the prose and the conformance test-vectors had not caught
+up with schema changes that already shipped in `v0.5.0`. All fixes
+are **prose-only or test-vector-only** — the wire-format schemas are
+unchanged, the contract that integrators sign against is unchanged.
+**No spec version bump.** Same drift-closure pattern as `sdk-ts`
+v0.5.1 / v0.5.2 / v0.5.3 explicitly stated "spec NOT bumped" — the
+inverse rationale applies here: when the schemas are correct and
+only the prose lags, prose-fix without bump preserves semver
+discipline (each tag = a wire contract; this lot doesn't change
+the wire).
+
+### Fixed
+
+- **prose:** `profiles/transaction/transaction-event.md` §5 (Response
+  Payload) + §5.1 (Response Status Values) + §6 (Processing Rules)
+  now enumerate `Deferred` as the 5th `status` value (was 4),
+  matching `transaction-event-response.schema.json` since `v0.5.0`.
+  §6 step 7 articulates the `Deferred`-vs-`RetryLater` station-side
+  contract (no auto-resend; do not delete local copy; cross-links
+  to `reconciliation.md §4.2` for the upstream state machine). A
+  firmware vendor reading the profile page in isolation now sees
+  the same 5-value enum the schema validator enforces.
+- **prose:** `03-messages.md §4.1` TransactionEvent response payload
+  table + `status` behavior table now include the `Deferred` row,
+  mirroring the profile page. Closes the same blind spot for
+  vendors using `03-messages.md` as the master message catalog.
+- **prose:** `07-errors.md` Appendix A — Quick Reference now lists
+  codes 4010 `CSR_INVALID`, 4011 `CERTIFICATE_CHAIN_INVALID`, 4012
+  `CERTIFICATE_TYPE_MISMATCH`, 4013 `RENEWAL_DENIED`, 4014
+  `KEYPAIR_GENERATION_FAILED`. §3.4 §4.01x has had these since
+  `v0.4.x` but Appendix A skipped 4008 → 5000, leaving 5 cert-
+  management codes invisible to integrators scraping the Quick
+  Reference as the canonical list. Appendix A row count is now
+  106, matching §1.1 totals and §3.x details.
+- **conformance:** `test-vectors/valid/offline/receipt-full.json` +
+  `receipt-minimal.json` now carry `offlinePassId`, `userId`, and
+  `deviceId` at the outer level, matching `ble/receipt.schema.json`
+  since `v0.4.2`. Prior vectors omitted all three and produced
+  2 spurious FAILs on the "valid" side of `tools/verify-schemas.py`;
+  re-run now reports `155/155 valid PASS, 147/147 invalid correctly
+  rejected, total 302/302 PASS`. The signed inner body
+  (`receipt.data`) is unchanged — outer-level identity fields are
+  schema-required for symmetry with the signed receipt body per
+  `06-security.md §6.2` and do not require re-signing.
+- **cosmetic:** `README.md` badges now reflect the actual count of
+  messages (`### N.M MessageName` subsections under `03-messages.md`
+  = 40, badge was 34) and schemas (47 mqtt + 13 ble + 18 common + 1
+  top-level = 79, badge was 67).
+
+### Verification
+
+- `tools/verify-schemas.py`: `302/302 PASS, 0 FAIL, 0 SKIP`.
+- Wire-format schemas, error-code numeric assignments, enum
+  semantics: **unchanged**.
+- Cross-repo: `ospp-sdk-php v0.5.3` + `sdk-ts v0.5.3` schemas
+  remain byte-identical to `spec/schemas/`; no SDK re-vendoring
+  required.
+
+---
+
 ## [0.5.0] — 2026-06-06
 
 Lockstep re-synchronization release. The three OSPP repositories (`spec`, `ospp-sdk-php`, `sdk-ts`) drifted out of step through `0.4.x` — `spec` shipped the v0.4.2 Reconcile-Time Gate without matching SDK releases, `ospp-sdk-php` consumed `v0.4.2`/`v0.4.3` for SDK-internal fixes unrelated to spec, and `sdk-ts` stagnated at `v0.4.0`. The next protocol-affecting change (TransactionEventResponse status enum addition) would have collided on `0.4.3` across spec + ospp-sdk-php. v0.5.0 deliberately re-syncs all three to a single version number; see [ADR-001 — Cross-Repository Lockstep Versioning From 0.5.0](adr/ADR-001-cross-repo-lockstep-versioning.md) for the convention going forward.

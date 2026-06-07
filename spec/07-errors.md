@@ -789,6 +789,11 @@ Vendors MAY define custom error codes in the **9000–9999** range for proprieta
 | 4006 | `PAYMENT_TIMEOUT` | Warning | P |
 | 4007 | `REFUND_FAILED` | Error | P |
 | 4008 | `WEBHOOK_SIGNATURE_INVALID` | Critical | P |
+| 4010 | `CSR_INVALID` | Error | P |
+| 4011 | `CERTIFICATE_CHAIN_INVALID` | Error | P |
+| 4012 | `CERTIFICATE_TYPE_MISMATCH` | Warning | P |
+| 4013 | `RENEWAL_DENIED` | Error | P |
+| 4014 | `KEYPAIR_GENERATION_FAILED` | Critical | P |
 | 5000 | `HARDWARE_GENERIC` | Warning | H |
 | 5001 | `PUMP_SYSTEM` | Critical | H |
 | 5002 | `FLUID_SYSTEM` | Warning | H |

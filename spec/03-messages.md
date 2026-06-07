@@ -784,8 +784,8 @@ Each transaction includes a **signed receipt** (ECDSA P-256) with a monotonic **
 
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
-| `status` | string | Yes | `"Accepted"`, `"Duplicate"`, `"Rejected"`, or `"RetryLater"` |
-| `reason` | string | Cond. | Rejection or retry reason (when not `Accepted`) |
+| `status` | string | Yes | `"Accepted"`, `"Duplicate"`, `"Rejected"`, `"RetryLater"`, or `"Deferred"` |
+| `reason` | string | Cond. | Rejection, retry, or defer reason (when not `Accepted`) |
 
 **`status` behavior:**
 
@@ -795,6 +795,7 @@ Each transaction includes a **signed receipt** (ECDSA P-256) with a monotonic **
 | `Duplicate` | Remove transaction from local queue (already processed) |
 | `Rejected` | Flag transaction for manual investigation; do NOT retry |
 | `RetryLater` | Keep in queue; retry after `retryInterval` seconds |
+| `Deferred` | Server detected a `txCounter` gap and is holding the transaction pending arrival of missing in-sequence transactions or operator-manual unblock. Keep in queue; do NOT auto-resend (distinct from `RetryLater`). See [`profiles/offline/reconciliation.md §4.2`](profiles/offline/reconciliation.md) for the full state machine. |
 
 **Server-side processing:**
 1. Deduplicate by `offlineTxId`
