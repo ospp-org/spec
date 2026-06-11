@@ -22,7 +22,7 @@
       "stationMaxOfflineTx": 50
     },
     "signatureAlgorithm": "ECDSA-P256-SHA256",
-    "signature": "MEUCIQC8rJHL0tVPj3K2fNqr5vQ7bXz1Uf0XkJmYVwPaLEygPwIgWjFnR9kX3lH8YTmVpN7sA2cU6K+dB5hGvE4jCmQ7kNc="
+    "signature": "MEUCIQDgtV4c0wnDl5SB+uDBj3Z1pibF6xXOa4Aclb55jp18MAIgIe4s5v3reyAlNBOW+gtWYeUGU+yUr3LaGq1mtwnSWIA="
   },
   "counter": 0,
   "sessionProof": "dGhpcyBpcyBhbiBobWFjIHByb29mIGZvciB0aGUgc2Vzc2lvbg=="

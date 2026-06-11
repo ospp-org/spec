@@ -24,7 +24,7 @@
       "stationMaxOfflineTx": 100
     },
     "signatureAlgorithm": "ECDSA-P256-SHA256",
-    "signature": "YjRlNWY2YTdiOGM5ZDBlMWYyYTNiNGM1ZDZlN2Y4YTliMGMxZDJlM2Y0YTViNmM3ZDhlOWYw"
+    "signature": "MEQCIDvNymhYN4f0zr1BGo/gJtVGrnbMApV23mAxsF8oMWKJAiA6kQBoa8edQL4xqYIbuS2+PYjCWZ0UZ8E99h0F+U1CYA=="
   },
   "deviceId": "device-pixel-8-pro-042",
   "counter": 3,
