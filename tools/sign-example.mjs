@@ -198,6 +198,34 @@ function signServerSignedAuth(outer, keyPem, file) {
 }
 
 // -----------------------------------------------------------------------------
+// Firmware mode (spec §4.6 — signature is over the firmware BINARY, not over
+// any JSON canonical body)
+// -----------------------------------------------------------------------------
+//
+// Per `spec/06-security.md` §4.6 the `signature` field of an UpdateFirmware
+// message MUST contain the Base64-encoded ECDSA P-256 signature of the
+// firmware image itself. The conformance corpus signs a single committed
+// synthetic binary (`conformance/test-firmware/test-firmware.bin`) so the
+// vectors are reproducible end-to-end without anyone pulling a real release
+// artifact down at verification time.
+
+const FIRMWARE_BIN_PATH = 'conformance/test-firmware/test-firmware.bin';
+
+function signFirmware(outer, keyPem) {
+  const binary = readFileSync(FIRMWARE_BIN_PATH);
+  const sha256Hex = createHash('sha256').update(binary).digest('hex');
+
+  // ecdsaSign hashes its input internally (SHA-256), so passing the raw
+  // binary produces ECDSA-P256-Sign(key, SHA-256(binary)) — the canonical
+  // firmware code-signing primitive of §4.6.
+  const signature = ecdsaSign(keyPem, binary);
+  outer.checksum = `sha256:${sha256Hex}`;
+  outer.signature = signature;
+
+  return { mode: 'firmware', bodyFields: ['<test-firmware.bin>'], signatureLength: signature.length };
+}
+
+// -----------------------------------------------------------------------------
 // Dispatcher
 // -----------------------------------------------------------------------------
 
@@ -211,7 +239,10 @@ function detectMode(outer, file) {
   if (outer && typeof outer === 'object' && outer.type === 'ServerSignedAuth') {
     return 'server-signed-auth';
   }
-  throw new Error(`${file}: cannot detect signing mode (no .receipt, .offlinePass, or type=ServerSignedAuth)`);
+  if (outer && typeof outer === 'object' && typeof outer.firmwareUrl === 'string') {
+    return 'firmware';
+  }
+  throw new Error(`${file}: cannot detect signing mode (no .receipt, .offlinePass, type=ServerSignedAuth, or .firmwareUrl)`);
 }
 
 function parseArgs(args) {
@@ -245,6 +276,7 @@ function signFile(file, keyPem) {
   if (mode === 'receipt') result = signReceipt(outer, keyPem);
   else if (mode === 'offline-pass') result = signOfflinePass(outer, keyPem);
   else if (mode === 'server-signed-auth') result = signServerSignedAuth(outer, keyPem, file);
+  else if (mode === 'firmware') result = signFirmware(outer, keyPem);
   else throw new Error(`${file}: unsupported mode ${mode}`);
 
   const trailing = raw.endsWith('\n') ? '\n' : '';

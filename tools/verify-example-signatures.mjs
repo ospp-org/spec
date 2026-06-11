@@ -25,10 +25,13 @@
 //
 // =============================================================================
 
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { argv, exit } from 'node:process';
 import { canonicalize } from '@ospp/protocol';
 import { ecdsaVerify } from '@ospp/protocol/server';
+
+const FIRMWARE_BIN_PATH = 'conformance/test-firmware/test-firmware.bin';
 
 function parseArgs(args) {
   const opts = { key: null, files: [] };
@@ -61,7 +64,45 @@ function detectMode(outer) {
   if (outer && typeof outer === 'object' && outer.type === 'ServerSignedAuth') {
     return 'server-signed-auth';
   }
+  if (outer && typeof outer === 'object' && typeof outer.firmwareUrl === 'string') {
+    return 'firmware';
+  }
   return null;
+}
+
+function verifyFirmware(outer, file, pubPem) {
+  if (typeof outer.checksum !== 'string' || !outer.checksum.startsWith('sha256:')) {
+    return { file, ok: false, reason: 'checksum missing or not in "sha256:<hex>" form' };
+  }
+  if (typeof outer.signature !== 'string') {
+    return { file, ok: false, reason: 'signature missing' };
+  }
+
+  const binary = readFileSync(FIRMWARE_BIN_PATH);
+  const expectedDigestHex = createHash('sha256').update(binary).digest('hex');
+  const expectedChecksum = `sha256:${expectedDigestHex}`;
+  if (outer.checksum !== expectedChecksum) {
+    return {
+      file,
+      ok: false,
+      reason: `checksum mismatch: file says ${outer.checksum}, binary digests to ${expectedChecksum}`,
+    };
+  }
+
+  // ecdsaVerify hashes its input internally; passing the raw binary verifies
+  // ECDSA-P256-Verify(pub, SHA-256(binary), sig) — the canonical firmware
+  // verification primitive of §4.6.
+  if (!ecdsaVerify(pubPem, binary, outer.signature)) {
+    return { file, ok: false, reason: 'signature failed to verify against the firmware binary' };
+  }
+
+  return {
+    file,
+    ok: true,
+    mode: 'firmware',
+    bodyFields: ['<test-firmware.bin>'],
+    canonicalBytes: binary.length,
+  };
 }
 
 function verifyReceipt(outer, file, pubPem) {
@@ -220,7 +261,8 @@ function verifyFile(file, pubPem) {
   if (mode === 'receipt') return verifyReceipt(outer, file, pubPem);
   if (mode === 'offline-pass') return verifyOfflinePass(outer, file, pubPem);
   if (mode === 'server-signed-auth') return verifyServerSignedAuth(outer, file, pubPem);
-  return { file, ok: false, reason: 'no .receipt, .offlinePass, or type=ServerSignedAuth wrapper detected' };
+  if (mode === 'firmware') return verifyFirmware(outer, file, pubPem);
+  return { file, ok: false, reason: 'no .receipt, .offlinePass, type=ServerSignedAuth, or .firmwareUrl detected' };
 }
 
 function main() {
