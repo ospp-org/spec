@@ -877,8 +877,10 @@ Every offline transaction produces a cryptographically signed receipt, ensuring 
    // transaction payload (see Note 4 below). All other 11 fields are REQUIRED.
 2. receipt_data = OSPP_Canonical_Form(receipt_fields)  // see §4.8
 3. digest       = SHA-256(receipt_data)                // hash the canonical bytes directly
-4. signature    = ECDSA-P256-Sign(station_private_key, digest)  // RFC 6979 deterministic nonces
-5. receipt = {
+4. (r, s)       = ECDSA-P256-Sign(station_private_key, digest)  // RFC 6979 deterministic nonces
+5. if s > n/2 then s := n - s                          // low-s normalisation (see Note 6)
+6. signature    = DER_Encode(r, s)
+7. receipt = {
      data:               base64(receipt_data),
      signature:          base64(signature),
      signatureAlgorithm: "ECDSA-P256-SHA256"
@@ -897,6 +899,8 @@ Every offline transaction produces a cryptographically signed receipt, ensuring 
 
 > **Firmware-timing note (v0.4.2 migration):** Firmware MUST sign per the v0.4.2 `receipt_fields` definition and the canonical-bytes digest rule from initial integration. Receipts signed under the v0.4.1 9-field shape OR with the v0.4.1 base64-hash rule will fail server-side signature verification (`2002 OFFLINE_PASS_INVALID`) or reconcile-time cross-checks (`2017 OFFLINE_RECEIPT_MISMATCH`). The v0.4.1 → v0.4.2 stack upgrade is a coordinated break — pre-launch context (no v0.4.1 firmware deployments) makes the wire-format + digest-rule expansion clean.
 
+> **Note 6 (low-s normalisation, MUST):** After RFC 6979 produces `(r, s)`, software implementations **MUST** normalise `s` to the lower half of the curve order — if `s > n/2`, replace it with `n - s` (where `n` is the order of the P-256 base point). RFC 6979 alone leaves `s` in either half; the unmodified `s` and its complement are BOTH valid signatures over the same `(key, digest)` pair (ECDSA signature malleability). Two RFC 6979 implementations that differ on this single step produce the same `r` but a complemented `s` — each verifies on either side, but the DER bytes diverge, which breaks the byte-reproducibility property published conformance vectors and signed examples rely on. Low-s normalisation is the industry convention (BIP-66 in Bitcoin, `@noble/curves` p256 default, OpenSSL ≥ 1.1) and the OSPP cross-language test corpus (`sdk-ts` ↔ `sdk-php`) is locked to it. This requirement applies identically to all OSPP ECDSA P-256 signing flows: receipt signing (this section), OfflinePass signing (`profiles/offline/offline-pass.md` §3), ServerSignedAuth signing (`profiles/offline/ble-handshake.md` §4.2.1), and any future signature primitive defined under §4.8. Hardware secure elements that produce both halves of `s` MUST apply the normalisation in firmware before publishing the DER bytes; SEs that already produce the low-s form natively (a common configuration) satisfy this requirement intrinsically.
+
 #### Verification (Server-Side)
 
 During reconciliation ([Flow §10](04-flows.md#10-offline--online-reconciliation)), the server verifies each receipt:
@@ -906,6 +910,9 @@ During reconciliation ([Flow §10](04-flows.md#10-offline--online-reconciliation
 2. canonical_bytes = base64_decode(receipt.data)   // decode wire encoding
 3. digest          = SHA-256(canonical_bytes)      // hash the canonical bytes (NOT the receipt.data field directly)
 4. Verify(receipt.signature, digest, stationPublicKey) using ECDSA-P256
+   // Verification is malleability-agnostic: it MUST accept any valid DER
+   // ECDSA P-256 signature regardless of which half of the order `s` lies
+   // in. Low-s normalisation (Note 6) is a signing-time requirement only.
 5. If verification fails → CRITICAL alert, flag transaction for investigation
                           (errorCode 2002 OFFLINE_PASS_INVALID at reconcile-time)
 ```
