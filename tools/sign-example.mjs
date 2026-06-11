@@ -36,11 +36,14 @@
 //
 // =============================================================================
 
-import { createHash } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { argv, exit } from 'node:process';
 import { canonicalize } from '@ospp/protocol';
 import { ecdsaSign, SIGNATURE_ALGORITHM } from '@ospp/protocol/server';
+
+const SESSION_KEY_PATH = 'conformance/test-keys/session-test-key.bin';
+const AUTH_RESPONSE_OK_LABEL = 'AuthResponse_OK';
 
 // -----------------------------------------------------------------------------
 // Receipt mode (spec §6.2 v0.4.2)
@@ -226,6 +229,62 @@ function signFirmware(outer, keyPem) {
 }
 
 // -----------------------------------------------------------------------------
+// HMAC modes (BLE handshake — sessionProof + sessionKeyConfirmation)
+// -----------------------------------------------------------------------------
+//
+// `sessionProof` (ble-handshake.md §4.1):
+//   HMAC-SHA256(sessionKey, type || offlinePass.passId || counter)
+//   — UTF-8 ASCII concatenation, counter as decimal string.
+//
+// `sessionKeyConfirmation` (ble-handshake.md §5):
+//   HMAC-SHA256(sessionKey, "AuthResponse_OK")
+//
+// Output is base64-encoded HMAC tag. The conformance corpus uses the
+// deterministic session key at `conformance/test-keys/session-test-key.bin`
+// (SHA-256 of the literal "OSPP_TEST_SESSION_KEY_V1"), so any verifier with
+// the same key can recompute the tag and confirm byte-equality.
+
+function hmacBase64(keyBytes, msg) {
+  return createHmac('sha256', keyBytes).update(msg).digest('base64');
+}
+
+function signSessionProof(outer, sessionKey) {
+  if (outer.type !== 'OfflineAuthRequest') {
+    throw new Error('sessionProof requires outer.type === "OfflineAuthRequest"');
+  }
+  if (typeof outer?.offlinePass?.passId !== 'string') {
+    throw new Error('sessionProof requires outer.offlinePass.passId');
+  }
+  if (!Number.isInteger(outer.counter)) {
+    throw new Error('sessionProof requires outer.counter (integer)');
+  }
+  // type || passId || counter  — UTF-8 ASCII concatenation, counter decimal.
+  const msg = Buffer.from(`${outer.type}${outer.offlinePass.passId}${outer.counter}`, 'utf-8');
+  outer.sessionProof = hmacBase64(sessionKey, msg);
+  return { mode: 'session-proof', bodyFields: ['type', 'passId', 'counter'], signatureLength: outer.sessionProof.length };
+}
+
+function signSessionKeyConfirmation(outer, sessionKey) {
+  if (outer.type !== 'AuthResponse') {
+    throw new Error('sessionKeyConfirmation requires outer.type === "AuthResponse"');
+  }
+  if (outer.result !== 'Accepted') {
+    // Per ble-handshake.md §5, sessionKeyConfirmation is conditional —
+    // "Present when result is Accepted." Skip silently on Rejected vectors
+    // and strip any leftover placeholder so the file stays spec-coherent.
+    if ('sessionKeyConfirmation' in outer) delete outer.sessionKeyConfirmation;
+    return {
+      mode: 'session-key-confirmation',
+      bodyFields: ['(skipped — result != Accepted, sessionKeyConfirmation stripped)'],
+      signatureLength: 0,
+    };
+  }
+  const msg = Buffer.from(AUTH_RESPONSE_OK_LABEL, 'utf-8');
+  outer.sessionKeyConfirmation = hmacBase64(sessionKey, msg);
+  return { mode: 'session-key-confirmation', bodyFields: ['"AuthResponse_OK" literal'], signatureLength: outer.sessionKeyConfirmation.length };
+}
+
+// -----------------------------------------------------------------------------
 // Dispatcher
 // -----------------------------------------------------------------------------
 
@@ -234,30 +293,39 @@ function detectMode(outer, file) {
     return 'receipt';
   }
   if (outer && typeof outer === 'object' && typeof outer.offlinePass === 'object' && outer.offlinePass !== null) {
+    // OfflinePass-bearing — may also carry a sessionProof HMAC. Mode dispatch
+    // happens at the operation level (--mode flag), so the bare detect returns
+    // the ECDSA mode here. Callers needing the HMAC step pass --mode session-proof.
     return 'offline-pass';
   }
   if (outer && typeof outer === 'object' && outer.type === 'ServerSignedAuth') {
     return 'server-signed-auth';
   }
+  if (outer && typeof outer === 'object' && outer.type === 'AuthResponse') {
+    return 'session-key-confirmation';
+  }
   if (outer && typeof outer === 'object' && typeof outer.firmwareUrl === 'string') {
     return 'firmware';
   }
-  throw new Error(`${file}: cannot detect signing mode (no .receipt, .offlinePass, type=ServerSignedAuth, or .firmwareUrl)`);
+  throw new Error(`${file}: cannot detect signing mode`);
 }
 
 function parseArgs(args) {
-  const opts = { key: null, files: [] };
+  const opts = { key: null, mode: null, files: [] };
   for (let i = 2; i < args.length; i++) {
     const a = args[i];
     if (a === '--key') opts.key = args[++i];
+    else if (a === '--mode') opts.mode = args[++i];
     else if (a === '--in') opts.files.push(args[++i]);
     else if (a === '--help' || a === '-h') {
-      console.log('Usage: sign-example.mjs --key <key.pem> [--in <file>] <file...>');
+      console.log('Usage: sign-example.mjs --key <key.pem|key.bin> [--mode <mode>] [--in <file>] <file...>');
+      console.log('  modes (auto-detected; override with --mode):');
+      console.log('    receipt, offline-pass, server-signed-auth, firmware, session-proof, session-key-confirmation');
       exit(0);
     } else opts.files.push(a);
   }
   if (!opts.key) {
-    console.error('error: --key <key.pem> is required');
+    console.error('error: --key <key.pem|key.bin> is required');
     exit(2);
   }
   if (opts.files.length === 0) {
@@ -267,16 +335,18 @@ function parseArgs(args) {
   return opts;
 }
 
-function signFile(file, keyPem) {
+function signFile(file, key, modeOverride) {
   const raw = readFileSync(file, 'utf-8');
   const outer = JSON.parse(raw);
-  const mode = detectMode(outer, file);
+  const mode = modeOverride ?? detectMode(outer, file);
 
   let result;
-  if (mode === 'receipt') result = signReceipt(outer, keyPem);
-  else if (mode === 'offline-pass') result = signOfflinePass(outer, keyPem);
-  else if (mode === 'server-signed-auth') result = signServerSignedAuth(outer, keyPem, file);
-  else if (mode === 'firmware') result = signFirmware(outer, keyPem);
+  if (mode === 'receipt') result = signReceipt(outer, key);
+  else if (mode === 'offline-pass') result = signOfflinePass(outer, key);
+  else if (mode === 'server-signed-auth') result = signServerSignedAuth(outer, key, file);
+  else if (mode === 'firmware') result = signFirmware(outer, key);
+  else if (mode === 'session-proof') result = signSessionProof(outer, key);
+  else if (mode === 'session-key-confirmation') result = signSessionKeyConfirmation(outer, key);
   else throw new Error(`${file}: unsupported mode ${mode}`);
 
   const trailing = raw.endsWith('\n') ? '\n' : '';
@@ -284,12 +354,17 @@ function signFile(file, keyPem) {
   return { file, ...result };
 }
 
+function loadKey(path) {
+  // HMAC modes use a raw 32-byte session key (.bin); ECDSA modes use a PEM string.
+  return path.endsWith('.bin') ? readFileSync(path) : readFileSync(path, 'utf-8');
+}
+
 function main() {
   const opts = parseArgs(argv);
-  const keyPem = readFileSync(opts.key, 'utf-8');
+  const key = loadKey(opts.key);
 
   for (const file of opts.files) {
-    const r = signFile(file, keyPem);
+    const r = signFile(file, key, opts.mode);
     console.log(`  signed ${r.file}  [mode=${r.mode}]`);
     console.log(`    body fields (${r.bodyFields.length}): ${r.bodyFields.join(', ')}`);
     console.log(`    signature base64 length: ${r.signatureLength}`);

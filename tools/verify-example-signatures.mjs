@@ -25,26 +25,29 @@
 //
 // =============================================================================
 
-import { createHash } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { argv, exit } from 'node:process';
 import { canonicalize } from '@ospp/protocol';
 import { ecdsaVerify } from '@ospp/protocol/server';
 
 const FIRMWARE_BIN_PATH = 'conformance/test-firmware/test-firmware.bin';
+const SESSION_KEY_PATH = 'conformance/test-keys/session-test-key.bin';
+const AUTH_RESPONSE_OK_LABEL = 'AuthResponse_OK';
 
 function parseArgs(args) {
-  const opts = { key: null, files: [] };
+  const opts = { key: null, mode: null, files: [] };
   for (let i = 2; i < args.length; i++) {
     const a = args[i];
     if (a === '--key') opts.key = args[++i];
+    else if (a === '--mode') opts.mode = args[++i];
     else if (a === '--help' || a === '-h') {
-      console.log('Usage: verify-example-signatures.mjs --key <pub.pem> <file...>');
+      console.log('Usage: verify-example-signatures.mjs --key <pub.pem|key.bin> [--mode <mode>] <file...>');
       exit(0);
     } else opts.files.push(a);
   }
   if (!opts.key) {
-    console.error('error: --key <pub.pem> is required');
+    console.error('error: --key is required');
     exit(2);
   }
   if (opts.files.length === 0) {
@@ -54,15 +57,79 @@ function parseArgs(args) {
   return opts;
 }
 
+function hmacBase64(keyBytes, msg) {
+  return createHmac('sha256', keyBytes).update(msg).digest('base64');
+}
+
+function verifySessionProof(outer, file, sessionKey) {
+  if (typeof outer.sessionProof !== 'string') {
+    return { file, ok: false, reason: 'sessionProof missing or not a string' };
+  }
+  if (outer.type !== 'OfflineAuthRequest') {
+    return { file, ok: false, reason: 'sessionProof verify requires type === OfflineAuthRequest' };
+  }
+  if (typeof outer?.offlinePass?.passId !== 'string') {
+    return { file, ok: false, reason: 'sessionProof verify requires offlinePass.passId' };
+  }
+  if (!Number.isInteger(outer.counter)) {
+    return { file, ok: false, reason: 'sessionProof verify requires integer counter' };
+  }
+  const msg = Buffer.from(`${outer.type}${outer.offlinePass.passId}${outer.counter}`, 'utf-8');
+  const expected = hmacBase64(sessionKey, msg);
+  const a = Buffer.from(outer.sessionProof, 'base64');
+  const b = Buffer.from(expected, 'base64');
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    return { file, ok: false, reason: `sessionProof mismatch — got ${outer.sessionProof}, expected ${expected}` };
+  }
+  return { file, ok: true, mode: 'session-proof', bodyFields: ['type', 'passId', 'counter'], canonicalBytes: msg.length };
+}
+
+function verifySessionKeyConfirmation(outer, file, sessionKey) {
+  if (outer.type !== 'AuthResponse') {
+    return { file, ok: false, reason: 'sessionKeyConfirmation verify requires type === AuthResponse' };
+  }
+  if (outer.result !== 'Accepted') {
+    // §5: present only when Accepted. If absent on a Rejected vector, that's
+    // spec-compliant — verify is a no-op success.
+    if (!('sessionKeyConfirmation' in outer)) {
+      return {
+        file,
+        ok: true,
+        mode: 'session-key-confirmation',
+        bodyFields: ['(skipped — result=Rejected, no HMAC expected)'],
+        canonicalBytes: 0,
+      };
+    }
+    return { file, ok: false, reason: 'sessionKeyConfirmation present but result=Rejected (§5 forbids)' };
+  }
+  if (typeof outer.sessionKeyConfirmation !== 'string') {
+    return { file, ok: false, reason: 'sessionKeyConfirmation missing or not a string' };
+  }
+  const msg = Buffer.from(AUTH_RESPONSE_OK_LABEL, 'utf-8');
+  const expected = hmacBase64(sessionKey, msg);
+  const a = Buffer.from(outer.sessionKeyConfirmation, 'base64');
+  const b = Buffer.from(expected, 'base64');
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    return { file, ok: false, reason: `sessionKeyConfirmation mismatch — got ${outer.sessionKeyConfirmation}, expected ${expected}` };
+  }
+  return { file, ok: true, mode: 'session-key-confirmation', bodyFields: ['"AuthResponse_OK" literal'], canonicalBytes: msg.length };
+}
+
 function detectMode(outer) {
   if (outer && typeof outer === 'object' && typeof outer.receipt === 'object' && outer.receipt !== null) {
     return 'receipt';
   }
   if (outer && typeof outer === 'object' && typeof outer.offlinePass === 'object' && outer.offlinePass !== null) {
+    // OfflinePass-bearing files may ALSO carry a sessionProof HMAC (Tranșa 4).
+    // Auto-detect returns the ECDSA mode; callers needing the HMAC step pass
+    // --mode session-proof explicitly.
     return 'offline-pass';
   }
   if (outer && typeof outer === 'object' && outer.type === 'ServerSignedAuth') {
     return 'server-signed-auth';
+  }
+  if (outer && typeof outer === 'object' && outer.type === 'AuthResponse') {
+    return 'session-key-confirmation';
   }
   if (outer && typeof outer === 'object' && typeof outer.firmwareUrl === 'string') {
     return 'firmware';
@@ -255,23 +322,29 @@ function verifyServerSignedAuth(outer, file, pubPem) {
   };
 }
 
-function verifyFile(file, pubPem) {
+function verifyFile(file, key, modeOverride) {
   const outer = JSON.parse(readFileSync(file, 'utf-8'));
-  const mode = detectMode(outer);
-  if (mode === 'receipt') return verifyReceipt(outer, file, pubPem);
-  if (mode === 'offline-pass') return verifyOfflinePass(outer, file, pubPem);
-  if (mode === 'server-signed-auth') return verifyServerSignedAuth(outer, file, pubPem);
-  if (mode === 'firmware') return verifyFirmware(outer, file, pubPem);
-  return { file, ok: false, reason: 'no .receipt, .offlinePass, type=ServerSignedAuth, or .firmwareUrl detected' };
+  const mode = modeOverride ?? detectMode(outer);
+  if (mode === 'receipt') return verifyReceipt(outer, file, key);
+  if (mode === 'offline-pass') return verifyOfflinePass(outer, file, key);
+  if (mode === 'server-signed-auth') return verifyServerSignedAuth(outer, file, key);
+  if (mode === 'firmware') return verifyFirmware(outer, file, key);
+  if (mode === 'session-proof') return verifySessionProof(outer, file, key);
+  if (mode === 'session-key-confirmation') return verifySessionKeyConfirmation(outer, file, key);
+  return { file, ok: false, reason: `no detectable wrapper and no --mode override (got ${mode})` };
+}
+
+function loadKey(path) {
+  return path.endsWith('.bin') ? readFileSync(path) : readFileSync(path, 'utf-8');
 }
 
 function main() {
   const opts = parseArgs(argv);
-  const pubPem = readFileSync(opts.key, 'utf-8');
+  const key = loadKey(opts.key);
 
   let failures = 0;
   for (const file of opts.files) {
-    const r = verifyFile(file, pubPem);
+    const r = verifyFile(file, key, opts.mode);
     if (r.ok) {
       console.log(`  OK  ${r.file}  [mode=${r.mode}, body=${r.bodyFields.length} fields, canonical=${r.canonicalBytes}B]`);
     } else {
