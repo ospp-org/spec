@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/common/server-signed-auth.schema.json",
+  "title": "SignedAuthorization",
+  "description": "Cryptographically signed authorisation wrapper produced by the server for the Partial A flow (profiles/offline/ble-handshake.md §4.2). Sibling shape to the receipt wrapper (common/receipt.schema.json): the signed body is the canonical claim set defined by server-signed-auth-claims.schema.json; the signature is ECDSA P-256-SHA256 over the canonical bytes per §4.2.1.",
+  "type": "object",
+  "required": [
+    "data",
+    "signature",
+    "signatureAlgorithm"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "data": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "description": "Base64-encoded OSPP Canonical Form (spec/06-security.md §4.8) of the canonical ServerSignedAuthClaims body — see server-signed-auth-claims.schema.json (10 required claims). Signed by the server's ECDSA P-256 private key over the canonical bytes directly per §4.2.1 (NOT over the base64 form)."
+    },
+    "signature": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "description": "Base64-encoded DER ECDSA P-256 signature."
+    },
+    "signatureAlgorithm": {
+      "type": "string",
+      "const": "ECDSA-P256-SHA256",
+      "description": "Signature algorithm — fixed value matching §4.2.1."
+    }
+  }
+}

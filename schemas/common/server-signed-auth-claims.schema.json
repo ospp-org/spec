@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/common/server-signed-auth-claims.schema.json",
+  "title": "ServerSignedAuthClaims",
+  "description": "Canonical body serialised via OSPP Canonical Form (spec/06-security.md §4.8) and base64-encoded into the `signedAuthorization.data` field of a ServerSignedAuth message for ECDSA P-256 signing. Per profiles/offline/ble-handshake.md §4.2.1. 10 required claims — no optional fields. The digest signed by the server's private key is SHA-256 over the canonical bytes directly (NOT over the base64 form).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "authId",
+    "sub",
+    "deviceId",
+    "sessionId",
+    "stationId",
+    "bayId",
+    "serviceId",
+    "appNonce",
+    "issuedAt",
+    "expiresAt"
+  ],
+  "properties": {
+    "authId": {
+      "type": "string",
+      "pattern": "^auth_[a-f0-9]{8,}$",
+      "minLength": 13,
+      "maxLength": 64,
+      "description": "Server-side unique identifier for this authorisation. Mirrors the `passId` / `offlineTxId` convention (lowercase prefix, lowercase hex)."
+    },
+    "sub": {
+      "$ref": "user-id.schema.json",
+      "description": "User subject identifier the authorisation is issued to."
+    },
+    "deviceId": {
+      "$ref": "device-id.schema.json",
+      "description": "Mobile device the authorisation is bound to. The station MUST cross-check against `Hello.deviceId` (§4.2.2 check #4)."
+    },
+    "sessionId": {
+      "$ref": "session-id.schema.json",
+      "description": "Session this authorisation activates. The station MUST cross-check against the outer envelope's `sessionId` (§4.2.2 check #5)."
+    },
+    "stationId": {
+      "$ref": "station-id.schema.json",
+      "description": "Station this authorisation is valid for. The station MUST cross-check against its own provisioned `stationId` (§4.2.2 check #3) — prevents cross-station replay."
+    },
+    "bayId": {
+      "$ref": "bay-id.schema.json",
+      "description": "Bay this authorisation activates."
+    },
+    "serviceId": {
+      "$ref": "service-id.schema.json",
+      "description": "Service this authorisation activates."
+    },
+    "appNonce": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]{43}=$",
+      "minLength": 44,
+      "maxLength": 44,
+      "description": "Base64-encoded 32-byte cryptographically random nonce, equal to the `appNonce` the app writes in the upcoming `Hello` message. The server MUST read this from the `POST /sessions/offline-auth` request body. The station MUST cross-check against `Hello.appNonce` (§4.2.2 check #2) — primary, clock-independent anti-replay defence."
+    },
+    "issuedAt": {
+      "$ref": "timestamp.schema.json",
+      "description": "ISO 8601 UTC timestamp when this authorisation was signed."
+    },
+    "expiresAt": {
+      "$ref": "timestamp.schema.json",
+      "description": "ISO 8601 UTC timestamp after which this authorisation MUST NOT be accepted. MUST be no later than five minutes after `issuedAt`. Secondary clock-skew bound; `appNonce` (§4.2.2 check #2) is the primary anti-replay defence."
+    }
+  }
+}
