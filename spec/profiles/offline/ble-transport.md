@@ -254,11 +254,14 @@ The `receipt` object contains:
     "energyWh": 150
   },
   "receipt": {
-    "data": "eyJvZmZsaW5lVHhJZCI6Im90eF9kNGU1ZjZnNyIsImJheUlkIjoiYmF5X3gxeTJ6MyIsInNlcnZpY2VJZCI6InN2Y19mb2FtIiwiZHVyYXRpb24iOjI5OCwiY3JlZGl0cyI6NTB9",
-    "signature": "MEUCIQC7x2kR9wPz5mNvHp3LdFbYqT1sXcA0jKe6fZoWnBgUIQIgRtM4vN8hJpLyD3kWm0aOxCqFb5sE7nGdT2fYiJwKxQ==",
+    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQ2hhcmdlZCI6NTAsImRldmljZUlkIjoiZGV2X2Q0ZTVmNmE3IiwiZHVyYXRpb25TZWNvbmRzIjoyOTgsImVuZGVkQXQiOiIyMDI2LTAyLTEzVDEwOjA0OjU4LjAwMFoiLCJtZXRlclZhbHVlcyI6eyJjb25zdW1hYmxlTWwiOjUwMCwiZW5lcmd5V2giOjE1MCwibGlxdWlkTWwiOjQ1MjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzXzkyZGYwZDVjMDExZWFmNzQiLCJvZmZsaW5lVHhJZCI6Im90eF9kNGU1ZjZhN2I4YzkiLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwidHhDb3VudGVyIjo1LCJ1c2VySWQiOiJzdWJfMDYwNzJhODI5ZTM5MThhOCJ9",
+    "signature": "MEUCIQDyxPIeLDSHP+58yLVECN0M/LyjnCmy54FddAWiCwyO4AIgbGW9Larubc+Ry6HZ/enabrZmXZ4LXjEAi0pyQjABbe8=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
-  "txCounter": 5
+  "txCounter": 5,
+  "offlinePassId": "opass_92df0d5c011eaf74",
+  "userId": "sub_06072a829e3918a8",
+  "deviceId": "dev_d4e5f6a7"
 }
 ```
 

@@ -354,15 +354,18 @@ In the **Partial B** offline scenario (phone offline, station online), the mobil
       "maxTotalCredits": 100,
       "maxUses": 5,
       "maxCreditsPerTx": 30,
-      "allowedServiceTypes": ["svc_eco", "svc_standard"]
+      "allowedServiceTypes": [
+        "svc_eco",
+        "svc_standard"
+      ]
     },
     "constraints": {
       "minIntervalSec": 60,
       "stationOfflineWindowHours": 72,
       "stationMaxOfflineTx": 100
     },
-    "signature": "MEUCIQD8a7XK1e5Zj1bJnKLm5P3nRv4kZwE...",
-    "signatureAlgorithm": "ECDSA-P256-SHA256"
+    "signatureAlgorithm": "ECDSA-P256-SHA256",
+    "signature": "MEUCIQDXKT0ewRBp/nkPY/qh6mBjwSn4BE7fmjDTdjcP1dhIyQIgPyXM1VnFZtrG6WaOgpRwiQIeFF2I2zeFsb05dyel1rE="
   },
   "deviceId": "device_uuid_123",
   "counter": 5,
@@ -823,8 +826,8 @@ Each transaction includes a **signed receipt** (ECDSA P-256) with a monotonic **
   "durationSeconds": 298,
   "creditsCharged": 50,
   "receipt": {
-    "data": "eyJvZmZsaW5lVHhJZCI6Im90eF9kNGU1ZjZnNyIsImJheUlk...",
-    "signature": "MEUCIQD8a7XK1e5Zj1bJnKLm5P3nRv4kZwE...",
+    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQ2hhcmdlZCI6NTAsImRldmljZUlkIjoiZGV2X2Q0ZTVmNmE3IiwiZHVyYXRpb25TZWNvbmRzIjoyOTgsImVuZGVkQXQiOiIyMDI2LTAxLTMwVDE0OjA1OjAwLjAwMFoiLCJtZXRlclZhbHVlcyI6eyJjb25zdW1hYmxlTWwiOjUwMCwiZW5lcmd5V2giOjE1MCwibGlxdWlkTWwiOjQ1MjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2E4YjljMGQxZTJmMyIsIm9mZmxpbmVUeElkIjoib3R4X2Q0ZTVmNmE3YjhjOSIsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAxLTMwVDE0OjAwOjAwLjAwMFoiLCJ0eENvdW50ZXIiOjUsInVzZXJJZCI6InN1Yl94eXo3ODkifQ==",
+    "signature": "MEQCIBvVdTmz/ssZ3CLwoGT/513dOLKMtx6n3fWl4uIbGB4rAiBU0H7AxL936wrJyseqVRmNPBGlbwJcse8mZqz2RFBLZg==",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "txCounter": 5,
@@ -832,7 +835,8 @@ Each transaction includes a **signed receipt** (ECDSA P-256) with a monotonic **
     "liquidMl": 45200,
     "consumableMl": 500,
     "energyWh": 150
-  }
+  },
+  "deviceId": "dev_d4e5f6a7"
 }
 ```
 
@@ -2543,18 +2547,21 @@ The app MUST request biometric or PIN confirmation from the user before sending 
       "maxTotalCredits": 100,
       "maxUses": 5,
       "maxCreditsPerTx": 30,
-      "allowedServiceTypes": ["svc_eco", "svc_standard"]
+      "allowedServiceTypes": [
+        "svc_eco",
+        "svc_standard"
+      ]
     },
     "constraints": {
       "minIntervalSec": 60,
       "stationOfflineWindowHours": 72,
       "stationMaxOfflineTx": 100
     },
-    "signature": "MEUCIQD8a7XK1e5Zj1bJnKLm5P3nRv4kZwE...",
-    "signatureAlgorithm": "ECDSA-P256-SHA256"
+    "signatureAlgorithm": "ECDSA-P256-SHA256",
+    "signature": "MEUCIQDXKT0ewRBp/nkPY/qh6mBjwSn4BE7fmjDTdjcP1dhIyQIgPyXM1VnFZtrG6WaOgpRwiQIeFF2I2zeFsb05dyel1rE="
   },
   "counter": 5,
-  "sessionProof": "dGhpcyBpcyBhIHNlc3Npb24gcHJvb2Yg..."
+  "sessionProof": "Iy0WMLx+39Vf5zEyStf2Qxls/7qqnVvVejKK0GsSTSo="
 }
 ```
 
@@ -2595,7 +2602,11 @@ The station MUST verify the signature using its stored `OfflinePassPublicKey` (d
 ```json
 {
   "type": "ServerSignedAuth",
-  "signedAuthorization": "eyJiYXlJZCI6ImJheV94MXkyejMiLCJzZXJ2aWNlSWQiOi...",
+  "signedAuthorization": {
+    "data": "eyJhcHBOb25jZSI6IkRUVXJUME1PS1JpekYyN1JIMC9YVHBVSHcwWnJoSlh0MUsxT0NYSXhybXc9IiwiYXV0aElkIjoiYXV0aF80YTRjOTE3YmY4N2YiLCJiYXlJZCI6ImJheV85M2EwMGMxNjJjNmMiLCJkZXZpY2VJZCI6ImRldl8zZTMwOTE1ODc1YzdhYjMyIiwiZXhwaXJlc0F0IjoiMjAyNi0wMi0xM1QxMDowNTowMC4wMDBaIiwiaXNzdWVkQXQiOiIyMDI2LTAyLTEzVDEwOjAwOjAwLjAwMFoiLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic2Vzc2lvbklkIjoic2Vzc19mMWEyYjNjNGU1ZDYiLCJzdGF0aW9uSWQiOiJzdG5fYTg5NWZhNGQiLCJzdWIiOiJzdWJfZGNjMjI2OGEzZDkwOWRjOCJ9",
+    "signature": "MEUCIQCmYkfi5etVIQeutM2vCtUzHrQ+lky3u5+DHvWB6mQc3QIgWRJ3UShGJW0mZ/BRZlOHyyJI8Ls+byAQOXJFknDCW0A=",
+    "signatureAlgorithm": "ECDSA-P256-SHA256"
+  },
   "sessionId": "sess_f1a2b3c4e5d6"
 }
 ```
@@ -2647,7 +2658,7 @@ Authentication result from the station. On `Accepted`, the app MAY proceed to st
 {
   "type": "AuthResponse",
   "result": "Accepted",
-  "sessionKeyConfirmation": "dGhpcyBpcyBhIHNlc3Npb24ga2V5IGNvbmZpcm0..."
+  "sessionKeyConfirmation": "uo31nIXlLPNLPc8rCOeJWYwbDh/ycVRE692174J5jp0="
 }
 ```
 
@@ -2943,11 +2954,14 @@ The app MUST store the receipt in its offline transaction log and sync it to the
     "energyWh": 150
   },
   "receipt": {
-    "data": "eyJvZmZsaW5lVHhJZCI6Im90eF9kNGU1ZjZnNyIs...",
-    "signature": "MEUCIQD8a7XK1e5Zj1bJnKLm5P3nRv4kZwE...",
+    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQ2hhcmdlZCI6NTAsImRldmljZUlkIjoiZGV2X2Q0ZTVmNmE3IiwiZHVyYXRpb25TZWNvbmRzIjoyOTgsImVuZGVkQXQiOiIyMDI2LTAxLTMwVDE0OjA0OjU4LjAwMFoiLCJtZXRlclZhbHVlcyI6eyJjb25zdW1hYmxlTWwiOjUwMCwiZW5lcmd5V2giOjE1MCwibGlxdWlkTWwiOjQ1MjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzXzkyZGYwZDVjMDExZWFmNzQiLCJvZmZsaW5lVHhJZCI6Im90eF9kNGU1ZjZhN2I4YzkiLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic3RhcnRlZEF0IjoiMjAyNi0wMS0zMFQxNDowMDowMC4wMDBaIiwidHhDb3VudGVyIjo1LCJ1c2VySWQiOiJzdWJfMDYwNzJhODI5ZTM5MThhOCJ9",
+    "signature": "MEQCIFPr/uMoUl3kckJeX3DnRRmJwE5atw9IrG4KNkiKp/eEAiBm3UG4KhciXWPHmI+cZB64sZG1VKuEt0ySBonTA+HALw==",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
-  "txCounter": 5
+  "txCounter": 5,
+  "offlinePassId": "opass_92df0d5c011eaf74",
+  "userId": "sub_06072a829e3918a8",
+  "deviceId": "dev_d4e5f6a7"
 }
 ```
 

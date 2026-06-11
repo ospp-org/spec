@@ -104,8 +104,8 @@ If the watchdog timer expires and automatic rollback fails (e.g., both firmware 
   "payload": {
     "firmwareUrl": "https://firmware.example.com/station/v1.3.0.bin",
     "firmwareVersion": "1.3.0",
-    "checksum": "sha256:a3f2b8c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1",
-    "signature": "MEUCIQDtjLkM5bXhZA1rQ7vYzN0cBpL2hUwF9jD6tG3nKm4xRgIgWpRf8sT2aHb3cKdV5eYnM6jLqNwO7xPzU1iS0kA9vE=",
+    "checksum": "sha256:928de7ea35ba13fd64dfdec744051a7af9142a06bab3404a8bc548b5761644b0",
+    "signature": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtg==",
     "scheduledAt": "2026-02-14T03:00:00.000Z"
   }
 }

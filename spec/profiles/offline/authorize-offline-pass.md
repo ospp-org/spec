@@ -123,15 +123,18 @@ The server **MUST** perform all of the following checks in order. Processing **M
         "maxTotalCredits": 200,
         "maxUses": 5,
         "maxCreditsPerTx": 50,
-        "allowedServiceTypes": ["svc_eco", "svc_standard"]
+        "allowedServiceTypes": [
+          "svc_eco",
+          "svc_standard"
+        ]
       },
       "constraints": {
         "minIntervalSec": 60,
         "stationOfflineWindowHours": 24,
         "stationMaxOfflineTx": 50
       },
-      "signature": "MEUCIQC7xRbV2nKp8TjG4mFwZkQa3LdY9vNxHs0pWbTfK2gJwIgS3kM5dX8eA1rQ7vYzN0cBpL2hUwF9jD6tG3nKm4xRs0=",
-      "signatureAlgorithm": "ECDSA-P256-SHA256"
+      "signatureAlgorithm": "ECDSA-P256-SHA256",
+      "signature": "MEQCIAnYOdbX0GrJNoudnOUPviB8qyjrTDLrwI32eGPmvJP+AiA3+5yjsH4JMUjItqGE83WOx58hbBkK1fBAi56MMeip9w=="
     },
     "deviceId": "dev_android_abc123",
     "counter": 5,

@@ -99,18 +99,21 @@ Used when the app has a locally-stored OfflinePass. In the **Full Offline** scen
       "maxTotalCredits": 100,
       "maxUses": 5,
       "maxCreditsPerTx": 30,
-      "allowedServiceTypes": ["svc_eco", "svc_standard"]
+      "allowedServiceTypes": [
+        "svc_eco",
+        "svc_standard"
+      ]
     },
     "constraints": {
       "minIntervalSec": 60,
       "stationOfflineWindowHours": 72,
       "stationMaxOfflineTx": 100
     },
-    "signature": "V2hYcE9wR3FkN21MbjZzWnRKdUF4Q2JrRjVlUmlXZ0g4VTNQYW9EeUtsTXZCOXdmMGpBaFRjSWxFcDNyTnlPZA==",
-    "signatureAlgorithm": "ECDSA-P256-SHA256"
+    "signatureAlgorithm": "ECDSA-P256-SHA256",
+    "signature": "MEUCIQD6sC/bKX/fkNskHHEGr01INojLAlu4I6zsEm1keSjYoQIgJAjdhwiYhlQOX/BAqsFq9RRgxpXGSXJU6BeL0qMBnMc="
   },
   "counter": 5,
-  "sessionProof": "dG1SZ1VXMXB5THNrQWZKZU9jTmhCNndiRHhpWnZLcTk="
+  "sessionProof": "Iy0WMLx+39Vf5zEyStf2Qxls/7qqnVvVejKK0GsSTSo="
 }
 ```
 
@@ -170,8 +173,8 @@ The station **MUST** apply the following checks before accepting a `ServerSigned
 {
   "type": "ServerSignedAuth",
   "signedAuthorization": {
-    "data": "eyJhcHBOb25jZSI6IjQyVUVRWWJiL3ZONkRPSExqU2FCUTQ2eUlLZE0wWFRNcDk4UFVQc25KVzg9IiwiYXV0aElkIjoiYXV0aF9hMWIyYzNkNCIsImJheUlkIjoiYmF5X2MxZDJlM2Y0YTViNiIsImRldmljZUlkIjoiZGV2X2FsaWNlMjAyNiIsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfYjNjNGQ1ZTYiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJzdWIiOiJzdWJfYWxpY2UyMDI2In0=",
-    "signature": "MEUCIQDeXamplePlaceholderECDSA-P256-DERSignatureOver80BytesEncodedBase64==AiAExamplePlaceholderECDSA-P256-DERSignatureOver80BytesEncodedBase64==",
+    "data": "eyJhcHBOb25jZSI6IjdKbm1rUlNyUkw0MmZocVI4VklYeTBMbmJFRHN4U2FYMTlOK1Y5b2dJUWc9IiwiYXV0aElkIjoiYXV0aF80YzE1OWMxNTlkNzAiLCJiYXlJZCI6ImJheV9lZDMwOTY5ZDljMGIiLCJkZXZpY2VJZCI6ImRldl82NmU5Zjg4MzliODhhNWQ1IiwiZXhwaXJlc0F0IjoiMjAyNi0wMi0xM1QxMDowNTowMC4wMDBaIiwiaXNzdWVkQXQiOiIyMDI2LTAyLTEzVDEwOjAwOjAwLjAwMFoiLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic2Vzc2lvbklkIjoic2Vzc19iM2M0ZDVlNiIsInN0YXRpb25JZCI6InN0bl9hYWUxNzdiNSIsInN1YiI6InN1Yl9lMzFlNzdmMzFlOTIyNjc2In0=",
+    "signature": "MEUCIQCDzVN4jGzqtCVi3r2+gSxu8oR3b8Qa5I8X0xgFZrHH7wIgbJIlYiU1Qj+HAUyFJP+XHJvotV89+C96WHPLHDLS+cY=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "sessionId": "sess_b3c4d5e6"
@@ -202,7 +205,7 @@ On `Accepted`, the `sessionKeyConfirmation` field proves to the app that the sta
 {
   "type": "AuthResponse",
   "result": "Accepted",
-  "sessionKeyConfirmation": "pLm3KxNv8dRqWz0hYcFj5sTbAeOiG7nU2JfBwXtIk6o="
+  "sessionKeyConfirmation": "uo31nIXlLPNLPc8rCOeJWYwbDh/ycVRE692174J5jp0="
 }
 ```
 

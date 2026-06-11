@@ -830,7 +830,10 @@ The OfflinePass is a server-signed credential that authorizes offline service us
     "maxTotalCredits": 100,
     "maxUses": 5,
     "maxCreditsPerTx": 30,
-    "allowedServiceTypes": ["svc_eco", "svc_standard"]
+    "allowedServiceTypes": [
+      "svc_eco",
+      "svc_standard"
+    ]
   },
   "constraints": {
     "minIntervalSec": 60,
@@ -838,7 +841,7 @@ The OfflinePass is a server-signed credential that authorizes offline service us
     "stationMaxOfflineTx": 100
   },
   "signatureAlgorithm": "ECDSA-P256-SHA256",
-  "signature": "ECDSA-P256-base64-signature..."
+  "signature": "MEUCIQDXKT0ewRBp/nkPY/qh6mBjwSn4BE7fmjDTdjcP1dhIyQIgPyXM1VnFZtrG6WaOgpRwiQIeFF2I2zeFsb05dyel1rE="
 }
 ```
 

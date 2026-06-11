@@ -120,8 +120,8 @@ When the station reports `pendingOfflineTransactions > 0` in BootNotification, t
     "durationSeconds": 285,
     "creditsCharged": 48,
     "receipt": {
-      "data": "eyJ0eElkIjoib3R4X2Q0ZTVmNmE3IiwiY3JlZGl0cyI6NDh9",
-      "signature": "MEUCIQDtjLkM5bXhZA1rQ7vYzN0cBpL2hUwF9jD6tG3nKm4xRgIgWpRf8sT2aHb3cKdV5eYnM6jLqNwO7xPzU1iS0kA9vE=",
+      "data": "eyJiYXlJZCI6ImJheV9hMWIyYzNkNCIsImNyZWRpdHNDaGFyZ2VkIjo0OCwiZGV2aWNlSWQiOiJkZXZfZDRlNWY2YTciLCJkdXJhdGlvblNlY29uZHMiOjI4NSwiZW5kZWRBdCI6IjIwMjYtMDItMTNUMDk6NTY6NDUuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6NDcwLCJlbmVyZ3lXaCI6MTM4LCJsaXF1aWRNbCI6NDI4MDB9LCJvZmZsaW5lUGFzc0lkIjoib3Bhc3NfYThiOWMwZDFlMmYzIiwib2ZmbGluZVR4SWQiOiJvdHhfZDRlNWY2YTciLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xM1QwOTo1MjowMC4wMDBaIiwidHhDb3VudGVyIjo1LCJ1c2VySWQiOiJzdWJfOWE4YjdjNmQifQ==",
+      "signature": "MEUCIQCpl62Tv5tdn1Zs2kKEFJ5o3SUlEjHdWlQBgcTxGXMS5gIgVu3ua5oaGZVuZS+RbQkvEGjDD7cq2O+DkF/IIdlPgUg=",
       "signatureAlgorithm": "ECDSA-P256-SHA256"
     },
     "txCounter": 5,
@@ -129,7 +129,8 @@ When the station reports `pendingOfflineTransactions > 0` in BootNotification, t
       "liquidMl": 42800,
       "consumableMl": 470,
       "energyWh": 138
-    }
+    },
+    "deviceId": "dev_d4e5f6a7"
   }
 }
 ```
