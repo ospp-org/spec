@@ -1,0 +1,10 @@
+{
+  "name": "@ospp/spec-tooling",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Local-only tooling for conformance signing + verification (not published).",
+  "dependencies": {
+    "@ospp/protocol": "^0.5.4"
+  }
+}
