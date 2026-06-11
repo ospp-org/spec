@@ -1,5 +1,9 @@
 {
   "type": "ServerSignedAuth",
-  "signedAuthorization": "ZXlKaGJHY2lPaUpGWkRJMU5URTVJaXdpZEhsd0lqb2lTbGRVSW4wLmV5SnpkV0lpT2lKemRXSmZlSGw2TnpnNUlpd2ljM1J1SWpvaWMzUnVYMkV4WWpKak0=",
+  "signedAuthorization": {
+    "data": "eyJhcHBOb25jZSI6IjdKbm1rUlNyUkw0MmZocVI4VklYeTBMbmJFRHN4U2FYMTlOK1Y5b2dJUWc9IiwiYXV0aElkIjoiYXV0aF80YzE1OWMxNTlkNzAiLCJiYXlJZCI6ImJheV9lZDMwOTY5ZDljMGIiLCJkZXZpY2VJZCI6ImRldl82NmU5Zjg4MzliODhhNWQ1IiwiZXhwaXJlc0F0IjoiMjAyNi0wMi0xM1QxMDowNTowMC4wMDBaIiwiaXNzdWVkQXQiOiIyMDI2LTAyLTEzVDEwOjAwOjAwLjAwMFoiLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic2Vzc2lvbklkIjoic2Vzc19iM2M0ZDVlNiIsInN0YXRpb25JZCI6InN0bl9hYWUxNzdiNSIsInN1YiI6InN1Yl9lMzFlNzdmMzFlOTIyNjc2In0=",
+    "signature": "MEUCIQCDzVN4jGzqtCVi3r2+gSxu8oR3b8Qa5I8X0xgFZrHH7wIgbJIlYiU1Qj+HAUyFJP+XHJvotV89+C96WHPLHDLS+cY=",
+    "signatureAlgorithm": "ECDSA-P256-SHA256"
+  },
   "sessionId": "sess_b3c4d5e6"
 }
