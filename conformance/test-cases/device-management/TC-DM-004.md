@@ -33,13 +33,13 @@ Verify that the station correctly handles firmware update lifecycle including su
 
 1. Send UpdateFirmware:
    ```json
-   {
-     "firmwareUrl": "https://firmware.example.com/station/v1.3.0.bin",
-     "firmwareVersion": "1.3.0",
-     "checksum": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
-     "signature": "MEUCIQC7x2kR9wPz5mNvHp3LdFbYqT1sXcA0jKe6fZoWnBgUIQIgRtM4vN8hJpLyD3kWm0aOxCqFb5sE7nGdT2fYiJwKxQ=="
-   }
-   ```
+{
+  "firmwareUrl": "https://firmware.example.com/station/v1.3.0.bin",
+  "firmwareVersion": "1.3.0",
+  "checksum": "sha256:928de7ea35ba13fd64dfdec744051a7af9142a06bab3404a8bc548b5761644b0",
+  "signature": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtg=="
+}
+```
 2. Verify UpdateFirmware response within 300 seconds:
    ```json
    {
@@ -61,13 +61,13 @@ Verify that the station correctly handles firmware update lifecycle including su
 
 13. Send UpdateFirmware with a URL that will return HTTP 404:
     ```json
-    {
-      "firmwareUrl": "https://firmware.example.com/station/nonexistent.bin",
-      "firmwareVersion": "1.4.0",
-      "checksum": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-      "signature": "MEQCIHrN5kR8wPz5mNvHp3LdFbYqT1sXcA0jKe6fZoWnBgUIIBRtM4vN8hJpLyD3kWm0aOxCqFb5sE7nGdT2fYiJwKxQ=="
-    }
-    ```
+{
+  "firmwareUrl": "https://firmware.example.com/station/nonexistent.bin",
+  "firmwareVersion": "1.4.0",
+  "checksum": "sha256:928de7ea35ba13fd64dfdec744051a7af9142a06bab3404a8bc548b5761644b0",
+  "signature": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtg=="
+}
+```
 14. Verify UpdateFirmware response `status: "Accepted"` (station accepts the command and begins download).
 15. Observe FirmwareStatusNotification with `status: "Downloading"`.
 16. Observe FirmwareStatusNotification with `status: "Failed"` and `errorText` indicating download failure.
@@ -78,13 +78,13 @@ Verify that the station correctly handles firmware update lifecycle including su
 
 19. Send UpdateFirmware with a firmware binary that will fail the health check after boot:
     ```json
-    {
-      "firmwareUrl": "https://firmware.example.com/station/v1.4.0-bad.bin",
-      "firmwareVersion": "1.4.0",
-      "checksum": "sha256:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
-      "signature": "MEUCIQD3kR8wPz5mNvHp3LdFbYqT1sXcA0jKe6fZoWnBgUIQIgRtM4vN8hJpLyD3kWm0aOxCqFb5sE7nGdT2fYiJwKxQ=="
-    }
-    ```
+{
+  "firmwareUrl": "https://firmware.example.com/station/v1.4.0-bad.bin",
+  "firmwareVersion": "1.4.0",
+  "checksum": "sha256:928de7ea35ba13fd64dfdec744051a7af9142a06bab3404a8bc548b5761644b0",
+  "signature": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtg=="
+}
+```
 20. Verify UpdateFirmware response `status: "Accepted"`.
 21. Observe FirmwareStatusNotification progression: `Downloading` -> `Downloaded` -> `Installing`.
 22. Station reboots with new firmware.
@@ -98,13 +98,13 @@ Verify that the station correctly handles firmware update lifecycle including su
 
 28. Send UpdateFirmware with an HTTP (not HTTPS) URL:
     ```json
-    {
-      "firmwareUrl": "http://firmware.example.com/station/v1.5.0.bin",
-      "firmwareVersion": "1.5.0",
-      "checksum": "sha256:b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3",
-      "signature": "MEQCIHrN5kR8wPz5mNvHp3LdFbYqT1sXcA0jKe6fZoWnBgUIIBRtM4vN8hJpLyD3kWm0aOxCqFb5sE7nGdT2fYiJwKxQ=="
-    }
-    ```
+{
+  "firmwareUrl": "http://firmware.example.com/station/v1.5.0.bin",
+  "firmwareVersion": "1.5.0",
+  "checksum": "sha256:928de7ea35ba13fd64dfdec744051a7af9142a06bab3404a8bc548b5761644b0",
+  "signature": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtg=="
+}
+```
 29. Verify UpdateFirmware response within 300 seconds:
     ```json
     {
@@ -120,13 +120,13 @@ Verify that the station correctly handles firmware update lifecycle including su
 
 32. Send UpdateFirmware with a valid URL and checksum but an invalid (corrupted) signature:
     ```json
-    {
-      "firmwareUrl": "https://firmware.example.com/station/v1.3.0.bin",
-      "firmwareVersion": "1.5.0",
-      "checksum": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
-      "signature": "INVALID_BASE64_SIGNATURE_DATA=="
-    }
-    ```
+{
+  "firmwareUrl": "https://firmware.example.com/station/v1.3.0.bin",
+  "firmwareVersion": "1.5.0",
+  "checksum": "sha256:928de7ea35ba13fd64dfdec744051a7af9142a06bab3404a8bc548b5761644b0",
+  "signature": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtg=="
+}
+```
 33. Verify UpdateFirmware response `status: "Accepted"` (station accepts the command and begins download).
 34. Observe FirmwareStatusNotification with `status: "Downloading"`.
 35. Observe FirmwareStatusNotification with `status: "Downloaded"` (checksum passes).

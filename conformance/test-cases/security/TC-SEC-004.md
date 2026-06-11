@@ -70,13 +70,13 @@ Verify that the station generates SecurityEvent [MSG-012] messages with correct 
 
 11. Send an UpdateFirmware command with a firmware version older than the currently installed version:
     ```json
-    {
-      "firmwareUrl": "https://fw.example.com/ospp-station-1.0.0.bin",
-      "firmwareVersion": "1.0.0",
-      "checksum": "sha256:a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
-      "signature": "MEUCIQDxR2v3..."
-    }
-    ```
+{
+  "firmwareUrl": "https://fw.example.com/ospp-station-1.0.0.bin",
+  "firmwareVersion": "1.0.0",
+  "checksum": "sha256:928de7ea35ba13fd64dfdec744051a7af9142a06bab3404a8bc548b5761644b0",
+  "signature": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtg=="
+}
+```
 12. Observe SecurityEvent from the station:
     ```json
     {

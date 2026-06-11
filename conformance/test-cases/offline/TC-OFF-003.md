@@ -46,20 +46,25 @@ Verify that when a station reconnects to the server after an offline period, it 
 
 7. Observe the station sends TransactionEvent(Ended) for TX-A:
    ```json
-   {
-     "offlineTxId": "otx_a1b2c3d4e5f6",
-     "offlinePassId": "<offline_pass_id>",
-     "userId": "<user_id>",
-     "bayId": "bay_a1b2c3d4",
-     "serviceId": "svc_basic",
-     "startedAt": "<ISO 8601>",
-     "endedAt": "<ISO 8601>",
-     "durationSeconds": 120,
-     "creditsCharged": 9,
-     "receipt": { "data": "<canonical payload>", "signature": "<ECDSA sig>", "signatureAlgorithm": "ECDSA-P256-SHA256" },
-     "txCounter": 5
-   }
-   ```
+{
+  "offlineTxId": "otx_a1b2c3d4e5f6",
+  "offlinePassId": "<offline_pass_id>",
+  "userId": "<user_id>",
+  "bayId": "bay_a1b2c3d4",
+  "serviceId": "svc_basic",
+  "startedAt": "<ISO 8601>",
+  "endedAt": "<ISO 8601>",
+  "durationSeconds": 120,
+  "creditsCharged": 9,
+  "receipt": {
+    "data": "eyJiYXlJZCI6ImJheV9hMWIyYzNkNCIsImNyZWRpdHNDaGFyZ2VkIjo5LCJkZXZpY2VJZCI6ImRldl9hMWIyYzNkNCIsImR1cmF0aW9uU2Vjb25kcyI6MTIwLCJlbmRlZEF0IjoiPElTTyA4NjAxPiIsIm9mZmxpbmVQYXNzSWQiOiI8b2ZmbGluZV9wYXNzX2lkPiIsIm9mZmxpbmVUeElkIjoib3R4X2ExYjJjM2Q0ZTVmNiIsInNlcnZpY2VJZCI6InN2Y19iYXNpYyIsInN0YXJ0ZWRBdCI6IjxJU08gODYwMT4iLCJ0eENvdW50ZXIiOjUsInVzZXJJZCI6Ijx1c2VyX2lkPiJ9",
+    "signature": "MEQCIBMUtqXRgxgSRGFtMChYKeB+C4M74vO4ohEs/1KoyMalAiBibvng4kgrA/01MhlhxBgkAImK57WAniDvb/drCj3xmQ==",
+    "signatureAlgorithm": "ECDSA-P256-SHA256"
+  },
+  "txCounter": 5,
+  "deviceId": "dev_a1b2c3d4"
+}
+```
 8. Verify TX-A is received BEFORE TX-B and TX-C (ordered by `txCounter`).
 9. Server validates:
    - `txCounter` (5) == station's last reconciled counter (4) + 1 (no gap).

@@ -30,24 +30,25 @@ Verify that the station correctly sends TransactionEvent messages for offline tr
 
 1. Observe the station sends the first TransactionEvent (txCounter=5):
    ```json
-   {
-     "offlineTxId": "otx_d4e5f6a7b8c9",
-     "offlinePassId": "opass_a8b9c0d1e2f3",
-     "userId": "sub_xyz789",
-     "bayId": "bay_c1d2e3f4a5b6",
-     "serviceId": "svc_eco",
-     "startedAt": "2026-01-30T14:00:00.000Z",
-     "endedAt": "2026-01-30T14:05:00.000Z",
-     "durationSeconds": 298,
-     "creditsCharged": 50,
-     "receipt": {
-       "data": "eyJvZmZsaW5lVHhJZCI6Im90eF9kNGU1ZjZhN2I4YzkiLCJiYXlJZCI6...",
-       "signature": "MEUCIQD8a7XK1e5Zj1bJnKLm5P3nRv4kZwE...",
-       "signatureAlgorithm": "ECDSA-P256-SHA256"
-     },
-     "txCounter": 5
-   }
-   ```
+{
+  "offlineTxId": "otx_d4e5f6a7b8c9",
+  "offlinePassId": "opass_a8b9c0d1e2f3",
+  "userId": "sub_xyz789",
+  "bayId": "bay_c1d2e3f4a5b6",
+  "serviceId": "svc_eco",
+  "startedAt": "2026-01-30T14:00:00.000Z",
+  "endedAt": "2026-01-30T14:05:00.000Z",
+  "durationSeconds": 298,
+  "creditsCharged": 50,
+  "receipt": {
+    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQ2hhcmdlZCI6NTAsImRldmljZUlkIjoiZGV2X2Q0ZTVmNmE3IiwiZHVyYXRpb25TZWNvbmRzIjoyOTgsImVuZGVkQXQiOiIyMDI2LTAxLTMwVDE0OjA1OjAwLjAwMFoiLCJvZmZsaW5lUGFzc0lkIjoib3Bhc3NfYThiOWMwZDFlMmYzIiwib2ZmbGluZVR4SWQiOiJvdHhfZDRlNWY2YTdiOGM5Iiwic2VydmljZUlkIjoic3ZjX2VjbyIsInN0YXJ0ZWRBdCI6IjIwMjYtMDEtMzBUMTQ6MDA6MDAuMDAwWiIsInR4Q291bnRlciI6NSwidXNlcklkIjoic3ViX3h5ejc4OSJ9",
+    "signature": "MEQCIH8ZyTvi5mhuzHFw2t2uOKnIB6mqxynFog68ArW8ImaKAiA+EDMiNq2oNV79hJbRGDxawx/WKs9pdnveeu0IB273Bg==",
+    "signatureAlgorithm": "ECDSA-P256-SHA256"
+  },
+  "txCounter": 5,
+  "deviceId": "dev_d4e5f6a7"
+}
+```
 2. Verify all required fields are present: `offlineTxId`, `offlinePassId`, `userId`, `bayId`, `serviceId`, `startedAt`, `endedAt`, `durationSeconds`, `creditsCharged`, `receipt`, `txCounter`.
 3. Verify `receipt.signatureAlgorithm` is `"ECDSA-P256-SHA256"`.
 4. Send TransactionEvent response within 60 seconds:

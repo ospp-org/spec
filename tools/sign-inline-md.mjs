@@ -54,6 +54,14 @@ const ALL_FILES = [
   'spec/profiles/transaction/transaction-event.md',
   'spec/profiles/device-management/update-firmware.md',
   'spec/03-messages.md',
+  // Conformance test-case walkthroughs carry illustrative inline payloads;
+  // sign them too so the CI guard stays a clean tripwire.
+  'conformance/test-cases/offline/TC-OFF-001.md',
+  'conformance/test-cases/offline/TC-OFF-003.md',
+  'conformance/test-cases/offline/TC-OFF-004.md',
+  'conformance/test-cases/transaction/TC-TX-006.md',
+  'conformance/test-cases/security/TC-SEC-004.md',
+  'conformance/test-cases/device-management/TC-DM-004.md',
 ];
 
 const STATION_KEY = readFileSync(`${KEY_DIR}/station-test-key.pem`, 'utf-8');

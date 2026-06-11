@@ -32,28 +32,29 @@ Verify that the station correctly performs offline transaction reconciliation af
 1. Observe the station begins reconciliation automatically after BootNotification `Accepted`.
 2. Observe the first TransactionEvent (txCounter=1):
    ```json
-   {
-     "offlineTxId": "otx_a1b2c3d4e5f6",
-     "offlinePassId": "opass_f1e2d3c4b5a6",
-     "userId": "sub_alice001",
-     "bayId": "bay_c1d2e3f4a5b6",
-     "serviceId": "svc_eco",
-     "startedAt": "2026-01-30T10:30:00.000Z",
-     "endedAt": "2026-01-30T10:35:00.000Z",
-     "durationSeconds": 298,
-     "creditsCharged": 50,
-     "receipt": {
-       "data": "eyJvZmZsaW5lVHhJZCI6Im90eF9hMWIyYzNkNGU1ZjYiLCJiYXlJZCI6...",
-       "signature": "MEUCIQD8a7XK1e5Zj1bJnKLm5P3nRv4kZwE...",
-       "signatureAlgorithm": "ECDSA-P256-SHA256"
-     },
-     "txCounter": 1,
-     "meterValues": {
-       "liquidMl": 45200,
-       "energyWh": 150
-     }
-   }
-   ```
+{
+  "offlineTxId": "otx_a1b2c3d4e5f6",
+  "offlinePassId": "opass_f1e2d3c4b5a6",
+  "userId": "sub_alice001",
+  "bayId": "bay_c1d2e3f4a5b6",
+  "serviceId": "svc_eco",
+  "startedAt": "2026-01-30T10:30:00.000Z",
+  "endedAt": "2026-01-30T10:35:00.000Z",
+  "durationSeconds": 298,
+  "creditsCharged": 50,
+  "receipt": {
+    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQ2hhcmdlZCI6NTAsImRldmljZUlkIjoiZGV2X2ExYjJjM2Q0IiwiZHVyYXRpb25TZWNvbmRzIjoyOTgsImVuZGVkQXQiOiIyMDI2LTAxLTMwVDEwOjM1OjAwLjAwMFoiLCJtZXRlclZhbHVlcyI6eyJlbmVyZ3lXaCI6MTUwLCJsaXF1aWRNbCI6NDUyMDB9LCJvZmZsaW5lUGFzc0lkIjoib3Bhc3NfZjFlMmQzYzRiNWE2Iiwib2ZmbGluZVR4SWQiOiJvdHhfYTFiMmMzZDRlNWY2Iiwic2VydmljZUlkIjoic3ZjX2VjbyIsInN0YXJ0ZWRBdCI6IjIwMjYtMDEtMzBUMTA6MzA6MDAuMDAwWiIsInR4Q291bnRlciI6MSwidXNlcklkIjoic3ViX2FsaWNlMDAxIn0=",
+    "signature": "MEUCIQCwMyJ+tra9TSwiiz+7z4DS2z8wW5WD0cqMAP+6tBonNwIgTN2vnIsXLd+/o4/xYR09l19i+YZrJxs2r5k9Uzqq5vc=",
+    "signatureAlgorithm": "ECDSA-P256-SHA256"
+  },
+  "txCounter": 1,
+  "meterValues": {
+    "liquidMl": 45200,
+    "energyWh": 150
+  },
+  "deviceId": "dev_a1b2c3d4"
+}
+```
 3. Verify `txCounter` is 1 (first in sequence).
 4. Send `Accepted` response within 60 seconds.
 5. Observe TransactionEvent with `txCounter: 2`.
