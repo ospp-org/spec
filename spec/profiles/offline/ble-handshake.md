@@ -195,7 +195,7 @@ The station evaluates the authentication request and sends an AuthResponse notif
 |--------------------------|---------|----------|-----------------------------------------------|
 | `type` | string | Yes | `AuthResponse` (constant). |
 | `result` | string | Yes | `Accepted` or `Rejected`. |
-| `sessionKeyConfirmation` | string | Cond. | HMAC confirmation of the shared session key. Present when `result` is `Accepted`. |
+| `sessionKeyConfirmation` | string | Cond. | HMAC confirmation of the shared session key. **MUST** be present when `result` is `Accepted`; **MUST NOT** be present when `result` is `Rejected`. |
 | `reason` | string | Cond. | Human-readable rejection reason code. Present when `result` is `Rejected`. |
 | `errorCode` | integer | Cond. | Numeric OSPP error code. Present when `result` is `Rejected`. |
 
