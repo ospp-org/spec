@@ -83,12 +83,15 @@ function verifyFile(file, pubPem) {
 
   // Body/outer cross-check on shared fields — drift detection (§6.2 Note 5
   // semantics: pass / user / device claims are cryptographically bound; the
-  // server cross-checks signed body against the envelope).
+  // server cross-checks signed body against the envelope). Compare via the
+  // canonical form so a key-order difference inside a nested object (the
+  // signed body is alphabetically sorted by spec; the human-edited outer
+  // wrapper preserves insertion order) is not flagged as drift.
   const mismatches = [];
   for (const k of Object.keys(body)) {
     if (k in outer) {
-      const bv = JSON.stringify(body[k]);
-      const ov = JSON.stringify(outer[k]);
+      const bv = canonicalize({ v: body[k] });
+      const ov = canonicalize({ v: outer[k] });
       if (bv !== ov) mismatches.push(`${k}: body=${bv} outer=${ov}`);
     }
   }
