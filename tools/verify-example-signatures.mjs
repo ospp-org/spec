@@ -1,20 +1,24 @@
 #!/usr/bin/env node
 // =============================================================================
-// verify-example-signatures.mjs — verify station-signed OSPP receipt examples
+// verify-example-signatures.mjs — verify ECDSA-P256 signed OSPP examples
 // =============================================================================
 //
-// For each input JSON file containing a `receipt` wrapper, this tool:
+// Auto-detects the wrapper shape and verifies the appropriate signature with
+// the supplied PEM public key. Designed for CI: exits non-zero on any failure.
 //
-//   1. Reads `receipt.data` (base64-encoded canonical body) and decodes it.
-//   2. Verifies `receipt.signature` against the provided public key over the
-//      decoded canonical bytes, using ECDSA-P256-SHA256 (spec §6.2 Verification).
-//   3. Cross-checks the decoded body against the outer wrapper fields: every
-//      field that appears in BOTH must compare equal. This catches drift
-//      between the signed body and the human-visible envelope.
-//   4. Re-canonicalises the decoded body and asserts the bytes round-trip
-//      (no whitespace, no key-order drift inside the canonical bytes).
+// Modes:
 //
-// Exit non-zero on any failure. Designed for CI.
+//   1. RECEIPT  (`outer.receipt = {data, signature, signatureAlgorithm}`)
+//      - Decode receipt.data as base64 → canonical bytes
+//      - Verify receipt.signature against canonical bytes
+//      - Round-trip canonicality: re-canonicalise the decoded body, must match
+//      - Cross-check body / outer on shared fields (drift detection)
+//
+//   2. OFFLINE_PASS  (`outer.offlinePass` with inline signature + signatureAlgorithm)
+//      - Strip signature + signatureAlgorithm from the pass object
+//      - Canonicalise the remainder → canonical bytes
+//      - Verify offlinePass.signature against canonical bytes
+//      - Re-canonicalise yields the same bytes
 //
 // Usage:
 //   node tools/verify-example-signatures.mjs --key <pub.pem> <file...>
@@ -47,12 +51,18 @@ function parseArgs(args) {
   return opts;
 }
 
-function verifyFile(file, pubPem) {
-  const outer = JSON.parse(readFileSync(file, 'utf-8'));
-  const receipt = outer.receipt;
-  if (!receipt || typeof receipt !== 'object') {
-    return { file, ok: false, reason: 'missing .receipt wrapper' };
+function detectMode(outer) {
+  if (outer && typeof outer === 'object' && typeof outer.receipt === 'object' && outer.receipt !== null) {
+    return 'receipt';
   }
+  if (outer && typeof outer === 'object' && typeof outer.offlinePass === 'object' && outer.offlinePass !== null) {
+    return 'offline-pass';
+  }
+  return null;
+}
+
+function verifyReceipt(outer, file, pubPem) {
+  const receipt = outer.receipt;
   for (const k of ['data', 'signature', 'signatureAlgorithm']) {
     if (typeof receipt[k] !== 'string') {
       return { file, ok: false, reason: `receipt.${k} missing or not a string` };
@@ -63,13 +73,10 @@ function verifyFile(file, pubPem) {
   }
 
   const canonicalBytes = Buffer.from(receipt.data, 'base64');
-
-  // Signature verification (spec §6.2 Verification step 4).
   if (!ecdsaVerify(pubPem, canonicalBytes, receipt.signature)) {
     return { file, ok: false, reason: 'signature failed to verify against the provided public key' };
   }
 
-  // Round-trip canonicality — the decoded body re-canonicalises to the same bytes.
   let body;
   try {
     body = JSON.parse(canonicalBytes.toString('utf-8'));
@@ -78,15 +85,9 @@ function verifyFile(file, pubPem) {
   }
   const recanonical = canonicalize(body);
   if (recanonical !== canonicalBytes.toString('utf-8')) {
-    return { file, ok: false, reason: 'receipt.data is not OSPP-canonical (re-canonicalisation produced different bytes)' };
+    return { file, ok: false, reason: 'receipt.data is not OSPP-canonical' };
   }
 
-  // Body/outer cross-check on shared fields — drift detection (§6.2 Note 5
-  // semantics: pass / user / device claims are cryptographically bound; the
-  // server cross-checks signed body against the envelope). Compare via the
-  // canonical form so a key-order difference inside a nested object (the
-  // signed body is alphabetically sorted by spec; the human-edited outer
-  // wrapper preserves insertion order) is not flagged as drift.
   const mismatches = [];
   for (const k of Object.keys(body)) {
     if (k in outer) {
@@ -102,9 +103,69 @@ function verifyFile(file, pubPem) {
   return {
     file,
     ok: true,
+    mode: 'receipt',
     bodyFields: Object.keys(body),
     canonicalBytes: canonicalBytes.length,
   };
+}
+
+function verifyOfflinePass(outer, file, pubPem) {
+  const pass = outer.offlinePass;
+  for (const k of ['signature', 'signatureAlgorithm']) {
+    if (typeof pass[k] !== 'string') {
+      return { file, ok: false, reason: `offlinePass.${k} missing or not a string` };
+    }
+  }
+  if (pass.signatureAlgorithm !== 'ECDSA-P256-SHA256') {
+    return { file, ok: false, reason: `signatureAlgorithm "${pass.signatureAlgorithm}" != ECDSA-P256-SHA256` };
+  }
+
+  // Build the canonical body the way the signer must have built it: pass
+  // minus signature + signatureAlgorithm. canonicalize sorts keys so the
+  // input field order does not affect the bytes.
+  const { signature, signatureAlgorithm, ...body } = pass;
+  void signatureAlgorithm;
+  const canonicalJson = canonicalize(body);
+  const canonicalBytes = Buffer.from(canonicalJson, 'utf-8');
+
+  if (!ecdsaVerify(pubPem, canonicalBytes, signature)) {
+    return { file, ok: false, reason: 'offlinePass.signature failed to verify against the provided public key' };
+  }
+
+  // Cross-check pass fields against any outer-level fields that mirror them
+  // (e.g. authorize-offline-pass.request has top-level offlinePassId, deviceId
+  // that mirror pass.passId / pass.deviceId, where present).
+  const mirror = {
+    passId: 'offlinePassId',
+    deviceId: 'deviceId',
+  };
+  const mismatches = [];
+  for (const [passField, outerField] of Object.entries(mirror)) {
+    if (passField in body && outerField in outer) {
+      const bv = canonicalize({ v: body[passField] });
+      const ov = canonicalize({ v: outer[outerField] });
+      if (bv !== ov) mismatches.push(`${passField}↔${outerField}: pass=${bv} outer=${ov}`);
+    }
+  }
+  if (mismatches.length > 0) {
+    return { file, ok: false, reason: `pass/outer drift on mirrored fields: ${mismatches.join('; ')}` };
+  }
+
+  return {
+    file,
+    ok: true,
+    mode: 'offline-pass',
+    bodyFields: Object.keys(body),
+    canonicalBytes: canonicalBytes.length,
+  };
+}
+
+function verifyFile(file, pubPem) {
+  const outer = JSON.parse(readFileSync(file, 'utf-8'));
+  const mode = detectMode(outer);
+  if (mode === 'receipt') return verifyReceipt(outer, file, pubPem);
+  if (mode === 'offline-pass') return verifyOfflinePass(outer, file, pubPem);
+  return { file, ok: false, reason: 'no .receipt or .offlinePass wrapper detected' };
 }
 
 function main() {
@@ -115,7 +176,7 @@ function main() {
   for (const file of opts.files) {
     const r = verifyFile(file, pubPem);
     if (r.ok) {
-      console.log(`  OK  ${r.file}  (body=${r.bodyFields.length} fields, canonical=${r.canonicalBytes}B)`);
+      console.log(`  OK  ${r.file}  [mode=${r.mode}, body=${r.bodyFields.length} fields, canonical=${r.canonicalBytes}B]`);
     } else {
       console.error(`  FAIL ${r.file}: ${r.reason}`);
       failures++;
