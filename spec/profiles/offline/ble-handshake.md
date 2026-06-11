@@ -116,25 +116,69 @@ Used when the app has a locally-stored OfflinePass. In the **Full Offline** scen
 
 ### 4.2 ServerSignedAuth (Partial A)
 
-Used when the app is online but the station is offline. The app requests a server-signed authorization blob from the server (via HTTPS) and relays it to the station over BLE. The station verifies the ECDSA P-256 signature using the server's public key (provisioned at boot).
+Used when the app is online but the station is offline. The app obtains a server-signed authorization (via `POST /sessions/offline-auth`, supplying the same `appNonce` it will write in the upcoming `Hello` so the server binds the authorization to this handshake) and relays it to the station over BLE. The station verifies the ECDSA P-256 signature using the server's public key (provisioned at boot) and re-checks each claim against the live handshake state.
 
 **Payload:**
 
 | Field | Type | Required | Description |
 |----------------------|---------|----------|-----------------------------------------------|
 | `type` | string | Yes | `ServerSignedAuth` (constant). |
-| `signedAuthorization` | string | Yes | Base64-encoded server-signed ECDSA P-256 authorization blob. |
+| `signedAuthorization` | object | Yes | Signed authorization wrapper — see [`server-signed-auth.schema.json`](../../../schemas/common/server-signed-auth.schema.json). |
 | `sessionId` | string | Yes | Session identifier assigned by the server. |
+
+The `signedAuthorization` object has shape `{data, signature, signatureAlgorithm}` — sibling to the receipt wrapper (`06-security.md` §6.2). `data` is a Base64-encoded OSPP-canonical JSON body (the claims defined in §4.2.1); `signature` is a Base64-encoded DER ECDSA P-256 signature over the canonical bytes; `signatureAlgorithm` is `"ECDSA-P256-SHA256"`.
+
+#### 4.2.1 Signing Process (Server-Side)
+
+The server **MUST** sign the authorization following the same canonical-form + ECDSA-P256 + RFC 6979 pattern used for transaction receipts (`06-security.md` §6.2):
+
+```
+1. claims = {
+     authId, sub, deviceId, sessionId, stationId,
+     bayId, serviceId, appNonce, issuedAt, expiresAt,
+   }                                              // see server-signed-auth-claims.schema.json
+2. data_bytes = OSPP_Canonical_Form(claims)       // §4.8
+3. digest     = SHA-256(data_bytes)               // hash the canonical bytes directly
+4. signature  = ECDSA-P256-Sign(server_private_key, digest)  // RFC 6979 deterministic nonce
+5. signedAuthorization = {
+     data:               base64(data_bytes),
+     signature:          base64(signature),
+     signatureAlgorithm: "ECDSA-P256-SHA256",
+   }
+```
+
+The `appNonce` claim **MUST** equal the `appNonce` the app will write in the upcoming `Hello` message — the server reads it from the `POST /sessions/offline-auth` request body. The `expiresAt` claim **MUST** be no later than five minutes after `issuedAt`; `appNonce` provides the primary, clock-independent replay defence (§4.2.2 check #2) and `expiresAt` is a secondary bound.
+
+#### 4.2.2 Verification (Station-Side)
+
+The station **MUST** apply the following checks before accepting a `ServerSignedAuth`. Checks **MUST** be evaluated in the listed order; on the first failure the station **MUST** reject with the indicated error code.
+
+| # | Check | Error code |
+|:-:|---|---|
+| 1 | ECDSA P-256 signature verifies against the server's verify key over `base64_decode(signedAuthorization.data)` | `2002 OFFLINE_PASS_INVALID` |
+| 2 | `claims.appNonce == Hello.appNonce` from the current handshake | **`2018 SERVER_AUTH_NONCE_MISMATCH`** |
+| 3 | `claims.stationId == STATION_OWN_ID` (no cross-station replay) | `2002 OFFLINE_PASS_INVALID` |
+| 4 | `claims.deviceId == Hello.deviceId` (device binding) | `2002 OFFLINE_PASS_INVALID` |
+| 5 | `claims.sessionId == envelope.sessionId` (envelope binding) | `2002 OFFLINE_PASS_INVALID` |
+| 6 | `claims.expiresAt > NOW` (clock-skew margin; `appNonce` is the primary defence) | `2002 OFFLINE_PASS_INVALID` |
+
+**Anti-replay model.** `appNonce` is the **primary, clock-independent** anti-replay defence: because every `Hello.appNonce` is a 32-byte cryptographically random value never reused across handshakes (§2), a captured `ServerSignedAuth` cannot be relayed into a different handshake whose `Hello` carries a different `appNonce`, regardless of system clock state. `expiresAt` is a **secondary** bound that limits the window in which a same-handshake passive replay would still be evaluated against the server's clock; it is not a substitute for the nonce check.
 
 **Example:**
 
 ```json
 {
   "type": "ServerSignedAuth",
-  "signedAuthorization": "ZXlKaGJHY2lPaUpGWkRJMU5URTVJaXdpZEhsd0lqb2lTbGRVSW4wLmV5SnpkV0lpT2lKemRXSmZlSGw2TnpnNUlpd2ljM1J1SWpvaWMzUnVYMkV4WWpKak0=",
+  "signedAuthorization": {
+    "data": "eyJhcHBOb25jZSI6IjQyVUVRWWJiL3ZONkRPSExqU2FCUTQ2eUlLZE0wWFRNcDk4UFVQc25KVzg9IiwiYXV0aElkIjoiYXV0aF9hMWIyYzNkNCIsImJheUlkIjoiYmF5X2MxZDJlM2Y0YTViNiIsImRldmljZUlkIjoiZGV2X2FsaWNlMjAyNiIsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfYjNjNGQ1ZTYiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJzdWIiOiJzdWJfYWxpY2UyMDI2In0=",
+    "signature": "MEUCIQDeXamplePlaceholderECDSA-P256-DERSignatureOver80BytesEncodedBase64==AiAExamplePlaceholderECDSA-P256-DERSignatureOver80BytesEncodedBase64==",
+    "signatureAlgorithm": "ECDSA-P256-SHA256"
+  },
   "sessionId": "sess_b3c4d5e6"
 }
 ```
+
+> Conformance vectors (`conformance/test-vectors/valid/offline/server-signed-auth-*.json`) carry signatures produced by the synthetic `conformance/test-keys/server-test-key.pem`; verify with `conformance/test-keys/server-test-pub.pem` via `tools/verify-example-signatures.mjs`.
 
 ## 5. Step 4: AuthResponse
 
