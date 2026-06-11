@@ -36,6 +36,7 @@
 //
 // =============================================================================
 
+import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { argv, exit } from 'node:process';
 import { canonicalize } from '@ospp/protocol';
@@ -143,6 +144,60 @@ function signOfflinePass(outer, keyPem) {
 }
 
 // -----------------------------------------------------------------------------
+// ServerSignedAuth mode (profiles/offline/ble-handshake.md §4.2.1)
+// -----------------------------------------------------------------------------
+//
+// 10 required claims canonicalised and signed by the server. Claim values for
+// this synthetic conformance corpus are derived deterministically from the
+// outer envelope's sessionId so the test vectors are reproducible end-to-end
+// without external inputs (the production server sources them from the
+// `POST /sessions/offline-auth` request + its own state).
+
+const SSA_ISSUED_AT = '2026-02-13T10:00:00.000Z';
+const SSA_EXPIRES_AT = '2026-02-13T10:05:00.000Z'; // issuedAt + 5 min — §4.2.1 cap
+
+function sha256Hex(input) {
+  return createHash('sha256').update(input).digest('hex');
+}
+
+function deriveSsaClaims(outer, file) {
+  if (typeof outer.sessionId !== 'string' || outer.sessionId.length === 0) {
+    throw new Error(`${file}: outer.sessionId is required for ServerSignedAuth claim derivation`);
+  }
+  const seed = outer.sessionId;
+  const h = (label) => sha256Hex(`${label}|${seed}`);
+
+  // 32-byte appNonce, base64 — matches the appNonce the app would write in
+  // the upcoming Hello (and supply to POST /sessions/offline-auth).
+  const appNonce = Buffer.from(h('appNonce').slice(0, 64), 'hex').toString('base64');
+
+  return {
+    authId: `auth_${h('authId').slice(0, 12)}`,
+    sub: `sub_${h('sub').slice(0, 16)}`,
+    deviceId: `dev_${h('deviceId').slice(0, 16)}`,
+    sessionId: outer.sessionId,
+    stationId: `stn_${h('stationId').slice(0, 8)}`,
+    bayId: `bay_${h('bayId').slice(0, 12)}`,
+    serviceId: 'svc_eco',
+    appNonce,
+    issuedAt: SSA_ISSUED_AT,
+    expiresAt: SSA_EXPIRES_AT,
+  };
+}
+
+function signServerSignedAuth(outer, keyPem, file) {
+  const claims = deriveSsaClaims(outer, file);
+  const canonicalBytes = Buffer.from(canonicalize(claims), 'utf-8');
+  const signature = ecdsaSign(keyPem, canonicalBytes);
+  outer.signedAuthorization = {
+    data: canonicalBytes.toString('base64'),
+    signature,
+    signatureAlgorithm: SIGNATURE_ALGORITHM,
+  };
+  return { mode: 'server-signed-auth', bodyFields: Object.keys(claims), signatureLength: signature.length };
+}
+
+// -----------------------------------------------------------------------------
 // Dispatcher
 // -----------------------------------------------------------------------------
 
@@ -153,7 +208,10 @@ function detectMode(outer, file) {
   if (outer && typeof outer === 'object' && typeof outer.offlinePass === 'object' && outer.offlinePass !== null) {
     return 'offline-pass';
   }
-  throw new Error(`${file}: cannot detect signing mode (no .receipt or .offlinePass wrapper found)`);
+  if (outer && typeof outer === 'object' && outer.type === 'ServerSignedAuth') {
+    return 'server-signed-auth';
+  }
+  throw new Error(`${file}: cannot detect signing mode (no .receipt, .offlinePass, or type=ServerSignedAuth)`);
 }
 
 function parseArgs(args) {
@@ -186,6 +244,7 @@ function signFile(file, keyPem) {
   let result;
   if (mode === 'receipt') result = signReceipt(outer, keyPem);
   else if (mode === 'offline-pass') result = signOfflinePass(outer, keyPem);
+  else if (mode === 'server-signed-auth') result = signServerSignedAuth(outer, keyPem, file);
   else throw new Error(`${file}: unsupported mode ${mode}`);
 
   const trailing = raw.endsWith('\n') ? '\n' : '';

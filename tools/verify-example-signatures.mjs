@@ -58,6 +58,9 @@ function detectMode(outer) {
   if (outer && typeof outer === 'object' && typeof outer.offlinePass === 'object' && outer.offlinePass !== null) {
     return 'offline-pass';
   }
+  if (outer && typeof outer === 'object' && outer.type === 'ServerSignedAuth') {
+    return 'server-signed-auth';
+  }
   return null;
 }
 
@@ -160,12 +163,64 @@ function verifyOfflinePass(outer, file, pubPem) {
   };
 }
 
+function verifyServerSignedAuth(outer, file, pubPem) {
+  const wrapper = outer.signedAuthorization;
+  if (!wrapper || typeof wrapper !== 'object') {
+    return { file, ok: false, reason: 'signedAuthorization missing or not an object' };
+  }
+  for (const k of ['data', 'signature', 'signatureAlgorithm']) {
+    if (typeof wrapper[k] !== 'string') {
+      return { file, ok: false, reason: `signedAuthorization.${k} missing or not a string` };
+    }
+  }
+  if (wrapper.signatureAlgorithm !== 'ECDSA-P256-SHA256') {
+    return { file, ok: false, reason: `signatureAlgorithm "${wrapper.signatureAlgorithm}" != ECDSA-P256-SHA256` };
+  }
+
+  const canonicalBytes = Buffer.from(wrapper.data, 'base64');
+  if (!ecdsaVerify(pubPem, canonicalBytes, wrapper.signature)) {
+    return { file, ok: false, reason: 'signedAuthorization.signature failed to verify' };
+  }
+
+  let claims;
+  try {
+    claims = JSON.parse(canonicalBytes.toString('utf-8'));
+  } catch (e) {
+    return { file, ok: false, reason: `decoded signedAuthorization.data is not valid JSON: ${e.message}` };
+  }
+  if (canonicalize(claims) !== canonicalBytes.toString('utf-8')) {
+    return { file, ok: false, reason: 'signedAuthorization.data is not OSPP-canonical' };
+  }
+
+  // Cross-checks mandated by §4.2.2 for the parts visible from the envelope.
+  // Station-side checks (Hello.appNonce, Hello.deviceId, STATION_OWN_ID, NOW
+  // vs expiresAt) require live handshake state that conformance fixtures
+  // cannot capture, so we only assert the envelope binding here:
+  //   §4.2.2 check #5  —  claims.sessionId == envelope.sessionId
+  if (claims.sessionId !== outer.sessionId) {
+    return {
+      file,
+      ok: false,
+      reason: `§4.2.2 #5: claims.sessionId="${claims.sessionId}" != outer.sessionId="${outer.sessionId}"`,
+    };
+  }
+
+  return {
+    file,
+    ok: true,
+    mode: 'server-signed-auth',
+    bodyFields: Object.keys(claims),
+    canonicalBytes: canonicalBytes.length,
+  };
+}
+
 function verifyFile(file, pubPem) {
   const outer = JSON.parse(readFileSync(file, 'utf-8'));
   const mode = detectMode(outer);
   if (mode === 'receipt') return verifyReceipt(outer, file, pubPem);
   if (mode === 'offline-pass') return verifyOfflinePass(outer, file, pubPem);
-  return { file, ok: false, reason: 'no .receipt or .offlinePass wrapper detected' };
+  if (mode === 'server-signed-auth') return verifyServerSignedAuth(outer, file, pubPem);
+  return { file, ok: false, reason: 'no .receipt, .offlinePass, or type=ServerSignedAuth wrapper detected' };
 }
 
 function main() {
