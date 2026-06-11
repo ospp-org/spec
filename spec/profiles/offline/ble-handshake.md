@@ -82,6 +82,8 @@ Used when the app has a locally-stored OfflinePass. In the **Full Offline** scen
 | `counter` | integer | Yes | Monotonic usage counter (minimum 0). **MUST** be strictly greater than the last counter seen by the station for this pass. |
 | `sessionProof` | string | Yes | HMAC-SHA256 proof binding this request to the derived session key. Computed as `HMAC-SHA256(sessionKey, type || offlinePass.passId || counter)`. |
 
+The HMAC input is the concatenation, in order, of the UTF-8 bytes of `type`, `offlinePass.passId`, and `counter` (no delimiters, no length prefixes). The `counter` integer **MUST** be serialized as its shortest decimal ASCII representation with no leading zeros and no sign character (e.g. `5` → bytes `"5"`, `42` → bytes `"42"`, `0` → bytes `"0"`). The resulting HMAC tag is base64-encoded for transport. This binding is canonical: any deviation (binary encoding, hexadecimal, zero-padding, locale-specific digits) produces an incompatible proof and **MUST** be rejected with error `2013 BLE_AUTH_FAILED`.
+
 **Example:**
 
 ```json
