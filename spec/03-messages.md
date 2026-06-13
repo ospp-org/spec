@@ -14,7 +14,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHALL NOT**, **S
 
 ### MQTT Messages
 
-All MQTT messages are wrapped in the standard OSPP envelope (see the Conventions section below, Section 1). The payload tables below document only the **`payload` field** of the envelope. The envelope fields (`messageId`, `messageType`, `action`, `timestamp`, `source`, `protocolVersion`) are always present. The `mac` field is conditionally present based on `MessageSigningMode` configuration. Exempt messages: BootNotification REQUEST, ConnectionLost (LWT).
+All MQTT messages are wrapped in the standard OSPP envelope (see the Conventions section below, Section 1). The payload tables below document only the **`payload` field** of the envelope. The envelope fields (`messageId`, `messageType`, `action`, `timestamp`, `source`, `protocolVersion`) are always present. The `mac` field is conditionally present based on `MessageSigningMode` configuration. Exempt messages: BootNotification REQUEST, BootNotification RESPONSE, ConnectionLost (LWT).
 
 MQTT topics follow the patterns defined in [Chapter 02 — Transport](02-transport.md), Section 2:
 
@@ -291,7 +291,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
 | `2001` | `STATION_NOT_REGISTERED` — station unknown to server |
 | `6001` | `SERVER_INTERNAL_ERROR` — server encountered an unexpected error during processing |
 
-> **Signing note:** The BootNotification REQUEST is **exempt** from HMAC-SHA256 signing because the session key has not yet been established. The RESPONSE that delivers the `sessionKey` is protected by TLS.
+> **Signing note:** Both directions of BootNotification are **exempt** from HMAC-SHA256 signing. The REQUEST is exempt because the session key has not yet been established. The RESPONSE is exempt because its MAC would be cryptographically void — the `sessionKey` that would verify it is delivered *in* that message; delivery integrity is provided by mTLS, not HMAC.
 
 ---
 

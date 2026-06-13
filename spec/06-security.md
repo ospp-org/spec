@@ -703,7 +703,7 @@ The receiver MUST verify the MAC before processing the payload:
 
 #### Mode `All`
 
-All MQTT messages MUST include a valid `mac` field, except BootNotification REQUEST and ConnectionLost (exempt — see below).
+All MQTT messages MUST include a valid `mac` field, except BootNotification (REQUEST and RESPONSE) and ConnectionLost (exempt — see below).
 
 #### Mode `Critical` (default)
 
@@ -712,7 +712,7 @@ Messages are classified as **critical** (HMAC required) or **exempt** (HMAC not 
 | # | Action | Direction | HMAC Required | Rationale |
 |--:|--------|-----------|:---:|-----------|
 | 1 | BootNotification REQ | Station → Server | **NO** | Informational. No HMAC key available yet (key is issued in the response). |
-| 2 | BootNotification RES | Server → Station | **YES** | Contains HMAC session key and configuration. |
+| 2 | BootNotification RES | Server → Station | **NO** | Carries the session key that would verify it — the MAC is cryptographically void; delivery integrity is provided by mTLS, not HMAC. |
 | 3 | AuthorizeOfflinePass REQ | Station → Server | **YES** | Auth decision — financial gate. |
 | 4 | AuthorizeOfflinePass RES | Server → Station | **YES** | Auth verdict — controls resource access. |
 | 5 | ReserveBay REQ | Server → Station | **YES** | Blocks physical resources. |
@@ -759,7 +759,7 @@ Messages are classified as **critical** (HMAC required) or **exempt** (HMAC not 
 | 46 | TriggerMessage REQ | Server → Station | **YES** | Server command that triggers station behavior. |
 | 47 | TriggerMessage RES | Station → Server | **YES** | Confirms trigger accepted. |
 
-**Summary:** 32 of 47 message types require HMAC in `Critical` mode, 15 are exempt. The exempt messages (BootNotification REQ, Heartbeat, StatusNotification, MeterValues, ConnectionLost, SecurityEvent, GetConfiguration, GetDiagnostics, FirmwareStatusNotification, DiagnosticsNotification, DataTransfer) represent ~70% of message *volume* in normal operation.
+**Summary:** 31 of 47 message types require HMAC in `Critical` mode, 16 are exempt. The exempt messages (BootNotification REQ, BootNotification RES, Heartbeat, StatusNotification, MeterValues, ConnectionLost, SecurityEvent, GetConfiguration, GetDiagnostics, FirmwareStatusNotification, DiagnosticsNotification, DataTransfer) represent ~70% of message *volume* in normal operation.
 
 #### Mode `None`
 
@@ -772,6 +772,7 @@ Regardless of `MessageSigningMode`, the following messages are always exempt:
 | Message | Reason |
 |---------|--------|
 | BootNotification REQUEST [MSG-001] | Session key not yet established |
+| BootNotification RESPONSE [MSG-001] | Carries the session key that would verify it; integrity via mTLS, not HMAC |
 | ConnectionLost (LWT) [MSG-011] | Pre-configured at CONNECT time, published by broker |
 
 ### 5.7 Failure Handling
@@ -1289,7 +1290,7 @@ Diagnostic uploads via GetDiagnostics [MSG-018] **MUST** apply the same redactio
 - [ ] TLS 1.3 mandatory, no TLS 1.2 fallback
 - [ ] mTLS client certificate with CN = `stn_{station_id}`
 - [ ] Private keys stored in secure element / TPM (never exported)
-- [ ] HMAC-SHA256 verification on all incoming messages per `MessageSigningMode` (except LWT)
+- [ ] HMAC-SHA256 verification on all incoming messages per `MessageSigningMode` (except LWT and BootNotification RESPONSE)
 - [ ] HMAC-SHA256 signing on outgoing messages per `MessageSigningMode` (default: `Critical` — signs security-sensitive messages only; except BootNotification REQUEST which is always exempt)
 - [ ] Timing-safe HMAC comparison
 - [ ] OfflinePass 10-check validation for Full Offline mode

@@ -8,19 +8,33 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
-## Unreleased — prose & conformance alignment to v0.5.0 schemas (no wire change, no bump)
+## Unreleased — prose/conformance alignment + BootNotification HMAC exemption (no wire change, no bump)
 
 Post-Wave-3 consistency audit identified 4 documentation/conformance
 gaps where the prose and the conformance test-vectors had not caught
-up with schema changes that already shipped in `v0.5.0`. All fixes
-are **prose-only or test-vector-only** — the wire-format schemas are
-unchanged, the contract that integrators sign against is unchanged.
+up with schema changes that already shipped in `v0.5.0`. Those
+conformance fixes (under **Fixed** below) are **prose-only or
+test-vector-only** — the wire-format schemas are unchanged, the
+contract that integrators sign against is unchanged.
 **No spec version bump.** Same drift-closure pattern as `sdk-ts`
 v0.5.1 / v0.5.2 / v0.5.3 explicitly stated "spec NOT bumped" — the
 inverse rationale applies here: when the schemas are correct and
 only the prose lags, prose-fix without bump preserves semver
 discipline (each tag = a wire contract; this lot doesn't change
 the wire).
+
+### Changed
+
+- **§5.6 signing classification (normative):** `BootNotification`
+  RESPONSE is reclassified from HMAC-critical to **always-exempt** — the
+  whole action is now exempt in every `MessageSigningMode`. Its MAC is
+  cryptographically void: the session key that would verify the RESPONSE
+  is delivered *in* that message, so delivery integrity comes from
+  **mTLS**, not HMAC (the REQUEST was already exempt — no key yet). A
+  normative correction, but **no wire change** (`mac` is already optional
+  in the envelope schema) and **no schema change**, so the no-bump
+  rationale above applies. Critical-mode count moves 32→31 (16 exempt).
+  Lands lockstep with `ospp-sdk-php` and `sdk-ts` **v0.5.5**.
 
 ### Fixed
 
