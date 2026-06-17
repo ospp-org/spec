@@ -1060,6 +1060,7 @@ Reports consumption telemetry during an active session. Sent at the interval con
 | `values.liquidMl` | integer | No | Liquid consumed in milliliters |
 | `values.consumableMl` | integer | No | Consumable consumed in milliliters |
 | `values.energyWh` | integer | No | Energy consumed in watt-hours |
+| `seqNo` | integer | No | Per-session monotonic counter starting at 0, incrementing by 1 per session-scoped EVENT (MeterValues, SessionEnded). See [`02-transport.md §3.2`](02-transport.md) (ordering) and [`05-state-machines.md §2.5`](05-state-machines.md) (NVS persistence). |
 
 > Sensor sampling occurs at the `MeterValuesSampleInterval` (default: 10 seconds). The `MeterValuesInterval` controls how often the aggregated values are reported to the server.
 
@@ -1121,6 +1122,8 @@ This message is NOT sent when the session is stopped by a server-initiated StopS
 | `meterValues.liquidMl` | integer | No | Total liquid consumed in milliliters |
 | `meterValues.consumableMl` | integer | No | Total consumable consumed in milliliters |
 | `meterValues.energyWh` | integer | No | Total energy consumed in watt-hours |
+| `seqNo` | integer | No | Per-session monotonic counter — matches the running `seqNo` of the last MeterValues for the session. See [`02-transport.md §3.2`](02-transport.md). |
+| `finalSeqNo` | integer | No | Canonical session-final marker — the highest `seqNo` emitted for this session. Servers MUST discard MeterValues with `seqNo > finalSeqNo` received after this SessionEnded for the same `sessionId`. See [`02-transport.md §3.2`](02-transport.md). |
 
 **`reason` enum values:**
 
