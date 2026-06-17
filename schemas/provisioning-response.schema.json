@@ -49,6 +49,11 @@
       "pattern": "^-----BEGIN CERTIFICATE-----[\\s\\S]+-----END CERTIFICATE-----\\s*$",
       "description": "PEM-encoded trust anchor (Root CA, or Root + intermediate chain) used by the station to validate the broker's TLS server certificate during mTLS. OPTIONAL: when present, station MUST use as trust anchor; when absent, station MAY use system trust store. May contain multiple concatenated PEM blocks."
     },
+    "rootCaThumbprint": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "OPTIONAL. SHA-256 thumbprint of the DER-encoded Root CA certificate, formatted as `sha256:<64 lowercase hex>`. Enables a station to pin the Root CA trust anchor (e.g. in NVS) and confirm it matches the apex of stationCaChain. Stations that do not implement trust-anchor pinning MAY ignore this field; servers are not required to emit it."
+    },
     "serverVerifyKey": {
       "type": "string",
       "minLength": 100,
