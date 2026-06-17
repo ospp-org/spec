@@ -257,7 +257,7 @@ OSPP uses two complementary liveness mechanisms:
 
 - After boot, the station MUST send a Heartbeat REQUEST every `heartbeatIntervalSec` seconds (default: 30s, configurable via BootNotification response or ChangeConfiguration).
 - The server responds with `serverTime` for clock synchronization.
-- If the server does not receive a Heartbeat (or any message) from a station for **3.5 × heartbeatIntervalSec**, it SHOULD consider the station offline.
+- If the server does not receive a Heartbeat (or any message) from a station for **3.5 × heartbeatIntervalSec**, it MUST consider the station offline.
 
 These two mechanisms are intentionally redundant. MQTT keep-alive detects transport failures; OSPP heartbeat detects application-level hangs and provides clock sync.
 
