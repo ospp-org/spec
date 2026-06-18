@@ -38,7 +38,7 @@
     "source": {
       "type": "string",
       "enum": ["Server", "Station"],
-      "description": "The origin of this message. Most messages use the literal sender ('station' for station-originated, 'server' for server-originated). For ConnectionLost (LWT), the source is 'server' because the broker-side infrastructure detects the disconnection and publishes the retained will message."
+      "description": "The origin of this message. Most messages use the literal sender ('Station' for station-originated, 'Server' for server-originated). For ConnectionLost (LWT), the source is 'Server' because the broker publishes the will message on the station's behalf when it detects the disconnection."
     },
     "protocolVersion": {
       "type": "string",

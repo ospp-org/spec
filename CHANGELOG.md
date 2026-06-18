@@ -86,6 +86,24 @@ the wire).
   messages (`### N.M MessageName` subsections under `03-messages.md`
   = 40, badge was 34) and schemas (47 mqtt + 13 ble + 18 common + 1
   top-level = 79, badge was 67).
+- **prose (schema description):** `schemas/common/mqtt-envelope.schema.json`
+  — the `source` field description used lowercase `'station'`/`'server'` under a
+  PascalCase `enum` (`["Server","Station"]`) and called the LWT a "retained will
+  message" (Will Retain is `false`, `02-transport.md §3.4`). The description now
+  uses the PascalCase literals and states the broker publishes the will message
+  on the station's behalf when it detects the disconnection. Description-only —
+  no `enum`/`required`/`pattern` change, no wire change.
+- **prose:** `02-transport.md §2.2` now states that the specification-document
+  version in each chapter header (e.g. *OSPP Version: 0.5.0*) is independent of
+  the wire `protocolVersion` field (e.g. `0.2.1`) — the two evolve separately and
+  need not match. Removes a recurring reader trap (header `0.5.0` vs every wire
+  example `0.2.1`); the examples are correct and unchanged.
+- **prose:** `06-security.md §5.1` selective-signing rationale corrected — it
+  claimed "HMAC protects against broker compromise", but §5.2 delivers the
+  per-station session key *through* the broker at boot, so a fully-compromised
+  broker can forge HMACs. The rationale now scopes HMAC to publish-capable-but-
+  not-intercept-capable adversaries (a leaked management-API credential, an ACL
+  regression). Explanatory prose only; the signing classification is unchanged.
 
 ### Verification
 

@@ -636,7 +636,7 @@ The `MessageSigningMode` configuration key controls HMAC-SHA256 message signing.
 
 When `MessageSigningMode` is `Critical` or `All`, applicable MQTT messages MUST include an HMAC-SHA256 message authentication code in the `mac` envelope field. This provides **defense-in-depth** — message integrity protection independent of TLS.
 
-> **Rationale for selective signing:** The MQTT broker terminates TLS on both sides (Server↔Broker and Broker↔Station are separate TLS sessions). A compromised broker sees plaintext. HMAC protects against broker compromise — a real threat for financial and command messages. However, high-frequency informational messages (Heartbeat, StatusNotification, MeterValues) have zero financial impact, and signing them adds CPU overhead with no security value.
+> **Rationale for selective signing:** The MQTT broker terminates TLS on both sides (Server↔Broker and Broker↔Station are separate TLS sessions). A compromised broker sees plaintext — and because the per-station session key is itself delivered through the broker at boot (§5.2), HMAC does **not** defend against a fully-compromised broker. What it does protect against is an adversary that can **publish** to the broker without intercepting its traffic — a leaked management-API credential, an ACL regression, or another publish-capable service — which is the realistic threat for financial and command messages. However, high-frequency informational messages (Heartbeat, StatusNotification, MeterValues) have zero financial impact, and signing them adds CPU overhead with no security value.
 
 ### 5.2 Session Key Establishment
 
