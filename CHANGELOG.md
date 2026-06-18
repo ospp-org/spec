@@ -38,6 +38,19 @@ the wire).
 
 ### Fixed
 
+- **prose/contradiction-resolution:** `profiles/offline/ble-handshake.md` §4.1
+  `sessionProof` deviated from the normative `06-security.md §6.5.1`. §4.1
+  specified **base64** over a **3-input** HMAC (`type || passId || counter`,
+  decimal-ASCII counter) plus a MUST-reject-hex clause — directly contradicting
+  §6.5.1's canonical **hex / 4-input** construction (`offlinePassId | BE32(txCounter)
+  | bayId | serviceId`, pipe-delimited, hex-lowercase 64 chars). §4.1 now defers to
+  §6.5.1 as the single normative definition, and the base64 examples in §4.1 and
+  `03-messages.md §4.1` are converted to illustrative hex. `06-security.md §6.5.1`
+  is unchanged and is already the reference impl (`ospp-sdk-php
+  SessionProofCalculator` follows it verbatim). **No schema change** (the
+  OfflineAuthRequest `sessionProof` field carried no encoding `pattern`, enforcing
+  neither side) and **no wire change** — the canonical reading was always §6.5.1;
+  this only removes the contradicting prose. No-bump rationale above applies.
 - **prose:** `profiles/transaction/transaction-event.md` §5 (Response
   Payload) + §5.1 (Response Status Values) + §6 (Processing Rules)
   now enumerate `Deferred` as the 5th `status` value (was 4),

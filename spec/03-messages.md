@@ -2564,9 +2564,11 @@ The app MUST request biometric or PIN confirmation from the user before sending 
     "signature": "MEUCIQDXKT0ewRBp/nkPY/qh6mBjwSn4BE7fmjDTdjcP1dhIyQIgPyXM1VnFZtrG6WaOgpRwiQIeFF2I2zeFsb05dyel1rE="
   },
   "counter": 5,
-  "sessionProof": "Iy0WMLx+39Vf5zEyStf2Qxls/7qqnVvVejKK0GsSTSo="
+  "sessionProof": "e3a1f8b2c4d6e8f0a2b4c6d8e0f2a4b6c8d0e2f4a6b8c0d2e4f6a8b0c2d4e6f8"
 }
 ```
+
+> The `sessionProof` above is illustrative (hex-encoded lowercase HMAC-SHA256, 64 chars), computed per [§6.5.1](06-security.md#651-sessionproof-computation-normative); it does not correspond to the example fields shown.
 
 ---
 

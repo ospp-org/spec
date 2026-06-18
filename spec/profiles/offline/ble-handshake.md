@@ -80,9 +80,9 @@ Used when the app has a locally-stored OfflinePass. In the **Full Offline** scen
 | `type` | string | Yes | `OfflineAuthRequest` (constant). |
 | `offlinePass` | object | Yes | Full OfflinePass object (see [offline-pass.md](offline-pass.md)). |
 | `counter` | integer | Yes | Monotonic usage counter (minimum 0). **MUST** be strictly greater than the last counter seen by the station for this pass. |
-| `sessionProof` | string | Yes | HMAC-SHA256 proof binding this request to the derived session key. Computed as `HMAC-SHA256(sessionKey, type || offlinePass.passId || counter)`. |
+| `sessionProof` | string | Yes | Hex-encoded lowercase HMAC-SHA256 (64 chars) binding this request to the derived session key. Computed per the normative formula in [06-security.md §6.5.1](../../06-security.md#651-sessionproof-computation-normative). |
 
-The HMAC input is the concatenation, in order, of the UTF-8 bytes of `type`, `offlinePass.passId`, and `counter` (no delimiters, no length prefixes). The `counter` integer **MUST** be serialized as its shortest decimal ASCII representation with no leading zeros and no sign character (e.g. `5` → bytes `"5"`, `42` → bytes `"42"`, `0` → bytes `"0"`). The resulting HMAC tag is base64-encoded for transport. This binding is canonical: any deviation (binary encoding, hexadecimal, zero-padding, locale-specific digits) produces an incompatible proof and **MUST** be rejected with error `2013 BLE_AUTH_FAILED`.
+The `sessionProof` construction is normative and defined once in [06-security.md §6.5.1](../../06-security.md#651-sessionproof-computation-normative): `HMAC-SHA256(SessionKey, UTF8(offlinePassId) || UTF8("|") || BE32(txCounter) || UTF8("|") || UTF8(bayId) || UTF8("|") || UTF8(serviceId))`, output **hex-encoded lowercase, 64 characters**. `|` is the literal pipe (`0x7C`) domain separator, `BE32` is the big-endian 4-byte encoding of `counter`, and `bayId`/`serviceId` are the bay and service the user is requesting (from the BLE session context). A `sessionProof` that does not match the station's own computation per §6.5.1 **MUST** be rejected with error `2013 BLE_AUTH_FAILED`.
 
 **Example:**
 
@@ -115,9 +115,11 @@ The HMAC input is the concatenation, in order, of the UTF-8 bytes of `type`, `of
     "signature": "MEUCIQD6sC/bKX/fkNskHHEGr01INojLAlu4I6zsEm1keSjYoQIgJAjdhwiYhlQOX/BAqsFq9RRgxpXGSXJU6BeL0qMBnMc="
   },
   "counter": 5,
-  "sessionProof": "Iy0WMLx+39Vf5zEyStf2Qxls/7qqnVvVejKK0GsSTSo="
+  "sessionProof": "e3a1f8b2c4d6e8f0a2b4c6d8e0f2a4b6c8d0e2f4a6b8c0d2e4f6a8b0c2d4e6f8"
 }
 ```
+
+> The `sessionProof` above is illustrative (hex-encoded lowercase HMAC-SHA256, 64 chars). It does not correspond to the example fields shown; see [06-security.md §6.5.1](../../06-security.md#651-sessionproof-computation-normative) for the canonical construction and test vector.
 
 ### 4.2 ServerSignedAuth (Partial A)
 
