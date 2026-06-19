@@ -5,7 +5,7 @@
     "sub": "sub_premiumUser42XyZ",
     "deviceId": "d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2",
     "issuedAt": "2026-02-12T14:30:00.000Z",
-    "expiresAt": "2026-02-19T14:30:00.000Z",
+    "expiresAt": "2026-02-13T14:30:00.000Z",
     "policyVersion": 3,
     "revocationEpoch": 2,
     "offlineAllowance": {
@@ -24,7 +24,7 @@
       "stationMaxOfflineTx": 200
     },
     "signatureAlgorithm": "ECDSA-P256-SHA256",
-    "signature": "MEUCIQCdlApaQayBu1UQviP88L/ww80No4JklE9jsQ9N4YydNwIgLtywTcCBaADp7krIlA7aelgFo8rl/ZU0fTWq3w5uB/0="
+    "signature": "MEUCIQCnEHKHHsez+291Vw16fp5axR7XFEMSi3pBqRwSi+rhMQIgLSX3qEp8AJMnB85SsS8FsKR1O1wLQUqxXVm/thb74Yg="
   },
   "counter": 7,
   "sessionProof": "s67QuiN60Suqv0Zn5OXRYQRv24szytxFhOtvV7cZ/gc="

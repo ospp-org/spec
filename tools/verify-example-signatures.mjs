@@ -243,6 +243,24 @@ function verifyOfflinePass(outer, file, pubPem) {
     return { file, ok: false, reason: 'offlinePass.signature failed to verify against the provided public key' };
   }
 
+  // Profile constraint (beyond JSON-schema validity): a "valid" OfflinePass
+  // vector MUST also satisfy the offline-pass profile. Maximum validity is
+  // 24 hours from issuedAt (offline-pass.md §2). Schema-validity is necessary
+  // but not sufficient — this guards a vector marked "valid" from silently
+  // shipping a profile violation (N14: both offline-auth-request vectors
+  // shipped a 7-day window). Other profile invariants can be added here.
+  if (typeof body.issuedAt === 'string' && typeof body.expiresAt === 'string') {
+    const issuedMs = Date.parse(body.issuedAt);
+    const expiresMs = Date.parse(body.expiresAt);
+    if (Number.isFinite(issuedMs) && Number.isFinite(expiresMs)) {
+      const MAX_VALIDITY_MS = 24 * 60 * 60 * 1000;
+      if (expiresMs - issuedMs > MAX_VALIDITY_MS) {
+        const hours = ((expiresMs - issuedMs) / 3_600_000).toFixed(1);
+        return { file, ok: false, reason: `offlinePass validity ${hours}h exceeds the 24h profile maximum (offline-pass.md §2)` };
+      }
+    }
+  }
+
   // Cross-check pass fields against any outer-level fields that mirror them
   // (e.g. authorize-offline-pass.request has top-level offlinePassId, deviceId
   // that mirror pass.passId / pass.deviceId, where present).
