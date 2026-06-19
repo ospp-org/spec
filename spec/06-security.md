@@ -962,7 +962,7 @@ Each offline transaction includes a monotonically increasing `txCounter` (per st
 
 ### 6.5 BLE Session Key Derivation — HKDF-SHA256
 
-A per-handshake session key is derived from an **ephemeral-static + ephemeral-ephemeral ECDH P-256 exchange** combined with the nonces exchanged in Hello [MSG-029] / Challenge [MSG-030]. This construction replaces the BLE Long-Term Key (LTK) derivation used through v0.5.x. The LTK is **unobtainable by a third-party mobile application** on both iOS (Core Bluetooth exposes no key material) and Android (link keys live in the system Bluetooth stack), so the v0.5.x derivation was never executable by a real app — and reducing the LTK to a public/zero value collapses the session key onto values every endpoint knows, turning the OfflinePass into a bearer token. The design rationale is recorded in [ADR-002](../../adr/ADR-002-ble-handshake-security-architecture.md). Security no longer depends on BLE pairing (§6.4); it is provided end-to-end at the application layer by this exchange, the StationIdentity certificate (§6.5.2), and the AEAD channel (§6.5.3).
+A per-handshake session key is derived from an **ephemeral-static + ephemeral-ephemeral ECDH P-256 exchange** combined with the nonces exchanged in Hello [MSG-029] / Challenge [MSG-030]. This construction replaces the BLE Long-Term Key (LTK) derivation used through v0.5.x. The LTK is **unobtainable by a third-party mobile application** on both iOS (Core Bluetooth exposes no key material) and Android (link keys live in the system Bluetooth stack), so the v0.5.x derivation was never executable by a real app — and reducing the LTK to a public/zero value collapses the session key onto values every endpoint knows, turning the OfflinePass into a bearer token. The design rationale is recorded in [ADR-002](../adr/ADR-002-ble-handshake-security-architecture.md). Security no longer depends on BLE pairing (§6.4); it is provided end-to-end at the application layer by this exchange, the StationIdentity certificate (§6.5.2), and the AEAD channel (§6.5.3).
 
 **Two ECDH operations — full forward secrecy:**
 
@@ -1046,7 +1046,7 @@ sessionProof = Base64( HMAC-SHA256( SessionKey,
 
 ### 6.5.2 StationIdentity Certificate
 
-The **StationIdentity certificate** is a server-signed credential that binds a station's business identity and issuing organization to its **dedicated static BLE ECDH public key**. It is the trust anchor that lets a mobile app authenticate a station offline, before transmitting any OfflinePass. It is carried in the BLE Challenge [MSG-030] and is defined by [`station-identity.schema.json`](../../schemas/ble/station-identity.schema.json).
+The **StationIdentity certificate** is a server-signed credential that binds a station's business identity and issuing organization to its **dedicated static BLE ECDH public key**. It is the trust anchor that lets a mobile app authenticate a station offline, before transmitting any OfflinePass. It is carried in the BLE Challenge [MSG-030] and is defined by [`station-identity.schema.json`](../schemas/ble/station-identity.schema.json).
 
 **Certificate body (signed):**
 
@@ -1065,7 +1065,7 @@ The wrapper adds `signatureAlgorithm` (`"ECDSA-P256-SHA256"`) and `signature`. T
 **Dedicated BLE key pair (key separation).** `stationPubKey` is a key pair **distinct from** the station's ECDSA P-256 mTLS/receipt key (§4.3): one P-256 key MUST NOT be used for both ECDSA signing and ECDH key agreement (NIST SP 800-56A key-separation). The station generates this ECDH key pair **on-device** at provisioning (the private key never leaves the station, exactly as for the TLS key) and submits the public key in the provisioning request alongside its TLS CSR.
 
 **Issuance, delivery, and rotation.**
-- **Issuance.** At provisioning the server signs the StationIdentity over the station-submitted `stationPubKey` and returns it in the provisioning response `stationIdentity` field ([`provisioning-response.schema.json`](../../schemas/provisioning-response.schema.json)). Server-side this reuses the existing OfflinePass signing path; no new cryptographic machinery is added.
+- **Issuance.** At provisioning the server signs the StationIdentity over the station-submitted `stationPubKey` and returns it in the provisioning response `stationIdentity` field ([`provisioning-response.schema.json`](../schemas/provisioning-response.schema.json)). Server-side this reuses the existing OfflinePass signing path; no new cryptographic machinery is added.
 - **Delivery to the station.** Provisioning response, and thereafter ChangeConfiguration [MSG-013] (key `StationIdentityCertificate`) for re-issuance — mirroring `OfflinePassPublicKey` distribution (§6.7).
 - **Rotation.** `expiresAt` SHOULD be short; the server re-issues before expiry. During the re-issuance window a station MAY hold both its current and previous certificate. **Server-key** rotation (§6.7) interacts with verification: the app MUST accept a StationIdentity whose signature verifies under **any** server signing key currently in its trusted set (the overlap set the server publishes during rotation), exactly as a station accepts OfflinePasses under the current or previous server key.
 
@@ -1102,7 +1102,7 @@ An endpoint **MUST** abort the session (no wraparound) before a direction's coun
 
 **Pin 7 — AAD (byte-exact).** The Additional Authenticated Data for **every** frame is the 32-byte `transcriptHash` (§6.5 Pin 4): `AAD = transcriptHash`. This binds each frame to the exact handshake instance, so a frame can never be lifted into a different session even in the theoretical event of a key collision.
 
-**Frame format.** A secure frame is the JSON object defined by [`ble-secure-frame.schema.json`](../../schemas/ble/ble-secure-frame.schema.json):
+**Frame format.** A secure frame is the JSON object defined by [`ble-secure-frame.schema.json`](../schemas/ble/ble-secure-frame.schema.json):
 
 ```
 plaintext = UTF8(<the inner message's exact JSON bytes>)

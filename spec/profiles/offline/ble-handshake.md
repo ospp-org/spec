@@ -276,7 +276,7 @@ Both the app and the station **MUST** derive a shared session key using HKDF-SHA
 |-----------|-----------------------------------------------|
 | **IKM** | `es ‖ ee ‖ appNonce ‖ stationNonce` (4 × 32 bytes). `es = ECDH(appEphemeralPriv, stationStaticPub)`, `ee = ECDH(appEphemeralPriv, stationEphemeralPub)`. Each ECDH secret is the X-coordinate, big-endian, 32 bytes, zero-left-padded (06-security §6.5 Pin 1). `appNonce`/`stationNonce` are the decoded 32-byte nonce values. |
 | **Salt** | UTF-8 bytes of `"OSPP_BLE_SESSION_V2"` |
-| **Info** | `LP(deviceId) ‖ LP(stationId) ‖ LP(transcriptHash)`, where `LP(x) = U16BE(len(x)) ‖ x` and `transcriptHash = SHA-256(LP16(helloBytes) ‖ LP16(challengeBytes))` over the raw reassembled wire bytes (06-security §6.5 Pin 3/Pin 4). `stationId` is taken from the verified StationIdentity certificate (§4.x / 06-security §6.5.2). |
+| **Info** | `LP(deviceId) ‖ LP(stationId) ‖ LP(transcriptHash)`, where `LP(x) = U16BE(len(x)) ‖ x` and `transcriptHash = SHA-256(LP16(helloBytes) ‖ LP16(challengeBytes))` over the raw reassembled wire bytes (06-security §6.5 Pin 3/Pin 4). `stationId` is taken from the verified StationIdentity certificate in the Challenge (§3; defined in [06-security.md §6.5.2](../../06-security.md#652-stationidentity-certificate)). |
 | **Output** | 32 bytes (256-bit session key) |
 
 **Pseudocode:**

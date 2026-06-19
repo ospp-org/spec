@@ -53,7 +53,7 @@ The server **MUST** rotate signing keys periodically. Key rotation is communicat
 
 ## 4. Validation Checks (10)
 
-The station (or server, in Partial B) **MUST** perform all 10 checks. Processing **MUST** stop at the first failure.
+The station **MUST** perform all 10 checks below. Processing **MUST** stop at the first failure. (In the **Partial B** scenario the **server** runs the same credential checks and additionally applies an org-binding check — see [`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks-11-checks) check #11, errorCode `2015` — for 11 checks total. The org check is server-side because it compares against the server's stored pass record; the station, validating offline, cannot perform it without `organization_id` in the signed pass, which is deferred to D5.)
 
 > **Implementation note:** Implementations **SHOULD** validate structural integrity (required fields, types, valid base64 signature) before check #1. This avoids the expensive ECDSA verification on malformed payloads. Structural failures use `2002 OFFLINE_PASS_INVALID`.
 
