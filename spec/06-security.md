@@ -980,6 +980,8 @@ SessionKey = HKDF-SHA256(
 
 **Purpose:** The session key binds the authentication to the specific BLE session. The `sessionProof` in OfflineAuthRequest [MSG-031] is an HMAC computed with this key, proving the sender participated in the handshake.
 
+**Rationale — HMAC here vs ECDSA elsewhere.** OSPP uses ECDSA-P256 wherever the verifier holds only the signer's *public* key and the artifact must be transferable and non-repudiable across parties that never shared a secret — the OfflinePass, the transaction receipt, and the ServerSignedAuth blob. It uses HMAC-SHA256 wherever both parties already hold a *fresh shared secret* (the per-handshake session key) and the only property required is ephemeral proof-of-participation — the `sessionProof` and the `sessionKeyConfirmation`, neither of which has to outlive the BLE session or convince a third party. Using ECDSA for those would force a per-app key pair plus certificate distribution while buying nothing (the proof is deliberately non-transferable), and symmetric MAC verification is also markedly cheaper on the station MCU.
+
 ### 6.5.1 sessionProof Computation (Normative)
 
 The `sessionProof` field in OfflineAuthRequest [MSG-031] **MUST** be computed as follows:
