@@ -235,34 +235,36 @@ On `Accepted`, the `sessionKeyConfirmation` field proves to the app that the sta
 
 ## 6. Session Key Derivation (HKDF-SHA256)
 
-> **Note:** The normative HKDF parameters are defined in [Chapter 06 — Security](../../06-security.md). This section mirrors those values for implementer convenience.
+> **Note:** The normative key-derivation construction is defined in [Chapter 06 — Security §6.5](../../06-security.md#65-ble-session-key-derivation--hkdf-sha256). This section mirrors it for implementer convenience; on any discrepancy, §6.5 governs.
 
-Both the app and the station **MUST** derive a shared session key using HKDF-SHA256 (RFC 5869) with the following parameters:
+Both the app and the station **MUST** derive a shared session key using HKDF-SHA256 (RFC 5869) over a **two-operation ECDH P-256 exchange** (the BLE Long-Term Key is NOT used — it is unobtainable by a mobile app; see [ADR-002](../../../adr/ADR-002-ble-handshake-security-architecture.md)) with the following parameters:
 
 | Parameter | Value |
 |-----------|-----------------------------------------------|
-| **IKM** | `LTK \|\| appNonce \|\| stationNonce` (LTK from BLE pairing concatenated with the decoded nonce bytes) |
-| **Salt** | UTF-8 bytes of `"OSPP_BLE_SESSION_V1"` |
-| **Info** | `deviceId \|\| stationId` |
+| **IKM** | `es ‖ ee ‖ appNonce ‖ stationNonce` (4 × 32 bytes). `es = ECDH(appEphemeralPriv, stationStaticPub)`, `ee = ECDH(appEphemeralPriv, stationEphemeralPub)`. Each ECDH secret is the X-coordinate, big-endian, 32 bytes, zero-left-padded (06-security §6.5 Pin 1). `appNonce`/`stationNonce` are the decoded 32-byte nonce values. |
+| **Salt** | UTF-8 bytes of `"OSPP_BLE_SESSION_V2"` |
+| **Info** | `LP(deviceId) ‖ LP(stationId) ‖ LP(transcriptHash)`, where `LP(x) = U16BE(len(x)) ‖ x` and `transcriptHash = SHA-256(LP16(helloBytes) ‖ LP16(challengeBytes))` over the raw reassembled wire bytes (06-security §6.5 Pin 3/Pin 4). `stationId` is taken from the verified StationIdentity certificate (§4.x / 06-security §6.5.2). |
 | **Output** | 32 bytes (256-bit session key) |
 
 **Pseudocode:**
 
 ```
+es = ECDH(appEphemeralPriv, stationStaticPub)    // station's certified static BLE key
+ee = ECDH(appEphemeralPriv, stationEphemeralPub) // forward secrecy
 SessionKey = HKDF-SHA256(
-  ikm    = LTK || appNonce || stationNonce,
-  salt   = "OSPP_BLE_SESSION_V1",
-  info   = deviceId || stationId,
+  ikm    = es ‖ ee ‖ appNonce ‖ stationNonce,    // each 32 bytes, in this order
+  salt   = "OSPP_BLE_SESSION_V2",
+  info   = LP(deviceId) ‖ LP(stationId) ‖ LP(transcriptHash),
   length = 32 bytes
 )
 ```
 
 The derived session key is used for:
-1. Computing the `sessionProof` in OfflineAuthRequest.
-2. Computing the `sessionKeyConfirmation` in AuthResponse.
-3. Optionally encrypting subsequent BLE payloads if payload-level encryption is enabled.
+1. Computing the `sessionProof` in OfflineAuthRequest (§4.1).
+2. Computing the `sessionKeyConfirmation` in AuthResponse (§5).
+3. Expanding the directional AEAD keys `k_app_to_station` / `k_station_to_app` that encrypt-and-authenticate **all** post-Challenge messages (06-security §6.5.3). Post-Challenge plaintext is NOT permitted.
 
-Both parties **MUST** use cryptographically secure random number generators for nonce generation. Nonces **MUST NOT** be reused across handshakes.
+The app **MUST** verify the StationIdentity certificate (06-security §6.5.2) before sending any OfflinePass. Both parties **MUST** use cryptographically secure random number generators for the ephemeral key pairs and nonces. Ephemeral keys and nonces **MUST NOT** be reused across handshakes.
 
 ## 7. Rejection Reasons
 

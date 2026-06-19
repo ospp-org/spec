@@ -636,7 +636,7 @@ BLE link encryption alone is insufficient for OSPP. The protocol provides additi
 | Mechanism | Purpose |
 |-----------|---------|
 | **OfflinePass** (ECDSA P-256) | Server-signed credential authorizing offline service delivery |
-| **Session Key** (HKDF-SHA256) | Derived from LTK + nonces, used for BLE application-layer payload encryption. Station and mobile derive a shared session key via HKDF; all BLE payloads after handshake **MUST** be encrypted with AES-256-GCM using this key. |
+| **Session Key** (ECDH P-256 + HKDF-SHA256) | Derived from a two-operation ECDH P-256 exchange (ephemeral-static + ephemeral-ephemeral) plus nonces — NOT from the BLE LTK. Station and mobile derive a shared session key per [Chapter 06 — Security §6.5](06-security.md#65-ble-session-key-derivation--hkdf-sha256); all BLE messages after the Challenge **MUST** be encrypted and authenticated with **ChaCha20-Poly1305 (IETF, RFC 8439)** under per-direction keys expanded from it (§6.5.3). |
 | **Receipt** (ECDSA-P256-SHA256) | Station-signed proof of service delivery |
 
 See [Offline Profile — BLE Handshake](profiles/offline/ble-handshake.md) for the full authentication flow.

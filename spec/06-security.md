@@ -959,26 +959,65 @@ BLE connections MUST use **LE Secure Connections** (LESC) introduced in Bluetoot
 
 ### 6.5 BLE Session Key Derivation — HKDF-SHA256
 
-A per-handshake session key is derived from the BLE LTK and the nonces exchanged in Hello [MSG-029] / Challenge [MSG-030]:
+A per-handshake session key is derived from an **ephemeral-static + ephemeral-ephemeral ECDH P-256 exchange** combined with the nonces exchanged in Hello [MSG-029] / Challenge [MSG-030]. This construction replaces the BLE Long-Term Key (LTK) derivation used through v0.5.x. The LTK is **unobtainable by a third-party mobile application** on both iOS (Core Bluetooth exposes no key material) and Android (link keys live in the system Bluetooth stack), so the v0.5.x derivation was never executable by a real app — and reducing the LTK to a public/zero value collapses the session key onto values every endpoint knows, turning the OfflinePass into a bearer token. The design rationale is recorded in [ADR-002](../../adr/ADR-002-ble-handshake-security-architecture.md). Security no longer depends on BLE pairing (§6.4); it is provided end-to-end at the application layer by this exchange, the StationIdentity certificate (§6.5.2), and the AEAD channel (§6.5.3).
+
+**Two ECDH operations — full forward secrecy:**
+
+| Secret | Computation | Property |
+|--------|-------------|----------|
+| `es` | `ECDH(appEphemeralPriv, stationStaticPub)` | **Authenticates the station** — only the holder of the certified static BLE key (§6.5.2) can compute it. |
+| `ee` | `ECDH(appEphemeralPriv, stationEphemeralPub)` | **Forward secrecy** — both ephemeral keys are destroyed after the session, so a later static-key compromise cannot decrypt recorded sessions. |
+
+`stationStaticPub` is the `stationPubKey` carried in the **verified** StationIdentity certificate (§6.5.2). The app's ephemeral key pair (`appEphemeralPriv`/`appEphemeralPubKey`) and the station's ephemeral key pair (`stationEphemeralPriv`/`stationEphemeralPubKey`) are freshly generated per handshake and carried in Hello and Challenge respectively (see [ble-handshake.md](profiles/offline/ble-handshake.md)).
+
+**Pin 1 — ECDH shared-secret encoding (byte-exact).** Each ECDH secret (`es`, `ee`) is encoded as the **X-coordinate of the shared point, big-endian, exactly 32 bytes, zero-left-padded** (RFC 5903 §8.1). Implementations MUST take the X-coordinate only and left-pad it to 32 bytes. Library behaviour differs and MUST be normalised: `@noble/curves` `getSharedSecret` returns a **33-byte compressed point** (`0x02`/`0x03` prefix) — the prefix byte MUST be stripped and the remaining X left-padded to 32 bytes; PHP `openssl_pkey_derive` and mbedTLS return the 32-byte X directly. (This is the same byte-exactness class as the EC-scalar left-pad fix shipped in `ospp/protocol` 0.5.7.)
+
+**Pin 3 — Key schedule (byte-exact).**
 
 ```
-SessionKey = HKDF-SHA256(
-  ikm    = LTK || appNonce || stationNonce,
-  salt   = "OSPP_BLE_SESSION_V1",
-  info   = deviceId || stationId,
-  length = 32 bytes
-)
+IKM  = es ‖ ee ‖ appNonce ‖ stationNonce          // 4 × 32 bytes = 128 bytes, in exactly this order
+salt = UTF8("OSPP_BLE_SESSION_V2")                 // the _V2 suffix domain-separates this ECDH
+                                                    // construction from the retired LTK one (_V1)
+info = LP(deviceId) ‖ LP(stationId) ‖ LP(transcriptHash)
+SessionKey = HKDF-SHA256(IKM, salt, info, L = 32)  // RFC 5869 (Extract-then-Expand), 32-byte output
 ```
+
+- `appNonce` / `stationNonce` are the **decoded 32-byte nonce values**, NOT their Base64 text.
+- `LP(x)` denotes a **length-prefixed field**: `U16BE(byteLength(x)) ‖ x`, where `U16BE` is an unsigned 16-bit big-endian length. Length-prefixing every `info` component removes the concatenation ambiguity that an attacker-chosen `deviceId` would otherwise introduce (this closes finding N23 — the v0.5.x `info = deviceId || stationId` had no delimiter).
+- `deviceId` is taken from Hello [MSG-029]; `stationId` is taken from the **verified StationIdentity certificate** (§6.5.2), NOT from the unauthenticated StationInfo read.
+- `transcriptHash` is defined in Pin 4.
+
+**Pin 4 — Handshake transcript (byte-exact).**
+
+```
+transcriptHash = SHA-256( LP16(helloBytes) ‖ LP16(challengeBytes) )
+```
+
+where `LP16(x) = U16BE(byteLength(x)) ‖ x`, and `helloBytes` / `challengeBytes` are the **exact reassembled UTF-8 byte sequences of the Hello and Challenge messages as transmitted on the wire** — post-defragmentation ([ble-transport.md §11](profiles/offline/ble-transport.md)), before any AEAD framing — concatenated in that fixed order. The transcript is computed over **raw transmitted bytes, NOT a re-canonicalized form**: each party hashes the exact octets it sent (for the message it sent) and the exact octets it received (for the message it received); on the lossless GATT link these byte sequences are identical on both ends. Binding `transcriptHash` into `info` makes the SessionKey depend on **every field of both handshake messages** — both ephemeral public keys, both nonces, the certificate, `stationConnectivity`, `availableServices`, `appVersion` — so tampering with any plaintext handshake field produces divergent keys on the two ends and the handshake fails at the first AEAD frame or the `sessionProof` check.
+
+**Directional AEAD sub-keys.** The 256-bit `SessionKey` is expanded into two independent directional keys for the AEAD channel (§6.5.3):
+
+```
+k_app_to_station = HKDF-Expand(SessionKey, UTF8("OSPP-BLE-v0.6.0-key-app-to-station"), 32)
+k_station_to_app = HKDF-Expand(SessionKey, UTF8("OSPP-BLE-v0.6.0-key-station-to-app"), 32)
+```
+
+The two `info` labels are distinct fixed ASCII constants (no length-prefix needed — each is a single fixed string, not a concatenation of variable fields). `SessionKey` itself keys the `sessionProof` (§6.5.1) and the `sessionKeyConfirmation` (`HMAC-SHA256(SessionKey, UTF8("AuthResponse_OK"))`). These two HMAC data inputs and the two HKDF-Expand labels are mutually domain-separated by distinct leading bytes, so deriving the directional keys from `SessionKey` while also using it for the proofs leaks nothing between them (HMAC-SHA256 is a PRF).
+
+**Derivation timing.** The app has all inputs once it receives Challenge; the station has all inputs once it has received Hello and generated/sent Challenge. Both parties therefore derive `SessionKey` immediately after Challenge, before any Authentication message. Station authentication is **implicit** — only the holder of the certified static key can compute `es` and hence `SessionKey` — and is confirmed **explicitly** by `sessionKeyConfirmation` in the AuthResponse and by the first AEAD frame the station emits (model: "Noise-N(X) + key confirmation").
 
 | Parameter | Source |
 |-----------|--------|
-| `LTK` | BLE Long-Term Key (from LESC pairing) |
+| `es`, `ee` | ECDH P-256 shared secrets (Pin 1) |
 | `appNonce` | 32 random bytes from Hello [MSG-029] |
 | `stationNonce` | 32 random bytes from Challenge [MSG-030] |
-| `deviceId` | From Hello [MSG-029] |
-| `stationId` | From StationInfo [MSG-027] |
+| `appEphemeralPubKey` | Hello [MSG-029] — compressed SEC1 (Pin 2, §6.5.2) |
+| `stationEphemeralPubKey` | Challenge [MSG-030] — compressed SEC1 (Pin 2, §6.5.2) |
+| `stationStaticPub` | `stationPubKey` from the verified StationIdentity (§6.5.2) |
+| `deviceId` | Hello [MSG-029] |
+| `stationId` | verified StationIdentity certificate (§6.5.2) |
 
-**Purpose:** The session key binds the authentication to the specific BLE session. The `sessionProof` in OfflineAuthRequest [MSG-031] is an HMAC computed with this key, proving the sender participated in the handshake.
+**Purpose:** The session key binds the authentication to this specific handshake **and** to the cryptographically authenticated station identity (a stronger binding than the v0.5.x LTK channel binding). The `sessionProof` in OfflineAuthRequest [MSG-031] is an HMAC computed with this key (§6.5.1), and all post-Challenge traffic is encrypted and authenticated under the directional keys (§6.5.3).
 
 **Rationale — HMAC here vs ECDSA elsewhere.** OSPP uses ECDSA-P256 wherever the verifier holds only the signer's *public* key and the artifact must be transferable and non-repudiable across parties that never shared a secret — the OfflinePass, the transaction receipt, and the ServerSignedAuth blob. It uses HMAC-SHA256 wherever both parties already hold a *fresh shared secret* (the per-handshake session key) and the only property required is ephemeral proof-of-participation — the `sessionProof` and the `sessionKeyConfirmation`, neither of which has to outlive the BLE session or convince a third party. Using ECDSA for those would force a per-app key pair plus certificate distribution while buying nothing (the proof is deliberately non-transferable), and symmetric MAC verification is also markedly cheaper on the station MCU.
 
