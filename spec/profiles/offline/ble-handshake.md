@@ -6,6 +6,8 @@
 
 The BLE handshake establishes a secure, authenticated session between the mobile app and the station. It follows a four-step sequence: HELLO, CHALLENGE, Authentication, and AuthResponse. The handshake **MUST** complete within 10 seconds from the first Hello write; if it does not, both parties **MUST** abort and the station **MUST** report error `2013 BLE_AUTH_FAILED`.
 
+**Timing model (Non-normative).** The station measures the 10-second budget from **t₀ = reception of the first `Hello` write**; the app measures the same budget from when it issues that write. Implementers MAY apportion the budget across the four steps as internal sub-deadlines (for example, a small fixed share to reach `Challenge` and the remainder for `Authentication` + `AuthResponse`), but any such per-step figures are guidance only, not normative limits. The 5-second fragmentation/reassembly timeout ([ble-transport.md §11](ble-transport.md)) is a **per-message** bound that runs *inside* this total budget rather than in addition to it: the fragments of any single message that take longer than 5 s are discarded, and the handshake as a whole still has only the one 10-second envelope to complete.
+
 ## 2. Step 1: Hello
 
 The app initiates the handshake by writing a Hello message to characteristic FFF3.
