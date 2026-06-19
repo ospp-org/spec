@@ -8,6 +8,38 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.6.0] — Unreleased
+
+> **Status: pending the cryptographic-review gate** before tag/release. v0.6.0 is a **breaking** revision of the BLE / Offline profile handshake (the profile has no executable implementation yet, so this is the cheapest possible moment for a wire break). Lockstep SDK (`ospp-sdk-php`, `sdk-ts`) implementation and the full conformance-vector regeneration follow in their own change windows; the three repositories tag `v0.6.0` together once the gate passes (ADR-001).
+
+The BLE session-key derivation used `IKM = LTK || appNonce || stationNonce`, but the BLE Long-Term Key is unobtainable by a third-party mobile app on iOS and Android — the derivation was never executable by a real app, and a zero/public LTK turns the OfflinePass into a bearer token. v0.6.0 adopts an authenticated application-layer construction (decision **D1**, [ADR-002](adr/ADR-002-ble-handshake-security-architecture.md)).
+
+### Changed (BREAKING)
+
+- **BLE session key (§6.5).** Derivation is now `IKM = es ‖ ee ‖ appNonce ‖ stationNonce` over a two-operation ECDH P-256 exchange (ephemeral-app × certified-static-station for authentication, plus ephemeral-app × ephemeral-station for full forward secrecy); `salt = "OSPP_BLE_SESSION_V2"`; `info = LP(deviceId) ‖ LP(stationId) ‖ LP(transcriptHash)` (length-prefixed, closing N23). Byte-exact pins spelled out: ECDH X-only-left-pad (Pin 1), key-schedule order/widths (Pin 3), length-prefixed transcript over raw wire bytes (Pin 4).
+- **`Hello` / `Challenge` wire format.** `Hello += appEphemeralPubKey`; `Challenge += stationCert (StationIdentity) + stationEphemeralPubKey`. Compressed-SEC1 P-256 wire encoding pinned (Pin 2). Nonces tightened to exactly 32 bytes (N16).
+- **`sessionProof` (N1).** Canonical definition moves to `ble-handshake.md` §4.1: `Base64(HMAC-SHA256(SessionKey, UTF8("OfflineAuthRequest") ‖ UTF8(passId) ‖ UTF8(decimal(counter))))`; `06-security.md` §6.5.1 becomes a pointer. The prior 4-input hex form (`offlinePassId | BE32(counter) | bayId | serviceId`) is **withdrawn** — bay/service binding moves to the authenticated `StartService` in-channel. This Base64/3-input form is what the conformance vectors and `verify-example-signatures.mjs` already compute.
+- **BLE pairing (§6.4).** Demoted to **OPTIONAL** and never a security premise (LESC-only-if-enabled; legacy pairing MUST NOT; no bond-table dependency). Channel security is the application-layer ECDH + StationIdentity certificate + AEAD. Algorithm inventory (§4.1), threat model (T01/T02/T12), §2.4, the implementer checklists, `02-transport` §8.2/§8.8, and `01-architecture` updated to match; the stale `AES-256-GCM` mention in `02-transport` §8.8.2 corrected to ChaCha20-Poly1305.
+
+### Added
+
+- **§6.5.2 StationIdentity certificate.** Server-signed `{stationId, organizationId, stationPubKey, issuedAt, expiresAt}` (OSPP Canonical Form + ECDSA P-256, signed by the same key as OfflinePasses), binding a station's identity to a **dedicated** static BLE ECDH key (key-separated from the mTLS/receipt key, SP 800-56A). Specifies on-device keygen + provisioning issuance, ChangeConfiguration rotation with overlap, the normative **app verification gate** (verify before sending any pass — abort on failure), and a normative residual-risk model (offline-revocation window, server-key freshness, one-station blast radius, relay-not-prevented/impersonation-is). New schema `ble/station-identity.schema.json`; delivered via `provisioning-response.stationIdentity`.
+- **§6.5.3 BLE AEAD channel.** Every post-Challenge message is sealed with ChaCha20-Poly1305 IETF (Pin 6, NOT XChaCha) under per-direction keys; 12-byte counter nonce with hard-fail no-wrap (Pin 5); `AAD = transcriptHash` (Pin 7); `{n, ct}` frame (`ble/ble-secure-frame.schema.json`), encrypt-then-fragment over §11. Closes N4 (unauthenticated Start/Stop), N15 (FFF6 receipt confidentiality + re-handshake pickup; resolves the `ble-session` §5 ↔ §13 reconnect contradiction), N17 (unauthenticated rejections).
+- **`organization_id` binding at authorize-time** (`authorize-offline-pass.md` §5 check #11, errorCode `2015`), unified with the reconcile-time gate check #7 as one canonical invariant (N9). Also aligns §5 check #5 to read station scoping from the server's stored pass record (N6 spec text).
+- New common schema `common/ec-public-key.schema.json` (compressed-SEC1 P-256, Pin 2). Pin 8: canonical-JSON reuse (§4.8) pinned for the certificate and receipt — firmware replicates byte-for-byte; the handshake transcript deliberately uses raw wire bytes instead.
+
+### Deferred (tracked, not in this revision)
+
+- **Conformance vectors + `verify-example-signatures.mjs` extension (T1):** full regeneration for the ECDH / HKDF / AEAD / certificate paths. The `sessionProof` and `sessionKeyConfirmation` vectors are unaffected (they already match §4.1 / `"AuthResponse_OK"` and use a raw test key). Inline example crypto values in the prose are illustrative placeholders until then.
+- **N22 / D5:** `organization_id` in the **signed** pass body — `offline-pass.schema.json` does not yet carry it while the prose marks it required (live N5). Adding it to examples awaits the schema + signature + vector change (D5 / S2 / T1).
+- **N18:** `common/device-id.schema.json` tightening (cross-cutting common schema; coupled with example/vector normalization → T1). The length-prefixed `info` (Pin 3) already removes the security concern.
+- Non-normative mirrors (`guides/implementors-guide.md`, `examples/flows/**`, `diagrams/`, root-README mermaid edge labels) and the per-doc version stamps on docs not revised here remain at 0.5.x pending a sync pass.
+- Counter-replay `eventId` single-ordinal alignment (`check_5 → check_10`) stays with S2.
+
+This release subsumes the prior unreleased prose/conformance alignment (below), which on its own required no bump.
+
+---
+
 ## Unreleased — prose/conformance alignment + BootNotification HMAC exemption (no wire change, no bump)
 
 Post-Wave-3 consistency audit identified 4 documentation/conformance

@@ -1,6 +1,6 @@
 # BLE Handshake Protocol
 
-> **Status:** Draft | **OSPP Version:** 0.5.0
+> **Status:** Draft | **OSPP Version:** 0.6.0
 
 ## 1. Handshake Overview
 
