@@ -205,16 +205,18 @@ The station generates its nonce and reports its connectivity status.
 }
 ```
 
-The `stationConnectivity: "Online"` confirms the Partial B scenario. Both sides derive the BLE session key:
+The `stationConnectivity: "Online"` confirms the Partial B scenario. Both sides derive the BLE session key over the ECDH secrets (the BLE LTK is **not** used — see `spec/06-security.md` §6.5):
 
 ```
 SessionKey = HKDF-SHA256(
-  ikm   = LTK || appNonce || stationNonce,
-  salt  = "OSPP_BLE_SESSION_V1",
-  info  = "device_b7c4de89f0123456" || "stn_a1b2c3d4",
+  ikm   = es ‖ ee ‖ appNonce ‖ stationNonce,   // es=ECDH(appEph, stnStatic[cert]); ee=ECDH(appEph, stnEph)
+  salt  = "OSPP_BLE_SESSION_V2",
+  info  = LP("device_b7c4de89f0123456") ‖ LP(transcriptHash),   // LP(x)=U16BE(len)‖x; stationId bound via transcript
   length = 32
 )
 ```
+
+> **Note (v0.6.0 / T1-pending):** The BLE message JSON in this walkthrough still reflects the v0.5.x handshake shape; it regenerates as a coherent set in the T1 vector batch (adding `appEphemeralPubKey`/`stationCert`/`stationEphemeralPubKey`, length-prefixed `sessionProof`, AEAD framing). The derivation above is the v0.6.0 construction.
 
 ---
 

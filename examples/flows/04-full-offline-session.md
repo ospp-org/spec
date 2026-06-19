@@ -212,18 +212,20 @@ The station generates its own 32-byte random nonce. The `stationConnectivity: "O
 
 ### Step 8: Session Key Derivation (18:32:13.200)
 
-Both the app and station independently derive the BLE session key using HKDF-SHA256:
+Both the app and station independently derive the BLE session key using HKDF-SHA256 over the ECDH secrets (the BLE LTK is **not** used — see `spec/06-security.md` §6.5):
 
 ```
 SessionKey = HKDF-SHA256(
-  ikm   = LTK || appNonce || stationNonce,
-  salt  = "OSPP_BLE_SESSION_V1",
-  info  = "device_b7c4de89f0123456" || "stn_a1b2c3d4",
+  ikm   = es ‖ ee ‖ appNonce ‖ stationNonce,   // es=ECDH(appEph, stnStatic[cert]); ee=ECDH(appEph, stnEph)
+  salt  = "OSPP_BLE_SESSION_V2",
+  info  = LP("device_b7c4de89f0123456") ‖ LP(transcriptHash),   // LP(x)=U16BE(len)‖x; stationId bound via transcript
   length = 32
 )
 ```
 
-This produces a 32-byte symmetric key used for the `sessionProof` HMAC in the next step and for the `sessionKeyConfirmation` in the AuthResponse.
+This produces a 32-byte symmetric key used for the `sessionProof` HMAC in the next step, for the `sessionKeyConfirmation` in the AuthResponse, and to expand the per-direction AEAD keys that encrypt every post-Challenge message.
+
+> **Note (v0.6.0 / T1-pending):** The BLE message JSON shown in this walkthrough (Hello/Challenge fields, `sessionProof` values) still reflects the v0.5.x handshake shape and is regenerated as a coherent set in the T1 vector batch (it must carry `appEphemeralPubKey`, `stationCert`, `stationEphemeralPubKey`, length-prefixed `sessionProof`, and AEAD framing). The derivation above is the v0.6.0 construction.
 
 ---
 
@@ -773,4 +775,4 @@ The station removes the transaction from its local queue.
 
 6. **Biometric gate before OfflinePass transmission.** The app requires Face ID, Touch ID, or PIN before sending the OfflineAuthRequest. This prevents a stolen unlocked phone from being used for offline sessions. The biometric confirmation is a local device operation and does not require network access.
 
-7. **Session key derivation binds handshake to auth.** The HKDF-SHA256 session key derived from the LTK, appNonce, and stationNonce is used to compute the `sessionProof` in the OfflineAuthRequest. This cryptographically binds the authentication to the specific BLE handshake, preventing replay attacks where an attacker captures an OfflineAuthRequest and tries to use it on a different connection.
+7. **Session key derivation binds handshake to auth.** The HKDF-SHA256 session key — derived from the ECDH secrets (`es ‖ ee`) and the nonces, and bound to the full handshake transcript — is used to compute the `sessionProof` in the OfflineAuthRequest. This cryptographically binds the authentication to the specific BLE handshake and to the authenticated station identity, preventing replay attacks where an attacker captures an OfflineAuthRequest and tries to use it on a different connection.

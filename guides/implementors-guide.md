@@ -2,7 +2,7 @@
 
 > **For:** Developers building OSPP-compatible stations, servers, or user agents
 > **Level:** Practical guide, not formal spec. Read this first, then the spec chapters.
-> **Spec Version:** 0.5.0
+> **Spec Version:** 0.6.0
 
 ---
 
@@ -143,7 +143,7 @@ Make sure you understand:
 A station needs:
 
 - **Network connectivity** — Ethernet (preferred), WiFi, or cellular for MQTT
-- **BLE 4.2+** (recommended 5.0+) — For offline mode. LE Secure Connections (LESC) is REQUIRED
+- **BLE 4.2+** (recommended 5.0+) — For offline mode. LE Secure Connections (LESC) pairing is OPTIONAL — channel security is application-layer (ECDH + StationIdentity certificate + ChaCha20-Poly1305 AEAD), not link-layer pairing
 - **Secure storage (NVS)** — For TLS certificates, ECDSA private keys, configuration
 - **Real-time clock** — Accuracy matters for OfflinePass validation (synced via Heartbeat)
 - **1+ bays** — Each bay has relay-controlled services (pumps, valves, etc.)
@@ -365,11 +365,13 @@ If your station supports the Offline profile, you need a BLE GATT service:
 ```
 App reads FFF1 (StationInfo) → confirms station identity
 App reads FFF2 (AvailableServices) → shows catalog to user
-App writes FFF3: Hello {deviceId, appNonce}
-Station notifies FFF4: Challenge {stationNonce, stationConnectivity}
-App writes FFF3: OfflineAuthRequest {offlinePass, counter, sessionProof}
+App writes FFF3: Hello {deviceId, appNonce, appEphemeralPubKey}
+Station notifies FFF4: Challenge {stationNonce, stationCert, stationEphemeralPubKey, stationConnectivity}
+  → App verifies stationCert (aborts, sends no pass, if invalid)
+  → both derive SessionKey via ECDH + HKDF; AEAD channel established
+App writes FFF3: OfflineAuthRequest {offlinePass, counter, sessionProof}   [AEAD-encrypted]
   → Station validates OfflinePass (10 checks)
-Station notifies FFF4: AuthResponse {result: "Accepted"}
+Station notifies FFF4: AuthResponse {result: "Accepted"}   [AEAD-encrypted]
 App writes FFF3: StartServiceRequest {bayId, serviceId, duration}
 Station notifies FFF4: StartServiceResponse {sessionId, offlineTxId}
   → Station notifies FFF5 periodically: ServiceStatus {elapsed, remaining, meters}
@@ -382,20 +384,18 @@ App reads FFF6: Receipt {receipt, txCounter}
 
 ### 2.9 sessionProof Computation
 
-Before validating the OfflinePass, the station **MUST** verify the `sessionProof` field. Both the app and station compute it independently using the BLE SessionKey (from HKDF, see `spec/06-security.md` §6.5):
+Before validating the OfflinePass, the station **MUST** verify the `sessionProof` field. Both the app and station compute it independently using the BLE SessionKey (derived from the ECDH handshake, see `spec/06-security.md` §6.5):
 
 ```
-sessionProof = HMAC-SHA256(
-  key:  SessionKey,
-  data: UTF8(passId) || "|" || BE32(counter) || "|" || UTF8(bayId) || "|" || UTF8(serviceId)
-)
+sessionProof = Base64( HMAC-SHA256( SessionKey,
+                 LP(UTF8("OfflineAuthRequest")) || LP(UTF8(passId)) || LP(UTF8(decimal(counter))) ) )
 ```
 
-- `BE32` = big-endian 32-bit unsigned integer (4 bytes)
-- `||` = byte concatenation, `|` = literal pipe (0x7C)
-- Output: hex-encoded lowercase, 64 characters
+- `LP(x) = U16BE(byteLength(x)) || x` — the same length-prefix encoding used for the HKDF `info` and transcript (§6.5 Pin 3 / Pin 4); length-prefixing makes the input injective
+- `decimal(counter)` = shortest base-10 ASCII (no leading zeros, no sign)
+- Output: Base64, exactly 44 characters
 
-If the proof doesn't match, reject immediately — it means the sender didn't participate in the BLE handshake. See `spec/06-security.md` §6.5.1 for the full normative formula, pseudocode, and test vector.
+If the proof doesn't match, reject immediately — it means the sender didn't participate in the BLE handshake. The canonical formula lives in `spec/profiles/offline/ble-handshake.md` §4.1 (`spec/06-security.md` §6.5.1 points to it). The prior 4-input hex form (binding `bayId`/`serviceId`) is **withdrawn** in v0.6.0 — bay/service selection moved to the authenticated `StartService` step inside the AEAD channel.
 
 ### 2.10 OfflinePass Validation (10 Checks)
 
@@ -846,8 +846,8 @@ Your app needs to:
 1. **Pre-arm an OfflinePass** while online — call `POST /me/offline-pass/refresh`. Store the pass securely (encrypted at rest, device keychain).
 2. **Detect connectivity** — Know whether the phone and station are online/offline (4 scenarios).
 3. **BLE scanning** — Filter for service UUID `0000FFF0-0000-1000-8000-00805F9B34FB`.
-4. **HELLO/CHALLENGE handshake** — Exchange nonces with the station.
-5. **Derive session key** — `HKDF-SHA256(LTK || appNonce || stationNonce)`.
+4. **HELLO/CHALLENGE handshake** — Exchange nonces + per-handshake ephemeral P-256 keys; verify the StationIdentity certificate before sending any pass.
+5. **Derive session key** — `HKDF-SHA256(es ‖ ee ‖ appNonce ‖ stationNonce)` over the two ECDH secrets (the BLE LTK is **not** used); then send all post-Challenge messages through the ChaCha20-Poly1305 AEAD channel.
 6. **Authenticate** — Send OfflineAuthRequest (Full Offline, Partial B) or ServerSignedAuth (Partial A).
 7. **Store receipts** — After an offline session, store the signed receipt in a local transaction log.
 8. **Sync when online** — Upload offline receipts to the server via `POST /me/offline-txs`.
@@ -1162,13 +1162,13 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 
 ### Offline / BLE
 
-- [ ] **[OFFLINE]** BLE 4.2+ with LE Secure Connections (LESC)
+- [ ] **[OFFLINE]** BLE 4.2+ (LESC pairing OPTIONAL — not a security premise; verify StationIdentity cert instead)
 - [ ] **[OFFLINE]** GATT Service UUID: `0000FFF0-0000-1000-8000-00805F9B34FB`
 - [ ] **[OFFLINE]** 6 characteristics: FFF1 (Read), FFF2 (Read), FFF3 (Write), FFF4 (Notify), FFF5 (Notify), FFF6 (Read)
 - [ ] **[OFFLINE]** BLE advertising name: `OSPP-{station_id_last6}`
 - [ ] **[OFFLINE]** MTU negotiation to 247 bytes; fragmentation for messages > MTU-3
 - [ ] **[OFFLINE]** HELLO/CHALLENGE handshake with fresh nonces
-- [ ] **[OFFLINE]** Session key derivation: HKDF-SHA256(LTK \|\| appNonce \|\| stationNonce)
+- [ ] **[OFFLINE]** Session key derivation: ECDH P-256 + HKDF-SHA256(es ‖ ee ‖ appNonce ‖ stationNonce) — NOT the LTK
 - [ ] **[OFFLINE]** OfflinePass validation: all 10 checks in order
 - [ ] **[OFFLINE]** ECDSA P-256 signature verification for OfflinePass
 - [ ] **[OFFLINE]** Key rotation support: accept `OfflinePassPublicKey` and cached previous key during grace period (300 s)
@@ -1243,11 +1243,11 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 | Message signing | HMAC-SHA256 | 256 bit |
 | OfflinePass | ECDSA P-256 | 256 bit |
 | Receipts | ECDSA P-256 | 256 bit |
-| BLE session key | HKDF-SHA256 | 256 bit |
-| BLE encryption | AES-CCM-128 (LESC) | 128 bit |
+| BLE session key | ECDH P-256 + HKDF-SHA256 | 256 bit |
+| BLE channel AEAD | ChaCha20-Poly1305 (IETF) | 256-bit key |
 | Webhooks | HMAC-SHA512 | 512 bit |
 | JWT | ES256 | 256 bit |
 
 ---
 
-*This guide covers OSPP 0.5.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*
+*This guide covers OSPP 0.6.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*
