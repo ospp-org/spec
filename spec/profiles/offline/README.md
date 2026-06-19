@@ -33,7 +33,7 @@ This role assignment also aligns with mobile OS power management: iOS and Androi
 |-------------------------------------|-----------------------------------------------|
 | [AuthorizeOfflinePass](authorize-offline-pass.md) | MQTT-based offline pass validation (Partial B scenario) |
 | [BLE Transport](ble-transport.md) | Hardware requirements, GATT service definition, characteristics, MTU negotiation, fragmentation |
-| [BLE Handshake](ble-handshake.md) | HELLO / CHALLENGE / AUTH authentication sequence, session key derivation (HKDF-SHA256) |
+| [BLE Handshake](ble-handshake.md) | HELLO / CHALLENGE / AUTH authentication sequence, ECDH P-256 + StationIdentity certificate, session key derivation (HKDF-SHA256), AEAD channel |
 | [BLE Session](ble-session.md) | Service start, real-time monitoring, stop, receipt retrieval, connection drop handling |
 | [OfflinePass](offline-pass.md) | Server-signed offline credential structure, 10-check validation, epoch revocation, lifecycle |
 | [Reconciliation](reconciliation.md) | Offline transaction sync, deduplication, txCounter gap detection, fraud detection, wallet debit |
@@ -42,7 +42,7 @@ This role assignment also aligns with mobile OS power management: iOS and Androi
 
 1. A station that declares the Offline / BLE profile in its BootNotification (`capabilities.bleSupported: true`) MUST implement all documents listed above.
 2. The station MUST support at least the Full Offline and Partial B connectivity scenarios. Partial A support is RECOMMENDED but MAY be omitted if the station does not store server-signed authorization verification keys.
-3. The station MUST support BLE 4.2 or later with LE Secure Connections (LESC). BLE 5.0 is RECOMMENDED.
+3. The station MUST support BLE 4.2 or later; BLE 5.0 is RECOMMENDED. BLE pairing (LESC) is OPTIONAL — channel security is provided at the application layer (ECDH P-256 handshake + StationIdentity certificate + ChaCha20-Poly1305 AEAD; see [06-security.md §6.4/§6.5](../../06-security.md)), not by link-layer pairing.
 4. All BLE handshakes MUST complete within 10 seconds. The station MUST reject handshakes that exceed this timeout.
 5. The station MUST generate ECDSA-P256-SHA256 signed receipts for every offline transaction and MUST maintain a monotonic `txCounter` across transactions for gap detection during reconciliation.
 6. The station MUST buffer offline transactions and synchronize them via TransactionEvent upon reconnection.

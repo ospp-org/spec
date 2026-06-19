@@ -510,7 +510,7 @@ BLE transport is part of the **Offline/BLE Profile** and is OPTIONAL. Stations t
 | Requirement | Minimum | Recommended |
 |-------------|---------|-------------|
 | BLE version | 4.2 | 5.0 |
-| LE Secure Connections | REQUIRED | REQUIRED |
+| LE Secure Connections (pairing) | OPTIONAL | OPTIONAL (defense-in-depth only — see §8.8) |
 | TX power | 0 dBm | +4 dBm |
 | Range (open air) | 10 meters | 20 meters |
 | Simultaneous connections | 1 | 3 (configurable via `MaxConcurrentBLEConnections`) |
@@ -619,15 +619,11 @@ Mobile App (Central)                            Station (Peripheral)
 
 ### 8.8 BLE Security
 
-#### 8.8.1 Link-Layer Encryption
+#### 8.8.1 Link-Layer Pairing (Optional)
 
-The station MUST require **LE Secure Connections** (LESC) for all BLE connections. LESC provides:
+BLE pairing is **OPTIONAL** and is **never** a security premise for OSPP (Chapter 06 — Security §6.4). The channel's confidentiality, integrity, and station authentication are provided end-to-end at the application layer by the ECDH P-256 handshake, the StationIdentity certificate, and the ChaCha20-Poly1305 AEAD channel (§6.5). A station **MUST** operate correctly with no pairing at all.
 
-- **ECDH P-256** key exchange (Elliptic Curve Diffie-Hellman)
-- **AES-CCM** (128-bit) link-layer encryption
-- **MITM protection** via Numeric Comparison or Passkey Entry pairing
-
-The station SHOULD use **Just Works** pairing for minimal user friction, with application-layer authentication (OfflinePass) providing the security guarantee. Numeric Comparison MAY be used for higher-security environments.
+If a deployment chooses to enable link-layer pairing for defense-in-depth, it **MUST** use **LE Secure Connections** (LESC); legacy pairing **MUST NOT** be used. The station **MUST NOT** require pairing, MitM-protected pairing (Numeric Comparison / Passkey Entry), or bonding to complete a handshake — public self-service stations are NoInputNoOutput and serve large numbers of distinct phones, so a pairing mandate is both unenforceable from a third-party app and operationally unscalable (bond-table churn, mid-handshake OS pairing dialogs). The application-layer credential (OfflinePass / ServerSignedAuth) and the §6.5 handshake are the security guarantee.
 
 #### 8.8.2 Application-Layer Security
 

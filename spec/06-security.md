@@ -29,7 +29,7 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 | T09 | [Physical Tampering](#t09---physical-tampering) | Access internal components, extract keys | Critical | §4.5 secure element, tamper detection, SecurityEvent [MSG-012] |
 | T10 | [Certificate Compromise](#t10---certificate-compromise) | Impersonate a station after private key extraction | Critical | §4.3 CRL/OCSP, on-device key generation, §4.5 secure storage |
 | T11 | [Webhook Spoofing](#t11---webhook-spoofing) | Forge payment confirmations | High | §2.5 HMAC-SHA512 + IP whitelist + timing-safe comparison |
-| T12 | [BLE Eavesdropping](#t12---ble-eavesdropping) | Intercept offline pass or session data over-the-air | Medium | §6.4 LESC encryption (AES-CCM-128), §6.5 session key HKDF |
+| T12 | [BLE Eavesdropping](#t12---ble-eavesdropping) | Intercept offline pass or session data over-the-air | Medium | §6.5.3 application-layer AEAD (ChaCha20-Poly1305) over an ECDH-authenticated channel, §6.5.2 StationIdentity verification |
 | T13 | [Denial of Service](#t13---denial-of-service) | Station becomes unresponsive to legitimate users | High | §7.1 rate limiting, BLE connection throttling, MQTT message rate cap |
 
 ### T01 - Replay Attack
@@ -40,7 +40,7 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 - Every MQTT message carries a unique `messageId` (UUID v4). Receivers maintain a deduplication window (last 1000 IDs or 1 hour) and reject duplicates (see [Chapter 02](02-transport.md), §3.3).
 - HMAC-SHA256 binds the `messageId` and `timestamp` to the session key — replayed messages with old timestamps are detectable.
 - BLE OfflineAuthRequest [MSG-031] includes a **monotonic counter** that MUST be strictly greater than the last seen counter; replaying an old counter value triggers error `2005 OFFLINE_COUNTER_REPLAY`.
-- BLE session keys are derived per-handshake from fresh nonces (HKDF-SHA256), so captured messages from a previous session are invalid.
+- BLE session keys are derived per-handshake from fresh ephemeral ECDH keys and nonces (§6.5), so captured messages from a previous session are invalid and cannot be decrypted later (forward secrecy).
 
 ### T02 - Man-in-the-Middle
 
@@ -50,7 +50,7 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 - **TLS 1.3 mandatory** on all MQTT and HTTPS connections; no fallback to TLS 1.2. 0-RTT MUST NOT be used (replay risk).
 - **mTLS** (mutual TLS) — both the station and broker present X.509 certificates. The station verifies the broker's certificate, and the broker verifies the station's certificate, preventing impersonation on either side.
 - **HMAC-SHA256 defense-in-depth** — even if TLS were compromised, message tampering is detectable via the MAC field.
-- **BLE LE Secure Connections** (LESC) with AES-CCM-128 encryption prevents over-the-air interception.
+- **BLE application-layer AEAD** (ChaCha20-Poly1305 over an ECDH-authenticated channel, §6.5) protects all post-Challenge traffic end-to-end; an active MITM cannot derive the session key without the station's certified static key, and the app refuses to send a credential to any station whose StationIdentity certificate does not verify (§6.5.2).
 
 ### T03 - Credit Fraud / Double-Spend
 
@@ -144,9 +144,9 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 **Description:** Attacker within BLE range captures over-the-air traffic to steal OfflinePass data or session credentials.
 
 **Countermeasures:**
-- **LE Secure Connections** (LESC) with AES-CCM-128 encryption — all BLE traffic is encrypted.
-- **Per-session key derivation** via HKDF-SHA256 (§6.5) — even if one session key is compromised, others are not affected.
-- **Station limits concurrent BLE connections** to 1 (configurable up to 3), reducing the attack surface.
+- **Application-layer AEAD** (ChaCha20-Poly1305 IETF, §6.5.3) encrypts and authenticates all post-Challenge traffic end-to-end, independent of any BLE link-layer pairing. The OfflinePass and receipt are never exposed in plaintext over the air.
+- **Authenticated, forward-secret key agreement** (§6.5): the per-handshake ECDH (ephemeral-static + ephemeral-ephemeral) means a passive capture cannot be decrypted even if a station's static key is later compromised, and an active attacker cannot impersonate the station without a valid StationIdentity certificate (§6.5.2).
+- **Station limits concurrent BLE connections** to 1 (configurable up to 3) with per-connection isolation ([ble-transport.md §13](profiles/offline/ble-transport.md)), reducing the attack surface.
 
 ### T13 - Denial of Service
 
@@ -240,8 +240,8 @@ OSPP uses **channel-specific authentication** — each communication channel has
 | Property | Value |
 |----------|-------|
 | **Protocol** | BLE GATT |
-| **Mechanism** | HELLO/CHALLENGE handshake + OfflinePass or ServerSignedAuth |
-| **Encryption** | LE Secure Connections (AES-CCM-128) |
+| **Mechanism** | HELLO/CHALLENGE handshake (ECDH P-256 + StationIdentity cert) + OfflinePass or ServerSignedAuth |
+| **Encryption** | Application-layer AEAD — ChaCha20-Poly1305 IETF (§6.5.3). LESC link encryption OPTIONAL (§6.4), not assumed. |
 
 **Authentication flows** (see [Chapter 04 — Flows](04-flows.md), §5a/b/c):
 
@@ -252,9 +252,10 @@ OSPP uses **channel-specific authentication** — each communication channel has
 | Partial B (station online) | OfflineAuthRequest [MSG-031] | Station forwards to server via AuthorizeOfflinePass [MSG-002] |
 
 **Handshake security:**
-- Fresh nonces (32 bytes) on every handshake (app nonce + station nonce) prevent replay.
-- Session key derived via HKDF-SHA256 (§6.5) binds the handshake to the specific BLE connection.
-- `sessionProof` in OfflineAuthRequest proves the sender possesses the derived session key.
+- Fresh ephemeral P-256 key pairs and 32-byte nonces on every handshake prevent replay and provide forward secrecy.
+- The app **verifies the StationIdentity certificate before sending any credential** (§6.5.2), so a pass is never leaked to an impersonating station.
+- The session key is derived via ECDH P-256 + HKDF-SHA256 (§6.5), binding the session to the authenticated station identity and the full handshake transcript.
+- `sessionProof` proves participation, and all post-Challenge traffic is encrypted/authenticated by the AEAD channel (§6.5.3).
 
 ### 2.5 Payment Processor → Server — HMAC-SHA512 Webhook
 
@@ -360,8 +361,8 @@ The MQTT broker MUST enforce topic-level access control based on the client cert
 | 3 | MQTT HMAC session key | HMAC-SHA256 | 256 bit (32 bytes) | FIPS 198-1 | Per-boot message integrity (selective — see §5) |
 | 4 | OfflinePass signing | ECDSA P-256 (RFC 6979) | 256 bit | FIPS 186-4, RFC 6979 | Server signs offline authorization |
 | 5 | Receipt signing | ECDSA P-256 (RFC 6979) | 256 bit | FIPS 186-4, RFC 6979 | Station signs transaction receipts (includes txCounter) |
-| 6 | BLE session key | HKDF-SHA256 | 256 bit (32 bytes) | RFC 5869 | Per-handshake BLE session key |
-| 7 | BLE encryption | AES-CCM-128 | 128 bit | BLE 4.2 LESC | BLE over-the-air encryption |
+| 6 | BLE session key | ECDH P-256 + HKDF-SHA256 | 256 bit (32 bytes) | RFC 5903, RFC 5869 | Per-handshake BLE session key (ephemeral-static + ephemeral-ephemeral ECDH; §6.5). Replaces the v0.5.x LTK input. |
+| 7 | BLE channel AEAD | ChaCha20-Poly1305 (IETF) | 256-bit key | RFC 8439 | Post-Challenge BLE message confidentiality + integrity (§6.5.3). LESC AES-CCM link encryption is now OPTIONAL (§6.4), not a security premise. |
 | 8 | Webhook verification | HMAC-SHA512 | 512 bit | FIPS 198-1 | Payment webhook integrity |
 | 9 | JWT signing | ES256 (ECDSA P-256) | 256 bit | RFC 7518 | Access/refresh token signing |
 | 10 | Root CA | ECDSA P-384 | 384 bit | X.509 v3 | Trust anchor (offline, air-gapped) |
@@ -944,18 +945,20 @@ Each offline transaction includes a monotonically increasing `txCounter` (per st
 3. Verify that `txCounter` is strictly greater than the previous transaction's counter for this station
 4. If a counter gap is detected, apply the normative gap handling defined in [reconciliation.md §4.2](profiles/offline/reconciliation.md#42-txcounter-gap-detection): flag the gap, log a SecurityEvent, and **defer** reconciliation of the affected transactions (`status: "Deferred"`) until the missing in-sequence transactions arrive or an operator manually unblocks. `reconciliation.md` is the single source of truth for gap severity and handling; this chapter does not restate it. (The earlier "process anyway / +0.30" text here was a stale mirror that contradicted §4.2.)
 
-### 6.4 BLE Transport Encryption
+### 6.4 BLE Transport Security
 
-BLE connections MUST use **LE Secure Connections** (LESC) introduced in Bluetooth 4.2:
+**The security of the BLE channel is provided end-to-end at the application layer** — the ECDH P-256 handshake (§6.5), the StationIdentity certificate (§6.5.2), and the AEAD channel (§6.5.3). **BLE pairing is OPTIONAL and MUST NOT be relied upon as a security premise.** This is a deliberate change from v0.5.x: the prior model leaned on LESC pairing (and the unobtainable LTK), which is unenforceable from a third-party mobile app, does not scale for public self-service (bond-table exhaustion across thousands of distinct phones), and triggers an OS pairing dialog mid-handshake that breaks the time budget. Confidentiality, integrity, and authentication now come from §6.5, not from the link layer.
 
 | Property | Value |
 |----------|-------|
-| **Pairing** | LE Secure Connections (LESC) — REQUIRED |
-| **Encryption** | AES-CCM-128 |
-| **Key Exchange** | ECDH P-256 (Bluetooth standard) |
-| **Legacy Pairing** | MUST NOT be used (vulnerable to passive eavesdropping) |
-| **Bonding** | RECOMMENDED for repeat users (avoids re-pairing) |
-| **Man-in-the-Middle Protection** | Numeric Comparison or Passkey Entry RECOMMENDED for first pair |
+| **Pairing** | **OPTIONAL.** If a deployment enables it, it **MUST** be LE Secure Connections (LESC); it provides defense-in-depth only and is never assumed by the protocol. |
+| **Legacy Pairing** | **MUST NOT** be used (if any pairing is enabled). |
+| **Link-layer encryption** | OPTIONAL (a side effect of LESC if enabled). The protocol does not require it; all sensitive traffic is already encrypted by the §6.5.3 AEAD channel. |
+| **Bonding** | OPTIONAL; **MUST NOT** be required. Every session performs a fresh handshake regardless of bonding state (no bond-table dependency). |
+| **MITM / impersonation protection** | Provided by the StationIdentity certificate + ECDH (§6.5.2), **not** by pairing. Numeric Comparison / Passkey Entry are neither required nor assumed (stations are NoInputNoOutput). |
+| **GATT characteristic security** | Characteristics operate without link-layer encryption requirements; per-characteristic confidentiality is provided by the AEAD channel for post-Challenge traffic. |
+
+**Pin 8 — canonical JSON (byte-exact).** Every BLE artifact that is signed or MAC'd over a JSON value — the StationIdentity certificate (§6.5.2) and the transaction receipt (§6.2) — uses the **OSPP Canonical Form** (§4.8): recursively sorted object keys, compact separators, UTF-8, integers without leading zeros. Station firmware **MUST** replicate this canonicalization byte-for-byte; the reference implementations are the `CanonicalJsonSerializer` in the PHP and TypeScript SDKs. (The handshake *transcript* of §6.5 Pin 4 is the one place that deliberately uses **raw wire bytes** rather than canonical JSON — see that pin.)
 
 ### 6.5 BLE Session Key Derivation — HKDF-SHA256
 
@@ -1357,7 +1360,7 @@ Diagnostic uploads via GetDiagnostics [MSG-018] **MUST** apply the same redactio
 - [ ] ECDSA P-256 signature verification for ServerSignedAuth
 - [ ] ECDSA P-256 receipt signing for all offline transactions
 - [ ] txCounter maintenance (monotonically increasing, persisted to NVS)
-- [ ] BLE LE Secure Connections (no legacy pairing)
+- [ ] BLE handshake: ECDH P-256 (ephemeral) + StationIdentity certificate + ChaCha20-Poly1305 AEAD channel (§6.5); dedicated static BLE ECDH key (separate from the mTLS/receipt key); BLE pairing OPTIONAL (never assumed)
 - [ ] Tamper detection (if hardware supports it)
 - [ ] Diagnostics exclude private keys
 - [ ] Firmware checksum verification before installation
@@ -1383,9 +1386,9 @@ Diagnostic uploads via GetDiagnostics [MSG-018] **MUST** apply the same redactio
 
 ### BLE Implementation (Mobile App)
 
-- [ ] LE Secure Connections (no legacy pairing)
-- [ ] HKDF-SHA256 session key derivation
-- [ ] Session proof generation with derived key
+- [ ] StationIdentity certificate verification BEFORE sending any pass (§6.5.2); abort on failure
+- [ ] ECDH P-256 (ephemeral) + HKDF-SHA256 session key derivation (§6.5); BLE pairing OPTIONAL
+- [ ] sessionProof generation + ChaCha20-Poly1305 AEAD framing of all post-Challenge messages (§6.5.3)
 - [ ] Biometric/PIN confirmation before OfflineAuthRequest
 - [ ] OfflinePass secure storage (platform keychain / keystore)
 - [ ] Receipt storage in local encrypted database

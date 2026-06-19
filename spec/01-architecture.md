@@ -284,7 +284,7 @@ OSPP defines a five-layer communication stack. Each layer has a distinct respons
 | Layer | Name | Online Path (MQTT) | Offline Path (BLE) |
 |:-----:|------|--------------------|--------------------|
 | **L1** | Physical | Ethernet / WiFi / Cellular | Bluetooth Low Energy 4.2+ |
-| **L2** | Transport | TCP/IP + TLS 1.3 (mTLS) | BLE L2CAP + LESC (LE Secure Connections) |
+| **L2** | Transport | TCP/IP + TLS 1.3 (mTLS) | BLE L2CAP (LESC pairing OPTIONAL); security is application-layer (Ch.06 §6.5) |
 | **L3** | Messaging | MQTT 5.0 (QoS 1) | BLE GATT characteristics |
 | **L4** | Protocol | OSPP envelope (`messageId`, `messageType`, `action`, `timestamp`, `source`, `protocolVersion`, `payload`, `mac`) | BLE JSON payloads with `type` field |
 | **L5** | Application | Profiles (see Section 5.4) | Offline profile only |
@@ -305,7 +305,7 @@ For full transport details — connection parameters, TLS requirements, topic st
 The **offline path** provides a fallback channel between the mobile app and the station when MQTT connectivity is degraded or unavailable. The mobile app communicates directly with the station's BLE GATT service to authorize sessions, start services, and retrieve receipts.
 
 - **Direction:** Bidirectional via GATT characteristics (Read, Write, Notify).
-- **Security:** BLE LE Secure Connections (LESC) with AES-CCM-128 encryption. Session keys derived via HKDF-SHA256 from fresh nonces per handshake.
+- **Security:** Application-layer ECDH P-256 handshake + server-signed StationIdentity certificate + ChaCha20-Poly1305 AEAD channel (Chapter 06 — Security §6.5). Session keys are derived via HKDF-SHA256 from the ECDH shared secrets and fresh per-handshake nonces. BLE link-layer pairing (LESC) is OPTIONAL and is not a security premise.
 - **Scope:** The offline path supports only the Offline profile. Configuration, firmware updates, and diagnostics are NOT available over BLE.
 
 For BLE GATT service definition, characteristic UUIDs, MTU, and fragmentation — see [Chapter 02 — Transport](02-transport.md), Section 8.
