@@ -110,12 +110,12 @@ The `sessionProof` construction is **canonical and defined here** ([06-security.
 
 ```
 sessionProof = Base64( HMAC-SHA256( SessionKey,
-                 UTF8("OfflineAuthRequest") ‖ UTF8(passId) ‖ UTF8(decimal(counter)) ) )
+                 LP(UTF8("OfflineAuthRequest")) ‖ LP(UTF8(passId)) ‖ LP(UTF8(decimal(counter))) ) )
 ```
 
-where `SessionKey` is the ECDH-derived session key ([06-security.md §6.5](../../06-security.md#65-ble-session-key-derivation--hkdf-sha256)), `"OfflineAuthRequest"` is the literal message-type string, `passId` is `offlinePass.passId`, and `decimal(counter)` is the `counter` value rendered as its **shortest base-10 ASCII string** (no leading zeros, no sign). `‖` is byte concatenation — there is **no separator** between the three components. The output is Base64 (RFC 4648, standard alphabet, with padding) — exactly **44 characters**. A `sessionProof` that does not match the station's own computation **MUST** be rejected with error `2013 BLE_AUTH_FAILED`.
+where `SessionKey` is the ECDH-derived session key ([06-security.md §6.5](../../06-security.md#65-ble-session-key-derivation--hkdf-sha256)); `LP(x) = U16BE(byteLength(x)) ‖ x` is **the same length-prefix encoding used for the HKDF `info` and the transcript** ([06-security.md §6.5](../../06-security.md#65-ble-session-key-derivation--hkdf-sha256) Pin 3 / Pin 4); `"OfflineAuthRequest"` is the literal message-type string; `passId` is `offlinePass.passId`; and `decimal(counter)` is the `counter` value rendered as its **shortest base-10 ASCII string** (no leading zeros, no sign). Length-prefixing each component makes the input **injective** — no two distinct `(passId, counter)` tuples can ever produce the same byte string — which the v0.5.x empty concatenation did not guarantee (e.g. `("opass_a", 15)` and `("opass_a1", 5)` both concatenated to `…opass_a15`). The output is Base64 (RFC 4648, standard alphabet, with padding) — exactly **44 characters**. A `sessionProof` that does not match the station's own computation **MUST** be rejected with error `2013 BLE_AUTH_FAILED`.
 
-The prior 4-input hex construction (which additionally bound `bayId`/`serviceId`, output as 64 hex chars) is **withdrawn** in v0.6.0: under the AEAD channel ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)) bay/service selection happens at the authenticated `StartService` step, so the proof binds only `(passId, counter)` to the session. This Base64/3-input form is the construction the conformance vectors and `tools/verify-example-signatures.mjs` already implement.
+The prior 4-input hex construction (which additionally bound `bayId`/`serviceId`, output as 64 hex chars) is **withdrawn** in v0.6.0: under the AEAD channel ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)) bay/service selection happens at the authenticated `StartService` step, so the proof binds only `(passId, counter)` to the session. The reference tooling (`tools/verify-example-signatures.mjs`, `tools/sign-example.mjs`, `tools/sign-inline-md.mjs`) computes exactly this length-prefixed form; spec and tooling are aligned in the same change.
 
 **Example:**
 
@@ -148,7 +148,7 @@ The prior 4-input hex construction (which additionally bound `bayId`/`serviceId`
     "signature": "MEUCIQD6sC/bKX/fkNskHHEGr01INojLAlu4I6zsEm1keSjYoQIgJAjdhwiYhlQOX/BAqsFq9RRgxpXGSXJU6BeL0qMBnMc="
   },
   "counter": 5,
-  "sessionProof": "s67QuiN60Suqv0Zn5OXRYQRv24szytxFhOtvV7cZ/gc="
+  "sessionProof": "ObgxpE1Ad+xl6P8fRWtBstqMY2Tjan9oK/LIWofxvrI="
 }
 ```
 

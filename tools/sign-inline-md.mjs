@@ -175,11 +175,21 @@ function signFirmware(outer) {
   return 'firmware';
 }
 
+// Length-prefix: U16BE(byteLength) ‖ UTF-8 bytes (06-security.md §6.5 Pin 3 / Pin 4).
+function lp(s) {
+  const b = Buffer.from(s, 'utf-8');
+  const len = Buffer.alloc(2);
+  len.writeUInt16BE(b.length);
+  return Buffer.concat([len, b]);
+}
+
 function signSessionProof(outer) {
   if (!outer.offlinePass?.passId || !Number.isInteger(outer.counter)) {
     throw new Error('sessionProof requires offlinePass.passId + integer counter');
   }
-  const msg = Buffer.from(`${outer.type}${outer.offlinePass.passId}${outer.counter}`, 'utf-8');
+  // LP(type) ‖ LP(passId) ‖ LP(decimal(counter)) — length-prefixed, injective
+  // (ble-handshake.md §4.1).
+  const msg = Buffer.concat([lp(outer.type), lp(outer.offlinePass.passId), lp(String(outer.counter))]);
   outer.sessionProof = createHmac('sha256', SESSION_KEY).update(msg).digest('base64');
   return 'session-proof';
 }

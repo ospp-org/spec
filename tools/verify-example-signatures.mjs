@@ -61,6 +61,15 @@ function hmacBase64(keyBytes, msg) {
   return createHmac('sha256', keyBytes).update(msg).digest('base64');
 }
 
+// Length-prefix a string: U16BE(byteLength) ‖ UTF-8 bytes — the same LP used
+// for the HKDF info and transcript (06-security.md §6.5 Pin 3 / Pin 4).
+function lp(s) {
+  const b = Buffer.from(s, 'utf-8');
+  const len = Buffer.alloc(2);
+  len.writeUInt16BE(b.length);
+  return Buffer.concat([len, b]);
+}
+
 function verifySessionProof(outer, file, sessionKey) {
   if (typeof outer.sessionProof !== 'string') {
     return { file, ok: false, reason: 'sessionProof missing or not a string' };
@@ -74,7 +83,9 @@ function verifySessionProof(outer, file, sessionKey) {
   if (!Number.isInteger(outer.counter)) {
     return { file, ok: false, reason: 'sessionProof verify requires integer counter' };
   }
-  const msg = Buffer.from(`${outer.type}${outer.offlinePass.passId}${outer.counter}`, 'utf-8');
+  // LP(type) ‖ LP(passId) ‖ LP(decimal(counter)) — length-prefixed, injective
+  // (ble-handshake.md §4.1; 06-security.md §6.5.1).
+  const msg = Buffer.concat([lp(outer.type), lp(outer.offlinePass.passId), lp(String(outer.counter))]);
   const expected = hmacBase64(sessionKey, msg);
   const a = Buffer.from(outer.sessionProof, 'base64');
   const b = Buffer.from(expected, 'base64');

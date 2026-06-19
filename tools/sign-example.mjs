@@ -233,7 +233,8 @@ function signFirmware(outer, keyPem) {
 // -----------------------------------------------------------------------------
 //
 // `sessionProof` (ble-handshake.md §4.1):
-//   HMAC-SHA256(sessionKey, type || offlinePass.passId || counter)
+//   HMAC-SHA256(sessionKey, LP(type) || LP(passId) || LP(decimal(counter)))
+//   where LP(x) = U16BE(byteLength(x)) || x  (06-security.md §6.5 Pin 3 / Pin 4)
 //   — UTF-8 ASCII concatenation, counter as decimal string.
 //
 // `sessionKeyConfirmation` (ble-handshake.md §5):
@@ -248,6 +249,15 @@ function hmacBase64(keyBytes, msg) {
   return createHmac('sha256', keyBytes).update(msg).digest('base64');
 }
 
+// Length-prefix a string: U16BE(byteLength) ‖ UTF-8 bytes — same LP as the
+// HKDF info / transcript (06-security.md §6.5 Pin 3 / Pin 4).
+function lp(s) {
+  const b = Buffer.from(s, 'utf-8');
+  const len = Buffer.alloc(2);
+  len.writeUInt16BE(b.length);
+  return Buffer.concat([len, b]);
+}
+
 function signSessionProof(outer, sessionKey) {
   if (outer.type !== 'OfflineAuthRequest') {
     throw new Error('sessionProof requires outer.type === "OfflineAuthRequest"');
@@ -258,8 +268,9 @@ function signSessionProof(outer, sessionKey) {
   if (!Number.isInteger(outer.counter)) {
     throw new Error('sessionProof requires outer.counter (integer)');
   }
-  // type || passId || counter  — UTF-8 ASCII concatenation, counter decimal.
-  const msg = Buffer.from(`${outer.type}${outer.offlinePass.passId}${outer.counter}`, 'utf-8');
+  // LP(type) || LP(passId) || LP(decimal(counter)) — length-prefixed, injective
+  // (ble-handshake.md §4.1; 06-security.md §6.5.1).
+  const msg = Buffer.concat([lp(outer.type), lp(outer.offlinePass.passId), lp(String(outer.counter))]);
   outer.sessionProof = hmacBase64(sessionKey, msg);
   return { mode: 'session-proof', bodyFields: ['type', 'passId', 'counter'], signatureLength: outer.sessionProof.length };
 }

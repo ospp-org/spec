@@ -1032,15 +1032,15 @@ For convenience, the construction is:
 
 ```
 sessionProof = Base64( HMAC-SHA256( SessionKey,
-                 UTF8("OfflineAuthRequest") ‖ UTF8(passId) ‖ UTF8(decimal(counter)) ) )
+                 LP(UTF8("OfflineAuthRequest")) ‖ LP(UTF8(passId)) ‖ LP(UTF8(decimal(counter))) ) )
 ```
 
-— a Base64-encoded 256-bit HMAC, keyed by the `SessionKey` of §6.5, over the byte concatenation of the message-type literal `"OfflineAuthRequest"`, the `offlinePass.passId`, and the **counter rendered as its shortest base-10 ASCII string** (no leading zeros, no sign). Output is exactly 44 Base64 characters.
+— a Base64-encoded 256-bit HMAC keyed by the `SessionKey` of §6.5, over three **length-prefixed** components, where `LP(x) = U16BE(byteLength(x)) ‖ x` is the same length-prefix used for the HKDF `info` and the transcript (§6.5 Pin 3 / Pin 4): the message-type literal `"OfflineAuthRequest"`, the `offlinePass.passId`, and the **counter rendered as its shortest base-10 ASCII string** (no leading zeros, no sign). Length-prefixing makes the input injective — no two distinct `(passId, counter)` tuples can collide. Output is exactly 44 Base64 characters.
 
 **N1 reconciliation — the prior 4-input hex form is WITHDRAWN.** Through v0.5.x this section carried a different construction — `HMAC` over `offlinePassId | BE32(counter) | bayId | serviceId`, output as 64 lowercase hex characters — and `ble-handshake.md §4.1` was made to defer to it. v0.6.0 **inverts that**: §4.1 is canonical and this section points to it. The reasons:
 
 - Under the AEAD channel (§6.5.3) the `bayId`/`serviceId` selection happens at `StartService`, *inside* the authenticated channel where in-flight tampering is impossible — so the proof no longer needs to bind bay/service at authentication time.
-- The Base64/3-input form is the construction the conformance vectors and `tools/verify-example-signatures.mjs` have **always** computed (over a raw test key, independent of this key-derivation change); aligning §4.1 to it is a prose correction, not a wire change to the tooling-tested behaviour.
+- The Base64/3-input *structure* (`type`, `passId`, `counter`, keyed by a raw session key — independent of the §6.5 key-derivation change) is what the conformance vectors and `tools/*.mjs` have always used; v0.6.0 refines it to the **length-prefixed** form above (Decision #1) for injectivity, updating the spec prose, the reference tooling, and the regenerated sessionProof vectors in lockstep.
 
 **Relationship to the AEAD channel.** Because `OfflineAuthRequest` now travels inside the §6.5.3 AEAD channel, the frame's Poly1305 tag already proves the sender holds a key derived from `SessionKey`. The `sessionProof` is retained as an explicit, deliberately non-transferable proof-of-participation that additionally binds the specific `(passId, counter)` tuple under the session key (rationale: HMAC vs ECDSA, below).
 
