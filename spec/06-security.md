@@ -929,7 +929,7 @@ Each offline transaction includes a monotonically increasing `txCounter` (per st
 
 **Properties:**
 - **Ordering:** The `txCounter` ensures transactions are processed in the correct order during reconciliation.
-- **Gap detection:** A counter gap (e.g., 5 → 7) reveals a missing transaction, triggering a fraud score of +0.30 (see §7.4).
+- **Gap detection:** A counter gap (e.g., 5 → 7) reveals a missing transaction. The reconciliation-time handling of a gap — its HIGH-severity fraud classification and the `Deferred` hold until the missing transactions arrive or an operator manually resolves it — is defined normatively in [reconciliation.md §4.2](profiles/offline/reconciliation.md#42-txcounter-gap-detection); this chapter does not restate it.
 - **Non-repudiation:** The `txCounter` is included in the ECDSA-signed receipt data. A station cannot retroactively change the counter without invalidating the signature.
 - **Crash resilience:** The station only needs to persist a single integer (`txCounter`) atomically to NVS. No hash chain state to corrupt on power loss.
 
@@ -942,7 +942,7 @@ Each offline transaction includes a monotonically increasing `txCounter` (per st
 1. Receive TransactionEvent [MSG-007] with `txCounter` and `receipt`
 2. Verify ECDSA signature on the receipt (§6.2)
 3. Verify that `txCounter` is strictly greater than the previous transaction's counter for this station
-4. If counter gap detected → log WARNING, process transaction anyway (do not reject — the financial record matters), increase fraud score (+0.30)
+4. If a counter gap is detected, apply the normative gap handling defined in [reconciliation.md §4.2](profiles/offline/reconciliation.md#42-txcounter-gap-detection): flag the gap, log a SecurityEvent, and **defer** reconciliation of the affected transactions (`status: "Deferred"`) until the missing in-sequence transactions arrive or an operator manually unblocks. `reconciliation.md` is the single source of truth for gap severity and handling; this chapter does not restate it. (The earlier "process anyway / +0.30" text here was a stale mirror that contradicted §4.2.)
 
 ### 6.4 BLE Transport Encryption
 
