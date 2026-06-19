@@ -123,7 +123,14 @@ The `sessionProof` construction is normative and defined once in [06-security.md
 
 ### 4.2 ServerSignedAuth (Partial A)
 
-Used when the app is online but the station is offline. The app obtains a server-signed authorization (via `POST /sessions/offline-auth`, supplying the same `appNonce` it will write in the upcoming `Hello` so the server binds the authorization to this handshake) and relays it to the station over BLE. The station verifies the ECDSA P-256 signature using the server's public key (provisioned at boot) and re-checks each claim against the live handshake state.
+Used when the app is online but the station is offline. The app obtains a server-signed authorization (via `POST /sessions/offline-auth`, supplying the same `appNonce` it uses in the `Hello` of this handshake so the server binds the authorization to it — see **Acquisition ordering** below) and relays it to the station over BLE. The station verifies the ECDSA P-256 signature using the server's public key (provisioned at boot) and re-checks each claim against the live handshake state.
+
+**Acquisition ordering (Normative).** The `appNonce` is chosen by the app and is the sole binding between the `POST` and the BLE handshake (§4.2.2 check #2), so the `POST /sessions/offline-auth` and the `Hello` write **MAY** occur in either order, provided the `appNonce` in the POST body equals the `appNonce` in the `Hello`. Two orderings are conformant:
+
+- **Pre-fetch** (RECOMMENDED when the app already knows the target `stationId` — e.g. from a scanned code or a prior advertisement): POST first, then write `Hello` carrying the same `appNonce`. This keeps the server round-trip out of the 10-second handshake budget (§1).
+- **Post-Challenge**: write `Hello`, read the `Challenge`, then POST and relay `ServerSignedAuth`. This is the ordering drawn in §8.2; here the POST and the relay both run inside the handshake budget, and the server's `expiresAt ≤ issuedAt + 5 min` bound (§4.2.1) must still hold when the station evaluates the relayed authorization.
+
+The sequence diagrams in §8.2 and [04-flows.md §5b](../../04-flows.md) each show one valid ordering and are illustrative, not exclusive.
 
 **Payload:**
 
@@ -154,7 +161,7 @@ The server **MUST** sign the authorization following the same canonical-form + E
    }
 ```
 
-The `appNonce` claim **MUST** equal the `appNonce` the app will write in the upcoming `Hello` message — the server reads it from the `POST /sessions/offline-auth` request body. The `expiresAt` claim **MUST** be no later than five minutes after `issuedAt`; `appNonce` provides the primary, clock-independent replay defence (§4.2.2 check #2) and `expiresAt` is a secondary bound.
+The `appNonce` claim **MUST** equal the `appNonce` the app uses in the `Hello` message of this handshake (in either acquisition order — see §4.2) — the server reads it from the `POST /sessions/offline-auth` request body. The `expiresAt` claim **MUST** be no later than five minutes after `issuedAt`; `appNonce` provides the primary, clock-independent replay defence (§4.2.2 check #2) and `expiresAt` is a secondary bound.
 
 #### 4.2.2 Verification (Station-Side)
 
