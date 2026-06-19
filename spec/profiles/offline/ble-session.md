@@ -5,6 +5,8 @@
 ## 1. Starting a Service
 
 > **AEAD channel (Normative).** Every message in this lifecycle — `StartServiceRequest`/`StartServiceResponse`, `StopServiceRequest`/`StopServiceResponse`, the FFF5 ServiceStatus notifications, and the FFF6 Receipt value — travels **inside the post-Challenge AEAD channel** ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)), encrypted and authenticated under the per-direction session keys. A station **MUST** reject any session command that does not decrypt and authenticate under the channel established by *this* connection's handshake. This is what makes `bayId`/`serviceId` selection and `StopServiceRequest` tamper-proof and un-forgeable by a co-located central (finding N4), and what removes the need for `sessionProof` to bind bay/service at authentication time (N1).
+>
+> **Message-ordering (Normative).** A station **MUST** reject a `StartServiceRequest` — or any other session command — that arrives **before** it has sent an `Accepted` AuthResponse on this connection: until authentication completes there is no authorized session to act on. (This is enforced by the connection state machine; it is additionally gated by the AEAD channel, since a pre-Accepted peer cannot in any case produce a valid frame, but the state check **MUST** be explicit so an out-of-order command is rejected rather than acted upon.)
 
 After a successful AuthResponse (`result: "Accepted"`), the app writes a StartServiceRequest to characteristic FFF3 to activate a service.
 
