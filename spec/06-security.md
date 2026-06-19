@@ -981,13 +981,14 @@ A per-handshake session key is derived from an **ephemeral-static + ephemeral-ep
 IKM  = es ‖ ee ‖ appNonce ‖ stationNonce          // 4 × 32 bytes = 128 bytes, in exactly this order
 salt = UTF8("OSPP_BLE_SESSION_V2")                 // the _V2 suffix domain-separates this ECDH
                                                     // construction from the retired LTK one (_V1)
-info = LP(deviceId) ‖ LP(stationId) ‖ LP(transcriptHash)
+info = LP(deviceId) ‖ LP(transcriptHash)           // stationId is NOT duplicated here — it is
+                                                    // already bound by transcriptHash (Pin 4)
 SessionKey = HKDF-SHA256(IKM, salt, info, L = 32)  // RFC 5869 (Extract-then-Expand), 32-byte output
 ```
 
 - `appNonce` / `stationNonce` are the **decoded 32-byte nonce values**, NOT their Base64 text.
 - `LP(x)` denotes a **length-prefixed field**: `U16BE(byteLength(x)) ‖ x`, where `U16BE` is an unsigned 16-bit big-endian length. Length-prefixing every `info` component removes the concatenation ambiguity that an attacker-chosen `deviceId` would otherwise introduce (this closes finding N23 — the v0.5.x `info = deviceId || stationId` had no delimiter).
-- `deviceId` is taken from Hello [MSG-029]; `stationId` is taken from the **verified StationIdentity certificate** (§6.5.2), NOT from the unauthenticated StationInfo read.
+- `deviceId` is taken from Hello [MSG-029] and is bound explicitly (it is the app-chosen client identity). `stationId` is **deliberately not a separate `info` component**: it is already bound by `transcriptHash` (Pin 4), which hashes the entire Challenge — including the StationIdentity certificate that carries the authenticated `stationId`. Duplicating it in `info` would add nothing.
 - `transcriptHash` is defined in Pin 4.
 
 **Pin 4 — Handshake transcript (byte-exact).**
@@ -1017,8 +1018,7 @@ The two `info` labels are distinct fixed ASCII constants (no length-prefix neede
 | `appEphemeralPubKey` | Hello [MSG-029] — compressed SEC1 (Pin 2, §6.5.2) |
 | `stationEphemeralPubKey` | Challenge [MSG-030] — compressed SEC1 (Pin 2, §6.5.2) |
 | `stationStaticPub` | `stationPubKey` from the verified StationIdentity (§6.5.2) |
-| `deviceId` | Hello [MSG-029] |
-| `stationId` | verified StationIdentity certificate (§6.5.2) |
+| `deviceId` | Hello [MSG-029] (the only standalone `info` component besides the transcript) |
 
 **Purpose:** The session key binds the authentication to this specific handshake **and** to the cryptographically authenticated station identity (a stronger binding than the v0.5.x LTK channel binding). The `sessionProof` in OfflineAuthRequest [MSG-031] is an HMAC computed with this key (§6.5.1), and all post-Challenge traffic is encrypted and authenticated under the directional keys (§6.5.3).
 

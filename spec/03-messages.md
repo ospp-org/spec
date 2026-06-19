@@ -2480,7 +2480,7 @@ The `stationConnectivity` field determines which authentication flow the app MUS
 | `availableServices[].available` | boolean | Yes | Whether the service can be started |
 
 > **Session key derivation:** Both sides derive the session key using HKDF-SHA256 over a two-operation ECDH P-256 exchange (the BLE LTK is NOT used — see [Chapter 06 — Security §6.5](06-security.md#65-ble-session-key-derivation--hkdf-sha256), which governs):
-> `SessionKey = HKDF-SHA256(ikm = es ‖ ee ‖ appNonce ‖ stationNonce, salt = "OSPP_BLE_SESSION_V2", info = LP(deviceId) ‖ LP(stationId) ‖ LP(transcriptHash), length = 32)` — where `es = ECDH(appEphemeral, stationStatic[cert])`, `ee = ECDH(appEphemeral, stationEphemeral)`.
+> `SessionKey = HKDF-SHA256(ikm = es ‖ ee ‖ appNonce ‖ stationNonce, salt = "OSPP_BLE_SESSION_V2", info = LP(deviceId) ‖ LP(transcriptHash), length = 32)` — where `es = ECDH(appEphemeral, stationStatic[cert])`, `ee = ECDH(appEphemeral, stationEphemeral)`, and `stationId` is bound via `transcriptHash` (not a separate `info` field).
 
 #### Example
 
