@@ -16,7 +16,7 @@ graph TB
 
     subgraph "Station Site"
         CTRL["⚙️ Station Controller<br/>(ESP32 / RPi)"]
-        BLE["📶 BLE Radio<br/>(4.2+ LESC)"]
+        BLE["📶 BLE Radio<br/>(4.2+)"]
         BAY1["🚿 Bay 1<br/>eco, standard, deluxe"]
         BAY2["🚿 Bay 2<br/>eco, standard"]
         BAYН["🚿 Bay N<br/>..."]
@@ -38,7 +38,7 @@ graph TB
     SERVER <--> DB
 
     %% BLE offline path (dashed)
-    APP -. "BLE GATT<br/>AES-CCM-128 (LESC)" .-> BLE
+    APP -. "BLE GATT<br/>app-layer AEAD" .-> BLE
     BLE -. "BLE GATT<br/>Receipts" .-> APP
 
     %% Station internals
