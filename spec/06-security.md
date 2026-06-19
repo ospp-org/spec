@@ -997,7 +997,17 @@ SessionKey = HKDF-SHA256(IKM, salt, info, L = 32)  // RFC 5869 (Extract-then-Exp
 transcriptHash = SHA-256( LP16(helloBytes) ‖ LP16(challengeBytes) )
 ```
 
-where `LP16(x) = U16BE(byteLength(x)) ‖ x`, and `helloBytes` / `challengeBytes` are the **exact reassembled UTF-8 byte sequences of the Hello and Challenge messages as transmitted on the wire** — post-defragmentation ([ble-transport.md §11](profiles/offline/ble-transport.md)), before any AEAD framing — concatenated in that fixed order. The transcript is computed over **raw transmitted bytes, NOT a re-canonicalized form**: each party hashes the exact octets it sent (for the message it sent) and the exact octets it received (for the message it received); on the lossless GATT link these byte sequences are identical on both ends. Binding `transcriptHash` into `info` makes the SessionKey depend on **every field of both handshake messages** — both ephemeral public keys, both nonces, the certificate, `stationConnectivity`, `availableServices`, `appVersion` — so tampering with any plaintext handshake field produces divergent keys on the two ends and the handshake fails at the first AEAD frame or the `sessionProof` check.
+where `LP16(x) = U16BE(byteLength(x)) ‖ x`, and `helloBytes` / `challengeBytes` are the Hello and Challenge messages, concatenated in that fixed order.
+
+**`helloBytes` / `challengeBytes` MUST be the fully-reassembled wire octets of each message, exactly as transmitted and received** — the byte sequence obtained after fragment reassembly ([ble-transport.md §11](profiles/offline/ble-transport.md)) and before any AEAD framing, with **no further processing**. Concretely:
+
+- Each party **MUST** hash, for the message it **sent**, the exact octets it placed on the wire, and for the message it **received**, the exact octets it received (post-reassembly). On the lossless, in-order GATT link these are byte-identical on both ends, which is why the two parties derive the same `transcriptHash`.
+- An implementation **MUST NOT** parse the received JSON and re-serialize it, apply the OSPP Canonical Form (§4.8), pretty-print, re-order keys, or perform any other normalization before hashing. The transcript is over the **raw message bytes**, not a canonical or re-encoded form.
+- This is the deliberate opposite of Pin 8 / §4.8 (canonical JSON), and for a different reason: the canonical form exists so that parties who never shared the exact bytes can reproduce a **signature** input (cert, receipt); the transcript exists to detect that the two handshake endpoints saw the **same bytes**, so it must hash those bytes verbatim. Mixing the two — canonicalizing the transcript — would break it.
+- **Capture the trap (class N1):** two implementations that disagree on *how* to reduce a message to bytes fail at the **first** handshake (this is exactly the N1 failure mode — a spec ambiguity that two conformant implementations resolve differently). The firmware, the app, and the simulator all hash **what they received on the wire**, never what they would have re-generated.
+- The hash is over the **complete reassembled message**, never over individual fragments.
+
+Binding `transcriptHash` into `info` makes the SessionKey depend on **every field of both handshake messages** — both ephemeral public keys, both nonces, the certificate, `stationConnectivity`, `availableServices`, `appVersion` — so tampering with any plaintext handshake field produces divergent keys on the two ends and the handshake fails at the first AEAD frame or the `sessionProof` check.
 
 **Directional AEAD sub-keys.** The 256-bit `SessionKey` is expanded into two independent directional keys for the AEAD channel (§6.5.3):
 
