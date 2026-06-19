@@ -322,7 +322,28 @@ The following BLE-related configuration keys **MAY** be set via the ChangeConfig
 | `BLEMTUPreferred` | integer | 247 | 23--517 bytes | Preferred MTU for BLE connections. |
 | `BLEStatusInterval` | integer | 5 | 1--30 s | Interval for FFF5 Service Status notifications. |
 
-## 13. Related Schemas
+## 13. Connection Lifecycle and Isolation
+
+A station serves the handshake and the subsequent session over a single GATT connection. The following rules isolate concurrent connections so that one central cannot observe or disrupt another central's session.
+
+**Per-connection isolation (Normative):**
+
+- A station **MUST** scope all handshake and session state to the single GATT connection on which it was established. At most one active handshake **MUST** be in progress per connection.
+- On disconnect, the station **MUST** discard every piece of state associated with that connection — derived session key, nonces, buffered fragments, and any authenticated session context. State **MUST NOT** carry over to a later connection.
+- A station **MUST** reject any session command (e.g. `StartService`/`StopService`, see [ble-session.md](ble-session.md)) or any post-handshake FFF3 write that arrives on a connection other than the one whose handshake authenticated that session. A command targeting a `sessionId` **MUST NOT** be honoured on a connection that did not establish that session.
+- A station **MAY** bound the number of concurrent central connections it accepts; when the bound is reached it **MAY** refuse or shed new connections.
+
+**Denial-of-service guidance (Non-normative):**
+
+BLE peripherals support only a small number of concurrent connections, so an unauthenticated central can exhaust connection slots. Stations SHOULD:
+
+- drop a connection that has not completed the handshake within the handshake budget ([ble-handshake.md §1](ble-handshake.md)) rather than holding the slot until `BLEConnectionTimeout` elapses;
+- continue advertising while connections are active (subject to the hardware connection limit) so a legitimate central is not locked out by a stalled or hostile peer;
+- prefer the lower end of the `BLEConnectionTimeout` range for connections that have not yet authenticated.
+
+This is operational guidance, not a wire-protocol requirement.
+
+## 14. Related Schemas
 
 - Station Info: [`station-info.schema.json`](../../../schemas/ble/station-info.schema.json)
 - Available Services: [`available-services.schema.json`](../../../schemas/ble/available-services.schema.json)
