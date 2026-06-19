@@ -1,6 +1,6 @@
 # Chapter 05 — State Machines
 
-> **Status:** Draft | **OSPP Version:** 0.5.0
+> **Status:** Draft | **OSPP Version:** 0.6.0
 
 This chapter defines all finite state machines (FSMs) governing OSPP entities. Each FSM specifies the complete set of states, valid transitions, guards, actions, and a Mermaid diagram. Implementations MUST enforce these state machines; any transition not explicitly listed here is invalid and MUST be rejected.
 
