@@ -18,23 +18,29 @@ The app initiates the handshake by writing a Hello message to characteristic FFF
 |-------------|---------|----------|-----------------------------------------------|
 | `type` | string | Yes | `Hello` (constant). |
 | `deviceId` | string | Yes | Unique device identifier for the mobile app. |
-| `appNonce` | string | Yes | Base64-encoded 32-byte cryptographically random nonce. |
+| `appNonce` | string | Yes | Base64-encoded 32-byte cryptographically random nonce (exactly 44 Base64 characters). |
 | `appVersion` | string | Yes | Semantic version of the mobile application. |
+| `appEphemeralPubKey` | string | Yes | App's per-handshake ephemeral P-256 public key, compressed SEC1, Base64 (44 chars; [06-security.md §6.5.2](../../06-security.md#652-stationidentity-certificate) Pin 2). Combined with the station's keys to derive the session key (§6). Freshly generated per handshake; discarded after the session. |
 
 The `appNonce` serves two purposes:
 1. **Replay protection** -- ensures each handshake is unique.
-2. **Key derivation input** -- combined with the station nonce to derive the session key (see section 6).
+2. **Key derivation input** -- combined with the station nonce in the IKM (see section 6).
+
+`appEphemeralPubKey` is the app's contribution to the ECDH exchange (§6); the app generates a fresh P-256 key pair per handshake.
 
 **Example:**
 
 ```json
 {
   "type": "Hello",
-  "deviceId": "device_a8f3bc12e4567890",
+  "deviceId": "dev_a8f3bc12e4567890",
   "appNonce": "k7Rz2mPqXvN8dF5sYwB1cA0hJ6tL9oKe3iGnUxMpWbQ=",
-  "appVersion": "2.1.0"
+  "appVersion": "2.1.0",
+  "appEphemeralPubKey": "AjRkc2Vzc2lvbi1lcGhlbWVyYWwtcHVia2V5LWFwcDEy"
 }
 ```
+
+> The `appEphemeralPubKey` above is an illustrative 44-character Base64 placeholder; conformance vectors carry real compressed-SEC1 keys (regenerated under [`tools/`](../../../tools) per the v0.6.0 vector batch).
 
 ## 3. Step 2: Challenge
 
@@ -45,7 +51,9 @@ The station responds to the Hello by sending a Challenge notification on charact
 | Field | Type | Required | Description |
 |-----------------------|---------|----------|-----------------------------------------------|
 | `type` | string | Yes | `Challenge` (constant). |
-| `stationNonce` | string | Yes | Base64-encoded 32-byte cryptographically random nonce. |
+| `stationNonce` | string | Yes | Base64-encoded 32-byte cryptographically random nonce (exactly 44 Base64 characters). |
+| `stationCert` | object | Yes | Server-signed StationIdentity certificate ([06-security.md §6.5.2](../../06-security.md#652-stationidentity-certificate); [`station-identity.schema.json`](../../../schemas/ble/station-identity.schema.json)). The app **MUST** verify its signature and expiry before sending any credential. Carries the station's static BLE ECDH key (`stationPubKey`) and authenticated `stationId`/`organizationId`. |
+| `stationEphemeralPubKey` | string | Yes | Station's per-handshake ephemeral P-256 public key, compressed SEC1, Base64 (44 chars; §6.5.2 Pin 2). Provides forward secrecy (`ee` in §6). Freshly generated per handshake. |
 | `stationConnectivity` | string | Yes | `"Online"` or `"Offline"` -- determines which auth path the app **MUST** use. |
 | `availableServices` | array | No | Optional snapshot of bay/service availability. |
 
@@ -53,12 +61,24 @@ The `stationConnectivity` field is critical for path selection:
 - **`"Online"`** -- the station has MQTT connectivity. The app **MAY** use ServerSignedAuth (Partial A) or OfflineAuthRequest (Partial B, relayed to server).
 - **`"Offline"`** -- the station has no MQTT connectivity. The app **MUST** use OfflineAuthRequest with a locally-stored OfflinePass (Full Offline).
 
+`stationCert` and `stationEphemeralPubKey` together let the app authenticate the station and complete the ECDH exchange (§6). The app **MUST** verify `stationCert` (§6.5.2 app verification gate) **before** transmitting any OfflinePass or ServerSignedAuth; on verification failure it aborts with `2013 BLE_AUTH_FAILED` and sends no credential.
+
 **Example:**
 
 ```json
 {
   "type": "Challenge",
   "stationNonce": "Qm4xR9vTfH2wLpZjK0sNcYgX5uOdA8rE1iBn6CtJkWe=",
+  "stationCert": {
+    "stationId": "stn_a1b2c3d4",
+    "organizationId": "org_7f3a9c2e1b5d",
+    "stationPubKey": "AymtZXJ2ZXItZXBoZW1lcmFsLXB1YmtleS1zdGF0aW9u",
+    "issuedAt": "2026-02-13T00:00:00.000Z",
+    "expiresAt": "2026-02-20T00:00:00.000Z",
+    "signatureAlgorithm": "ECDSA-P256-SHA256",
+    "signature": "MEUCIQDXKT0ewRBp/nkPY/qh6mBjwSn4BE7fmjDTdjcP1dhIyQIgPyXM1VnFZtrG6WaOgpRwiQIeFF2I2zeFsb05dyel1rE="
+  },
+  "stationEphemeralPubKey": "AzN0YXRpb24tZXBoZW1lcmFsLXB1YmtleS1jaGFsbGVu",
   "stationConnectivity": "Offline",
   "availableServices": [
     { "bayId": "bay_c1d2e3f4a5b6", "serviceId": "svc_eco", "available": true },
@@ -66,6 +86,8 @@ The `stationConnectivity` field is critical for path selection:
   ]
 }
 ```
+
+> The `stationCert` signature and the two compressed-SEC1 public keys above are illustrative placeholders; conformance vectors carry real values regenerated under the v0.6.0 vector batch.
 
 ## 4. Step 3: Authentication
 
@@ -291,15 +313,19 @@ The following rejection reason codes **MAY** appear in the AuthResponse `reason`
       |                                       |
       |--- Hello (FFF3 Write) -------------->|
       |    { type, deviceId, appNonce,        |
-      |      appVersion }                     |
+      |      appVersion, appEphemeralPubKey } |
       |                                       |
       |<-- Challenge (FFF4 Notify) ----------|
-      |    { type, stationNonce,              |
+      |    { type, stationNonce, stationCert, |
+      |      stationEphemeralPubKey,          |
       |      stationConnectivity: "Offline" } |
       |                                       |
-      |  [App derives session key via HKDF]   |
+      |  [App verifies stationCert; aborts    |
+      |   if invalid — no pass is sent]       |
+      |  [Both derive SessionKey via ECDH+    |
+      |   HKDF; AEAD channel established]      |
       |                                       |
-      |--- OfflineAuthRequest (FFF3) ------>|
+      |=== OfflineAuthRequest (FFF3) ======>|   (AEAD frame {n, ct})
       |    { type, offlinePass, counter,      |
       |      sessionProof }                   |
       |                                       |
@@ -307,11 +333,15 @@ The following rejection reason codes **MAY** appear in the AuthResponse `reason`
       |     signature, expiry, epoch,         |
       |     counter, limits, sessionProof]    |
       |                                       |
-      |<-- AuthResponse (FFF4 Notify) ------|
+      |<== AuthResponse (FFF4 Notify) ======|   (AEAD frame {n, ct})
       |    { type, result: "Accepted",        |
       |      sessionKeyConfirmation }         |
       |                                       |
+      |  ( === = encrypted AEAD channel,      |
+      |    §6.5.3; --- = plaintext )          |
 ```
+
+> The Partial A and Partial B diagrams below share §8.1's extended Hello/Challenge (carrying the ephemeral public keys and `stationCert`), the same mandatory `stationCert` verification before any credential is sent, and the same AEAD channel (§6.5.3) for every post-Challenge message. They omit those details for brevity.
 
 ### 8.2 Partial A Handshake (Station Offline, App Online)
 

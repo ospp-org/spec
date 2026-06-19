@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/common/ec-public-key.schema.json",
+  "title": "EC Public Key (P-256, compressed SEC1)",
+  "description": "An NIST P-256 (secp256r1) public key in compressed SEC1 point form (33 bytes: a 0x02 or 0x03 prefix byte followed by the 32-byte big-endian X coordinate), Base64-encoded. Used on the BLE wire for the per-handshake ephemeral keys (Hello.appEphemeralPubKey, Challenge.stationEphemeralPubKey) and the StationIdentity certificate's static key (stationPubKey). 33 bytes Base64-encode to exactly 44 characters with no padding. Encoding pin: compressed SEC1 (06-security.md §6.5 Pin 2) — NOT the 65-byte uncompressed form (which is reserved for the PEM-delivered server signing key).",
+  "type": "string",
+  "pattern": "^[A-Za-z0-9+/]{44}$"
+}

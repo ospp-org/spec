@@ -1097,6 +1097,46 @@ sessionProof:       "e3a1f8b2c4d6e8f0a2b4c6d8e0f2a4b6c8d0e2f4a6b8c0d2e4f6a8b0c2d
 
 > **Note:** The test vector above uses an illustrative `sessionProof` output. Implementors MUST use a known-good HMAC-SHA256 library and verify their implementation produces identical output for the given inputs before deployment.
 
+### 6.5.2 StationIdentity Certificate
+
+The **StationIdentity certificate** is a server-signed credential that binds a station's business identity and issuing organization to its **dedicated static BLE ECDH public key**. It is the trust anchor that lets a mobile app authenticate a station offline, before transmitting any OfflinePass. It is carried in the BLE Challenge [MSG-030] and is defined by [`station-identity.schema.json`](../../schemas/ble/station-identity.schema.json).
+
+**Certificate body (signed):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `stationId` | string | Business station ID (`stn_<hex>`). Becomes the authenticated `stationId` in the key-derivation `info` (§6.5 Pin 3). |
+| `organizationId` | string | Issuing organization (`org_<uuid>`). |
+| `stationPubKey` | string | The station's **static BLE ECDH P-256** public key, compressed SEC1, Base64 (Pin 2 below). This is `stationStaticPub` in `es = ECDH(appEphemeral, stationStaticPub)` (§6.5). |
+| `issuedAt` | string | ISO 8601 UTC issuance time. |
+| `expiresAt` | string | ISO 8601 UTC expiry — SHOULD be short (see residual risks). |
+
+The wrapper adds `signatureAlgorithm` (`"ECDSA-P256-SHA256"`) and `signature`. The signature is computed over the **OSPP Canonical Form** (§4.8) of the body (all fields above, excluding `signature`/`signatureAlgorithm`), using **the same server signing key that signs OfflinePasses and ServerSignedAuth** (§4.2), with RFC 6979 deterministic nonces and low-s normalisation (§6.2 Note 6). No new server key is introduced.
+
+**Pin 2 — public-key wire encoding (byte-exact).** Every P-256 public key transmitted on the BLE wire — `stationPubKey` in this certificate, `appEphemeralPubKey` in Hello, and `stationEphemeralPubKey` in Challenge — MUST be **compressed SEC1** (33 bytes: a `0x02`/`0x03` prefix byte followed by the 32-byte big-endian X coordinate), Base64-encoded to exactly 44 characters with no padding. NOTE: `@noble/curves` emits compressed points by default; the 65-byte uncompressed (`0x04`-prefixed) form MUST NOT be used on the BLE wire. The 65-byte uncompressed form remains reserved for the PEM-delivered server signing key (`serverVerifyKey`, unchanged), which is an ECDSA verify key, not an ECDH key.
+
+**Dedicated BLE key pair (key separation).** `stationPubKey` is a key pair **distinct from** the station's ECDSA P-256 mTLS/receipt key (§4.3): one P-256 key MUST NOT be used for both ECDSA signing and ECDH key agreement (NIST SP 800-56A key-separation). The station generates this ECDH key pair **on-device** at provisioning (the private key never leaves the station, exactly as for the TLS key) and submits the public key in the provisioning request alongside its TLS CSR.
+
+**Issuance, delivery, and rotation.**
+- **Issuance.** At provisioning the server signs the StationIdentity over the station-submitted `stationPubKey` and returns it in the provisioning response `stationIdentity` field ([`provisioning-response.schema.json`](../../schemas/provisioning-response.schema.json)). Server-side this reuses the existing OfflinePass signing path; no new cryptographic machinery is added.
+- **Delivery to the station.** Provisioning response, and thereafter ChangeConfiguration [MSG-013] (key `StationIdentityCertificate`) for re-issuance — mirroring `OfflinePassPublicKey` distribution (§6.7).
+- **Rotation.** `expiresAt` SHOULD be short; the server re-issues before expiry. During the re-issuance window a station MAY hold both its current and previous certificate. **Server-key** rotation (§6.7) interacts with verification: the app MUST accept a StationIdentity whose signature verifies under **any** server signing key currently in its trusted set (the overlap set the server publishes during rotation), exactly as a station accepts OfflinePasses under the current or previous server key.
+
+**What the app holds (no per-station keys).** The mobile app holds only the **server signing public key(s)** — obtained when it last fetched OfflinePasses (it is online by definition then) — plus one freshly generated ephemeral key per handshake. It verifies *every* station with the server key, root-CA style; it stores **zero** per-station keys. The app SHOULD refresh the server-key set on every online contact.
+
+**App verification gate (Normative).** Before transmitting any OfflinePass [MSG-031] or ServerSignedAuth [MSG-032], the app **MUST**:
+1. verify the StationIdentity `signature` (ECDSA P-256) over the canonical body against a server signing key it trusts;
+2. verify `expiresAt` is in the future (with a small clock-skew margin);
+3. on either failure, **abort the handshake and send no credential**, surfacing error `2013 BLE_AUTH_FAILED`.
+
+Only after the gate passes does the app use `stationPubKey` as `stationStaticPub` (§6.5) and the certificate's `stationId` in the key-derivation `info`. This gate is what stops an impersonating station from harvesting a pass: a fake station cannot produce a certificate that verifies under the server key, so the app never sends the pass to it. (This is the single property no symmetric arrangement provides without an extra round-trip.)
+
+**Residual risks (Normative acknowledgement).** The certificate authenticates *identity*; it does not make the channel unconditionally safe. Implementers MUST account for:
+- **Offline revocation is best-effort.** An offline app cannot fetch a CRL/OCSP. A station whose static BLE key is compromised remains impersonatable until its certificate `expiresAt`. Mitigation = short `expiresAt` + rotation; this is a deliberate availability/security trade-off, not an oversight.
+- **Server-key freshness on the phone.** A phone that has been offline since before a server-key rotation holds only the old key. Mitigation = the server publishes an **overlapping set** of valid signing keys and the app refreshes on every online contact (above).
+- **Blast radius is one station.** Compromise of a single station's static BLE key permits impersonation of **that station only**, bounded by its `expiresAt` + rotation — not a fleet-wide break.
+- **Relay is not prevented; impersonation is.** The certificate proves "a legitimate station of this organization", not "the station physically in front of the user". A pure relay that forwards a genuine station's Challenge is not stopped by the certificate. OSPP tolerates this because authorization is by the cryptographic OfflinePass (explicit, deliberate user action), not by mere proximity — a relay can do nothing a legitimate station could not already do. OSPP is therefore immune to the proximity-unlock relay class (e.g. Tesla/Kwikset), where possession-by-proximity *is* the authorization.
+
 ### 6.6 Epoch-Based Revocation
 
 OSPP uses a global **revocation epoch** for batch OfflinePass invalidation, avoiding the complexity of Certificate Revocation Lists:

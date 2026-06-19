@@ -59,7 +59,11 @@
       "minLength": 100,
       "maxLength": 4096,
       "pattern": "^-----BEGIN (PUBLIC|EC PUBLIC) KEY-----[\\s\\S]+-----END (PUBLIC|EC PUBLIC) KEY-----\\s*$",
-      "description": "PEM-encoded ECDSA P-256 server signing public key used by the station to verify OfflinePass and ServerSignedAuth signatures (Chapter 06 — Security §4.2 §6.1 §6.7)."
+      "description": "PEM-encoded ECDSA P-256 server signing public key used by the station to verify OfflinePass and ServerSignedAuth signatures (Chapter 06 — Security §4.2 §6.1 §6.7). The same key signs the StationIdentity certificate (§6.5.2)."
+    },
+    "stationIdentity": {
+      "$ref": "ble/station-identity.schema.json",
+      "description": "OPTIONAL. The server-signed StationIdentity certificate for the BLE handshake (Chapter 06 — Security §6.5.2), issued over the station's dedicated static BLE ECDH public key (which the station generated on-device and submitted in the provisioning request, like its TLS CSR). Present for stations implementing the Offline/BLE profile; absent otherwise. Rotated out-of-band via ChangeConfiguration [MSG-013] (key `StationIdentityCertificate`), mirroring OfflinePassPublicKey rotation (§6.7)."
     },
     "mqttConfig": {
       "type": "object",

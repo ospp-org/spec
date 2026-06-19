@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/ble/station-identity.schema.json",
+  "title": "StationIdentity",
+  "description": "Server-signed certificate binding a station's business identity and issuing organization to its dedicated static BLE ECDH public key. Carried in the BLE Challenge (FFF4) and delivered to the station at provisioning. The mobile app verifies the ECDSA P-256 signature against the server signing key (the same key that signs OfflinePasses) BEFORE transmitting any OfflinePass, which prevents leaking the pass to an impersonating station. Normative definition: 06-security.md §6.5.2. The signed canonical body is the object MINUS the signature and signatureAlgorithm fields (OSPP Canonical Form, 06-security.md §4.8).",
+  "type": "object",
+  "required": [
+    "stationId",
+    "organizationId",
+    "stationPubKey",
+    "issuedAt",
+    "expiresAt",
+    "signatureAlgorithm",
+    "signature"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "stationId": {
+      "$ref": "../common/station-id.schema.json",
+      "description": "Business station identifier (stn_<hex>). Becomes the authenticated stationId used in the session-key info (06-security.md §6.5 Pin 3) and in ServerSignedAuth check #3."
+    },
+    "organizationId": {
+      "type": "string",
+      "pattern": "^org_[A-Za-z0-9_-]+$",
+      "maxLength": 64,
+      "description": "Issuing organization identifier (org_<uuid>). Binds the station to its operator/tenant; the app MAY cross-check it against the pass's issuing organization."
+    },
+    "stationPubKey": {
+      "$ref": "../common/ec-public-key.schema.json",
+      "description": "The station's DEDICATED static BLE ECDH P-256 public key (compressed SEC1, 44-char Base64). Separate from the station's ECDSA mTLS/receipt key (key separation, SP 800-56A). Used as stationStaticPub in es = ECDH(appEphemeral, stationStaticPub)."
+    },
+    "issuedAt": {
+      "$ref": "../common/timestamp.schema.json",
+      "description": "ISO 8601 UTC issuance time."
+    },
+    "expiresAt": {
+      "$ref": "../common/timestamp.schema.json",
+      "description": "ISO 8601 UTC expiry. SHOULD be short (offline revocation is best-effort; see 06-security.md §6.5.2). The app MUST reject an expired certificate."
+    },
+    "signatureAlgorithm": {
+      "type": "string",
+      "const": "ECDSA-P256-SHA256",
+      "description": "Algorithm used to sign the certificate body."
+    },
+    "signature": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "description": "ECDSA P-256 (RFC 6979, low-s normalised) DER signature over the OSPP Canonical Form of the certificate body (all fields except signature and signatureAlgorithm), Base64-encoded. Verified with the server signing public key (provisioning serverVerifyKey)."
+    }
+  }
+}

@@ -7,7 +7,9 @@
   "required": [
     "type",
     "stationNonce",
-    "stationConnectivity"
+    "stationConnectivity",
+    "stationCert",
+    "stationEphemeralPubKey"
   ],
   "additionalProperties": false,
   "properties": {
@@ -18,9 +20,16 @@
     },
     "stationNonce": {
       "type": "string",
-      "minLength": 1,
-      "maxLength": 1024,
-      "description": "Base64-encoded 32-byte random nonce"
+      "pattern": "^[A-Za-z0-9+/]{43}=$",
+      "description": "Base64-encoded 32-byte cryptographically random nonce (exactly 44 Base64 characters; N16 — was minLength:1)."
+    },
+    "stationCert": {
+      "$ref": "station-identity.schema.json",
+      "description": "Server-signed StationIdentity certificate (06-security.md §6.5.2). The app MUST verify its ECDSA signature and expiry BEFORE sending any OfflinePass. Its stationPubKey is the station's static BLE ECDH key used in es = ECDH(appEphemeral, stationStaticPub)."
+    },
+    "stationEphemeralPubKey": {
+      "$ref": "../common/ec-public-key.schema.json",
+      "description": "The station's per-handshake ephemeral P-256 public key (compressed SEC1, Base64). Provides forward secrecy via ee = ECDH(appEphemeral, stationEphemeral). Freshly generated per handshake."
     },
     "stationConnectivity": {
       "type": "string",

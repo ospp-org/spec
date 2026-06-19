@@ -566,11 +566,11 @@ sequenceDiagram
 3. **App** reads **StationInfo** [MSG-027] from FFF1 — verifies station identity, checks `connectivity: "Offline"`
 4. **App** reads **AvailableServices** [MSG-028] from FFF2 — displays service catalog with prices
 5. User selects a bay and service
-6. **App** writes **HELLO** [MSG-029] to FFF3 with `deviceId`, `appNonce`, `appVersion`
-7. **SSP** responds with **CHALLENGE** [MSG-030] on FFF4 with `stationNonce`, `stationConnectivity: "Offline"`
-8. **App** derives the session key via HKDF-SHA256 (`ikm = LTK || appNonce || stationNonce`)
+6. **App** writes **HELLO** [MSG-029] to FFF3 with `deviceId`, `appNonce`, `appVersion`, `appEphemeralPubKey`
+7. **SSP** responds with **CHALLENGE** [MSG-030] on FFF4 with `stationNonce`, `stationCert` (StationIdentity), `stationEphemeralPubKey`, `stationConnectivity: "Offline"`
+8. **App** verifies `stationCert` against the server signing key (§6.5.2) — **aborts and sends no pass if invalid** — then derives the session key via ECDH P-256 + HKDF-SHA256 (`ikm = es ‖ ee ‖ appNonce ‖ stationNonce`; the LTK is not used). The post-Challenge AEAD channel is now established.
 9. **App** requests biometric or PIN confirmation from the user
-10. **App** writes **OfflineAuthRequest** [MSG-031] to FFF3 with the OfflinePass, counter, and session proof
+10. **App** writes **OfflineAuthRequest** [MSG-031] to FFF3 (inside the AEAD channel) with the OfflinePass, counter, and `sessionProof`
 11. **SSP** validates the OfflinePass (10 checks — signature, expiry, epoch, device, limits, interval, counter)
 12. **SSP** sends **AuthResponse** [MSG-033] `Accepted` on FFF4 with session key confirmation
 13. **App** writes **StartServiceRequest** [MSG-034] to FFF3 with `bayId`, `serviceId`, `requestedDurationSeconds`

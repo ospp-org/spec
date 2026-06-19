@@ -2432,6 +2432,7 @@ First message of the BLE handshake. The app sends its identity and a random nonc
 | `deviceId` | string | Yes | Unique mobile device identifier (stable across sessions) |
 | `appNonce` | string | Yes | Base64-encoded 32-byte random nonce |
 | `appVersion` | string | Yes | Mobile app version (semver) |
+| `appEphemeralPubKey` | string | Yes | App's per-handshake ephemeral P-256 public key (compressed SEC1, Base64). ECDH input for session-key derivation ([Chapter 06 §6.5](06-security.md#65-ble-session-key-derivation--hkdf-sha256)). |
 
 #### Example
 
@@ -2440,7 +2441,8 @@ First message of the BLE handshake. The app sends its identity and a random nonc
   "type": "Hello",
   "deviceId": "device_uuid_123",
   "appNonce": "dGhpcyBpcyBhIDMyLWJ5dGUgcmFuZG9tIG5vbmNl...",
-  "appVersion": "2.1.0"
+  "appVersion": "2.1.0",
+  "appEphemeralPubKey": "AjRkc2Vzc2lvbi1lcGhlbWVyYWwtcHVia2V5LWFwcDEy"
 }
 ```
 
@@ -2469,6 +2471,8 @@ The `stationConnectivity` field determines which authentication flow the app MUS
 |-------|------|:--------:|-------------|
 | `type` | string | Yes | `"Challenge"` |
 | `stationNonce` | string | Yes | Base64-encoded 32-byte random nonce |
+| `stationCert` | object | Yes | Server-signed StationIdentity certificate ([Chapter 06 §6.5.2](06-security.md#652-stationidentity-certificate)). App MUST verify before sending any credential. |
+| `stationEphemeralPubKey` | string | Yes | Station's per-handshake ephemeral P-256 public key (compressed SEC1, Base64). ECDH input for forward secrecy (§6.5). |
 | `stationConnectivity` | string | Yes | `"Online"` or `"Offline"` |
 | `availableServices` | array | No | Simplified list of currently available services |
 | `availableServices[].bayId` | string | Yes | Bay identifier |
@@ -2484,6 +2488,16 @@ The `stationConnectivity` field determines which authentication flow the app MUS
 {
   "type": "Challenge",
   "stationNonce": "c3RhdGlvbiBub25jZSAzMiBieXRlcyByYW5kb20u...",
+  "stationCert": {
+    "stationId": "stn_a1b2c3d4",
+    "organizationId": "org_7f3a9c2e1b5d",
+    "stationPubKey": "AymtZXJ2ZXItZXBoZW1lcmFsLXB1YmtleS1zdGF0aW9u",
+    "issuedAt": "2026-02-13T00:00:00.000Z",
+    "expiresAt": "2026-02-20T00:00:00.000Z",
+    "signatureAlgorithm": "ECDSA-P256-SHA256",
+    "signature": "MEUCIQDXKT0ewRBp/nkPY/qh6mBjwSn4BE7fmjDTdjcP1dhIyQIgPyXM1VnFZtrG6WaOgpRwiQIeFF2I2zeFsb05dyel1rE="
+  },
+  "stationEphemeralPubKey": "AzN0YXRpb24tZXBoZW1lcmFsLXB1YmtleS1jaGFsbGVu",
   "stationConnectivity": "Offline",
   "availableServices": [
     { "bayId": "bay_c1d2e3f4a5b6", "serviceId": "svc_eco", "available": true },

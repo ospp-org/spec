@@ -8,7 +8,8 @@
     "type",
     "deviceId",
     "appNonce",
-    "appVersion"
+    "appVersion",
+    "appEphemeralPubKey"
   ],
   "additionalProperties": false,
   "properties": {
@@ -22,15 +23,18 @@
     },
     "appNonce": {
       "type": "string",
-      "minLength": 1,
-      "maxLength": 1024,
-      "description": "Base64-encoded 32-byte random nonce"
+      "pattern": "^[A-Za-z0-9+/]{43}=$",
+      "description": "Base64-encoded 32-byte cryptographically random nonce (exactly 44 Base64 characters; N16 — was minLength:1)."
     },
     "appVersion": {
       "type": "string",
       "pattern": "^\\d+\\.\\d+\\.\\d+$",
       "maxLength": 32,
       "description": "Semantic version of the mobile application"
+    },
+    "appEphemeralPubKey": {
+      "$ref": "../common/ec-public-key.schema.json",
+      "description": "The app's per-handshake ephemeral P-256 public key (compressed SEC1, Base64). Combined with the station's keys to derive the session key (06-security.md §6.5). Freshly generated per handshake and discarded after the session."
     }
   }
 }
