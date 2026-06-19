@@ -287,7 +287,7 @@ ee = ECDH(appEphemeralPriv, stationEphemeralPub) // forward secrecy
 SessionKey = HKDF-SHA256(
   ikm    = es ‖ ee ‖ appNonce ‖ stationNonce,    // each 32 bytes, in this order
   salt   = "OSPP_BLE_SESSION_V2",
-  info   = LP(deviceId) ‖ LP(stationId) ‖ LP(transcriptHash),
+  info   = LP(deviceId) ‖ LP(transcriptHash),     // stationId is bound via transcriptHash, not duplicated
   length = 32 bytes
 )
 ```
