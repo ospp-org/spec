@@ -28,7 +28,7 @@ graph TB
 
     subgraph "Station Site"
         CTRL["⚙️ Station Controller<br/>(ESP32 / RPi)"]
-        BLE["📶 BLE Radio<br/>(4.2+ LESC)"]
+        BLE["📶 BLE Radio<br/>(4.2+)"]
         BAY1["🚿 Bay 1<br/>Service A, B, C"]
         BAY2["🚿 Bay 2<br/>Service A, B"]
         BAYН["🚿 Bay N<br/>..."]
@@ -41,7 +41,7 @@ graph TB
     PG -->|"Webhook<br/>HMAC-SHA512"| SERVER
     SERVER -->|"Payment API<br/>HTTPS"| PG
     SERVER <--> DB
-    APP -. "BLE GATT<br/>AES-CCM-128 (LESC)" .-> BLE
+    APP -. "BLE GATT<br/>app-layer AEAD" .-> BLE
     BLE -. "BLE GATT<br/>Receipts" .-> APP
     BLE --- CTRL
     CTRL --- BAY1

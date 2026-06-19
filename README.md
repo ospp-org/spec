@@ -63,7 +63,7 @@ graph TB
 
     subgraph "Station (SSP)"
         MCU["Station Controller<br/>(ESP32 / RPi)"]
-        BLE["BLE Radio<br/>(4.2+ LESC)"]
+        BLE["BLE Radio<br/>(4.2+)"]
         Bay1["Bay 1<br/>Service A, B, C"]
         Bay2["Bay 2<br/>Service A, B"]
     end
@@ -73,7 +73,7 @@ graph TB
     Server <-->|"MQTT 5.0<br/>mTLS / TLS 1.3<br/>QoS 1"| Broker
     Broker <-->|"MQTT 5.0<br/>mTLS / TLS 1.3"| MCU
     PG -->|"Webhook<br/>HMAC-SHA512"| Server
-    App <-.->|"BLE GATT<br/>AES-CCM-128"| BLE
+    App <-.->|"BLE GATT<br/>app-layer AEAD"| BLE
     BLE --- MCU
     MCU --- Bay1
     MCU --- Bay2
