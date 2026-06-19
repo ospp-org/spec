@@ -92,6 +92,8 @@ The server **MUST** apply the 11 checks below in the listed dependency-ordered c
 | 10 | **Revocation epoch** | The pass's `revocation_epoch` MUST be greater than or equal to the server's current `RevocationEpoch`. | `2004 OFFLINE_EPOCH_REVOKED` |
 | 11 | **Individual revocation** | The pass's `is_revoked` flag MUST be `false`. | `2014 OFFLINE_PASS_REVOKED` |
 
+> **Org binding is one canonical invariant (finding N9).** Check #7 here and check #11 of the authorize-time gate ([`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks-11-checks)) are the **same** organization-binding invariant, keyed by the **same** wire error code `2015 OFFLINE_ORG_MISMATCH`. Both compare the pass's issuing `organization_id` (from the server's stored pass record) against the reporting station's `organization_id`, for scoped and unscoped passes alike. The positional index differs only because the two gates run different check sets; the semantics and error code are identical.
+
 ### 6.2 Station Binding Format and Unscoped Semantics
 
 **Format (check #8).** `allowed_station_ids` stores **business station IDs** — the `stn_<hex>` form the station uses to identify itself in the MQTT envelope and BootNotification (the same identifier referenced throughout the OSPP identity scheme) — NOT server-internal UUIDs. The check #8 membership test compares the envelope's `stationId` (already a business ID on the wire) by **string equality** against the entries in `allowed_station_ids`. Implementations MUST NOT convert either side to UUID before comparison; both sides are business IDs. (A server may internally resolve the envelope `stationId` to a UUID for downstream persistence, but the gate-check comparison is against the business-ID array as stored.)

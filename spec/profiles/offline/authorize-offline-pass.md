@@ -36,7 +36,7 @@ This action provides stronger security guarantees than local-only validation bec
 | `creditsAuthorized` | integer | Cond. | Number of credits authorized for this session. Present when `status` is `Accepted`. |
 | `reason` | string | Cond. | Human-readable rejection reason. Present when `status` is `Rejected`. |
 
-## 5. Validation Checks (10 checks)
+## 5. Validation Checks (11 checks)
 
 The server **MUST** perform all of the following checks in order. Processing **MUST** stop at the first failure.
 
@@ -46,12 +46,15 @@ The server **MUST** perform all of the following checks in order. Processing **M
 | 2 | **Not expired** -- `expiresAt` **MUST** be greater than the current server time. | `2003 OFFLINE_PASS_EXPIRED` |
 | 3 | **Revocation epoch** -- `revocationEpoch` **MUST** be greater than or equal to the server's current `RevocationEpoch`. | `2004 OFFLINE_EPOCH_REVOKED` |
 | 4 | **Device binding** -- `offlinePass.deviceId` **MUST** match the `deviceId` field in the request. | `2002 OFFLINE_PASS_INVALID` |
-| 5 | **Station allowance** -- if the pass includes station-scoped constraints, the station **MUST** be permitted. | `2006 OFFLINE_STATION_MISMATCH` |
+| 5 | **Station allowance** -- the reporting station **MUST** be permitted by the `allowed_station_ids` of the **server's stored pass record** (not a wire field). | `2006 OFFLINE_STATION_MISMATCH` |
 | 6 | **Usage limit** -- the pass's `maxUses` **MUST NOT** have been exceeded (server tracks cumulative uses). | `4002 OFFLINE_LIMIT_EXCEEDED` |
 | 7 | **Total credits limit** -- cumulative credits charged **MUST NOT** exceed `maxTotalCredits`. | `4002 OFFLINE_LIMIT_EXCEEDED` |
 | 8 | **Per-transaction credits** -- the estimated cost for the requested service **MUST NOT** exceed `maxCreditsPerTx`. | `4004 OFFLINE_PER_TX_EXCEEDED` |
 | 9 | **Rate limit** -- elapsed time since last use **MUST** be at least `minIntervalSec` seconds. | `4003 OFFLINE_RATE_LIMITED` |
 | 10 | **Counter replay** -- `counter` **MUST** be strictly greater than the last seen counter for this pass. | `2005 OFFLINE_COUNTER_REPLAY` |
+| 11 | **Org binding** -- the issuing `organization_id` of the **server's stored pass record** **MUST** equal the reporting station's `organization_id`. Applies to ALL passes (scoped and unscoped). | `2015 OFFLINE_ORG_MISMATCH` |
+
+> **Org binding is one canonical invariant (finding N9).** Check #11 here and the reconcile-time gate's check #7 ([`reconciliation.md` §6.1](reconciliation.md#61-check-list)) are the **same** organization-binding invariant, keyed by the **same wire error code `2015 OFFLINE_ORG_MISMATCH`**. The positional index differs only because the two gates run different check sets in different contexts (authorize-time station-presented credential vs reconcile-time settlement); the invariant, its semantics ("the pass's issuing org must equal the reporting station's org, for scoped and unscoped passes alike"), and its error code are identical. Both read `organization_id` from the **server's stored pass record**, so neither requires the organization to be carried in the signed pass body. Like the other policy rejections at authorize-time (expiry, epoch, station, limits, rate), an org mismatch is **not** a SecurityEvent (§6 rule 7); only check #1 and check #10 emit. (The full single-ordinal alignment of the authorize-time list with the reconcile-time list is coupled to the counter-replay `eventId` migration and is scheduled with that change — see CHANGELOG / S2.)
 
 ## 6. Processing Rules
 
@@ -61,7 +64,7 @@ The server **MUST** perform all of the following checks in order. Processing **M
 4. On `Accepted`: the station **MUST** store the `sessionId`, `durationSeconds`, and `creditsAuthorized`, then proceed with service activation. The station **MUST** relay the acceptance result back to the app via the BLE AuthResponse.
 5. On `Rejected`: the station **MUST NOT** start any service. The station **MUST** relay the rejection back to the app via the BLE AuthResponse with the appropriate error code.
 6. If no response is received within 15 seconds, the station **MUST** treat the request as timed out (error `1010 MESSAGE_TIMEOUT`) and **MAY** fall back to local validation if the Offline profile is supported.
-7. The server **MUST** log a SecurityEvent for any signature verification failure (check #1) or counter replay (check #5). This is the only case in which the server itself emits a SecurityEvent on behalf of a station-presented credential; other `Rejected` outcomes (expiry, epoch revocation, station mismatch, usage limits, rate limit) are policy decisions, not security incidents, and **MUST NOT** be emitted as SecurityEvents by the server.
+7. The server **MUST** log a SecurityEvent for any signature verification failure (check #1) or counter replay (check #5). This is the only case in which the server itself emits a SecurityEvent on behalf of a station-presented credential; other `Rejected` outcomes (expiry, epoch revocation, station mismatch, org mismatch, usage limits, rate limit) are policy decisions, not security incidents, and **MUST NOT** be emitted as SecurityEvents by the server.
 
     The emitted SecurityEvent **MUST** conform to the SecurityEvent profile (`profiles/security/security-event.md`) with the following constraints:
 
@@ -92,6 +95,7 @@ The server **MUST** perform all of the following checks in order. Processing **M
 | 2004 | `OFFLINE_EPOCH_REVOKED` | Error | Pass `revocationEpoch` is less than the server's current epoch. |
 | 2005 | `OFFLINE_COUNTER_REPLAY` | Critical | Counter is not strictly greater than last seen; possible replay attack. |
 | 2006 | `OFFLINE_STATION_MISMATCH` | Error | Station not in the pass's allowed station list. |
+| 2015 | `OFFLINE_ORG_MISMATCH` | Error | Pass's issuing organization does not match the reporting station's organization (check #11; same invariant as `reconciliation.md` §6.1 check #7). |
 | 4002 | `OFFLINE_LIMIT_EXCEEDED` | Error | `maxUses` or `maxTotalCredits` exceeded. |
 | 4003 | `OFFLINE_RATE_LIMITED` | Warning | `minIntervalSec` constraint violated. |
 | 4004 | `OFFLINE_PER_TX_EXCEEDED` | Error | Requested service cost exceeds `maxCreditsPerTx`. |
