@@ -1084,7 +1084,10 @@ The wrapper adds `signatureAlgorithm` (`"ECDSA-P256-SHA256"`) and `signature`. T
 **App verification gate (Normative).** Before transmitting any OfflinePass [MSG-031] or ServerSignedAuth [MSG-032], the app **MUST**:
 1. verify the StationIdentity `signature` (ECDSA P-256) over the canonical body against a server signing key it trusts;
 2. verify `expiresAt` is in the future (with a small clock-skew margin);
-3. on either failure, **abort the handshake and send no credential**, surfacing error `2013 BLE_AUTH_FAILED`.
+3. **if the app holds an intended `stationId` from an out-of-band channel** — e.g. a QR code on the physical station, an NFC tag, or a deep link the user opened — verify `cert.stationId == intended_stationId`;
+4. on any of the checks above failing, **abort the handshake and send no credential**, surfacing error `2013 BLE_AUTH_FAILED`.
+
+**Intended-station binding (Normative, with its limit).** Step 3 is what binds the cryptographic identity to the *physical* station the user chose, narrowing the relay/wrong-station gap (the certificate alone proves "a legitimate provisioned station of the organization", not "the station in front of the user"). Its limit MUST be understood honestly: the `stationId` read from **StationInfo (FFF1) is delivered before the handshake and is unauthenticated** — a fake or relaying station can advertise any `stationId` — so the app **MUST NOT** treat a `cert.stationId == StationInfo.stationId` comparison as a security binding; against an unauthenticated source it is purely advisory. Only an **out-of-band** intended `stationId` (QR/NFC/deep-link, established through a channel the attacker does not control) provides a real binding in step 3. When no out-of-band `stationId` is available, the certificate's `stationId` is informational only and the **Relay** residual below applies in full.
 
 Only after the gate passes does the app use `stationPubKey` as `stationStaticPub` (§6.5); the certificate's `stationId` is bound into the session key via the transcript (§6.5 Pin 4), not as a separate `info` component.
 
