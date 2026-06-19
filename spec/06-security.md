@@ -31,6 +31,7 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 | T11 | [Webhook Spoofing](#t11---webhook-spoofing) | Forge payment confirmations | High | §2.5 HMAC-SHA512 + IP whitelist + timing-safe comparison |
 | T12 | [BLE Eavesdropping](#t12---ble-eavesdropping) | Intercept offline pass or session data over-the-air | Medium | §6.5.3 application-layer AEAD (ChaCha20-Poly1305) over an ECDH-authenticated channel, §6.5.2 StationIdentity verification |
 | T13 | [Denial of Service](#t13---denial-of-service) | Station becomes unresponsive to legitimate users | High | §7.1 rate limiting, BLE connection throttling, MQTT message rate cap |
+| T14 | [BLE Presence Tracking](#t14---ble-presence-tracking) | Track a device's physical presence via the plaintext `deviceId` in Hello | Low | Accepted residual for v0.6.0; mitigation deferred to a future design revision (see T14) |
 
 ### T01 - Replay Attack
 
@@ -159,6 +160,18 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 - Broker **SHOULD** enforce per-client rate limits: max 100 PUBLISH/minute per station. Excess messages **SHOULD** be dropped with MQTT DISCONNECT reason code `0x96` (Message rate too high). This default assumes ≤4 bays with standard `MeterValuesInterval` (15s). Operators deploying stations with more bays or `MeterValuesInterval` below 10 seconds **SHOULD** increase this limit proportionally (recommended formula: `bays × 60/MeterValuesInterval + 20` overhead).
 - Station **SHOULD** implement exponential backoff on repeated failures (initial delay 1 second, max delay 60 seconds, jitter ±20%).
 - Server **SHOULD** monitor for anomalous traffic patterns (message frequency spikes, unusual topic access) and alert operators.
+
+### T14 - BLE Presence Tracking
+
+**Description:** The `Hello` message ([ble-handshake.md §2](profiles/offline/ble-handshake.md)) is sent in **plaintext**, as the first handshake step — **before** the AEAD channel exists and before the app verifies the station's certificate. It carries `deviceId`, a **stable** device identifier. Any BLE radio within range (~10–20 m) — including a passive fake station or a dedicated tracker that merely advertises the OSPP service UUID — can capture `deviceId` from the `Hello` write and use it to track the physical presence and movement of that device over time.
+
+This is a **privacy** exposure, **not** a credential compromise: the OfflinePass, the receipt, and all session data remain confidential (they travel only inside the AEAD channel, §6.5.3); only the `deviceId` identifier leaks.
+
+**Severity: Low.** Exploitation requires the attacker to operate BLE-range hardware at locations of interest and to correlate `deviceId` with a real-world identity to be meaningful; it yields presence/movement metadata, never the credential or funds.
+
+**Status — accepted residual for v0.6.0.** Mitigation is a **future design revision**, deliberately not taken now because it would touch the (Red-Team-validated) key schedule: `deviceId` is bound into the HKDF `info` (§6.5 Pin 3) and is the app-chosen client identity used in the device-binding checks (§6.1.1 #4). Replacing it with an ephemeral/rotating identifier — or removing it from the plaintext `Hello` — is coupled with (a) the intended-station binding (§6.5.2) and (b) the real mobile client (B6), since all three concern *what an unauthenticated peer can observe or assume before the channel exists*. Changing it now — against a mock-only app with no field deployment — is disproportionate risk to the validated construction for a small metadata leak. Tracked for a future revision.
+
+**Partial measures available today (non-normative):** an app MAY reduce exposure by minimizing BLE scan/advertising footprint and by not reusing the same `deviceId` across unrelated accounts; these reduce but do not eliminate the leak.
 
 ---
 
