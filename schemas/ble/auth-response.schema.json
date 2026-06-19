@@ -25,8 +25,8 @@
     },
     "sessionKeyConfirmation": {
       "type": "string",
-      "maxLength": 1024,
-      "description": "HMAC confirmation of shared session key, present when result is Accepted"
+      "pattern": "^[A-Za-z0-9+/]{43}=$",
+      "description": "Base64-encoded HMAC-SHA256(sessionKey, \"AuthResponse_OK\") (exactly 44 chars), present when result is Accepted (06-security.md §6.5)."
     },
     "reason": {
       "type": "string",

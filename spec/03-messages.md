@@ -2532,7 +2532,7 @@ The app MUST request biometric or PIN confirmation from the user before sending 
 | `type` | string | Yes | `"OfflineAuthRequest"` |
 | `offlinePass` | object | Yes | Complete OfflinePass object (see [Chapter 06 — Security](06-security.md)) |
 | `counter` | integer | Yes | Monotonically increasing counter (anti-replay) |
-| `sessionProof` | string | Yes | HMAC-SHA256 proof binding this request to the BLE session key. Computed per the normative formula in [Chapter 06 §6.5.1](06-security.md#651-sessionproof-computation-normative). Hex-encoded lowercase, 64 characters. |
+| `sessionProof` | string | Yes | HMAC-SHA256 proof binding this request to the BLE session key. Canonical construction: [ble-handshake.md §4.1](profiles/offline/ble-handshake.md) — `Base64(HMAC-SHA256(SessionKey, UTF8("OfflineAuthRequest") ‖ UTF8(passId) ‖ UTF8(decimal(counter))))`. Base64-encoded, exactly 44 characters. (N1: the prior 64-char hex/4-input form is withdrawn.) |
 
 **Station-side validation (Full Offline)** — the station MUST perform all 10 checks:
 
@@ -2578,11 +2578,11 @@ The app MUST request biometric or PIN confirmation from the user before sending 
     "signature": "MEUCIQDXKT0ewRBp/nkPY/qh6mBjwSn4BE7fmjDTdjcP1dhIyQIgPyXM1VnFZtrG6WaOgpRwiQIeFF2I2zeFsb05dyel1rE="
   },
   "counter": 5,
-  "sessionProof": "e3a1f8b2c4d6e8f0a2b4c6d8e0f2a4b6c8d0e2f4a6b8c0d2e4f6a8b0c2d4e6f8"
+  "sessionProof": "s67QuiN60Suqv0Zn5OXRYQRv24szytxFhOtvV7cZ/gc="
 }
 ```
 
-> The `sessionProof` above is illustrative (hex-encoded lowercase HMAC-SHA256, 64 chars), computed per [§6.5.1](06-security.md#651-sessionproof-computation-normative); it does not correspond to the example fields shown.
+> The `sessionProof` above is illustrative (Base64-encoded HMAC-SHA256, 44 chars), computed per [ble-handshake.md §4.1](profiles/offline/ble-handshake.md); it does not correspond to the example fields shown. On the wire this message travels inside the §6.5.3 AEAD frame.
 
 ---
 

@@ -1023,79 +1023,23 @@ The two `info` labels are distinct fixed ASCII constants (no length-prefix neede
 
 ### 6.5.1 sessionProof Computation (Normative)
 
-The `sessionProof` field in OfflineAuthRequest [MSG-031] **MUST** be computed as follows:
+> **The canonical `sessionProof` construction is defined once, in [`ble-handshake.md` §4.1](profiles/offline/ble-handshake.md). That section governs; this is a pointer (finding N1).**
+
+For convenience, the construction is:
 
 ```
-sessionProof = HMAC-SHA256(
-  key:  SessionKey,
-  data: UTF8(offlinePassId) || UTF8("|") ||
-        BE32(txCounter)     || UTF8("|") ||
-        UTF8(bayId)         || UTF8("|") ||
-        UTF8(serviceId)
-)
+sessionProof = Base64( HMAC-SHA256( SessionKey,
+                 UTF8("OfflineAuthRequest") ‖ UTF8(passId) ‖ UTF8(decimal(counter)) ) )
 ```
 
-**Output:** hex-encoded lowercase string, 64 characters (256 bits).
+— a Base64-encoded 256-bit HMAC, keyed by the `SessionKey` of §6.5, over the byte concatenation of the message-type literal `"OfflineAuthRequest"`, the `offlinePass.passId`, and the **counter rendered as its shortest base-10 ASCII string** (no leading zeros, no sign). Output is exactly 44 Base64 characters.
 
-**Notation:**
-- `BE32` = big-endian 32-bit unsigned integer (4 bytes).
-- `||` = byte concatenation.
-- `|` = literal pipe character (0x7C), used as a domain separator.
-- `UTF8()` = UTF-8 encoding of the string value.
+**N1 reconciliation — the prior 4-input hex form is WITHDRAWN.** Through v0.5.x this section carried a different construction — `HMAC` over `offlinePassId | BE32(counter) | bayId | serviceId`, output as 64 lowercase hex characters — and `ble-handshake.md §4.1` was made to defer to it. v0.6.0 **inverts that**: §4.1 is canonical and this section points to it. The reasons:
 
-**Parameters:**
+- Under the AEAD channel (§6.5.3) the `bayId`/`serviceId` selection happens at `StartService`, *inside* the authenticated channel where in-flight tampering is impossible — so the proof no longer needs to bind bay/service at authentication time.
+- The Base64/3-input form is the construction the conformance vectors and `tools/verify-example-signatures.mjs` have **always** computed (over a raw test key, independent of this key-derivation change); aligning §4.1 to it is a prose correction, not a wire change to the tooling-tested behaviour.
 
-| Parameter | Source | Example |
-|-----------|--------|---------|
-| `SessionKey` | Derived via HKDF-SHA256 (§6.5) | 32-byte key |
-| `offlinePassId` | `offlinePass.passId` from the OfflineAuthRequest | `"opass_abc123"` |
-| `txCounter` | `counter` field from the OfflineAuthRequest | `42` → `0x0000002A` |
-| `bayId` | The bay the user is requesting service on | `"bay_01"` |
-| `serviceId` | The service the user is requesting | `"svc_wash_basic"` |
-
-**Verification:** Both the app and the station independently compute `sessionProof` using the same SessionKey (derived from shared HKDF inputs). The station **MUST** verify that the received `sessionProof` matches its own computation. Mismatch indicates the sender did not participate in the BLE handshake or the message was tampered with.
-
-**Pseudocode:**
-
-```
-function computeSessionProof(sessionKey, passId, counter, bayId, serviceId):
-    counterBytes = uint32ToBytesBigEndian(counter)  // 4 bytes
-    pipe = encode("UTF-8", "|")                     // 1 byte: 0x7C
-
-    data = encode("UTF-8", passId)
-         + pipe
-         + counterBytes
-         + pipe
-         + encode("UTF-8", bayId)
-         + pipe
-         + encode("UTF-8", serviceId)
-
-    mac = HMAC_SHA256(key = sessionKey, data = data)
-    return hexEncodeLowercase(mac)  // 64 hex chars
-```
-
-**Test vector:**
-
-```
-SessionKey (hex):   a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
-                    a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2
-offlinePassId:      "opass_abc123"
-txCounter:          42
-bayId:              "bay_01"
-serviceId:          "svc_wash_basic"
-
-data (hex):         6f706173735f616263313233           # "opass_abc123"
-                    7c                                 # "|"
-                    0000002a                           # BE32(42)
-                    7c                                 # "|"
-                    6261795f3031                       # "bay_01"
-                    7c                                 # "|"
-                    7376635f776173685f6261736963       # "svc_wash_basic"
-
-sessionProof:       "e3a1f8b2c4d6e8f0a2b4c6d8e0f2a4b6c8d0e2f4a6b8c0d2e4f6a8b0c2d4e6f8"
-```
-
-> **Note:** The test vector above uses an illustrative `sessionProof` output. Implementors MUST use a known-good HMAC-SHA256 library and verify their implementation produces identical output for the given inputs before deployment.
+**Relationship to the AEAD channel.** Because `OfflineAuthRequest` now travels inside the §6.5.3 AEAD channel, the frame's Poly1305 tag already proves the sender holds a key derived from `SessionKey`. The `sessionProof` is retained as an explicit, deliberately non-transferable proof-of-participation that additionally binds the specific `(passId, counter)` tuple under the session key (rationale: HMAC vs ECDSA, below).
 
 ### 6.5.2 StationIdentity Certificate
 
@@ -1136,6 +1080,41 @@ Only after the gate passes does the app use `stationPubKey` as `stationStaticPub
 - **Server-key freshness on the phone.** A phone that has been offline since before a server-key rotation holds only the old key. Mitigation = the server publishes an **overlapping set** of valid signing keys and the app refreshes on every online contact (above).
 - **Blast radius is one station.** Compromise of a single station's static BLE key permits impersonation of **that station only**, bounded by its `expiresAt` + rotation — not a fleet-wide break.
 - **Relay is not prevented; impersonation is.** The certificate proves "a legitimate station of this organization", not "the station physically in front of the user". A pure relay that forwards a genuine station's Challenge is not stopped by the certificate. OSPP tolerates this because authorization is by the cryptographic OfflinePass (explicit, deliberate user action), not by mere proximity — a relay can do nothing a legitimate station could not already do. OSPP is therefore immune to the proximity-unlock relay class (e.g. Tesla/Kwikset), where possession-by-proximity *is* the authorization.
+
+### 6.5.3 BLE AEAD Channel
+
+Every BLE message **after** the Challenge — `OfflineAuthRequest`, `ServerSignedAuth`, `AuthResponse`, `StartServiceRequest`/`StartServiceResponse`, `StopServiceRequest`/`StopServiceResponse`, the FFF5 ServiceStatus notifications, and the FFF6 Receipt value — **MUST** be encrypted and authenticated with the directional keys derived in §6.5. Hello and Challenge themselves are sent in plaintext (they establish the keys) and are instead integrity-bound by the transcript hash (§6.5 Pin 4). **No post-Challenge message may travel in plaintext.** This makes the "optionally encrypt subsequent payloads" gesture of earlier drafts a hard requirement and closes the unauthenticated-command findings (N4, N15, N17).
+
+**Pin 6 — AEAD algorithm (byte-exact).** The AEAD is **ChaCha20-Poly1305, IETF construction, RFC 8439**, with a **96-bit (12-byte) nonce**. The **XChaCha20-Poly1305** variant (24-byte nonce) **MUST NOT** be used — it is a different construction and a known cross-implementation drift point. ChaCha20-Poly1305 is chosen over AES-GCM because it needs no AES hardware acceleration and is byte-identical across `@noble/ciphers`, libsodium (`crypto_aead_chacha20poly1305_ietf_*`), and mbedTLS (`MBEDTLS_CHACHAPOLY_C`).
+
+**Directional keys.** `k_app_to_station` and `k_station_to_app` are the two keys from §6.5. Frames written by the app (FFF3) use `k_app_to_station`; frames sent by the station (FFF4/FFF5/FFF6) use `k_station_to_app`. The two directions therefore never share a (key, nonce) pair.
+
+**Pin 5 — nonce construction (byte-exact).** Each direction maintains its **own** 64-bit frame counter, starting at **0** and incrementing by **1 per frame** emitted in that direction. The 96-bit AEAD nonce is:
+
+```
+nonce96 = 0x00 00 00 00 ‖ U64BE(counter)     // 4 zero bytes ‖ big-endian uint64
+```
+
+An endpoint **MUST** abort the session (no wraparound) before a direction's counter would exceed 2^64−1. This frame counter is **distinct from** the 32-bit little-endian block counter internal to ChaCha20 (which RFC 8439 fixes and which implementations manage internally); the value pinned here is the OSPP frame nonce, not the cipher's block counter.
+
+**Pin 7 — AAD (byte-exact).** The Additional Authenticated Data for **every** frame is the 32-byte `transcriptHash` (§6.5 Pin 4): `AAD = transcriptHash`. This binds each frame to the exact handshake instance, so a frame can never be lifted into a different session even in the theoretical event of a key collision.
+
+**Frame format.** A secure frame is the JSON object defined by [`ble-secure-frame.schema.json`](../../schemas/ble/ble-secure-frame.schema.json):
+
+```
+plaintext = UTF8(<the inner message's exact JSON bytes>)
+sealed    = ChaCha20-Poly1305-IETF-Encrypt(key = k_<direction>, nonce = nonce96,
+                                            plaintext = plaintext, aad = transcriptHash)
+            // `sealed` is ciphertext ‖ 16-byte Poly1305 tag (the standard
+            //  libsodium / @noble output order)
+frame     = { "n": <counter>, "ct": base64(sealed) }
+```
+
+`n` is the same per-direction counter used to build `nonce96`. On receipt an endpoint **MUST**: (1) check `n` equals the next expected counter for that direction (a mismatch is a drop/replay/desync → abort); (2) reconstruct `nonce96` from `n`; (3) decrypt-and-verify with the directional key and `AAD = transcriptHash`. Any authentication-tag failure or counter mismatch **MUST** abort the session with `2013 BLE_AUTH_FAILED`; the plaintext **MUST NOT** be processed.
+
+**Encrypt-then-fragment.** The `{n, ct}` frame is the unit handed to the fragmentation layer ([ble-transport.md §11](profiles/offline/ble-transport.md)) — encryption happens first, fragmentation second, and the frame JSON is the "valid JSON" the reassembler validates. Reassembly never sees plaintext for post-Challenge messages.
+
+**Findings closed.** Because Start/Stop and every other post-Challenge message now travel only inside this authenticated, per-connection channel: a co-located central without the session key can neither forge nor replay a `StopServiceRequest` against another central's session (**N4**); the FFF6 receipt (which carries `userId`/`deviceId`/amounts) is confidential to the handshake peer and a reconnecting app must complete a fresh handshake to read it, because the per-connection key is discarded on disconnect ([ble-transport.md §13](profiles/offline/ble-transport.md); receipt retention and re-handshake pickup in [ble-session.md](profiles/offline/ble-session.md)) (**N15**); and a forged post-Challenge `Rejected` cannot be injected without the key (**N17**). The residual unauthenticated surface is limited to pre-key rejections (malformed Hello, etc.), which is acceptable and disclosed.
 
 ### 6.6 Epoch-Based Revocation
 

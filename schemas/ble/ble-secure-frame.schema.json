@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/ble/ble-secure-frame.schema.json",
+  "title": "BleSecureFrame",
+  "description": "AEAD-encrypted wrapper for every BLE message after the Challenge (06-security.md §6.5.3). The inner plaintext is the exact UTF-8 JSON bytes of one OSPP BLE message (OfflineAuthRequest, ServerSignedAuth, AuthResponse, Start/StopServiceRequest/Response, ServiceStatus, or the Receipt value). Sealed with ChaCha20-Poly1305 IETF (RFC 8439) under the appropriate directional key, nonce = 0x00000000 || U64BE(n), AAD = transcriptHash. This frame is the unit fragmented by ble-transport.md §11 (encrypt-then-fragment).",
+  "type": "object",
+  "required": ["n", "ct"],
+  "additionalProperties": false,
+  "properties": {
+    "n": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Per-direction frame counter (06-security.md §6.5.3 Pin 5). Starts at 0, increments by 1 per frame in this direction, and forms the AEAD nonce as 0x00000000 || U64BE(n). The receiver MUST verify n equals its next expected counter for the sender's direction; a mismatch is a replay/desync and MUST abort the session."
+    },
+    "ct": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]+={0,2}$",
+      "description": "Base64 of the ChaCha20-Poly1305-IETF sealed output (ciphertext followed by the 16-byte Poly1305 tag) over the inner message's UTF-8 JSON bytes, with AAD = transcriptHash (06-security.md §6.5 Pin 4)."
+    }
+  }
+}

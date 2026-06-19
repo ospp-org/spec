@@ -292,6 +292,8 @@ If the negotiated MTU is below 185 bytes, the station **SHOULD** log a warning b
 
 ## 11. Fragmentation Protocol
 
+> **Encrypt-then-fragment (Normative).** Every message *after* the Challenge is first sealed into an AEAD secure frame `{n, ct}` ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel); [`ble-secure-frame.schema.json`](../../../schemas/ble/ble-secure-frame.schema.json)) and only then handed to this fragmentation layer. The "JSON payload" fragmented below is therefore the secure-frame JSON for post-Challenge messages (and the plaintext message JSON for the pre-key Hello/Challenge). Fragmentation and reassembly are **unchanged** by the AEAD channel — they operate on opaque bytes; reassembly rule 4 ("valid JSON") is satisfied by the `{n, ct}` frame, which is decrypted only after full reassembly.
+
 When a JSON payload exceeds the effective ATT payload size, the sender **MUST** fragment the message using the following protocol:
 
 **Fragment header (3 bytes):**
@@ -349,3 +351,4 @@ This is operational guidance, not a wire-protocol requirement.
 - Available Services: [`available-services.schema.json`](../../../schemas/ble/available-services.schema.json)
 - Service Status: [`service-status.schema.json`](../../../schemas/ble/service-status.schema.json)
 - Receipt: [`receipt.schema.json`](../../../schemas/ble/receipt.schema.json)
+- Secure Frame (AEAD wrapper for post-Challenge messages): [`ble-secure-frame.schema.json`](../../../schemas/ble/ble-secure-frame.schema.json)

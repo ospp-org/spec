@@ -4,6 +4,8 @@
 
 ## 1. Starting a Service
 
+> **AEAD channel (Normative).** Every message in this lifecycle — `StartServiceRequest`/`StartServiceResponse`, `StopServiceRequest`/`StopServiceResponse`, the FFF5 ServiceStatus notifications, and the FFF6 Receipt value — travels **inside the post-Challenge AEAD channel** ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)), encrypted and authenticated under the per-direction session keys. A station **MUST** reject any session command that does not decrypt and authenticate under the channel established by *this* connection's handshake. This is what makes `bayId`/`serviceId` selection and `StopServiceRequest` tamper-proof and un-forgeable by a co-located central (finding N4), and what removes the need for `sessionProof` to bind bay/service at authentication time (N1).
+
 After a successful AuthResponse (`result: "Accepted"`), the app writes a StartServiceRequest to characteristic FFF3 to activate a service.
 
 **Request Payload (FFF3 Write):**
@@ -187,7 +189,7 @@ After the service ends (manual stop or auto-stop), the app reads characteristic 
 2. The app **MUST** store the receipt in local secure storage for later upload to the server.
 3. The receipt includes a `txCounter` field for transaction ordering and gap detection during reconciliation. The app **MUST** preserve this field unmodified.
 4. The receipt's `signature` is an ECDSA-P256-SHA256 signature computed by the station over the canonical `data` field using the station's private key. The server verifies this signature during reconciliation.
-5. If the app is unable to read FFF6 (e.g., BLE disconnect), it **MAY** reconnect and read at a later time. The station **MUST** retain the last receipt on FFF6 until the next session begins or the station reboots.
+5. The FFF6 value is served as an AEAD frame under the **current** connection's `k_station_to_app` (06-security.md §6.5.3): only the authenticated handshake peer can read the receipt, which carries `userId`/`deviceId`/amounts (finding N15). The financial **record** persists in the station's NVS independently of the BLE channel. If the app is unable to read FFF6 (e.g., BLE disconnect), it **MAY** reconnect later — but because the per-connection session key is discarded on disconnect ([ble-transport.md §13](ble-transport.md)), the app **MUST** complete a fresh handshake first; the station then re-seals the retained receipt under the new channel's key for retrieval. The station **MUST** retain the receipt record until the next session begins on the same bay or the station reboots.
 
 **Example:**
 
@@ -224,7 +226,7 @@ If the BLE connection drops during an active session, the following rules apply:
 1. **Station behaviour:** The station **MUST** continue the active service until the auto-stop timer expires. The station **MUST NOT** abort a running service due to BLE disconnection. Upon service completion (auto-stop), the station **MUST** generate a signed receipt and store it on FFF6.
 2. **App behaviour:** The app **SHOULD** attempt to reconnect to the station using the same BLE connection parameters. On reconnect, the app **MAY** re-subscribe to FFF5 notifications. If the service has already completed, the app **SHOULD** read FFF6 to retrieve the receipt.
 3. **Receipt availability:** The station **MUST** retain the receipt on FFF6 for at least 10 minutes after service completion, or until the next session begins on the same bay, whichever comes first.
-4. **Session state on reconnect:** The app does not need to re-authenticate (HELLO/CHALLENGE/AUTH) if the connection drop was transient (less than `BLEConnectionTimeout`). If the timeout has elapsed, the station **MUST** require a full re-handshake.
+4. **Session state on reconnect:** A disconnect destroys the per-connection AEAD session key ([ble-transport.md §13](ble-transport.md) — derived key, nonces, and authenticated context are discarded). Therefore, on **any** reconnect, the app **MUST** perform a full re-handshake (HELLO/CHALLENGE/AUTH) before issuing any session command or reading the receipt; there is no key to resume. The underlying *service* is unaffected — it continues on its auto-stop timer (§6) regardless of the BLE channel — but the secure channel itself is always re-established from scratch.
 
 ## 6. Auto-Stop Timer
 

@@ -104,9 +104,18 @@ Used when the app has a locally-stored OfflinePass. In the **Full Offline** scen
 | `type` | string | Yes | `OfflineAuthRequest` (constant). |
 | `offlinePass` | object | Yes | Full OfflinePass object (see [offline-pass.md](offline-pass.md)). |
 | `counter` | integer | Yes | Monotonic usage counter (minimum 0). **MUST** be strictly greater than the last counter seen by the station for this pass. |
-| `sessionProof` | string | Yes | Hex-encoded lowercase HMAC-SHA256 (64 chars) binding this request to the derived session key. Computed per the normative formula in [06-security.md §6.5.1](../../06-security.md#651-sessionproof-computation-normative). |
+| `sessionProof` | string | Yes | Base64-encoded HMAC-SHA256 (exactly 44 chars) binding this request to the derived session key. Canonical construction defined in this section. |
 
-The `sessionProof` construction is normative and defined once in [06-security.md §6.5.1](../../06-security.md#651-sessionproof-computation-normative): `HMAC-SHA256(SessionKey, UTF8(offlinePassId) || UTF8("|") || BE32(txCounter) || UTF8("|") || UTF8(bayId) || UTF8("|") || UTF8(serviceId))`, output **hex-encoded lowercase, 64 characters**. `|` is the literal pipe (`0x7C`) domain separator, `BE32` is the big-endian 4-byte encoding of `counter`, and `bayId`/`serviceId` are the bay and service the user is requesting (from the BLE session context). A `sessionProof` that does not match the station's own computation per §6.5.1 **MUST** be rejected with error `2013 BLE_AUTH_FAILED`.
+The `sessionProof` construction is **canonical and defined here** ([06-security.md §6.5.1](../../06-security.md#651-sessionproof-computation-normative) points to this section — finding N1):
+
+```
+sessionProof = Base64( HMAC-SHA256( SessionKey,
+                 UTF8("OfflineAuthRequest") ‖ UTF8(passId) ‖ UTF8(decimal(counter)) ) )
+```
+
+where `SessionKey` is the ECDH-derived session key ([06-security.md §6.5](../../06-security.md#65-ble-session-key-derivation--hkdf-sha256)), `"OfflineAuthRequest"` is the literal message-type string, `passId` is `offlinePass.passId`, and `decimal(counter)` is the `counter` value rendered as its **shortest base-10 ASCII string** (no leading zeros, no sign). `‖` is byte concatenation — there is **no separator** between the three components. The output is Base64 (RFC 4648, standard alphabet, with padding) — exactly **44 characters**. A `sessionProof` that does not match the station's own computation **MUST** be rejected with error `2013 BLE_AUTH_FAILED`.
+
+The prior 4-input hex construction (which additionally bound `bayId`/`serviceId`, output as 64 hex chars) is **withdrawn** in v0.6.0: under the AEAD channel ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)) bay/service selection happens at the authenticated `StartService` step, so the proof binds only `(passId, counter)` to the session. This Base64/3-input form is the construction the conformance vectors and `tools/verify-example-signatures.mjs` already implement.
 
 **Example:**
 
@@ -139,15 +148,15 @@ The `sessionProof` construction is normative and defined once in [06-security.md
     "signature": "MEUCIQD6sC/bKX/fkNskHHEGr01INojLAlu4I6zsEm1keSjYoQIgJAjdhwiYhlQOX/BAqsFq9RRgxpXGSXJU6BeL0qMBnMc="
   },
   "counter": 5,
-  "sessionProof": "e3a1f8b2c4d6e8f0a2b4c6d8e0f2a4b6c8d0e2f4a6b8c0d2e4f6a8b0c2d4e6f8"
+  "sessionProof": "s67QuiN60Suqv0Zn5OXRYQRv24szytxFhOtvV7cZ/gc="
 }
 ```
 
-> The `sessionProof` above is illustrative (hex-encoded lowercase HMAC-SHA256, 64 chars). It does not correspond to the example fields shown; see [06-security.md §6.5.1](../../06-security.md#651-sessionproof-computation-normative) for the canonical construction and test vector.
+> The `sessionProof` above is illustrative (Base64-encoded HMAC-SHA256, 44 chars). It does not correspond to the example fields shown; the canonical construction is defined in §4.1 above. (On the wire this `OfflineAuthRequest` travels inside the §6.5.3 AEAD frame; the plaintext is shown here for clarity.)
 
 ### 4.2 ServerSignedAuth (Partial A)
 
-Used when the app is online but the station is offline. The app obtains a server-signed authorization (via `POST /sessions/offline-auth`, supplying the same `appNonce` it uses in the `Hello` of this handshake so the server binds the authorization to it — see **Acquisition ordering** below) and relays it to the station over BLE. The station verifies the ECDSA P-256 signature using the server's public key (provisioned at boot) and re-checks each claim against the live handshake state.
+Used when the app is online but the station is offline. The app obtains a server-signed authorization (via `POST /sessions/offline-auth`, supplying the same `appNonce` it uses in the `Hello` of this handshake so the server binds the authorization to it — see **Acquisition ordering** below) and relays it to the station over BLE. The station verifies the ECDSA P-256 signature using the server's public key (provisioned at boot) and re-checks each claim against the live handshake state. Like every post-Challenge message, `ServerSignedAuth` is relayed **inside the AEAD channel** ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)).
 
 **Acquisition ordering (Normative).** The `appNonce` is chosen by the app and is the sole binding between the `POST` and the BLE handshake (§4.2.2 check #2), so the `POST /sessions/offline-auth` and the `Hello` write **MAY** occur in either order, provided the `appNonce` in the POST body equals the `appNonce` in the `Hello`. Two orderings are conformant:
 
@@ -232,7 +241,9 @@ The station evaluates the authentication request and sends an AuthResponse notif
 | `reason` | string | Cond. | Human-readable rejection reason code. Present when `result` is `Rejected`. |
 | `errorCode` | integer | Cond. | Numeric OSPP error code. Present when `result` is `Rejected`. |
 
-On `Accepted`, the `sessionKeyConfirmation` field proves to the app that the station also derived the same session key. It is computed as `HMAC-SHA256(sessionKey, "AuthResponse_OK")`.
+On `Accepted`, the `sessionKeyConfirmation` field proves to the app that the station also derived the same session key. It is computed as `HMAC-SHA256(sessionKey, "AuthResponse_OK")`, Base64-encoded (44 chars). It **MUST** be present when `result` is `Accepted` and **MUST NOT** be present when `result` is `Rejected`.
+
+The AuthResponse, like all post-Challenge messages, travels **inside the AEAD channel** ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)). A `Rejected` AuthResponse emitted after a completed handshake is therefore authenticated by the channel — a third party cannot forge or inject a fake rejection (finding N17). Only a pre-key rejection (e.g. a malformed Hello, rejected before any key is derived) is unauthenticated; this residual is acceptable and disclosed.
 
 **Example (Accepted):**
 

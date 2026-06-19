@@ -27,9 +27,8 @@
     },
     "sessionProof": {
       "type": "string",
-      "minLength": 1,
-      "maxLength": 1024,
-      "description": "HMAC proof binding request to session key"
+      "pattern": "^[A-Za-z0-9+/]{43}=$",
+      "description": "Base64-encoded HMAC-SHA256 (exactly 44 chars) binding this request to the session key. Canonical construction: ble-handshake.md §4.1 — Base64(HMAC-SHA256(SessionKey, UTF8(\"OfflineAuthRequest\") || UTF8(passId) || UTF8(decimal(counter)))). N1: the prior 64-char hex/4-input form is withdrawn."
     }
   }
 }
