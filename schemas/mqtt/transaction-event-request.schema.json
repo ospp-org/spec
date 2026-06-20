@@ -7,7 +7,6 @@
   "additionalProperties": false,
   "required": [
     "offlineTxId",
-    "offlinePassId",
     "userId",
     "bayId",
     "serviceId",
@@ -18,12 +17,40 @@
     "receipt",
     "txCounter"
   ],
+  "oneOf": [
+    {
+      "title": "pass-form (Full Offline / Partial B)",
+      "required": ["offlinePassId", "passCounter"],
+      "properties": { "authId": false, "sessionId": false }
+    },
+    {
+      "title": "auth-form (Partial A — ServerSignedAuth)",
+      "required": ["authId", "sessionId"],
+      "properties": { "offlinePassId": false, "passCounter": false }
+    }
+  ],
   "properties": {
     "offlineTxId": {
       "$ref": "../common/offline-tx-id.schema.json"
     },
     "offlinePassId": {
       "$ref": "../common/offline-pass-id.schema.json"
+    },
+    "passCounter": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Pass-form only. Envelope copy of the pass's app-global usage counter (finding N7). MUST equal the signed receipt's passCounter (reconcile gate §6.1 check #12); the gate then enforces global (offlinePassId, passCounter) uniqueness (check #13)."
+    },
+    "authId": {
+      "type": "string",
+      "pattern": "^auth_[a-f0-9]{8,}$",
+      "minLength": 13,
+      "maxLength": 64,
+      "description": "Auth-form (Partial A) only. Envelope copy of the ServerSignedAuth authId; MUST equal the signed receipt's authId (gate §6.1 check #2 auth-branch). The gate resolves it against the issued-authorization registry (check #4 auth-branch)."
+    },
+    "sessionId": {
+      "$ref": "../common/session-id.schema.json",
+      "description": "Auth-form (Partial A) only. Envelope copy of the server-issued sessionId the transaction settles; MUST equal the signed receipt's sessionId."
     },
     "userId": {
       "$ref": "../common/user-id.schema.json"

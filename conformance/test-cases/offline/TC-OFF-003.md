@@ -57,12 +57,13 @@ Verify that when a station reconnects to the server after an offline period, it 
   "durationSeconds": 120,
   "creditsCharged": 9,
   "receipt": {
-    "data": "eyJiYXlJZCI6ImJheV9hMWIyYzNkNCIsImNyZWRpdHNDaGFyZ2VkIjo5LCJkZXZpY2VJZCI6ImRldl9hMWIyYzNkNCIsImR1cmF0aW9uU2Vjb25kcyI6MTIwLCJlbmRlZEF0IjoiPElTTyA4NjAxPiIsIm9mZmxpbmVQYXNzSWQiOiI8b2ZmbGluZV9wYXNzX2lkPiIsIm9mZmxpbmVUeElkIjoib3R4X2ExYjJjM2Q0ZTVmNiIsInNlcnZpY2VJZCI6InN2Y19iYXNpYyIsInN0YXJ0ZWRBdCI6IjxJU08gODYwMT4iLCJ0eENvdW50ZXIiOjUsInVzZXJJZCI6Ijx1c2VyX2lkPiJ9",
-    "signature": "MEQCIBMUtqXRgxgSRGFtMChYKeB+C4M74vO4ohEs/1KoyMalAiBibvng4kgrA/01MhlhxBgkAImK57WAniDvb/drCj3xmQ==",
+    "data": "eyJiYXlJZCI6ImJheV9hMWIyYzNkNCIsImNyZWRpdHNDaGFyZ2VkIjo5LCJkZXZpY2VJZCI6ImRldl9hMWIyYzNkNCIsImR1cmF0aW9uU2Vjb25kcyI6MTIwLCJlbmRlZEF0IjoiPElTTyA4NjAxPiIsIm9mZmxpbmVQYXNzSWQiOiI8b2ZmbGluZV9wYXNzX2lkPiIsIm9mZmxpbmVUeElkIjoib3R4X2ExYjJjM2Q0ZTVmNiIsInBhc3NDb3VudGVyIjo0LCJzZXJ2aWNlSWQiOiJzdmNfYmFzaWMiLCJzdGFydGVkQXQiOiI8SVNPIDg2MDE+IiwidHhDb3VudGVyIjo1LCJ1c2VySWQiOiI8dXNlcl9pZD4ifQ==",
+    "signature": "MEUCIQCsMDPQTOWl3u/ls+JQDzkFOzIz7uPMfdh8ZjyLQruNXAIgD5bMlaoIDgvtm8cdLDFLa/mL5iHNV3PABekcuJxqDJQ=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "txCounter": 5,
-  "deviceId": "dev_a1b2c3d4"
+  "deviceId": "dev_a1b2c3d4",
+  "passCounter": 4
 }
 ```
 8. Verify TX-A is received BEFORE TX-B and TX-C (ordered by `txCounter`).

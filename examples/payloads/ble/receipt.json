@@ -1,6 +1,7 @@
 {
   "offlineTxId": "otx_a1b2c3d4e5f6a7b8",
   "offlinePassId": "opass_a1b2c3d4e5f6a7b8",
+  "passCounter": 17,
   "userId": "sub_a1b2c3d4e5f6a7b8",
   "deviceId": "dev_ble_a1b2c3d4",
   "bayId": "bay_a1b2c3d4e5f6",
@@ -15,8 +16,8 @@
     "energyWh": 150
   },
   "receipt": {
-    "data": "eyJiYXlJZCI6ImJheV9hMWIyYzNkNGU1ZjYiLCJjcmVkaXRzQ2hhcmdlZCI6NTAsImRldmljZUlkIjoiZGV2X2JsZV9hMWIyYzNkNCIsImR1cmF0aW9uU2Vjb25kcyI6Mjk4LCJlbmRlZEF0IjoiMjAyNi0wMi0xM1QxMDowNDo1OC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjo1MDAsImVuZXJneVdoIjoxNTAsImxpcXVpZE1sIjo0NTIwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19hMWIyYzNkNGU1ZjZhN2I4Iiwib2ZmbGluZVR4SWQiOiJvdHhfYTFiMmMzZDRlNWY2YTdiOCIsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDEwOjAwOjAwLjAwMFoiLCJ0eENvdW50ZXIiOjUsInVzZXJJZCI6InN1Yl9hMWIyYzNkNGU1ZjZhN2I4In0=",
-    "signature": "MEUCIQD+RcQVcxrXJVJ89AATxTDP4LGDtvktf1gPd2RSxOcHSAIgKaOhZ2ZnQyogdvBmFZSiW1fi5AWn1oSpBU+EmC0Rf48=",
+    "data": "eyJiYXlJZCI6ImJheV9hMWIyYzNkNGU1ZjYiLCJjcmVkaXRzQ2hhcmdlZCI6NTAsImRldmljZUlkIjoiZGV2X2JsZV9hMWIyYzNkNCIsImR1cmF0aW9uU2Vjb25kcyI6Mjk4LCJlbmRlZEF0IjoiMjAyNi0wMi0xM1QxMDowNDo1OC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjo1MDAsImVuZXJneVdoIjoxNTAsImxpcXVpZE1sIjo0NTIwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19hMWIyYzNkNGU1ZjZhN2I4Iiwib2ZmbGluZVR4SWQiOiJvdHhfYTFiMmMzZDRlNWY2YTdiOCIsInBhc3NDb3VudGVyIjoxNywic2VydmljZUlkIjoic3ZjX2VjbyIsInN0YXJ0ZWRBdCI6IjIwMjYtMDItMTNUMTA6MDA6MDAuMDAwWiIsInR4Q291bnRlciI6NSwidXNlcklkIjoic3ViX2ExYjJjM2Q0ZTVmNmE3YjgifQ==",
+    "signature": "MEUCIQD5+vvCrN9Mh+w47ZL3cVsPfaj3HwG6lfgNZtcLv8Ad6gIgLrsmGK24JFVd8AXPkFPsQmgqovTumxZRDWLkcfiB5FQ=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "txCounter": 5

@@ -41,12 +41,13 @@ Verify that the station correctly sends TransactionEvent messages for offline tr
   "durationSeconds": 298,
   "creditsCharged": 50,
   "receipt": {
-    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQ2hhcmdlZCI6NTAsImRldmljZUlkIjoiZGV2X2Q0ZTVmNmE3IiwiZHVyYXRpb25TZWNvbmRzIjoyOTgsImVuZGVkQXQiOiIyMDI2LTAxLTMwVDE0OjA1OjAwLjAwMFoiLCJvZmZsaW5lUGFzc0lkIjoib3Bhc3NfYThiOWMwZDFlMmYzIiwib2ZmbGluZVR4SWQiOiJvdHhfZDRlNWY2YTdiOGM5Iiwic2VydmljZUlkIjoic3ZjX2VjbyIsInN0YXJ0ZWRBdCI6IjIwMjYtMDEtMzBUMTQ6MDA6MDAuMDAwWiIsInR4Q291bnRlciI6NSwidXNlcklkIjoic3ViX3h5ejc4OSJ9",
-    "signature": "MEQCIH8ZyTvi5mhuzHFw2t2uOKnIB6mqxynFog68ArW8ImaKAiA+EDMiNq2oNV79hJbRGDxawx/WKs9pdnveeu0IB273Bg==",
+    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQ2hhcmdlZCI6NTAsImRldmljZUlkIjoiZGV2X2Q0ZTVmNmE3IiwiZHVyYXRpb25TZWNvbmRzIjoyOTgsImVuZGVkQXQiOiIyMDI2LTAxLTMwVDE0OjA1OjAwLjAwMFoiLCJvZmZsaW5lUGFzc0lkIjoib3Bhc3NfYThiOWMwZDFlMmYzIiwib2ZmbGluZVR4SWQiOiJvdHhfZDRlNWY2YTdiOGM5IiwicGFzc0NvdW50ZXIiOjM2LCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic3RhcnRlZEF0IjoiMjAyNi0wMS0zMFQxNDowMDowMC4wMDBaIiwidHhDb3VudGVyIjo1LCJ1c2VySWQiOiJzdWJfeHl6Nzg5In0=",
+    "signature": "MEQCICZSK3m8V4v2mCg+4RjckzWXSh5Ghbq0zrosNnjt5nJrAiBvxlOfXOHa6YcRlaoEOp5zRakuliqHaQOz2WnPhvkYXw==",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "txCounter": 5,
-  "deviceId": "dev_d4e5f6a7"
+  "deviceId": "dev_d4e5f6a7",
+  "passCounter": 36
 }
 ```
 2. Verify all required fields are present: `offlineTxId`, `offlinePassId`, `userId`, `bayId`, `serviceId`, `startedAt`, `endedAt`, `durationSeconds`, `creditsCharged`, `receipt`, `txCounter`.

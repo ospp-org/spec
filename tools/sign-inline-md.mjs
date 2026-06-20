@@ -74,7 +74,7 @@ const SESSION_KEY = readFileSync(`${KEY_DIR}/session-test-key.bin`);
 // -----------------------------------------------------------------------------
 
 const RECEIPT_FIELDS = [
-  'offlineTxId','offlinePassId','userId','deviceId','bayId','serviceId',
+  'offlineTxId','offlinePassId','passCounter','userId','deviceId','bayId','serviceId',
   'startedAt','endedAt','durationSeconds','creditsCharged','txCounter',
 ];
 const OFFLINE_PASS_FIELDS = [
@@ -97,6 +97,9 @@ function deriveReceiptStaleFields(outer) {
   if (!('offlinePassId' in outer)) outer.offlinePassId = `opass_${h('offlinePassId').slice(0, 16)}`;
   if (!('userId' in outer))        outer.userId        = `sub_${h('userId').slice(0, 16)}`;
   if (!('deviceId' in outer))      outer.deviceId      = deriveDeviceId(outer.offlineTxId);
+  // passCounter (finding N7): app-global pass usage counter, signed into the
+  // receipt. Synthesised deterministically when the inline example omits it.
+  if (!('passCounter' in outer))   outer.passCounter   = (parseInt(h('passCounter').slice(0, 6), 16) % 64) + 1;
 }
 
 function signReceipt(outer) {
@@ -151,6 +154,8 @@ function deriveSsaClaims(outer) {
     stationId: `stn_${h('stationId').slice(0, 8)}`,
     bayId:     `bay_${h('bayId').slice(0, 12)}`,
     serviceId: 'svc_eco',
+    durationSeconds: 300,
+    creditsAuthorized: 200,
     appNonce:  Buffer.from(h('appNonce').slice(0, 64), 'hex').toString('base64'),
     issuedAt:  SSA_ISSUED_AT,
     expiresAt: SSA_EXPIRES_AT,

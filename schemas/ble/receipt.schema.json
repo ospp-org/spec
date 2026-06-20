@@ -2,11 +2,10 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/ble/receipt.schema.json",
   "title": "Receipt",
-  "description": "Transaction receipt read from the station via BLE characteristic FFF6 (Read). Contains the complete record of a completed service session for offline reconciliation. v0.4.2: outer wrapper includes offlinePassId / userId / deviceId for symmetry with the signed inner body (06-security.md §6.2 receipt_fields).",
+  "description": "Transaction receipt read from the station via BLE characteristic FFF6 (Read). Contains the complete record of a completed service session for offline reconciliation. v0.4.2: outer wrapper includes offlinePassId / userId / deviceId for symmetry with the signed inner body (06-security.md §6.2 receipt_fields). v0.6.0: discriminated (oneOf) — pass-form carries {offlinePassId, passCounter} (N7); auth-form (Partial A) carries {authId, sessionId} (Q4); both mirror the signed receipt.data body.",
   "type": "object",
   "required": [
     "offlineTxId",
-    "offlinePassId",
     "userId",
     "deviceId",
     "bayId",
@@ -19,13 +18,41 @@
     "txCounter"
   ],
   "additionalProperties": false,
+  "oneOf": [
+    {
+      "title": "pass-form (Full Offline / Partial B)",
+      "required": ["offlinePassId", "passCounter"],
+      "properties": { "authId": false, "sessionId": false }
+    },
+    {
+      "title": "auth-form (Partial A — ServerSignedAuth)",
+      "required": ["authId", "sessionId"],
+      "properties": { "offlinePassId": false, "passCounter": false }
+    }
+  ],
   "properties": {
     "offlineTxId": {
       "$ref": "../common/offline-tx-id.schema.json"
     },
     "offlinePassId": {
       "$ref": "../common/offline-pass-id.schema.json",
-      "description": "OfflinePass identifier used to authorize this service. Matches the value signed into receipt.data per 06-security.md §6.2 (v0.4.2)."
+      "description": "Pass-form only. OfflinePass identifier used to authorize this service. Matches the value signed into receipt.data per 06-security.md §6.2."
+    },
+    "passCounter": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Pass-form only. The pass's app-global usage counter, matching the value signed into receipt.data (finding N7)."
+    },
+    "authId": {
+      "type": "string",
+      "pattern": "^auth_[a-f0-9]{8,}$",
+      "minLength": 13,
+      "maxLength": 64,
+      "description": "Auth-form (Partial A) only. ServerSignedAuth authId, matching the value signed into receipt.data (finding Q4)."
+    },
+    "sessionId": {
+      "$ref": "../common/session-id.schema.json",
+      "description": "Auth-form (Partial A) only. Server-issued session, matching the value signed into receipt.data (finding Q4)."
     },
     "userId": {
       "$ref": "../common/user-id.schema.json",

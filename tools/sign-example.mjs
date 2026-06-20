@@ -52,6 +52,7 @@ const AUTH_RESPONSE_OK_LABEL = 'AuthResponse_OK';
 const RECEIPT_REQUIRED_FIELDS = [
   'offlineTxId',
   'offlinePassId',
+  'passCounter',
   'userId',
   'deviceId',
   'bayId',
@@ -182,6 +183,8 @@ function deriveSsaClaims(outer, file) {
     stationId: `stn_${h('stationId').slice(0, 8)}`,
     bayId: `bay_${h('bayId').slice(0, 12)}`,
     serviceId: 'svc_eco',
+    durationSeconds: 300,
+    creditsAuthorized: 200,
     appNonce,
     issuedAt: SSA_ISSUED_AT,
     expiresAt: SSA_EXPIRES_AT,

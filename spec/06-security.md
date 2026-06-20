@@ -877,9 +877,11 @@ The station MUST perform all 10 checks when validating an OfflinePass locally (F
 | 7 | **Max total credits** | `4002` | Cumulative credits charged MUST be < `maxTotalCredits` |
 | 8 | **Max per-tx credits** | `4004` | Requested service cost MUST be <= `maxCreditsPerTx` |
 | 9 | **Min interval** | `4003` | Time since last transaction from this pass MUST be >= `minIntervalSec` |
-| 10 | **Counter anti-replay** | `2005` | `counter` MUST be > `lastSeenCounter` for this pass on this station |
+| 10 | **Counter anti-replay (station-local horizon)** | `2005` | `counter` MUST be strictly greater than `lastSeenCounter` for this pass on this station. See the counter-model note below. |
 
 **Implementation note:** Implementations SHOULD perform structural and temporal checks before cryptographic verification to mitigate denial-of-service. The error code returned SHOULD correspond to the first failed check in the canonical order (1–10).
+
+**Counter model — app-global value, station-local horizon (finding N7).** The `counter` carried in `OfflineAuthRequest` is a **single app-global monotonic value per pass**: the app — the sole holder of the pass — increments it on **every** use, regardless of which station the pass is presented to. The phrase "for this pass on this station" in check #10 describes the **offline station's verification horizon, not a per-station scoping of the value**. An offline station can only compare `counter` against what its own NVS has seen (it has no cross-station knowledge), so its anti-replay is necessarily local; because the value is app-global and strictly increasing, it trivially passes each station's local `>` check, and a station seeing this pass for the first time uses `lastSeenCounter = -1` so any value passes. The **cross-station** guarantee — that a cloned pass replayed across multiple stations is caught — is **not** provided by this local check; it is enforced **server-side at reconcile** via global `(offlinePassId, passCounter)` uniqueness ([`profiles/offline/reconciliation.md` §6.1](profiles/offline/reconciliation.md#61-check-list) checks #12/#13). The station **MUST** echo the `counter` it verified into the signed receipt as `passCounter` (§6.2 `receipt_fields`), so the server performs that global check on a value it can cryptographically trust.
 
 ### 6.2 Transaction Receipt Signing — ECDSA P-256
 
@@ -888,11 +890,33 @@ Every offline transaction produces a cryptographically signed receipt, ensuring 
 #### Signing Process
 
 ```
-1. receipt_fields = {offlineTxId, offlinePassId, userId, deviceId,
-                     bayId, serviceId, startedAt, endedAt,
-                     durationSeconds, creditsCharged, meterValues, txCounter}
-   // `meterValues` is OMITTED from the canonical body when not present in the
-   // transaction payload (see Note 4 below). All other 11 fields are REQUIRED.
+1. receipt_fields — discriminated by session type (one of two forms):
+
+   pass-form (Full Offline / Partial B) =
+     {offlineTxId, offlinePassId, passCounter, userId, deviceId,
+      bayId, serviceId, startedAt, endedAt,
+      durationSeconds, creditsCharged, meterValues, txCounter}
+
+   auth-form (Partial A — ServerSignedAuth, no pass) =
+     {offlineTxId, authId, sessionId, userId, deviceId,
+      bayId, serviceId, startedAt, endedAt,
+      durationSeconds, creditsCharged, meterValues, txCounter}
+
+   // A Partial-A session carries no OfflinePass: the auth-form replaces the
+   // {offlinePassId, passCounter} pair with the server-issued {authId, sessionId}
+   // join key (findings N2 / Q4), binding the buffered transaction back to its
+   // ServerSignedAuth authorization and its issue-time debit. All other fields
+   // are shared. The two forms are mutually exclusive (schema `oneOf`); the
+   // reconcile gate branches on which pair is present (reconciliation.md §6.1
+   // checks #2 / #4).
+   // `meterValues` is OMITTED from the canonical body when not present (Note 4).
+   // In each form, every field except `meterValues` is REQUIRED and signed.
+   // `authId` / `sessionId` are signed (finding Q4) so the Partial-A join key is
+   // non-spoofable at reconcile (the envelope copy alone is forgeable).
+   // `passCounter` (finding N7) is the pass's app-global monotonic usage counter,
+   // signed so the server enforces global (offlinePassId, passCounter) uniqueness
+   // at reconcile (reconciliation.md §6.1 checks #12/#13). Distinct from
+   // `txCounter`, the per-station boot counter.
 2. receipt_data = OSPP_Canonical_Form(receipt_fields)  // see §4.8
 3. digest       = SHA-256(receipt_data)                // hash the canonical bytes directly
 4. (r, s)       = ECDSA-P256-Sign(station_private_key, digest)  // RFC 6979 deterministic nonces
@@ -907,13 +931,13 @@ Every offline transaction produces a cryptographically signed receipt, ensuring 
 
 > **Note 1 (v0.4.2):** The digest is computed over the **canonical bytes** (`receipt_data`), NOT over the base64-encoded form. Base64 is the wire encoding for the `receipt.data` field only; it is not part of the cryptographic input. Implementations MUST NOT hash `base64(receipt_data)`. Prior pseudocode (carried since v0.2.x) inadvertently hashed the base64 form; v0.4.2 aligns the spec with the implementation-level behavior shared by csms-server `EcdsaService` and the OSPP receipt-signing path. See CHANGELOG (M) fix.
 
-> **Note 2:** The 11 mandatory fields listed in `receipt_fields` (plus `meterValues` when present — see Note 4) are the only fields canonicalized for signing. The receipt envelope's `data`, `signature`, and `signatureAlgorithm` fields are **not** part of the signed input — they are the output container produced by the signing process. Implementations MUST NOT include them in the canonicalized receipt body.
+> **Note 2:** The mandatory fields listed in `receipt_fields` for the applicable form — pass-form or auth-form (plus `meterValues` when present — see Note 4) — are the only fields canonicalized for signing. The receipt envelope's `data`, `signature`, and `signatureAlgorithm` fields are **not** part of the signed input — they are the output container produced by the signing process. Implementations MUST NOT include them in the canonicalized receipt body.
 
 > **Note 3:** The `txCounter` field is included in the signed receipt data to enable gap detection during reconciliation. The server can verify monotonically increasing counters and detect missing transactions (e.g., counter 5 → 7 indicates a missing transaction) without requiring a hash chain.
 
 > **Note 4 (v0.4.2):** `meterValues` is signed **when present** in the transaction payload and **omitted from the canonical body when absent** — implementations MUST NOT emit an empty `meterValues: {}` object into the canonical form (doing so would change the canonical bytes and break signature verification on the server). The server-side verifier reconstructs the canonical body conditionally on `meterValues` presence, matching the station's omit-when-absent behavior.
 
-> **Note 5 (v0.4.2):** `offlinePassId`, `userId`, and `deviceId` are signed to provide cryptographic binding of the receipt to the offline pass, the user, and the device — not merely envelope claims. The server's reconcile-time re-validation gate (`profiles/offline/reconciliation.md` §6) cross-checks these signed values against the TransactionEvent envelope (for `offlinePassId` and `userId`) and against the pass record's `device_id` field (for `deviceId`). This closes the cross-station-replay attack class where a station could wrap an authentic receipt with arbitrary pass / user / device claims in the envelope.
+> **Note 5 (v0.4.2):** `offlinePassId`, `userId`, and `deviceId` are signed to provide cryptographic binding of the receipt to the offline pass, the user, and the device — not merely envelope claims. The server's reconcile-time re-validation gate (`profiles/offline/reconciliation.md` §6) cross-checks these signed values against the TransactionEvent envelope (for `offlinePassId` and `userId`) and against the pass record's `device_id` field (for `deviceId`). This closes the cross-station-replay attack class where a station could wrap an authentic receipt with arbitrary pass / user / device claims in the envelope. v0.6.0 extends the same signed-and-cross-checked binding to `passCounter` (pass-form, finding N7 — gate check #12) and to the `authId` / `sessionId` join key (auth-form / Partial A, finding Q4 — gate check #2), so neither the app-global counter value nor the authorization a buffered transaction settles against can be forged in the envelope.
 
 > **Firmware-timing note (v0.4.2 migration):** Firmware MUST sign per the v0.4.2 `receipt_fields` definition and the canonical-bytes digest rule from initial integration. Receipts signed under the v0.4.1 9-field shape OR with the v0.4.1 base64-hash rule will fail server-side signature verification (`2002 OFFLINE_PASS_INVALID`) or reconcile-time cross-checks (`2017 OFFLINE_RECEIPT_MISMATCH`). The v0.4.1 → v0.4.2 stack upgrade is a coordinated break — pre-launch context (no v0.4.1 firmware deployments) makes the wire-format + digest-rule expansion clean.
 
@@ -1108,7 +1132,7 @@ The wrapper adds `signatureAlgorithm` (`"ECDSA-P256-SHA256"`) and `signature`. T
 
 Only after the gate passes does the app use `stationPubKey` as `stationStaticPub` (§6.5); the certificate's `stationId` is bound into the session key via the transcript (§6.5 Pin 4), not as a separate `info` component.
 
-**What this gate stops — and what it does not.** The gate stops a **fake / unprovisioned** station from harvesting a pass: such a station cannot produce a certificate that verifies under the server key, and even if it **replays a genuine station's certificate** it cannot compute `es = ECDH(appEph, stationStaticPub)` (it lacks that station's static private key), so when the app transmits the AEAD-encrypted OfflineAuthRequest the fake station receives only **opaque ciphertext** — it cannot decrypt the pass. (This is the single property no symmetric arrangement provides without an extra round-trip.) The gate does **NOT** stop a **provisioned-but-malicious or compromised** station: such a station presents its *own* valid certificate, computes `es` with its own static key, and **does** decrypt the pass presented to it. The certificate authenticates that the peer is *a provisioned station of the organization*, **not that it is honest**. A malicious provisioned station that harvests a pass can then replay it across stations — finding **N7 (cross-station double-spend)**, which the per-station anti-replay counter does not prevent and which is **deferred to S2/D2** (reconcile-time `(passId, counter)` uniqueness). The gate's guarantee is therefore precise: *no pass leakage to fake/unprovisioned stations*; cross-station replay by a provisioned malicious/compromised station is an open, separately-tracked risk (N7).
+**What this gate stops — and what it does not.** The gate stops a **fake / unprovisioned** station from harvesting a pass: such a station cannot produce a certificate that verifies under the server key, and even if it **replays a genuine station's certificate** it cannot compute `es = ECDH(appEph, stationStaticPub)` (it lacks that station's static private key), so when the app transmits the AEAD-encrypted OfflineAuthRequest the fake station receives only **opaque ciphertext** — it cannot decrypt the pass. (This is the single property no symmetric arrangement provides without an extra round-trip.) The gate does **NOT** stop a **provisioned-but-malicious or compromised** station: such a station presents its *own* valid certificate, computes `es` with its own static key, and **does** decrypt the pass presented to it. The certificate authenticates that the peer is *a provisioned station of the organization*, **not that it is honest**. A malicious provisioned station that harvests a pass can then replay it across stations — finding **N7 (cross-station double-spend)**, which the per-station anti-replay counter does not prevent. v0.6.0 (S2/D2) closes this **at settlement**: the station echoes the pass's app-global `counter` into the signed receipt as `passCounter`, and the reconcile gate enforces global `(offlinePassId, passCounter)` uniqueness ([`profiles/offline/reconciliation.md` §6.1](profiles/offline/reconciliation.md#61-check-list) check #13 — a same-value replay/clone hard-reject — plus a complementary cross-station-aggregate fraud signal, §7, for the disjoint-counter-stream clone). The gate's guarantee is therefore precise: *no pass leakage to fake/unprovisioned stations*; and cross-station replay of a harvested pass is **detected and hard-rejected at reconcile** (the harvesting station still cannot decrypt a pass it was never presented — see above).
 
 **Residual risks (Normative acknowledgement).** The certificate authenticates *identity*; it does not make the channel unconditionally safe. Implementers MUST account for:
 - **Offline revocation is best-effort.** An offline app cannot fetch a CRL/OCSP. A station whose static BLE key is compromised remains impersonatable until its certificate `expiresAt`. Mitigation = short `expiresAt` + rotation; this is a deliberate availability/security trade-off, not an oversight.

@@ -35,7 +35,7 @@ The station validates the request and responds via FFF4 with a StartServiceRespo
 **Processing rules:**
 
 1. The station **MUST** verify that the requested `bayId` and `serviceId` are still available. If the bay state changed between authentication and start (e.g., another BLE session claimed the bay), the station **MUST** respond with `Rejected` and error `3001 BAY_BUSY`.
-2. The station **MUST** verify that `requestedDurationSeconds` does not exceed the authorized `durationSeconds` from the AuthResponse. If it does, the station **SHOULD** clamp to the authorized maximum rather than rejecting.
+2. The station **MUST** verify that `requestedDurationSeconds` does not exceed the authorized `durationSeconds` (finding N3). For a Partial-A (ServerSignedAuth) session this is the **signed** `durationSeconds` claim (`server-signed-auth-claims.schema.json`) the station verified during the handshake; for a Partial-B session it is the `durationSeconds` from the AuthorizeOfflinePass response. The AuthResponse MAY relay an unsigned advisory copy for the app, but the clamp **MUST** be enforced against the signed/server value, never the advisory one. If `requestedDurationSeconds` exceeds the authorized value, the station **SHOULD** clamp to the authorized maximum rather than rejecting.
 3. Before confirming a StartServiceResponse with `result: "Accepted"`, the station SHOULD persist the pending transaction record (`offlineTxId`, `sessionId`, `bayId`, `timestamp`, `creditsAuthorized`) to non-volatile storage. This ensures that if the station loses power mid-session, the transaction can be recovered and reconciled upon reboot. If the station cannot persist the record (e.g., storage failure), it SHOULD reject the StartService request with error `5111 BUFFER_FULL`.
 4. On `Accepted`, the station **MUST** activate the physical hardware, start the auto-stop timer, and begin sending FFF5 Service Status notifications.
 5. The app **MUST** store the `offlineTxId` for later reconciliation and receipt matching.
@@ -210,14 +210,15 @@ After the service ends (manual stop or auto-stop), the app reads characteristic 
     "energyWh": 150
   },
   "receipt": {
-    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQ2hhcmdlZCI6NTAsImRldmljZUlkIjoiZGV2X2Q0ZTVmNmE3IiwiZHVyYXRpb25TZWNvbmRzIjoyOTgsImVuZGVkQXQiOiIyMDI2LTAyLTEzVDEwOjA0OjU4LjAwMFoiLCJtZXRlclZhbHVlcyI6eyJjb25zdW1hYmxlTWwiOjUwMCwiZW5lcmd5V2giOjE1MCwibGlxdWlkTWwiOjQ1MjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzXzkyZGYwZDVjMDExZWFmNzQiLCJvZmZsaW5lVHhJZCI6Im90eF9kNGU1ZjZhN2I4YzkiLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwidHhDb3VudGVyIjo1LCJ1c2VySWQiOiJzdWJfMDYwNzJhODI5ZTM5MThhOCJ9",
-    "signature": "MEUCIQDyxPIeLDSHP+58yLVECN0M/LyjnCmy54FddAWiCwyO4AIgbGW9Larubc+Ry6HZ/enabrZmXZ4LXjEAi0pyQjABbe8=",
+    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQ2hhcmdlZCI6NTAsImRldmljZUlkIjoiZGV2X2Q0ZTVmNmE3IiwiZHVyYXRpb25TZWNvbmRzIjoyOTgsImVuZGVkQXQiOiIyMDI2LTAyLTEzVDEwOjA0OjU4LjAwMFoiLCJtZXRlclZhbHVlcyI6eyJjb25zdW1hYmxlTWwiOjUwMCwiZW5lcmd5V2giOjE1MCwibGlxdWlkTWwiOjQ1MjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzXzkyZGYwZDVjMDExZWFmNzQiLCJvZmZsaW5lVHhJZCI6Im90eF9kNGU1ZjZhN2I4YzkiLCJwYXNzQ291bnRlciI6MzYsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDEwOjAwOjAwLjAwMFoiLCJ0eENvdW50ZXIiOjUsInVzZXJJZCI6InN1Yl8wNjA3MmE4MjllMzkxOGE4In0=",
+    "signature": "MEUCIQDSRvP/bEpvafY6VUIUGn7TD7O7VC6TmI/P94Dzy+mhNwIgOK0Sdt86gUUMiG+JVehka2U2S3uKAKJgxNJfR7u4/D8=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "txCounter": 5,
   "offlinePassId": "opass_92df0d5c011eaf74",
   "userId": "sub_06072a829e3918a8",
-  "deviceId": "dev_d4e5f6a7"
+  "deviceId": "dev_d4e5f6a7",
+  "passCounter": 36
 }
 ```
 
@@ -234,7 +235,7 @@ If the BLE connection drops during an active session, the following rules apply:
 
 The station **MUST** maintain a server-side auto-stop timer for every active BLE session:
 
-1. The timer is initialized to `requestedDurationSeconds` (or the authorized `durationSeconds` from the server, whichever is lower) when the service starts.
+1. The timer is initialized to `requestedDurationSeconds` (or the authorized `durationSeconds` — the **signed** ServerSignedAuth claim for Partial A, or the AuthorizeOfflinePass response value for Partial B — whichever is lower) when the service starts.
 2. The timer counts down in real time, independent of the BLE connection state.
 3. When the timer reaches zero, the station **MUST** stop the physical hardware, calculate final `creditsCharged`, generate a signed receipt, store it on FFF6, and send a `ReceiptReady` notification on FFF5 (if the app is still connected).
 4. The auto-stop timer ensures that services always complete within the authorized duration, even if the app crashes, the BLE connection drops, or the user walks away.

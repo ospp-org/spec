@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/common/server-signed-auth-claims.schema.json",
   "title": "ServerSignedAuthClaims",
-  "description": "Canonical body serialised via OSPP Canonical Form (spec/06-security.md §4.8) and base64-encoded into the `signedAuthorization.data` field of a ServerSignedAuth message for ECDSA P-256 signing. Per profiles/offline/ble-handshake.md §4.2.1. 10 required claims — no optional fields. The digest signed by the server's private key is SHA-256 over the canonical bytes directly (NOT over the base64 form).",
+  "description": "Canonical body serialised via OSPP Canonical Form (spec/06-security.md §4.8) and base64-encoded into the `signedAuthorization.data` field of a ServerSignedAuth message for ECDSA P-256 signing. Per profiles/offline/ble-handshake.md §4.2.1. 12 required claims — no optional fields. `durationSeconds` and `creditsAuthorized` (finding N3) carry the authorized budget that the station clamps the session to (profiles/offline/ble-session.md §6); they are signed so the station can enforce a server-authorized limit it can cryptographically trust, not an app-supplied request. The digest signed by the server's private key is SHA-256 over the canonical bytes directly (NOT over the base64 form).",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -13,6 +13,8 @@
     "stationId",
     "bayId",
     "serviceId",
+    "durationSeconds",
+    "creditsAuthorized",
     "appNonce",
     "issuedAt",
     "expiresAt"
@@ -48,6 +50,15 @@
     "serviceId": {
       "$ref": "service-id.schema.json",
       "description": "Service this authorisation activates."
+    },
+    "durationSeconds": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Authorized service duration in seconds (finding N3). The station MUST clamp requestedDurationSeconds to this signed value (profiles/offline/ble-session.md §6). Signed so the station enforces a server-authorized bound, not an app-supplied request."
+    },
+    "creditsAuthorized": {
+      "$ref": "credit-amount.schema.json",
+      "description": "Authorized credit budget for this session (finding N3). Bounds settlement; the station MUST NOT charge beyond it. Signed."
     },
     "appNonce": {
       "type": "string",

@@ -2,12 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/common/receipt-data.schema.json",
   "title": "ReceiptData",
-  "description": "Canonical body serialized via OSPP Canonical Form (spec/06-security.md §4.8) and base64-encoded into the receipt.data field for ECDSA P-256 signing. Per 06-security.md §6.2 v0.4.2. 11 required fields plus meterValues (optional, signed when present, omitted from the canonical body when absent). Up to 12 signed fields total. The digest signed by the station's private key is SHA-256 over the canonical bytes directly (NOT over the base64 form).",
+  "description": "Canonical body serialized via OSPP Canonical Form (spec/06-security.md §4.8) and base64-encoded into the receipt.data field for ECDSA P-256 signing. Per 06-security.md §6.2. Discriminated (oneOf) by session type: the pass-form carries {offlinePassId, passCounter} (Full Offline / Partial B); the auth-form carries {authId, sessionId} (Partial A — ServerSignedAuth, no pass). Each form has 12 required fields plus optional meterValues (signed when present, omitted from the canonical body when absent). `passCounter` (finding N7) is the pass's app-global usage counter, signed for global (offlinePassId, passCounter) uniqueness at reconcile; `authId`/`sessionId` (finding Q4) are the signed, non-spoofable Partial-A join key binding the buffered transaction to its ServerSignedAuth authorization. The digest signed by the station's private key is SHA-256 over the canonical bytes directly (NOT over the base64 form).",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "offlineTxId",
-    "offlinePassId",
     "userId",
     "deviceId",
     "bayId",
@@ -18,9 +17,24 @@
     "creditsCharged",
     "txCounter"
   ],
+  "oneOf": [
+    {
+      "title": "pass-form (Full Offline / Partial B)",
+      "required": ["offlinePassId", "passCounter"],
+      "properties": { "authId": false, "sessionId": false }
+    },
+    {
+      "title": "auth-form (Partial A — ServerSignedAuth)",
+      "required": ["authId", "sessionId"],
+      "properties": { "offlinePassId": false, "passCounter": false }
+    }
+  ],
   "properties": {
     "offlineTxId":      { "$ref": "./offline-tx-id.schema.json" },
     "offlinePassId":    { "$ref": "./offline-pass-id.schema.json" },
+    "passCounter":      { "type": "integer", "minimum": 0, "description": "Pass-form only. The pass's app-global monotonic usage counter (the value the app carried in OfflineAuthRequest.counter, echoed by the station). Signed (finding N7) so the server enforces global (offlinePassId, passCounter) uniqueness at reconcile. Distinct from txCounter (per-station boot counter)." },
+    "authId":           { "type": "string", "pattern": "^auth_[a-f0-9]{8,}$", "minLength": 13, "maxLength": 64, "description": "Auth-form (Partial A) only. The server-issued ServerSignedAuth authId this transaction reconciles against (mirrors the claim in server-signed-auth-claims.schema.json). Signed (finding Q4) so the join key is non-spoofable; the reconcile gate resolves it against the issued-authorization registry (reconciliation.md §6.1 check #4 auth-branch)." },
+    "sessionId":        { "$ref": "./session-id.schema.json", "description": "Auth-form (Partial A) only. The server-issued session this transaction settles. Signed (finding Q4); paired with authId as the Partial-A join key." },
     "userId":           { "$ref": "./user-id.schema.json" },
     "deviceId":         { "type": "string", "minLength": 1, "maxLength": 128, "description": "Device identifier from the BLE Hello / OfflinePass binding. Cryptographically binds the receipt to the device that authorized the pass." },
     "bayId":            { "$ref": "./bay-id.schema.json" },

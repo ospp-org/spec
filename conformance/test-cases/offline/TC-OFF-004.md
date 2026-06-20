@@ -43,8 +43,8 @@ Verify that the station correctly performs offline transaction reconciliation af
   "durationSeconds": 298,
   "creditsCharged": 50,
   "receipt": {
-    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQ2hhcmdlZCI6NTAsImRldmljZUlkIjoiZGV2X2ExYjJjM2Q0IiwiZHVyYXRpb25TZWNvbmRzIjoyOTgsImVuZGVkQXQiOiIyMDI2LTAxLTMwVDEwOjM1OjAwLjAwMFoiLCJtZXRlclZhbHVlcyI6eyJlbmVyZ3lXaCI6MTUwLCJsaXF1aWRNbCI6NDUyMDB9LCJvZmZsaW5lUGFzc0lkIjoib3Bhc3NfZjFlMmQzYzRiNWE2Iiwib2ZmbGluZVR4SWQiOiJvdHhfYTFiMmMzZDRlNWY2Iiwic2VydmljZUlkIjoic3ZjX2VjbyIsInN0YXJ0ZWRBdCI6IjIwMjYtMDEtMzBUMTA6MzA6MDAuMDAwWiIsInR4Q291bnRlciI6MSwidXNlcklkIjoic3ViX2FsaWNlMDAxIn0=",
-    "signature": "MEUCIQCwMyJ+tra9TSwiiz+7z4DS2z8wW5WD0cqMAP+6tBonNwIgTN2vnIsXLd+/o4/xYR09l19i+YZrJxs2r5k9Uzqq5vc=",
+    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQ2hhcmdlZCI6NTAsImRldmljZUlkIjoiZGV2X2ExYjJjM2Q0IiwiZHVyYXRpb25TZWNvbmRzIjoyOTgsImVuZGVkQXQiOiIyMDI2LTAxLTMwVDEwOjM1OjAwLjAwMFoiLCJtZXRlclZhbHVlcyI6eyJlbmVyZ3lXaCI6MTUwLCJsaXF1aWRNbCI6NDUyMDB9LCJvZmZsaW5lUGFzc0lkIjoib3Bhc3NfZjFlMmQzYzRiNWE2Iiwib2ZmbGluZVR4SWQiOiJvdHhfYTFiMmMzZDRlNWY2IiwicGFzc0NvdW50ZXIiOjQsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAxLTMwVDEwOjMwOjAwLjAwMFoiLCJ0eENvdW50ZXIiOjEsInVzZXJJZCI6InN1Yl9hbGljZTAwMSJ9",
+    "signature": "MEQCIGGPjqnGgjYK9O2tuh/tFm+3OFIdYUWHXBJulZFPpyikAiAcefFqzC0Z60jJT9SzbvD5Yen+HInEN3Ypg05YR8VXDQ==",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "txCounter": 1,
@@ -52,7 +52,8 @@ Verify that the station correctly performs offline transaction reconciliation af
     "liquidMl": 45200,
     "energyWh": 150
   },
-  "deviceId": "dev_a1b2c3d4"
+  "deviceId": "dev_a1b2c3d4",
+  "passCounter": 4
 }
 ```
 3. Verify `txCounter` is 1 (first in sequence).

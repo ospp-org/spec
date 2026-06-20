@@ -28,6 +28,16 @@
       "pattern": "^[A-Za-z0-9+/]{43}=$",
       "description": "Base64-encoded HMAC-SHA256(sessionKey, \"AuthResponse_OK\") (exactly 44 chars), present when result is Accepted (06-security.md §6.5)."
     },
+    "durationSeconds": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Advisory copy of the authorized service duration for app UX (finding N3). UNSIGNED — relayed by the station from the SIGNED ServerSignedAuth claims (Partial A) or the AuthorizeOfflinePass response (Partial B). The station's clamp enforcement is rooted in the SIGNED durationSeconds (server-signed-auth-claims.schema.json), NOT this advisory field. MAY be present when result is Accepted."
+    },
+    "creditsAuthorized": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Advisory copy of the authorized credit budget for app UX (finding N3). UNSIGNED — see durationSeconds. MAY be present when result is Accepted."
+    },
     "reason": {
       "type": "string",
       "maxLength": 256,

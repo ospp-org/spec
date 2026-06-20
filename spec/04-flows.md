@@ -667,7 +667,7 @@ sequenceDiagram
 ### Happy Path
 
 1. **App** sends `POST /sessions/offline-auth` to Server with `bayId` and `serviceId`
-2. **Server** validates the user, debits credits, signs an authorization blob with ECDSA P-256 server key (includes `bayId`, `serviceId`, `durationSeconds`, `issuedAt`, `expiresAt`)
+2. **Server** validates the user, debits credits, signs the ServerSignedAuth authorization blob with ECDSA P-256 server key — the signed claims carry the authorized budget (`durationSeconds`, `creditsAuthorized`) the station enforces, alongside `authId`, `sessionId`, `bayId`, `serviceId`, `appNonce`, `issuedAt`, `expiresAt` (full claim set: `server-signed-auth-claims.schema.json`, finding N3)
 3. **Server** returns `signedAuthorization` (Base64) and `sessionId` to the App
 4. **App** connects to the SSP via BLE
 5. **App** reads **StationInfo** [MSG-027] — confirms `connectivity: "Offline"`
