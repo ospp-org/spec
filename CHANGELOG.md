@@ -160,6 +160,26 @@ the wire).
   remain byte-identical to `spec/schemas/`; no SDK re-vendoring
   required.
 
+### Reconciliation + Partial-A (S2 — decisions D2/D3)
+
+> Implements the approved D2/D3 set on top of the D1 handshake work above: reconcile-time financial semantics (N7/N8/N11) and the Partial-A representation (N2/N3/Q4), plus the N9 `eventId` alignment. All signed-format changes ride a **single** conformance-vector regeneration (receipts, transaction-event, ServerSignedAuth + every inline example); `verify-all-signatures.sh` is green (signatures, BLE crypto oracle untouched, schema vectors `302/302`, inline-md idempotent). Unlike the earlier 0.6.0 sub-revisions, S2 **does** change `spec/schemas/`, so the SDK schemas re-vendor at the v0.6.0 lockstep tag — though no SDK signing *code* changes (the canonical-JSON serializer is field-agnostic). Server-side build (csms B1/B3) follows in its own window.
+
+#### Changed (BREAKING)
+
+- **Signed receipt + envelope are now discriminated (`oneOf`) by session type (N2/Q4).** They carry **either** `{offlinePassId, passCounter}` (pass-form — Full Offline / Partial B) **or** `{authId, sessionId}` (auth-form — Partial A). `receipt-data`, `ble/receipt`, and `transaction-event-request` schemas restructured; `offlinePassId` is no longer unconditionally required. Makes Partial-A reconcilable end-to-end (previously impossible — a no-pass session could not build a conforming envelope and was hard-rejected at gate check #4).
+- **`passCounter` added to the signed receipt + envelope (N7).** The pass's app-global monotonic usage counter, echoed by the station into the ECDSA-signed receipt body and the envelope. `06-security.md` §6.1 #10 clarified: "for this pass on this station" is the offline station's *local* anti-replay horizon, not a per-station scoping of the value (the counter is app-global).
+- **`authId` + `sessionId` added to the signed receipt + envelope (Q4).** The server-issued Partial-A join key, signed so it is non-spoofable at reconcile.
+- **ServerSignedAuth claims gain `durationSeconds` + `creditsAuthorized` (N3).** The authorized budget is now in the **signed** 12-claim body (was 10), so the station's duration clamp (`ble-session.md` §3/§6) is enforceable against a server-authorized value, not an app request — resolving the prose↔schema contradiction (`04-flows.md` §5b vs the claims schema). `ble/auth-response` gains an **unsigned advisory** budget copy for app UX only.
+- **Counter-replay `eventId` derivation aligned `check_5 → check_10` (N9).** `authorize-offline-pass.md` §6 now derives the counter-replay SecurityEvent `eventId` over `…check_10:` to match the §5 table (counter-replay = check #10). Deterministic on `(messageId, N)`, so only future audit identifiers change; emitted rows are immutable.
+
+#### Added
+
+- **Reconcile gate checks #12 / #13 (N7).** #12 cross-checks the envelope `passCounter` against the signed receipt; #13 hard-rejects a reused `(offlinePassId, passCounter)` tuple (cross-station replay / clone), with a complementary §7 aggregate fraud signal for the disjoint-counter-stream clone. The gate is now 13 checks; `eventId` domain `…reconcile_tx:check_N:` for `1 ≤ N ≤ 13`.
+- **Reconcile gate #10 epoch-at-tx-time + revocation-window flag (N8, §6.6).** #10 compares `pass.revocation_epoch` against `epoch_active_at(endedAt)` (server-side bump history; no wire field) instead of the current epoch — a bulk revocation issued after a legitimate offline transaction no longer retroactively rejects it. A pass valid at tx time but since revoked is **accepted-but-flagged** (`revoked_after_tx`) for operator review: a deterministic gate marker, not a §7 score and not a rejection.
+- **Partial-A reconciliation branch (§6.7, N2/N3).** Checks #2/#4 branch on the discriminator; the auth-form resolves `authId` against an issued-authorization registry (created + wallet-debited at `POST /sessions/offline-auth`), and derived checks read the registry row.
+- **Settle-once wallet reconciliation (§8.2, N11).** A session debited at authorization time (Partial A always; Partial-B offline fallback) is **trued-up** at reconcile (the difference vs the issue-time debit), never re-debited; correlation is server-side on `sessionId` (`reconciled_session_id`) with a shared idempotency key. Specified as a forward guard — the Partial-B authorize-debit path is not yet implemented server-side, so no double-debit exists today.
+- **`ServerSignedAuthReplay` SecurityEvent type (`security-event.md` §4).** Closes the dangling reference from error `2018 SERVER_AUTH_NONCE_MISMATCH` (the type was named in `07-errors.md` but absent from the enum).
+
 ---
 
 ## [0.5.0] — 2026-06-06
