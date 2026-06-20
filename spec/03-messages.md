@@ -1258,6 +1258,7 @@ Reports security incidents to the server for audit and automated response. The s
 | `CertificateError` | Critical | TLS certificate expired, invalid, or revoked |
 | `UnauthorizedAccess` | Warning | Attempt to access unauthorized resource or topic |
 | `OfflinePassRejected` | Warning | BLE offline pass failed validation |
+| `ServerSignedAuthReplay` | Critical | ServerSignedAuth (Partial A) replayed — signed `appNonce` ≠ current handshake `Hello.appNonce` (error 2018); logged by the server at reconciliation |
 | `TamperDetected` | Critical | Physical tamper switch triggered or enclosure opened |
 | `BruteForceAttempt` | Warning | Repeated failed authentication attempts |
 | `FirmwareIntegrityFailure` | Critical | Firmware checksum mismatch or signature invalid |
@@ -3062,7 +3063,7 @@ Error codes referenced in this chapter. For the full catalog, see [Chapter 07 �
 | 2002 | `OFFLINE_PASS_INVALID` | AuthorizeOfflinePass, TransactionEvent, BLE AuthResponse |
 | 2003 | `OFFLINE_PASS_EXPIRED` | AuthorizeOfflinePass, BLE AuthResponse |
 | 2004 | `OFFLINE_EPOCH_REVOKED` | AuthorizeOfflinePass, TransactionEvent, BLE AuthResponse |
-| 2005 | `OFFLINE_COUNTER_REPLAY` | AuthorizeOfflinePass, BLE AuthResponse |
+| 2005 | `OFFLINE_COUNTER_REPLAY` | AuthorizeOfflinePass, TransactionEvent, BLE AuthResponse |
 | 2006 | `OFFLINE_STATION_MISMATCH` | AuthorizeOfflinePass, BLE AuthResponse |
 | 2007 | `COMMAND_NOT_SUPPORTED` | All Server→Station commands (implicit) |
 | 2008 | `ACTION_NOT_PERMITTED` | ChangeConfiguration |

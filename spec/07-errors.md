@@ -229,7 +229,7 @@ Authentication errors cover identity verification (mTLS, JWT, BLE handshake, Off
 | 2002 | `OFFLINE_PASS_INVALID` | Error | false | OfflinePass ECDSA P-256 signature verification failed. The pass data has been tampered with or was signed by an unknown key. | App: request a new OfflinePass from the server. Station: log SecurityEvent [MSG-012] with `type: "OfflinePassRejected"`. |
 | 2003 | `OFFLINE_PASS_EXPIRED` | Warning | true | OfflinePass `expiresAt` timestamp has passed. The pass is no longer valid. | App: request a new OfflinePass from the server. Pass has a maximum validity of 24 hours. |
 | 2004 | `OFFLINE_EPOCH_REVOKED` | Error | false | OfflinePass `revocationEpoch` is less than the station's current `RevocationEpoch`. The pass has been batch-revoked. | App: request a new OfflinePass with the current epoch. Station epoch is updated via ChangeConfiguration [MSG-013]. |
-| 2005 | `OFFLINE_COUNTER_REPLAY` | Critical | false | OfflinePass `counter` is less than or equal to the station's `lastSeenCounter`. Possible replay attack. | Reject authentication. Station: log SecurityEvent [MSG-012] with `type: "OfflinePassRejected"`. App: if legitimate, request a new OfflinePass. |
+| 2005 | `OFFLINE_COUNTER_REPLAY` | Critical | false | A pass usage counter was replayed. **Authorize-time** (AuthorizeOfflinePass): the OfflinePass `counter` is ≤ the station's `lastSeenCounter`. **Reconcile-time** (TransactionEvent): the signed `(offlinePassId, passCounter)` tuple was already settled (pass-form, `reconciliation.md` §6.1 check #13), or an already-reconciled `(authId, sessionId)` was re-presented (auth-form, §6.7) — a cloned or replayed authorization. | Reject. Station (authorize-time): log SecurityEvent [MSG-012] with `type: "OfflinePassRejected"`. Server (reconcile-time): hard-reject the TransactionEvent and emit the gate SecurityEvent (`reconciliation.md` §6.3). App: if legitimate, request a new OfflinePass. |
 | 2006 | `OFFLINE_STATION_MISMATCH` | Error | false | OfflinePass `stationId` constraint does not match the connected station (when station-restricted passes are used). | App: the OfflinePass is not valid for this station. Request a new pass or use an unrestricted pass. |
 | 2007 | `COMMAND_NOT_SUPPORTED` | Warning | false | The requested action is recognized but not implemented by this station's firmware or disabled by configuration. | Server: do not retry. Check station capabilities from BootNotification. |
 | 2008 | `ACTION_NOT_PERMITTED` | Error | false | The authenticated entity does not have the required RBAC role or permission to perform this action. | Verify the user's role and permissions. Contact the operator admin if elevated access is needed. |
@@ -385,7 +385,7 @@ This table maps which error codes can appear in the RESPONSE or rejection of eac
 | Heartbeat [MSG-008] | 1005, 1010, 5106, 6001 |
 | StatusNotification [MSG-009] | *(EVENT — no RESPONSE, but may carry 5xxx error details in payload)* |
 | MeterValues [MSG-010] | *(EVENT — no RESPONSE)* |
-| TransactionEvent [MSG-007] | **2002**, **2003**, **2004**, **2006**, **2014**, **2015**, **2016**, **2017**, 1005, 3015, 6001 |
+| TransactionEvent [MSG-007] | **2002**, **2003**, **2004**, **2005**, **2006**, **2014**, **2015**, **2016**, **2017**, 1005, 3015, 6001 |
 | AuthorizeOfflinePass [MSG-002] | **2002**, **2003**, **2004**, **2005**, **2006**, 1005, 4002, 4003, 4004, 6001 |
 | FirmwareStatusNotification [MSG-017] | *(EVENT — no RESPONSE)* |
 | DiagnosticsNotification [MSG-019] | *(EVENT — no RESPONSE)* |

@@ -1,0 +1,15 @@
+{
+  "eventId": "sec_5e2f6a7b8c9d0001",
+  "type": "ServerSignedAuthReplay",
+  "severity": "Critical",
+  "timestamp": "2026-03-01T12:05:00.000Z",
+  "details": {
+    "authId": "auth_4a4c917bf87f",
+    "sessionId": "sess_b3c4d5e6",
+    "errorCode": 2018,
+    "helloAppNonce": "DTUrT0MOKRizF27RH0/XTpUHw0ZrhJXt1K1OCXIxrmw=",
+    "claimsAppNonce": "Xb1a2C3d4E5f6a7B8c9D0e1F2a3B4c5D6e7F8a9B0c1D=",
+    "reportingStationId": "stn_a895fa4d",
+    "description": "ServerSignedAuth replay: claims.appNonce does not match Hello.appNonce of the current handshake (07-errors.md 2018)"
+  }
+}

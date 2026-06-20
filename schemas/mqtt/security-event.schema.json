@@ -26,6 +26,7 @@
         "CertificateError",
         "UnauthorizedAccess",
         "OfflinePassRejected",
+        "ServerSignedAuthReplay",
         "TamperDetected",
         "BruteForceAttempt",
         "FirmwareIntegrityFailure",
