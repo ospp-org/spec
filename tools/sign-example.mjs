@@ -49,10 +49,8 @@ const AUTH_RESPONSE_OK_LABEL = 'AuthResponse_OK';
 // Receipt mode (spec §6.2 v0.4.2)
 // -----------------------------------------------------------------------------
 
-const RECEIPT_REQUIRED_FIELDS = [
+const RECEIPT_SHARED_FIELDS = [
   'offlineTxId',
-  'offlinePassId',
-  'passCounter',
   'userId',
   'deviceId',
   'bayId',
@@ -63,6 +61,11 @@ const RECEIPT_REQUIRED_FIELDS = [
   'creditsCharged',
   'txCounter',
 ];
+// Discriminated receipt forms (06-security.md §6.2 receipt_fields, schema oneOf):
+//   pass-form (Full Offline / Partial B): + {offlinePassId, passCounter}
+//   auth-form (Partial A — ServerSignedAuth, no pass): + {authId, sessionId}
+const RECEIPT_PASS_FORM_FIELDS = ['offlinePassId', 'passCounter'];
+const RECEIPT_AUTH_FORM_FIELDS = ['authId', 'sessionId'];
 
 function deriveDeviceId(offlineTxId) {
   if (typeof offlineTxId !== 'string' || !offlineTxId.startsWith('otx_')) {
@@ -72,14 +75,17 @@ function deriveDeviceId(offlineTxId) {
 }
 
 function buildReceiptBody(outer, file) {
+  // Discriminate: auth-form iff the auth-key pair is present (Partial A, no pass).
+  const isAuthForm = ('authId' in outer) || ('sessionId' in outer);
+  const formFields = isAuthForm ? RECEIPT_AUTH_FORM_FIELDS : RECEIPT_PASS_FORM_FIELDS;
   const body = {};
-  for (const field of RECEIPT_REQUIRED_FIELDS) {
+  for (const field of [...RECEIPT_SHARED_FIELDS, ...formFields]) {
     if (field === 'deviceId' && !(field in outer)) {
       body.deviceId = deriveDeviceId(outer.offlineTxId);
       continue;
     }
     if (!(field in outer)) {
-      throw new Error(`${file}: missing required outer field "${field}"`);
+      throw new Error(`${file}: missing required outer field "${field}" (${isAuthForm ? 'auth' : 'pass'}-form)`);
     }
     body[field] = outer[field];
   }

@@ -73,10 +73,14 @@ const SESSION_KEY = readFileSync(`${KEY_DIR}/session-test-key.bin`);
 // Sign helpers (mirror of tools/sign-example.mjs)
 // -----------------------------------------------------------------------------
 
-const RECEIPT_FIELDS = [
-  'offlineTxId','offlinePassId','passCounter','userId','deviceId','bayId','serviceId',
+const RECEIPT_SHARED_FIELDS = [
+  'offlineTxId','userId','deviceId','bayId','serviceId',
   'startedAt','endedAt','durationSeconds','creditsCharged','txCounter',
 ];
+// Discriminated forms (schema oneOf): pass-form +{offlinePassId,passCounter};
+// auth-form (Partial A — ServerSignedAuth) +{authId,sessionId}.
+const RECEIPT_PASS_FORM_FIELDS = ['offlinePassId','passCounter'];
+const RECEIPT_AUTH_FORM_FIELDS = ['authId','sessionId'];
 const OFFLINE_PASS_FIELDS = [
   'passId','sub','deviceId','issuedAt','expiresAt','policyVersion',
   'revocationEpoch','offlineAllowance','constraints',
@@ -94,18 +98,24 @@ function deriveDeviceId(offlineTxId) {
 function deriveReceiptStaleFields(outer) {
   const seed = outer.offlineTxId ?? '';
   const h = (label) => createHash('sha256').update(`${label}|${seed}`).digest('hex');
-  if (!('offlinePassId' in outer)) outer.offlinePassId = `opass_${h('offlinePassId').slice(0, 16)}`;
   if (!('userId' in outer))        outer.userId        = `sub_${h('userId').slice(0, 16)}`;
   if (!('deviceId' in outer))      outer.deviceId      = deriveDeviceId(outer.offlineTxId);
-  // passCounter (finding N7): app-global pass usage counter, signed into the
-  // receipt. Synthesised deterministically when the inline example omits it.
-  if (!('passCounter' in outer))   outer.passCounter   = (parseInt(h('passCounter').slice(0, 6), 16) % 64) + 1;
+  // Auth-form (Partial A) bodies carry {authId, sessionId} and no pass; synthesise
+  // the pass-form {offlinePassId, passCounter} only for pass-form bodies.
+  const isAuthForm = ('authId' in outer) || ('sessionId' in outer);
+  if (!isAuthForm) {
+    if (!('offlinePassId' in outer)) outer.offlinePassId = `opass_${h('offlinePassId').slice(0, 16)}`;
+    // passCounter (finding N7): app-global pass usage counter, signed into the receipt.
+    if (!('passCounter' in outer))   outer.passCounter   = (parseInt(h('passCounter').slice(0, 6), 16) % 64) + 1;
+  }
 }
 
 function signReceipt(outer) {
   deriveReceiptStaleFields(outer);
+  const isAuthForm = ('authId' in outer) || ('sessionId' in outer);
+  const fields = [...RECEIPT_SHARED_FIELDS, ...(isAuthForm ? RECEIPT_AUTH_FORM_FIELDS : RECEIPT_PASS_FORM_FIELDS)];
   const body = {};
-  for (const f of RECEIPT_FIELDS) {
+  for (const f of fields) {
     if (!(f in outer)) throw new Error(`receipt missing field: ${f}`);
     body[f] = outer[f];
   }
