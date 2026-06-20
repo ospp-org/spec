@@ -1287,6 +1287,7 @@ During reconciliation ([Flow §10](04-flows.md#10-offline--online-reconciliation
 | Invalid timestamps | +0.50 | Timestamps out of order, in the future, or impossibly spaced |
 | Duration exceeds allowance | +0.20 | `durationSeconds` exceeds `maxSessionDuration` or pass limits |
 | High offline frequency | +0.20 | > 10 transactions from same user in 24 hours |
+| Rapid consecutive (< `minIntervalSec`) | +0.15 | Two transactions for the same `offlinePassId` spaced less than `minIntervalSec` apart — the reconcile-time backstop for the per-pass rate limit (authorize-time hard check, `4003`) |
 | Exceeds per-tx credit limit | +0.15 | `creditsCharged` > `maxCreditsPerTx` from OfflinePass |
 | Station not in allowlist | +0.10 | Transaction from a station the user has not previously used |
 | Pass was revoked at tx time | +0.30 | `revocationEpoch` was already incremented before `startedAt` |

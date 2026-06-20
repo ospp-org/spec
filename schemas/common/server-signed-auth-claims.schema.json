@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/common/server-signed-auth-claims.schema.json",
   "title": "ServerSignedAuthClaims",
-  "description": "Canonical body serialised via OSPP Canonical Form (spec/06-security.md §4.8) and base64-encoded into the `signedAuthorization.data` field of a ServerSignedAuth message for ECDSA P-256 signing. Per profiles/offline/ble-handshake.md §4.2.1. 12 required claims — no optional fields. `durationSeconds` and `creditsAuthorized` (finding N3) carry the authorized budget that the station clamps the session to (profiles/offline/ble-session.md §6); they are signed so the station can enforce a server-authorized limit it can cryptographically trust, not an app-supplied request. The digest signed by the server's private key is SHA-256 over the canonical bytes directly (NOT over the base64 form).",
+  "description": "Canonical body serialised via OSPP Canonical Form (spec/06-security.md §4.8) and base64-encoded into the `signedAuthorization.data` field of a ServerSignedAuth message for ECDSA P-256 signing. Per profiles/offline/ble-handshake.md §4.2.1. 12 required claims — no optional fields. `durationSeconds` (finding N3) is the authorized duration the station clamps the session to (profiles/offline/ble-session.md §3/§6); `creditsAuthorized` is the issue-time pre-debit basis, NOT a settlement cap — the server recomputes final billing per the Billing Authority (04-flows §6 / reconciliation §8.2), so the settled cost MAY exceed it. Both are signed so the station enforces a server-authorized duration it can cryptographically trust, not an app-supplied request. The digest signed by the server's private key is SHA-256 over the canonical bytes directly (NOT over the base64 form).",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -58,7 +58,7 @@
     },
     "creditsAuthorized": {
       "$ref": "credit-amount.schema.json",
-      "description": "Authorized credit budget for this session (finding N3). Bounds settlement; the station MUST NOT charge beyond it. Signed."
+      "description": "Authorized credit budget for this session (finding N3) — sets the issue-time pre-debit. NOT a settlement cap: the server recomputes final billing per the Billing Authority (04-flows §6), so the settled cost MAY exceed it (reconciliation §8.2). Signed."
     },
     "appNonce": {
       "type": "string",

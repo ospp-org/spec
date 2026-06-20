@@ -108,7 +108,7 @@ This semantic prevents "unscoped" from becoming a cross-organization hole: an un
 
 ### 6.3 SecurityEvent Emission
 
-Each gate failure on checks #1–#13 **MUST** emit an `OfflinePassRejected` SecurityEvent. The emission occurs at the gate-rejection point — **before** any persistence attempt — for all 13 checks, including check #4 (pass-found). The storage-layer FK described in §6.5 is a defense-in-depth guard for **non-gate code paths** (direct DB writes, admin tooling, batch importers) and never co-fires with the gate's emission on the conforming reconciliation path.
+Each gate failure on a check **applicable to the resolved form** (§6.1 — all 13 for the pass-form; #1–#9 for the auth-form) **MUST** emit an `OfflinePassRejected` SecurityEvent. The emission occurs at the gate-rejection point — **before** any persistence attempt — for every applicable check, including check #4 (authorization-found). The storage-layer FK described in §6.5 is a defense-in-depth guard for **non-gate code paths** (direct DB writes, admin tooling, batch importers) and never co-fires with the gate's emission on the conforming reconciliation path.
 
 The emitted SecurityEvent **MUST** conform to the SecurityEvent profile (`profiles/security/security-event.md`) with the following constraints (mirroring `authorize-offline-pass.md` §6.7 v0.4.1 pattern):
 
