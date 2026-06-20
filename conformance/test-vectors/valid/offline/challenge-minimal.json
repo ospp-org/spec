@@ -1,5 +1,15 @@
 {
   "type": "Challenge",
-  "stationNonce": "c3RhdGlvbjMyYnl0ZXJhbmRvbW5vbmNldmFsdWUh",
-  "stationConnectivity": "Online"
+  "stationNonce": "d1Z/mZmaNLJ/SrntW22nb0sHNCbdMF+TsugI93zIm3k=",
+  "stationConnectivity": "Online",
+  "stationCert": {
+    "stationId": "stn_b68ec15330c6",
+    "organizationId": "org_f10717404764df62",
+    "stationPubKey": "A4uNiuL54JiaHTu74LVygnWNTorzDF2U2pBZaW085HD9",
+    "issuedAt": "2026-02-13T10:00:00.000Z",
+    "expiresAt": "2026-03-15T10:00:00.000Z",
+    "signatureAlgorithm": "ECDSA-P256-SHA256",
+    "signature": "MEUCIQCnquT+s/g6e11zNBzgR7UhmK4f42FQVrIuTLwQGIZMEgIgTIYCZFRfqmQy9Gv4p9216oxT31UEBF43CiIO/TCTEcU="
+  },
+  "stationEphemeralPubKey": "A/L8+I3WLIy9eoibSZfFg+QPG/aIjqzvi8HrmbN9VboQ"
 }

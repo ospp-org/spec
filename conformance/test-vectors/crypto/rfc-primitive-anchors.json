@@ -1,0 +1,36 @@
+{
+  "_comment": "External-truth anchors for the OSPP BLE v0.6.0 crypto corpus. Each primitive (ECDH P-256, HKDF-SHA256, ChaCha20-Poly1305 IETF) reproduces a PUBLISHED RFC test vector byte-for-byte. This is what makes the conformance corpus non-circular: generate-ble-vectors.mjs and verify-ble-crypto.mjs both reproduce these before trusting any OSPP-specific value. If a primitive ever fails to reproduce its RFC vector, both tools abort. Regenerate: node tools/generate-ble-vectors.mjs ; re-check: node tools/verify-ble-crypto.mjs",
+  "specRef": "v0.6.0",
+  "sources": {
+    "ecdh": "RFC 5903 §8.1 (256-bit Random ECP Group)",
+    "hkdf": "RFC 5869 Appendix A.1 + A.2 (SHA-256)",
+    "aead": "RFC 8439 §2.8.2 (AEAD_CHACHA20_POLY1305)"
+  },
+  "anchors": [
+    {
+      "rfc": "RFC 5903 §8.1",
+      "primitive": "ECDH P-256 (X-only, 32B, Pin 1)",
+      "sharedSecretX": "d6840f6b42f6edafd13116e0e12565202fef8e9ece7dce03812464d04b9442de",
+      "bothDirectionsMatch": true
+    },
+    {
+      "rfc": "RFC 5869 A.1",
+      "primitive": "HKDF-SHA256 (extract+expand, Pin 3)",
+      "prk": "077709362c2e32df0ddc3f0dc47bba6390b6c73bb50f9c3122ec844ad7c2b3e5",
+      "okm": "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865"
+    },
+    {
+      "rfc": "RFC 5869 A.2",
+      "primitive": "HKDF-SHA256 (extract+expand, Pin 3)",
+      "prk": "06a6b88c5853361a06104c9ceb35b45cef760014904671014a193f40c15fc244",
+      "okm": "b11e398dc80327a1c8e7f78c596a49344f012eda2d4efad8a050cc4c19afa97c59045a99cac7827271cb41c65e590e09da3275600c2f09b8367793a9aca3db71cc30c58179ec3e87c14c01d5c1f3434f1d87"
+    },
+    {
+      "rfc": "RFC 8439 §2.8.2",
+      "primitive": "ChaCha20-Poly1305 IETF (12B nonce, Pin 6)",
+      "ciphertext": "d31a8d34648e60db7b86afbc53ef7ec2a4aded51296e08fea9e2b5a736ee62d63dbea45e8ca9671282fafb69da92728b1a71de0a9e060b2905d6a5b67ecd3b3692ddbd7f2d778b8c9803aee328091b58fab324e4fad675945585808b4831d7bc3ff4def08e4b7a9de576d26586cec64b6116",
+      "tag": "1ae10b594f09e26a7e902ecbd0600691",
+      "roundTrip": true
+    }
+  ]
+}

@@ -1,0 +1,247 @@
+{
+  "_comment": "OSPP BLE v0.6.0 handshake key-schedule + AEAD ORACLE (the cross-platform golden corpus). Every value is reproducible from the inputs by any conformant implementation; verify-ble-crypto.mjs re-derives all of it. helloWire/challengeWire (Base64) are the EXACT octets the transcript (Pin 4) hashes — compact JSON, NOT the pretty-printed schema fixture, NOT OSPP-canonicalised (Pin 4 hashes raw wire bytes; the schema fixtures conformance/test-vectors/valid/offline/{hello,challenge}-*.json carry the SAME logical message for schema validation). Private keys are test-only, derived deterministically as scalar = SHA-256(label) reduced into [1,n-1]. *Hex = lowercase hex of raw bytes.",
+  "specRef": "v0.6.0",
+  "specSection": "06-security.md §6.5 (Pin 1/2/3/4), §6.5.1 (sessionProof), §6.5.3 (Pin 5/6/7 AEAD); ble-handshake.md §4.1",
+  "serverSigningKey": "conformance/test-keys/server-test-pub.pem (the SAME key that signs OfflinePasses)",
+  "stationIdentity": {
+    "cert": {
+      "stationId": "stn_b68ec15330c6",
+      "organizationId": "org_f10717404764df62",
+      "stationPubKey": "A4uNiuL54JiaHTu74LVygnWNTorzDF2U2pBZaW085HD9",
+      "issuedAt": "2026-02-13T10:00:00.000Z",
+      "expiresAt": "2026-03-15T10:00:00.000Z",
+      "signatureAlgorithm": "ECDSA-P256-SHA256",
+      "signature": "MEUCIQCnquT+s/g6e11zNBzgR7UhmK4f42FQVrIuTLwQGIZMEgIgTIYCZFRfqmQy9Gv4p9216oxT31UEBF43CiIO/TCTEcU="
+    },
+    "canonicalBodyUtf8": "{\"expiresAt\":\"2026-03-15T10:00:00.000Z\",\"issuedAt\":\"2026-02-13T10:00:00.000Z\",\"organizationId\":\"org_f10717404764df62\",\"stationId\":\"stn_b68ec15330c6\",\"stationPubKey\":\"A4uNiuL54JiaHTu74LVygnWNTorzDF2U2pBZaW085HD9\"}",
+    "note": "signature = ECDSA-P256-SHA256 (RFC 6979, low-s) over OSPP Canonical Form of the body (Pin 8); verifies under server-test-pub.pem"
+  },
+  "keys": {
+    "note": "P-256. privateKeyHex = raw 32-byte scalar; publicKeyCompressedBase64 = on-wire encoding (compressed SEC1, Pin 2)",
+    "stationStatic": {
+      "label": "OSPP_BLE_STATION_STATIC_V1",
+      "privateKeyHex": "fb73b9f7c0d9a3d9cffc5e0a67362283323fb39ac5caff98e4c38acb73ed7c19",
+      "publicKeyCompressedBase64": "A4uNiuL54JiaHTu74LVygnWNTorzDF2U2pBZaW085HD9",
+      "publicKeyUncompressedHex": "048b8d8ae2f9e0989a1d3bbbe0b57282758d4e8af30c5d94da9059696d3ce470fd81cdd1b071388d85a81d36f3b5707442d8900a9b81b4d320b4ac3cd379b8d969"
+    },
+    "appEphemeralFull": {
+      "label": "OSPP_BLE_APP_EPH_FULL_V1",
+      "privateKeyHex": "f7e0e4e5af9f504578949245ccee898a637dd0729b8c7daf98a48ae1bdc5010f",
+      "publicKeyCompressedBase64": "A/cUFXImC4RNsZ73h9F3OC7NlDkjONgQqYt893+O8ijr",
+      "publicKeyUncompressedHex": "04f7141572260b844db19ef787d177382ecd94392338d810a98b7cf77f8ef228eb6a52d0864b88dd1b06b0a0cb126d7cc01f590e7a3c54ef4dc8004db64930fdb3"
+    },
+    "stationEphemeralFull": {
+      "label": "OSPP_BLE_STATION_EPH_FULL_V1",
+      "privateKeyHex": "8644155f0b7fe77e4b379ed3350133021b8aeb20ce0b62028ce393cba40956bf",
+      "publicKeyCompressedBase64": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
+      "publicKeyUncompressedHex": "04db53d4e9470b88d3b99558f1891001dd5fecaaff9ca86f9f123eed542dd07918b78ea79f30a7fa59bba3497cac2fa4ce8889ce71a85f1e8a45b7abb5500b9a41"
+    },
+    "appEphemeralMinimal": {
+      "label": "OSPP_BLE_APP_EPH_MINIMAL_V1",
+      "privateKeyHex": "6c0f0b7fa80f57697a27075954413f107f1fca8a7989b3ca1b6ee5bee7332a1e",
+      "publicKeyCompressedBase64": "Aukr6rsx+Awya9X7RtdexB+xIEJMNHLw7Ps2Z5zUZS2a",
+      "publicKeyUncompressedHex": "04e92beabb31f80c326bd5fb46d75ec41fb120424c3472f0ecfb36679cd4652d9acdce0faf35579c2da27ae4c7ed3418befd439988aa64eaf6cc232aad1c751e82"
+    },
+    "stationEphemeralMinimal": {
+      "label": "OSPP_BLE_STATION_EPH_MINIMAL_V1",
+      "privateKeyHex": "88c4e20d219ed1a5a8a82bcd6a601d46d345f40c72e033b14db03895c7cd57c7",
+      "publicKeyCompressedBase64": "A/L8+I3WLIy9eoibSZfFg+QPG/aIjqzvi8HrmbN9VboQ",
+      "publicKeyUncompressedHex": "04f2fcf88dd62c8cbd7a889b4997c583e40f1bf6888eacef8bc1eb99b37d55ba10023b0d938c0bd3360d85cb1fc4f7ecb8fc09dc28142671c01b05385893479b91"
+    }
+  },
+  "scenarios": [
+    {
+      "scenario": "full",
+      "hello": {
+        "message": {
+          "type": "Hello",
+          "deviceId": "d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2",
+          "appNonce": "yxY2RQiyfmbyxGwwd0rO7H5u/O6x3my1LJ8VGicpSZ4=",
+          "appVersion": "2.5.3",
+          "appEphemeralPubKey": "A/cUFXImC4RNsZ73h9F3OC7NlDkjONgQqYt893+O8ijr"
+        },
+        "wireBase64": "eyJ0eXBlIjoiSGVsbG8iLCJkZXZpY2VJZCI6ImQ3ZThmOWEwYjFjMmQzZTRmNWE2YjdjOGQ5ZTBmMWEyIiwiYXBwTm9uY2UiOiJ5eFkyUlFpeWZtYnl4R3d3ZDByTzdINXUvTzZ4M215MUxKOFZHaWNwU1o0PSIsImFwcFZlcnNpb24iOiIyLjUuMyIsImFwcEVwaGVtZXJhbFB1YktleSI6IkEvY1VGWEltQzRSTnNaNzNoOUYzT0M3TmxEa2pPTmdRcVl0ODkzK084aWpyIn0=",
+        "wireByteLength": 209
+      },
+      "challenge": {
+        "message": {
+          "type": "Challenge",
+          "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
+          "stationConnectivity": "Offline",
+          "stationCert": {
+            "stationId": "stn_b68ec15330c6",
+            "organizationId": "org_f10717404764df62",
+            "stationPubKey": "A4uNiuL54JiaHTu74LVygnWNTorzDF2U2pBZaW085HD9",
+            "issuedAt": "2026-02-13T10:00:00.000Z",
+            "expiresAt": "2026-03-15T10:00:00.000Z",
+            "signatureAlgorithm": "ECDSA-P256-SHA256",
+            "signature": "MEUCIQCnquT+s/g6e11zNBzgR7UhmK4f42FQVrIuTLwQGIZMEgIgTIYCZFRfqmQy9Gv4p9216oxT31UEBF43CiIO/TCTEcU="
+          },
+          "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
+          "availableServices": [
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_basic",
+              "available": true
+            },
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_premium",
+              "available": false
+            },
+            {
+              "bayId": "bay_f6e5d4c3b2a1",
+              "serviceId": "svc_auxiliary",
+              "available": true
+            }
+          ]
+        },
+        "wireBase64": "eyJ0eXBlIjoiQ2hhbGxlbmdlIiwic3RhdGlvbk5vbmNlIjoiZW9RVGQwRm9PYmtvb29GNmg5bWx5eXlBUnYrczlPalRiaHlocDJBK25XUT0iLCJzdGF0aW9uQ29ubmVjdGl2aXR5IjoiT2ZmbGluZSIsInN0YXRpb25DZXJ0Ijp7InN0YXRpb25JZCI6InN0bl9iNjhlYzE1MzMwYzYiLCJvcmdhbml6YXRpb25JZCI6Im9yZ19mMTA3MTc0MDQ3NjRkZjYyIiwic3RhdGlvblB1YktleSI6IkE0dU5pdUw1NEppYUhUdTc0TFZ5Z25XTlRvcnpERjJVMnBCWmFXMDg1SEQ5IiwiaXNzdWVkQXQiOiIyMDI2LTAyLTEzVDEwOjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDI2LTAzLTE1VDEwOjAwOjAwLjAwMFoiLCJzaWduYXR1cmVBbGdvcml0aG0iOiJFQ0RTQS1QMjU2LVNIQTI1NiIsInNpZ25hdHVyZSI6Ik1FVUNJUUNucXVUK3MvZzZlMTF6TkJ6Z1I3VWhtSzRmNDJGUVZySXVUTHdRR0laTUVnSWdUSVlDWkZSZnFtUXk5R3Y0cDkyMTZveFQzMVVFQkY0M0NpSU8vVENURWNVPSJ9LCJzdGF0aW9uRXBoZW1lcmFsUHViS2V5IjoiQTl0VDFPbEhDNGpUdVpWWThZa1FBZDFmN0tyL25LaHZueEkrN1ZRdDBIa1kiLCJhdmFpbGFibGVTZXJ2aWNlcyI6W3siYmF5SWQiOiJiYXlfYTFiMmMzZDRlNWY2Iiwic2VydmljZUlkIjoic3ZjX2Jhc2ljIiwiYXZhaWxhYmxlIjp0cnVlfSx7ImJheUlkIjoiYmF5X2ExYjJjM2Q0ZTVmNiIsInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwiYXZhaWxhYmxlIjpmYWxzZX0seyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEiLCJzZXJ2aWNlSWQiOiJzdmNfYXV4aWxpYXJ5IiwiYXZhaWxhYmxlIjp0cnVlfV19",
+        "wireByteLength": 804
+      },
+      "transcript": {
+        "construction": "SHA-256( U16BE(len(helloWire))‖helloWire ‖ U16BE(len(challengeWire))‖challengeWire )",
+        "transcriptHashHex": "04b27faa51dbf1dcb69b9f3e4bd1b6d5bf08a81dfc58b38402b92c36c5c81d15"
+      },
+      "ecdh": {
+        "esHex": "416a6d669617e53b287d54dbf861585c0fb10f928ff0a97c25c4b27005f056a7",
+        "eeHex": "1af3bb6fca84095a06c48372556e43b002142021da808e4f2a8a88ddf61bbb01",
+        "note": "es = ECDH(appEphemeralPriv, stationStaticPub); ee = ECDH(appEphemeralPriv, stationEphemeralPub); X-only, 32B, left-padded (Pin 1)"
+      },
+      "keySchedule": {
+        "ikmHex": "416a6d669617e53b287d54dbf861585c0fb10f928ff0a97c25c4b27005f056a71af3bb6fca84095a06c48372556e43b002142021da808e4f2a8a88ddf61bbb01cb16364508b27e66f2c46c30774aceec7e6efceeb1de6cb52c9f151a2729499e7a841377416839b928a2817a87d9a5cb2c8046ffacf4e8d36e1ca1a7603e9d64",
+        "saltUtf8": "OSPP_BLE_SESSION_V2",
+        "infoHex": "00206437653866396130623163326433653466356136623763386439653066316132002004b27faa51dbf1dcb69b9f3e4bd1b6d5bf08a81dfc58b38402b92c36c5c81d15",
+        "infoNote": "LP(deviceId)‖LP(transcriptHash); LP(x)=U16BE(len)‖x (Pin 3)",
+        "sessionKeyHex": "f9cbf4eeeb75e68223c9a5173bae15977225058955efabc775be94a01d50de61",
+        "sessionKeyBase64": "+cv07ut15oIjyaUXO64Vl3IlBYlV76vHdb6UoB1Q3mE=",
+        "kAppToStationHex": "57934130495b6bd91b7b2ec0a15839ae8565a15883c5621d9c081563457037f6",
+        "kStationToAppHex": "d7335630365ecd9d82bf7188dd21552547e4e2497684f920090671e94514106c",
+        "sessionKeyConfirmationBase64": "8+XKsvp2Jem04ka4lthHBBQ2KfXTbWyaxI3HMVMM77Q="
+      },
+      "sessionProof": {
+        "passId": "opass_e4d3c2b1a0f9e8d7c6b5",
+        "counter": 7,
+        "messageHex": "00124f66666c696e654175746852657175657374001a6f706173735f6534643363326231613066396538643763366235000137",
+        "sessionProofBase64": "952XYMHgSAxA5pb4Vzkif5Eima1j6N2m1GKnn/sQmiY=",
+        "note": "HMAC-SHA256(SessionKey, LP(\"OfflineAuthRequest\")‖LP(passId)‖LP(decimal(counter))) (§6.5.1)"
+      },
+      "aeadFrames": [
+        {
+          "direction": "app->station",
+          "keyRef": "kAppToStation",
+          "counter": 0,
+          "nonce96Hex": "000000000000000000000000",
+          "aad": "transcriptHash",
+          "aadHex": "04b27faa51dbf1dcb69b9f3e4bd1b6d5bf08a81dfc58b38402b92c36c5c81d15",
+          "plaintextUtf8": "{\"type\":\"OfflineAuthRequest\",\"offlinePass\":{\"passId\":\"opass_e4d3c2b1a0f9e8d7c6b5\",\"sub\":\"sub_premiumUser42XyZ\",\"deviceId\":\"d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2\",\"issuedAt\":\"2026-02-12T14:30:00.000Z\",\"expiresAt\":\"2026-02-13T14:30:00.000Z\",\"policyVersion\":3,\"revocationEpoch\":2,\"offlineAllowance\":{\"maxTotalCredits\":2000,\"maxUses\":20,\"maxCreditsPerTx\":500,\"allowedServiceTypes\":[\"svc_basic\",\"svc_premium\",\"svc_auxiliary\"]},\"constraints\":{\"minIntervalSec\":60,\"stationOfflineWindowHours\":72,\"stationMaxOfflineTx\":200},\"signatureAlgorithm\":\"ECDSA-P256-SHA256\",\"signature\":\"MEUCIQCnEHKHHsez+291Vw16fp5axR7XFEMSi3pBqRwSi+rhMQIgLSX3qEp8AJMnB85SsS8FsKR1O1wLQUqxXVm/thb74Yg=\"},\"counter\":7,\"sessionProof\":\"952XYMHgSAxA5pb4Vzkif5Eima1j6N2m1GKnn/sQmiY=\"}",
+          "frame": {
+            "n": 0,
+            "ct": "gModbJI3+5NJY9Oqe6BGwX3dr2pq4/ICaVebMByHUJQFmrNJs/6HtpaysZ9RfKYpGuzWJ1ALuJqtohKWx+eoC5rU2WkF97+lQ2WRwt5YayDtK5KIvnTKP+cr2iRjeVw4uiiCzwPyzaRgSOvrU2D/SsiJZ63MvwGTEpYBdjCEkcfc/jvRBsiRMjsb8bFq/7mpMkiX8NMy+ryA53tLkUbrhuKCYEqU/parVUTDxmpb6y6WByemlRK/sOfJJl1cfGvGQzfgTaobVrpBsz0pWbMwK8L1X1SieKZMdcnzR8kXPdarfOAVJlrv1DtAjF8a4dxADc2pSZZmYCoVe2Ria/8UFmybS+WNE6yXRCLnUtSMnXhG2JIYd2a3uAPr7dXc5FVXGTlZ9vmQiwtdLGaXM8bLdZhpft4SECUFr6BHhYQeovmho3GG+7JW8Phi2sjczLrch6ynL6d8MCXqDQumPAxYrM4n8QsXqgswhaueRPDrnFM+TC+yZswRDsPUxopgGwIghruODxd8N/sicX7zoTP8fpTtpg3OCEoJUQVZKW3FWqwGze0tFo5T+KSOQNdHp8hzCZBGdaCF1MlGDW1ZEbumQQtS37thRaJFBEvXSh/EHasnuYHQj9IxLQH7pLdSqcX9pFOKeBhnyM113SFoAXdK1M5IYEQxVuan3Pn/wETlk679u36vdW+uLKJ4sJNy1axPMYo/ORMSVuOGGKnZdE8Xo1o/KctZAICsDnEKrWSanj9xZySYzA9V89d+sungY1UItmCqomi0XLf5ZuH5mJZmb9O7cDBr6+ubFrN/x/8Ulj3LdIkJhLyBcy4meGW24OA04PsZIhxqNeyYy/ISgatLUPC6QeKwVfhgAagERYC6Mk07kaoBrgDqPNhhkHqZb+LLaD9X3UL3dJNfDfPC0AxOX8ZHP6QTlKCnVhfrTFsjEivpT2A3JYdok+SdhPGWa1JbGEGzdEUCmZDg313nu2V1m2vrFngXNNvlPrWi1yf86Ycf"
+          }
+        },
+        {
+          "direction": "station->app",
+          "keyRef": "kStationToApp",
+          "counter": 0,
+          "nonce96Hex": "000000000000000000000000",
+          "aad": "transcriptHash",
+          "aadHex": "04b27faa51dbf1dcb69b9f3e4bd1b6d5bf08a81dfc58b38402b92c36c5c81d15",
+          "plaintextUtf8": "{\"type\":\"AuthResponse\",\"result\":\"Accepted\",\"sessionKeyConfirmation\":\"8+XKsvp2Jem04ka4lthHBBQ2KfXTbWyaxI3HMVMM77Q=\"}",
+          "frame": {
+            "n": 0,
+            "ct": "k/fkvOSWVrR7goH296n/nI1qIP1ILg2st2W87BO0oKgO7UFeNq8xaWHRDKqAze/eosQh0vMkyCU90Mz4KG2d59e31xh0eJ3x66Zjvce7FVBSA1o7P1Tk+CMVo5txnHoaB6AJCsGAegTHnOJO91MCWrDKUGiSyw9AU/k0Ws8l8sOi9ms="
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "minimal",
+      "hello": {
+        "message": {
+          "type": "Hello",
+          "deviceId": "d7e8f9a0b1c2d3e4f5a6b7c8",
+          "appNonce": "1sgvi5LS4ckBKmGZBOkcAUN4KqecimX1kuZ9lR923jI=",
+          "appVersion": "1.0.0",
+          "appEphemeralPubKey": "Aukr6rsx+Awya9X7RtdexB+xIEJMNHLw7Ps2Z5zUZS2a"
+        },
+        "wireBase64": "eyJ0eXBlIjoiSGVsbG8iLCJkZXZpY2VJZCI6ImQ3ZThmOWEwYjFjMmQzZTRmNWE2YjdjOCIsImFwcE5vbmNlIjoiMXNndmk1TFM0Y2tCS21HWkJPa2NBVU40S3FlY2ltWDFrdVo5bFI5MjNqST0iLCJhcHBWZXJzaW9uIjoiMS4wLjAiLCJhcHBFcGhlbWVyYWxQdWJLZXkiOiJBdWtyNnJzeCtBd3lhOVg3UnRkZXhCK3hJRUpNTkhMdzdQczJaNXpVWlMyYSJ9",
+        "wireByteLength": 201
+      },
+      "challenge": {
+        "message": {
+          "type": "Challenge",
+          "stationNonce": "d1Z/mZmaNLJ/SrntW22nb0sHNCbdMF+TsugI93zIm3k=",
+          "stationConnectivity": "Online",
+          "stationCert": {
+            "stationId": "stn_b68ec15330c6",
+            "organizationId": "org_f10717404764df62",
+            "stationPubKey": "A4uNiuL54JiaHTu74LVygnWNTorzDF2U2pBZaW085HD9",
+            "issuedAt": "2026-02-13T10:00:00.000Z",
+            "expiresAt": "2026-03-15T10:00:00.000Z",
+            "signatureAlgorithm": "ECDSA-P256-SHA256",
+            "signature": "MEUCIQCnquT+s/g6e11zNBzgR7UhmK4f42FQVrIuTLwQGIZMEgIgTIYCZFRfqmQy9Gv4p9216oxT31UEBF43CiIO/TCTEcU="
+          },
+          "stationEphemeralPubKey": "A/L8+I3WLIy9eoibSZfFg+QPG/aIjqzvi8HrmbN9VboQ"
+        },
+        "wireBase64": "eyJ0eXBlIjoiQ2hhbGxlbmdlIiwic3RhdGlvbk5vbmNlIjoiZDFaL21abWFOTEovU3JudFcyMm5iMHNITkNiZE1GK1RzdWdJOTN6SW0zaz0iLCJzdGF0aW9uQ29ubmVjdGl2aXR5IjoiT25saW5lIiwic3RhdGlvbkNlcnQiOnsic3RhdGlvbklkIjoic3RuX2I2OGVjMTUzMzBjNiIsIm9yZ2FuaXphdGlvbklkIjoib3JnX2YxMDcxNzQwNDc2NGRmNjIiLCJzdGF0aW9uUHViS2V5IjoiQTR1Tml1TDU0SmlhSFR1NzRMVnlnbldOVG9yekRGMlUycEJaYVcwODVIRDkiLCJpc3N1ZWRBdCI6IjIwMjYtMDItMTNUMTA6MDA6MDAuMDAwWiIsImV4cGlyZXNBdCI6IjIwMjYtMDMtMTVUMTA6MDA6MDAuMDAwWiIsInNpZ25hdHVyZUFsZ29yaXRobSI6IkVDRFNBLVAyNTYtU0hBMjU2Iiwic2lnbmF0dXJlIjoiTUVVQ0lRQ25xdVQrcy9nNmUxMXpOQnpnUjdVaG1LNGY0MkZRVnJJdVRMd1FHSVpNRWdJZ1RJWUNaRlJmcW1ReTlHdjRwOTIxNm94VDMxVUVCRjQzQ2lJTy9UQ1RFY1U9In0sInN0YXRpb25FcGhlbWVyYWxQdWJLZXkiOiJBL0w4K0kzV0xJeTllb2liU1pmRmcrUVBHL2FJanF6dmk4SHJtYk45VmJvUSJ9",
+        "wireByteLength": 564
+      },
+      "transcript": {
+        "construction": "SHA-256( U16BE(len(helloWire))‖helloWire ‖ U16BE(len(challengeWire))‖challengeWire )",
+        "transcriptHashHex": "d0566f1347080c7cd3854c8678e1b4e42720692557b8ce3a3de350b2cbeaeb07"
+      },
+      "ecdh": {
+        "esHex": "1787f4549f47f8a8e896467763962beb8359551bd68dd70cd57d87a808e767a0",
+        "eeHex": "9f1c38ce3213b3a0622050041a0a495f50b772eb674dcdf00e7ec8d99fd45dc7",
+        "note": "es = ECDH(appEphemeralPriv, stationStaticPub); ee = ECDH(appEphemeralPriv, stationEphemeralPub); X-only, 32B, left-padded (Pin 1)"
+      },
+      "keySchedule": {
+        "ikmHex": "1787f4549f47f8a8e896467763962beb8359551bd68dd70cd57d87a808e767a09f1c38ce3213b3a0622050041a0a495f50b772eb674dcdf00e7ec8d99fd45dc7d6c82f8b92d2e1c9012a619904e91c0143782aa79c8a65f592e67d951f76de3277567f99999a34b27f4ab9ed5b6da76f4b073426dd305f93b2e808f77cc89b79",
+        "saltUtf8": "OSPP_BLE_SESSION_V2",
+        "infoHex": "00186437653866396130623163326433653466356136623763380020d0566f1347080c7cd3854c8678e1b4e42720692557b8ce3a3de350b2cbeaeb07",
+        "infoNote": "LP(deviceId)‖LP(transcriptHash); LP(x)=U16BE(len)‖x (Pin 3)",
+        "sessionKeyHex": "fc08768d4557594d42aab70803410af5c3a8234f5b9ce4ad5dc9588e0091b15e",
+        "sessionKeyBase64": "/Ah2jUVXWU1CqrcIA0EK9cOoI09bnOStXclYjgCRsV4=",
+        "kAppToStationHex": "91de814882feeb5240057e1a4c85a6cbb444b49cb16ecdf69c0bfcc5bb09b20e",
+        "kStationToAppHex": "d4fc0a6b509d469adaf9e3f808d0c845ca5634fdee0b2bdd2bd7783d1ec00b05",
+        "sessionKeyConfirmationBase64": "or7D3h03SKW7WIltOGCHbRu8CODoPNuPYd6Ug/4H5iE="
+      },
+      "sessionProof": {
+        "passId": "opass_a1b2c3d4e5f6a7b8",
+        "counter": 0,
+        "messageHex": "00124f66666c696e65417574685265717565737400166f706173735f61316232633364346535663661376238000130",
+        "sessionProofBase64": "taY7YFeKc4sjGgtcGriOv0rk6uJrrYONtTsxLWXu93s=",
+        "note": "HMAC-SHA256(SessionKey, LP(\"OfflineAuthRequest\")‖LP(passId)‖LP(decimal(counter))) (§6.5.1)"
+      },
+      "aeadFrames": [
+        {
+          "direction": "app->station",
+          "keyRef": "kAppToStation",
+          "counter": 0,
+          "nonce96Hex": "000000000000000000000000",
+          "aad": "transcriptHash",
+          "aadHex": "d0566f1347080c7cd3854c8678e1b4e42720692557b8ce3a3de350b2cbeaeb07",
+          "plaintextUtf8": "{\"type\":\"OfflineAuthRequest\",\"offlinePass\":{\"passId\":\"opass_a1b2c3d4e5f6a7b8\",\"sub\":\"sub_user1234abcdef\",\"deviceId\":\"d7e8f9a0b1c2d3e4f5a6b7c8\",\"issuedAt\":\"2026-02-10T08:00:00.000Z\",\"expiresAt\":\"2026-02-11T08:00:00.000Z\",\"policyVersion\":1,\"revocationEpoch\":0,\"offlineAllowance\":{\"maxTotalCredits\":500,\"maxUses\":5,\"maxCreditsPerTx\":200,\"allowedServiceTypes\":[\"svc_basic\"]},\"constraints\":{\"minIntervalSec\":300,\"stationOfflineWindowHours\":24,\"stationMaxOfflineTx\":50},\"signatureAlgorithm\":\"ECDSA-P256-SHA256\",\"signature\":\"MEQCIBsv9tgGtPef//txVWIWZLV2kmC+uNdE60W0/o0+ibBcAiBi/HXRIqNKJrC8S/CZA2Kw73TocwuAhYmfc4D9Q4rnTA==\"},\"counter\":0,\"sessionProof\":\"taY7YFeKc4sjGgtcGriOv0rk6uJrrYONtTsxLWXu93s=\"}",
+          "frame": {
+            "n": 0,
+            "ct": "mbwbBbB/i1OS0VZEX/PCT7jHUD6c6oHk5/gtVE7pTlxeC6h1SOY6rPvioEd7gpulruYOO0RBpzOKXt+ZcVL1JHTSQJPzquok3G4hQKCkJimhsYXDah30t0Os/No+oD0orVrszjALXfazmUhc2RnKPMuaon++BqrSNJ+4MVgiNdTMbTxeGTFrLR7ai13AYAzQFvC0yV6POVmYOfzWqldqgQb2C+PlnG+dRyxIT7yjXu3Jf2fTpOAyGaa0BgAAlwKo1z1d3g6P9fW0EJCQszhdfFN5GytHopFiMJA7ovNbX2pCV5wd0pd/BuTbLXNzNDiMrlQu5dijjWIlsOVJ8GG+RyRCoJI8I4p8Ge0C/hRU53PyTSa6NuUKba3k2aHb0+glVUotbi1cjYzVUuCsZhx9ftjE59YwOMTtjdI+oiAvjqm69O9zAbZDq+16xrfvQoXmIkSR/PkvXpjUOFU7+lU83APo8oY7Az5diqK46hREQ4s62+hPp30V5kc/KmFy2Z6u48UPS01IX96Ssd7SUHZxDoczNNGZmmI1E4S46NvlX23zDca4i3lCSPDfgF4XOBqVnH2bYxvp/rs7lN5KyDgCKUuLr0dfMCLKzwCzNS+4hqF4zIM1KnMro5wDDk9UzlgUUqshOS4VlyF4GZWbYizZlNq5nMbwC90gUzNhWpg6ARqrCHIg7YglemgbEM3Xq3QNIvVCVkxbeLlz7K7rRppd1HwFMqLLj7PoRK8+vjGO9ynYbveaKmZS36TAZ7Onczlpm7oysbC9PBZKLGmqCwXyds7Tb8GFoIB5tm8jUmQnUOtfKD27m69v5x20FDpcIRKaT/3gN7rHdJwKZqVeq+okeuosZ89I7zYr1GbEvIas6qFzdl/JVxqKQDmSuqVrT4pXYzje1st8cu8UWfUaSBrSp5H2yIQCuIhZCas09npxQ/vhXdA="
+          }
+        },
+        {
+          "direction": "station->app",
+          "keyRef": "kStationToApp",
+          "counter": 0,
+          "nonce96Hex": "000000000000000000000000",
+          "aad": "transcriptHash",
+          "aadHex": "d0566f1347080c7cd3854c8678e1b4e42720692557b8ce3a3de350b2cbeaeb07",
+          "plaintextUtf8": "{\"type\":\"AuthResponse\",\"result\":\"Accepted\",\"sessionKeyConfirmation\":\"or7D3h03SKW7WIltOGCHbRu8CODoPNuPYd6Ug/4H5iE=\"}",
+          "frame": {
+            "n": 0,
+            "ct": "iOaDpZDk1kD+l1Srkjz3Tla88vyitZjKQWcuMje0kKdGEiHzKaJpmt6k3iY7Hcheq1gkoYNZHGYev9heNzAAo0n5roB04hoe9tg7jP1r+icOKCDYDKWf3IX+FS9ecX2ABcPAWAM92hE6ry9kY2zKEMQwFopRY6O4Q9MMomJ8fjNqekc="
+          }
+        }
+      ]
+    }
+  ]
+}
