@@ -60,6 +60,14 @@ verify_group "server ServerSignedAuth" conformance/test-keys/server-test-pub.pem
   conformance/test-vectors/valid/offline/server-signed-auth-full.json \
   conformance/test-vectors/valid/offline/server-signed-auth-minimal.json
 
+# StationIdentity certificates carried in the BLE Challenge (FFF4). Signed by the
+# SAME server key that signs OfflinePasses, verified with server-test-pub.pem
+# (06-security.md §6.5.2, station-identity mode).
+verify_group "station identity certs" conformance/test-keys/server-test-pub.pem \
+  examples/payloads/ble/challenge.json \
+  conformance/test-vectors/valid/offline/challenge-full.json \
+  conformance/test-vectors/valid/offline/challenge-minimal.json
+
 verify_group "firmware" conformance/test-keys/firmware-test-pub.pem \
   examples/payloads/mqtt/update-firmware.request.json \
   conformance/test-vectors/valid/device-management/update-firmware-request-full.json \
@@ -83,6 +91,19 @@ if node tools/verify-example-signatures.mjs \
   ok "HMAC sessionProof (3 file(s))"
 else
   err "HMAC sessionProof failed:"; sed 's/^/      /' /tmp/vas-out
+fi
+
+# -----------------------------------------------------------------------------
+# 1b. BLE crypto oracle — re-derive the key schedule + AEAD from inputs,
+#     anchored on the RFC 5903 / 5869 / 8439 test vectors (external truth).
+# -----------------------------------------------------------------------------
+
+section "BLE crypto oracle (key schedule + AEAD, RFC-anchored)"
+
+if node tools/verify-ble-crypto.mjs >/tmp/vas-crypto 2>&1; then
+  ok "BLE key schedule + AEAD + StationIdentity re-derived (RFC 5903/5869/8439 anchored)"
+else
+  err "BLE crypto oracle FAILED:"; sed 's/^/      /' /tmp/vas-crypto
 fi
 
 # -----------------------------------------------------------------------------

@@ -31,6 +31,11 @@ import { argv, exit } from 'node:process';
 import { canonicalize } from '@ospp/protocol';
 import { ecdsaVerify } from '@ospp/protocol/server';
 
+// Compressed SEC1 P-256 public key on the BLE wire: 33 bytes → 44 Base64 chars,
+// no padding (06-security.md §6.5 Pin 2).
+const EC_PUBKEY_RE = /^[A-Za-z0-9+/]{44}$/;
+const STATION_IDENTITY_BODY_FIELDS = ['stationId', 'organizationId', 'stationPubKey', 'issuedAt', 'expiresAt'];
+
 const FIRMWARE_BIN_PATH = 'conformance/test-firmware/test-firmware.bin';
 const SESSION_KEY_PATH = 'conformance/test-keys/session-test-key.bin';
 const AUTH_RESPONSE_OK_LABEL = 'AuthResponse_OK';
@@ -142,10 +147,64 @@ function detectMode(outer) {
   if (outer && typeof outer === 'object' && outer.type === 'AuthResponse') {
     return 'session-key-confirmation';
   }
+  // StationIdentity certificate — either embedded in a Challenge (FFF4) as
+  // `stationCert`, or a bare cert object (stationPubKey + signature wrapper).
+  if (outer && typeof outer === 'object' && outer.type === 'Challenge' && outer.stationCert && typeof outer.stationCert === 'object') {
+    return 'station-identity';
+  }
+  if (outer && typeof outer === 'object' && typeof outer.stationPubKey === 'string' && typeof outer.signature === 'string' && typeof outer.signatureAlgorithm === 'string') {
+    return 'station-identity';
+  }
   if (outer && typeof outer === 'object' && typeof outer.firmwareUrl === 'string') {
     return 'firmware';
   }
   return null;
+}
+
+function verifyStationIdentity(outer, file, pubPem) {
+  // Accept the cert directly, or pull it out of a Challenge wrapper.
+  const cert = (outer.stationCert && typeof outer.stationCert === 'object') ? outer.stationCert : outer;
+
+  for (const k of [...STATION_IDENTITY_BODY_FIELDS, 'signatureAlgorithm', 'signature']) {
+    if (typeof cert[k] !== 'string') {
+      return { file, ok: false, reason: `stationCert.${k} missing or not a string` };
+    }
+  }
+  if (cert.signatureAlgorithm !== 'ECDSA-P256-SHA256') {
+    return { file, ok: false, reason: `signatureAlgorithm "${cert.signatureAlgorithm}" != ECDSA-P256-SHA256` };
+  }
+
+  // Signed body = cert MINUS signature + signatureAlgorithm, OSPP-canonical (§4.8 / Pin 8).
+  const { signature, signatureAlgorithm, ...body } = cert;
+  void signatureAlgorithm;
+  const canonicalBytes = Buffer.from(canonicalize(body), 'utf-8');
+  if (!ecdsaVerify(pubPem, canonicalBytes, signature)) {
+    return { file, ok: false, reason: 'stationCert.signature failed to verify against the server public key' };
+  }
+
+  // stationPubKey is the static ECDH key — MUST be compressed SEC1 (Pin 2).
+  if (!EC_PUBKEY_RE.test(body.stationPubKey)) {
+    return { file, ok: false, reason: 'stationPubKey is not a 44-char compressed-SEC1 Base64 key (§6.5 Pin 2)' };
+  }
+  // If embedded in a Challenge, the ephemeral key MUST also be compressed SEC1.
+  if (outer.stationCert && !EC_PUBKEY_RE.test(outer.stationEphemeralPubKey ?? '')) {
+    return { file, ok: false, reason: 'Challenge.stationEphemeralPubKey is not a 44-char compressed-SEC1 Base64 key (§6.5 Pin 2)' };
+  }
+
+  // Structural profile (a timeless vector): issuedAt < expiresAt. The absolute
+  // freshness check (expiresAt > now, with clock-skew) is the app's RUNTIME gate
+  // (§6.5.2 step 2) — it cannot be asserted on a fixed vector and is exercised
+  // live in B5, not here. Stated, not hidden.
+  const issuedMs = Date.parse(body.issuedAt);
+  const expiresMs = Date.parse(body.expiresAt);
+  if (!Number.isFinite(issuedMs) || !Number.isFinite(expiresMs)) {
+    return { file, ok: false, reason: 'issuedAt/expiresAt is not a parseable timestamp' };
+  }
+  if (!(expiresMs > issuedMs)) {
+    return { file, ok: false, reason: `expiresAt (${body.expiresAt}) must be after issuedAt (${body.issuedAt})` };
+  }
+
+  return { file, ok: true, mode: 'station-identity', bodyFields: Object.keys(body), canonicalBytes: canonicalBytes.length };
 }
 
 function verifyFirmware(outer, file, pubPem) {
@@ -357,6 +416,7 @@ function verifyFile(file, key, modeOverride) {
   if (mode === 'receipt') return verifyReceipt(outer, file, key);
   if (mode === 'offline-pass') return verifyOfflinePass(outer, file, key);
   if (mode === 'server-signed-auth') return verifyServerSignedAuth(outer, file, key);
+  if (mode === 'station-identity') return verifyStationIdentity(outer, file, key);
   if (mode === 'firmware') return verifyFirmware(outer, file, key);
   if (mode === 'session-proof') return verifySessionProof(outer, file, key);
   if (mode === 'session-key-confirmation') return verifySessionKeyConfirmation(outer, file, key);
