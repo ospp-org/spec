@@ -15,7 +15,7 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 1024,
-      "description": "Base64-encoded OSPP Canonical Form (spec/06-security.md §4.8) of the canonical ServerSignedAuthClaims body — see server-signed-auth-claims.schema.json (10 required claims). Signed by the server's ECDSA P-256 private key over the canonical bytes directly per §4.2.1 (NOT over the base64 form)."
+      "description": "Base64-encoded OSPP Canonical Form (spec/06-security.md §4.8) of the canonical ServerSignedAuthClaims body — see server-signed-auth-claims.schema.json (12 required claims). Signed by the server's ECDSA P-256 private key over the canonical bytes directly per §4.2.1 (NOT over the base64 form)."
     },
     "signature": {
       "type": "string",

@@ -182,8 +182,9 @@ The server **MUST** sign the authorization following the same canonical-form + E
 ```
 1. claims = {
      authId, sub, deviceId, sessionId, stationId,
-     bayId, serviceId, appNonce, issuedAt, expiresAt,
-   }                                              // see server-signed-auth-claims.schema.json
+     bayId, serviceId, durationSeconds, creditsAuthorized,
+     appNonce, issuedAt, expiresAt,
+   }                                  // 12 claims — see server-signed-auth-claims.schema.json (N3)
 2. data_bytes = OSPP_Canonical_Form(claims)       // §4.8
 3. digest     = SHA-256(data_bytes)               // hash the canonical bytes directly
 4. signature  = ECDSA-P256-Sign(server_private_key, digest)  // RFC 6979 deterministic nonce

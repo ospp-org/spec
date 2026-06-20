@@ -14,7 +14,7 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 1024,
-      "description": "Base64-encoded OSPP Canonical Form (spec/06-security.md §4.8) of the canonical ReceiptData body — see receipt-data.schema.json (11 required fields plus meterValues when present; up to 12 signed fields). Signed by the station's ECDSA P-256 private key over the canonical bytes directly (per 06-security.md §6.2 v0.4.2; NOT over the base64 form)."
+      "description": "Base64-encoded OSPP Canonical Form (spec/06-security.md §4.8) of the canonical ReceiptData body — see receipt-data.schema.json (discriminated oneOf — pass-form {…,offlinePassId,passCounter} or auth-form {…,authId,sessionId}; 12 required fields per form plus meterValues when present; up to 13 signed fields). Signed by the station's ECDSA P-256 private key over the canonical bytes directly (per 06-security.md §6.2; NOT over the base64 form)."
     },
     "signature": {
       "type": "string",

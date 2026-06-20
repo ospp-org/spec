@@ -18,7 +18,7 @@
     },
     "signedAuthorization": {
       "$ref": "../common/server-signed-auth.schema.json",
-      "description": "Server-signed authorisation wrapper (data + signature + signatureAlgorithm) per profiles/offline/ble-handshake.md §4.2.1. The canonical signed body is defined by server-signed-auth-claims.schema.json (10 required claims). Station-side verification in §4.2.2."
+      "description": "Server-signed authorisation wrapper (data + signature + signatureAlgorithm) per profiles/offline/ble-handshake.md §4.2.1. The canonical signed body is defined by server-signed-auth-claims.schema.json (12 required claims). Station-side verification in §4.2.2."
     },
     "sessionId": {
       "$ref": "../common/session-id.schema.json"
