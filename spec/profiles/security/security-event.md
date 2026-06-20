@@ -29,6 +29,7 @@ SecurityEvent is sent by the station to report security-relevant incidents to th
 | `CertificateError` | TLS certificate validation failed (expired, untrusted CA, CN mismatch). | Critical |
 | `UnauthorizedAccess` | An entity attempted an action without the required RBAC role or permission. | Warning |
 | `OfflinePassRejected` | An OfflinePass failed validation (bad signature, expired, revoked, replayed). | Warning |
+| `ServerSignedAuthReplay` | A ServerSignedAuth (Partial A) authorization was presented whose signed `appNonce` claim did not match the current handshake's `Hello.appNonce` — a replay of a captured authorization (error `2018 SERVER_AUTH_NONCE_MISMATCH`; `ble-handshake.md` §4.2.2 check #2). The station rejects it at the handshake; the server logs this type at the next reconciliation. | Critical |
 | `TamperDetected` | Physical tampering detected (case opened, sensor triggered, wiring alteration). | Critical |
 | `BruteForceAttempt` | Multiple consecutive authentication failures from the same source within a short window. | Warning |
 | `FirmwareIntegrityFailure` | Firmware hash verification failed at boot. The installed firmware does not match the expected checksum. | Critical |
