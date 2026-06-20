@@ -174,7 +174,7 @@ A **Partial A** session is authorized fully offline against a server-signed `Ser
 
 **Issued-authorization registry.** When the server issues a ServerSignedAuth at `POST /sessions/offline-auth`, it records a registry row keyed by `authId`, carrying `sub`, `deviceId`, `sessionId`, `stationId`, `bayId`, `serviceId`, the signed authorized budget (`durationSeconds`, `creditsAuthorized`), `expiresAt`, the **issue-time debit amount**, and a status (`pending` → `reconciled` / `expired`). The wallet is **debited at issue** (`04-flows.md` §5b postconditions), not at reconcile.
 
-**Gate branch (check #4 auth-branch).** For an auth-form envelope the gate resolves `authId` against this registry instead of `offline_passes`, and cross-checks the registry row's `sessionId` against the receipt's signed `sessionId`. The derived checks read the **registry row** in place of the pass record:
+**Gate branch (check #4 auth-branch).** For an auth-form envelope the gate resolves `authId` against this registry instead of `offline_passes`, and cross-checks the registry row's `sessionId` (the **server-issued** value) against the receipt's signed `sessionId`. The receipt **MUST** carry the server-issued `sessionId` (§6.2, F2) — the value the server minted at `POST /sessions/offline-auth` and signed into the claims — for this cross-check to pass; a station that signed a locally-minted identifier instead is rejected at check #4 (`2002`). The derived checks read the **registry row** in place of the pass record:
 - #5 user match — `registry.sub` == receipt `userId`.
 - #6 deviceId — `registry.deviceId` == signed receipt `deviceId`.
 - #7 org binding — `registry.organization_id` == reporting station's org.
@@ -183,32 +183,16 @@ A **Partial A** session is authorized fully offline against a server-signed `Ser
 - #10 / #11 (epoch / individual revocation) — **not applicable** (no pass); the registry's own `status` is the validity gate (a row cancelled/revoked before settlement is rejected with `2014 OFFLINE_PASS_REVOKED`).
 - #12 / #13 (passCounter) — **not applicable** (no pass counter). Partial-A anti-replay is the `appNonce` bound into the handshake plus the one-shot `(authId, sessionId)`: the gate rejects a second TransactionEvent that settles an already-reconciled `(authId, sessionId)` as a replay (`2005 OFFLINE_COUNTER_REPLAY`).
 
-**Settle-once (true-up, not re-debit — finding N11).** Because the wallet was already debited at issue, the gate **MUST NOT** debit again at reconcile. It performs the §8 **true-up**: it reconciles the final `creditsCharged` against the issue-time `creditsAuthorized` debit and adjusts the wallet by the **difference only** — a refund if the session cost less than authorized, an additional debit (bounded by the signed `creditsAuthorized`) if it cost more. Correlation is server-side on `sessionId` (`reconciled_session_id`), never a fresh debit keyed on `offlineTxId`. See §8.
+**Settle-once (true-up, not re-debit — finding N11).** Because the wallet was already debited at issue, the gate **MUST NOT** debit again at reconcile. It performs the §8.2 **true-up**: it recomputes the final cost (Billing Authority, `04-flows.md` §6) and adjusts the wallet by the difference vs the issue-time pre-debit — a refund if it cost less, an additional debit if it cost more (`creditsAuthorized` is **not** a settlement cap; see §8.2). Correlation is server-side on the **server-issued** `sessionId` (`reconciled_session_id`) — the same `sessionId` the server minted at `POST /sessions/offline-auth`, signed into the ServerSignedAuth claims and echoed into the signed auth-form receipt (see check #4 and §6.2) — never a fresh debit keyed on `offlineTxId`. See §8.2.
 
 ## 7. Fraud Detection
 
-The server **MUST** apply a fraud scoring model to each reconciled offline transaction. The following signals contribute to the fraud score:
+The server **MUST** apply a fraud scoring model to each reconciled offline transaction. The **authoritative** model — its factors, the cross-station cumulative computation, the `0.00`–`1.00` score scale, and the threshold→action bands — is defined **once** in [`06-security.md` §7.4](../../06-security.md#74-fraud-detection--offline-transactions). The offline reconciliation path uses that model verbatim; this section does not restate it. (Finding F3: the previously divergent integer table here and the float mirror in `04-flows.md` §10 are **subsumed by §7.4** — one authoritative source, the other two are pointers.)
 
-| Signal                                  | Severity | Score | Description |
-|-----------------------------------------|----------|:-----:|-------------|
-| Invalid receipt signature               | Critical | 100   | Receipt was not signed by the station's key. Immediate flag. |
-| txCounter gap                           | High     | 80    | Missing transactions in the counter sequence. |
-| Credits exceed `maxCreditsPerTx`        | Medium   | 50    | Transaction charged more than the pass allows per session. |
-| Rapid consecutive transactions          | Medium   | 40    | Transactions spaced less than `minIntervalSec` apart. |
-| Usage beyond `maxUses`                  | Medium   | 50    | More transactions than `maxUses` for the same pass. |
-| Credits beyond `maxTotalCredits`        | Medium   | 50    | Cumulative credits exceed the pass limit. |
+Two reconcile-time anchors connect that model to this profile:
 
-> **Note (v0.4.2):** "Expired pass used" was removed from this table — expiry is now a hard-reject gate check (§6 check #9, errorCode `2003 OFFLINE_PASS_EXPIRED`). A pass that expired before `tx.endedAt` indicates either a station clock-drift bug or a transaction retained beyond the pass's 24-hour validity window — both are deterministic policy violations, not probabilistic fraud signals.
-
-> **Note (finding N7 — complementary counter defenses):** The hard-gate check #13 (§6.1, `(offlinePassId, passCounter)` uniqueness) and the **"Usage beyond `maxUses`"** signal above are **complementary**, covering the two ways a cloned pass manifests at reconcile. Check #13 deterministically hard-rejects the **same-value** case — a replay, or a naive clone whose copies reuse counter values. It does **not** catch a sophisticated clone whose second device starts its counter **above** the first device's high-water mark (two disjoint, non-overlapping counter streams never collide on a value). That case surfaces only in the **aggregate**: two valid monotone streams for one pass inflate the cumulative use count, tripping "Usage beyond `maxUses`" (and "Credits beyond `maxTotalCredits`") into the manual-review band. The hard gate stops the cheap attack outright; the soft aggregate signal flags the expensive one for review. Neither alone is sufficient; together they bound cross-station double-spend.
-
-**Scoring thresholds:**
-
-| Total Score | Action |
-|:-----------:|-----------------------------------------------|
-| >= 100 | **Automatic:** disable offline mode for the station, revoke user's OfflinePass, notify operator immediately. |
-| 50 -- 99 | **Automatic:** flag for manual operator review within 24 hours. Continue accepting transactions but log enhanced audit data. |
-| < 50 | **Automatic:** log and accept. No immediate action required. |
+- **Deterministic violations are §6 hard-reject gate checks, not fraud factors.** Invalid receipt signature (§5), expiry (#9, `2003`), epoch-at-tx (#10, `2004` / §6.6), user/org/station/device mismatches (#5–#8), and **same-value** counter reuse (#13, `2005`) are deterministic security-property violations the §6 gate handles with `Rejected` + a SecurityEvent — never probabilistic scoring. A `txCounter` gap is handled by §4.2 (`Deferred`), not a score.
+- **Note (finding N7 — complementary counter defenses).** The §6.1 check #13 hard-gate (`(offlinePassId, passCounter)` uniqueness) and the §7.4 **cumulative cross-station `maxUses` / `maxTotalCredits`** factors are **complementary**: check #13 deterministically hard-rejects the *same-value* clone/replay; the §7.4 cumulative factors flag the *disjoint-counter-stream* clone — whose copies run on non-overlapping counter ranges and never collide on a `(offlinePassId, passCounter)` tuple — once the **fleet-wide** aggregate exceeds `maxUses`. Neither alone is sufficient; together they bound cross-station double-spend (the N7 guarantee, now delivered by a defined computation — §7.4).
 
 ## 8. Wallet Reconciliation
 
@@ -226,8 +210,8 @@ After a transaction passes fraud scoring, the server settles the user's wallet. 
 
 When the gate resolved the transaction to a prior authorization that was **already debited at issue** (the issued-authorization registry row for Partial A, §6.7; or a Partial-B session that debited at authorize-time, then lost MQTT mid-session and reconciled offline):
 
-1. The server reads `creditsCharged` (actual) and the issue-time debit amount (the signed `creditsAuthorized` for Partial A; the recorded authorize-time debit for Partial B).
-2. The server applies a **true-up**: it adjusts the wallet by `creditsCharged − priorDebit` **only** — a **refund** when the session cost less than authorized, an **additional debit** when it cost more (bounded, for Partial A, by the signed `creditsAuthorized`). It **MUST NOT** re-debit the full `creditsCharged`.
+1. The server reads the issue-time debit amount (`priorDebit`): the pre-authorized maximum (the signed `creditsAuthorized`) for Partial A; the recorded authorize-time debit for Partial B.
+2. The server recomputes the final cost per the **Billing Authority** rule (`04-flows.md` §6 — actual delivered duration × the tariff in force when the session ran; the station-reported `creditsCharged` is advisory, and the server **MUST** recompute regardless of it). It then applies a **true-up**: it adjusts the wallet by `recomputedCost − priorDebit` **only** — a **refund** when the session cost less than the pre-authorized maximum, an **additional debit** when it cost more. It **MUST NOT** re-debit the full amount. The signed `creditsAuthorized` is **not** a settlement cap: it sets the issue-time pre-debit and (via the duration clamp, `ble-session.md` §3) bounds the authorized *duration*, but settled credits follow the Billing Authority recomputation — a tariff change during the offline window can yield a settled cost **above** `creditsAuthorized`, and the user pays the real delivered cost.
 3. The true-up shares the **same idempotency key** as the authorize-time debit (derived from `sessionId`), so a retried reconcile or a late-arriving duplicate cannot double-apply it. Steps 3–5 of §8.1 (negative balance, notification, top-up) apply to the net adjustment.
 4. The server marks the authorization `reconciled` and records `reconciled_session_id` on the transaction.
 

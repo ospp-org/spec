@@ -27,7 +27,7 @@ The station validates the request and responds via FFF4 with a StartServiceRespo
 |--------------|---------|----------|-----------------------------------------------|
 | `type` | string | Yes | `StartServiceResponse` (constant). |
 | `result` | string | Yes | `Accepted` or `Rejected`. |
-| `sessionId` | string | Cond. | Local session identifier assigned by the station. Present when `result` is `Accepted`. |
+| `sessionId` | string | Cond. | Session identifier. For **Full Offline / pass-form** sessions the station mints it locally. For **Partial A (ServerSignedAuth)** the station **MUST** use the **server-issued** `sessionId` from the validated claims (not a locally-minted one) — it is the settle-once correlation key signed into the receipt (`06-security.md` §6.2 / `reconciliation.md` §6.7, finding F2). Present when `result` is `Accepted`. |
 | `offlineTxId` | string | Cond. | Offline transaction identifier for reconciliation. Present when `result` is `Accepted`. |
 | `errorCode` | integer | Cond. | Numeric error code. Present when `result` is `Rejected`. |
 | `errorText` | string | Cond. | Human-readable error description. Present when `result` is `Rejected`. |

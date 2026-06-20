@@ -1185,27 +1185,7 @@ sequenceDiagram
 
 ### Fraud Scoring
 
-Server computes a fraud score (0.00 -- 1.00) for each offline transaction:
-
-| Factor | Score |
-|--------|------:|
-| Counter gap detected | +0.30 |
-| Invalid timestamps (out of order, future) | +0.50 |
-| Duration exceeds offline allowance | +0.20 |
-| High offline frequency (> 10 tx / 24h) | +0.20 |
-| Exceeds per-transaction credit limit | +0.15 |
-| Station not in user's allowlist | +0.10 |
-| Pass was revoked at transaction time | +0.30 |
-| User has negative wallet balance | +0.10 |
-
-**Thresholds:**
-
-| Score Range | Action |
-|-------------|--------|
-| 0.00 -- 0.29 | Normal — accept silently |
-| 0.30 -- 0.59 | Review — flag for manual review |
-| 0.60 -- 0.79 | Alert — disable offline mode for user, notify admin |
-| 0.80 -- 1.00 | Block — revoke OfflinePass, block user, notify security |
+The server computes a fraud score (`0.00`–`1.00`) for each offline transaction. The factor list, the **cross-station cumulative** `maxUses` / `maxTotalCredits` computation (finding N7), and the threshold→action bands are defined authoritatively in [06-security.md §7.4](06-security.md#74-fraud-detection--offline-transactions). This flow does not restate them — finding F3: §7.4 is the single source; this section and `profiles/offline/reconciliation.md` §7 are pointers.
 
 ### App-Side Reconciliation (Backup)
 
