@@ -10,8 +10,8 @@
 // Modes:
 //
 //   1. RECEIPT  — input has a `receipt = {data, signature, signatureAlgorithm}`
-//      wrapper. The signed body is the outer wrapper's 11 receipt fields
-//      (spec §6.2 v0.4.2) plus `meterValues` when present (omitted from the
+//      wrapper. The signed body is the outer wrapper's 12 receipt fields
+//      (spec §6.2; 10 shared + 2 form-specific, pass/auth `oneOf`) plus `meterValues` when present (omitted from the
 //      canonical body when absent per Note 4). MQTT TransactionEvent envelopes
 //      omit `deviceId` outer; we synthesise it from `offlineTxId` so the inner
 //      signed body is well-formed.  → typically signed with `station-test-key`.

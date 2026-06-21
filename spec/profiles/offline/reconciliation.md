@@ -1,6 +1,6 @@
 # Offline Transaction Reconciliation
 
-> **Status:** Draft | **OSPP Version:** 0.6.0
+> **Status:** Draft | **OSPP Version:** 0.6.1
 
 ## 1. Overview
 
@@ -108,9 +108,9 @@ This semantic prevents "unscoped" from becoming a cross-organization hole: an un
 
 ### 6.3 SecurityEvent Emission
 
-Each gate failure on a check **applicable to the resolved form** (§6.1 — all 13 for the pass-form; #1–#9 for the auth-form) **MUST** emit an `OfflinePassRejected` SecurityEvent. The emission occurs at the gate-rejection point — **before** any persistence attempt — for every applicable check, including check #4 (authorization-found). The storage-layer FK described in §6.5 is a defense-in-depth guard for **non-gate code paths** (direct DB writes, admin tooling, batch importers) and never co-fires with the gate's emission on the conforming reconciliation path.
+Each gate failure on a check **applicable to the resolved form** (§6.1 — all 13 for the pass-form; #1–#9 for the auth-form, plus the auth-form `(authId, sessionId)` replay reject of §6.7) **MUST** emit an `OfflinePassRejected` SecurityEvent. The emission occurs at the gate-rejection point — **before** any persistence attempt — for every applicable check, including check #4 (authorization-found). The storage-layer FK described in §6.5 is a defense-in-depth guard for **non-gate code paths** (direct DB writes, admin tooling, batch importers) and never co-fires with the gate's emission on the conforming reconciliation path.
 
-The emitted SecurityEvent **MUST** conform to the SecurityEvent profile (`profiles/security/security-event.md`) with the following constraints (mirroring `authorize-offline-pass.md` §6.7 v0.4.1 pattern):
+The emitted SecurityEvent **MUST** conform to the SecurityEvent profile (`profiles/security/security-event.md`) with the following constraints (mirroring `authorize-offline-pass.md` §6 rule 7, the v0.4.1 authorize-time pattern):
 
 a. The `type` **MUST** be `OfflinePassRejected` (from the spec-defined enum in `security-event.md` §4).
 
@@ -122,7 +122,7 @@ b. The `eventId` **MUST** be deterministically derived from the originating Tran
    eventId = "sec_" || lowerhex(SHA-256("ospp:reconcile_tx:check_" || N || ":" || messageId))[0:16]
    ```
 
-   Implementations **MAY** use a different derivation scheme provided the four conformance properties from `authorize-offline-pass.md` §6.7 are satisfied: (i) `sec_` + 16-hex-character format per `security-event.md` §6.2; (ii) determinism for the same `(messageId, N)` pair; (iii) collision-resistance across distinct `messageId`s; (iv) documented derivation in the implementation's deployment manifest.
+   Implementations **MAY** use a different derivation scheme provided the four conformance properties from `authorize-offline-pass.md` §6 (rule 7) are satisfied: (i) `sec_` + 16-hex-character format per `security-event.md` §6.2; (ii) determinism for the same `(messageId, N)` pair; (iii) collision-resistance across distinct `messageId`s; (iv) documented derivation in the implementation's deployment manifest.
 
 c. The `details` object **SHOULD** include `offlinePassId`, the failed check number, the rejection `errorCode`, the originating `messageId`, and check-specific forensic context:
    - Checks #1/#2/#3/#6 (`OFFLINE_RECEIPT_MISMATCH`): `details.field` (which signed field mismatched), `details.signedValue`, `details.expectedValue`.
@@ -185,7 +185,7 @@ A **Partial A** session is authorized fully offline against a server-signed `Ser
 - #8 station binding — `registry.stationId` == reporting station.
 - #9 not-expired-at-tx — `registry.expiresAt` > `endedAt`.
 - #10 / #11 (epoch / individual revocation) — **not applicable** (no pass); the registry's own `status` is the validity gate (a row cancelled/revoked before settlement is rejected with `2014 OFFLINE_PASS_REVOKED` — the code is reused here for the registry-status case; the auth-form has no pass `is_revoked` flag, so `2014` denotes "authorization revoked before settlement", finding M3).
-- #12 / #13 (passCounter) — **not applicable** (no pass counter). Partial-A anti-replay is the `appNonce` bound into the handshake plus the one-shot `(authId, sessionId)`: the gate rejects a second TransactionEvent that settles an already-reconciled `(authId, sessionId)` as a replay (`2005 OFFLINE_COUNTER_REPLAY`).
+- #12 / #13 (passCounter) — **not applicable** (no pass counter). Partial-A anti-replay is the `appNonce` bound into the handshake plus the one-shot `(authId, sessionId)`: the gate rejects a second TransactionEvent that settles an already-reconciled `(authId, sessionId)` as a replay (`2005 OFFLINE_COUNTER_REPLAY`). Like every §6 gate rejection, this replay reject **MUST** emit an `OfflinePassRejected` SecurityEvent (§6.3) before the `Rejected` response: the `eventId` is deterministically derived from the TransactionEvent REQUEST's `messageId` over the `check_13` domain (`2005` is the counter-replay check in both forms — the auth-form keys it on `(authId, sessionId)`, the pass-form on `(offlinePassId, passCounter)`), and `details` **SHOULD** carry `authId`, `sessionId`, and the `priorOfflineTxId` that first settled the tuple.
 
 **Settle-once (true-up, not re-debit — finding N11).** Because the wallet was already debited at issue, the gate **MUST NOT** debit again at reconcile. It performs the §8.2 **true-up**: it recomputes the final cost (Billing Authority, `04-flows.md` §6) and adjusts the wallet by the difference vs the issue-time pre-debit — a refund if it cost less, an additional debit if it cost more (`creditsAuthorized` is **not** a settlement cap; see §8.2). Correlation is server-side on the **server-issued** `sessionId` (`reconciled_session_id`) — the same `sessionId` the server minted at `POST /sessions/offline-auth`, signed into the ServerSignedAuth claims and echoed into the signed auth-form receipt (see check #4 and §6.2) — never a fresh debit keyed on `offlineTxId`. See §8.2.
 

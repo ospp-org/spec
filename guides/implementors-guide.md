@@ -764,26 +764,9 @@ When a station reconnects after being offline, it sends TransactionEvent REQUEST
 5. **Run fraud scoring:** Check for anomalies (broken chain, excessive credits, suspiciously fast intervals).
 6. **Respond with `Accepted`** (the TransactionEvent RESPONSE only has `status` and `reason`).
 
-**Fraud scoring factors (8 factors, 0.00-1.00 scale, capped at 1.00):**
+**Fraud scoring model.** The authoritative model — its factors, the cross-station cumulative `maxUses` / `maxTotalCredits` computation, the `0.00`–`1.00` score scale, and the threshold → action bands — is defined **once** in [`06-security.md` §7.4](../spec/06-security.md#74-fraud-detection--offline-transactions). This guide does not restate it (finding F3: one authoritative source; `reconciliation.md` §7 and `04-flows.md` §10 are the other two pointers).
 
-| Factor | Weight | Trigger |
-|--------|:------:|---------|
-| txCounter gap detected | +0.30 | txCounter not sequential |
-| Invalid receipt signature | +0.30 | ECDSA verification fails |
-| Excessive credits | +0.15 | Well above pass limits |
-| Suspicious interval | +0.10 | Transactions too fast |
-| Unknown device | +0.10 | deviceId not in user's devices |
-| Expired pass used | +0.05 | Pass was expired at time of use |
-| High transaction count | +0.05 | Unusual volume |
-| Clock skew | +0.05 | Station time vs server time drift |
-
-Score is capped at 1.00 if the sum of triggered factors exceeds 1.00.
-
-**Response at threshold (graduated):**
-- Score 0.00–0.29 → Normal (no action)
-- Score 0.30–0.59 → flag for manual review
-- Score 0.60–0.79 → auto-disable offline for user, alert operator
-- Score 0.80–1.00 → block user account, alert operator
+The model deliberately does **not** score deterministic security-property violations: an invalid receipt signature, an expired pass, an epoch-at-tx revocation, or same-value counter reuse are **hard-reject gate checks** (`reconciliation.md` §6 — `Rejected` + a SecurityEvent), never probabilistic fraud factors. (The earlier inline 8-factor table here scored several of these; it diverged from §7.4 and is removed.)
 
 ### 3.7 Epoch-Based Revocation
 

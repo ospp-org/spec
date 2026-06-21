@@ -1,6 +1,6 @@
 # Chapter 03 — Message Catalog
 
-> **Status:** Draft | **OSPP Version:** 0.6.0
+> **Status:** Draft | **OSPP Version:** 0.6.1
 
 This chapter is the normative reference for **every message** in the OSPP protocol. Each message is documented with its complete payload schema, metadata, and example.
 
@@ -3068,6 +3068,11 @@ Error codes referenced in this chapter. For the full catalog, see [Chapter 07 �
 | 2007 | `COMMAND_NOT_SUPPORTED` | All Server→Station commands (implicit) |
 | 2008 | `ACTION_NOT_PERMITTED` | ChangeConfiguration |
 | 2013 | `BLE_AUTH_FAILED` | BLE AuthResponse |
+| 2014 | `OFFLINE_PASS_REVOKED` | AuthorizeOfflinePass, TransactionEvent, BLE AuthResponse |
+| 2015 | `OFFLINE_ORG_MISMATCH` | AuthorizeOfflinePass, TransactionEvent, BLE AuthResponse |
+| 2016 | `OFFLINE_USER_MISMATCH` | TransactionEvent |
+| 2017 | `OFFLINE_RECEIPT_MISMATCH` | TransactionEvent |
+| 2018 | `SERVER_AUTH_NONCE_MISMATCH` | BLE AuthResponse (Partial A ServerSignedAuth) |
 
 ### 3xxx Session & Bay Errors
 

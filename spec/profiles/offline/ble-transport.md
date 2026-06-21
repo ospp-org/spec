@@ -1,6 +1,6 @@
 # BLE Transport
 
-> **Status:** Draft | **OSPP Version:** 0.6.0
+> **Status:** Draft | **OSPP Version:** 0.6.1
 
 ## 1. Hardware Requirements
 
