@@ -8,6 +8,18 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.6.2] — 2026-06-22
+
+> **SDK enum catch-up (lockstep, ADR-001).** No spec content change. `ServerSignedAuthReplay` (SecurityEvent type) and error `2018 SERVER_AUTH_NONCE_MISMATCH` were both fully specified in [0.6.1] — schema enum, `security-event.md` §4, `07-errors.md` §3.2, and `03-messages.md` Appendix C — but the hand-maintained enum types in `ospp-sdk-php` and `sdk-ts` had not yet mirrored them. v0.6.2 catches the SDK enums up to the already-vendored schema and bumps all three repos to the same lockstep tag. No wire change; `spec/schemas/` is byte-identical to [0.6.1].
+
+### Changed
+
+- Version cascade `0.6.1 → 0.6.2` across all spec document headers. `spec/schemas/` and the conformance-vector corpus are **unchanged** — schema validation and `verify-all-signatures.sh` stay green on the [0.6.1] corpus (no regeneration).
+
+### SDK (lockstep, no spec change)
+
+- `ospp-sdk-php` + `sdk-ts`: `SecurityEventType` gains `ServerSignedAuthReplay`; `OsppErrorCode` gains `SERVER_AUTH_NONCE_MISMATCH = 2018` (Critical, non-recoverable per `07-errors.md` §3.2, `httpStatus` 401, `auth` category). Values are cross-SDK identical and byte-consistent with the vendored schema. For the BLE Partial-A ServerSignedAuth replay defence (`ble-handshake.md` §4.2.2 check #2).
+
 ## [0.6.1] — 2026-06-21
 
 > **Reconciliation + Partial-A (S2 — decisions D2/D3).** Folds reconciliation + Partial-A onto the v0.6.0 BLE-handshake work: reconcile-time financial semantics (N7/N8/N11) and the Partial-A representation (N2/N3/Q4), plus the N9 `eventId` alignment. All signed-format changes ride a **single** conformance-vector regeneration (receipts, transaction-event, ServerSignedAuth + every inline example); `verify-all-signatures.sh` is green (signatures, BLE crypto oracle untouched, schema vectors `306/306`, inline-md idempotent). S2 **does** change `spec/schemas/`, so the SDK schemas re-vendor at the **v0.6.1** lockstep tag — no SDK signing *code* changes (the canonical-JSON serializer is field-agnostic). Server-side build (csms B1/B3) follows in its own window.

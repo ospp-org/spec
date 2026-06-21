@@ -1,6 +1,6 @@
 ---
 status: Draft
-ospp-version: 0.6.1
+ospp-version: 0.6.2
 ---
 
 # OSPP Specification — Reading Guide
@@ -14,8 +14,8 @@ ospp-version: 0.6.1
 | Field | Value |
 |-------|-------|
 | Status | Draft |
-| OSPP Version | 0.6.1 |
-| Last Updated | 2026-06-21 |
+| OSPP Version | 0.6.2 |
+| Last Updated | 2026-06-22 |
 
 ## Document Map
 
