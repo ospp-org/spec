@@ -351,7 +351,7 @@ sequenceDiagram
 | 7 | `3001 BAY_BUSY` | Bay became occupied between validation and command | Server refunds 100% |
 | 7 | `3009 HARDWARE_ACTIVATION_FAILED` | Hardware failed to start | Server refunds 100% |
 
-**Refund policy:** Any failure at or after step 3 (credits debited) triggers an automatic full refund to the user's wallet.
+**Refund policy:** Any failure at or after step 3 (credits debited) but **before the service begins delivering** triggers an automatic full refund to the user's wallet — every error above occurs pre-delivery, so `delivered = 0`. Once the service has begun delivering, a terminal failure is settled by the per-reason **Refund Policy** in the Session End flow (pro-rated by delivered time; a full refund only when `< 50%` was delivered **and** the reason is `Fault`), not an automatic full refund.
 
 ### Postconditions
 
