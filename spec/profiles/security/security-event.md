@@ -1,6 +1,6 @@
 # SecurityEvent
 
-> **Status:** Draft | **OSPP Version:** 0.6.2
+> **Status:** Draft | **OSPP Version:** 0.7.0
 
 ## 1. Overview
 

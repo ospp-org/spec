@@ -1,6 +1,6 @@
 # Chapter 06 — Security
 
-> **Status:** Draft | **OSPP Version:** 0.6.2
+> **Status:** Draft | **OSPP Version:** 0.7.0
 
 This chapter defines the complete security model for the OSPP protocol, covering threat analysis, authentication, authorization, cryptographic requirements, message integrity, offline security, anti-abuse mechanisms, and data protection.
 
@@ -19,7 +19,7 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 | ID | Threat | Impact | Severity | Countermeasure |
 |:--:|--------|--------|:--------:|----------------|
 | T01 | [Replay Attack](#t01---replay-attack) | Duplicate service activation or credit deduction | High | §5.3 HMAC with messageId, §6.3 monotonic counter |
-| T02 | [Man-in-the-Middle](#t02---man-in-the-middle) | Eavesdrop or modify station commands | Critical | §2.1 mTLS (TLS 1.3), §5 HMAC-SHA256 |
+| T02 | [Man-in-the-Middle](#t02---man-in-the-middle) | Eavesdrop or modify station commands | Critical | §2.1 mTLS (TLS 1.2+), §5 HMAC-SHA256 |
 | T03 | [Credit Fraud / Double-Spend](#t03---credit-fraud--double-spend) | Unauthorized service without payment | Critical | §6.1 OfflinePass limits, §6.2 signed receipts with txCounter, §6.6 epoch revocation, §7.4 fraud scoring |
 | T04 | [Unauthorized Station Access](#t04---unauthorized-station-access) | Rogue station impersonation or topic hijacking | Critical | §2.1 mTLS + CN-based ACL, §4.2 PKI |
 | T05 | [Session Hijacking](#t05---session-hijacking) | Take over another user's session | High | §2.2 JWT short-lived, §2.3 session token UUID, §5 HMAC |
@@ -48,7 +48,7 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 **Description:** An attacker intercepts the network path between the station and broker (or between the app and server) to eavesdrop, modify, or inject messages.
 
 **Countermeasures:**
-- **TLS 1.3 mandatory** on all MQTT and HTTPS connections; no fallback to TLS 1.2. 0-RTT MUST NOT be used (replay risk).
+- **TLS 1.2+ mandatory** on all MQTT and HTTPS connections; TLS 1.3 RECOMMENDED. 0-RTT MUST NOT be used (replay risk).
 - **mTLS** (mutual TLS) — both the station and broker present X.509 certificates. The station verifies the broker's certificate, and the broker verifies the station's certificate, preventing impersonation on either side.
 - **HMAC-SHA256 defense-in-depth** — even if TLS were compromised, message tampering is detectable via the MAC field.
 - **BLE application-layer AEAD** (ChaCha20-Poly1305 over an ECDH-authenticated channel, §6.5) protects all post-Challenge traffic end-to-end; an active MITM cannot derive the session key without the station's certified static key, and the app refuses to send a credential to any station whose StationIdentity certificate does not verify (§6.5.2).
@@ -183,7 +183,7 @@ OSPP uses **channel-specific authentication** — each communication channel has
 
 | Property | Value |
 |----------|-------|
-| **Protocol** | TLS 1.3 ([RFC 8446](https://www.rfc-editor.org/rfc/rfc8446)) |
+| **Protocol** | TLS 1.2+ (1.3 recommended) |
 | **Authentication** | Mutual — both station and broker present X.509 certificates |
 | **Station Certificate CN** | `stn_{station_id}` (e.g., `stn_a1b2c3d4`) |
 | **Applies to** | MQTT (port 8883), Station REST fallback (mTLS) |
@@ -195,13 +195,16 @@ OSPP uses **channel-specific authentication** — each communication channel has
 - The broker MUST extract the CN from the client certificate and use it for **topic ACL enforcement** (see §3.3).
 - TLS session resumption is RECOMMENDED for reconnection performance. **0-RTT MUST NOT be used** (replay risk).
 
-**TLS 1.3 cipher suites** (in preference order):
+**TLS cipher suites** (broker offers exactly these, in preference order):
 
-| Priority | Cipher Suite |
-|:--------:|--------------|
-| 1 | `TLS_AES_256_GCM_SHA384` |
-| 2 | `TLS_CHACHA20_POLY1305_SHA256` |
-| 3 | `TLS_AES_128_GCM_SHA256` |
+| Priority | TLS | Cipher Suite |
+|:--------:|:---:|--------------|
+| 1 | 1.3 | `TLS_AES_256_GCM_SHA384` |
+| 2 | 1.3 | `TLS_AES_128_GCM_SHA256` |
+| 3 | 1.2 | `ECDHE-ECDSA-AES256-GCM-SHA384` |
+| 4 | 1.2 | `ECDHE-ECDSA-AES128-GCM-SHA256` |
+
+The TLS 1.2 suites are ECDHE-ECDSA with AEAD-GCM only, matching the ECDSA P-256 server certificate. CBC-mode, RSA-key-exchange, and 3DES suites MUST NOT be offered or accepted. (`TLS_CHACHA20_POLY1305_SHA256` is dropped from the offered set under the TLS-1.2-floor hardening.)
 
 **Key exchange groups:** X25519 (preferred), secp256r1.
 
@@ -369,7 +372,7 @@ The MQTT broker MUST enforce topic-level access control based on the client cert
 
 | # | Key / Operation | Algorithm | Key Size | Standard | Purpose |
 |:-:|-----------------|-----------|:--------:|----------|---------|
-| 1 | TLS transport | TLS 1.3 | — | RFC 8446 | Channel encryption (all connections) |
+| 1 | TLS transport | TLS 1.2+ (1.3 recommended) | — | RFC 5246 / RFC 8446 | Channel encryption (all connections) |
 | 2 | Station TLS cert | ECDSA P-256 | 256 bit | X.509 v3 | mTLS authentication |
 | 3 | MQTT HMAC session key | HMAC-SHA256 | 256 bit (32 bytes) | FIPS 198-1 | Per-boot message integrity (selective — see §5) |
 | 4 | OfflinePass signing | ECDSA P-256 (RFC 6979) | 256 bit | FIPS 186-4, RFC 6979 | Server signs offline authorization |
@@ -385,7 +388,7 @@ The MQTT broker MUST enforce topic-level access control based on the client cert
 **Deprecated/prohibited algorithms:**
 - MD5 — MUST NOT be used anywhere
 - SHA-1 — MUST NOT be used for signatures or HMAC
-- TLS 1.2 or earlier — MUST NOT be used
+- TLS 1.1 or earlier (SSLv3, TLS 1.0, TLS 1.1) — MUST NOT be used
 - RC4, DES, 3DES — MUST NOT be used
 - RSA key exchange (non-PFS) — MUST NOT be used
 - Ed25519 — MUST NOT be used (replaced by ECDSA P-256 for secure element compatibility)
@@ -657,7 +660,7 @@ When `MessageSigningMode` is `Critical` or `All`, applicable MQTT messages MUST 
 1. Station sends BootNotification REQUEST [MSG-001] (exempt from signing — no key yet)
 2. Server generates a cryptographically random 32-byte key
 3. Server includes `sessionKey` (Base64-encoded) in the BootNotification RESPONSE [MSG-001]
-4. The session key is protected in transit by TLS 1.3 encryption
+4. The session key is protected in transit by TLS 1.2+ encryption
 5. Both sides store the key in volatile memory for the duration of the MQTT session
 
 ### 5.3 Canonical Form
@@ -1420,7 +1423,7 @@ Diagnostic uploads via GetDiagnostics [MSG-018] **MUST** apply the same redactio
 
 ### Station Implementation
 
-- [ ] TLS 1.3 mandatory, no TLS 1.2 fallback
+- [ ] TLS 1.2+ mandatory; TLS 1.3 RECOMMENDED and negotiated when supported; 0-RTT MUST NOT be enabled
 - [ ] mTLS client certificate with CN = `stn_{station_id}`
 - [ ] Private keys stored in secure element / TPM (never exported)
 - [ ] HMAC-SHA256 verification on all incoming messages per `MessageSigningMode` (except LWT and BootNotification RESPONSE)
@@ -1438,7 +1441,7 @@ Diagnostic uploads via GetDiagnostics [MSG-018] **MUST** apply the same redactio
 
 ### Server Implementation
 
-- [ ] TLS 1.3 for all external connections
+- [ ] TLS 1.2+ for all external connections (TLS 1.3 RECOMMENDED)
 - [ ] mTLS verification for station connections (CN extraction for ACL)
 - [ ] JWT ES256 signing with key rotation
 - [ ] Refresh token one-time-use enforcement

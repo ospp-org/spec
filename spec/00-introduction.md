@@ -1,6 +1,6 @@
 # Chapter 00 — Introduction
 
-> **Status:** Draft | **OSPP Version:** 0.6.2
+> **Status:** Draft | **OSPP Version:** 0.7.0
 
 This chapter establishes the purpose, scope, and conventions for the Open Self-Service Point Protocol (OSPP) specification. It identifies the target audience, defines how normative language is used throughout the document, describes notation and formatting conventions, and provides the normative and informative reference bibliography.
 
@@ -44,7 +44,7 @@ graph TB
 
     APP -->|"HTTPS REST"| SERVER
     WEB -->|"HTTPS REST"| SERVER
-    SERVER <-->|"MQTT 5.0 / TLS 1.3"| BROKER
+    SERVER <-->|"MQTT 5.0 / TLS 1.2+/1.3"| BROKER
     BROKER <-->|"MQTT 5.0 / mTLS"| CTRL
     APP -. "BLE GATT (offline)" .-> BLE
     BLE --- CTRL
@@ -241,3 +241,4 @@ The following documents provide additional context and prior art. They are not n
 | 0.6.0 | 2026-06-20 | OSPP Authors | BLE handshake security (D1, [ADR-002](../adr/ADR-002-ble-handshake-security-architecture.md)): authenticated application-layer ECDH (`IKM = es ‖ ee ‖ appNonce ‖ stationNonce`), StationIdentity certificate (§6.5.2), BLE AEAD channel (ChaCha20-Poly1305 IETF, §6.5.3), `Hello`/`Challenge` ephemeral-key wire format, BLE pairing demoted to OPTIONAL, `sessionProof` canonical definition moved to `ble-handshake.md` §4.1. Lockstep with `ospp-sdk-php` + `sdk-ts`. |
 | 0.6.1 | 2026-06-21 | OSPP Authors | Reconciliation + Partial-A (S2, decisions D2/D3): the reconcile-time re-validation gate grows to 13 checks (passCounter receipt cross-check #12 + cross-station `(offlinePassId, passCounter)` uniqueness #13, finding N7); revocation epoch anchored at transaction time (#10, §6.6, N8); discriminated (`oneOf`) signed receipt + envelope (pass-form `{offlinePassId, passCounter}` vs auth-form `{authId, sessionId}`, N2/Q4) making Partial-A reconcilable; ServerSignedAuth claims gain signed `durationSeconds`/`creditsAuthorized` (10→12, N3); settle-once wallet true-up (§8.2, N11); `ServerSignedAuthReplay` SecurityEvent type (error 2018). Lockstep re-vendor of `spec/schemas/`. |
 | 0.6.2 | 2026-06-22 | OSPP Authors | SDK enum catch-up (lockstep, ADR-001), no spec content change: `ServerSignedAuthReplay` SecurityEvent type + error `2018 SERVER_AUTH_NONCE_MISMATCH` — both fully specified in 0.6.1 — are mirrored into the `ospp-sdk-php` / `sdk-ts` enum types (Critical, non-recoverable, httpStatus 401). `spec/schemas/` byte-identical to 0.6.1; version-header cascade only. |
+| 0.7.0 | 2026-07-10 | OSPP Authors | TLS 1.2 floor amendment: `02-transport.md` §1.3 relaxes the TLS-1.3-only rule to a TLS-1.2 floor with TLS 1.3 RECOMMENDED-and-negotiated-when-supported, admitting constrained cellular modems (e.g. SIMCom A7608E-H) with no firmware path to 1.3; cipher suite list extended to 4 entries (2× TLS 1.3 AES-GCM + 2× TLS 1.2 ECDHE-ECDSA-GCM, `TLS_CHACHA20_POLY1305_SHA256` dropped from the offered set); `06-security.md` cipher table, threat-model, and checklist references updated to match. All other chapter/profile mentions of a hard TLS-1.3-only requirement (connection-sequence diagrams, protocol summary tables, algorithm inventory) updated for consistency. `04-flows.md` §2 (Station Provisioning) gains a "Single-use and idempotent retry" subsection formalizing same-token retry idempotency within the 24h TTL and the 401 conditions (expired/beyond TTL, superseded, revoked); the error-path table's 401 row is broadened to match, and `02-transport.md` §9.3 gains a provisioning-token idempotency note cross-referencing it. |

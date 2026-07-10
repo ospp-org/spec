@@ -1,6 +1,6 @@
 # Chapter 04 — Protocol Flows
 
-> **Status:** Draft | **OSPP Version:** 0.6.2
+> **Status:** Draft | **OSPP Version:** 0.7.0
 
 This chapter documents every end-to-end protocol flow as a sequence of messages defined in [Chapter 03 — Message Catalog](03-messages.md). Each flow includes preconditions, a Mermaid sequence diagram, numbered happy-path steps, alternative paths, error paths, and postconditions.
 
@@ -248,7 +248,7 @@ sequenceDiagram
 
 | Error | Cause | SSP Action |
 |-------|-------|------------|
-| 401 Unauthorized | Token expired or already used | Display error, await new provisioning token |
+| 401 Unauthorized | Token expired / beyond TTL, superseded, or revoked | Display error, await new provisioning token |
 | 400 Bad Request | Invalid CSR or missing fields | Log error, regenerate keys, retry |
 | Network unreachable | No connectivity | Retry with backoff, await network |
 
@@ -260,6 +260,16 @@ sequenceDiagram
 | SSP | Provisioned, ready to boot |
 | Server | Station registered, certificate issued, provisioning token consumed |
 | Provisioning Token | Invalidated (single-use) |
+
+### Single-use and idempotent retry
+
+A provisioning token is **single-use**: it authorises the issuance of **exactly one certificate**. The token is consumed on the first successful `POST /api/v1/stations/provision`, which binds the issued certificate to the token.
+
+Because provisioning traverses unreliable links, the station **MAY** retry with the **same** token. Within the token's 24-hour TTL, a retry that follows a completed provision is **idempotent**: the server **MUST** return `200 OK` with the **byte-identical** certificate already issued and **MUST NOT** mint a second certificate. Request-body drift on a retry (different `serialNumber`, `bayCount`, CSR, or receipt key) **MUST** be ignored — the token, not the body, determines the certificate.
+
+Once the TTL elapses the token is invalid for **all** purposes: any further call — **including** a retry of an already-completed provision — **MUST** be rejected with `401 Unauthorized`, and the station **MUST** obtain a new provisioning token. A token that has been **superseded** by a re-issuance for the same station, or administratively **revoked**, is likewise invalid and **MUST** be rejected with `401`.
+
+This is the provisioning-endpoint instance of the idempotency-retention rule in [Transport §9.3](02-transport.md#93-idempotency) (retain ≥ 24 h), keyed on the provisioning token rather than an `Idempotency-Key` header.
 
 ---
 

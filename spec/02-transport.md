@@ -1,6 +1,6 @@
 # Chapter 02 — Transport
 
-> **Status:** Draft | **OSPP Version:** 0.6.2
+> **Status:** Draft | **OSPP Version:** 0.7.0
 
 OSPP defines three transport layers for communication between participants. Each transport serves a distinct channel with its own security model, reliability guarantees, and failure modes.
 
@@ -48,14 +48,25 @@ The station MUST establish the MQTT connection with the following parameters:
 
 The broker MUST be configured with a keep-alive multiplier of **1.5**, meaning it will disconnect a station after **45 seconds** without any MQTT packet (PINGREQ, PUBLISH, etc.).
 
-### 1.3 TLS 1.3
+### 1.3 TLS (1.2 floor, 1.3 recommended)
 
-All MQTT connections MUST use **TLS 1.3** ([RFC 8446](https://www.rfc-editor.org/rfc/rfc8446)). TLS 1.2 fallback is **NOT permitted**. TLS 0-RTT (early data) **MUST NOT** be enabled due to replay attack risk.
+All MQTT connections MUST use **TLS 1.2 or higher**; **TLS 1.3 is RECOMMENDED** and MUST be negotiated whenever both peers support it ([RFC 8446](https://www.rfc-editor.org/rfc/rfc8446) / [RFC 5246](https://www.rfc-editor.org/rfc/rfc5246)). TLS versions below 1.2 (1.1, 1.0, SSLv3) MUST be rejected. TLS 0-RTT (early data) **MUST NOT** be enabled (replay risk).
+
+> The TLS-1.2 floor (formerly TLS-1.3-only) admits constrained cellular modems that cap at TLS 1.2 with no firmware path to 1.3 (e.g. SIMCom A7608E-H). It parallels the REST channel, which is already TLS 1.2+ with the same mTLS client certificate. mTLS remains mandatory on every connection regardless of negotiated TLS version.
 
 The station MUST support at least the following cipher suites:
 
+**TLS 1.3:**
+
 - `TLS_AES_256_GCM_SHA384` (RECOMMENDED)
 - `TLS_AES_128_GCM_SHA256`
+
+**TLS 1.2** (ECDHE-ECDSA with AEAD-GCM only — the OSPP server certificate is ECDSA P-256):
+
+- `ECDHE-ECDSA-AES256-GCM-SHA384`
+- `ECDHE-ECDSA-AES128-GCM-SHA256`
+
+CBC-mode, RSA-key-exchange, and 3DES cipher suites MUST NOT be offered or accepted.
 
 The connection MUST use **mutual TLS (mTLS)**:
 
@@ -74,12 +85,12 @@ Station                                              Broker
    │<─── TCP SYN-ACK ──────────────────────────────────│
    │──── TCP ACK ──────────────────────────────────────>│
    │                                                    │
-   │──── TLS ClientHello (TLS 1.3) ───────────────────>│
+   │──── TLS ClientHello (TLS 1.2 or 1.3) ────────────>│
    │<─── TLS ServerHello + Certificate ────────────────│
    │──── TLS Certificate (station cert) + Finished ───>│
    │<─── TLS Finished ────────────────────────────────-│
    │                                                    │
-   │  [TLS 1.3 session established — mTLS verified]     │
+   │  [TLS 1.2/1.3 session established — mTLS verified] │
    │                                                    │
    │──── MQTT CONNECT {clientId, cleanStart=false, ...}>│
    │<─── MQTT CONNACK {reasonCode=0x00 Success} ──────│
@@ -130,7 +141,7 @@ The `v1` segment in the topic path is a **namespace identifier**, NOT the protoc
 - The protocol version is negotiated inside the message envelope via the `protocolVersion` field (see [Chapter 03 — Messages](03-messages.md)).
 - The topic namespace `v1` MUST remain `v1` for all OSPP 1.x protocol versions.
 - A new topic namespace (e.g., `v2`) would only be introduced for a fundamental transport-level change that cannot be handled by protocol version negotiation.
-- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.6.2*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.2.1`): the two version numbers evolve separately and need not match.
+- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.7.0*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.2.1`): the two version numbers evolve separately and need not match.
 
 ### 2.3 Server Subscription Patterns
 
@@ -224,7 +235,7 @@ The station MUST follow this sequence on power-on or reconnect:
 │  1. Hardware init, load config + certificates from NVS  │
 │  2. Initialize BLE → start advertising (before MQTT!)   │
 │  3. DNS resolution of MQTT broker endpoint              │
-│  4. TCP + TLS 1.3 + mTLS handshake (port 8883)         │
+│  4. TCP + TLS 1.2+/1.3 + mTLS handshake (port 8883)    │
 │  5. MQTT CONNECT (parameters per Section 1.2)           │
 │  6. Process CONNACK (verify reason code = 0x00)         │
 │  7. SUBSCRIBE to: ospp/v1/stations/{id}/to-station      │
@@ -455,7 +466,7 @@ The broker MUST NOT rely on the MQTT Client ID alone for authorization, as it ca
 Any MQTT 5.0 compliant broker MAY be used. The broker MUST support:
 
 - MQTT 5.0 (full specification)
-- TLS 1.3 with client certificate authentication (mTLS)
+- TLS 1.2+ (1.3 recommended) with client certificate authentication (mTLS)
 - Persistent sessions (Clean Start = false)
 - Message Expiry Interval
 - Shared Subscriptions (for multi-server deployments)
@@ -747,6 +758,8 @@ Content-Type: application/json
 ```
 
 The server MUST store the response for a given `Idempotency-Key` and return the same response on duplicate requests. The key MUST be a UUID v4. The server SHOULD retain idempotency keys for at least **24 hours**.
+
+The station-provisioning endpoint (`POST /api/v1/stations/provision`) implements this contract keyed on the **provisioning token itself** rather than an `Idempotency-Key` header: a repeat within the token's 24-hour TTL returns the originally-issued certificate; after the TTL the token is invalid (see [Flows §2 — Single-use and idempotent retry](04-flows.md#single-use-and-idempotent-retry)).
 
 ### 9.4 Request Tracing
 

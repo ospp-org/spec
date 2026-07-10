@@ -1,6 +1,6 @@
 # Chapter 01 — Architecture
 
-> **Status:** Draft | **OSPP Version:** 0.6.2
+> **Status:** Draft | **OSPP Version:** 0.7.0
 
 This chapter defines the foundational system model upon which all subsequent chapters build: the participants, their communication channels, the hardware model, the identity scheme, the controller topologies, and the layered communication stack.
 
@@ -27,7 +27,7 @@ Three communication channels connect the participants:
 
 | Channel | Participants | Transport | Purpose |
 |---------|-------------|-----------|---------|
-| **Online** | Station ↔ Server | MQTT 5.0 over TLS 1.3 | Primary path for all station operations: boot, sessions, status, config, firmware, security events. |
+| **Online** | Station ↔ Server | MQTT 5.0 over TLS 1.2+ (1.3 recommended) | Primary path for all station operations: boot, sessions, status, config, firmware, security events. |
 | **Mobile API** | Mobile App ↔ Server | HTTPS REST | App operations: authentication, session initiation, payments, offline pass provisioning, push notifications. |
 | **Offline** | Mobile App ↔ Station | BLE GATT | Fallback path when MQTT is unavailable: offline authorization, session start, receipt retrieval. |
 
@@ -55,8 +55,8 @@ graph TB
         PORTAL["Operator Portal"]
     end
 
-    STATION -- "MQTT 5.0 / TLS 1.3" --> SERVER
-    SERVER -- "MQTT 5.0 / TLS 1.3" --> STATION
+    STATION -- "MQTT 5.0 / TLS 1.2+/1.3" --> SERVER
+    SERVER -- "MQTT 5.0 / TLS 1.2+/1.3" --> STATION
     APP -- "HTTPS REST" --> SERVER
     SERVER -- "HTTPS REST" --> APP
     APP -. "BLE GATT (offline)" .-> STATION
@@ -183,7 +183,7 @@ The simplest topology: one controller manages exactly one bay.
 │  └───────────────────┘  │
 └─────────────────────────┘
         │
-    MQTT 5.0 / TLS 1.3
+    MQTT 5.0 / TLS 1.2+/1.3
         │
    ┌─────────┐
    │  Server  │
@@ -209,7 +209,7 @@ A single controller manages **N** bays (e.g., a station site with 4 bays). The c
 │  └─────────────────────────────────┘  │
 └───────────────────────────────────────┘
         │
-    MQTT 5.0 / TLS 1.3 (single connection)
+    MQTT 5.0 / TLS 1.2+/1.3 (single connection)
         │
    ┌─────────┐
    │  Server  │
@@ -242,7 +242,7 @@ In the **gateway topology**, a single network gateway aggregates connectivity fo
     │  Gateway  │
     └─────┬─────┘
           │
-     MQTT 5.0 / TLS 1.3
+     MQTT 5.0 / TLS 1.2+/1.3
           │
     ┌─────┴─────┐
     │  Server   │
@@ -274,7 +274,7 @@ OSPP defines a five-layer communication stack. Each layer has a distinct respons
 │                      HTTPS REST (mobile↔server)         │
 │                      BLE GATT (mobile↔station)          │
 ├─────────────────────────────────────────────────────────┤
-│  L2  Transport       TCP/IP, TLS 1.3                    │
+│  L2  Transport       TCP/IP, TLS 1.2+/1.3               │
 │                      BLE L2CAP                          │
 ├─────────────────────────────────────────────────────────┤
 │  L1  Physical        Ethernet, WiFi, Cellular, BLE      │
@@ -284,7 +284,7 @@ OSPP defines a five-layer communication stack. Each layer has a distinct respons
 | Layer | Name | Online Path (MQTT) | Offline Path (BLE) |
 |:-----:|------|--------------------|--------------------|
 | **L1** | Physical | Ethernet / WiFi / Cellular | Bluetooth Low Energy 4.2+ |
-| **L2** | Transport | TCP/IP + TLS 1.3 (mTLS) | BLE L2CAP (LESC pairing OPTIONAL); security is application-layer (Ch.06 §6.5) |
+| **L2** | Transport | TCP/IP + TLS 1.2+ (1.3 recommended) (mTLS) | BLE L2CAP (LESC pairing OPTIONAL); security is application-layer (Ch.06 §6.5) |
 | **L3** | Messaging | MQTT 5.0 (QoS 1) | BLE GATT characteristics |
 | **L4** | Protocol | OSPP envelope (`messageId`, `messageType`, `action`, `timestamp`, `source`, `protocolVersion`, `payload`, `mac`) | BLE JSON payloads with `type` field |
 | **L5** | Application | Profiles (see Section 5.4) | Offline profile only |
@@ -443,14 +443,14 @@ Before first boot, the station must be configured with network and security cred
 | Parameter | Description |
 |-----------|-------------|
 | Network | WiFi SSID + password, or cellular APN |
-| MQTT broker URL | `mqtts://{broker}:8883` (TLS 1.3, port 8883) |
+| MQTT broker URL | `mqtts://{broker}:8883` (TLS 1.2+/1.3, port 8883) |
 | TLS credentials | Station certificate + CA chain → stored in secure element or encrypted NVS |
 | `stationId` | Confirmed (matches certificate CN) |
 
 ### 7.3 First Boot
 
 1. All bays initialize to **Unknown** state.
-2. Station establishes a **TLS 1.3 connection** to the MQTT broker (mTLS — both sides present certificates).
+2. Station establishes a **TLS 1.2+ (1.3 recommended) connection** to the MQTT broker (mTLS — both sides present certificates).
 3. Station subscribes to its `to-station` topic, then sends a **BootNotification REQUEST** [MSG-001].
 4. Server responds with one of:
 
@@ -491,6 +491,6 @@ OSPP defines **station-to-server communication** (MQTT 5.0) and **app-to-station
 |------|-----------|
 | **Mobile App ↔ Server API** | The REST/HTTP interface between mobile applications and the server (account management, credit purchases, session initiation via web payment) is implementation-specific. Each operator defines their own API. OSPP does not constrain this interface. |
 | **Customer Data Management** | GDPR compliance, right-to-deletion, and personal data handling are server-side and application-side concerns. OSPP messages carry operational identifiers (`sessionId`, `userId` tokens), not personally identifiable information. |
-| **Deployment Topology** | Broker clustering, database selection, server-side HA, network segmentation, and monitoring stack are operator concerns. OSPP specifies protocol-level requirements (e.g., TLS 1.3, mTLS, shared subscriptions) but does not mandate specific infrastructure. A dedicated deployment chapter is planned for v0.2. |
+| **Deployment Topology** | Broker clustering, database selection, server-side HA, network segmentation, and monitoring stack are operator concerns. OSPP specifies protocol-level requirements (e.g., TLS 1.2+, mTLS, shared subscriptions) but does not mandate specific infrastructure. A dedicated deployment chapter is planned for v0.2. |
 
 > These boundaries are intentional. OSPP focuses on the interoperability surface between station hardware and backend systems. Server-side APIs, mobile client design, and infrastructure topology vary widely across operators and are best left to implementation.

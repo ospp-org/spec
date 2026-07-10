@@ -1,6 +1,6 @@
 ---
 status: Draft
-ospp-version: 0.6.2
+ospp-version: 0.7.0
 ---
 
 # OSPP Specification — Reading Guide
@@ -14,8 +14,8 @@ ospp-version: 0.6.2
 | Field | Value |
 |-------|-------|
 | Status | Draft |
-| OSPP Version | 0.6.2 |
-| Last Updated | 2026-06-22 |
+| OSPP Version | 0.7.0 |
+| Last Updated | 2026-07-10 |
 
 ## Document Map
 
@@ -30,7 +30,7 @@ domain-specific behavior.
 | -- | [glossary.md](glossary.md) | Glossary | Draft | Normative definitions of all terms used across the specification. |
 | 00 | [00-introduction.md](00-introduction.md) | Introduction | Draft | Scope, audience, document conventions, normative and informative references. |
 | 01 | [01-architecture.md](01-architecture.md) | Architecture | Draft | System topology, hardware model, identity scheme, controller topologies, communication stack. |
-| 02 | [02-transport.md](02-transport.md) | Transport | Draft | MQTT 5.0 / TLS 1.3, BLE GATT, HTTPS REST, topic structure, QoS, connection lifecycle, ACL. |
+| 02 | [02-transport.md](02-transport.md) | Transport | Draft | MQTT 5.0 / TLS 1.2+/1.3, BLE GATT, HTTPS REST, topic structure, QoS, connection lifecycle, ACL. |
 | 03 | [03-messages.md](03-messages.md) | Message Catalog | Draft | Normative reference for every OSPP message: payload schemas, metadata, examples. |
 | 04 | [04-flows.md](04-flows.md) | Protocol Flows | Draft | End-to-end protocol flows for boot, sessions, reservations, offline scenarios. |
 | 05 | [05-state-machines.md](05-state-machines.md) | State Machines | Draft | Bay, Session, Reservation, BLE Connection, and Firmware Update FSMs. |

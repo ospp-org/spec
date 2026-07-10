@@ -146,9 +146,9 @@
         },
         "tlsVersion": {
           "type": "string",
-          "enum": ["1.3"],
-          "default": "1.3",
-          "description": "Minimum TLS version. Chapter 06 — Security §4.1 / Chapter 02 — Transport §1.3 mandate TLS 1.3 only. TLS 1.2 fallback MUST NOT be permitted; TLS 0-RTT MUST NOT be enabled."
+          "enum": ["1.2", "1.3"],
+          "default": "1.2",
+          "description": "Minimum TLS version the station must support; the broker accepts this version OR HIGHER (a floor, not the negotiated session version). Chapter 02 — Transport §1.3: MQTT connections MUST use TLS 1.2 or higher, with TLS 1.3 RECOMMENDED. TLS 0-RTT MUST NOT be enabled."
         },
         "mqttVersion": {
           "type": "string",
@@ -164,7 +164,7 @@
           "description": "OPTIONAL Last Will and Testament topic template. When present the station SHOULD publish a ConnectionLost LWT (MSG-011) on this topic at MQTT CONNECT. The {stationId} placeholder, if present, is substituted by the station. Defaults to {topicPrefix}/stations/{stationId}/to-server when omitted (Chapter 02 — Transport §4.3)."
         }
       },
-      "description": "MQTT 5.0 broker connection parameters. Defaults align with Chapter 02 — Transport §1.2 normative values; servers SHOULD NOT advertise values that contradict §1.2 (the schema rejects QoS≠1, cleanStart≠false, mqttVersion≠5.0, tlsVersion≠1.3 to enforce this)."
+      "description": "MQTT 5.0 broker connection parameters. Defaults align with Chapter 02 — Transport §1.2 normative values; servers SHOULD NOT advertise values that contradict §1.2 (the schema rejects QoS≠1, cleanStart≠false, mqttVersion≠5.0, tlsVersion below the 1.2 floor to enforce this)."
     }
   }
 }

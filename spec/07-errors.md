@@ -1,6 +1,6 @@
 # Chapter 07 — Error Codes & Resilience
 
-> **Status:** Draft | **OSPP Version:** 0.6.2
+> **Status:** Draft | **OSPP Version:** 0.7.0
 
 This chapter defines the complete error taxonomy for the OSPP protocol, including the error code registry, standard error response format, retry policies, circuit breaker patterns, and graceful degradation behavior.
 
@@ -205,7 +205,7 @@ Transport errors cover network connectivity, protocol negotiation, message forma
 | 1000 | `TRANSPORT_GENERIC` | Error | true | Unclassified transport or communication error. | Retry with exponential backoff; if persistent, report to server. |
 | 1001 | `MQTT_CONNECTION_LOST` | Error | true | MQTT connection to broker was lost unexpectedly. | Reconnect with exponential backoff (1s→30s cap). Buffer events locally. See §5.1. |
 | 1002 | `MQTT_PUBLISH_FAILED` | Error | true | MQTT PUBLISH failed after all QoS 1 delivery attempts. | Retry publish; if repeated, check broker connectivity. Buffer message for later delivery. |
-| 1003 | `TLS_HANDSHAKE_FAILED` | Critical | false | TLS 1.3 handshake failed (cipher negotiation, certificate validation, or version mismatch). | Verify certificate chain and expiry. Check TLS library version. Report via SecurityEvent [MSG-012]. |
+| 1003 | `TLS_HANDSHAKE_FAILED` | Critical | false | TLS handshake failed (cipher negotiation, certificate validation, or version mismatch). | Verify certificate chain and expiry. Check TLS library version. Report via SecurityEvent [MSG-012]. |
 | 1004 | `CERTIFICATE_ERROR` | Critical | false | X.509 certificate is expired, revoked, self-signed, or has an invalid chain. | Station: enter provisioning mode for certificate renewal. Server: reject connection, alert operator. |
 | 1005 | `INVALID_MESSAGE_FORMAT` | Error | false | Received message is not valid JSON, is missing required envelope fields, or has invalid field types. | Log the malformed message. Do NOT retry — sender must fix the message. |
 | 1006 | `UNKNOWN_ACTION` | Warning | false | Received message has an `action` field that is not recognized by this implementation. | Respond with REJECTED. Sender should verify protocol version and action name. |

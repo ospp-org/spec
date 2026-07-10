@@ -1,6 +1,6 @@
 # Glossary
 
-> **Status:** Draft | **OSPP Version:** 0.6.2
+> **Status:** Draft | **OSPP Version:** 0.7.0
 
 This glossary provides normative definitions for all terms used throughout the OSPP
 specification. Where a definition involves a requirement, normative language
@@ -346,8 +346,10 @@ specification. Where a definition involves a requirement, normative language
 
 **TLS (Transport Layer Security)**
 : The cryptographic protocol used to secure MQTT and HTTPS connections. OSPP
-  **REQUIRES** TLS 1.3 (RFC 8446); earlier versions **MUST NOT** be used.
-  0-RTT (early data) **MUST NOT** be enabled due to replay risk.
+  **REQUIRES** TLS 1.2 or higher; TLS 1.3 (RFC 8446) is **RECOMMENDED** and MUST
+  be negotiated whenever both peers support it. Versions below 1.2 (1.1, 1.0,
+  SSLv3) **MUST NOT** be used. 0-RTT (early data) **MUST NOT** be enabled due to
+  replay risk.
   See [Chapter 02, Section 1.3](02-transport.md) and [Chapter 06, Section 2](06-security.md).
 
 **Topic**
