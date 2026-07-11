@@ -30,7 +30,7 @@ Security considerations for setting up and running OSPP conformance tests.
 
 ## 3. Network Requirements
 
-- The test network **MUST** support TLS 1.3 for MQTT connections.
+- The test network **MUST** support TLS 1.2 and TLS 1.3 for MQTT connections (the floor is TLS 1.2; TLS-1.3-capable stations negotiate 1.3).
 - For mTLS tests (`TC-SEC-002`), the test harness **MUST** be able to present
   valid, expired, self-signed, and revoked certificates.
 - Network simulation capabilities (latency injection, packet loss, disconnection)

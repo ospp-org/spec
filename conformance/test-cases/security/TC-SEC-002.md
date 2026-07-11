@@ -6,7 +6,7 @@ Security Profile
 
 ## Purpose
 
-Verify that the station presents a valid X.509 client certificate during the TLS 1.3 handshake with the MQTT broker, that the server validates the certificate chain correctly, and that connections with expired, revoked, or self-signed certificates are rejected with the appropriate error codes (`1003 TLS_HANDSHAKE_FAILED`, `1004 CERTIFICATE_ERROR`).
+Verify that the station presents a valid X.509 client certificate during the TLS handshake (TLS 1.2 or 1.3) with the MQTT broker, that the server validates the certificate chain correctly, and that connections with expired, revoked, or self-signed certificates are rejected with the appropriate error codes (`1003 TLS_HANDSHAKE_FAILED`, `1004 CERTIFICATE_ERROR`).
 
 ## References
 
@@ -34,7 +34,7 @@ Verify that the station presents a valid X.509 client certificate during the TLS
 
 1. Configure the station with the valid client certificate and private key.
 2. Power on the station or trigger reconnection.
-3. Observe the TLS 1.3 handshake between the station and the broker.
+3. Observe the TLS handshake (TLS 1.2 or 1.3) between the station and the broker.
 4. Verify the station presents its client certificate during the handshake.
 5. Verify the broker accepts the certificate (handshake completes successfully).
 6. Observe the station establishes the MQTT connection.
@@ -87,7 +87,7 @@ Verify that the station presents a valid X.509 client certificate during the TLS
 
 ## Expected Results
 
-1. A station with a valid certificate completes the TLS 1.3 handshake and proceeds to MQTT connect + BootNotification.
+1. A station with a valid certificate completes the TLS handshake (TLS 1.2 or 1.3) and proceeds to MQTT connect + BootNotification.
 2. The station's certificate contains proper attributes (stationId in SAN, clientAuth key usage, valid chain).
 3. An expired certificate causes TLS handshake failure; no MQTT connection is established.
 4. A self-signed certificate causes TLS handshake failure; no MQTT connection is established.

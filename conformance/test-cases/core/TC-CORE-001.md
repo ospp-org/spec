@@ -31,7 +31,7 @@ Verify that a station sends BootNotification as the first message after establis
 ### Part A — Accepted Response
 
 1. Power on the station (or trigger a software reboot).
-2. Observe that the station establishes a TLS 1.3 connection to the MQTT broker.
+2. Observe that the station establishes a TLS connection (TLS 1.2 or 1.3; the floor is TLS 1.2) to the MQTT broker.
 3. Verify that the MQTT CONNECT packet includes a Last Will and Testament (LWT) message on the station's ConnectionLost topic.
 4. Observe the first MQTT PUBLISH from the station.
 5. Validate that the message `action` is `BootNotification`.

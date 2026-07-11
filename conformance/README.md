@@ -54,7 +54,7 @@ level to enable rapid local development and testing.
 
 A Standard-compliant station **MUST** pass all `TC-CORE-*`, `TC-TX-*`, and
 `TC-SEC-*` test cases. This is the **minimum level for production deployment** —
-it validates session lifecycle, metering, and mandatory security (TLS 1.3 + mTLS +
+it validates session lifecycle, metering, and mandatory security (TLS 1.2+, mTLS, and
 HMAC-SHA256).
 
 | Requirement | Test Cases |

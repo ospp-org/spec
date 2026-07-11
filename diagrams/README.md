@@ -37,7 +37,7 @@ graph TB
     APP -->|"HTTPS REST<br/>JWT Auth"| SERVER
     WEB -->|"HTTPS REST<br/>Session Token"| SERVER
     SERVER <-->|"MQTT 5.0<br/>Internal"| BROKER
-    BROKER <-->|"MQTT 5.0<br/>mTLS / TLS 1.3<br/>QoS 1"| CTRL
+    BROKER <-->|"MQTT 5.0<br/>mTLS / TLS 1.2+<br/>QoS 1"| CTRL
     PG -->|"Webhook<br/>HMAC-SHA512"| SERVER
     SERVER -->|"Payment API<br/>HTTPS"| PG
     SERVER <--> DB

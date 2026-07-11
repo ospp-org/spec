@@ -33,7 +33,7 @@ It is 10:00 UTC on a cold February morning in Example City. A technician powers 
 10:00:01.200  Hardware init complete: relays, pumps, meters self-tested OK
 10:00:01.500  BLE radio initialized, starts advertising as OSPP-b2c3d4
 10:00:02.000  mTLS certificates loaded from NVS
-10:00:02.300  MQTT CONNECT sent to broker.example.com:8883 (TLS 1.3, client cert)
+10:00:02.300  MQTT CONNECT sent to broker.example.com:8883 (TLS 1.2+ floor; 1.3 negotiated, client cert)
 10:00:02.650  CONNACK received — connection established
 10:00:02.700  SUBSCRIBE to ospp/v1/stations/stn_a1b2c3d4/to-station (QoS 1)
 10:00:02.750  SUBACK received
@@ -93,7 +93,7 @@ The station loads its TLS client certificate and private key from NVS, then init
 | Parameter | Value |
 |-----------|-------|
 | Broker | `broker.example.com:8883` |
-| TLS | TLS 1.3, client certificate authentication |
+| TLS | TLS 1.2+ (1.3 negotiated in this trace), client certificate authentication |
 | Client ID | `stn_a1b2c3d4` |
 | Clean Start | `false` (resume any queued QoS 1 messages) |
 | Keep Alive | 30 seconds |

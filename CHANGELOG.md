@@ -8,6 +8,26 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.7.0] — 2026-07-10
+
+> **TLS 1.2 floor + provisioning-token idempotency.** Lowers the MQTT/mTLS transport floor from TLS-1.3-only to **TLS 1.2 minimum (TLS 1.3 recommended, negotiated when both peers support it)** so cellular modems capped at TLS 1.2 (e.g. SIMCom A7608E-H) can connect. Sub-1.2 remains rejected, 0-RTT remains forbidden, and mTLS is unchanged — reinforced as mandatory on every connection regardless of negotiated TLS version. Also formalises provisioning-token §2 (single-use + TTL-bounded idempotent retry). `spec/schemas/provisioning-response.schema.json` changes (`tlsVersion` enum widened + re-described as a floor), so the SDK schemas re-vendor at the **v0.7.0** lockstep tag.
+
+### Changed (BREAKING)
+
+- **`tlsVersion` (provisioning-response schema) widened `["1.3"]` → `["1.2", "1.3"]`, default `"1.3"` → `"1.2"`, and its semantics changed from "the TLS version" to a **minimum floor** ("the station must support this version; the broker accepts this version or higher").** `06-security.md` §2.1 cipher table now offers exactly four suites — TLS 1.3: `TLS_AES_256_GCM_SHA384`, `TLS_AES_128_GCM_SHA256`; TLS 1.2: `ECDHE-ECDSA-AES256-GCM-SHA384`, `ECDHE-ECDSA-AES128-GCM-SHA256` (ECDHE-ECDSA / AEAD-GCM only, matching the ECDSA P-256 server certificate; `TLS_CHACHA20_POLY1305_SHA256` dropped from the offered set). Sub-1.2 (TLS 1.0/1.1, SSLv3), CBC-mode, RSA-key-exchange and 3DES suites MUST NOT be offered or accepted; TLS 0-RTT remains MUST-NOT.
+
+### Added
+
+- **Provisioning-token §2 — single-use + idempotent retry (`04-flows.md`).** A provisioning token authorises exactly one certificate and is consumed on first success; a retry within the token's 24-hour TTL is idempotent (returns the byte-identical certificate and MUST NOT mint a second identity); once the TTL elapses, or if the token is superseded or administratively revoked, it is invalid for all purposes and MUST be rejected with `401 Unauthorized` (`04-flows.md` §2 "Single-use and idempotent retry" + its Error Paths table; `07-errors.md` §3.1).
+
+### Changed
+
+- Version cascade `0.6.2 → 0.7.0` across all spec document headers. Doc-consistency cascade: the implementor's guide, conformance suite, root `README`, and architecture diagrams updated from the former TLS-1.3-only wording to the TLS 1.2 floor. The TLS `spec/schemas/` change is limited to `provisioning-response.schema.json`; the conformance-vector corpus is **unchanged** (BLE crypto / HKDF domain-separation labels and the `specRef: v0.6.0` crypto vectors are deliberately left as-is — bumping them would break the key schedule / corpus). `verify-schemas.py` stays `306/306`.
+
+### SDK (lockstep, ADR-001)
+
+- `ospp-sdk-php` + `sdk-ts`: `schemas/provisioning-response.schema.json` re-vendored at the **v0.7.0** lockstep tag (`tlsVersion` enum `["1.2","1.3"]`, default `"1.2"`, floor semantics). Byte-identical to the canonical `spec/schemas/provisioning-response.schema.json`.
+
 ## [0.6.2] — 2026-06-22
 
 > **SDK enum catch-up (lockstep, ADR-001).** No spec content change. `ServerSignedAuthReplay` (SecurityEvent type) and error `2018 SERVER_AUTH_NONCE_MISMATCH` were both fully specified in [0.6.1] — schema enum, `security-event.md` §4, `07-errors.md` §3.2, and `03-messages.md` Appendix C — but the hand-maintained enum types in `ospp-sdk-php` and `sdk-ts` had not yet mirrored them. v0.6.2 catches the SDK enums up to the already-vendored schema and bumps all three repos to the same lockstep tag. No wire change; `spec/schemas/` is byte-identical to [0.6.1].

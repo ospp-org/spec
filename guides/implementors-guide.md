@@ -2,7 +2,7 @@
 
 > **For:** Developers building OSPP-compatible stations, servers, or user agents
 > **Level:** Practical guide, not formal spec. Read this first, then the spec chapters.
-> **Spec Version:** 0.6.0
+> **Spec Version:** 0.7.0
 
 ---
 
@@ -34,7 +34,7 @@ The protocol handles:
 ### The Three Actors
 
 ```
-+----------+         MQTT/TLS 1.3        +----------+       HTTPS/JWT        +----------+
++----------+         MQTT/TLS 1.2+       +----------+       HTTPS/JWT        +----------+
 | Station  |<=========================>| Server   |<=====================>| App/Web  |
 |  (SSP)   |                            |  (CSMS)  |                       |  (Agent) |
 +----------+                            +----------+                       +----------+
@@ -118,7 +118,7 @@ Make sure you understand:
 
 1. **MQTT 5.0** — Not 3.1.1. You need MQTT 5.0 features (message expiry, session expiry, will delay interval). If you haven't used MQTT before, read [the OASIS spec](https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html) or a good tutorial.
 
-2. **TLS 1.3 with mutual authentication (mTLS)** — Both the station and broker present certificates. The broker's ACL uses the station's certificate CN for topic authorization.
+2. **TLS 1.2+ (TLS 1.3 recommended) with mutual authentication (mTLS)** — Both the station and broker present certificates. The broker's ACL uses the station's certificate CN for topic authorization.
 
 3. **BLE GATT** (if implementing Offline) — The station is a BLE peripheral with 6 characteristics. The app is a BLE central.
 
@@ -979,7 +979,7 @@ Test the error scenarios in `/examples/error-scenarios/`:
 
 ### 5.6 Security Testing Checklist
 
-- [ ] TLS 1.3 only — does your station reject TLS 1.2?
+- [ ] TLS 1.2 floor — does your station reject TLS versions below 1.2 (1.0/1.1)?
 - [ ] mTLS — does the broker reject a station with an invalid certificate?
 - [ ] HMAC verification — does your station reject a message with a bad `mac`?
 - [ ] Replay protection — does your deduplication catch a replayed `messageId`?
@@ -1067,7 +1067,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 ### Transport
 
 - [ ] **[MUST]** MQTT 5.0 protocol (NOT 3.1.1)
-- [ ] **[MUST]** TLS 1.3 mandatory (TLS 1.2 forbidden)
+- [ ] **[MUST]** TLS 1.2+ mandatory (TLS below 1.2 forbidden; TLS 1.3 recommended)
 - [ ] **[MUST]** mTLS — station presents X.509 client certificate
 - [ ] **[MUST]** Client ID = `stn_{station_id}` matching certificate CN
 - [ ] **[MUST]** QoS 1 for all messages
@@ -1085,7 +1085,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** 0-RTT TLS resumption NOT used
 - [ ] **[SHOULD]** Max Packet Size = 65,536 bytes
 - [ ] **[SHOULD]** Receive Maximum = 10
-- [ ] **[SHOULD]** TLS cipher suite: `TLS_AES_256_GCM_SHA384` preferred
+- [ ] **[SHOULD]** TLS cipher suites: TLS 1.3 — `TLS_AES_256_GCM_SHA384` (preferred), `TLS_AES_128_GCM_SHA256`; TLS 1.2 — `ECDHE-ECDSA-AES256-GCM-SHA384`, `ECDHE-ECDSA-AES128-GCM-SHA256` (ECDHE-ECDSA/AEAD-GCM only, matching the ECDSA P-256 server cert)
 
 ### Message Format
 
@@ -1220,7 +1220,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 
 | Purpose | Algorithm | Key Size |
 |---------|-----------|----------|
-| Transport | TLS 1.3 | — |
+| Transport | TLS 1.2+ (1.3 recommended) | — |
 | Station TLS | mTLS (ECDSA P-256) | 256 bit |
 | Root CA | ECDSA P-384 | 384 bit |
 | Message signing | HMAC-SHA256 | 256 bit |
@@ -1233,4 +1233,4 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 
 ---
 
-*This guide covers OSPP 0.6.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*
+*This guide covers OSPP 0.7.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*
