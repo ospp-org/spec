@@ -16,77 +16,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-python@v5
         with:
-          node-version: '20'
+          python-version: '3.12'
 
-      - name: Install ajv-cli
-        run: npm install -g ajv-cli@5 ajv-formats@3
+      - name: Install jsonschema
+        run: pip install jsonschema
 
-      - name: Validate valid test vectors (must pass)
+      - name: Validate test vectors (0-skip enforced)
         run: |
-          shopt -s globstar nullglob
-          failed=0
-          for f in conformance/test-vectors/valid/**/*.json; do
-            # Extract schema path from the filename convention
-            dir=$(basename "$(dirname "$f")")
-            base=$(basename "$f" .json)
-            # Try to find matching schema
-            schema_name=$(echo "$base" | sed 's/-minimal$//' | sed 's/-full$//' | sed 's/-[0-9]*$//')
-            # Prefer BLE schemas for offline test vectors to avoid MQTT/BLE name collisions
-            if [[ "$dir" == "offline" ]]; then
-              schema="schemas/ble/${schema_name}.schema.json"
-              if [ ! -f "$schema" ]; then
-                schema="schemas/mqtt/${schema_name}.schema.json"
-              fi
-            else
-              schema="schemas/mqtt/${schema_name}.schema.json"
-              if [ ! -f "$schema" ]; then
-                schema="schemas/ble/${schema_name}.schema.json"
-              fi
-            fi
-            if [ ! -f "$schema" ]; then
-              echo "SKIP: No schema found for $f"
-              continue
-            fi
-            if ajv validate -s "$schema" -r "schemas/common/*.schema.json" -d "$f" --spec=draft2020 -c ajv-formats 2>/dev/null; then
-              echo "PASS: $f"
-            else
-              echo "FAIL: $f"
-              failed=1
-            fi
-          done
-          exit $failed
+          # Real validator: checks every vector under conformance/test-vectors/**
+          # against its schema (no args, cwd-independent, stdlib + jsonschema only).
+          # It exits nonzero on any FAIL, but a vector that can't be mapped to a
+          # schema is counted as SKIP, not FAIL — so a discovery gap would NOT by
+          # itself make the script exit nonzero. Guard against that vacuity
+          # explicitly: the job must also fail if any vector was skipped.
+          out=$(python3 tools/verify-schemas.py) || rc=$?
+          rc="${rc:-0}"
+          echo "$out"
 
-      - name: Validate invalid test vectors (must fail)
-        run: |
-          shopt -s globstar nullglob
-          errors=0
-          for f in conformance/test-vectors/invalid/**/*.json; do
-            dir=$(basename "$(dirname "$f")")
-            base=$(basename "$f" .json)
-            schema_name=$(echo "$base" | sed 's/-missing-.*$//' | sed 's/-invalid-.*$//' | sed 's/-extra-.*$//' | sed 's/-additional-.*$//')
-            # Prefer BLE schemas for offline test vectors to avoid MQTT/BLE name collisions
-            if [[ "$dir" == "offline" ]]; then
-              schema="schemas/ble/${schema_name}.schema.json"
-              if [ ! -f "$schema" ]; then
-                schema="schemas/mqtt/${schema_name}.schema.json"
-              fi
-            else
-              schema="schemas/mqtt/${schema_name}.schema.json"
-              if [ ! -f "$schema" ]; then
-                schema="schemas/ble/${schema_name}.schema.json"
-              fi
-            fi
-            if [ ! -f "$schema" ]; then
-              echo "SKIP: No schema found for $f"
-              continue
-            fi
-            if ajv validate -s "$schema" -r "schemas/common/*.schema.json" -d "$f" --spec=draft2020 -c ajv-formats 2>/dev/null; then
-              echo "FAIL (should have been rejected): $f"
-              errors=1
-            else
-              echo "PASS (correctly rejected): $f"
-            fi
-          done
-          exit $errors
+          if [ "$rc" -ne 0 ]; then
+            echo "::error::verify-schemas.py exited $rc — FAIL(s) present (see output above)"
+            exit "$rc"
+          fi
+
+          if echo "$out" | grep -q '^SKIP'; then
+            echo "::error::validator reported SKIP line(s) — a vector could not be mapped to a schema (discovery gap)"
+            exit 1
+          fi
+
+          if ! echo "$out" | grep -qE '0 SKIP'; then
+            echo "::error::validator summary does not confirm 0 SKIP — discovery gap"
+            exit 1
+          fi
+
+          echo "Non-vacuity check passed: exit $rc, 0 SKIP — all vectors mapped and validated"
