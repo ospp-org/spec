@@ -1,6 +1,6 @@
 # BLE Session Lifecycle
 
-> **Status:** Draft | **OSPP Version:** 0.7.0
+> **Status:** Draft | **OSPP Version:** 0.8.0
 
 ## 1. Starting a Service
 
@@ -95,7 +95,7 @@ During an active service, the station sends periodic Service Status notification
 | `ReceiptReady` | Receipt is available for reading on FFF6. |
 | `Error` | A hardware or software error occurred during the session. |
 
-**Notification interval:** Configurable via `BLEStatusInterval` (default 5 seconds, range 1--30 seconds). The station **MUST** send at least one notification per interval while the service is in `Starting` or `Running` status.
+**Notification interval:** 5 seconds. The station **MUST** send at least one notification per interval while the service is in `Starting` or `Running` status.
 
 **App disconnection during session:** If the BLE connection drops while the service is running, the station **MUST** continue the service until the auto-stop timer expires. The station **MUST NOT** stop the service prematurely due to app disconnection. When the app reconnects, it **MAY** re-subscribe to FFF5 to resume monitoring.
 

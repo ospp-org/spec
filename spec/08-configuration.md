@@ -1,6 +1,6 @@
 # Chapter 08 — Configuration
 
-> **Status:** Draft | **OSPP Version:** 0.7.0
+> **Status:** Draft | **OSPP Version:** 0.8.0
 
 This chapter defines the configuration model for OSPP stations, including the key-value store structure, supported data types, access modes, mutability semantics, and the complete registry of standard configuration keys. Configuration is read and written via the [GetConfiguration](03-messages.md#62-getconfiguration) and [ChangeConfiguration](03-messages.md#61-changeconfiguration) messages defined in Chapter 03.
 
@@ -12,7 +12,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHALL NOT**, **S
 
 ### 1.1 Key-Value Structure
 
-Each station maintains a flat **key-value store** containing all configuration parameters. Keys are strings in **PascalCase** (e.g., `HeartbeatIntervalSeconds`, `BLEAdvertisingEnabled`). Values are typed according to Section 1.2.
+Each station maintains a flat **key-value store** containing all configuration parameters. Keys are strings in **PascalCase** (e.g., `HeartbeatIntervalSeconds`, `OfflineModeEnabled`). Values are typed according to Section 1.2.
 
 The server reads configuration values via a **GetConfiguration** REQUEST and writes configuration values via a **ChangeConfiguration** REQUEST. Both messages are defined in [Chapter 03 -- Messages](03-messages.md), Section 6.
 
@@ -65,10 +65,10 @@ Configuration keys are organized into profiles that align with station capabilit
 
 | Profile | Keys | Required |
 |---------|------|:--------:|
-| **Core** | HeartbeatIntervalSeconds, ConnectionTimeout, ReconnectBackoffMax, StationName, TimeZone, ProtocolVersion, FirmwareVersion, BootRetryInterval, StatusNotificationInterval, EventThrottleSeconds, ConnectionLostGracePeriod, Locale | Yes |
+| **Core** | HeartbeatIntervalSeconds, ConnectionTimeout, ReconnectBackoffMax, StationName, TimeZone, ProtocolVersion, FirmwareVersion, BootRetryInterval, ConnectionLostGracePeriod | Yes |
 | **Transaction** | MeterValuesInterval, MeterValuesSampleInterval, MaxSessionDurationSeconds, SessionTimeout, ReservationDefaultTTL, DefaultCreditsPerSession | Yes |
-| **Security** | SecurityProfile, CertificateSerialNumber, AuthorizationCacheEnabled, MessageSigningMode, OfflinePassPublicKey, CertificateRenewalThresholdDays, CertificateRenewalEnabled | Yes |
-| **Offline / BLE** | OfflineModeEnabled, MaxOfflineTransactions, OfflinePassMaxAge, BLEAdvertisingEnabled, MaxConcurrentBLEConnections, BLEAdvertisingInterval, BLETxPower, BLEConnectionTimeout, BLEMTUPreferred, BLEStatusInterval, RevocationEpoch, BLEMaxRetries | Conditional (required if `capabilities.bleSupported = true`) |
+| **Security** | CertificateSerialNumber, AuthorizationCacheEnabled, MessageSigningMode, OfflinePassPublicKey, CertificateRenewalThresholdDays, CertificateRenewalEnabled | Yes |
+| **Offline / BLE** | OfflineModeEnabled, MaxOfflineTransactions, OfflinePassMaxAge, RevocationEpoch | Conditional (required if `capabilities.bleSupported = true`) |
 | **Device Management** | FirmwareUpdateEnabled, DiagnosticsUploadUrl, LogLevel, AutoRebootEnabled | Yes |
 | **Vendor-Specific** | `Vendor_{VendorName}_*` | No |
 
@@ -80,7 +80,7 @@ A station MUST support all keys in the required profiles. A station that adverti
 
 | Key | Type | Default | Access | Mutability | Range | Description |
 |-----|------|---------|:------:|:----------:|-------|-------------|
-| `HeartbeatIntervalSeconds` | integer | `30` | RW | Dynamic | 10--3600 | Heartbeat period in seconds. The station sends a Heartbeat REQUEST at this interval. Also configurable via BootNotification RESPONSE. |
+| `HeartbeatIntervalSeconds` | integer | `30` | RW | Dynamic | 30--3600 | Heartbeat period in seconds. The station sends a Heartbeat REQUEST at this interval. Also configurable via BootNotification RESPONSE. |
 | `ConnectionTimeout` | integer | `60` | RW | Dynamic | 10--300 | MQTT connection timeout in seconds. If the station cannot establish a connection within this window, it MUST initiate reconnection with backoff. |
 | `ReconnectBackoffMax` | integer | `30` | RW | Dynamic | 30--3600 | Maximum reconnect backoff delay in seconds (see [Chapter 02](02-transport.md), Section 4.5). |
 | `StationName` | string | `""` | RW | Static | max 100 chars | Human-readable station name for display in management dashboards. |
@@ -88,10 +88,7 @@ A station MUST support all keys in the required profiles. A station that adverti
 | `ProtocolVersion` | string | `"0.2.1"` | R | Static | -- | OSPP protocol version supported by the station. ReadOnly; the station firmware determines this value. |
 | `FirmwareVersion` | string | -- | R | Static | -- | Current firmware version in semver format (e.g., `"1.2.3"`). ReadOnly; updated only via firmware update. |
 | `BootRetryInterval` | integer | `30` | RW | Dynamic | 10--600 | Retry interval in seconds when BootNotification is rejected or pending. |
-| `StatusNotificationInterval` | integer | `0` | RW | Dynamic | 0--3600 | Interval in seconds for periodic StatusNotification events. 0 disables periodic notifications (only state-change-triggered). |
-| `EventThrottleSeconds` | integer | `0` | RW | Dynamic | 0--60 | Minimum interval in seconds between consecutive StatusNotification events for the same bay. 0 disables throttling. |
 | `ConnectionLostGracePeriod` | integer | `300` | RW | Dynamic | 60--600 | Duration in seconds to wait before terminating orphaned sessions after MQTT connection loss. |
-| `Locale` | string | `"en-US"` | RW | Dynamic | BCP 47 tag | BCP 47 language tag for station display locale (e.g., `"ro-RO"`, `"en-US"`). |
 
 ---
 
@@ -99,11 +96,11 @@ A station MUST support all keys in the required profiles. A station that adverti
 
 | Key | Type | Default | Access | Mutability | Range | Description |
 |-----|------|---------|:------:|:----------:|-------|-------------|
-| `MeterValuesInterval` | integer | `15` | RW | Dynamic | 5--300 | Interval in seconds between MeterValues event reports during an active session. |
+| `MeterValuesInterval` | integer | `60` | RW | Dynamic | 10--3600 | Interval in seconds between MeterValues event reports during an active session. |
 | `MeterValuesSampleInterval` | integer | `10` | RW | Dynamic | 1--60 | Sensor sampling interval in seconds. Controls how frequently the station reads hardware sensors. Aggregated values are reported to the server at `MeterValuesInterval`. |
-| `MaxSessionDurationSeconds` | integer | `600` | RW | Dynamic | 60--7200 | Maximum session duration in seconds. The station MUST auto-stop the service when this limit is reached. |
+| `MaxSessionDurationSeconds` | integer | `900` | RW | Dynamic | 60--3600 | Maximum session duration in seconds. The station MUST auto-stop the service when this limit is reached. |
 | `SessionTimeout` | integer | `120` | RW | Dynamic | 30--600 | Idle session timeout in seconds. If no user interaction occurs within this window after session start, the station MAY stop the service. |
-| `ReservationDefaultTTL` | integer | `180` | RW | Dynamic | 60--1800 | Reservation time-to-live in seconds. Expired reservations are automatically cancelled. |
+| `ReservationDefaultTTL` | integer | `300` | RW | Dynamic | 60--1800 | Reservation time-to-live in seconds. Expired reservations are automatically cancelled. |
 | `DefaultCreditsPerSession` | integer | `100` | RW | Dynamic | 1--10000 | Default credit authorization amount in minor currency units when no explicit amount is provided. |
 
 ---
@@ -112,7 +109,6 @@ A station MUST support all keys in the required profiles. A station that adverti
 
 | Key | Type | Default | Access | Mutability | Range | Description |
 |-----|------|---------|:------:|:----------:|-------|-------------|
-| `SecurityProfile` | integer | `2` | RW | Static | 1--3 | Security profile level. `1` = basic auth, `2` = TLS server auth, `3` = mTLS mutual auth. See [Chapter 06 — Security](06-security.md). |
 | `CertificateSerialNumber` | string | -- | R | Static | -- | Serial number of the station's current X.509 client certificate. ReadOnly; updated when a new certificate is provisioned. |
 | `AuthorizationCacheEnabled` | boolean | `true` | RW | Dynamic | -- | When `true`, the station caches authorization responses locally for faster repeat authorizations. |
 | `MessageSigningMode` | string | `"Critical"` | RW | Dynamic | `"All"`, `"Critical"`, `"None"` | Controls HMAC-SHA256 message signing. `All` = every message, `Critical` = financial/command messages only (see [Chapter 06](06-security.md), §5.6), `None` = disabled. |
@@ -131,15 +127,7 @@ These keys are REQUIRED when the station reports `capabilities.bleSupported = tr
 | `OfflineModeEnabled` | boolean | `true` | RW | Dynamic | -- | When `true`, the station accepts offline session authorization via BLE. When `false`, all BLE auth requests are rejected. |
 | `MaxOfflineTransactions` | integer | `50` | RW | Dynamic | 10--500 | Maximum number of offline transactions the station buffers before requiring server reconciliation. |
 | `OfflinePassMaxAge` | integer | `3600` | RW | Dynamic | 300--86400 | Maximum age in seconds for an OfflinePass to be considered valid. Passes older than this value MUST be rejected. |
-| `BLEAdvertisingEnabled` | boolean | `true` | RW | Dynamic | -- | Master switch for BLE advertising. When `false`, the station stops all BLE advertising and rejects new BLE connections. |
-| `MaxConcurrentBLEConnections` | integer | `1` | RW | Dynamic | 1--3 | Maximum number of simultaneous BLE GATT connections the station accepts. See [Chapter 02](02-transport.md), Section 8.2. |
-| `BLEAdvertisingInterval` | integer | `200` | RW | Dynamic | 100--2000 | BLE advertising interval in milliseconds. Lower values improve discoverability at the cost of power consumption. |
-| `BLETxPower` | integer | `4` | RW | Dynamic | -20--10 | BLE TX power in dBm. Higher values increase range at the cost of power consumption. |
-| `BLEConnectionTimeout` | integer | `30` | RW | Dynamic | 10--120 | Maximum idle time in seconds before the station drops an inactive BLE connection. |
-| `BLEMTUPreferred` | integer | `247` | RW | Dynamic | 23--517 | Preferred ATT MTU size in bytes for BLE connections. |
-| `BLEStatusInterval` | integer | `5` | RW | Dynamic | 1--30 | Interval in seconds for BLE Service Status (FFF5) characteristic notifications during active sessions. |
 | `RevocationEpoch` | integer | `0` | RW | Dynamic | 0--2147483647 | Global OfflinePass revocation epoch. Incremented by server to batch-revoke all OfflinePasses issued before this epoch. |
-| `BLEMaxRetries` | integer | `3` | RW | Dynamic | 1--10 | Maximum number of BLE reconnection attempts the app SHOULD make before falling back to error state. |
 
 ---
 
@@ -210,7 +198,7 @@ The server retrieves configuration values by sending a **GetConfiguration** REQU
 
 ```json
 {
-  "keys": ["HeartbeatIntervalSeconds", "BLEAdvertisingEnabled", "Vendor_AcmeCorp_OutputPressure"]
+  "keys": ["HeartbeatIntervalSeconds", "OfflineModeEnabled", "Vendor_AcmeCorp_OutputPressure"]
 }
 ```
 
@@ -220,7 +208,7 @@ The server retrieves configuration values by sending a **GetConfiguration** REQU
 {
   "configuration": [
     { "key": "HeartbeatIntervalSeconds", "value": "30", "readonly": false },
-    { "key": "BLEAdvertisingEnabled", "value": "true", "readonly": false }
+    { "key": "OfflineModeEnabled", "value": "true", "readonly": false }
   ],
   "unknownKeys": ["Vendor_AcmeCorp_OutputPressure"]
 }
@@ -327,38 +315,26 @@ The following table provides a consolidated reference of all standard configurat
 | 6 | `ProtocolVersion` | string | `"0.2.1"` | R | Static | Core |
 | 7 | `FirmwareVersion` | string | -- | R | Static | Core |
 | 8 | `BootRetryInterval` | integer | `30` | RW | Dynamic | Core |
-| 9 | `StatusNotificationInterval` | integer | `0` | RW | Dynamic | Core |
-| 10 | `EventThrottleSeconds` | integer | `0` | RW | Dynamic | Core |
-| 11 | `ConnectionLostGracePeriod` | integer | `300` | RW | Dynamic | Core |
-| 12 | `Locale` | string | `"en-US"` | RW | Dynamic | Core |
-| 13 | `MeterValuesInterval` | integer | `15` | RW | Dynamic | Transaction |
-| 14 | `MeterValuesSampleInterval` | integer | `10` | RW | Dynamic | Transaction |
-| 15 | `MaxSessionDurationSeconds` | integer | `600` | RW | Dynamic | Transaction |
-| 16 | `SessionTimeout` | integer | `120` | RW | Dynamic | Transaction |
-| 17 | `ReservationDefaultTTL` | integer | `180` | RW | Dynamic | Transaction |
-| 18 | `DefaultCreditsPerSession` | integer | `100` | RW | Dynamic | Transaction |
-| 19 | `SecurityProfile` | integer | `2` | RW | Static | Security |
-| 20 | `CertificateSerialNumber` | string | -- | R | Static | Security |
-| 21 | `AuthorizationCacheEnabled` | boolean | `true` | RW | Dynamic | Security |
-| 22 | `MessageSigningMode` | string | `"Critical"` | RW | Dynamic | Security |
-| 23 | `OfflinePassPublicKey` | string | -- | W | Dynamic | Security |
-| 24 | `CertificateRenewalThresholdDays` | integer | `30` | RW | Dynamic | Security |
-| 25 | `CertificateRenewalEnabled` | boolean | `true` | RW | Dynamic | Security |
-| 26 | `OfflineModeEnabled` | boolean | `true` | RW | Dynamic | Offline / BLE |
-| 27 | `MaxOfflineTransactions` | integer | `50` | RW | Dynamic | Offline / BLE |
-| 28 | `OfflinePassMaxAge` | integer | `3600` | RW | Dynamic | Offline / BLE |
-| 29 | `BLEAdvertisingEnabled` | boolean | `true` | RW | Dynamic | Offline / BLE |
-| 30 | `MaxConcurrentBLEConnections` | integer | `1` | RW | Dynamic | Offline / BLE |
-| 31 | `BLEAdvertisingInterval` | integer | `200` | RW | Dynamic | Offline / BLE |
-| 32 | `BLETxPower` | integer | `4` | RW | Dynamic | Offline / BLE |
-| 33 | `BLEConnectionTimeout` | integer | `30` | RW | Dynamic | Offline / BLE |
-| 34 | `BLEMTUPreferred` | integer | `247` | RW | Dynamic | Offline / BLE |
-| 35 | `BLEStatusInterval` | integer | `5` | RW | Dynamic | Offline / BLE |
-| 36 | `RevocationEpoch` | integer | `0` | RW | Dynamic | Offline / BLE |
-| 37 | `BLEMaxRetries` | integer | `3` | RW | Dynamic | Offline / BLE |
-| 38 | `FirmwareUpdateEnabled` | boolean | `true` | RW | Dynamic | Device Mgmt |
-| 39 | `DiagnosticsUploadUrl` | string | `""` | RW | Static | Device Mgmt |
-| 40 | `LogLevel` | string | `"Info"` | RW | Dynamic | Device Mgmt |
-| 41 | `AutoRebootEnabled` | boolean | `false` | RW | Dynamic | Device Mgmt |
+| 9 | `ConnectionLostGracePeriod` | integer | `300` | RW | Dynamic | Core |
+| 10 | `MeterValuesInterval` | integer | `60` | RW | Dynamic | Transaction |
+| 11 | `MeterValuesSampleInterval` | integer | `10` | RW | Dynamic | Transaction |
+| 12 | `MaxSessionDurationSeconds` | integer | `900` | RW | Dynamic | Transaction |
+| 13 | `SessionTimeout` | integer | `120` | RW | Dynamic | Transaction |
+| 14 | `ReservationDefaultTTL` | integer | `300` | RW | Dynamic | Transaction |
+| 15 | `DefaultCreditsPerSession` | integer | `100` | RW | Dynamic | Transaction |
+| 16 | `CertificateSerialNumber` | string | -- | R | Static | Security |
+| 17 | `AuthorizationCacheEnabled` | boolean | `true` | RW | Dynamic | Security |
+| 18 | `MessageSigningMode` | string | `"Critical"` | RW | Dynamic | Security |
+| 19 | `OfflinePassPublicKey` | string | -- | W | Dynamic | Security |
+| 20 | `CertificateRenewalThresholdDays` | integer | `30` | RW | Dynamic | Security |
+| 21 | `CertificateRenewalEnabled` | boolean | `true` | RW | Dynamic | Security |
+| 22 | `OfflineModeEnabled` | boolean | `true` | RW | Dynamic | Offline / BLE |
+| 23 | `MaxOfflineTransactions` | integer | `50` | RW | Dynamic | Offline / BLE |
+| 24 | `OfflinePassMaxAge` | integer | `3600` | RW | Dynamic | Offline / BLE |
+| 25 | `RevocationEpoch` | integer | `0` | RW | Dynamic | Offline / BLE |
+| 26 | `FirmwareUpdateEnabled` | boolean | `true` | RW | Dynamic | Device Mgmt |
+| 27 | `DiagnosticsUploadUrl` | string | `""` | RW | Static | Device Mgmt |
+| 28 | `LogLevel` | string | `"Info"` | RW | Dynamic | Device Mgmt |
+| 29 | `AutoRebootEnabled` | boolean | `false` | RW | Dynamic | Device Mgmt |
 
-**Total: 41 standard configuration keys** (12 Core + 6 Transaction + 7 Security + 12 Offline/BLE + 4 Device Management).
+**Total: 29 standard configuration keys** (9 Core + 6 Transaction + 6 Security + 4 Offline/BLE + 4 Device Management).

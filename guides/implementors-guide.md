@@ -470,14 +470,11 @@ Supported keys:
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `HeartbeatIntervalSeconds` | int (seconds) | 30 | How often to send Heartbeat |
-| `MeterValuesInterval` | int (seconds) | 15 | How often to send MeterValues during session |
-| `MaxSessionDurationSeconds` | int (seconds) | 600 | Maximum allowed session duration |
-| `ReservationDefaultTTL` | int (seconds) | 180 | Reservation expiry |
+| `MeterValuesInterval` | int (seconds) | 60 | How often to send MeterValues during session |
+| `MaxSessionDurationSeconds` | int (seconds) | 900 | Maximum allowed session duration |
+| `ReservationDefaultTTL` | int (seconds) | 300 | Reservation expiry |
 | `OfflineModeEnabled` | bool | true | Accept BLE offline sessions |
-| `BLEAdvertisingEnabled` | bool | true | Master BLE switch |
-| `BLETxPower` | int (dBm) | 4 | TX power (-20 to +10) |
 | `RevocationEpoch` | int | 0 | Minimum accepted OfflinePass epoch |
-| `MaxConcurrentBLEConnections` | int | 1 | Simultaneous BLE connections (1-3) |
 | `MessageSigningMode` | string | `"Critical"` | HMAC signing: `"All"`, `"Critical"`, or `"None"` |
 | `LogLevel` | string | `"Info"` | Log verbosity: `"Debug"`, `"Info"`, `"Warn"`, `"Error"` |
 

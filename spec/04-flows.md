@@ -1,6 +1,6 @@
 # Chapter 04 — Protocol Flows
 
-> **Status:** Draft | **OSPP Version:** 0.7.0
+> **Status:** Draft | **OSPP Version:** 0.8.0
 
 This chapter documents every end-to-end protocol flow as a sequence of messages defined in [Chapter 03 — Message Catalog](03-messages.md). Each flow includes preconditions, a Mermaid sequence diagram, numbered happy-path steps, alternative paths, error paths, and postconditions.
 
@@ -339,7 +339,7 @@ sequenceDiagram
 8. **SSP** sends **StatusNotification** [MSG-009] with `status: "Occupied"`
 9. **Server** updates session to `status: active`, returns `201 Created` to the App
 10. **App** polls `GET /sessions/{id}/status` every 3 seconds (6 seconds when in background)
-11. **SSP** sends periodic **MeterValues** [MSG-010] events (every `MeterValuesInterval` seconds, default 15)
+11. **SSP** sends periodic **MeterValues** [MSG-010] events (every `MeterValuesInterval` seconds, default 60)
 12. Session continues until stopped (see [Flow §6](#6-session-stop--completion))
 
 ### Alternative Paths
@@ -450,7 +450,7 @@ sequenceDiagram
 5. **Server** sends **ReserveBay REQUEST** [MSG-003] to the SSP with `reservationId`, bay, and expiration (default 180s TTL)
 6. **SSP** transitions bay to `Reserved`, sends **ReserveBay RESPONSE** [MSG-003] `Accepted`
 7. **SSP** sends **StatusNotification** [MSG-009] with `status: "Reserved"`
-8. **Server** creates a PaymentIntent (`created` → `pending`), returns a `sessionToken` (UUID v4, 10-min TTL) and payment gateway redirect URL to the Browser
+8. **Server** creates a PaymentIntent (`created` → `pending`), returns a `sessionToken` (RFC 4122 UUID, any version; 10-min TTL) and payment gateway redirect URL to the Browser
 9. **Browser** redirects to the payment gateway 3D Secure verification page
 10. User completes 3DS authentication
 11. **PG** sends `POST /webhooks/payment-gateway/notification` (HMAC-SHA512 signed) to Server
@@ -888,6 +888,31 @@ This separation ensures that a misconfigured or compromised station cannot overc
 | If < 50% duration delivered AND reason=`Fault` | Full | 100% (override pro-rate) |
 
 > **Refund scope clarification:** The `< 50% duration delivered` override applies **only** when SessionEnded reason is `Fault`. It does **not** apply to `TimerExpired` sessions: a session that runs to its booked timer is billed for the full pre-authorized duration regardless of meter values, because the user received the time they paid for. The override formula is `actualDurationSeconds < 0.5 * durationSeconds`, evaluated against the booked `durationSeconds` from StartService.
+
+### Settlement by Service Kind
+
+The refund matrix above is the **pro-rata baseline**. The settlement a session actually receives on a terminal reason is modulated by its **service kind** — a settlement attribute each service in the operator catalog declares, describing *what kind of thing the session delivers*. The kind is **snapshot onto the session at start**, so a later catalog edit never retroactively changes how an in-flight or already-settled session bills. The **server is the sole settlement authority** (see **Billing Authority** above); a station never computes a refund and never reports a kind.
+
+Three kinds are defined:
+
+| Kind | What it is | Settlement model |
+|------|-----------|------------------|
+| `UserDuration` | The user chooses the duration at start | **Pro-rata on delivered time** — the baseline matrix above, unchanged. |
+| `FixedDuration` | A preset programme of fixed length (e.g. a 5-minute wash) | **All-or-nothing** — a started programme is consumed; a broken one delivered nothing. |
+| `MultiUnit` | A discrete actuation (e.g. a 1–5 s dispense pulse) | **All-or-nothing per unit** — a dispensed unit is charged; a missed one is refunded. |
+
+For `UserDuration`, settlement is exactly the reason-keyed matrix above. `FixedDuration` and `MultiUnit` are both **all-or-nothing**: the kind overrides the pro-rata amount on the two reasons where the models diverge, and matches it on the rest.
+
+| SessionEnded reason | `UserDuration` | `FixedDuration` / `MultiUnit` |
+|---------------------|----------------|-------------------------------|
+| `TimerExpired` — delivered in full | Full charge | **Full charge** (same) |
+| `Local` — voluntary stop mid-service | Pro-rata on delivered time | **Full charge** — a preset the user started is consumed |
+| `Fault` — hardware fault mid-service | Pro-rata (full refund if `< 50%` delivered) | **Full refund** — a service the station broke delivered nothing of value |
+| `LocalOutOfCredit` / `Deauthorized` | Full refund (`creditsCharged` MUST be `0`) | **Full refund** (same) |
+
+Only the `Local` and `Fault` rows diverge; `TimerExpired` (full charge) and `LocalOutOfCredit` / `Deauthorized` (full refund) are already kind-invariant. An all-or-nothing override is always the pre-authorized amount **in full** or **`0`** — never a partial amount.
+
+**Delivery outcome (`MultiUnit`).** A `MultiUnit` session additionally records what physically happened — `Dispensed` on a clean `TimerExpired`, `Missed` on a `Fault`. When the physical outcome is genuinely ambiguous from control-plane signals alone (e.g. a mid-pulse voluntary stop) it is left unrecorded rather than guessed; settlement never depends on it (it stays derived from the kind). A jam the firmware does not itself detect runs the timer to expiry and is therefore billed as delivered; the corrective path is an operator-issued refund, not an automatic one.
 
 ### Postconditions
 

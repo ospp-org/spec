@@ -8,6 +8,25 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.8.0] — 2026-07-13
+
+> **Configuration vocabulary alignment.** Reconciles the `08-configuration.md` catalog with the keys the SDKs and server actually implement: removes 12 configuration keys that were documented but never wired to any behaviour, corrects the defaults/ranges of 4 surviving keys to their canonical values, and relaxes the web-payment / idempotency token format from "UUID v4" to any RFC 4122 UUID. Configuration-key total drops **41 → 29**. This is a **documentation-consistency** release — the wire `protocolVersion` field is **unchanged at `0.2.1`**, no message schema changes, and `spec/schemas/` is byte-identical (`verify-schemas.py` stays `306/306`).
+
+### Removed
+
+- **12 unused configuration keys** deleted from `08-configuration.md` and every dangling reference across the spec chapters, conformance test cases, and implementor's guide: `SecurityProfile`; the eight BLE keys `BLEAdvertisingEnabled`, `BLEAdvertisingInterval`, `BLETxPower`, `MaxConcurrentBLEConnections`, `BLEConnectionTimeout`, `BLEMTUPreferred`, `BLEStatusInterval`, `BLEMaxRetries`; `Locale`; `StatusNotificationInterval`; and `EventThrottleSeconds`. None of these keys drove any specified behaviour — the prose that referenced them (BLE advertising/TX-power conditionals, StatusNotification throttling and periodic triggers, station locale, the active security profile) is reworded or dropped so the surviving text stands on its own; worked configuration examples that used a removed key now use a surviving key (`OfflineModeEnabled`, `MeterValuesInterval`). Config-key total: **41 → 29** (Core 12 → 9, Security 6, Offline/BLE 12 → 4, Transaction 6, Device Management 4).
+
+### Changed
+
+- **Four surviving config-key defaults/ranges corrected** to the canonical values shared by the spec, `sdk-ts`, and `ospp-sdk-php`: `HeartbeatIntervalSeconds` range floor raised to **30** (30–3600); `MeterValuesInterval` default **60**, range **10–3600**; `MaxSessionDurationSeconds` default **900**, range **60–3600**; `ReservationDefaultTTL` default **300** (range 60–1800).
+- **Token format relaxed from "UUID v4" to any RFC 4122 UUID** in the web-payment session-token and idempotency-key prose (`02-transport.md`, `06-security.md`, `07-errors.md`, `04-flows.md`), matching the already-relaxed normative statements — any RFC 4122 version is accepted; any "122 bits of entropy" / RECOMMENDED nuance stated elsewhere is unchanged.
+- **Per-service-kind settlement clause** added to `04-flows.md` §6: `UserDuration` settles pro-rata on elapsed time, `FixedDuration` bills the full authorized amount, `MultiUnit` settles per delivered unit, and `Fault` yields a full refund.
+- Version cascade `0.7.0 → 0.8.0` across the remaining spec document headers, the root `README` badge, and `package.json`'s `@ospp/protocol` dependency (`^0.7.0` → `^0.8.0`). The wire `protocolVersion` field stays `0.2.1`.
+
+### Verification
+
+- `tools/verify-schemas.py`: `306/306 PASS, 0 FAIL, 0 SKIP` — unchanged. Configuration keys are freeform string key-value pairs with no JSON-schema surface, so no schema or conformance-vector regeneration was required.
+
 ## [0.7.0] — 2026-07-10
 
 > **TLS 1.2 floor + provisioning-token idempotency.** Lowers the MQTT/mTLS transport floor from TLS-1.3-only to **TLS 1.2 minimum (TLS 1.3 recommended, negotiated when both peers support it)** so cellular modems capped at TLS 1.2 (e.g. SIMCom A7608E-H) can connect. Sub-1.2 remains rejected, 0-RTT remains forbidden, and mTLS is unchanged — reinforced as mandatory on every connection regardless of negotiated TLS version. Also formalises provisioning-token §2 (single-use + TTL-bounded idempotent retry). `spec/schemas/provisioning-response.schema.json` changes (`tlsVersion` enum widened + re-described as a floor), so the SDK schemas re-vendor at the **v0.7.0** lockstep tag.

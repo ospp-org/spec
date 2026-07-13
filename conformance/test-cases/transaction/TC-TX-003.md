@@ -21,7 +21,7 @@ Verify that when a session is stopped before its natural expiry (early stop), th
 1. Station is booted and has received BootNotification ACCEPTED.
 2. Bay `bay_a1b2c3d4` is in `Available` state.
 3. Service catalog includes `svc_basic` with a known credits-per-second rate.
-4. `MeterValuesInterval` is set to 5 seconds.
+4. `MeterValuesInterval` is set to 10 seconds.
 5. Test harness has `sessionId: "sess_b3c4d5e6f7a8"` ready.
 6. The server-side `creditsAuthorized` for a 300-second session is known (e.g., 50 credits).
 

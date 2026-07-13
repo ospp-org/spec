@@ -24,7 +24,7 @@ Verify that GetConfiguration returns the station's current configuration (all ke
 2. MQTT connection is stable.
 3. The station's configuration includes at least:
    - A dynamic key: `HeartbeatIntervalSeconds` (writable, takes effect immediately).
-   - A dynamic key: `BLETxPower` (writable, takes effect immediately).
+   - A dynamic key: `MeterValuesInterval` (writable, takes effect immediately; default 60, range 10–3600).
    - A read-only key: `FirmwareVersion` (not writable).
 4. The test harness knows the expected initial values for these keys.
 
@@ -38,7 +38,7 @@ Verify that GetConfiguration returns the station's current configuration (all ke
    ```
 2. Receive the response containing `configuration` array.
 3. Validate the response structure: each entry has `key` (string), `value` (string), `readonly` (boolean).
-4. Verify that `HeartbeatIntervalSeconds`, `BLETxPower`, `FirmwareVersion`, and `MeterValuesInterval` are present in the response.
+4. Verify that `HeartbeatIntervalSeconds`, `FirmwareVersion`, and `MeterValuesInterval` are present in the response.
 5. Record the current value of `HeartbeatIntervalSeconds` (e.g., `"30"`).
 6. Verify that `FirmwareVersion` has `readonly: true`.
 7. Verify that `HeartbeatIntervalSeconds` has `readonly: false`.
@@ -58,26 +58,26 @@ Verify that GetConfiguration returns the station's current configuration (all ke
     ```json
     {
       "key": "HeartbeatIntervalSeconds",
-      "value": "15"
+      "value": "45"
     }
     ```
 12. Verify the response: `status == "Accepted"`.
 13. Send GetConfiguration for `HeartbeatIntervalSeconds`.
-14. Verify the returned value is `"15"` (updated).
-15. Wait and observe Heartbeat messages — verify they now arrive at ~15-second intervals (confirming immediate effect).
+14. Verify the returned value is `"45"` (updated).
+15. Wait and observe Heartbeat messages — verify they now arrive at ~45-second intervals (confirming immediate effect).
 
-### Part D — ChangeConfiguration (Dynamic Key — BLETxPower)
+### Part D — ChangeConfiguration (Dynamic Key — MeterValuesInterval)
 
-16. Send ChangeConfiguration to update `BLETxPower`:
+16. Send ChangeConfiguration to update `MeterValuesInterval`:
     ```json
     {
-      "key": "BLETxPower",
-      "value": "4"
+      "key": "MeterValuesInterval",
+      "value": "120"
     }
     ```
 17. Verify the response: `status == "Accepted"`.
-18. Send GetConfiguration for `BLETxPower`.
-19. Verify the value is updated to `"4"` and takes effect immediately.
+18. Send GetConfiguration for `MeterValuesInterval`.
+19. Verify the value is updated to `"120"` and takes effect immediately.
 
 ### Part E — ChangeConfiguration (Read-Only Key — Rejected)
 
@@ -97,15 +97,15 @@ Verify that GetConfiguration returns the station's current configuration (all ke
 24. Send three sequential ChangeConfiguration requests:
     - `{ "key": "HeartbeatIntervalSeconds", "value": "30" }`
     - `{ "key": "FirmwareVersion", "value": "1.0.0" }`
-    - `{ "key": "BLETxPower", "value": "0" }`
-25. Verify the responses: `Accepted` for HeartbeatIntervalSeconds, `Rejected` for FirmwareVersion, `Accepted` for BLETxPower.
+    - `{ "key": "MeterValuesInterval", "value": "60" }`
+25. Verify the responses: `Accepted` for HeartbeatIntervalSeconds, `Rejected` for FirmwareVersion, `Accepted` for MeterValuesInterval.
 
 ## Expected Results
 
 1. GetConfiguration (all keys) returns a complete list of configuration entries with correct types.
 2. GetConfiguration (specific keys) returns requested keys and lists unknown keys in `unknownKeys`.
 3. Changing a dynamic key returns Accepted and the new value takes effect immediately.
-4. Changing `BLETxPower` (dynamic) returns Accepted and the new value takes effect immediately.
+4. Changing `MeterValuesInterval` (dynamic) returns Accepted and the new value takes effect immediately.
 5. Changing a read-only key returns Rejected and the value remains unchanged.
 6. Sequential multi-key updates return independent per-key statuses.
 7. All responses validate against their JSON schemas.
@@ -115,7 +115,7 @@ Verify that GetConfiguration returns the station's current configuration (all ke
 1. GetConfiguration does not return all known keys when no filter is specified.
 2. Unknown keys cause an error response instead of being listed in `unknownKeys`.
 3. A dynamic key change does not take effect immediately (e.g., HeartbeatIntervalSeconds change not reflected in Heartbeat cadence).
-4. A dynamic key change (`BLETxPower`) does not take effect immediately.
+4. A dynamic key change (`MeterValuesInterval`) does not take effect immediately.
 5. A read-only key change returns Accepted instead of Rejected.
 6. A sequential multi-key update fails to return the correct per-key status.
 7. GetConfiguration returns a stale value after a successful ChangeConfiguration.

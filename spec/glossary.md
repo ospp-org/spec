@@ -1,6 +1,6 @@
 # Glossary
 
-> **Status:** Draft | **OSPP Version:** 0.7.0
+> **Status:** Draft | **OSPP Version:** 0.8.0
 
 This glossary provides normative definitions for all terms used throughout the OSPP
 specification. Where a definition involves a requirement, normative language
@@ -375,8 +375,8 @@ specification. Where a definition involves a requirement, normative language
 ## U
 
 **UUID (Universally Unique Identifier)**
-: A 128-bit identifier defined in RFC 4122. OSPP uses UUID version 4 (random) for
-  all entity identifiers and message IDs. UUIDs **MUST** be represented as lowercase
+: A 128-bit identifier defined in RFC 4122. OSPP accepts any RFC 4122 UUID version for
+  all entity identifiers and message IDs (version 4, random, is RECOMMENDED). UUIDs **MUST** be represented as lowercase
   hyphenated strings (e.g., `550e8400-e29b-41d4-a716-446655440000`).
   See [Chapter 01, Section 3](01-architecture.md).
 

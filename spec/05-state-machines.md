@@ -1,6 +1,6 @@
 # Chapter 05 — State Machines
 
-> **Status:** Draft | **OSPP Version:** 0.7.0
+> **Status:** Draft | **OSPP Version:** 0.8.0
 
 This chapter defines all finite state machines (FSMs) governing OSPP entities. Each FSM specifies the complete set of states, valid transitions, guards, actions, and a Mermaid diagram. Implementations MUST enforce these state machines; any transition not explicitly listed here is invalid and MUST be rejected.
 
@@ -91,9 +91,6 @@ A station MUST send a StatusNotification EVENT [MSG-009] in the following circum
 
 1. **Post-boot report:** One StatusNotification per bay immediately after a successful BootNotification [MSG-001], reporting `bayNumber`, `status`, and available `services[]`.
 2. **State transition:** On every bay state transition listed in section 1.3.
-3. **Periodic (optional):** If the `StatusNotificationInterval` configuration key is set to a value greater than zero, the station SHOULD send a StatusNotification for each bay at that interval (in seconds) even if the state has not changed.
-
-The station MAY throttle StatusNotification events using the `EventThrottleSeconds` configuration key (minimum interval between same-type events per bay). Default: 0 (no throttle).
 
 ### 1.5 Invalid Transitions
 
@@ -230,7 +227,7 @@ stateDiagram-v2
 
 ### 3.4 TTL Behavior
 
-- The default reservation TTL is defined by the `ReservationDefaultTTL` configuration key (default: 180 seconds).
+- The default reservation TTL is defined by the `ReservationDefaultTTL` configuration key (default: 300 seconds).
 - The `expirationTime` in the ReserveBay request is an absolute ISO 8601 UTC timestamp. The station MUST use this timestamp, not a relative duration, to determine expiry.
 - The station MUST automatically release the bay when `expirationTime` is reached, transitioning it back to `Available` and sending a StatusNotification.
 - The server SHOULD send a CancelReservation if it determines the reservation should end before `expirationTime` (e.g., user cancels, payment fails).
@@ -326,7 +323,7 @@ stateDiagram-v2
 When the BLE connection enters the `Error` state, the app SHOULD follow this recovery procedure:
 
 1. **Retry delay:** Wait 1 second before attempting to reconnect. This prevents rapid reconnection loops that drain battery.
-2. **Maximum retries:** The app SHOULD attempt up to 3 reconnection attempts (configurable via `BLEMaxRetries`). Each retry starts from the `Idle` state.
+2. **Maximum retries:** The app SHOULD attempt up to 3 reconnection attempts. Each retry starts from the `Idle` state.
 3. **Exponential backoff:** Retry delays SHOULD follow 1s, 2s, 4s progression.
 4. **Fallback:** After exhausting retries, the app SHOULD:
    - If the phone has internet connectivity: fall back to online mode (HTTPS + MQTT session flow).

@@ -1,6 +1,6 @@
 # Chapter 02 — Transport
 
-> **Status:** Draft | **OSPP Version:** 0.7.0
+> **Status:** Draft | **OSPP Version:** 0.8.0
 
 OSPP defines three transport layers for communication between participants. Each transport serves a distinct channel with its own security model, reliability guarantees, and failure modes.
 
@@ -141,7 +141,7 @@ The `v1` segment in the topic path is a **namespace identifier**, NOT the protoc
 - The protocol version is negotiated inside the message envelope via the `protocolVersion` field (see [Chapter 03 — Messages](03-messages.md)).
 - The topic namespace `v1` MUST remain `v1` for all OSPP 1.x protocol versions.
 - A new topic namespace (e.g., `v2`) would only be introduced for a fundamental transport-level change that cannot be handled by protocol version negotiation.
-- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.7.0*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.2.1`): the two version numbers evolve separately and need not match.
+- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.8.0*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.2.1`): the two version numbers evolve separately and need not match.
 
 ### 2.3 Server Subscription Patterns
 
@@ -524,7 +524,7 @@ BLE transport is part of the **Offline/BLE Profile** and is OPTIONAL. Stations t
 | LE Secure Connections (pairing) | OPTIONAL | OPTIONAL (defense-in-depth only — see §8.8) |
 | TX power | 0 dBm | +4 dBm |
 | Range (open air) | 10 meters | 20 meters |
-| Simultaneous connections | 1 | 3 (configurable via `MaxConcurrentBLEConnections`) |
+| Simultaneous connections | 1 | 3 |
 | MTU | 23 bytes (default) | 247 bytes (negotiated) |
 | Advertising interval | 200ms | 200ms |
 
@@ -547,7 +547,7 @@ OSPP defines a single primary GATT service with 6 characteristics:
 
 ### 8.4 Advertising
 
-The station MUST include the following in BLE advertisements when `BLEAdvertisingEnabled = true`:
+The station MUST include the following in BLE advertisements:
 
 | AD Type | Field | Value |
 |---------|-------|-------|
@@ -555,10 +555,6 @@ The station MUST include the following in BLE advertisements when `BLEAdvertisin
 | `0x09` | Complete Local Name | `OSPP-{station_id_last6}` (e.g., `OSPP-b2c3d4`) |
 | `0x07` | Complete 128-bit Service UUID | `0000FFF0-0000-1000-8000-00805F9B34FB` |
 | `0xFF` | Manufacturer Specific Data | `{company_id}{station_id_bytes}{bay_count}{firmware_version}` |
-
-The advertising interval MUST be configurable via the `BLEAdvertisingInterval` configuration key (default: 200ms).
-
-The TX power MUST be configurable via the `BLETxPower` configuration key (default: 4 dBm, range: -20 to +10 dBm).
 
 ### 8.5 MTU Negotiation
 
@@ -659,18 +655,14 @@ Bonding (storing pairing keys for reconnection) is OPTIONAL. The station MAY sup
 | BLE connection drops during handshake | Clean up handshake state, ready for new connection |
 | BLE connection drops during active service | Service continues on local timer, auto-stops on expiry |
 | App does not read receipt within 5 min | Receipt retained for next BLE connection |
-| Multiple apps try to connect simultaneously | Accept first connection, reject subsequent until first disconnects (when `MaxConcurrentBLEConnections = 1`) |
+| Multiple apps try to connect simultaneously | Accept first connection, reject subsequent until first disconnects |
 | Station receives Hello while in handshake | Abort current handshake, start new one |
 
 ### 8.10 BLE Configuration Keys
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `BLEAdvertisingEnabled` | boolean | `true` | Master switch for BLE |
-| `BLETxPower` | integer (dBm) | `4` | TX power (-20 to +10) |
-| `BLEAdvertisingInterval` | integer (ms) | `200` | Advertising interval |
 | `OfflineModeEnabled` | boolean | `true` | Accept offline sessions via BLE |
-| `MaxConcurrentBLEConnections` | integer | `1` | Max simultaneous BLE clients (1–3) |
 
 ### 8.11 Fallback Behavior
 
@@ -725,7 +717,7 @@ The server MUST reject expired tokens with HTTP `401`. The client SHOULD transpa
 
 | Parameter | Value |
 |-----------|-------|
-| **Transport** | Session token (UUID v4) embedded in URL path |
+| **Transport** | Session token (RFC 4122 UUID, any version) embedded in URL path |
 | **Storage** | Server-side only (Redis with TTL) — no cookies, no localStorage |
 | **TTL** | 10 minutes |
 | **Scope** | Single payment session (one bay, one service) |
@@ -757,13 +749,13 @@ Idempotency-Key: 550e8400-e29b-41d4-a716-446655440000
 Content-Type: application/json
 ```
 
-The server MUST store the response for a given `Idempotency-Key` and return the same response on duplicate requests. The key MUST be a UUID v4. The server SHOULD retain idempotency keys for at least **24 hours**.
+The server MUST store the response for a given `Idempotency-Key` and return the same response on duplicate requests. The key MUST be a valid RFC 4122 UUID (any version). The server SHOULD retain idempotency keys for at least **24 hours**.
 
 The station-provisioning endpoint (`POST /api/v1/stations/provision`) implements this contract keyed on the **provisioning token itself** rather than an `Idempotency-Key` header: a repeat within the token's 24-hour TTL returns the originally-issued certificate; after the TTL the token is invalid (see [Flows §2 — Single-use and idempotent retry](04-flows.md#single-use-and-idempotent-retry)).
 
 ### 9.4 Request Tracing
 
-The server MUST include an `X-Request-Id` header (UUID v4) in all API responses:
+The server MUST include an `X-Request-Id` header (RFC 4122 UUID) in all API responses:
 
 ```
 HTTP/1.1 200 OK

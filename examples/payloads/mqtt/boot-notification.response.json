@@ -4,9 +4,8 @@
   "heartbeatIntervalSec": 30,
   "configuration": {
     "RevocationEpoch": "42",
-    "MaxSessionDurationSeconds": "600",
-    "BLEAdvertisingEnabled": "true",
-    "MeterValuesInterval": "15"
+    "MaxSessionDurationSeconds": "900",
+    "MeterValuesInterval": "60"
   },
   "sessionKey": "dGFwbHktc2Vzc2lvbi1rZXktMjAyNi0wMi0xM1QxMDowMDowMC4wMDBa"
 }

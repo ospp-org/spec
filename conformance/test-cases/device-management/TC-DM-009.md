@@ -41,10 +41,7 @@ Verify that the station correctly handles GetConfiguration requests for all keys
    - `ProtocolVersion`
    - `FirmwareVersion`
    - `BootRetryInterval`
-   - `StatusNotificationInterval`
-   - `EventThrottleSeconds`
    - `ConnectionLostGracePeriod`
-   - `Locale`
 4. Verify each entry has `key` (string), `value` (string), and `readonly` (boolean).
 5. Verify `ProtocolVersion` has `readonly: true`.
 6. Verify `FirmwareVersion` has `readonly: true`.

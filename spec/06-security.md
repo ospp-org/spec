@@ -1,6 +1,6 @@
 # Chapter 06 — Security
 
-> **Status:** Draft | **OSPP Version:** 0.7.0
+> **Status:** Draft | **OSPP Version:** 0.8.0
 
 This chapter defines the complete security model for the OSPP protocol, covering threat analysis, authentication, authorization, cryptographic requirements, message integrity, offline security, anti-abuse mechanisms, and data protection.
 
@@ -38,7 +38,7 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 **Description:** An attacker captures a valid MQTT message or BLE message and retransmits it to trigger duplicate actions (e.g., replay a StartService to get a free service, replay a TransactionEvent to double-charge a user).
 
 **Countermeasures:**
-- Every MQTT message carries a unique `messageId` (UUID v4). Receivers maintain a deduplication window (last 1000 IDs or 1 hour) and reject duplicates (see [Chapter 02](02-transport.md), §3.3).
+- Every MQTT message carries a unique `messageId` (RFC 4122 UUID). Receivers maintain a deduplication window (last 1000 IDs or 1 hour) and reject duplicates (see [Chapter 02](02-transport.md), §3.3).
 - HMAC-SHA256 binds the `messageId` and `timestamp` to the session key — replayed messages with old timestamps are detectable.
 - BLE OfflineAuthRequest [MSG-031] includes a **monotonic counter** that MUST be strictly greater than the last seen counter; replaying an old counter value triggers error `2005 OFFLINE_COUNTER_REPLAY`.
 - BLE session keys are derived per-handshake from fresh ephemeral ECDH keys and nonces (§6.5), so captured messages from a previous session are invalid and cannot be decrypted later (forward secrecy).
@@ -78,7 +78,7 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 
 **Countermeasures:**
 - **JWT access tokens** (§2.2) expire in 15 minutes, limiting the window of a stolen token.
-- **Web payment session tokens** (§2.3) are UUID v4, 10-minute TTL, stored in Redis (not cookies or localStorage), and scoped to a single payment flow.
+- **Web payment session tokens** (§2.3) are RFC 4122 UUIDs (any version), 10-minute TTL, stored in Redis (not cookies or localStorage), and scoped to a single payment flow.
 - **MQTT session isolation** — each station's messages flow through its own topic pair. There is no station-to-station communication.
 
 ### T06 - Offline Abuse
@@ -177,7 +177,7 @@ This is a **privacy** exposure, **not** a credential compromise: the OfflinePass
 
 ## 2. Authentication Mechanisms
 
-OSPP uses **channel-specific authentication** — each communication channel has its own authentication mechanism appropriate to its threat model and operational constraints. The active security profile is configurable via `SecurityProfile` (see §8 Configuration).
+OSPP uses **channel-specific authentication** — each communication channel has its own authentication mechanism appropriate to its threat model and operational constraints.
 
 ### 2.1 Station ↔ Server — Mutual TLS (mTLS)
 
@@ -238,13 +238,13 @@ The TLS 1.2 suites are ECDHE-ECDSA with AEAD-GCM only, matching the ECDSA P-256 
 | Property | Value |
 |----------|-------|
 | **Protocol** | HTTPS REST |
-| **Token** | UUID v4 in URL path (e.g., `/pay/sessions/{sessionToken}/status`) |
+| **Token** | RFC 4122 UUID (any version) in URL path (e.g., `/pay/sessions/{sessionToken}/status`) |
 | **TTL** | 10 minutes |
 | **Storage** | Redis with TTL |
 | **Scope** | Single payment flow only |
 
 **Requirements:**
-- Session tokens MUST be UUID v4 (122 bits of entropy).
+- Session tokens MUST be a valid RFC 4122 UUID; version 4 (122 bits of entropy) is RECOMMENDED.
 - Tokens MUST NOT be stored in cookies, localStorage, or sessionStorage (URL-only).
 - Tokens MUST expire after 10 minutes.
 - Tokens MUST be scoped to a single station + bay + service combination.

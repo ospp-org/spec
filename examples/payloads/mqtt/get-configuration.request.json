@@ -1,7 +1,6 @@
 {
   "keys": [
     "HeartbeatIntervalSeconds",
-    "BLEAdvertisingEnabled",
     "FirmwareVersion"
   ]
 }

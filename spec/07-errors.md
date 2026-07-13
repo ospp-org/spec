@@ -1,6 +1,6 @@
 # Chapter 07 — Error Codes & Resilience
 
-> **Status:** Draft | **OSPP Version:** 0.7.0
+> **Status:** Draft | **OSPP Version:** 0.8.0
 
 This chapter defines the complete error taxonomy for the OSPP protocol, including the error code registry, standard error response format, retry policies, circuit breaker patterns, and graceful degradation behavior.
 
@@ -235,7 +235,7 @@ Authentication errors cover identity verification (mTLS, JWT, BLE handshake, Off
 | 2008 | `ACTION_NOT_PERMITTED` | Error | false | The authenticated entity does not have the required RBAC role or permission to perform this action. | Verify the user's role and permissions. Contact the operator admin if elevated access is needed. |
 | 2009 | `JWT_EXPIRED` | Warning | true | JWT access token has expired (past `exp` claim). | App: use the refresh token to obtain a new access token. If refresh token is also expired, re-authenticate. |
 | 2010 | `JWT_INVALID` | Error | false | JWT is malformed, has an invalid signature, or was signed by an unknown key. | App: clear stored tokens and re-authenticate. May indicate token tampering. |
-| 2011 | `SESSION_TOKEN_EXPIRED` | Warning | true | Web payment session token (UUID v4) has exceeded its 10-minute TTL. | Browser: restart the payment flow from the QR code scan. |
+| 2011 | `SESSION_TOKEN_EXPIRED` | Warning | true | Web payment session token (RFC 4122 UUID, any version) has exceeded its 10-minute TTL. | Browser: restart the payment flow from the QR code scan. |
 | 2012 | `SESSION_TOKEN_INVALID` | Error | false | Web payment session token is not found in Redis or has an invalid format. | Browser: restart the payment flow. Do not retry with the same token. |
 | 2013 | `BLE_AUTH_FAILED` | Error | false | BLE challenge-response authentication failed. The session key derivation or session proof is invalid. | App: disconnect and retry the BLE handshake. If persistent, report to the server when online. |
 | 2014 | `OFFLINE_PASS_REVOKED` | Error | false | OfflinePass `is_revoked` flag is `true` — the pass has been individually revoked (typically due to device replacement or user-initiated revoke). Distinct from `2004 OFFLINE_EPOCH_REVOKED` (batch revocation by epoch bump). | App: request a new OfflinePass. Server: log SecurityEvent [MSG-012] with `type: "OfflinePassRejected"`. The original pass is permanently dead; the device must obtain a new one. |
@@ -267,7 +267,7 @@ Session errors cover bay state transitions, session lifecycle, reservation manag
 | 3010 | `MAX_DURATION_EXCEEDED` | Warning | false | The requested session duration exceeds the station's `MaxSessionDurationSeconds` configuration limit. | Reduce the requested duration to at most `MaxSessionDurationSeconds` seconds (default 600s). |
 | 3011 | `BAY_MAINTENANCE` | Warning | true | The bay is in `Unavailable` state due to active maintenance mode (SetMaintenanceMode [MSG-020]). | Wait for maintenance to complete. Operator: clear maintenance mode when work is done. |
 | 3012 | `RESERVATION_NOT_FOUND` | Error | false | The referenced `reservationId` does not exist or has already been cancelled/expired. | Do not retry. Start a new reservation flow if needed. |
-| 3013 | `RESERVATION_EXPIRED` | Warning | true | The reservation's TTL has elapsed. The bay has been automatically released. | Create a new reservation. Default TTL is `ReservationDefaultTTL` (180 seconds). |
+| 3013 | `RESERVATION_EXPIRED` | Warning | true | The reservation's TTL has elapsed. The bay has been automatically released. | Create a new reservation. Default TTL is `ReservationDefaultTTL` (300 seconds). |
 | 3014 | `BAY_RESERVED` | Warning | true | The bay has an active reservation held by another user/session. | Wait for the reservation to expire, or select a different bay. |
 | 3015 | `PAYLOAD_INVALID` | Error | false | The request payload is structurally valid JSON but contains semantically invalid values (e.g., negative credits, empty required strings, unknown enum values). | Fix the payload values. Inspect the `details` field for specific validation errors. |
 | 3016 | `ACTIVE_SESSIONS_PRESENT` | Warning | true | One or more bays have active sessions. The requested operation (e.g., Reset) cannot proceed until all sessions are completed or stopped. | Stop all active sessions first, then retry the operation. |

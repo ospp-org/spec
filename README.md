@@ -1,6 +1,6 @@
 # OSPP — Open Self-Service Point Protocol
 
-[![Version: 0.7.0](https://img.shields.io/badge/version-0.7.0-blue)]()
+[![Version: 0.8.0](https://img.shields.io/badge/version-0.8.0-blue)]()
 [![Status: Draft](https://img.shields.io/badge/status-draft-orange)]()
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![Messages: 40](https://img.shields.io/badge/messages-40-green)]()
@@ -132,7 +132,7 @@ npx ajv-cli validate \
 | [05](spec/05-state-machines.md) | State Machines | Bay, Session, Reservation, BLE Connection, Firmware Update FSMs | Draft |
 | [06](spec/06-security.md) | Security | Threat model, mTLS, HMAC-SHA256, PKI, OfflinePass, receipts, fraud scoring | Draft |
 | [07](spec/07-errors.md) | Error Codes | 95 codes (6 categories), retry policies, circuit breaker, graceful degradation | Draft |
-| [08](spec/08-configuration.md) | Configuration | 39 standard configuration keys, data types, access modes | Draft |
+| [08](spec/08-configuration.md) | Configuration | 29 standard configuration keys, data types, access modes | Draft |
 | [--](spec/glossary.md) | Glossary | Terms and definitions | Draft |
 
 ### Profiles

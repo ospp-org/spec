@@ -130,9 +130,9 @@ The station **MUST NOT** process any incoming commands until it receives an `Acc
     "heartbeatIntervalSec": 30,
     "configuration": {
       "RevocationEpoch": "42",
-      "MaxSessionDurationSeconds": "600",
-      "BLEAdvertisingEnabled": "true",
-      "MeterValuesInterval": "15"
+      "MaxSessionDurationSeconds": "900",
+      "OfflineModeEnabled": "true",
+      "MeterValuesInterval": "60"
     },
     "sessionKey": "dGFwbHktc2Vzc2lvbi1rZXktMjAyNi0wMi0xM1QxMDowMDowMC4wMDBa"
   }

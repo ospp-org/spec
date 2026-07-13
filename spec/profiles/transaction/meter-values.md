@@ -43,7 +43,7 @@ The meter value reporting interval is controlled by the `MeterValuesInterval` co
 
 | Parameter | Type | Default | Minimum | Maximum | Description |
 |---------------------------------------|---------|---------|---------|---------|-----------------------------------------------|
-| `MeterValuesInterval` | integer | 15 | 5 | 300 | Interval in seconds between MeterValues events. |
+| `MeterValuesInterval` | integer | 60 | 10 | 3600 | Interval in seconds between MeterValues events. |
 
 ### 5.1 Interval Rules
 

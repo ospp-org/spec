@@ -25,7 +25,7 @@ Verify that a station correctly handles the complete online session lifecycle fr
 3. The station's service catalog includes `svc_basic` on `bay_a1b2c3d4`.
 4. MQTT connection is stable; Heartbeat exchange is functioning.
 5. Test harness has a valid `sessionId` (`sess_b1c2d3e4f5a6`) ready to use.
-6. Station `MeterValuesInterval` configuration is set to 5 seconds.
+6. Station `MeterValuesInterval` configuration is set to 10 seconds.
 
 ## Steps
 
@@ -45,7 +45,7 @@ Verify that a station correctly handles the complete online session lifecycle fr
    - `bayId: "bay_a1b2c3d4"`
    - `status: "Occupied"`
    - `previousStatus: "Available"`
-5. Wait for `MeterValuesInterval` seconds (5s).
+5. Wait for `MeterValuesInterval` seconds (10s).
 6. Observe a MeterValues event:
    - `sessionId: "sess_b1c2d3e4f5a6"`, `bayId: "bay_a1b2c3d4"`
    - `values` object present (e.g., `liquidMl` >= 0)

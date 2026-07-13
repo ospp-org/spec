@@ -1,6 +1,6 @@
 ---
 status: Draft
-ospp-version: 0.7.0
+ospp-version: 0.8.0
 ---
 
 # OSPP Specification — Reading Guide
@@ -14,7 +14,7 @@ ospp-version: 0.7.0
 | Field | Value |
 |-------|-------|
 | Status | Draft |
-| OSPP Version | 0.7.0 |
+| OSPP Version | 0.8.0 |
 | Last Updated | 2026-07-10 |
 
 ## Document Map

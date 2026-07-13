@@ -1,6 +1,6 @@
 # Chapter 03 — Message Catalog
 
-> **Status:** Draft | **OSPP Version:** 0.7.0
+> **Status:** Draft | **OSPP Version:** 0.8.0
 
 This chapter is the normative reference for **every message** in the OSPP protocol. Each message is documented with its complete payload schema, metadata, and example.
 
@@ -149,7 +149,7 @@ The station MUST send a BootNotification REQUEST immediately after subscribing t
 
 > **Note:** BootNotification does NOT include bay status or services. Bay layout is reported via [StatusNotification](#52-statusnotification) events sent immediately after a successful boot.
 
-The station MAY include a human-readable name configurable via `StationName` (see §8 Configuration). Station locale is configurable via `Locale` (BCP 47, see §8 Configuration).
+The station MAY include a human-readable name configurable via `StationName` (see §8 Configuration).
 
 #### REQUEST Payload
 
@@ -253,7 +253,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
   "heartbeatIntervalSec": 30,
   "configuration": {
     "RevocationEpoch": "42",
-    "MaxSessionDurationSeconds": "600"
+    "MaxSessionDurationSeconds": "900"
   },
   "sessionKey": "dGhpcyBpcyBhIDMyLWJ5dGUga2V5IGZvciBITUFD..."
 }
@@ -439,7 +439,7 @@ Reserves a specific bay for an upcoming session. The station MUST transition the
 | `expirationTime` | string | Yes | ISO 8601 UTC — when the reservation automatically expires |
 | `sessionSource` | string | Yes | `"MobileApp"` or `"WebPayment"` |
 
-The default reservation TTL is configured by the `ReservationDefaultTTL` key (default: 180 seconds). The station MUST automatically release the reservation when `expirationTime` is reached.
+The default reservation TTL is configured by the `ReservationDefaultTTL` key (default: 300 seconds). The station MUST automatically release the reservation when `expirationTime` is reached.
 
 #### RESPONSE Payload
 
@@ -1030,8 +1030,6 @@ Reports the current status of a single bay. Sent in two contexts:
 }
 ```
 
-> **Throttling:** The station MAY throttle StatusNotification events using the `EventThrottleSeconds` configuration key (minimum interval between same-type events per bay). Default: 0 (no throttle).
-
 ---
 
 ### 5.3 MeterValues
@@ -1048,7 +1046,7 @@ Reports the current status of a single bay. Sent in two contexts:
 | **Idempotency** | Yes — duplicate meter readings are deduplicated by timestamp |
 | **Message Expiry** | 30 seconds |
 
-Reports consumption telemetry during an active session. Sent at the interval configured by `MeterValuesInterval` (default: 15 seconds). Only sent when `meterValuesSupported` capability is `true`.
+Reports consumption telemetry during an active session. Sent at the interval configured by `MeterValuesInterval` (default: 60 seconds). Only sent when `meterValuesSupported` capability is `true`.
 
 #### Payload
 
@@ -1450,7 +1448,7 @@ Retrieves one or more configuration values from the station.
 
 ```json
 {
-  "keys": ["HeartbeatIntervalSeconds", "BLEAdvertisingEnabled", "NonExistentKey"]
+  "keys": ["HeartbeatIntervalSeconds", "OfflineModeEnabled", "NonExistentKey"]
 }
 ```
 
@@ -1460,7 +1458,7 @@ Retrieves one or more configuration values from the station.
 {
   "configuration": [
     { "key": "HeartbeatIntervalSeconds", "value": "30", "readonly": false },
-    { "key": "BLEAdvertisingEnabled", "value": "true", "readonly": false }
+    { "key": "OfflineModeEnabled", "value": "true", "readonly": false }
   ],
   "unknownKeys": ["NonExistentKey"]
 }
@@ -3004,7 +3002,7 @@ The `messageId` field in the MQTT envelope SHOULD use the following prefixes for
 | `cmd_` | All server-to-station REQUEST messages (StartService, StopService, ReserveBay, etc.) |
 | `lwt-` | ConnectionLost (LWT) |
 
-The prefix is followed by a UUID v4: `{prefix}{uuid-v4}` (e.g., `cmd_550e8400-e29b-41d4-a716-446655440000`).
+The prefix is followed by an RFC 4122 UUID: `{prefix}{uuid}` (e.g., `cmd_550e8400-e29b-41d4-a716-446655440000`).
 
 > **Note:** The prefix is a convention, not a protocol requirement. Implementations MUST NOT rely on the prefix for message routing or type detection — use the `action` field instead.
 

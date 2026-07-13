@@ -5,6 +5,6 @@
   "type": "module",
   "description": "Local-only tooling for conformance signing + verification (not published).",
   "dependencies": {
-    "@ospp/protocol": "^0.5.4"
+    "@ospp/protocol": "^0.8.0"
   }
 }

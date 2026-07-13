@@ -67,7 +67,7 @@ This message uses implicit error codes only (1005, 2007, 6001 — see `spec/03-m
   "payload": {
     "keys": [
       "HeartbeatIntervalSeconds",
-      "BLEAdvertisingEnabled",
+      "OfflineModeEnabled",
       "FirmwareVersion"
     ]
   }
@@ -92,7 +92,7 @@ This message uses implicit error codes only (1005, 2007, 6001 — see `spec/03-m
         "readonly": false
       },
       {
-        "key": "BLEAdvertisingEnabled",
+        "key": "OfflineModeEnabled",
         "value": "true",
         "readonly": false
       },

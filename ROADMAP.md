@@ -20,7 +20,7 @@
 
 - 39 messages (26 MQTT + 13 BLE)
 - 102 error codes
-- 41 configuration keys
+- 29 configuration keys
 - Full offline/BLE support
 - Certificate lifecycle management
 - DataTransfer extensibility

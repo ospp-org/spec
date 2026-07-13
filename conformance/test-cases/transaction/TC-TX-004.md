@@ -23,7 +23,7 @@ Verify that the station correctly handles CancelReservation for valid reservatio
 1. Station `stn_a1b2c3d4` is booted and has received BootNotification `Accepted`.
 2. Bay `bay_c1d2e3f4a5b6` is in `Available` state.
 3. MQTT connection is stable; Heartbeat exchange is functioning.
-4. `ReservationDefaultTTL` is set to 180 seconds (default).
+4. `ReservationDefaultTTL` is set to 300 seconds (default).
 5. Test harness can inject ReserveBay, CancelReservation, and StartService commands.
 
 ## Steps

@@ -266,7 +266,7 @@ The station controller checks that bay 2 is Available, transitions it to Reserve
 
 ### Step 8: Server Creates PaymentIntent, Returns Redirect (14:20:16.500)
 
-The server creates a PaymentIntent with PG (`status: created -> pending`), generates a session token (UUID v4, 10-minute TTL), and responds to the browser.
+The server creates a PaymentIntent with PG (`status: created -> pending`), generates a session token (RFC 4122 UUID (any version), 10-minute TTL), and responds to the browser.
 
 **HTTP Response:**
 
@@ -740,7 +740,7 @@ On the Operator Dashboard, the operator sees:
 
 2. **StartService retry policy (web payment).** Because the user has already paid when StartService is sent, the server retries up to 4 times with delays of 0s, +5s, +10s, +15s (each with a 10s timeout). If all retries fail, the server sends CancelReservation and initiates a full refund via PG. This is more aggressive than the mobile app's single-attempt policy because a paid anonymous user cannot easily retry.
 
-3. **Session token, not session ID.** The browser receives a `sessionToken` (UUID v4, 10-minute TTL) rather than the internal `sessionId`. This prevents enumeration of session IDs and limits the anonymous user's access window. The token is single-purpose: it can only poll the status of this specific session.
+3. **Session token, not session ID.** The browser receives a `sessionToken` (RFC 4122 UUID (any version), 10-minute TTL) rather than the internal `sessionId`. This prevents enumeration of session IDs and limits the anonymous user's access window. The token is single-purpose: it can only poll the status of this specific session.
 
 4. **Anti-abuse: 5-layer defense.** Anonymous web payments are protected by: (1) IP rate limiting (5 sessions/30 min per IP), (2) device fingerprinting (3 sessions/30 min), (3) progressive CAPTCHA via Cloudflare Turnstile on suspicious patterns, (4) abandon scoring (5+ abandoned sessions trigger a 15-min block), and (5) bay lock only at `POST /pay/start` (browsing does not lock resources).
 

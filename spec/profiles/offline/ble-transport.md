@@ -1,6 +1,6 @@
 # BLE Transport
 
-> **Status:** Draft | **OSPP Version:** 0.7.0
+> **Status:** Draft | **OSPP Version:** 0.8.0
 
 ## 1. Hardware Requirements
 
@@ -177,7 +177,7 @@ The Service Status characteristic provides real-time progress updates during an 
 | `remainingSeconds`| integer | Yes | Estimated seconds remaining. |
 | `meterValues` | object | No | Real-time meter readings (liquidMl, consumableMl, energyWh). |
 
-The station **MUST** send notifications at a configurable interval (default 5 seconds, adjustable via `BLEStatusInterval`). The station **MUST** send a final notification with `status: "ReceiptReady"` when the service completes.
+The station **MUST** send notifications at a regular interval (5 seconds). The station **MUST** send a final notification with `status: "ReceiptReady"` when the service completes.
 
 **Example (Running):**
 
@@ -277,7 +277,7 @@ The station **MUST** include the following in its BLE advertising packet:
 | TX Power Level | 1 byte | Transmit power level in dBm for RSSI-based distance estimation. |
 | Manufacturer Data | variable | **OPTIONAL**. **MAY** include bay availability flags (1 bit per bay: 1 = available, 0 = occupied/faulted). |
 
-The advertising interval **MUST** be configurable via the `BLEAdvertisingInterval` configuration key (default: 200 ms, range: 100--2000 ms). The station **MUST** advertise continuously while the BLE profile is enabled.
+The station **MUST** advertise continuously while the BLE profile is enabled.
 
 ## 10. MTU Negotiation
 
@@ -313,19 +313,7 @@ When a JSON payload exceeds the effective ATT payload size, the sender **MUST** 
 4. After reassembly, the receiver **MUST** validate that the reassembled payload is valid JSON before processing.
 5. For single-fragment messages (payload fits within MTU), the header **MUST** be: `sequenceNumber: 0`, `totalFragments: 1`, `flags: 0x00`.
 
-## 12. BLE Configuration Keys
-
-The following BLE-related configuration keys **MAY** be set via the ChangeConfiguration action:
-
-| Key | Type | Default | Range | Description |
-|--------------------------|---------|---------|--------------|-----------------------------------------------|
-| `BLEAdvertisingInterval` | integer | 200 | 100--2000 ms | BLE advertising interval in milliseconds. |
-| `BLETxPower` | integer | 4 | -20--10 dBm | BLE transmit power level. |
-| `BLEConnectionTimeout` | integer | 30 | 10--120 s | Maximum idle time before BLE disconnect. |
-| `BLEMTUPreferred` | integer | 247 | 23--517 bytes | Preferred MTU for BLE connections. |
-| `BLEStatusInterval` | integer | 5 | 1--30 s | Interval for FFF5 Service Status notifications. |
-
-## 13. Connection Lifecycle and Isolation
+## 12. Connection Lifecycle and Isolation
 
 A station serves the handshake and the subsequent session over a single GATT connection. The following rules isolate concurrent connections so that one central cannot observe or disrupt another central's session.
 
@@ -340,13 +328,13 @@ A station serves the handshake and the subsequent session over a single GATT con
 
 BLE peripherals support only a small number of concurrent connections, so an unauthenticated central can exhaust connection slots. Stations SHOULD:
 
-- drop a connection that has not completed the handshake within the handshake budget ([ble-handshake.md §1](ble-handshake.md)) rather than holding the slot until `BLEConnectionTimeout` elapses;
+- drop a connection that has not completed the handshake within the handshake budget ([ble-handshake.md §1](ble-handshake.md)) rather than holding the slot open indefinitely;
 - continue advertising while connections are active (subject to the hardware connection limit) so a legitimate central is not locked out by a stalled or hostile peer;
-- prefer the lower end of the `BLEConnectionTimeout` range for connections that have not yet authenticated.
+- apply a shorter connection timeout to connections that have not yet authenticated.
 
 This is operational guidance, not a wire-protocol requirement.
 
-## 14. Related Schemas
+## 13. Related Schemas
 
 - Station Info: [`station-info.schema.json`](../../../schemas/ble/station-info.schema.json)
 - Available Services: [`available-services.schema.json`](../../../schemas/ble/available-services.schema.json)
