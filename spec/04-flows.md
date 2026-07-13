@@ -885,9 +885,11 @@ This separation ensures that a misconfigured or compromised station cannot overc
 | Offline credit exhausted mid-session (SessionEnded `reason=LocalOutOfCredit`) | Full | 100% (no charge — `creditsCharged` MUST be 0) |
 | Offline pass revoked mid-session (SessionEnded `reason=Deauthorized`) | Full | 100% (no charge — session not billable; `creditsCharged` MUST be 0) |
 | Timer ran to completion (SessionEnded `reason=TimerExpired`) | None | Charge full pre-authorized amount (user received the booked duration regardless of meter values) |
-| If < 50% duration delivered AND reason=`Fault` | Full | 100% (override pro-rate) |
+| If less than `faultFullRefundThreshold` of duration delivered AND reason=`Fault` | Full | 100% (override pro-rate) |
 
-> **Refund scope clarification:** The `< 50% duration delivered` override applies **only** when SessionEnded reason is `Fault`. It does **not** apply to `TimerExpired` sessions: a session that runs to its booked timer is billed for the full pre-authorized duration regardless of meter values, because the user received the time they paid for. The override formula is `actualDurationSeconds < 0.5 * durationSeconds`, evaluated against the booked `durationSeconds` from StartService.
+> **Refund scope clarification:** The low-delivery override applies **only** when SessionEnded reason is `Fault`. It does **not** apply to `TimerExpired` sessions: a session that runs to its booked timer is billed for the full pre-authorized duration regardless of meter values, because the user received the time they paid for. The override formula is `actualDurationSeconds < faultFullRefundThreshold × durationSeconds`, evaluated against the booked `durationSeconds` from StartService.
+>
+> **`faultFullRefundThreshold` (explicit, configurable product parameter — default `0.50`).** The fraction of the booked duration below which a `Fault`-terminated session is deemed to have delivered nothing of value and is refunded in full. This is a **product decision** — *below what fraction is the delivered service worthless?* — so it is a **named, documented, server-configurable value**, never a constant baked into an implementation. A conforming server MUST read it from configuration and MUST keep its configured value and this specification value in lockstep; the default is `0.50` (the historical "< 50%" rule). It is `Fault`-only: a voluntary (`Local`) stop below the threshold is still billed pro-rata, not made free.
 
 ### Settlement by Service Kind
 
@@ -907,7 +909,7 @@ For `UserDuration`, settlement is exactly the reason-keyed matrix above. `FixedD
 |---------------------|----------------|-------------------------------|
 | `TimerExpired` — delivered in full | Full charge | **Full charge** (same) |
 | `Local` — voluntary stop mid-service | Pro-rata on delivered time | **Full charge** — a preset the user started is consumed |
-| `Fault` — hardware fault mid-service | Pro-rata (full refund if `< 50%` delivered) | **Full refund** — a service the station broke delivered nothing of value |
+| `Fault` — hardware fault mid-service | Pro-rata (full refund if less than `faultFullRefundThreshold` delivered) | **Full refund** — a service the station broke delivered nothing of value |
 | `LocalOutOfCredit` / `Deauthorized` | Full refund (`creditsCharged` MUST be `0`) | **Full refund** (same) |
 
 Only the `Local` and `Fault` rows diverge; `TimerExpired` (full charge) and `LocalOutOfCredit` / `Deauthorized` (full refund) are already kind-invariant. An all-or-nothing override is always the pre-authorized amount **in full** or **`0`** — never a partial amount.
