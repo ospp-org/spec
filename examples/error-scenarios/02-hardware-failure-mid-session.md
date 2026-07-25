@@ -70,7 +70,7 @@ service was delivered (below the 50% threshold), Alice receives a full refund.
       "errorText": "PUMP_SYSTEM",
       "errorDescription": "Pump overcurrent detected on bay bay_c1d2e3f4a5b6. Measured 8.2A, threshold 6.0A. Emergency shutdown initiated.",
       "recoverable": false,
-      "recommendedAction": "DISPATCH_TECHNICIAN",
+      "recommendedAction": "Immediately stop active session on affected bay. Dispatch technician. Do not attempt restart without physical inspection.",
       "component": "pump_hp_bay1",
       "measuredValue": 8.2,
       "unit": "amperes",

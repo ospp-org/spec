@@ -152,7 +152,7 @@ Message msg_s2c_ll220001:
       "errorDescription": "Station stn_a1b2c3d4 did not respond to StartService request within the 10-second timeout window. The station may be offline or experiencing connectivity issues.",
       "severity": "Warning",
       "recoverable": true,
-      "recommendedAction": "RETRY_LATER",
+      "recommendedAction": "Server: refund 100% if this was a StartService. App: show \"Station did not respond\" with retry option. Server: check station heartbeat status.",
       "timestamp": "2026-02-13T10:20:16.800Z"
     },
     "refund": {
@@ -214,7 +214,7 @@ Message msg_s2c_ll220001:
       "errorDescription": "Station did not respond in time.",
       "severity": "Warning",
       "recoverable": true,
-      "recommendedAction": "RETRY_LATER"
+      "recommendedAction": "Server: refund 100% if this was a StartService. App: show \"Station did not respond\" with retry option. Server: check station heartbeat status."
     },
     "refund": {
       "refundId": "ref_mm330001",
@@ -254,7 +254,7 @@ Message msg_s2c_ll220001:
   "errorDescription": "Station temporarily unavailable. Please try again later.",
   "severity": "Warning",
   "recoverable": true,
-  "recommendedAction": "RETRY_LATER",
+  "recommendedAction": "Server: refund 100% if this was a StartService. App: show \"Station did not respond\" with retry option. Server: check station heartbeat status.",
   "timestamp": "2026-02-13T10:20:17.500Z",
   "details": {
     "circuitBreaker": {

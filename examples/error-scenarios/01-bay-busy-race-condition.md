@@ -137,7 +137,7 @@ reports the bay is already running a cycle. The station responds with error code
   "errorDescription": "Bay is occupied. Select another bay or try again later.",
   "severity": "Warning",
   "recoverable": true,
-  "recommendedAction": "SELECT_DIFFERENT_BAY",
+  "recommendedAction": "Wait for the current session to complete, or select a different bay. Server: refund 100% if this rejects a StartService [MSG-005].",
   "timestamp": "2026-02-13T10:15:03.500Z",
   "details": {
     "refund": {
