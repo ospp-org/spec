@@ -463,7 +463,7 @@ Server Signing Key (ECDSA P-256, server-side HSM)
 | **Distribution** | Public key submitted **directly** in the provisioning request as `receiptSigningPublicKey` — a bare public key, not carried in a CSR, and never certified as a TLS credential |
 | **Storage** | Station secure element (non-extractable); ATECC608B fully supports ECDSA P-256. Server: held against the station record and used to verify offline receipt signatures (§6.2). |
 | **Lifetime** | Independent of the station certificate. The server **MUST** retain it for at least as long as receipts signed under it must remain auditable (see the OSPP Session Retention Horizon, [Chapter 02 — Transport](02-transport.md)). |
-| **Rotation** | No rotation protocol is defined in this revision. [Re-provisioning](04-flows.md#re-provisioning-an-already-provisioned-station) is the only specified path by which the server comes to hold a different receipt-signing key. |
+| **Rotation** | **No in-band rotation path exists.** The key is established at provisioning and is fixed for the life of the provisioned identity; changing it **REQUIRES** [re-provisioning](04-flows.md#re-provisioning-an-already-provisioned-station) with a **new** provisioning token. The certificate renewal arc of §4.7 covers the mTLS certificate **only** and cannot carry this key. See *Known gap* below. |
 
 **Key separation — the two station ECDSA keys MUST be distinct.** A station's mTLS client key and its receipt-signing key **MUST** be different key pairs. A station **MUST NOT** submit the same public key as both the subject key of its `tlsCsr` and its `receiptSigningPublicKey`.
 
@@ -474,6 +474,14 @@ This is a **different and weaker** requirement than the BLE key separation of §
 **Server behaviour on identical keys.** Distinctness is a conformance requirement on the **station** — the station is the only party able to satisfy it, since both key pairs are generated on-device. A server that receives a provisioning request in which the `receiptSigningPublicKey` equals the CSR subject public key **MUST** detect the condition and **MUST** record it as a station non-conformance for operator review. It **MAY** reject the request. This specification does not state *when* a deployment begins rejecting, and defines no grace period: that is a rollout decision, not a protocol rule.
 
 > **Note.** No error code is registered for a rejection on this condition in this revision; a server that chooses to reject has no conformant code to return under §2.4. This is a known gap, recorded rather than silently filled.
+
+> **Known gap — receipt-key rotation.** The station mTLS key has a renewal arc (§4.7) and the server signing key has a rotation protocol (§6.7). The station receipt-signing key has **neither**. No message defined in this revision carries a replacement receipt-signing key in either direction, so the key is fixed for the life of the provisioned identity unless the station is re-provisioned. This is a stated limitation, not an omission — implementers should plan around it rather than assume a rotation exists:
+>
+> - A suspected compromise of a receipt-signing key **cannot** be remediated in band. Remediation is an operator-minted provisioning token plus a full re-provisioning cycle, per affected station.
+> - The mTLS key and the receipt-signing key rotate on **different schedules** — the former annually (§4.3), the latter not at all. An implementation **MUST NOT** assume the two are replaced together, or infer anything about one from a replacement of the other.
+> - Because the key does not rotate, the **Lifetime** row above is the binding constraint on how long the server must retain it: for as long as receipts signed under it must remain verifiable.
+>
+> Closing this gap requires a wire-level decision — whether a replacement key can ride an existing message or needs a new action — and is deliberately deferred to a future revision rather than pre-empted here.
 
 ### 4.4 Certificate Requirements
 
