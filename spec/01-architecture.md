@@ -481,6 +481,12 @@ After receiving `Accepted`:
 3. Station sends **StatusNotification** [MSG-009] per bay (reporting initial bay states).
 4. Station is now **operational** — ready to accept session commands.
 
+### 7.6 Hardware Replacement
+
+A station's `stationId` is stable across a change of the hardware serving it (§2.1). When a controller is replaced, the station presents the **same** `stationId` at its next BootNotification but reports a **different** `serialNumber`. Re-credentialling the replacement is the [re-provisioning flow](04-flows.md#re-provisioning-an-already-provisioned-station).
+
+That combination — `stationId` matched, `serialNumber` changed — carries a normative consequence for offline transactions left pending across the replacement. The rule is defined in the Offline profile and is **not** restated here: see [Reconciliation §9 — Conflict Resolution](profiles/offline/reconciliation.md), row *"Station replaced/reset between offline period and sync"*.
+
 > **Note:** The provisioning lifecycle is entirely out-of-band from the OSPP protocol perspective. The protocol begins at BootNotification. Manufacturers and operators are free to implement the pre-boot steps using any mechanism appropriate to their hardware and deployment model.
 
 ---
