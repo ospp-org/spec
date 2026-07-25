@@ -16,7 +16,7 @@ The OSPP ecosystem consists of four participants, each with a distinct role and 
 
 | Participant | Role | Trust Level |
 |-------------|------|-------------|
-| **Station** | Physical self-service point with one or more bays, a controller, and network connectivity. Executes service commands, reports status, and collects meter values. | Semi-trusted — operates in a hostile physical environment; authenticated via mTLS client certificate. |
+| **Station** | Self-service point with one or more bays, a controller, and network connectivity. Executes service commands, reports status, and collects meter values. | Semi-trusted — operates in a hostile physical environment; authenticated via mTLS client certificate. |
 | **Server (CSMS)** | Central Station Management System. Manages provisioning, session lifecycle, billing, configuration, firmware, and offline pass issuance. Acts as the authoritative source of truth. | Trusted — the highest-privilege participant. |
 | **Mobile App** | Consumer-facing smartphone application. Initiates sessions, manages reservations, handles payments, and provides offline authorization via BLE when connectivity is degraded. | Untrusted client — authenticated via short-lived JWTs issued by the Server. |
 | **Operator Portal** | Web-based management dashboard for station operators. Provides fleet monitoring, configuration management, diagnostics, and reporting. Communicates exclusively with the Server via HTTPS REST. | Trusted client — authenticated via operator credentials and role-based access control. |
@@ -72,7 +72,7 @@ graph TB
 
 ### 2.1 Station
 
-A **Station** is a physical self-service installation consisting of:
+A **Station** is a logical self-service installation, identified by a stable `stationId` and served by:
 
 - **Controller** — The embedded computing unit that runs the station firmware, manages bay hardware, maintains the MQTT connection to the server, and optionally advertises a BLE interface. Each station has exactly one controller.
 - **One or more Bays** — The individual service points where consumers receive services. A station MUST have at least one bay.
@@ -80,6 +80,8 @@ A **Station** is a physical self-service installation consisting of:
 - **BLE Interface** (OPTIONAL) — A Bluetooth Low Energy peripheral for offline authorization scenarios. Stations that declare `capabilities.bleSupported: true` in their BootNotification MUST implement the BLE GATT service defined in [Chapter 02 — Transport](02-transport.md), Section 8.
 
 A station is identified by a unique `stationId` with the `stn_` prefix (see Section 3). The station reports its hardware metadata — `stationModel`, `stationVendor`, `serialNumber`, `firmwareVersion`, `bayCount`, capabilities, and network information — in the BootNotification message sent at startup (see [Chapter 03 — Message Catalog](03-messages.md), Section 1.1).
+
+The `stationId` identifies the **service installation**, not the hardware currently serving it. It is allocated by the server during provisioning, before first boot (see Section 3.2) — that is, before any hardware is associated with it — and is **stable for the life of the station**. The hardware described by `serialNumber`, `stationModel`, and `stationVendor` **MAY** change without changing the `stationId`; replacing a failed controller board does not create a new station.
 
 ### 2.2 Bay
 

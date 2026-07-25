@@ -43,7 +43,7 @@ The protocol handles:
      +--------------------------------------------------------------------------+
 ```
 
-**Station (SSP)** — The physical device. Has 1+ bays, each offering services (basic, standard, deluxe, etc.). Runs an embedded controller (ESP32, RPi, etc.). Communicates with the server over MQTT and with users over BLE.
+**Station (SSP)** — A service installation identified by a stable `stationId`. Has 1+ bays, each offering services (basic, standard, deluxe, etc.). Runs an embedded controller (ESP32, RPi, etc.) which you can swap without the `stationId` changing. Communicates with the server over MQTT and with users over BLE.
 
 **Server (CSMS)** — Central System Management Server. Manages stations, users, wallets, sessions, billing, and firmware. Exposes a REST API for user agents and communicates with stations over MQTT.
 

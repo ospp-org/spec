@@ -326,8 +326,12 @@ specification. Where a definition involves a requirement, normative language
   **P**oint Protocol). See also: **Station**, **OSPP**.
 
 **Station**
-: A physical self-service installation containing a controller, one or more **Bays**,
-  network connectivity (MQTT and optionally BLE), and optional peripherals. Stations
+: A logical self-service installation identified by a stable `stationId`. A station is
+  served by a controller, one or more **Bays**, network connectivity (MQTT and
+  optionally BLE), and optional peripherals. The hardware serving a station is
+  described by `serialNumber`, `stationModel`, and `stationVendor`; that hardware
+  **MAY** change over the station's lifetime — for example when a controller board is
+  replaced after a fault — **without** changing the `stationId`. Stations
   are identified by the `stn_` prefix followed by 8 or more lowercase hexadecimal
   characters (e.g., `stn_a1b2c3d4e5f6`).
   See [Chapter 01, Section 2.1](01-architecture.md).
