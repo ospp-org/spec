@@ -91,7 +91,7 @@ Verify that a station sends BootNotification as the first message after establis
     }
     ```
 40. Verify that the station enters limited mode (same as Part B Rejected).
-41. Verify that the station does NOT retry BootNotification — error `1007` is non-recoverable (`recoverable: false`). The station MUST await firmware update.
+41. Verify that the station **does** retry BootNotification at the `retryInterval` from the response (300 s above), per CORE-011. `1007` is `recoverable: false` because someone must act — it does not mean the station stops retrying, and a rejected station cannot be sent a firmware update, so stopping would leave on-site service as its only recovery.
 42. Verify that the station logs or stores the `supportedVersions` array for diagnostic purposes.
 
 ## Expected Results
@@ -106,7 +106,7 @@ Verify that a station sends BootNotification as the first message after establis
 8. After Rejected, the station retries BootNotification at the specified `retryInterval`.
 9. After Pending, the station enters a restricted state (same as Rejected), does not send other messages, does not process server commands, and retries BootNotification at `retryInterval`.
 10. On timeout, the station retries after 60 seconds.
-11. After Rejected with `supportedVersions` (1007), the station enters limited mode and does NOT retry BootNotification (non-recoverable error).
+11. After Rejected with `supportedVersions` (1007), the station enters limited mode and continues retrying BootNotification at `retryInterval`, exactly as for any other Rejected — consistent with results 7 and 8 above, and with CORE-011.
 
 ## Failure Criteria
 
@@ -117,4 +117,4 @@ Verify that a station sends BootNotification as the first message after establis
 5. Station does not adopt the server-provided `heartbeatIntervalSec` (Heartbeat sent at a different cadence).
 6. LWT is absent from the MQTT CONNECT packet.
 7. Station does not send StatusNotification for all bays after Accepted.
-8. Station retries BootNotification after receiving Rejected with `1007 PROTOCOL_VERSION_MISMATCH` (non-recoverable — station MUST NOT retry).
+8. Station stops retrying BootNotification after receiving Rejected with `1007 PROTOCOL_VERSION_MISMATCH`. A station that stops cannot be recovered over the protocol — it accepts no commands while rejected, so it can be handed no firmware update — and it will not recover if the server later regains support for its MAJOR version.
