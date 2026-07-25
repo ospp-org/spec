@@ -277,7 +277,32 @@ A provisioning token is **single-use**: it authorises the issuance of **exactly 
 
 Because provisioning traverses unreliable links, the station **MAY** retry with the **same** token. Within the token's TTL, how the server treats that retry depends on **what** differs in the body. Descriptive fields and submitted public keys are **not** equivalent: the former describe the hardware, the latter *are* the identity being certified.
 
-**Descriptive drift MUST be ignored.** A retry whose descriptive fields differ — `serialNumber`, `bayCount` — is a replay. These are the only descriptive fields the request carries: the body is a closed field set ([`provisioning-request.schema.json`](../schemas/provisioning-request.schema.json)), and station model and firmware version are reported in BootNotification ([Chapter 03 — Messages](03-messages.md)), not at provisioning. The server **MUST** return `200 OK` with the **byte-identical** certificate already issued and **MUST NOT** mint a second certificate. For these fields the token, not the body, determines the certificate.
+**Descriptive drift MUST be ignored.** A retry whose descriptive fields differ — `serialNumber`, `bayCount` — is a replay. These are the only descriptive fields the request carries: the body is a closed field set ([`provisioning-request.schema.json`](../schemas/provisioning-request.schema.json)), and station model and firmware version are reported in BootNotification ([Chapter 03 — Messages](03-messages.md)), not at provisioning. The server **MUST** return `200 OK` with the **byte-identical** certificate already issued and **MUST NOT** mint a second certificate. For these fields the token, not the body, determines the certificate. What the rest of the response carries is governed by *What a replay returns* below.
+
+**What a replay returns.** A replay is answered with `200 OK` and a response that is **schema-valid in full** ([`provisioning-response.schema.json`](../schemas/provisioning-response.schema.json)). Its fields divide into two groups, and the division is normative — byte-identity applies to one group and **MUST NOT** be applied to the other.
+
+**Identity — MUST be byte-identical to the original response.** These are what the token bound and certified; returning anything else would mean one token issued two identities:
+
+| Field | Why it is fixed |
+|---|---|
+| `stationId` | the identifier the token is bound to; re-provisioning **MUST NOT** allocate a new one (§ *Re-provisioning*) |
+| `bayIds` | assigned at station registration, before the token was issued |
+| `clientCert` | the issued certificate itself |
+| `stationIdentity` | where present — the certificate issued over the station's **bound** BLE ECDH key |
+
+**Trust and configuration — MUST reflect the server's current state**, even where that differs from the original response:
+
+| Field | Why it is current |
+|---|---|
+| `stationCaChain` | the CA may have been rotated since issuance |
+| `brokerRootCa` | the broker's server-certificate trust anchor may have been re-anchored |
+| `rootCaThumbprint` | pins the apex of `stationCaChain`, so it moves with it |
+| `serverVerifyKey` | the server signing key has its own rotation protocol ([Chapter 06 §6.7](06-security.md)) |
+| `mqttConfig` | the broker may have moved, or its parameters changed |
+
+This is a **requirement, not a tolerance.** A token's TTL is fixed at issuance and may be days, so a replay can legitimately arrive after a CA rotation, a broker migration, or a server-key rotation. A server that froze these fields would hand the station a trust anchor that no longer validates, a broker address that no longer answers, or a verify key that cannot check the next OfflinePass — and each of those is unrecoverable **in band**, because the station needs a working connection before it can be told anything else. The station persists whatever the response carries — see this flow's *Postconditions* below — so a replay **MUST** carry values that work at the moment it is answered.
+
+Where these fields are interdependent the values returned **MUST** be mutually consistent **within the one response**: a rotated `stationCaChain` **MUST** be accompanied by the matching `rootCaThumbprint`, never the superseded one.
 
 **Key drift MUST be rejected.** A retry that presents a **different public key** than the one bound to the already-issued certificate **MUST NOT** be treated as a replay. The server **MUST** reject it with `409 Conflict` and error `4015 PROVISIONING_KEY_MISMATCH` ([Chapter 07 §3.4](07-errors.md)), and **MUST NOT** issue a second certificate on that token. Returning a certificate bound to a key the requester does not hold is not idempotency — it is a failure the requester cannot detect.
 

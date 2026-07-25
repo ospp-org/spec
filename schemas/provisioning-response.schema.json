@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/provisioning-response.schema.json",
   "title": "ProvisioningResponse",
-  "description": "HTTP 200 response body returned by the server's provisioning endpoint (POST /api/v1/stations/provision) per Chapter 04 — Protocol Flows §2. Contains the station's signed identity, trust anchors, server signing key, and the MQTT connection parameters required to bootstrap the operational mTLS session described in Chapter 02 — Transport §1.",
+  "description": "HTTP 200 response body returned by the server's provisioning endpoint (POST /api/v1/stations/provision) per Chapter 04 — Protocol Flows §2. Contains the station's signed identity, trust anchors, server signing key, and the MQTT connection parameters required to bootstrap the operational mTLS session described in Chapter 02 — Transport §1. On an idempotent retry (replay) the response is schema-valid in full, and its fields divide normatively: stationId, bayIds, clientCert and stationIdentity MUST be byte-identical to the original response, whereas stationCaChain, brokerRootCa, rootCaThumbprint, serverVerifyKey and mqttConfig MUST reflect the server's CURRENT state — a replay arriving after a CA rotation, broker migration or server-key rotation must carry the current values or the station cannot connect. See Chapter 04 — Protocol Flows §2, 'What a replay returns'.",
   "type": "object",
   "additionalProperties": false,
   "required": [
