@@ -39,7 +39,7 @@ stateDiagram-v2
     Finishing --> Available : Post-session cleanup complete
     Finishing --> Faulted : Hardware error during cleanup
 
-    Faulted --> Available : Fault cleared (automatic reset)
+    Faulted --> Available : Fault cleared (recoverable faults only)
     Faulted --> Unavailable : SetMaintenanceMode ON (manual intervention)
 
     Unavailable --> Available : SetMaintenanceMode OFF (maintenance complete)
@@ -80,7 +80,7 @@ stateDiagram-v2
 | Service duration elapsed | Occupied | Finishing | `durationSeconds` timer expires | Station auto-stops service, sends StatusNotification |
 | Post-session cleanup complete | Finishing | Available | Hardware wind-down finished (hardware off, actuator retracted) | Station sends StatusNotification; bay is ready for next session |
 | Hardware error detected | Available, Reserved, Occupied, Finishing | Faulted | Station detects hardware fault (actuator, fluid, consumable, electrical, or emergency stop) | Station sends StatusNotification with `errorCode` (5001-5009) |
-| Fault cleared | Faulted | Available | Automatic reset or operator clears fault | Station sends StatusNotification |
+| Fault cleared | Faulted | Available | The fault condition has ended **and** the reported error is `recoverable: true` in the [Chapter 07 registry](07-errors.md#3-error-code-registry) — automatic reset, or the operator clears it. A `recoverable: false` fault **MUST NOT** clear automatically, however the underlying reading may recover: it requires the Level 3 exit — physical intervention, operator verification, and station reboot ([§7.2](07-errors.md#72-station-degradation-levels)). `5004 ELECTRICAL_SYSTEM` is the worked case: a welded relay or a lost phase persists while measured voltage reads nominal. | Station sends StatusNotification |
 | SetMaintenanceMode ON [MSG-020] | Available, Faulted | Unavailable | Operator initiates maintenance | Station sends StatusNotification |
 | SetMaintenanceMode OFF [MSG-020] | Unavailable | Available | Operator completes maintenance | Station sends StatusNotification |
 | LWT / connection lost | Any except Unknown | Unknown | Broker publishes ConnectionLost [MSG-011] | Server marks bay as Unknown; station resolves via StatusNotification on reconnect |
