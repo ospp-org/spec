@@ -1,6 +1,6 @@
 ---
 adr: 001
-status: Accepted
+status: Accepted (amended 2026-07-25)
 date: 2026-06-06
 deciders: OSPP Authors
 supersedes: —
@@ -55,13 +55,35 @@ Starting at **OSPP `0.5.0`**, the three repositories release **lockstep**:
   a whole, not by any one repository.
 - A change in any of the three repositories that affects the public release surface
   (wire-affecting spec changes; SDK enum / schema / payload type changes; conformance
-  test vector additions) triggers a coordinated release that bumps all three
-  repositories to the same new version, in the same release window.
+  test vector additions) is **published** as a coordinated release in which all three
+  repositories carry the same version.
 - A release tag `vX.Y.Z` MUST exist on all three repositories before the release
   is considered published.
 - Repository-private internal changes (developer tooling, lint config, CI YAML,
   README typos) MAY land between releases without a version bump. They are not
   the release surface.
+
+### Scope — lockstep binds at publication, not during development
+
+The requirements above define what it means to **publish** an OSPP release. They
+place no constraint on work in flight:
+
+- The SDKs **MAY** tag and release independently while a spec version is being
+  developed, including versions the other repositories never carry. A tag cut
+  mid-development is not a release of the OSPP surface, and obliges the other two
+  repositories to do nothing.
+- The spec tag for a version is cut **once**, when the spec for that version is
+  done. It is not staged, and it is not held open waiting for the SDKs to catch up.
+- No repository is ever blocked from merging or tagging because another repository
+  has not yet reached the same version.
+
+What lockstep guarantees is that a version number, **once published as an OSPP
+release**, means the same thing in all three repositories. It does not guarantee —
+and does not require — that the three are at the same version at any moment in
+between. The original wording ("bumps all three repositories to the same new
+version, in the same release window") read as a constraint on development order;
+that was never the point, and at the current number of implementers it is pure
+coordination cost.
 
 A release is **complete** when:
 
@@ -87,7 +109,8 @@ The Deferred enum addition is on its own a PATCH-shaped change (additive to an
 enum; existing wire values keep their meaning; no required-field break). The
 MINOR bump to `0.5.0` is policy, not protocol — it marks the lockstep
 re-synchronization. From `0.5.0` forward, version arithmetic is back to standard
-SemVer with the three repositories moving as one.
+SemVer, with the three repositories converging on one number **at each published
+release** (see *Scope*).
 
 Documenting this as a deliberate MINOR bump (instead of attempting `0.4.4`
 across three repos with different histories) avoids:
@@ -105,16 +128,29 @@ Consumers can pin one version across all three packages and trust the matrix.
 **Negative.** Some repositories will publish "empty-feature" releases — a
 spec-only change still bumps SDK TS, even if no `.ts` file changed. This is the
 intentional cost: the version number now communicates "this is the canonical
-OSPP surface as of this date", not "this SDK changed".
+OSPP surface as of this date", not "this SDK changed". With lockstep scoped to
+publication this cost is paid once per release, not continuously during
+development.
 
 **Operational.** Release tooling MUST verify all three tags exist before
-announcing a release. A CI gate is RECOMMENDED to refuse merging a "release"
-commit unless the same `vX.Y.Z` is present on the other two repositories' default
-branches.
+**announcing** a release — that is the one check lockstep needs, and it runs at
+publication.
+
+No CI gate should block merging or tagging on another repository's state. The gate
+originally recommended here — refuse a "release" commit unless the same `vX.Y.Z` is
+already on the other two repositories' default branches — cannot work: every
+repository would wait for the other two to reach a version none of them is allowed
+to reach first. It is removed rather than reworded.
 
 ## Status
 
-Accepted, effective `0.5.0`.
+Accepted, effective `0.5.0`. **Amended 2026-07-25** — lockstep scoped to
+publication (see *Scope*), and the circular mid-development CI gate removed. The
+coordination the original wording imposed was written for a multi-implementer
+ecosystem; the SDKs have one implementer, and the external implementer of the wire
+protocol consumes the spec documents rather than the SDKs, so the cost was real and
+the benefit was not. What a published release means across the three repositories is
+unchanged.
 
 ## References
 
