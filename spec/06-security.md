@@ -1506,8 +1506,9 @@ Diagnostic uploads via GetDiagnostics [MSG-018] **MUST** apply the same redactio
 - [ ] OfflinePass 10-check validation for Full Offline mode
 - [ ] ECDSA P-256 signature verification for ServerSignedAuth
 - [ ] ECDSA P-256 receipt signing for all offline transactions
+- [ ] Receipt-signing key pair is a **distinct** key pair from the mTLS client key — the same public key MUST NOT be submitted as both the `tlsCsr` subject key and `receiptSigningPublicKey` at provisioning (§4.3); costs one additional secure-element slot
 - [ ] txCounter maintenance (monotonically increasing, persisted to NVS)
-- [ ] BLE handshake: ECDH P-256 (ephemeral) + StationIdentity certificate + ChaCha20-Poly1305 AEAD channel (§6.5); dedicated static BLE ECDH key (separate from the mTLS/receipt key); BLE pairing OPTIONAL (never assumed)
+- [ ] BLE handshake: ECDH P-256 (ephemeral) + StationIdentity certificate + ChaCha20-Poly1305 AEAD channel (§6.5); dedicated static BLE ECDH key (separate from **both** ECDSA keys — the mTLS client key and the receipt-signing key, §4.3); BLE pairing OPTIONAL (never assumed)
 - [ ] Tamper detection (if hardware supports it)
 - [ ] Diagnostics exclude private keys
 - [ ] Firmware checksum verification before installation
@@ -1521,6 +1522,9 @@ Diagnostic uploads via GetDiagnostics [MSG-018] **MUST** apply the same redactio
 - [ ] Refresh token one-time-use enforcement
 - [ ] ECDSA P-256 key generation and rotation for OfflinePass signing
 - [ ] ECDSA P-256 receipt verification during reconciliation
+- [ ] Reject provisioning requests whose `receiptSigningPublicKey` equals the CSR subject key — `422` / `4016 PROVISIONING_KEY_REUSE`, no certificate issued, token NOT consumed (§4.3)
+- [ ] Retain **every** receipt-signing key ever bound to a station, with each key's validity window; never overwrite a superseded key in place (§4.3)
+- [ ] Select the verification key from a **server-authoritative anchor** (the OfflinePass's validity window, or the authorization record for the auth form) — never from a station-supplied timestamp, and never by trying every retained key (§4.3)
 - [ ] txCounter sequence verification during reconciliation
 - [ ] Fraud scoring for offline transactions
 - [ ] Webhook HMAC-SHA512 verification (timing-safe)
