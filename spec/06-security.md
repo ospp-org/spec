@@ -462,7 +462,7 @@ Server Signing Key (ECDSA P-256, server-side HSM)
 | **Generation** | On-device during provisioning (private key NEVER leaves the station) |
 | **Distribution** | Public key submitted **directly** in the provisioning request as `receiptSigningPublicKey` — a bare public key, not carried in a CSR, and never certified as a TLS credential |
 | **Storage** | Station secure element (non-extractable); ATECC608B fully supports ECDSA P-256. Server: held against the station record and used to verify offline receipt signatures (§6.2). |
-| **Lifetime** | Independent of the station certificate. The server **MUST** retain it for at least as long as receipts signed under it must remain auditable (see the OSPP Session Retention Horizon, [Chapter 02 — Transport](02-transport.md)). |
+| **Lifetime** | Independent of the station certificate. The server **MUST** retain **every** receipt-signing key it has bound to the station — not only the current one — for at least as long as receipts signed under each must remain verifiable. See *Historical retention* below. |
 | **Rotation** | **No in-band rotation path exists.** The key is established at provisioning and is fixed for the life of the provisioned identity; changing it **REQUIRES** [re-provisioning](04-flows.md#re-provisioning-an-already-provisioned-station) with a **new** provisioning token. The certificate renewal arc of §4.7 covers the mTLS certificate **only** and cannot carry this key. See *Known gap* below. |
 
 **Key separation — the two station ECDSA keys MUST be distinct.** A station's mTLS client key and its receipt-signing key **MUST** be different key pairs. A station **MUST NOT** submit the same public key as both the subject key of its `tlsCsr` and its `receiptSigningPublicKey`.
@@ -476,6 +476,12 @@ This is a **different and weaker** requirement than the BLE key separation of §
 Distinctness is a conformance requirement on the **station** — it is the only party able to satisfy it, since both key pairs are generated on-device — but it is **enforced at the server**, where the check costs nothing: compare the CSR's DER `SubjectPublicKeyInfo` against the submitted `receiptSigningPublicKey`. Rejecting fails closed, so a station that has not implemented key separation cannot enter the fleet.
 
 This specification defines **no grace period** and no migration path for stations already provisioned with a shared key. When a given deployment begins enforcing is a rollout decision, not a protocol rule.
+
+**Historical retention — a superseded receipt-signing key MUST NOT be discarded.** Re-provisioning replaces the station's receipt-signing key. A server that overwrites the previous key **in place** destroys its own ability to verify anything signed under it — and offline receipts are long-lived fiscal artefacts that may be presented, audited, reconciled, or disputed long after the key that signed them was superseded.
+
+Therefore, for each station the server **MUST** retain **every** receipt-signing key it has bound, together with the **validity window** during which that key was current — the instant it was bound and the instant it was superseded. Retention **MUST** last at least as long as receipts signed under that key must remain verifiable; a key **MUST NOT** be deleted merely because a newer one has replaced it.
+
+At verification the server **MUST** use the key that was current **when the receipt was signed**, not the station's present key. Because a receipt carries no key identifier (§6.2), that selection is necessarily by time. A server **MAY** additionally attempt other keys retained for the **same** station — which is the more robust behaviour under clock skew — but **MUST NOT** accept a signature under any key that was never bound to that station.
 
 > **Known gap — receipt-key rotation.** The station mTLS key has a renewal arc (§4.7) and the server signing key has a rotation protocol (§6.7). The station receipt-signing key has **neither**. No message defined in this revision carries a replacement receipt-signing key in either direction, so the key is fixed for the life of the provisioned identity unless the station is re-provisioned. This is a stated limitation, not an omission — implementers should plan around it rather than assume a rotation exists:
 >
