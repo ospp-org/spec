@@ -66,9 +66,9 @@ Everything has a prefixed identifier:
 
 ### Message Model
 
-OSPP has **39 messages** across two transports:
+OSPP has **40 messages** across two transports:
 
-- **26 MQTT messages** — station-to-server and server-to-station
+- **27 MQTT messages** — station-to-server and server-to-station
 - **13 BLE messages** — app-to-station (offline)
 
 Every MQTT message is wrapped in an **envelope**:

@@ -10,14 +10,14 @@ This directory contains JSON Schema definitions for every message in the OSPP pr
 
 ```
 schemas/
-├── common/                              17 shared type definitions ($ref targets)
-├── mqtt/                                46 MQTT message payload schemas
-├── ble/                                 13 BLE message schemas
+├── common/                              21 shared type definitions ($ref targets)
+├── mqtt/                                47 MQTT message payload schemas
+├── ble/                                 15 BLE schemas (13 message types + StationIdentity + secure frame)
 ├── provisioning-response.schema.json    HTTP provisioning response (Flow §2)
 └── README.md                            This file
 ```
 
-**Total: 77 schema files.**
+**Total: 84 schema files.**
 
 ---
 

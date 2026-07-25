@@ -21,7 +21,7 @@ OSPP is an **open, vendor-neutral communication protocol** for self-service stat
 
 Think of it as **OCPP for self-service industries**. Where OCPP standardized EV charger-to-server communication, OSPP does the same for any station that delivers a time-bounded service through a physical bay. The protocol supports **online operation** (MQTT 5.0 over TLS 1.2+, TLS 1.3 recommended), **offline operation** (BLE 4.2+ GATT with cryptographically signed passes), and **four hybrid connectivity scenarios** — ensuring service continuity even when internet is unavailable.
 
-OSPP covers **34 messages** (21 MQTT + 13 BLE), **84 JSON Schemas**, **110 error codes**, **5 compliance profiles**, and a complete security model with mTLS, selective HMAC-SHA256 message signing, ECDSA P-256 offline authorization and receipt signing, and ECDSA P-384 root CA. It does NOT cover server-to-app REST APIs, payment gateway integration, business logic, or hardware internals — those are implementation-specific.
+OSPP covers **40 messages** (27 MQTT + 13 BLE), **84 JSON Schemas**, **110 error codes**, **5 compliance profiles**, and a complete security model with mTLS, selective HMAC-SHA256 message signing, ECDSA P-256 offline authorization and receipt signing, and ECDSA P-384 root CA. It does NOT cover server-to-app REST APIs, payment gateway integration, business logic, or hardware internals — those are implementation-specific.
 
 ---
 
@@ -127,7 +127,7 @@ npx ajv-cli validate \
 | [00](spec/00-introduction.md) | Introduction | Scope, audience, normative language (RFC 2119/8174) | Draft |
 | [01](spec/01-architecture.md) | Architecture | System topology, hardware model, identity scheme, protocol stack | Draft |
 | [02](spec/02-transport.md) | Transport | MQTT 5.0, TLS 1.2+, topic structure, QoS, BLE GATT, reconnection | Draft |
-| [03](spec/03-messages.md) | Message Catalog | JSON envelope, messageType, correlation, timestamps; all 34 messages — fields, types, constraints, directions | Draft |
+| [03](spec/03-messages.md) | Message Catalog | JSON envelope, messageType, correlation, timestamps; all 40 messages — fields, types, constraints, directions | Draft |
 | [04](spec/04-flows.md) | Protocol Flows | 12 end-to-end flows with sequence diagrams and step-by-step detail | Draft |
 | [05](spec/05-state-machines.md) | State Machines | Bay, Session, Reservation, BLE Connection, Firmware Update FSMs | Draft |
 | [06](spec/06-security.md) | Security | Threat model, mTLS, HMAC-SHA256, PKI, OfflinePass, receipts, fraud scoring | Draft |
@@ -149,7 +149,7 @@ Each profile defines a subset of protocol actions. Implementations declare which
 
 ### Message Catalog
 
-**21 MQTT Messages:**
+**27 MQTT Messages:**
 
 | # | Action | Direction | Type | Timeout |
 |:-:|--------|-----------|------|:-------:|
@@ -174,9 +174,14 @@ Each profile defines a subset of protocol actions. Implementations declare which
 | 19 | DiagnosticsNotification | Station → Server | EVENT | — |
 | 20 | SetMaintenanceMode | Server → Station | REQ/RES | 30s |
 | 21 | UpdateServiceCatalog | Server → Station | REQ/RES | 30s |
+| 22 | SignCertificate | Station → Server | REQ/RES | 30s |
+| 23 | CertificateInstall | Server → Station | REQ/RES | 30s |
+| 24 | TriggerCertificateRenewal | Server → Station | REQ/RES | 10s |
+| 25 | DataTransfer | Bidirectional | REQ/RES | 30s |
+| 26 | TriggerMessage | Server → Station | REQ/RES | 10s |
 | 40 | SessionEnded | Station → Server | EVENT | — | *(autonomous session termination — timer expiry or fault)*
 
-> **Note:** MSG-022–039 are security and BLE messages listed separately below.
+> **Note:** MSG-027–039 are the 13 BLE messages, listed separately below.
 
 **13 BLE Messages:** StationInfo (FFF1), AvailableServices (FFF2), HELLO, CHALLENGE, OfflineAuthRequest, ServerSignedAuth, AuthResponse, START/StopServiceRequest/RESPONSE, ServiceStatus (FFF5), Receipt (FFF6)
 
@@ -190,9 +195,9 @@ Full definitions: [Chapter 03 — Message Catalog](spec/03-messages.md)
 
 | Directory | Count | Content |
 |-----------|:-----:|---------|
-| [`schemas/common/`](schemas/common/) | 18 | Shared types: identifiers, timestamps, credit amounts, error objects, OfflinePass, receipt, envelope |
-| [`schemas/mqtt/`](schemas/mqtt/) | 36 | REQUEST/RESPONSE/EVENT payload schemas for all 21 MQTT actions |
-| [`schemas/ble/`](schemas/ble/) | 13 | BLE message schemas for all 13 BLE message types |
+| [`schemas/common/`](schemas/common/) | 21 | Shared types: identifiers, timestamps, credit amounts, error objects, OfflinePass, receipt, envelope |
+| [`schemas/mqtt/`](schemas/mqtt/) | 47 | REQUEST/RESPONSE/EVENT payload schemas for all 27 MQTT actions |
+| [`schemas/ble/`](schemas/ble/) | 15 | BLE message schemas for all 13 BLE message types, plus the StationIdentity certificate and secure-frame structures |
 
 Full index: [schemas/README.md](schemas/README.md)
 
@@ -308,7 +313,7 @@ ospp/
 │   ├── 00-introduction.md       Chapter 00: Introduction
 │   ├── 01-architecture.md       Chapter 01: Architecture
 │   ├── 02-transport.md          Chapter 02: Transport (MQTT + BLE)
-│   ├── 03-messages.md           Chapter 03: Message Catalog (34 messages)
+│   ├── 03-messages.md           Chapter 03: Message Catalog (40 messages)
 │   ├── 04-flows.md              Chapter 04: Protocol Flows (12 flows)
 │   ├── 05-state-machines.md     Chapter 05: State Machines
 │   ├── 06-security.md           Chapter 06: Security Model

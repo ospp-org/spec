@@ -68,7 +68,7 @@ Each message below includes:
 
 ## Quick Reference
 
-### MQTT Messages (26 actions)
+### MQTT Messages (27 actions)
 
 | # | Action | Direction | Type | Category | Timeout |
 |--:|--------|-----------|------|----------|--------:|
@@ -82,22 +82,23 @@ Each message below includes:
 | 8 | [Heartbeat](#51-heartbeat) | Station → Server | REQ/RES | Status | 30s |
 | 9 | [StatusNotification](#52-statusnotification) | Station → Server | EVENT | Status | — |
 | 10 | [MeterValues](#53-metervalues) | Station → Server | EVENT | Status | — |
-| 11 | [ConnectionLost](#54-connectionlost) | Broker → Server | EVENT (LWT) | Status | — |
-| 12 | [SecurityEvent](#55-securityevent) | Station → Server | EVENT | Status | — |
-| 13 | [ChangeConfiguration](#61-changeconfiguration) | Server → Station | REQ/RES | Config | 60s |
-| 14 | [GetConfiguration](#62-getconfiguration) | Server → Station | REQ/RES | Config | 30s |
-| 15 | [Reset](#63-reset) | Server → Station | REQ/RES | Config | 30s |
-| 16 | [UpdateFirmware](#64-updatefirmware) | Server → Station | REQ/RES | Firmware | 300s |
-| 17 | [FirmwareStatusNotification](#65-firmwarestatusnotification) | Station → Server | EVENT | Firmware | — |
-| 18 | [GetDiagnostics](#66-getdiagnostics) | Server → Station | REQ/RES | Config | 300s |
-| 19 | [DiagnosticsNotification](#67-diagnosticsnotification) | Station → Server | EVENT | Config | — |
-| 20 | [SetMaintenanceMode](#68-setmaintenancemode) | Server → Station | REQ/RES | Config | 30s |
-| 21 | [UpdateServiceCatalog](#69-updateservicecatalog) | Server → Station | REQ/RES | Config | 30s |
-| 22 | [SignCertificate](#610-signcertificate) | Station → Server | REQ/RES | Security | 30s |
-| 23 | [CertificateInstall](#611-certificateinstall) | Server → Station | REQ/RES | Security | 30s |
-| 24 | [TriggerCertificateRenewal](#612-triggercertificaterenewal) | Server → Station | REQ/RES | Security | 10s |
-| 25 | [DataTransfer](#613-datatransfer) | Bidirectional | REQ/RES | Core | 30s |
-| 26 | [TriggerMessage](#614-triggermessage) | Server → Station | REQ/RES | Core | 10s |
+| 11 | [SessionEnded](#54-sessionended) | Station → Server | EVENT | Status | — |
+| 12 | [ConnectionLost](#55-connectionlost) | Broker → Server | EVENT (LWT) | Status | — |
+| 13 | [SecurityEvent](#56-securityevent) | Station → Server | EVENT | Status | — |
+| 14 | [ChangeConfiguration](#61-changeconfiguration) | Server → Station | REQ/RES | Config | 60s |
+| 15 | [GetConfiguration](#62-getconfiguration) | Server → Station | REQ/RES | Config | 30s |
+| 16 | [Reset](#63-reset) | Server → Station | REQ/RES | Config | 30s |
+| 17 | [UpdateFirmware](#64-updatefirmware) | Server → Station | REQ/RES | Firmware | 300s |
+| 18 | [FirmwareStatusNotification](#65-firmwarestatusnotification) | Station → Server | EVENT | Firmware | — |
+| 19 | [GetDiagnostics](#66-getdiagnostics) | Server → Station | REQ/RES | Config | 300s |
+| 20 | [DiagnosticsNotification](#67-diagnosticsnotification) | Station → Server | EVENT | Config | — |
+| 21 | [SetMaintenanceMode](#68-setmaintenancemode) | Server → Station | REQ/RES | Config | 30s |
+| 22 | [UpdateServiceCatalog](#69-updateservicecatalog) | Server → Station | REQ/RES | Config | 30s |
+| 23 | [SignCertificate](#610-signcertificate) | Station → Server | REQ/RES | Security | 30s |
+| 24 | [CertificateInstall](#611-certificateinstall) | Server → Station | REQ/RES | Security | 30s |
+| 25 | [TriggerCertificateRenewal](#612-triggercertificaterenewal) | Server → Station | REQ/RES | Security | 10s |
+| 26 | [DataTransfer](#613-datatransfer) | Bidirectional | REQ/RES | Core | 30s |
+| 27 | [TriggerMessage](#614-triggermessage) | Server → Station | REQ/RES | Core | 10s |
 
 ### BLE Messages (13 message types)
 
