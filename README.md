@@ -21,7 +21,7 @@ OSPP is an **open, vendor-neutral communication protocol** for self-service stat
 
 Think of it as **OCPP for self-service industries**. Where OCPP standardized EV charger-to-server communication, OSPP does the same for any station that delivers a time-bounded service through a physical bay. The protocol supports **online operation** (MQTT 5.0 over TLS 1.2+, TLS 1.3 recommended), **offline operation** (BLE 4.2+ GATT with cryptographically signed passes), and **four hybrid connectivity scenarios** — ensuring service continuity even when internet is unavailable.
 
-OSPP covers **34 messages** (21 MQTT + 13 BLE), **67 JSON Schemas**, **95 error codes**, **5 compliance profiles**, and a complete security model with mTLS, selective HMAC-SHA256 message signing, ECDSA P-256 offline authorization and receipt signing, and ECDSA P-384 root CA. It does NOT cover server-to-app REST APIs, payment gateway integration, business logic, or hardware internals — those are implementation-specific.
+OSPP covers **34 messages** (21 MQTT + 13 BLE), **67 JSON Schemas**, **108 error codes**, **5 compliance profiles**, and a complete security model with mTLS, selective HMAC-SHA256 message signing, ECDSA P-256 offline authorization and receipt signing, and ECDSA P-384 root CA. It does NOT cover server-to-app REST APIs, payment gateway integration, business logic, or hardware internals — those are implementation-specific.
 
 ---
 
