@@ -648,7 +648,7 @@ QoS: 1 (always)
 
 1. Look up the station by `stationId`
 2. If unknown → respond `Rejected` with error `2001 STATION_NOT_REGISTERED`
-3. Validate protocol version compatibility — if the station's `protocolVersion` has a different MAJOR version than the server supports, respond `Rejected` with error `1007 PROTOCOL_VERSION_MISMATCH` and include `supportedVersions` array (e.g., `["0.1.0", "0.2.0"]`)
+3. Validate protocol version compatibility — if the station's `protocolVersion` has a different MAJOR version than the server supports, respond `Rejected` with error `1007 PROTOCOL_VERSION_MISMATCH` and include both the `supportedVersions` array (e.g., `["0.1.0", "0.2.0"]`) and a `retryInterval` — the station stays in limited mode and keeps retrying, so do not treat 1007 as a terminal state server-side
 4. Generate a 32-byte random session key (for HMAC signing)
 5. Respond `Accepted` with:
    - `serverTime` (ISO 8601 UTC) — station syncs its clock to this

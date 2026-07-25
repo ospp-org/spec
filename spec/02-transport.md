@@ -868,7 +868,7 @@ All timestamps MUST use **ISO 8601** format with **millisecond precision** and *
 | Message expired | MQTT | Message Expiry Interval | Discard, log warning |
 | Invalid JSON received | MQTT / BLE | JSON parse error | Send ERROR message with `1005`, discard |
 | Unknown action | MQTT / BLE | Action not recognized | Send ERROR message with `1006`, discard |
-| Protocol version mismatch | MQTT | BootNotification Rejected | Log `1007`, station cannot operate |
+| Protocol version mismatch | MQTT | BootNotification Rejected | Log `1007`, record `supportedVersions`, stay in limited mode and keep retrying BootNotification at `retryInterval` per [CORE-011](profiles/core/README.md) — the station cannot deliver service, but it MUST NOT stop retrying |
 | BLE scan timeout | BLE | No advertisement found in 30s | Return to IDLE, show error to user |
 | BLE connection drops | BLE | GATT disconnect event | Service continues on timer; receipt retained |
 | BLE fragment timeout | BLE | 5s without next fragment | Discard buffered fragments |
