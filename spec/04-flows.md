@@ -250,7 +250,7 @@ sequenceDiagram
 
 | Error | Cause | SSP Action |
 |-------|-------|------------|
-| 401 Unauthorized | Token expired / beyond TTL, superseded, or revoked | Display error, await new provisioning token |
+| 401 Unauthorized (`2019 PROVISIONING_TOKEN_INVALID`) | Token expired / beyond TTL, superseded, or revoked — carried in `details.reason` | Display error, await new provisioning token. Do **not** regenerate keys: the keys are not what was rejected |
 | 400 Bad Request | Invalid CSR or missing fields | Log error, regenerate keys, retry |
 | 409 Conflict (`4015 PROVISIONING_KEY_MISMATCH`) | This token already issued a certificate, and this retry presents a **different** public key | **Do NOT retry with this token** — no retry can succeed. Request a **new** provisioning token from the operator, then provision again with the keys currently held. Do **not** regenerate keys first: that is what caused the mismatch |
 | Network unreachable | No connectivity | Retry with backoff, await network |
@@ -286,7 +286,9 @@ A retry presenting the **same** keys is a replay and is answered as described ab
 
 **Comparison basis.** The comparison **MUST** be made on the **decoded public key**, never on the transmitted bytes. For the CSR this means the DER-encoded `SubjectPublicKeyInfo`, **not** the raw CSR bytes: a CSR is self-signed with ECDSA, whose signatures are randomised, so two honest CSRs for the same key differ byte-wise and a byte comparison would reject a legitimate retry. Equivalently, for the other keys a re-encoding of the same point — compressed vs. uncompressed SEC1, PEM whitespace — is **not** drift, whereas a different point **is**.
 
-Once the TTL elapses the token is invalid for **all** purposes: any further call — **including** a retry of an already-completed provision — **MUST** be rejected with `401 Unauthorized`, and the station **MUST** obtain a new provisioning token. A token that has been **superseded** by a re-issuance for the same station, or administratively **revoked**, is likewise invalid and **MUST** be rejected with `401`.
+Once the TTL elapses the token is invalid for **all** purposes: any further call — **including** a retry of an already-completed provision — **MUST** be rejected with `401 Unauthorized` and error `2019 PROVISIONING_TOKEN_INVALID` ([Chapter 07 §3.2](07-errors.md)), and the station **MUST** obtain a new provisioning token. A token that has been **superseded** by a re-issuance for the same station, or administratively **revoked**, is likewise invalid and **MUST** be rejected the same way; the discriminator (`expired`, `superseded`, `revoked`) **SHOULD** be carried in `details.reason`.
+
+Token validity is checked **before** the key comparison: an expired-or-revoked token yields `401` / `2019` regardless of which keys the request carries, and `409` / `4015` is reachable only on a token that is otherwise still valid.
 
 This is the provisioning-endpoint instance of the idempotency-retention rule in [Transport §9.3](02-transport.md#93-idempotency) (retain ≥ 24 h), keyed on the provisioning token rather than an `Idempotency-Key` header.
 

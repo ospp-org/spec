@@ -19,7 +19,7 @@ Error codes are organized into six functional categories. Each category occupies
 | Range | Category | Tier | Count | Description |
 |:------|----------|:----:|:-----:|-------------|
 | 1000–1999 | **Transport Errors** | Protocol | 15 | Network, protocol, message format, and message integrity errors |
-| 2000–2999 | **Authentication & Authorization Errors** | Protocol | 19 | Identity verification, credential validation, and access control |
+| 2000–2999 | **Authentication & Authorization Errors** | Protocol | 20 | Identity verification, credential validation, and access control |
 | 3000–3999 | **Session & Bay Errors** | Application | 17 | Bay state, session lifecycle, reservation, and service errors |
 | 4000–4999 | **Payment & Credit Errors** | Application | 15 | Wallet balance, payment processing, refunds, offline credit limits, and certificate management |
 | 5000–5999 | **Station Hardware & Software Errors** | Application | 34 | Physical hardware faults and embedded software errors |
@@ -32,7 +32,7 @@ Error codes are organized into six functional categories. Each category occupies
 - **Application tier** (3000–6999): Errors related to business logic, state violations, hardware conditions, and server-side processing. These errors indicate that the message was received and understood, but the requested operation could not be completed. Application-tier errors are handled by the application layer.
 - **Vendor tier** (9000–9999): Reserved for implementation-specific error codes. Vendors **MUST** document their vendor error codes separately.
 
-**Total: 108 standard error codes.**
+**Total: 109 standard error codes.**
 
 ### 1.2 Severity Levels
 
@@ -187,7 +187,7 @@ X-Request-Id: req_f47ac10b-58cc-4372-a567-0e02b2c3d479
 | HTTP Status | Typical Error Codes | Description |
 |:-----------:|---------------------|-------------|
 | 400 | 1005, 3015, 6004 | Bad request — invalid format or payload |
-| 401 | 2008, 2009, 2010 | Unauthorized — authentication failed or expired |
+| 401 | 2008, 2009, 2010, 2019 | Unauthorized — authentication failed or expired |
 | 402 | 4001 | Payment required — insufficient balance |
 | 403 | 2008 | Forbidden — action not permitted for this role |
 | 404 | 3005, 3006, 3012 | Not found — resource does not exist |
@@ -249,6 +249,7 @@ Authentication errors cover identity verification (mTLS, JWT, BLE handshake, Off
 | 2016 | `OFFLINE_USER_MISMATCH` | Error | false | OfflinePass `user_id` does not match the `userId` carried in the TransactionEvent envelope. The pass is bound to a different user than the one claimed by the station. | Server: log SecurityEvent [MSG-012] with `type: "OfflinePassRejected"`. Indicates either a station bug, station-side state corruption, or a deliberate user-id forgery. |
 | 2017 | `OFFLINE_RECEIPT_MISMATCH` | Critical | false | One or more of the cryptographically signed fields in `receipt.data` (`offlineTxId`, `offlinePassId`, `userId`, or `deviceId`) does not match the corresponding cross-check target (the TransactionEvent envelope for `offlineTxId` / `offlinePassId` / `userId`; the resolved pass record's `device_id` for `deviceId`). The signature itself verified, but the signed payload disagrees with the envelope's claim or the pass's device binding. | Server: log SecurityEvent [MSG-012] with `type: "OfflinePassRejected"`. The `details.field` element identifies the mismatched field (`offlineTxId` / `offlinePassId` / `userId` / `deviceId`); `details.signedValue` and `details.expectedValue` carry the forensic pair. This is a strong indicator of envelope tampering or station-side state corruption. |
 | 2018 | `SERVER_AUTH_NONCE_MISMATCH` | Critical | false | The `appNonce` claim inside a `ServerSignedAuth` payload (Partial A, `profiles/offline/ble-handshake.md` §4.2.2 check #2) does not match the `Hello.appNonce` of the current BLE handshake. The ECDSA P-256 signature itself verified, so this is a captured-and-replayed authorization being relayed into a different handshake — the primary, clock-independent anti-replay defence. | Station: reject the handshake and disconnect. App: SHOULD obtain a fresh `signedAuthorization` bound to the current `appNonce` and retry. Server: log SecurityEvent [MSG-012] with `type: "ServerSignedAuthReplay"` on the next reconciliation. |
+| 2019 | `PROVISIONING_TOKEN_INVALID` | Error | false | The provisioning token presented to `POST /api/v1/stations/provision` is not usable: it has passed its 24-hour TTL, has been **superseded** by a re-issuance for the same station, or has been administratively **revoked**. All three are terminal for that token. Servers **SHOULD** carry the discriminator in `details.reason` (`expired`, `superseded`, `revoked`). HTTP `401 Unauthorized`. Distinct from `4015 PROVISIONING_KEY_MISMATCH`, where the token is valid but the submitted identity changed. See [Flows §2](04-flows.md#single-use-and-idempotent-retry). | Station: display the error and **await a new provisioning token** — no retry with this token can succeed. Operator: issue a fresh token. Do not regenerate keys in response to this error; the keys are not what was rejected. |
 
 > **Note on `2003 OFFLINE_PASS_EXPIRED` context-dependent semantics (v0.4.2):**
 > At **authorize-time** (`profiles/offline/authorize-offline-pass.md` §5 check #2 / `offline-pass.md` §4 check #2): severity = `Warning`, recoverable = `true`. The app retries with a fresh pass.
@@ -444,7 +445,7 @@ This table maps which error codes can appear in the RESPONSE or rejection of eac
 | `POST /me/offline-txs` | 400, 401 | 2009, 2010, 3015, 6004 |
 | `POST /sessions/offline-auth` | 401, 402 | 2009, 4001 |
 | `POST /webhooks/payment-gateway/notification` | 401 | 4008 |
-| `POST /api/v1/stations/provision` | 400, 401, 409 | 4010, 4015 |
+| `POST /api/v1/stations/provision` | 400, 401, 409 | 2019, 4010, 4015 |
 
 ---
 
@@ -773,6 +774,7 @@ Vendors MAY define custom error codes in the **9000–9999** range for proprieta
 | 2016 | `OFFLINE_USER_MISMATCH` | Error | A |
 | 2017 | `OFFLINE_RECEIPT_MISMATCH` | Critical | A |
 | 2018 | `SERVER_AUTH_NONCE_MISMATCH` | Critical | A |
+| 2019 | `PROVISIONING_TOKEN_INVALID` | Error | A |
 | 3000 | `SESSION_GENERIC` | Error | S |
 | 3001 | `BAY_BUSY` | Warning | S |
 | 3002 | `BAY_NOT_READY` | Warning | S |
