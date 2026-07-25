@@ -65,7 +65,7 @@ Every error — whether in an MQTT RESPONSE, BLE AuthResponse, or REST API respo
 | `recommendedAction` | string | **REQUIRED** | The corrective action the §3 registry gives for this `errorCode`. Per-**code**, not per-occurrence; see §1.4. |
 | `timestamp` | string | **REQUIRED** | ISO 8601 UTC with milliseconds — when the error was detected. |
 | `vendorErrorCode` | string | OPTIONAL | Vendor-specific sub-code for proprietary diagnostics (see §8). |
-| `details` | object | OPTIONAL | Additional structured context (e.g., which field failed validation, threshold values, etc.). OPTIONAL in general, but **REQUIRED** for a code whose registry entry branches on a member of it — see §1.4. |
+| `details` | object | OPTIONAL | Additional structured context (e.g., which field failed validation, threshold values, etc.). OPTIONAL in general, but **REQUIRED** for a code whose registry entry branches on a member of it — see §1.4, and Appendix C, whose conditional blocks enforce it. |
 
 The field set above is identical on every transport. Where the object *sits* differs: inside `payload` for MQTT (§2.1), nested under `error` for BLE (§2.3, which must also carry the `type` and `result` discriminators), and as the entire top-level body for REST (§2.4).
 
@@ -976,6 +976,74 @@ The following JSON Schema validates error objects in OSPP messages.
       "additionalProperties": true
     }
   },
+  "allOf": [
+    {
+      "$comment": "1004 branches on details.cause (§3.1). Discriminator is REQUIRED on this code.",
+      "if": {
+        "properties": { "errorCode": { "const": 1004 } },
+        "required": ["errorCode"]
+      },
+      "then": {
+        "required": ["details"],
+        "properties": {
+          "details": {
+            "required": ["cause"],
+            "properties": {
+              "cause": {
+                "enum": ["expired", "revoked", "invalid-chain", "self-signed"]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "$comment": "4010 branches on details.phase (§3.4), including the renewal path.",
+      "if": {
+        "properties": { "errorCode": { "const": 4010 } },
+        "required": ["errorCode"]
+      },
+      "then": {
+        "required": ["details"],
+        "properties": {
+          "details": {
+            "required": ["phase"],
+            "properties": {
+              "phase": {
+                "enum": ["first-provision", "retry", "renewal"]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "$comment": "4016 branches on details.phase (§3.4). Not reachable from renewal.",
+      "if": {
+        "properties": { "errorCode": { "const": 4016 } },
+        "required": ["errorCode"]
+      },
+      "then": {
+        "required": ["details"],
+        "properties": {
+          "details": {
+            "required": ["phase"],
+            "properties": {
+              "phase": {
+                "enum": ["first-provision", "retry"]
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
   "additionalProperties": false
 }
 ```
+
+**On the conditional blocks.** `details` stays OPTIONAL in general — the `required` array above is the same seven fields it has always been, and the general case is unchanged. The `allOf` adds one `if`/`then` per **branching** entry (§1.4), which makes the discriminator a validation error rather than a matter of trust. This is expressible in the dialect in use: the schema declares JSON Schema **draft 2020-12**, where `if`/`then` is standard, so the constraint is machine-checkable by any conforming validator and no reader need assume validation covers something it does not.
+
+Exactly three entries branch today — `1004` on `details.cause`, `4010` and `4016` on `details.phase` — and each has a block above. **Any entry that gains a branch MUST gain a block here in the same change**, or the discriminator it declares is unenforced.
+
+This does **not** retire the fail-safe defaults. Schema validation binds the **emitter**; the defaults in §1.4 tell a **receiver** what to assume when a non-conforming emitter omits the discriminator anyway, and a receiver is not entitled to assume every peer validates its output. Both hold: the emitter MUST send the member, and the receiver MUST still default to the recoverable branch if it is absent.
