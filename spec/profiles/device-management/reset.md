@@ -33,7 +33,7 @@ Reset is a server-initiated command that instructs the station to perform either
 2. If active sessions exist, the station **MUST** respond with `Rejected` and error code `3016 ACTIVE_SESSIONS_PRESENT`. The server **MAY** re-issue the command after sessions have completed.
 3. If no active sessions exist, the station **MUST** respond with `Accepted` and then initiate the reset.
 4. For a **Soft** reset: the station **MUST** restart its firmware process. Configuration, logs, and persisted data **MUST** be preserved. After restart, the station **MUST** send a BootNotification with `bootReason: "ManualReset"`.
-5. For a **Hard** reset: the station **MUST** restore factory defaults and clear all local configuration, cached credentials, and session history. After restart, the station **MUST** send a BootNotification with `bootReason: "ManualReset"`. The server **SHOULD** expect a re-provisioning flow after a hard reset.
+5. For a **Hard** reset: the station **MUST** restore factory defaults and clear all local configuration, cached credentials, and session history. After restart, the station **MUST** send a BootNotification with `bootReason: "ManualReset"`. The server **SHOULD** expect a [re-provisioning flow](../../04-flows.md#re-provisioning-an-already-provisioned-station) after a hard reset.
 6. The station **MUST** send the `Accepted` response before performing the reset to ensure the server receives acknowledgement.
 7. The response `messageId` **MUST** match the request `messageId`.
 

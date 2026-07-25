@@ -191,7 +191,7 @@ sequenceDiagram
 - Administrator has created the station entry in the management portal
 - A provisioning token has been generated (24-hour TTL, single-use)
 - The station has network connectivity (Ethernet, WiFi, or cellular)
-- The station is in "not provisioned" state (no certificates in NVS)
+- The station is in "not provisioned" state (no certificates in NVS) **or** is being deliberately re-provisioned (see [Re-provisioning an already provisioned station](#re-provisioning-an-already-provisioned-station))
 
 ### Sequence Diagram
 
@@ -270,6 +270,23 @@ Because provisioning traverses unreliable links, the station **MAY** retry with 
 Once the TTL elapses the token is invalid for **all** purposes: any further call — **including** a retry of an already-completed provision — **MUST** be rejected with `401 Unauthorized`, and the station **MUST** obtain a new provisioning token. A token that has been **superseded** by a re-issuance for the same station, or administratively **revoked**, is likewise invalid and **MUST** be rejected with `401`.
 
 This is the provisioning-endpoint instance of the idempotency-retention rule in [Transport §9.3](02-transport.md#93-idempotency) (retain ≥ 24 h), keyed on the provisioning token rather than an `Idempotency-Key` header.
+
+### Re-provisioning an already provisioned station
+
+**Re-provisioning** is this same flow performed for a station that already holds credentials. It is a **supported** operation, not an error condition. It is the expected recovery path after:
+
+- a **Hard** reset, which clears cached credentials (see [Reset](profiles/device-management/reset.md));
+- **certificate expiry** where in-band renewal is no longer possible, because an expired certificate cannot establish the mTLS session that renewal requires (see [Chapter 06 — Security §4.7.3](06-security.md));
+- **controller replacement**, where the replacement hardware holds no credentials;
+- **key compromise**, where the station's existing private key must be retired.
+
+Preconditions specific to re-provisioning:
+
+- A **new** provisioning token has been generated. A consumed token **MUST NOT** be reused to re-provision: it is bound to the certificate it already issued, and presenting it again is either a replay (which returns that same certificate) or a key mismatch (which is rejected — see above).
+- The `stationId` is **unchanged**. Re-provisioning re-credentials an existing station; it does not create a new one, and the server **MUST NOT** allocate a new `stationId` (see [Chapter 01 — Architecture §2.1](01-architecture.md)).
+- The operator has deliberately initiated the operation. A station **MUST NOT** re-provision itself autonomously while holding valid credentials.
+
+On success the server issues a certificate bound to the new token, and the station's previously issued certificate is superseded. The number of certificates that may be valid simultaneously is bounded — see [Chapter 06 — Security §4.7.6](06-security.md).
 
 ---
 

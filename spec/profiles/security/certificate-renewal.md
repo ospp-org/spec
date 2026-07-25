@@ -99,7 +99,7 @@ This is used when:
 | > 30 | Normal | Station checks daily. No action unless server-triggered. |
 | 7 — 30 | Elevated | Station initiates automatic renewal. Server logs a background alert. |
 | < 7 | High | Station initiates renewal immediately. Server sends TriggerCertificateRenewal if station has not already started. Server alerts operator. |
-| 0 (expired) | Emergency | Certificate has expired. Station treats next TLS failure as connection loss and reconnects. If reconnection fails due to certificate rejection, station enters offline-only mode (BLE). Recovery requires server-triggered renewal over an existing session or physical re-provisioning. |
+| 0 (expired) | Emergency | Certificate has expired. Station treats next TLS failure as connection loss and reconnects. If reconnection fails due to certificate rejection, station enters offline-only mode (BLE). Recovery requires server-triggered renewal over an existing session or physical [re-provisioning](../../04-flows.md#re-provisioning-an-already-provisioned-station). |
 
 ## 6. Error Handling
 
