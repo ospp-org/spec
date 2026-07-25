@@ -495,7 +495,19 @@ The anchor differs by receipt form. In both cases it is a **server-issued** arte
 
 Where an anchor's window spans a supersession and therefore admits more than one bound key, the server **MAY** try each key the anchor admits — **and only those**.
 
-**`keyId` — OPTIONAL disambiguation hint.** A receipt **MAY** carry `keyId` ([`receipt.schema.json`](../schemas/common/receipt.schema.json)): base64url of the first 16 bytes of SHA-256 over the DER `SubjectPublicKeyInfo` of the signing key. It sits beside `signature`, **outside** the signed `data`, so it changes no signed field and invalidates no existing signature.
+**`keyId` — OPTIONAL disambiguation hint.** A receipt **MAY** carry `keyId` ([`receipt.schema.json`](../schemas/common/receipt.schema.json)). It sits beside `signature`, **outside** the signed `data`, so it changes no signed field and invalidates no existing signature.
+
+Its construction is fixed, and stated here in full so that two independent implementations produce byte-identical output:
+
+| Step | Definition |
+|---|---|
+| **Hash input** | The **DER encoding of the complete `SubjectPublicKeyInfo` structure** ([RFC 5280 §4.1.2.7](https://www.rfc-editor.org/rfc/rfc5280)) of the signing public key — the full `SEQUENCE` including the `AlgorithmIdentifier`, **not** the bare EC point, **not** any PEM wrapper or base64 layer, and **not** a JWK. |
+| **Digest** | `SHA-256` over those DER bytes. |
+| **Truncation** | The **first 16 bytes** (leftmost 128 bits) of the 32-byte digest. |
+| **Encoding** | **base64url** ([RFC 4648 §5](https://www.rfc-editor.org/rfc/rfc4648#section-5), the URL/filename-safe alphabet using `-` and `_`), with **padding removed** — yielding exactly **22 characters**. |
+| **Comparison** | Exact, case-sensitive string equality. Implementations **MUST NOT** re-encode or normalise before comparing. |
+
+> **Not a JWK thumbprint.** This is deliberately **not** [RFC 7638](https://www.rfc-editor.org/rfc/rfc7638), which hashes a canonical JWK JSON object (`{"crv","kty","x","y"}` for P-256) rather than the DER `SubjectPublicKeyInfo`. The two produce different digests for the same key. An implementer reaching for a JOSE library's thumbprint helper will get a value that never matches — hash the DER, not the JWK.
 
 `keyId` is a **hint only**. It **MUST NOT** select the verification key and **MUST NOT** widen the candidate set. The server **MUST** select the key from the anchor above *first*; then, if `keyId` is present, it **MUST** check that it matches the selected key, and where the two **disagree it MUST reject the receipt** rather than follow `keyId`. A `keyId` naming a key outside the anchor's candidate set is itself grounds for rejection.
 
