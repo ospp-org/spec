@@ -21,7 +21,7 @@ Error codes are organized into six functional categories. Each category occupies
 | 1000–1999 | **Transport Errors** | Protocol | 15 | Network, protocol, message format, and message integrity errors |
 | 2000–2999 | **Authentication & Authorization Errors** | Protocol | 20 | Identity verification, credential validation, and access control |
 | 3000–3999 | **Session & Bay Errors** | Application | 17 | Bay state, session lifecycle, reservation, and service errors |
-| 4000–4999 | **Payment & Credit Errors** | Application | 15 | Wallet balance, payment processing, refunds, offline credit limits, and certificate management |
+| 4000–4999 | **Payment & Credit Errors** | Application | 16 | Wallet balance, payment processing, refunds, offline credit limits, and certificate management |
 | 5000–5999 | **Station Hardware & Software Errors** | Application | 34 | Physical hardware faults and embedded software errors |
 | 6000–6999 | **Server Errors** | Application | 8 | Server-side processing, timeouts, and infrastructure errors |
 | 9000–9999 | **Vendor-Specific** | Vendor | — | Reserved for vendor-defined error codes |
@@ -32,7 +32,7 @@ Error codes are organized into six functional categories. Each category occupies
 - **Application tier** (3000–6999): Errors related to business logic, state violations, hardware conditions, and server-side processing. These errors indicate that the message was received and understood, but the requested operation could not be completed. Application-tier errors are handled by the application layer.
 - **Vendor tier** (9000–9999): Reserved for implementation-specific error codes. Vendors **MUST** document their vendor error codes separately.
 
-**Total: 109 standard error codes.**
+**Total: 110 standard error codes.**
 
 ### 1.2 Severity Levels
 
@@ -192,7 +192,7 @@ X-Request-Id: req_f47ac10b-58cc-4372-a567-0e02b2c3d479
 | 403 | 2008 | Forbidden — action not permitted for this role |
 | 404 | 3005, 3006, 3012 | Not found — resource does not exist |
 | 409 | 3001, 3014, 4015, 6005 | Conflict — resource state conflict |
-| 422 | 3004, 3008, 3010 | Unprocessable — valid format but invalid values |
+| 422 | 3004, 3008, 3010, 4016 | Unprocessable — valid format but invalid values |
 | 429 | 6006 | Too many requests — rate limit exceeded |
 | 500 | 6000, 6001 | Internal server error |
 | 502 | 6003 | Bad gateway — station unreachable |
@@ -305,6 +305,7 @@ Payment errors cover wallet balance, credit limits, payment processing, refunds,
 | 4013 | `RENEWAL_DENIED` | Error | false | The server refuses the certificate renewal request due to policy constraints, rate limiting, or station suspension. | Contact the operator. The server administrator must approve the renewal or adjust the policy. |
 | 4014 | `KEYPAIR_GENERATION_FAILED` | Critical | false | The station's secure element, TPM, or crypto hardware cannot generate a new ECDSA P-256 keypair. Possible hardware fault or entropy source failure. | Log SecurityEvent with `HardwareFault` type. Dispatch technician to inspect the station's crypto hardware. |
 | 4015 | `PROVISIONING_KEY_MISMATCH` | Error | false | A retry of an already-consumed provisioning token presented a **different public key** than the one bound to the certificate that token already issued. The token authorises exactly one provisioned identity, so this is not a replay and no second certificate is issued. See [Flows §2 — Single-use and idempotent retry](04-flows.md#single-use-and-idempotent-retry). HTTP `409 Conflict`. | Station: **do NOT retry with this token** — no retry can succeed, because the token is permanently bound to the earlier key. Request a **new** provisioning token from the operator, then provision again with the keys currently held. Server: log the mismatch; the already-issued certificate is unaffected. |
+| 4016 | `PROVISIONING_KEY_REUSE` | Error | true | The provisioning request submitted the **same public key** as both the `tlsCsr` subject key and the `receiptSigningPublicKey`. The station's mTLS client key and receipt-signing key **MUST** be distinct key pairs ([Chapter 06 §4.3](06-security.md)), so that receipt verification survives rotation or revocation of the TLS credential. HTTP `422 Unprocessable Entity`. Distinct from `4015 PROVISIONING_KEY_MISMATCH`: this is a non-conformant request at **first** provision, not a changed identity on a retry. | Station: generate a **separate** ECDSA P-256 key pair for receipt signing and resubmit. The token is **not** consumed by this rejection, so the same token may be reused once the keys are corrected. Firmware that derives both roles from one key slot must be updated. |
 
 ### 3.5 Station Hardware & Software Errors (5xxx)
 
@@ -445,7 +446,7 @@ This table maps which error codes can appear in the RESPONSE or rejection of eac
 | `POST /me/offline-txs` | 400, 401 | 2009, 2010, 3015, 6004 |
 | `POST /sessions/offline-auth` | 401, 402 | 2009, 4001 |
 | `POST /webhooks/payment-gateway/notification` | 401 | 4008 |
-| `POST /api/v1/stations/provision` | 400, 401, 409 | 2019, 4010, 4015 |
+| `POST /api/v1/stations/provision` | 400, 401, 409, 422 | 2019, 4010, 4015, 4016 |
 
 ---
 
@@ -807,6 +808,7 @@ Vendors MAY define custom error codes in the **9000–9999** range for proprieta
 | 4013 | `RENEWAL_DENIED` | Error | P |
 | 4014 | `KEYPAIR_GENERATION_FAILED` | Critical | P |
 | 4015 | `PROVISIONING_KEY_MISMATCH` | Error | P |
+| 4016 | `PROVISIONING_KEY_REUSE` | Error | P |
 | 5000 | `HARDWARE_GENERIC` | Warning | H |
 | 5001 | `PUMP_SYSTEM` | Critical | H |
 | 5002 | `FLUID_SYSTEM` | Warning | H |
