@@ -274,9 +274,9 @@ Because provisioning traverses unreliable links, the station **MAY** retry with 
 
 **Key drift MUST be rejected.** A retry that presents a **different public key** than the one bound to the already-issued certificate **MUST NOT** be treated as a replay. The server **MUST** reject it with `409 Conflict` and error `4015 PROVISIONING_KEY_MISMATCH` ([Chapter 07 §3.4](07-errors.md)), and **MUST NOT** issue a second certificate on that token. Returning a certificate bound to a key the requester does not hold is not idempotency — it is a failure the requester cannot detect.
 
-This applies to **every** public key **present in the request**: the token binds to the station's **complete provisioned identity**, not only its TLS identity. Partial drift is still drift.
+This applies to the station's **complete provisioned identity**, not only its TLS identity: what the token binds is the **bound set** — the set of key kinds submitted at first provision, together with the key each carried. Every key kind in that set is compared. Partial drift is still drift.
 
-The comparison is **per key kind**, against the set of keys bound at first provision. A key kind the station never submits is simply not part of that set and is never compared — a station declaring `capabilities.bleSupported: false` submits no BLE key, and not offering a key is not drift. A retry is a replay only if it presents the **same set of key kinds, each carrying the same key**, as the provision the token bound. The key kinds currently defined are:
+The comparison is **per key kind**, against the bound set. **A retry is a replay only if it presents the same set of key kinds, each carrying the same key, as the provision the token bound.** This single sentence decides every case, including presence: a key kind in **neither** the bound set nor the retry is not part of that station's identity and is never compared — a station declaring `capabilities.bleSupported: false` submitted no BLE key at first provision and submits none on retry, and that is a replay. Absence is exempt only when it is absence on **both** sides; a key kind that **is** in the bound set but is omitted from the retry is drift, exactly as a differing key is — see *A change in which key kinds are present is also drift* below. The key kinds currently defined are:
 
 | Submitted key | What it certifies | Consequence if drift were ignored |
 |---|---|---|
@@ -284,7 +284,7 @@ The comparison is **per key kind**, against the set of keys bound at first provi
 | `receiptSigningPublicKey` | offline receipt signatures | the server verifies receipts against a key the station no longer holds — every offline receipt fails at reconciliation, days later |
 | static BLE ECDH public key ([Chapter 06 §6.5.2](06-security.md)) — **only when BLE is supported** | the StationIdentity certificate | `es = ECDH(appEphemeral, stationStaticPub)` is never reproduced — every BLE handshake fails |
 
-A retry presenting the **same** keys is a replay and is answered as described above.
+A retry whose key kinds and keys match the bound set exactly is a replay, and is answered as described above.
 
 **Comparison basis.** The comparison **MUST** be made on the **decoded public key**, never on the transmitted bytes. For the CSR this means the DER-encoded `SubjectPublicKeyInfo`, **not** the raw CSR bytes: a CSR is self-signed with ECDSA, whose signatures are randomised, so two honest CSRs for the same key differ byte-wise and a byte comparison would reject a legitimate retry. Equivalently, for the other keys a re-encoding of the same point — compressed vs. uncompressed SEC1, PEM whitespace — is **not** drift, whereas a different point **is**.
 
