@@ -68,6 +68,18 @@ The station **MUST NOT** process any incoming commands until it receives an `Acc
 7. After a successful `Accepted` response, the station **MUST** send a StatusNotification for each bay to report current bay states.
 8. If `pendingOfflineTransactions` > 0, the server **SHOULD** schedule offline transaction synchronization after acceptance.
 
+### 5.1 Capability Semantics — absence means NOT STATED
+
+A BootNotification **reports** the station's state; it does not rewrite the server's authoritative record. This governs every member of the `capabilities` object equally — `bleSupported`, `offlineModeSupported`, `meterValuesSupported`, and any capability added in a later revision — not one field in particular.
+
+1. A capability present with value `true` records a **declared positive**. A capability present with value `false` records a **declared negative**. A capability **absent** from the object is **not stated** — it is the absence of information, and it is **not** a declared negative.
+2. Where a capability is absent, the server **MUST NOT** overwrite a value the station has previously declared. A capability once declared is retained until the station explicitly declares it otherwise.
+3. The server **MAY** treat a not-stated capability as unsupported **for the purpose of withholding commands**, consistent with the profile rule that a server must not send commands from a profile the station has not declared support for ([Profiles §3](../README.md)). It **MUST NOT** persist that treatment as though the station had declared `false`.
+
+> **Why this is normative rather than obvious.** Under the opposite reading — absence coerced to `false` on every boot — a station that declared a capability once is silently downgraded by any later boot that happens to omit it, with no error, no event, and nothing on the wire to show what changed. Where the downgraded capability is the one gating remote management, the downgrade also removes the channel by which it could be repaired: the only fix would be new firmware, delivered over the channel the flag just disabled. Rule 2 exists so that a reporting message can never destroy state it did not mention.
+
+This section fixes the meaning of an **absent** capability. It does not define capability *negotiation* — how a server advertises what it supports, or how the two reconcile — which remains open.
+
 ## 6. Error Handling
 
 | Condition | Error Code | Behaviour |

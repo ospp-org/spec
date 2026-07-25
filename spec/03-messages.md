@@ -175,6 +175,8 @@ The station MAY include a human-readable name configurable via `StationName` (se
 | `networkInfo.connectionType` | string | Yes | `"Ethernet"`, `"Wifi"`, or `"Cellular"` |
 | `networkInfo.signalStrength` | integer | No | Signal strength in dBm (`null` for Ethernet) |
 
+> **Absent capabilities are NOT STATED, not `false`.** A capability omitted from the `capabilities` object **MUST NOT** overwrite a value the station declared previously — only an explicit `false` records a negative. See [Core profile — BootNotification §5.1](profiles/core/boot-notification.md) for the full rule, which applies to every member of the object.
+
 **`bootReason` enum values:**
 
 | Value | Description |
