@@ -13,11 +13,12 @@ schemas/
 ├── common/                              21 shared type definitions ($ref targets)
 ├── mqtt/                                47 MQTT message payload schemas
 ├── ble/                                 15 BLE schemas (13 message types + StationIdentity + secure frame)
+├── provisioning-request.schema.json     HTTP provisioning request (Flow §2)
 ├── provisioning-response.schema.json    HTTP provisioning response (Flow §2)
 └── README.md                            This file
 ```
 
-**Total: 84 schema files.**
+**Total: 85 schema files.**
 
 ---
 
@@ -53,6 +54,7 @@ Schemas for HTTP request/response bodies that fall outside the MQTT envelope. Th
 
 | File | Endpoint | Direction | Spec Reference |
 |------|----------|-----------|----------------|
+| [`provisioning-request.schema.json`](provisioning-request.schema.json) | `POST /api/v1/stations/provision` | Station → Server | [04-flows.md §2](../spec/04-flows.md#2-station-provisioning) |
 | [`provisioning-response.schema.json`](provisioning-response.schema.json) | `POST /api/v1/stations/provision` | Server → Station | [04-flows.md §2](../spec/04-flows.md#2-station-provisioning) |
 
 ---
@@ -274,5 +276,5 @@ if (!valid) {
 |--------------|----------------|
 | [03 — Message Catalog](../spec/03-messages.md) | All 39 messages → 76 schema files (REQUEST + RESPONSE + EVENT + common types) |
 | [02 — Transport](../spec/02-transport.md) | `common/mqtt-envelope.schema.json` (envelope), `provisioning-response.schema.json` (MQTT connection parameters returned by provisioning) |
-| [04 — Protocol Flows](../spec/04-flows.md) | `provisioning-response.schema.json` (Flow §2) |
+| [04 — Protocol Flows](../spec/04-flows.md) | `provisioning-request.schema.json` + `provisioning-response.schema.json` (Flow §2) |
 | [06 — Security](../spec/06-security.md) | `common/offline-pass.schema.json`, `common/receipt.schema.json` |

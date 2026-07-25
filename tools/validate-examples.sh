@@ -76,6 +76,21 @@ for variant in "auth-response:auth-response.accepted" "auth-response:auth-respon
   fi
 done
 
+# HTTP provisioning payloads (top-level schemas, not under mqtt/ or ble/)
+for pair in "provisioning-request:http/provisioning.request"; do
+  schema_name="${pair%%:*}"
+  example_rel="${pair##*:}"
+  schema="$SCHEMA_DIR/${schema_name}.schema.json"
+  example="$EXAMPLE_DIR/${example_rel}.json"
+  if [ -f "$schema" ] && [ -f "$example" ]; then
+    echo "  $example"
+    if ! npx ajv validate -s "$schema" $REFS -d "$example" $OPTS 2>/dev/null; then
+      echo "  FAIL: $example"
+      ERRORS=$((ERRORS + 1))
+    fi
+  fi
+done
+
 if [ "$ERRORS" -eq 0 ]; then
   echo "All examples valid."
 else

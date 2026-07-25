@@ -4,7 +4,7 @@
 [![Status: Draft](https://img.shields.io/badge/status-draft-orange)]()
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![Messages: 40](https://img.shields.io/badge/messages-40-green)]()
-[![Schemas: 84](https://img.shields.io/badge/schemas-84-green)]()
+[![Schemas: 84](https://img.shields.io/badge/schemas-85-green)]()
 
 ---
 
@@ -21,7 +21,7 @@ OSPP is an **open, vendor-neutral communication protocol** for self-service stat
 
 Think of it as **OCPP for self-service industries**. Where OCPP standardized EV charger-to-server communication, OSPP does the same for any station that delivers a time-bounded service through a physical bay. The protocol supports **online operation** (MQTT 5.0 over TLS 1.2+, TLS 1.3 recommended), **offline operation** (BLE 4.2+ GATT with cryptographically signed passes), and **four hybrid connectivity scenarios** — ensuring service continuity even when internet is unavailable.
 
-OSPP covers **40 messages** (27 MQTT + 13 BLE), **84 JSON Schemas**, **110 error codes**, **5 compliance profiles**, and a complete security model with mTLS, selective HMAC-SHA256 message signing, ECDSA P-256 offline authorization and receipt signing, and ECDSA P-384 root CA. It does NOT cover server-to-app REST APIs, payment gateway integration, business logic, or hardware internals — those are implementation-specific.
+OSPP covers **40 messages** (27 MQTT + 13 BLE), **85 JSON Schemas**, **110 error codes**, **5 compliance profiles**, and a complete security model with mTLS, selective HMAC-SHA256 message signing, ECDSA P-256 offline authorization and receipt signing, and ECDSA P-384 root CA. It does NOT cover server-to-app REST APIs, payment gateway integration, business logic, or hardware internals — those are implementation-specific.
 
 ---
 

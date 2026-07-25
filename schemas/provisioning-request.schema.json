@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/provisioning-request.schema.json",
+  "title": "ProvisioningRequest",
+  "description": "HTTP request body sent by a station to the server's provisioning endpoint (POST /api/v1/stations/provision) per Chapter 04 — Protocol Flows §2. Carries the single-use provisioning token that authorises issuance, the station's descriptive fields, and every public key the station asks the server to bind to its provisioned identity. The distinction between the two groups is normative: descriptive drift on a retry MUST be ignored, whereas drift in any submitted public key MUST be rejected (Flows §2 — Single-use and idempotent retry). The server's response is defined by provisioning-response.schema.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "provisioningToken",
+    "serialNumber",
+    "bayCount",
+    "tlsCsr",
+    "receiptSigningPublicKey"
+  ],
+  "properties": {
+    "provisioningToken": {
+      "type": "string",
+      "minLength": 16,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9._~-]+$",
+      "description": "Single-use provisioning token authorising exactly one certificate issuance, with a TTL fixed at issuance (Chapter 04 — Protocol Flows §2). Treated as an OPAQUE bearer credential: the station MUST NOT parse or derive meaning from its content. NOTE: §2's narrative step 2 describes the token as a UUID, but no normative statement pins its format, and deployed servers use other shapes (e.g. 64 hex characters); the constraint here is therefore a conservative opaque-string bound rather than a UUID pattern. Once consumed, superseded, or past its TTL the token is invalid for all purposes and the server rejects with 401 / 2019 PROVISIONING_TOKEN_INVALID."
+    },
+    "serialNumber": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "description": "Manufacturer serial number of the hardware serving this station. DESCRIPTIVE: it identifies the hardware, not the station (Chapter 01 — Architecture §2.1), and it MAY change across the station's life without changing the stationId. Drift in this field on a retry with the same token MUST be ignored. Matches the BootNotification serialNumber constraint."
+    },
+    "bayCount": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 255,
+      "description": "Number of service bays the station reports. DESCRIPTIVE — drift on a retry MUST be ignored. Maximum bay count per controller is 255 (Chapter 01 — Architecture §4.2), matching the bayIds maxItems in the provisioning response."
+    },
+    "tlsCsr": {
+      "type": "string",
+      "minLength": 100,
+      "maxLength": 8192,
+      "pattern": "^-----BEGIN CERTIFICATE REQUEST-----[\\s\\S]+-----END CERTIFICATE REQUEST-----\\s*$",
+      "description": "PEM-encoded PKCS#10 Certificate Signing Request over the station's mTLS client key pair, generated on-device (the private key MUST NOT leave the station). ECDSA P-256; Subject CN MUST equal the stationId the token is bound to. The CSR's self-signature proves possession. IDENTITY-BEARING: on a retry, comparison is on the DER SubjectPublicKeyInfo, NOT the raw CSR bytes — ECDSA signatures are randomised, so two honest CSRs over the same key differ byte-wise and a byte comparison would reject a legitimate retry (Chapter 04 — Protocol Flows §2)."
+    },
+    "receiptSigningPublicKey": {
+      "type": "string",
+      "minLength": 100,
+      "maxLength": 4096,
+      "pattern": "^-----BEGIN (PUBLIC|EC PUBLIC) KEY-----[\\s\\S]+-----END (PUBLIC|EC PUBLIC) KEY-----\\s*$",
+      "description": "PEM-encoded ECDSA P-256 public key used by the server to verify offline transaction receipts (Chapter 06 — Security §6.2). Submitted as a BARE public key, not inside a CSR, and never certified. IDENTITY-BEARING — drift on a retry is rejected. It MUST be a DISTINCT key pair from the mTLS client key above: submitting the same public key as both is rejected with 422 / 4016 PROVISIONING_KEY_REUSE (Chapter 06 — Security §4.3), so that receipt verification survives rotation or revocation of the TLS credential."
+    },
+    "stationPubKey": {
+      "$ref": "common/ec-public-key.schema.json",
+      "description": "OPTIONAL. The station's dedicated static BLE ECDH P-256 public key (compressed SEC1, 44-char Base64), generated on-device, over which the server signs the StationIdentity certificate returned in the provisioning response (Chapter 06 — Security §6.5.2). Present ONLY for stations implementing the Offline/BLE profile; absent otherwise. Its presence is conditional on BLE support, which is declared in BootNotification (capabilities.bleSupported) and is therefore NOT expressible as a JSON Schema constraint on this request — the condition is prose-only, stated in Chapter 06 §6.5.2. IDENTITY-BEARING when present: drift on a retry is rejected, and its absence is never drift (Chapter 04 — Protocol Flows §2). MUST be distinct from both ECDSA keys above (ECDSA-signing vs ECDH key-agreement key separation, NIST SP 800-56A)."
+    }
+  }
+}
