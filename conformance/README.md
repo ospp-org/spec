@@ -165,14 +165,29 @@ Conformance reports **SHOULD** include:
 | ID | Title | Profile | Compliance Level |
 |----|-------|---------|-----------------|
 | TC-CORE-001 | Boot Notification Lifecycle | Core | Development |
+| TC-CORE-002 | Connection Lost & Recovery | Core | Development |
 | TC-TX-001 | Online Session Full Lifecycle | Transaction | Standard |
 | TC-TX-002 | Reservation and Conversion | Transaction | Standard |
 | TC-TX-003 | Early Stop with Refund | Transaction | Standard |
+| TC-TX-004 | Cancel Reservation | Transaction | Standard |
+| TC-TX-005 | Meter Values | Transaction | Standard |
+| TC-TX-006 | Transaction Event Lifecycle | Transaction | Standard |
+| TC-TX-007 | Autonomous Session Termination (SessionEnded EVENT) | Transaction | Standard |
 | TC-SEC-001 | HMAC Signature Verification | Security | Standard |
 | TC-SEC-002 | mTLS Certificate Validation | Security | Standard |
+| TC-SEC-003 | Certificate Renewal Lifecycle | Security | Standard |
+| TC-SEC-004 | SecurityEvent Verification | Security | Standard |
 | TC-SEC-005 | Provisioning Retry Idempotency & Key Binding | Security | Standard |
 | TC-DM-001 | Configuration Read/Write | Device Management | Extended |
 | TC-DM-002 | Firmware Update | Device Management | Extended |
+| TC-DM-003 | Reset | Device Management | Extended |
+| TC-DM-004 | Update Firmware | Device Management | Extended |
+| TC-DM-005 | Get Diagnostics | Device Management | Extended |
+| TC-DM-006 | Change Configuration | Device Management | Extended |
+| TC-DM-007 | Set Maintenance Mode | Device Management | Extended |
+| TC-DM-008 | Update Service Catalog | Device Management | Extended |
+| TC-DM-009 | Get Configuration | Device Management | Extended |
 | TC-OFF-001 | Full Offline BLE Session | Offline | Complete |
 | TC-OFF-002 | OfflinePass Validation (10 Checks) | Offline | Complete |
 | TC-OFF-003 | Reconciliation | Offline | Complete |
+| TC-OFF-004 | Reconciliation | Offline | Complete |

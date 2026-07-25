@@ -55,7 +55,7 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ### Added
 
-- **Provisioning-token §2 — single-use + idempotent retry (`04-flows.md`).** A provisioning token authorises exactly one certificate and is consumed on first success; a retry within the token's 24-hour TTL is idempotent (returns the byte-identical certificate and MUST NOT mint a second identity); once the TTL elapses, or if the token is superseded or administratively revoked, it is invalid for all purposes and MUST be rejected with `401 Unauthorized` (`04-flows.md` §2 "Single-use and idempotent retry" + its Error Paths table; `07-errors.md` §3.1).
+- **Provisioning-token §2 — single-use + idempotent retry (`04-flows.md`).** A provisioning token authorises exactly one certificate and is consumed on first success; a retry within the token's 24-hour TTL is idempotent (returns the byte-identical certificate and MUST NOT mint a second identity); once the TTL elapses, or if the token is superseded or administratively revoked, it is invalid for all purposes and MUST be rejected with `401 Unauthorized` (`04-flows.md` §2 "Single-use and idempotent retry" + its Error Paths table).
 
 ### Changed
 
