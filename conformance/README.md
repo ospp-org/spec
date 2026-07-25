@@ -170,6 +170,7 @@ Conformance reports **SHOULD** include:
 | TC-TX-003 | Early Stop with Refund | Transaction | Standard |
 | TC-SEC-001 | HMAC Signature Verification | Security | Standard |
 | TC-SEC-002 | mTLS Certificate Validation | Security | Standard |
+| TC-SEC-005 | Provisioning Retry Idempotency & Key Binding | Security | Standard |
 | TC-DM-001 | Configuration Read/Write | Device Management | Extended |
 | TC-DM-002 | Firmware Update | Device Management | Extended |
 | TC-OFF-001 | Full Offline BLE Session | Offline | Complete |
