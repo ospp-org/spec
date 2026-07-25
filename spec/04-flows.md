@@ -189,7 +189,7 @@ sequenceDiagram
 ### Preconditions
 
 - Administrator has created the station entry in the management portal
-- A provisioning token has been generated (24-hour TTL, single-use)
+- A provisioning token has been generated (single-use, with a TTL fixed at issuance)
 - The station has network connectivity (Ethernet, WiFi, or cellular)
 - The station is in "not provisioned" state (no certificates in NVS) **or** is being deliberately re-provisioned (see [Re-provisioning an already provisioned station](#re-provisioning-an-already-provisioned-station))
 
@@ -202,7 +202,7 @@ sequenceDiagram
     participant SSP as SSP (Station)
 
     Admin->>Server: Register station (model, vendor, bayCount)
-    Server-->>Admin: stationId, bayIds[], provisioningToken (24h TTL)
+    Server-->>Admin: stationId, bayIds[], provisioningToken (TTL set at issuance)
     Note over Admin: Technician receives token
 
     Note over SSP: Power on → detect "not provisioned" → provisioning mode
@@ -229,7 +229,7 @@ sequenceDiagram
 ### Happy Path
 
 1. Administrator registers a new station in the management portal with model, vendor, serial number, and bay count
-2. Server generates `stationId` (`stn_{uuid}`), `bayIds[]` (`bay_{uuid}` per bay), and a provisioning token (UUID, 24-hour TTL, single-use)
+2. Server generates `stationId` (`stn_{uuid}`), `bayIds[]` (`bay_{uuid}` per bay), and a provisioning token (UUID, single-use, with a TTL fixed at issuance)
 3. Technician installs the station and provides the provisioning token (via USB, local AP, or physical keypad)
 4. SSP powers on, detects no certificates in NVS, enters provisioning mode
 5. SSP generates a TLS key pair (ECDSA P-256) and produces a Certificate Signing Request (CSR) with CN = `stn_{station_id}`
@@ -268,7 +268,7 @@ sequenceDiagram
 
 A provisioning token is **single-use**: it authorises the issuance of **exactly one certificate**. The token is consumed on the first successful `POST /api/v1/stations/provision`, which binds the issued certificate to the token.
 
-Because provisioning traverses unreliable links, the station **MAY** retry with the **same** token. Within the token's 24-hour TTL, how the server treats that retry depends on **what** differs in the body. Descriptive fields and submitted public keys are **not** equivalent: the former describe the hardware, the latter *are* the identity being certified.
+Because provisioning traverses unreliable links, the station **MAY** retry with the **same** token. Within the token's TTL, how the server treats that retry depends on **what** differs in the body. Descriptive fields and submitted public keys are **not** equivalent: the former describe the hardware, the latter *are* the identity being certified.
 
 **Descriptive drift MUST be ignored.** A retry whose descriptive fields differ — `serialNumber`, `bayCount`, station model, firmware version — is a replay. The server **MUST** return `200 OK` with the **byte-identical** certificate already issued and **MUST NOT** mint a second certificate. For these fields the token, not the body, determines the certificate.
 
@@ -276,7 +276,7 @@ Because provisioning traverses unreliable links, the station **MAY** retry with 
 
 This applies to **every** public key **present in the request**: the token binds to the station's **complete provisioned identity**, not only its TLS identity. Partial drift is still drift.
 
-The comparison is **per key, and conditional on presence**. Each key present in the retry is compared against the key of the same kind bound at first provision. A key the station does not submit is simply not compared, and its **absence is never drift** — a station declaring `capabilities.bleSupported: false` submits no BLE key, and its retries are judged solely on the keys it does send. Only a key that is **present and different** triggers the rejection. The keys currently defined are:
+The comparison is **per key kind**, against the set of keys bound at first provision. A key kind the station never submits is simply not part of that set and is never compared — a station declaring `capabilities.bleSupported: false` submits no BLE key, and not offering a key is not drift. A retry is a replay only if it presents the **same set of key kinds, each carrying the same key**, as the provision the token bound. The key kinds currently defined are:
 
 | Submitted key | What it certifies | Consequence if drift were ignored |
 |---|---|---|
@@ -288,11 +288,20 @@ A retry presenting the **same** keys is a replay and is answered as described ab
 
 **Comparison basis.** The comparison **MUST** be made on the **decoded public key**, never on the transmitted bytes. For the CSR this means the DER-encoded `SubjectPublicKeyInfo`, **not** the raw CSR bytes: a CSR is self-signed with ECDSA, whose signatures are randomised, so two honest CSRs for the same key differ byte-wise and a byte comparison would reject a legitimate retry. Equivalently, for the other keys a re-encoding of the same point — compressed vs. uncompressed SEC1, PEM whitespace — is **not** drift, whereas a different point **is**.
 
+**A change in which key kinds are present is also drift.** Presence is part of the bound identity, so a retry whose **set** of key kinds differs from the bound set **MUST** be rejected exactly as a differing key is — `409 Conflict` with `4015 PROVISIONING_KEY_MISMATCH` — in **both** directions:
+
+- **Key kind added.** A retry introduces a key kind absent from the first provision (for example a BLE ECDH key where none was submitted). There is nothing to compare it against, and the station is asking to be certified for a **broader** identity than the token bound. The server **MUST NOT** bind the new key kind to the consumed token, and **MUST NOT** issue a second certificate.
+- **Key kind dropped.** A retry omits a key kind that **was** bound at first provision. This is not a replay of that provision — the identity presented is **narrower** than the one bound — and it **MUST NOT** silently succeed, because doing so would leave the caller believing an identity was re-confirmed when part of it was never presented.
+
+In either direction the recovery is the same as for a differing key: obtain a **new** provisioning token and provision the intended identity in full. A station whose set of key kinds has legitimately changed — BLE retrofitted onto a station provisioned without it — is performing [re-provisioning](#re-provisioning-an-already-provisioned-station), not a retry, and requires a new token accordingly.
+
 Once the TTL elapses the token is invalid for **all** purposes: any further call — **including** a retry of an already-completed provision — **MUST** be rejected with `401 Unauthorized` and error `2019 PROVISIONING_TOKEN_INVALID` ([Chapter 07 §3.2](07-errors.md)), and the station **MUST** obtain a new provisioning token. A token that has been **superseded** by a re-issuance for the same station, or administratively **revoked**, is likewise invalid and **MUST** be rejected the same way; the discriminator (`expired`, `superseded`, `revoked`) **SHOULD** be carried in `details.reason`.
 
 Token validity is checked **before** the key comparison: an expired-or-revoked token yields `401` / `2019` regardless of which keys the request carries, and `409` / `4015` is reachable only on a token that is otherwise still valid.
 
-This is the provisioning-endpoint instance of the idempotency-retention rule in [Transport §9.3](02-transport.md#93-idempotency) (retain ≥ 24 h), keyed on the provisioning token rather than an `Idempotency-Key` header.
+**Retention.** The server **MUST** retain the issued certificate and the bound set of public keys, associated with the consumed token, for **at least the token's full TTL**. This is what makes the rules above executable: a retry may legitimately arrive at any point up to expiry, and the comparison has nothing to compare against once the binding is discarded. The generic ≥ 24 h floor of [Transport §9.3](02-transport.md#93-idempotency) is **not** sufficient here — a deployment issuing tokens with a TTL longer than 24 hours that retained for only 24 would leave a window in which a retry is still permitted but no longer decidable.
+
+This is the provisioning-endpoint instance of the idempotency-retention rule in [Transport §9.3](02-transport.md#93-idempotency), keyed on the provisioning token rather than an `Idempotency-Key` header, and scoped to the token's TTL rather than to a fixed 24 hours.
 
 ### Re-provisioning an already provisioned station
 

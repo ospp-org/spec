@@ -153,7 +153,7 @@ A station needs:
 
 Before a station can connect, it needs to be provisioned:
 
-1. Admin registers the station in the management portal → gets a provisioning token (24h TTL, single-use)
+1. Admin registers the station in the management portal → gets a provisioning token (single-use; TTL is set at issuance and is a deployment policy, not a fixed protocol constant)
 2. Station powers on, detects "not provisioned" state (no certs in NVS)
 3. Station generates:
    - **TLS key pair** (ECDSA P-256) + Certificate Signing Request (CSR)

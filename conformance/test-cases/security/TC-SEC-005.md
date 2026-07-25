@@ -23,7 +23,7 @@ Verify that the **server's** provisioning endpoint (`POST /api/v1/stations/provi
 ## Preconditions
 
 1. A station entry exists in the management portal with `stationId` `stn_a1b2c3d4`, not yet provisioned.
-2. A provisioning token `T1` has been generated for it (24-hour TTL, single-use, unconsumed).
+2. A provisioning token `T1` has been generated for it (single-use, unconsumed, with a known TTL fixed at issuance).
 3. The test harness can generate ECDSA P-256 key pairs and produce CSRs with CN = `stn_a1b2c3d4`.
 4. The test harness can generate a static ECDH P-256 key pair (for Part D; required only if the station profile declares `bleSupported`).
 5. The test harness can capture full HTTP responses, including status code and body.
@@ -105,7 +105,7 @@ Verify that the **server's** provisioning endpoint (`POST /api/v1/stations/provi
 
 ### Part G — Token exhaustion is unchanged
 
-39. Advance time (or otherwise expire `T1`) beyond the 24-hour TTL.
+39. Advance time (or otherwise expire `T1`) beyond its TTL.
 40. Re-send the original step-3 request with token `T1`.
 41. Verify the response is **`401 Unauthorized`**, not `409` — TTL expiry takes precedence over the key comparison.
 
