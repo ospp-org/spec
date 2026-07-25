@@ -167,7 +167,7 @@ sequenceDiagram
 |-------|-------|------------|
 | CONNACK refused | Invalid certificate, broker unreachable | Reconnect with exponential backoff (see [Flow §9](#9-error-recovery--reconnection)) |
 | `1007 PROTOCOL_VERSION_MISMATCH` | Major version incompatible | Log error, await firmware update; do NOT retry |
-| `2001 STATION_NOT_REGISTERED` | Station unknown to server | Log error, enter provisioning mode |
+| `2001 STATION_NOT_REGISTERED` | Station unknown to server | Log error and **keep retrying BootNotification** at `retryInterval` (default 30 s), per [Core profile CORE-011](profiles/core/README.md). Do **not** enter provisioning mode and do **not** alter stored credentials: the station holds credentials the broker accepted, and [§2](#re-provisioning-an-already-provisioned-station) forbids re-provisioning autonomously while holding them. The cause is fixed operator-side, and the next retry then succeeds |
 | TLS handshake failure | Certificate expired or revoked | Send SecurityEvent [MSG-012] (if possible), await manual intervention |
 
 ### Postconditions
