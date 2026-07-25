@@ -109,7 +109,7 @@ A station MUST support all keys in the required profiles. A station that adverti
 
 | Key | Type | Default | Access | Mutability | Range | Description |
 |-----|------|---------|:------:|:----------:|-------|-------------|
-| `CertificateSerialNumber` | string | -- | R | Static | -- | Serial number of the station's current X.509 client certificate. ReadOnly; updated when a new certificate is provisioned. |
+| `CertificateSerialNumber` | string | -- | R | Static | -- | Serial number of the station's **CURRENT** X.509 client certificate. ReadOnly; updated when a new certificate is provisioned. A PREVIOUS certificate retained during rotation is deliberately not represented here — this key is single-valued by design, and the overlap it does not show is bounded by [Chapter 06 — Security](06-security.md), §4.7.6. |
 | `AuthorizationCacheEnabled` | boolean | `true` | RW | Dynamic | -- | When `true`, the station caches authorization responses locally for faster repeat authorizations. |
 | `MessageSigningMode` | string | `"Critical"` | RW | Dynamic | `"All"`, `"Critical"`, `"None"` | Controls HMAC-SHA256 message signing. `All` = every message, `Critical` = financial/command messages only (see [Chapter 06](06-security.md), §5.6), `None` = disabled. |
 | `OfflinePassPublicKey` | string | -- | W | Dynamic | valid SEC1 key | Server's ECDSA P-256 public key for OfflinePass signature verification (uncompressed or compressed SEC1 format). Updated via ChangeConfiguration during key rotation. Stations MUST accept passes signed by the current or immediately previous key. |

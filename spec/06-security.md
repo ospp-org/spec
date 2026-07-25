@@ -543,9 +543,24 @@ Upon receiving a TriggerCertificateRenewal REQUEST, the station responds with `A
 - The CSR **MUST** use ECDSA P-256. Other algorithms **MUST** be rejected by the server.
 - The server **MUST** verify that the CSR's Subject CN matches the station ID from the mTLS session.
 - All three certificate lifecycle messages **MUST** be HMAC-signed in `Critical` and `All` modes (see §5.6).
-- The station **SHOULD** keep the old certificate until the new certificate is successfully used for a TLS connection.
+- The station **SHOULD** keep the old certificate until the new certificate is successfully used for a TLS connection — and no longer; the retention window is bounded by §4.7.6.
 
 For the complete certificate renewal profile, see [Certificate Renewal](profiles/security/certificate-renewal.md).
+
+#### 4.7.6 Certificate Multiplicity
+
+Rotation (§4.7.1–§4.7.3) and [re-provisioning](04-flows.md#re-provisioning-an-already-provisioned-station) both open a window in which a station holds more than one certificate. That window is **bounded**.
+
+A station **MUST NOT** hold more than **one CURRENT and one PREVIOUS** certificate valid at the same time:
+
+- **CURRENT** — the certificate the station presents on new TLS connections.
+- **PREVIOUS** — the immediately preceding certificate, retained solely as the rollback target of §4.7.5. The station **SHOULD** retain it until the CURRENT certificate has been successfully used for a TLS connection, and **MUST** discard it once that has occurred.
+
+A third certificate is never simultaneously valid. Beginning a new issuance while a PREVIOUS certificate is still retained **MUST** retire that PREVIOUS certificate first — the two slots do not accumulate, and retention is never indefinite.
+
+The server side of the same bound: for any one station the server **MUST NOT** treat more than two certificates as simultaneously valid.
+
+**Scope — this bound is stated per certificate type.** It governs the station's mTLS client certificate: `StationCertificate`, and independently `MQTTClientCertificate` in deployments that separate transport-layer from application-layer identity ([Certificate Renewal §2](profiles/security/certificate-renewal.md)). Each type carries its own CURRENT/PREVIOUS pair; holding one of each type is **not** a violation. The BLE StationIdentity certificate (§6.5.2) is a distinct credential with its own re-issuance window and is not counted against this bound.
 
 ### 4.5 Key Storage Requirements
 
