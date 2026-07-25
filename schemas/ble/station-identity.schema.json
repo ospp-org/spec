@@ -27,7 +27,7 @@
     },
     "stationPubKey": {
       "$ref": "../common/ec-public-key.schema.json",
-      "description": "The station's DEDICATED static BLE ECDH P-256 public key (compressed SEC1, 44-char Base64). Separate from the station's ECDSA mTLS/receipt key (key separation, SP 800-56A). Used as stationStaticPub in es = ECDH(appEphemeral, stationStaticPub)."
+      "description": "The station's DEDICATED static BLE ECDH P-256 public key (compressed SEC1, 44-char Base64). Separate from BOTH of the station's ECDSA keys - its mTLS client key and its receipt-signing key (key separation, SP 800-56A). Used as stationStaticPub in es = ECDH(appEphemeral, stationStaticPub)."
     },
     "issuedAt": {
       "$ref": "../common/timestamp.schema.json",
