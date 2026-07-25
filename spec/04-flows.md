@@ -214,15 +214,21 @@ sequenceDiagram
     SSP->>Server: POST /api/v1/stations/provision
     Note right of SSP: {provisioningToken, serialNumber, bayCount, tlsCsr, receiptSigningPublicKey, stationPubKey?}
 
-    alt Token valid
+    alt Token expired / superseded / revoked
+        Server-->>SSP: 401 Unauthorized (2019 PROVISIONING_TOKEN_INVALID)
+        Note over SSP: Display error, await a NEW token. Do not regenerate keys
+    else Two submitted keys are the same key
+        Server-->>SSP: 422 Unprocessable Entity (4016 PROVISIONING_KEY_REUSE)
+        Note over SSP: Token NOT consumed - regenerate the colliding key, retry on the SAME token
+    else Retry does not match the bound set
+        Server-->>SSP: 409 Conflict (4015 PROVISIONING_KEY_MISMATCH)
+        Note over SSP: No retry can succeed - await a NEW token. Do not regenerate keys
+    else Token valid, keys pairwise distinct, bound set matches
         Server->>Server: Validate token, sign CSR
         Server-->>SSP: 200 OK ProvisioningResponse (per schemas/provisioning-response.schema.json)
         Note over SSP: Store all in NVS
         Note over SSP: Exit provisioning mode → reboot
         Note over SSP: Proceed to Boot Flow [§1]
-    else Token invalid/expired
-        Server-->>SSP: 401 Unauthorized
-        Note over SSP: Display error, await new token
     end
 ```
 
@@ -251,8 +257,9 @@ sequenceDiagram
 | Error | Cause | SSP Action |
 |-------|-------|------------|
 | 401 Unauthorized (`2019 PROVISIONING_TOKEN_INVALID`) | Token expired / beyond TTL, superseded, or revoked — carried in `details.reason` | Display error, await new provisioning token. Do **not** regenerate keys: the keys are not what was rejected |
-| 400 Bad Request | Invalid CSR or missing fields | Log error, regenerate keys, retry |
+| 422 Unprocessable Entity (`4016 PROVISIONING_KEY_REUSE`) | Two of the submitted keys are the same key — any of the three pairs among the `tlsCsr` subject key, `receiptSigningPublicKey` and `stationPubKey` ([Chapter 06 §4.3](06-security.md)) | Generate a **separate** key pair for the colliding role and resubmit. The token is **not** consumed — retry on the **same** token |
 | 409 Conflict (`4015 PROVISIONING_KEY_MISMATCH`) | This token already issued a certificate, and this retry does not match the bound set — a **different** public key for a bound kind, or a **different set** of key kinds (one added, or one dropped) | **Do NOT retry with this token** — no retry can succeed. Request a **new** provisioning token from the operator, then provision again with the keys currently held. Do **not** regenerate keys first: that is what caused the mismatch |
+| 400 Bad Request | Invalid CSR or missing fields | Log error, regenerate keys, retry |
 | Network unreachable | No connectivity | Retry with backoff, await network |
 
 ### Postconditions
