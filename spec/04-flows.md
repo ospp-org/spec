@@ -250,6 +250,7 @@ sequenceDiagram
 |-------|-------|------------|
 | 401 Unauthorized | Token expired / beyond TTL, superseded, or revoked | Display error, await new provisioning token |
 | 400 Bad Request | Invalid CSR or missing fields | Log error, regenerate keys, retry |
+| 409 Conflict (`4015 PROVISIONING_KEY_MISMATCH`) | This token already issued a certificate, and this retry presents a **different** public key | **Do NOT retry with this token** — no retry can succeed. Request a **new** provisioning token from the operator, then provision again with the keys currently held. Do **not** regenerate keys first: that is what caused the mismatch |
 | Network unreachable | No connectivity | Retry with backoff, await network |
 
 ### Postconditions
@@ -265,7 +266,23 @@ sequenceDiagram
 
 A provisioning token is **single-use**: it authorises the issuance of **exactly one certificate**. The token is consumed on the first successful `POST /api/v1/stations/provision`, which binds the issued certificate to the token.
 
-Because provisioning traverses unreliable links, the station **MAY** retry with the **same** token. Within the token's 24-hour TTL, a retry that follows a completed provision is **idempotent**: the server **MUST** return `200 OK` with the **byte-identical** certificate already issued and **MUST NOT** mint a second certificate. Request-body drift on a retry (different `serialNumber`, `bayCount`, CSR, or receipt key) **MUST** be ignored — the token, not the body, determines the certificate.
+Because provisioning traverses unreliable links, the station **MAY** retry with the **same** token. Within the token's 24-hour TTL, how the server treats that retry depends on **what** differs in the body. Descriptive fields and submitted public keys are **not** equivalent: the former describe the hardware, the latter *are* the identity being certified.
+
+**Descriptive drift MUST be ignored.** A retry whose descriptive fields differ — `serialNumber`, `bayCount`, station model, firmware version — is a replay. The server **MUST** return `200 OK` with the **byte-identical** certificate already issued and **MUST NOT** mint a second certificate. For these fields the token, not the body, determines the certificate.
+
+**Key drift MUST be rejected.** A retry that presents a **different public key** than the one bound to the already-issued certificate **MUST NOT** be treated as a replay. The server **MUST** reject it with `409 Conflict` and error `4015 PROVISIONING_KEY_MISMATCH` ([Chapter 07 §3.4](07-errors.md)), and **MUST NOT** issue a second certificate on that token. Returning a certificate bound to a key the requester does not hold is not idempotency — it is a failure the requester cannot detect.
+
+This applies to **every** public key the station submits: the token binds to the station's **complete provisioned identity**, not only its TLS identity. Partial drift is still drift. As of this revision those keys are:
+
+| Submitted key | What it certifies | Consequence if drift were ignored |
+|---|---|---|
+| CSR public key (`tlsCsr`) | the mTLS client certificate | the station holds a certificate that does not match its private key — every mTLS connection fails |
+| `receiptSigningPublicKey` | offline receipt signatures | the server verifies receipts against a key the station no longer holds — every offline receipt fails at reconciliation, days later |
+| static BLE ECDH public key ([Chapter 06 §6.5.2](06-security.md)) | the StationIdentity certificate | `es = ECDH(appEphemeral, stationStaticPub)` is never reproduced — every BLE handshake fails |
+
+A retry presenting the **same** keys is a replay and is answered as described above.
+
+**Comparison basis.** The comparison **MUST** be made on the **decoded public key**, never on the transmitted bytes. For the CSR this means the DER-encoded `SubjectPublicKeyInfo`, **not** the raw CSR bytes: a CSR is self-signed with ECDSA, whose signatures are randomised, so two honest CSRs for the same key differ byte-wise and a byte comparison would reject a legitimate retry. Equivalently, for the other keys a re-encoding of the same point — compressed vs. uncompressed SEC1, PEM whitespace — is **not** drift, whereas a different point **is**.
 
 Once the TTL elapses the token is invalid for **all** purposes: any further call — **including** a retry of an already-completed provision — **MUST** be rejected with `401 Unauthorized`, and the station **MUST** obtain a new provisioning token. A token that has been **superseded** by a re-issuance for the same station, or administratively **revoked**, is likewise invalid and **MUST** be rejected with `401`.
 
