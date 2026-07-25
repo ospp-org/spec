@@ -271,6 +271,10 @@ sequenceDiagram
 | Server | Station registered, certificate issued, provisioning token consumed. The server **MUST** retain every public key submitted in the request, bound to the consumed token — this binding is what a later retry is compared against (see [Single-use and idempotent retry](#single-use-and-idempotent-retry)); without it the comparison cannot be performed |
 | Provisioning Token | Invalidated (single-use) |
 
+**Persisting the response — the station side of the replay rule.** The station **MUST** persist the trust and configuration fields of the provisioning response — `stationCaChain`, `brokerRootCa`, `rootCaThumbprint`, `serverVerifyKey`, `mqttConfig` — **exactly as received**, replacing any values it already holds. This applies to **every** successful response, **including a replay of an already-completed provision**.
+
+The replay case is the one that matters, and it is the one firmware is most likely to skip: a station retrying after a transport failure may treat itself as already provisioned and ignore the body. It **MUST NOT**. A replay can legitimately carry a rotated Station CA chain, a re-anchored broker trust anchor, a rotated `serverVerifyKey`, or a migrated `mqttConfig` — see *What a replay returns* under [Single-use and idempotent retry](#single-use-and-idempotent-retry) — and a station that keeps its stored copy is left holding a trust anchor that no longer validates or a broker address that no longer answers, with no in-band way to be told. Re-persisting the identity fields is a no-op, since those are byte-identical on a replay; it is the trust and configuration fields that change, and they are the reason the body must be read.
+
 ### Single-use and idempotent retry
 
 A provisioning token is **single-use**: it authorises the issuance of **exactly one certificate**. The token is consumed on the first successful `POST /api/v1/stations/provision`, which binds the issued certificate to the token.
@@ -300,7 +304,7 @@ Because provisioning traverses unreliable links, the station **MAY** retry with 
 | `serverVerifyKey` | the server signing key has its own rotation protocol ([Chapter 06 §6.7](06-security.md)) |
 | `mqttConfig` | the broker may have moved, or its parameters changed |
 
-This is a **requirement, not a tolerance.** A token's TTL is fixed at issuance and may be days, so a replay can legitimately arrive after a CA rotation, a broker migration, or a server-key rotation. A server that froze these fields would hand the station a trust anchor that no longer validates, a broker address that no longer answers, or a verify key that cannot check the next OfflinePass — and each of those is unrecoverable **in band**, because the station needs a working connection before it can be told anything else. The station persists whatever the response carries — see this flow's *Postconditions* below — so a replay **MUST** carry values that work at the moment it is answered.
+This is a **requirement, not a tolerance.** A token's TTL is fixed at issuance and may be days, so a replay can legitimately arrive after a CA rotation, a broker migration, or a server-key rotation. A server that froze these fields would hand the station a trust anchor that no longer validates, a broker address that no longer answers, or a verify key that cannot check the next OfflinePass — and each of those is unrecoverable **in band**, because the station needs a working connection before it can be told anything else. The station is required to persist what the response carries, replacing what it holds — see *Persisting the response* under this flow's *Postconditions* above — so a replay **MUST** carry values that work at the moment it is answered.
 
 Where these fields are interdependent the values returned **MUST** be mutually consistent **within the one response**: a rotated `stationCaChain` **MUST** be accompanied by the matching `rootCaThumbprint`, never the superseded one.
 
