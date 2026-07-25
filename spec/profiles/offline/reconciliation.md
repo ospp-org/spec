@@ -20,7 +20,7 @@ The reconciliation sync follows this ordered flow:
 
 > **Note:** This profile uses a shorter response timeout (30s) than the standard TransactionEvent timeout (60s). During reconciliation, the server performs validation, deduplication, and record-keeping but does not make external payment authorization calls, allowing faster processing. The shorter timeout optimizes batch upload throughput when clearing large offline queues.
 
-**Ordering guarantee:** The station **MUST** send offline transactions in strict `txCounter` order. The server **MUST** reject out-of-order transactions with error `1005 INVALID_MESSAGE_FORMAT` until the missing transactions are received.
+**Ordering guarantee:** The station **MUST** send offline transactions in strict `txCounter` order. Where a `txCounter` gap shows transactions are missing, the server **MUST** defer them — see [§4.2 step 4](#42-txcounter-gap-detection), whose wire response is `status: "Deferred"`. The server **MUST NOT** answer that condition with `1005 INVALID_MESSAGE_FORMAT`: an out-of-order transaction is well-formed and was understood, so the sender has nothing to correct, and this response object carries no error code at all — [`transaction-event-response.schema.json`](../../../schemas/mqtt/transaction-event-response.schema.json) is closed over `status` and `reason`.
 
 ## 3. Deduplication (offlineTxId)
 
@@ -58,7 +58,7 @@ The server detects missing offline transactions by monitoring `txCounter` contin
    }
    ```
 
-   `Deferred` is distinct from `RetryLater` in semantics: `RetryLater` directs the station to back off and re-send the same transaction (transient server condition); `Deferred` directs the station that the transaction is held server-side pending operator-manual unblock or arrival of the missing in-sequence transactions, and the station **MUST NOT** auto-resend the same offline transaction. Re-arrivals of a previously-deferred `offlineTxId` **MUST** continue to return `Deferred` (without re-emitting the `§4.2:52` SecurityEvent) until the operator-manual unblock occurs.
+   `Deferred` is distinct from `RetryLater` in semantics: `RetryLater` directs the station to back off and re-send the same transaction (transient server condition); `Deferred` directs the station that the transaction is held server-side pending operator-manual unblock or arrival of the missing in-sequence transactions, and the station **MUST NOT** auto-resend the same offline transaction. Re-arrivals of a previously-deferred `offlineTxId` **MUST** continue to return `Deferred` (without re-emitting the `§4.2:52` SecurityEvent) until one of the two exits named above occurs — the operator-manual unblock, or the arrival of the missing in-sequence transactions.
 5. If `txCounter` is less than or equal to `lastReconciledCounter`, the server **MUST** treat it as a duplicate or replay and respond with `Duplicate`.
 
 ## 5. Receipt Signature Verification
