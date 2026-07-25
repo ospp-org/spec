@@ -30,7 +30,7 @@
     "keyId": {
       "type": "string",
       "pattern": "^[A-Za-z0-9_-]{22}$",
-      "description": "OPTIONAL disambiguation hint identifying the receipt-signing key. Base64url (unpadded) of the first 16 bytes of SHA-256 over the DER SubjectPublicKeyInfo of the signing public key, so both parties derive it from the key alone with no coordination. Deliberately OUTSIDE the signed `data` body: adding it changes no signed field and invalidates no existing signature. HINT ONLY - per 06-security.md §4.3 it MUST NOT select the verification key and MUST NOT widen the candidate set. The server selects the key from a server-authoritative anchor first, then rejects the receipt if a present keyId disagrees with the selected key."
+      "description": "OPTIONAL disambiguation hint identifying the receipt-signing key. Base64url (unpadded) of the first 16 bytes of SHA-256 over the DER SubjectPublicKeyInfo of the signing public key, so both parties derive it from the key alone with no coordination. Deliberately OUTSIDE the signed `data` body: adding it changes no signed field and invalidates no existing signature. HINT ONLY - per 06-security.md §4.3 it MUST NOT select the verification key and MUST NOT widen the candidate set. Emission is OPTIONAL: a station SHOULD emit it once re-provisioned at least once (the only case where the server can hold more than one retained key), and a server MUST NOT require it or reject a receipt for omitting it. The server selects the key from a server-authoritative anchor first, then rejects the receipt if a present keyId disagrees with the selected key."
     }
   },
   "additionalProperties": false
