@@ -1034,7 +1034,7 @@ Every offline transaction produces a cryptographically signed receipt, ensuring 
 During reconciliation ([Flow §10](04-flows.md#10-offline--online-reconciliation)), the server verifies each receipt:
 
 ```
-1. Look up the station's receipt-signing ECDSA P-256 public key (received during provisioning; §4.3 — NOT the mTLS key)
+1. **Select** the station's receipt-signing ECDSA P-256 public key **for this receipt** — from the server-authoritative anchor defined in §4.3, over the retained key set; **not** simply the station's current key, and **not** the mTLS key
 2. canonical_bytes = base64_decode(receipt.data)   // decode wire encoding
 3. digest          = SHA-256(canonical_bytes)      // hash the canonical bytes (NOT the receipt.data field directly)
 4. Verify(receipt.signature, digest, stationPublicKey) using ECDSA-P256

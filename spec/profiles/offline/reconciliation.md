@@ -65,7 +65,7 @@ The server detects missing offline transactions by monitoring `txCounter` contin
 
 The server verifies the ECDSA-P256-SHA256 signature on each offline transaction receipt:
 
-1. The server retrieves the station's **receipt-signing** ECDSA P-256 public key from the station registry (submitted at provisioning; distinct from the station's mTLS key — see [Chapter 06 — Security](../../06-security.md), §4.3).
+1. The server **selects** the station's **receipt-signing** ECDSA P-256 public key for this transaction from the retained key set, using the server-authoritative anchor of [Chapter 06 — Security §4.3](../../06-security.md) — for a pass-form receipt, the OfflinePass's own validity window; **never** the station's current key by default, **never** a station-supplied timestamp, and **never** the station's mTLS key.
 2. The server reconstructs the canonical receipt payload by Base64-decoding the `receipt.data` field.
 3. The server verifies the `receipt.signature` (Base64-decoded) against the reconstructed payload using ECDSA-P256-SHA256.
 4. **Invalid signatures** are a CRITICAL-severity fraud signal. The server **MUST** immediately flag the transaction, log a SecurityEvent (`type: "OfflinePassRejected"`), and **MAY** disable offline mode for the affected station until manual investigation is complete.
