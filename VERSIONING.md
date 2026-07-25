@@ -22,7 +22,7 @@ During `0.x` development, breaking changes MAY occur between minor versions. Eac
 
 The message envelope contains a `protocolVersion` field (e.g., `"0.2.1"`).
 
-At boot, the station sends its supported version in `BootNotification`. If versions are compatible (same MAJOR), the server responds with `Accepted`. If versions are incompatible (different MAJOR), the server MUST reject with error code `1007` (`PROTOCOL_VERSION_MISMATCH`) and include the `supportedVersions` array in the BootNotification RESPONSE, listing all protocol versions the server supports (e.g., `["0.1.0", "0.2.0"]`). The station MUST NOT retry and MUST await a firmware update.
+At boot, the station sends its supported version in `BootNotification`. If versions are compatible (same MAJOR), the server responds with `Accepted`. If versions are incompatible (different MAJOR), the server MUST reject with error code `1007` (`PROTOCOL_VERSION_MISMATCH`) and include the `supportedVersions` array in the BootNotification RESPONSE, listing all protocol versions the server supports (e.g., `["0.1.0", "0.2.0"]`). The station MUST continue retrying BootNotification at the `retryInterval` carried in that response (default 30 s), per [CORE-011](spec/profiles/core/README.md), and remains in limited mode until a boot is accepted. Resolution may come from either side — the station's firmware is upgraded to a supported MAJOR, or the server adds or restores support for the station's MAJOR — and the continued retry is what allows the second case to recover without a site visit. A rejected station accepts no commands and therefore cannot be sent a firmware update over the protocol, so it MUST NOT stop retrying.
 
 ## Schema Versioning
 
