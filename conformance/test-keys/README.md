@@ -26,7 +26,8 @@ Run `tools/verify-example-signatures.mjs` (added in the same change-set that int
 
 Production deployments establish their own keys through the operational PKI:
 
-- **Station ECDSA key**: generated on-device during provisioning; the private key never leaves the secure element / NVS. The CSR is signed by the operator's Station CA. See `profiles/security/certificate-renewal.md`.
+- **Station mTLS client key**: generated on-device during provisioning; the private key never leaves the secure element / NVS. Its CSR is signed by the operator's Station CA. See `profiles/security/certificate-renewal.md`.
+- **Station receipt-signing key**: a **separate** on-device ECDSA P-256 key pair, submitted at provisioning as a bare public key and never certified by the Station CA. It **MUST** be distinct from the mTLS client key (`06-security.md` §4.3). The `station-test-key.pem` / `station-test-pub.pem` pair above stands in for this key, not for the mTLS key.
 - **Server ECDSA key**: generated and stored in the server HSM / Vault. Public key distributed to stations via provisioning + `ChangeConfiguration` (`OfflinePassPublicKey`).
 - **Firmware code-signing key**: held by the firmware release pipeline. Public certificate pre-provisioned to the station's secure element.
 - **HMAC session key**: derived per-boot per `06-security.md` §5.2, never reused across sessions.

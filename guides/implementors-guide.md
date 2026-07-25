@@ -755,7 +755,7 @@ PG → POST /webhooks/payment-gateway/notification (HMAC-SHA512 signed)
 When a station reconnects after being offline, it sends TransactionEvent REQUESTs for each offline session:
 
 1. **Verify txCounter continuity:** Each transaction has a `txCounter`. Verify there are no gaps in the sequence from the last reconciled counter.
-2. **Verify the receipt signature:** Use the station's ECDSA P-256 public key (stored at provisioning time).
+2. **Verify the receipt signature:** Use the station's **receipt-signing** ECDSA P-256 public key (stored at provisioning time) — not its mTLS key; the two are required to be distinct.
 3. **Verify the OfflinePass:** Check that it was valid at the time of the transaction (signature, epoch, limits).
 4. **Debit user wallets:** The credits weren't debited at session time (user was offline), so debit them now. If the user's balance goes negative, record it as a debt.
 5. **Run fraud scoring:** Check for anomalies (broken chain, excessive credits, suspiciously fast intervals).

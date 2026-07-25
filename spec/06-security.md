@@ -412,7 +412,7 @@ Server Signing Key (ECDSA P-256, server-side HSM)
 |----------|-----------|:--------:|---------|---------|
 | Root CA | ECDSA P-384 | 20 years | Air-gapped HSM | Signs Station CA only |
 | Station CA | ECDSA P-256 | 5 years | Online HSM | Signs station certificates |
-| Station Cert | ECDSA P-256 | 1 year | Station secure element | mTLS authentication + receipt signing |
+| Station Cert | ECDSA P-256 | 1 year | Station secure element | mTLS authentication **only** — the receipt-signing key is a separate, uncertified key pair (§4.3) |
 | Server Signing Key | ECDSA P-256 | Annual rotation | Server HSM / Vault | OfflinePass + ServerSignedAuth signing |
 
 **Trust distribution:**
@@ -424,12 +424,14 @@ Server Signing Key (ECDSA P-256, server-side HSM)
 
 ### 4.3 Key Management Lifecycle
 
-#### Station TLS Key Pair
+#### Station mTLS Client Key Pair (ECDSA P-256)
 
 | Phase | Action |
 |-------|--------|
 | **Generation** | On-device during provisioning (private key NEVER leaves the station) |
-| **Storage** | Secure element, TPM, or encrypted NVS |
+| **Distribution** | Public key submitted **inside the provisioning CSR** (`tlsCsr`), whose self-signature proves possession; the server certifies it as the station's X.509 client certificate. It is never distributed as a bare public key. |
+| **Storage** | Secure element, TPM, or encrypted NVS (non-extractable where the hardware supports it) |
+| **Lifetime** | Bound to the certificate issued over it; how many may be valid simultaneously is bounded by §4.7.6 |
 | **Renewal** | Station generates new CSR; server signs via Station CA. Background alert when cert < 30 days to expiry. |
 | **Revocation** | CRL published by Station CA (checked by MQTT broker). OCSP RECOMMENDED. |
 | **Rotation** | Annual (1-year certificate validity) |
@@ -453,14 +455,25 @@ Server Signing Key (ECDSA P-256, server-side HSM)
 | **Storage** | Private: server HSM / Vault. Public: station NVS (`OfflinePassPublicKey`). |
 | **Rotation** | Annual. See §6.7 for the rotation protocol. |
 
-#### Station ECDSA P-256 Key (mTLS + Receipt signing)
+#### Station Receipt-Signing Key Pair (ECDSA P-256)
 
 | Phase | Action |
 |-------|--------|
 | **Generation** | On-device during provisioning (private key NEVER leaves the station) |
-| **Distribution** | Public key sent to server during provisioning; also used as TLS client cert |
-| **Storage** | Station secure element (non-extractable). ATECC608B fully supports ECDSA P-256. |
-| **Rotation** | Annual (new key pair generated, public key re-registered with server, new TLS cert issued) |
+| **Distribution** | Public key submitted **directly** in the provisioning request as `receiptSigningPublicKey` — a bare public key, not carried in a CSR, and never certified as a TLS credential |
+| **Storage** | Station secure element (non-extractable); ATECC608B fully supports ECDSA P-256. Server: held against the station record and used to verify offline receipt signatures (§6.2). |
+| **Lifetime** | Independent of the station certificate. The server **MUST** retain it for at least as long as receipts signed under it must remain auditable (see the OSPP Session Retention Horizon, [Chapter 02 — Transport](02-transport.md)). |
+| **Rotation** | No rotation protocol is defined in this revision. [Re-provisioning](04-flows.md#re-provisioning-an-already-provisioned-station) is the only specified path by which the server comes to hold a different receipt-signing key. |
+
+**Key separation — the two station ECDSA keys MUST be distinct.** A station's mTLS client key and its receipt-signing key **MUST** be different key pairs. A station **MUST NOT** submit the same public key as both the subject key of its `tlsCsr` and its `receiptSigningPublicKey`.
+
+The reason is lifecycle independence. A signed receipt must remain verifiable after the station's TLS certificate has been rotated or revoked, and a compromise of the TLS key **MUST NOT** retroactively make every historical receipt forgeable. Sharing one key ties receipt verification — an audit and settlement concern with a multi-year horizon — to a credential that is deliberately rotated annually and revoked on demand. The cost of separation is one additional key slot on the secure element.
+
+This is a **different and weaker** requirement than the BLE key separation of §6.5.2, which is unaffected by it: that rule forbids using a single P-256 key for both ECDSA signing and ECDH key agreement (NIST SP 800-56A), a stronger prohibition that continues to apply to all three station keys.
+
+**Server behaviour on identical keys.** Distinctness is a conformance requirement on the **station** — the station is the only party able to satisfy it, since both key pairs are generated on-device. A server that receives a provisioning request in which the `receiptSigningPublicKey` equals the CSR subject public key **MUST** detect the condition and **MUST** record it as a station non-conformance for operator review. It **MAY** reject the request. This specification does not state *when* a deployment begins rejecting, and defines no grace period: that is a rollout decision, not a protocol rule.
+
+> **Note.** No error code is registered for a rejection on this condition in this revision; a server that chooses to reject has no conformant code to return under §2.4. This is a known gap, recorded rather than silently filled.
 
 ### 4.4 Certificate Requirements
 
@@ -975,7 +988,7 @@ Every offline transaction produces a cryptographically signed receipt, ensuring 
 During reconciliation ([Flow §10](04-flows.md#10-offline--online-reconciliation)), the server verifies each receipt:
 
 ```
-1. Look up the station's ECDSA P-256 public key (received during provisioning)
+1. Look up the station's receipt-signing ECDSA P-256 public key (received during provisioning; §4.3 — NOT the mTLS key)
 2. canonical_bytes = base64_decode(receipt.data)   // decode wire encoding
 3. digest          = SHA-256(canonical_bytes)      // hash the canonical bytes (NOT the receipt.data field directly)
 4. Verify(receipt.signature, digest, stationPublicKey) using ECDSA-P256
@@ -1138,7 +1151,7 @@ The wrapper adds `signatureAlgorithm` (`"ECDSA-P256-SHA256"`) and `signature`. T
 
 **Public-key validation (Normative).** Before using any received P-256 public key in an ECDH operation — `appEphemeralPubKey` (Hello), `stationEphemeralPubKey` (Challenge), and the certificate's `stationPubKey` — the receiver **MUST** validate it: the compressed-SEC1 point **MUST** decompress to a valid point on the P-256 curve (a non-decompressable X is rejected), and the point **MUST NOT** be the identity / point at infinity. On failure the receiver **MUST** abort the handshake with `2013 BLE_AUTH_FAILED`. On P-256 (prime order, cofactor 1 — no small-order subgroups) with single-use ephemeral keys, invalid-curve and small-subgroup attacks are already inapplicable by construction, and a compliant library (`@noble/curves`, mbedTLS) rejects bad points on decode; this explicit MUST is **defense-in-depth** and a mandated B5 conformance test, stated so that no implementation silently skips the check. It adds a validation obligation only — the wire encoding (Pin 2) is unchanged.
 
-**Dedicated BLE key pair (key separation).** `stationPubKey` is a key pair **distinct from** the station's ECDSA P-256 mTLS/receipt key (§4.3): one P-256 key MUST NOT be used for both ECDSA signing and ECDH key agreement (NIST SP 800-56A key-separation). The station generates this ECDH key pair **on-device** at provisioning (the private key never leaves the station, exactly as for the TLS key) and submits the public key in the provisioning request alongside its TLS CSR.
+**Dedicated BLE key pair (key separation).** `stationPubKey` is a key pair **distinct from both** of the station's ECDSA P-256 keys — the mTLS client key and the receipt-signing key (§4.3): one P-256 key MUST NOT be used for both ECDSA signing and ECDH key agreement (NIST SP 800-56A key-separation). The station generates this ECDH key pair **on-device** at provisioning (the private key never leaves the station, exactly as for the TLS key) and submits the public key in the provisioning request alongside its TLS CSR.
 
 > **Note (proof-of-possession).** The provisioning request submits the BLE ECDH *public* key, but v0.6.0 does not mandate an explicit proof that the station holds the corresponding *private* key (unlike the TLS CSR, which is self-signed). This is benign: a certificate issued over a public key whose private key the requester does not control is cryptographically useless — `es = ECDH(appEphemeral, stationPubKey)` cannot be reproduced by anyone lacking that private key, so no station gains anything by certifying a key it cannot use. An explicit proof-of-possession (e.g. signing the provisioning request with the BLE key, or an ECDH challenge at issuance) would be cleaner defense-in-depth and **MAY** be added in a future revision; it is not required for v0.6.0.
 
