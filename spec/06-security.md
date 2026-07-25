@@ -1272,7 +1272,7 @@ sequenceDiagram
 
     Note over SSP: Grace period — station accepts signatures from BOTH<br/>the new key and the cached previous key (default 300 s)
 
-    Note over Server: After all stations updated (audit via GetConfiguration)
+    Note over Server: After every station has returned Accepted to the ChangeConfiguration
     Server->>Server: Revoke old key, stop signing with it
 ```
 
@@ -1281,7 +1281,7 @@ sequenceDiagram
 2. Push the **new** public key as `OfflinePassPublicKey` via ChangeConfiguration [MSG-013]
 3. Upon receiving the new key, the station MUST store it as the active key and SHOULD cache the previous key internally for a configurable grace period (default 300 seconds). No separate configuration key is required for the previous key.
 4. **Grace period:** During the grace period the station accepts ECDSA P-256 signatures from both the new and the cached previous key. After the grace period expires the station MUST discard the cached key.
-5. After ALL stations have been updated (verified via GetConfiguration [MSG-014]), revoke the old key
+5. After ALL stations have been updated, revoke the old key. **There is no read-back:** `OfflinePassPublicKey` is a **WriteOnly** key and **MUST NOT** be returned in a GetConfiguration [MSG-014] response ([Chapter 08 — Configuration](08-configuration.md), §2), precisely so that credentials cannot be harvested from a config dump. The server therefore tracks rollout from the **ChangeConfiguration [MSG-013] RESPONSE it received from each station** — a station counts as updated when, and only when, it has returned `Accepted`. A station that is offline, or has not answered, **MUST** be treated as not yet updated, and the old key **MUST NOT** be revoked while any such station remains within the retention window for passes it may still hold.
 
 ---
 
