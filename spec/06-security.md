@@ -481,7 +481,25 @@ This specification defines **no grace period** and no migration path for station
 
 Therefore, for each station the server **MUST** retain **every** receipt-signing key it has bound, together with the **validity window** during which that key was current — the instant it was bound and the instant it was superseded. Retention **MUST** last at least as long as receipts signed under that key must remain verifiable; a key **MUST NOT** be deleted merely because a newer one has replaced it.
 
-At verification the server **MUST** use the key that was current **when the receipt was signed**, not the station's present key. Because a receipt carries no key identifier (§6.2), that selection is necessarily by time. A server **MAY** additionally attempt other keys retained for the **same** station — which is the more robust behaviour under clock skew — but **MUST NOT** accept a signature under any key that was never bound to that station.
+**Key selection at verification.** The server **MUST** verify a receipt against the key that was bound to the station during the period in which that receipt could legitimately have been produced — not against the station's present key. Two rules govern how that key is chosen, and both are load-bearing:
+
+1. **The candidate set MUST be derived from a server-authoritative anchor.** A station-supplied timestamp — including the `startedAt` and `endedAt` that arrive on an envelope whose signature has *not yet been checked* — **MUST NOT** determine which key verifies a signature. Permitting it would let a caller holding a superseded, compromised key nominate that key simply by choosing a time inside its window.
+2. **The candidate set MUST be bounded by that anchor.** The server **MUST NOT** attempt every key it has ever retained for the station: try-all makes every superseded key permanently valid and defeats supersession entirely.
+
+The anchor differs by receipt form. In both cases it is a **server-issued** artefact the station cannot alter:
+
+| Receipt form | Server-authoritative anchor |
+|---|---|
+| **Pass form** (`offlinePassId`, `passCounter`) | The **OfflinePass**'s own validity window. The pass is issued and ECDSA-signed by the server (§6.1), so its `issuedAt`/`expiresAt` are authoritative and tamper-evident. Select the key(s) bound during that window — **not** the receipt's claimed `endedAt`. |
+| **Auth form** (`authId`, `sessionId`) | The **server-issued authorization record** named by `authId`, and its issuance time. |
+
+Where an anchor's window spans a supersession and therefore admits more than one bound key, the server **MAY** try each key the anchor admits — **and only those**.
+
+**`keyId` — OPTIONAL disambiguation hint.** A receipt **MAY** carry `keyId` ([`receipt.schema.json`](../schemas/common/receipt.schema.json)): base64url of the first 16 bytes of SHA-256 over the DER `SubjectPublicKeyInfo` of the signing key. It sits beside `signature`, **outside** the signed `data`, so it changes no signed field and invalidates no existing signature.
+
+`keyId` is a **hint only**. It **MUST NOT** select the verification key and **MUST NOT** widen the candidate set. The server **MUST** select the key from the anchor above *first*; then, if `keyId` is present, it **MUST** check that it matches the selected key, and where the two **disagree it MUST reject the receipt** rather than follow `keyId`. A `keyId` naming a key outside the anchor's candidate set is itself grounds for rejection.
+
+Stated this way the field is safe despite being unsigned: tampering with `keyId` can only cause a rejection, never acceptance under an attacker-nominated key. A `keyId` that could steer selection would be *worse* than no field at all — it would hand an attacker the same key-nomination attack as a forged timestamp, without even needing to calibrate one.
 
 > **Known gap — receipt-key rotation.** The station mTLS key has a renewal arc (§4.7) and the server signing key has a rotation protocol (§6.7). The station receipt-signing key has **neither**. No message defined in this revision carries a replacement receipt-signing key in either direction, so the key is fixed for the life of the provisioned identity unless the station is re-provisioned. This is a stated limitation, not an omission — implementers should plan around it rather than assume a rotation exists:
 >
