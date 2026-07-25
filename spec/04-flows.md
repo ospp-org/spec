@@ -336,11 +336,11 @@ sequenceDiagram
     else Station rejects
         SSP-->>Server: StartService RESPONSE (Rejected, errorCode) [MSG-005]
         Server->>Server: Refund credits to wallet
-        Server-->>App: 409 Conflict {error: BAY_BUSY}
+        Server-->>App: 409 Conflict {errorText: BAY_BUSY}
 
     else Timeout (no response in 10s)
         Server->>Server: Refund credits to wallet
-        Server-->>App: 504 Gateway Timeout {error: ACK_TIMEOUT}
+        Server-->>App: 504 Gateway Timeout {errorText: ACK_TIMEOUT}
     end
 ```
 

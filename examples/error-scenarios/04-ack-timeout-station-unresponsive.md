@@ -249,20 +249,20 @@ Message msg_s2c_ll220001:
 
 ```json
 {
-  "success": false,
-  "error": {
-    "errorCode": 6002,
-    "errorText": "ACK_TIMEOUT",
-    "errorDescription": "Station temporarily unavailable. Please try again later.",
-    "severity": "Warning",
-    "recoverable": true,
-    "recommendedAction": "RETRY_LATER"
-  },
-  "circuitBreaker": {
-    "state": "open",
-    "openedAt": "2026-02-13T10:20:17.500Z",
-    "retryAfter": "2026-02-13T10:20:47.500Z",
-    "retryAfterSeconds": 22
+  "errorCode": 6002,
+  "errorText": "ACK_TIMEOUT",
+  "errorDescription": "Station temporarily unavailable. Please try again later.",
+  "severity": "Warning",
+  "recoverable": true,
+  "recommendedAction": "RETRY_LATER",
+  "timestamp": "2026-02-13T10:20:17.500Z",
+  "details": {
+    "circuitBreaker": {
+      "state": "open",
+      "openedAt": "2026-02-13T10:20:17.500Z",
+      "retryAfter": "2026-02-13T10:20:47.500Z",
+      "retryAfterSeconds": 22
+    }
   }
 }
 ```

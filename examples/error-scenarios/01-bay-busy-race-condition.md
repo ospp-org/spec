@@ -132,22 +132,22 @@ reports the bay is already running a cycle. The station responds with error code
 
 ```json
 {
-  "success": false,
-  "error": {
-    "errorCode": 3001,
-    "errorText": "BAY_BUSY",
-    "errorDescription": "Bay is occupied. Select another bay or try again later.",
-    "severity": "Warning",
-    "recoverable": true,
-    "recommendedAction": "SELECT_DIFFERENT_BAY"
-  },
-  "refund": {
-    "refundId": "ref_ee550001",
-    "sessionId": "sess_c0d1e2f3a4b5",
-    "creditsRefunded": 50,
-    "refundPercentage": 100,
-    "reason": "bay_busy_race_condition",
-    "refundedAt": "2026-02-13T10:15:03.500Z"
+  "errorCode": 3001,
+  "errorText": "BAY_BUSY",
+  "errorDescription": "Bay is occupied. Select another bay or try again later.",
+  "severity": "Warning",
+  "recoverable": true,
+  "recommendedAction": "SELECT_DIFFERENT_BAY",
+  "timestamp": "2026-02-13T10:15:03.500Z",
+  "details": {
+    "refund": {
+      "refundId": "ref_ee550001",
+      "sessionId": "sess_c0d1e2f3a4b5",
+      "creditsRefunded": 50,
+      "refundPercentage": 100,
+      "reason": "bay_busy_race_condition",
+      "refundedAt": "2026-02-13T10:15:03.500Z"
+    }
   }
 }
 ```

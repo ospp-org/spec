@@ -67,6 +67,8 @@ Every error — whether in an MQTT RESPONSE, BLE AuthResponse, or REST API respo
 | `vendorErrorCode` | string | OPTIONAL | Vendor-specific sub-code for proprietary diagnostics (see §8). |
 | `details` | object | OPTIONAL | Additional structured context (e.g., which field failed validation, threshold values, etc.). |
 
+The field set above is identical on every transport. Where the object *sits* differs: inside `payload` for MQTT (§2.1), nested under `error` for BLE (§2.3, which must also carry the `type` and `result` discriminators), and as the entire top-level body for REST (§2.4).
+
 ---
 
 ## 2. Error Response Format
@@ -156,7 +158,9 @@ BLE errors are returned via the TX Response characteristic (FFF4) as AuthRespons
 
 ### 2.4 REST API Error Response
 
-Server REST API endpoints return errors using standard HTTP status codes with a JSON body containing the error object.
+Server REST API endpoints return errors using standard HTTP status codes with a JSON body that **is** the Error Object of §1.3.
+
+The Error Object **MUST** be the top-level JSON object of the response body. It **MUST NOT** be wrapped in an enclosing member (`error`, `data`, or any other name), and the body **MUST NOT** carry sibling members alongside it. Additional per-error context — the reason an input was rejected, a refund record, a circuit-breaker state — **MUST** be carried inside the object's own `details` member (§1.3); `details` is the single extension point, and the Error Object schema is otherwise closed (Appendix C, `additionalProperties: false`).
 
 ```json
 HTTP/1.1 409 Conflict
@@ -164,17 +168,19 @@ Content-Type: application/json
 X-Request-Id: req_f47ac10b-58cc-4372-a567-0e02b2c3d479
 
 {
-  "error": {
-    "errorCode": 3001,
-    "errorText": "BAY_BUSY",
-    "errorDescription": "Bay bay_c1d2e3f4a5b6 is currently occupied.",
-    "severity": "Warning",
-    "recoverable": true,
-    "recommendedAction": "Select a different bay or wait for the current session to complete.",
-    "timestamp": "2026-01-30T12:20:00.000Z"
-  }
+  "errorCode": 3001,
+  "errorText": "BAY_BUSY",
+  "errorDescription": "Bay bay_c1d2e3f4a5b6 is currently occupied.",
+  "severity": "Warning",
+  "recoverable": true,
+  "recommendedAction": "Select a different bay or wait for the current session to complete.",
+  "timestamp": "2026-01-30T12:20:00.000Z"
 }
 ```
+
+**Why flat, and why REST differs from the other two transports.** A REST error body carries the error and nothing else, so there is nothing for a wrapper to disambiguate. MQTT (§2.1) places the error fields inside `payload` because the envelope around it carries routing fields; BLE (§2.3) nests the object because the same body must also carry the `type` and `result` discriminators. Neither constraint applies to an HTTP response, whose status line already carries the outcome. One flat shape across every endpoint means any client — including a hand-written parser on a constrained device — decodes every error with a single code path, and finds `errorCode` at a fixed depth rather than one level deeper on some endpoints than others.
+
+**Every** REST error response uses this shape, with no per-endpoint variation: an endpoint **MUST NOT** define its own error body. In particular `errorCode` (the numeric OSPP registry code) is **REQUIRED** on every REST error, so an endpoint whose failures are outside the registry's existing vocabulary **MUST** have codes registered in §3 rather than substituting an endpoint-local string.
 
 **HTTP status code mapping:**
 
