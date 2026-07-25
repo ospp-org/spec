@@ -301,6 +301,8 @@ Token validity is checked **before** the key comparison: an expired-or-revoked t
 
 **Retention.** The server **MUST** retain the issued certificate and the bound set of public keys, associated with the consumed token, for **at least the token's full TTL**. This is what makes the rules above executable: a retry may legitimately arrive at any point up to expiry, and the comparison has nothing to compare against once the binding is discarded. The generic ≥ 24 h floor of [Transport §9.3](02-transport.md#93-idempotency) is **not** sufficient here — a deployment issuing tokens with a TTL longer than 24 hours that retained for only 24 would leave a window in which a retry is still permitted but no longer decidable.
 
+Supersession or revocation does **not** shorten this floor. It ends the window in which a retry on that token can be answered as a replay — both yield `401` / `2019` — but the certificate that token issued remains the station's live credential, and the bound key set remains the record of what the token certified. A token may be superseded at any point in its TTL, so retention cannot be made conditional on supersession not having happened.
+
 This is the provisioning-endpoint instance of the idempotency-retention rule in [Transport §9.3](02-transport.md#93-idempotency), keyed on the provisioning token rather than an `Idempotency-Key` header, and scoped to the token's TTL rather than to a fixed 24 hours.
 
 ### Re-provisioning an already provisioned station
@@ -314,7 +316,7 @@ This is the provisioning-endpoint instance of the idempotency-retention rule in 
 
 Preconditions specific to re-provisioning:
 
-- A **new** provisioning token has been generated. A consumed token **MUST NOT** be reused to re-provision: it is bound to the certificate it already issued, and presenting it again is either a replay (which returns that same certificate) or a key mismatch (which is rejected — see above).
+- A **new** provisioning token has been generated. A consumed token **MUST NOT** be reused to re-provision. Issuing the new token **supersedes** the station's existing tokens, and a superseded token is invalid for **all** purposes from that moment: presenting it **MUST** be rejected with `401 Unauthorized` and `2019 PROVISIONING_TOKEN_INVALID` (`details.reason: superseded`). It is **not** answered as a replay and **not** as a key mismatch — token validity is decided before either.
 - The `stationId` is **unchanged**. Re-provisioning re-credentials an existing station; it does not create a new one, and the server **MUST NOT** allocate a new `stationId` (see [Chapter 01 — Architecture §2.1](01-architecture.md)).
 - The operator has deliberately initiated the operation. A station **MUST NOT** re-provision itself autonomously while holding valid credentials.
 
