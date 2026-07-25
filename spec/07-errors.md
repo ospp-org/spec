@@ -59,15 +59,25 @@ Every error — whether in an MQTT RESPONSE, BLE AuthResponse, or REST API respo
 |-------|------|:--------:|-------------|
 | `errorCode` | integer | **REQUIRED** | Numeric error code from the ranges in §1.1. |
 | `errorText` | string | **REQUIRED** | Machine-readable error name in `UPPER_SNAKE_CASE` (e.g., `BAY_BUSY`). Stable across versions — clients MAY use this for programmatic matching. |
-| `errorDescription` | string | **REQUIRED** | Human-readable description of the error and its context. MAY vary per occurrence. |
+| `errorDescription` | string | **REQUIRED** | Human-readable description of **this occurrence** and its context — the bay, field, threshold, or identifier involved. Varies per occurrence; see §1.4. |
 | `severity` | string | **REQUIRED** | One of: `Critical`, `Error`, `Warning`, `Info`. |
 | `recoverable` | boolean | **REQUIRED** | `true` if the error can be resolved by retry, user action, or automatic recovery. `false` if manual intervention or system repair is required. |
-| `recommendedAction` | string | **REQUIRED** | Suggested corrective action for the receiver. |
+| `recommendedAction` | string | **REQUIRED** | The corrective action the §3 registry gives for this `errorCode`. Per-**code**, not per-occurrence; see §1.4. |
 | `timestamp` | string | **REQUIRED** | ISO 8601 UTC with milliseconds — when the error was detected. |
 | `vendorErrorCode` | string | OPTIONAL | Vendor-specific sub-code for proprietary diagnostics (see §8). |
 | `details` | object | OPTIONAL | Additional structured context (e.g., which field failed validation, threshold values, etc.). |
 
 The field set above is identical on every transport. Where the object *sits* differs: inside `payload` for MQTT (§2.1), nested under `error` for BLE (§2.3, which must also carry the `type` and `result` discriminators), and as the entire top-level body for REST (§2.4).
+
+### 1.4 Provenance of `errorDescription` and `recommendedAction`
+
+The two prose fields are not interchangeable, and only one of them is free text.
+
+**`recommendedAction` is per-code and comes from the registry.** It **MUST** carry the *Recommended Action* that [§3](#3-error-code-registry) gives for that `errorCode`. It is a property of the **code**, not of the occurrence: two errors carrying the same `errorCode` **MUST** carry the same `recommendedAction`. An implementation **MUST NOT** substitute a generic string derived from `severity` or `recoverable` — "Review the error details and take corrective action" is not a conforming value for a code whose registry entry says which token to request and which keys not to regenerate. Where a registry entry addresses more than one party (`Station: … Operator: …`), the emitted value **MUST** preserve the part addressed to the receiver and **MAY** carry the rest. A server **MAY** translate it, and **MAY** shorten it to fit the bound in Appendix C, provided the corrective action itself survives.
+
+This is the field the receiver acts on, and it is the reason the field is REQUIRED. A code whose recommended action is *request a new token, and do not regenerate keys first* is actionable only if that sentence actually reaches the station; a placeholder derived from severity tells the reader nothing the HTTP status did not already say.
+
+**`errorDescription` is per-occurrence and is written by the emitter.** It **MUST** describe *this* occurrence — the bay, field, threshold, identifier, or limit involved — and therefore varies between two errors carrying the same `errorCode`. The registry's *Description* column is **guidance for what to write**, not the value to emit: it exists to explain the code to an implementer, it is written in Markdown, and some entries exceed the wire bound of Appendix C. An implementation **MUST NOT** emit a registry *Description* cell verbatim as `errorDescription`, and a generator **MUST NOT** be built to do so.
 
 ---
 
