@@ -84,7 +84,7 @@ This section fixes the meaning of an **absent** capability. It does not define c
 
 | Condition | Error Code | Behaviour |
 |-------------------------------------|---------------------|-----------------------------------------------|
-| Station ID not recognized by server | `2001 STATION_NOT_REGISTERED` | Server responds with `Rejected`. Station **SHOULD** enter provisioning mode. |
+| Station ID not recognized by server | `2001 STATION_NOT_REGISTERED` | Server responds with `Rejected`. Station **MUST** keep retrying BootNotification per CORE-011, and **MUST NOT** enter provisioning mode or alter stored credentials: it holds credentials the broker accepted, and [Flows §2](../../04-flows.md#re-provisioning-an-already-provisioned-station) forbids re-provisioning autonomously in that state. The cause is fixed operator-side (register the `stationId`), after which the next retry succeeds. |
 | Invalid message format | `1005 INVALID_MESSAGE_FORMAT` | Server drops the message. Station does not receive a response and retries after timeout. |
 | Protocol version mismatch | `1007 PROTOCOL_VERSION_MISMATCH` | Server responds with `Rejected` and includes `supportedVersions` array listing compatible protocol versions. Station **MUST** await firmware update. |
 | Server internal error | `6001 SERVER_INTERNAL_ERROR` | Server responds with `Rejected` and `retryInterval`. Station retries. |
