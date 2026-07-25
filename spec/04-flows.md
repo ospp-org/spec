@@ -259,9 +259,9 @@ sequenceDiagram
 
 | Component | State |
 |-----------|-------|
-| SSP NVS | Contains: stationId, bayIds, TLS cert+key, ECDSA key pair, Station CA chain, broker root CA (optional, when broker uses private CA hierarchy for server cert), serverVerifyKey, mqttConfig |
+| SSP NVS | Contains: `stationId`, `bayIds`, TLS certificate + private key, the **receipt-signing** ECDSA P-256 key pair, the **static BLE ECDH** P-256 key pair together with the server-signed `stationIdentity` certificate issued over it (both only when BLE is supported), Station CA chain, broker root CA (optional, when broker uses private CA hierarchy for server cert), `serverVerifyKey`, `mqttConfig` |
 | SSP | Provisioned, ready to boot |
-| Server | Station registered, certificate issued, provisioning token consumed |
+| Server | Station registered, certificate issued, provisioning token consumed. The server **MUST** retain every public key submitted in the request, bound to the consumed token — this binding is what a later retry is compared against (see [Single-use and idempotent retry](#single-use-and-idempotent-retry)); without it the comparison cannot be performed |
 | Provisioning Token | Invalidated (single-use) |
 
 ### Single-use and idempotent retry
@@ -274,13 +274,15 @@ Because provisioning traverses unreliable links, the station **MAY** retry with 
 
 **Key drift MUST be rejected.** A retry that presents a **different public key** than the one bound to the already-issued certificate **MUST NOT** be treated as a replay. The server **MUST** reject it with `409 Conflict` and error `4015 PROVISIONING_KEY_MISMATCH` ([Chapter 07 §3.4](07-errors.md)), and **MUST NOT** issue a second certificate on that token. Returning a certificate bound to a key the requester does not hold is not idempotency — it is a failure the requester cannot detect.
 
-This applies to **every** public key the station submits: the token binds to the station's **complete provisioned identity**, not only its TLS identity. Partial drift is still drift. As of this revision those keys are:
+This applies to **every** public key **present in the request**: the token binds to the station's **complete provisioned identity**, not only its TLS identity. Partial drift is still drift.
+
+The comparison is **per key, and conditional on presence**. Each key present in the retry is compared against the key of the same kind bound at first provision. A key the station does not submit is simply not compared, and its **absence is never drift** — a station declaring `capabilities.bleSupported: false` submits no BLE key, and its retries are judged solely on the keys it does send. Only a key that is **present and different** triggers the rejection. The keys currently defined are:
 
 | Submitted key | What it certifies | Consequence if drift were ignored |
 |---|---|---|
 | CSR public key (`tlsCsr`) | the mTLS client certificate | the station holds a certificate that does not match its private key — every mTLS connection fails |
 | `receiptSigningPublicKey` | offline receipt signatures | the server verifies receipts against a key the station no longer holds — every offline receipt fails at reconciliation, days later |
-| static BLE ECDH public key ([Chapter 06 §6.5.2](06-security.md)) | the StationIdentity certificate | `es = ECDH(appEphemeral, stationStaticPub)` is never reproduced — every BLE handshake fails |
+| static BLE ECDH public key ([Chapter 06 §6.5.2](06-security.md)) — **only when BLE is supported** | the StationIdentity certificate | `es = ECDH(appEphemeral, stationStaticPub)` is never reproduced — every BLE handshake fails |
 
 A retry presenting the **same** keys is a replay and is answered as described above.
 
