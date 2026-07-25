@@ -189,5 +189,5 @@ Conformance reports **SHOULD** include:
 | TC-DM-009 | Get Configuration | Device Management | Extended |
 | TC-OFF-001 | Full Offline BLE Session | Offline | Complete |
 | TC-OFF-002 | OfflinePass Validation (10 Checks) | Offline | Complete |
-| TC-OFF-003 | Reconciliation | Offline | Complete |
-| TC-OFF-004 | Reconciliation | Offline | Complete |
+| TC-OFF-003 | Reconciliation: Server-Side Processing | Offline | Complete |
+| TC-OFF-004 | Reconciliation: Station Upload & Recovery | Offline | Complete |

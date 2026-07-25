@@ -1,4 +1,4 @@
-# TC-OFF-003 — Reconciliation
+# TC-OFF-003 — Reconciliation: Server-Side Processing
 
 ## Profile
 
