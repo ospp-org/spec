@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/provisioning-request.schema.json",
   "title": "ProvisioningRequest",
-  "description": "HTTP request body sent by a station to the server's provisioning endpoint (POST /api/v1/stations/provision) per Chapter 04 — Protocol Flows §2. Carries the single-use provisioning token that authorises issuance, the station's descriptive fields, and every public key the station asks the server to bind to its provisioned identity. The distinction between the two groups is normative: descriptive drift on a retry MUST be ignored, whereas drift in any submitted public key MUST be rejected (Flows §2 — Single-use and idempotent retry). The server's response is defined by provisioning-response.schema.json.",
+  "description": "HTTP request body sent by a station to the server's provisioning endpoint (POST /api/v1/stations/provision) per Chapter 04 — Protocol Flows §2. Carries the single-use provisioning token that authorises issuance, the station's descriptive fields, and every public key the station asks the server to bind to its provisioned identity. The distinction between the two groups is normative: descriptive drift on a retry MUST be ignored, whereas a retry is a replay only if it presents the same set of key kinds, each carrying the same key, as the provision the token bound — the BOUND SET. A different key for a bound kind, or a different set of key kinds in either direction, MUST be rejected (Flows §2 — Single-use and idempotent retry). The server's response is defined by provisioning-response.schema.json.",
   "type": "object",
   "additionalProperties": false,
   "required": [

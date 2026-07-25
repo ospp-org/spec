@@ -252,7 +252,7 @@ sequenceDiagram
 |-------|-------|------------|
 | 401 Unauthorized (`2019 PROVISIONING_TOKEN_INVALID`) | Token expired / beyond TTL, superseded, or revoked — carried in `details.reason` | Display error, await new provisioning token. Do **not** regenerate keys: the keys are not what was rejected |
 | 400 Bad Request | Invalid CSR or missing fields | Log error, regenerate keys, retry |
-| 409 Conflict (`4015 PROVISIONING_KEY_MISMATCH`) | This token already issued a certificate, and this retry presents a **different** public key | **Do NOT retry with this token** — no retry can succeed. Request a **new** provisioning token from the operator, then provision again with the keys currently held. Do **not** regenerate keys first: that is what caused the mismatch |
+| 409 Conflict (`4015 PROVISIONING_KEY_MISMATCH`) | This token already issued a certificate, and this retry does not match the bound set — a **different** public key for a bound kind, or a **different set** of key kinds (one added, or one dropped) | **Do NOT retry with this token** — no retry can succeed. Request a **new** provisioning token from the operator, then provision again with the keys currently held. Do **not** regenerate keys first: that is what caused the mismatch |
 | Network unreachable | No connectivity | Retry with backoff, await network |
 
 ### Postconditions

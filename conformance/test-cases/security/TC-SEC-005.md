@@ -25,7 +25,7 @@ Verify that the **server's** provisioning endpoint (`POST /api/v1/stations/provi
 1. A station entry exists in the management portal with `stationId` `stn_a1b2c3d4`, not yet provisioned.
 2. A provisioning token `T1` has been generated for it (single-use, unconsumed, with a known TTL fixed at issuance).
 3. The test harness can generate ECDSA P-256 key pairs and produce CSRs with CN = `stn_a1b2c3d4`.
-4. The test harness can generate a static ECDH P-256 key pair (for Part D; required only if the station profile declares `bleSupported`).
+4. The test harness can generate a static ECDH P-256 key pair (for Part F; required only if the station profile declares `bleSupported`).
 5. The test harness can capture full HTTP responses, including status code and body.
 6. The harness retains, byte-for-byte, the certificate returned by the first successful provision.
 7. The server's certificate store can be inspected (directly or via an operator API) to count certificates issued against `T1`.
@@ -95,7 +95,7 @@ Verify that the **server's** provisioning endpoint (`POST /api/v1/stations/provi
 
 ### Part F — BLE ECDH key drift MUST be rejected (conditional)
 
-> Applicable only where the station profile declares `bleSupported` and the provisioning request carries `stationPubKey` (`06-security.md` §6.5.2). Skip otherwise, and record it as skipped.
+> Applicable only where the station profile declares `bleSupported`, so that the **first provision** carries `stationPubKey` and the key is in the bound set (`06-security.md` §6.5.2). Skip otherwise, and record it as skipped. Note this part exercises BLE-key **value** drift only; a retry that **omits** a bound BLE key, or **adds** one that was not bound, is equally `409` / `4015` per Flows §2 and is not yet covered here.
 
 34. Repeat Part A steps 1–6, but include `stationPubKey: K_ble_1.pub` in the initial provision, using a fresh token `T2` on a second unprovisioned station entry.
 35. Generate a new static ECDH key pair `K_ble_2`.
