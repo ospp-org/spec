@@ -141,7 +141,7 @@ Each profile defines a subset of protocol actions. Implementations declare which
 
 | Profile | Messages | Description | Spec |
 |---------|:--------:|-------------|------|
-| **Core** | 4 | BootNotification, Heartbeat, StatusNotification, ConnectionLost | [spec/profiles/core/](spec/profiles/core/) |
+| **Core** | 6 | BootNotification, Heartbeat, StatusNotification, ConnectionLost, DataTransfer, TriggerMessage | [spec/profiles/core/](spec/profiles/core/) |
 | **Transaction** | 6 | StartService, StopService, TransactionEvent, MeterValues, ReserveBay, CancelReservation | [spec/profiles/transaction/](spec/profiles/transaction/) |
 | **Security** | 1 | SecurityEvent | [spec/profiles/security/](spec/profiles/security/) |
 | **Device Management** | 9 | Config, Reset, Firmware, Diagnostics, Maintenance, ServiceCatalog | [spec/profiles/device-management/](spec/profiles/device-management/) |
