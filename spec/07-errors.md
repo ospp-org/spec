@@ -21,7 +21,7 @@ Error codes are organized into six functional categories. Each category occupies
 | 1000–1999 | **Transport Errors** | Protocol | 15 | Network, protocol, message format, and message integrity errors |
 | 2000–2999 | **Authentication & Authorization Errors** | Protocol | 20 | Identity verification, credential validation, and access control |
 | 3000–3999 | **Session & Bay Errors** | Application | 17 | Bay state, session lifecycle, reservation, and service errors |
-| 4000–4999 | **Payment & Credit Errors** | Application | 16 | Wallet balance, payment processing, refunds, offline credit limits, and certificate management |
+| 4000–4999 | **Payment & Credit Errors** | Application | 17 | Wallet balance, payment processing, refunds, offline credit limits, and certificate management |
 | 5000–5999 | **Station Hardware & Software Errors** | Application | 34 | Physical hardware faults and embedded software errors |
 | 6000–6999 | **Server Errors** | Application | 8 | Server-side processing, timeouts, and infrastructure errors |
 | 9000–9999 | **Vendor-Specific** | Vendor | — | Reserved for vendor-defined error codes |
@@ -32,7 +32,7 @@ Error codes are organized into six functional categories. Each category occupies
 - **Application tier** (3000–6999): Errors related to business logic, state violations, hardware conditions, and server-side processing. These errors indicate that the message was received and understood, but the requested operation could not be completed. Application-tier errors are handled by the application layer.
 - **Vendor tier** (9000–9999): Reserved for implementation-specific error codes. Vendors **MUST** document their vendor error codes separately.
 
-**Total: 110 standard error codes.**
+**Total: 111 standard error codes.**
 
 ### 1.2 Severity Levels
 
@@ -196,7 +196,7 @@ X-Request-Id: req_f47ac10b-58cc-4372-a567-0e02b2c3d479
 
 | HTTP Status | Typical Error Codes | Description |
 |:-----------:|---------------------|-------------|
-| 400 | 1005, 3015, 6004 | Bad request — invalid format or payload |
+| 400 | 1005, 3015, 4010, 4017, 6004 | Bad request — invalid format or payload |
 | 401 | 2008, 2009, 2010, 2019 | Unauthorized — authentication failed or expired |
 | 402 | 4001 | Payment required — insufficient balance |
 | 403 | 2008 | Forbidden — action not permitted for this role |
@@ -309,13 +309,14 @@ Payment errors cover wallet balance, credit limits, payment processing, refunds,
 
 | Code | errorText | Severity | Recoverable | Description | Recommended Action |
 |:----:|-----------|:--------:|:-----------:|-------------|-------------------|
-| 4010 | `CSR_INVALID` | Error | true | The Certificate Signing Request is malformed, uses a prohibited key algorithm (must be ECDSA P-256), or has an invalid Subject CN. | Station: regenerate keypair and CSR with correct parameters. Server: inspect CSR details and log the specific validation failure. |
+| 4010 | `CSR_INVALID` | Error | true | The Certificate Signing Request is malformed, uses a prohibited key algorithm (must be ECDSA P-256), has an invalid Subject CN, or its `SubjectPublicKeyInfo` cannot be decoded. Reachable from two paths whose safe recovery is **opposite**: certificate renewal (SignCertificate [MSG-022]), where a fresh keypair *is* the renewal, and `POST /api/v1/stations/provision`, where after the token has issued a certificate the submitted key is **bound** and regenerating it is answered `4015` forever. Servers **MUST** therefore carry `details.phase` (`first-provision`, `retry`, or `renewal`) on this code. At the provisioning endpoint: HTTP `400 Bad Request`, evaluated after `2019` and before `4016` — see *Error precedence* in [Flows §2](04-flows.md#single-use-and-idempotent-retry); the rejection does not consume the token and alters no binding. | Station: recovery depends on `details.phase`, which the server MUST carry. `first-provision` or `renewal` — regenerate the keypair and CSR with correct parameters and resubmit; nothing is bound yet. `retry` — do NOT regenerate: a fresh key is answered `4015`, which is not recoverable. Resubmit a well-formed CSR over the already-bound key, or request a new token if it cannot be produced. If `details.phase` is absent, assume `retry`. Server: log the specific validation failure. |
 | 4011 | `CERTIFICATE_CHAIN_INVALID` | Error | true | The certificate chain verification failed. The signing CA is untrusted, an intermediate certificate is missing, or the signature does not validate. | Server: verify the CA chain is complete and correctly ordered. Station: report the specific chain validation error in the response. |
 | 4012 | `CERTIFICATE_TYPE_MISMATCH` | Warning | true | The certificate type in the response does not match the type requested in the CSR, or the station is not authorized for the requested certificate type. | Verify the `certificateType` field matches between SignCertificate and CertificateInstall. |
 | 4013 | `RENEWAL_DENIED` | Error | false | The server refuses the certificate renewal request due to policy constraints, rate limiting, or station suspension. | Contact the operator. The server administrator must approve the renewal or adjust the policy. |
 | 4014 | `KEYPAIR_GENERATION_FAILED` | Critical | false | The station's secure element, TPM, or crypto hardware cannot generate a new ECDSA P-256 keypair. Possible hardware fault or entropy source failure. | Log SecurityEvent with `HardwareFault` type. Dispatch technician to inspect the station's crypto hardware. |
 | 4015 | `PROVISIONING_KEY_MISMATCH` | Error | false | A retry did not match the **bound set** — the key kinds bound at first provision and the key each carried. Either a bound kind carried a **different** public key, or the **set** of kinds differed (one added, or one dropped). This is not a replay, and no second certificate is issued on that token. HTTP `409 Conflict`. Evaluated **last**, after `2019` and `4016` — see *Error precedence* in [Flows §2](04-flows.md#single-use-and-idempotent-retry). | Station: **do NOT retry with this token** — no retry can succeed, because the token is permanently bound to the earlier key. Request a **new** provisioning token from the operator, then provision again with the keys currently held. Server: log the mismatch; the already-issued certificate is unaffected. |
-| 4016 | `PROVISIONING_KEY_REUSE` | Error | true | The request submitted the **same public key** for two roles. Submitted keys **MUST** be pairwise distinct, and all three pairs are covered: `tlsCsr` subject key / `receiptSigningPublicKey`, `tlsCsr` subject key / `stationPubKey`, and `receiptSigningPublicKey` / `stationPubKey` ([Chapter 06 §4.3](06-security.md)). HTTP `422 Unprocessable Entity`. Evaluated **after** `2019` and **before** `4015`. Servers **SHOULD** name the colliding pair in `details`. | Station: generate a **separate** key pair for the colliding role and resubmit. The token is **not** consumed by this rejection, so the same token may be reused once the keys are corrected. Firmware that derives both roles from one key slot must be updated. |
+| 4016 | `PROVISIONING_KEY_REUSE` | Error | true | The request submitted the **same public key** for two roles. Submitted keys **MUST** be pairwise distinct, and all three pairs are covered: `tlsCsr` subject key / `receiptSigningPublicKey`, `tlsCsr` subject key / `stationPubKey`, and `receiptSigningPublicKey` / `stationPubKey` ([Chapter 06 §4.3](06-security.md)). HTTP `422 Unprocessable Entity`. Evaluated **after** `2019` and `4010`, and **before** `4015`. Servers **SHOULD** name the colliding pair in `details`, and **MUST** carry `details.phase` (`first-provision` or `retry`): this code is reachable both before and after the token has issued a certificate, and the safe recovery inverts between them. | Station: recovery depends on `details.phase`. `first-provision` — generate a separate key pair for the colliding role and resubmit; this rejection does not consume the token. `retry` — do NOT regenerate: the bound keys are what was certified, and a fresh key is answered `4015`, which is not recoverable. Resubmit the keys already bound, or request a new token. If `details.phase` is absent, assume `retry`. Firmware deriving two roles from one key slot must be updated. |
+| 4017 | `PROVISIONING_REQUEST_INVALID` | Error | true | The body sent to `POST /api/v1/stations/provision` failed schema validation against [`provisioning-request.schema.json`](../schemas/provisioning-request.schema.json) — a required property is absent, or a value violates its declared type, pattern, or bound. Distinct from `4010`, which is a structurally present but cryptographically invalid `tlsCsr`, and from `3015 PAYLOAD_INVALID`, which is a session-scoped semantic failure on a structurally complete body. HTTP `400 Bad Request`. Evaluated **first**, before `2019` — every later check reads a field out of this body; see *Error precedence* in [Flows §2](04-flows.md#single-use-and-idempotent-retry). The rejection does not consume the token and alters no binding. | Station: correct the offending property and resubmit on the **same** token — this rejection does not consume it. Inspect `details` for the failing property path. Do **not** regenerate keys: the keys are not what was rejected, and on a retry a fresh key would be answered `4015`, which is not recoverable. Server: name the failing property and the constraint it violated in `details`. |
 
 ### 3.5 Station Hardware & Software Errors (5xxx)
 
@@ -456,7 +457,7 @@ This table maps which error codes can appear in the RESPONSE or rejection of eac
 | `POST /me/offline-txs` | 400, 401 | 2009, 2010, 3015, 6004 |
 | `POST /sessions/offline-auth` | 401, 402 | 2009, 4001 |
 | `POST /webhooks/payment-gateway/notification` | 401 | 4008 |
-| `POST /api/v1/stations/provision` | 400, 401, 409, 422 | 2019, 4010, 4015, 4016 |
+| `POST /api/v1/stations/provision` | 400, 401, 409, 422 | 2019, 4010, 4015, 4016, 4017 |
 
 ---
 
@@ -819,6 +820,7 @@ Vendors MAY define custom error codes in the **9000–9999** range for proprieta
 | 4014 | `KEYPAIR_GENERATION_FAILED` | Critical | P |
 | 4015 | `PROVISIONING_KEY_MISMATCH` | Error | P |
 | 4016 | `PROVISIONING_KEY_REUSE` | Error | P |
+| 4017 | `PROVISIONING_REQUEST_INVALID` | Error | P |
 | 5000 | `HARDWARE_GENERIC` | Warning | H |
 | 5001 | `PUMP_SYSTEM` | Critical | H |
 | 5002 | `FLUID_SYSTEM` | Warning | H |

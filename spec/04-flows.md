@@ -214,16 +214,24 @@ sequenceDiagram
     SSP->>Server: POST /api/v1/stations/provision
     Note right of SSP: {provisioningToken, serialNumber, bayCount, tlsCsr, receiptSigningPublicKey, stationPubKey?}
 
-    alt Token expired / superseded / revoked
+    alt Body fails schema validation
+        Server-->>SSP: 400 Bad Request (4017 PROVISIONING_REQUEST_INVALID)
+        Note over SSP: Fix the body, resubmit on the SAME token. Do not regenerate keys
+    else Token expired / superseded / revoked
         Server-->>SSP: 401 Unauthorized (2019 PROVISIONING_TOKEN_INVALID)
         Note over SSP: Display error, await a NEW token. Do not regenerate keys
+    else CSR malformed, or its SubjectPublicKeyInfo will not decode
+        Server-->>SSP: 400 Bad Request (4010 CSR_INVALID) + details.phase
+        Note over SSP: phase=first-provision - regenerate, retry on the SAME token
+        Note over SSP: phase=retry - do NOT regenerate, resubmit a CSR over the BOUND key
     else Two submitted keys are the same key
-        Server-->>SSP: 422 Unprocessable Entity (4016 PROVISIONING_KEY_REUSE)
-        Note over SSP: Token NOT consumed - regenerate the colliding key, retry on the SAME token
+        Server-->>SSP: 422 Unprocessable Entity (4016 PROVISIONING_KEY_REUSE) + details.phase
+        Note over SSP: phase=first-provision - regenerate the colliding key, retry on the SAME token
+        Note over SSP: phase=retry - do NOT regenerate, resubmit the BOUND keys
     else Retry does not match the bound set
         Server-->>SSP: 409 Conflict (4015 PROVISIONING_KEY_MISMATCH)
         Note over SSP: No retry can succeed - await a NEW token. Do not regenerate keys
-    else Token valid, keys pairwise distinct, bound set matches
+    else Well-formed request, valid token, keys pairwise distinct, bound set matches
         Server->>Server: Validate token, sign CSR
         Server-->>SSP: 200 OK ProvisioningResponse (per schemas/provisioning-response.schema.json)
         Note over SSP: Store all in NVS
@@ -256,11 +264,25 @@ sequenceDiagram
 
 | Error | Cause | SSP Action |
 |-------|-------|------------|
+Rows are listed in the order the server evaluates them (see *Error precedence* below).
+
+| Error | Cause | SSP Action |
+|-------|-------|------------|
+| 400 Bad Request (`4017 PROVISIONING_REQUEST_INVALID`) | The request body failed schema validation ([`provisioning-request.schema.json`](../schemas/provisioning-request.schema.json)) — a required property is absent, or a value violates its declared type, pattern, or bound | Fix the request body and resubmit **on the same token**. Do **not** regenerate keys: the keys are not what was rejected, and a fresh key would be answered `4015` |
 | 401 Unauthorized (`2019 PROVISIONING_TOKEN_INVALID`) | Token expired / beyond TTL, superseded, or revoked — carried in `details.reason` | Display error, await new provisioning token. Do **not** regenerate keys: the keys are not what was rejected |
-| 422 Unprocessable Entity (`4016 PROVISIONING_KEY_REUSE`) | Two of the submitted keys are the same key — any of the three pairs among the `tlsCsr` subject key, `receiptSigningPublicKey` and `stationPubKey` ([Chapter 06 §4.3](06-security.md)) | Generate a **separate** key pair for the colliding role and resubmit. The token is **not** consumed — retry on the **same** token |
+| 400 Bad Request (`4010 CSR_INVALID`) | The `tlsCsr` is not a well-formed PKCS#10 CSR, uses a prohibited key algorithm, carries a Subject CN that is not the `stationId`, or its `SubjectPublicKeyInfo` cannot be decoded | Depends on `details.phase`, which the server **MUST** carry. `first-provision` — regenerate the keypair and CSR and resubmit on the same token. `retry` — **do NOT regenerate**: resubmit a well-formed CSR over the **already-bound** key. If `details.phase` is absent, assume `retry` and do not regenerate |
+| 422 Unprocessable Entity (`4016 PROVISIONING_KEY_REUSE`) | Two of the submitted keys are the same key — any of the three pairs among the `tlsCsr` subject key, `receiptSigningPublicKey` and `stationPubKey` ([Chapter 06 §4.3](06-security.md)) | Depends on `details.phase`. `first-provision` — generate a **separate** key pair for the colliding role and resubmit on the **same** token. `retry` — **do NOT regenerate**: resubmit the keys already bound, because a fresh key is answered `4015`. If `details.phase` is absent, assume `retry` |
 | 409 Conflict (`4015 PROVISIONING_KEY_MISMATCH`) | This token already issued a certificate, and this retry does not match the bound set — a **different** public key for a bound kind, or a **different set** of key kinds (one added, or one dropped) | **Do NOT retry with this token** — no retry can succeed. Request a **new** provisioning token from the operator, then provision again with the keys currently held. Do **not** regenerate keys first: that is what caused the mismatch |
-| 400 Bad Request | Invalid CSR or missing fields | Log error, regenerate keys, retry |
 | Network unreachable | No connectivity | Retry with backoff, await network |
+
+> **Why `4010` and `4016` branch on `details.phase`.** Both are reachable both before and after this
+> token has issued a certificate, and the safe recovery is **opposite** in the two cases. Before
+> issuance nothing is bound, so regenerating a key is free. After issuance the bound set is what the
+> certificate certifies, so regenerating a key converts a recoverable error into `4015`, which is
+> `recoverable: false` — the station would have destroyed its own identity while following the
+> advice the error told it to follow. The server knows which case applies; the retrying station may
+> not, since it cannot tell a lost response from a rejected request. So the server states it, and a
+> station that does not receive it **MUST** assume the binding exists and leave its keys alone.
 
 ### Postconditions
 
@@ -335,11 +357,20 @@ Once the TTL elapses the token is invalid for **all** purposes: any further call
 
 **Error precedence.** A request that fails more than one of these checks **MUST** be answered by the **first** that applies, in this order:
 
-1. **Token validity.** Expired, superseded, or revoked → `401 Unauthorized` / `2019 PROVISIONING_TOKEN_INVALID` ([Chapter 07 §3.2](07-errors.md)), with the discriminator in `details.reason`. Evaluated before the body is examined at all: an invalid token yields `401` regardless of which keys the request carries.
-2. **Request self-consistency.** Two of the submitted key kinds carry the same public key → `422 Unprocessable Entity` / `4016 PROVISIONING_KEY_REUSE` ([Chapter 06 §4.3](06-security.md)). A `4016` rejection **MUST NOT** consume the token and **MUST NOT** create or alter any binding.
-3. **Comparison against the bound set.** A key kind carries a different key, or the set of key kinds differs → `409 Conflict` / `4015 PROVISIONING_KEY_MISMATCH` ([Chapter 07 §3.4](07-errors.md)). Reachable only on a token that is still valid and a request that is self-consistent.
+1. **Request well-formedness.** The body **MUST** validate against [`provisioning-request.schema.json`](../schemas/provisioning-request.schema.json) — every required property present, every value within its declared type, pattern and bounds. Failure → `400 Bad Request` / `4017 PROVISIONING_REQUEST_INVALID` ([Chapter 07 §3.4](07-errors.md)). Evaluated first because every later check reads a field out of this body: a body that does not validate yields no token to check and no keys to compare. A `4017` rejection **MUST NOT** consume the token and **MUST NOT** create or alter any binding.
+2. **Token validity.** Expired, superseded, or revoked → `401 Unauthorized` / `2019 PROVISIONING_TOKEN_INVALID` ([Chapter 07 §3.2](07-errors.md)), with the discriminator in `details.reason`. Evaluated before any key in the body is examined: an invalid token yields `401` regardless of which keys the request carries.
+3. **CSR decodability.** The `tlsCsr` **MUST** parse as a PKCS#10 CSR whose self-signature verifies, whose `SubjectPublicKeyInfo` decodes to an ECDSA P-256 public key, and whose Subject CN is the `stationId` the token is bound to. Failure → `400 Bad Request` / `4010 CSR_INVALID` ([Chapter 07 §3.4](07-errors.md)). Evaluated before both key comparisons because both compare **decoded** keys: a CSR whose `SubjectPublicKeyInfo` cannot be decoded cannot be compared against the other submitted keys or against the bound set, so neither `4016` nor `4015` is decidable. A `4010` rejection **MUST NOT** consume the token and **MUST NOT** create or alter any binding.
+4. **Request self-consistency.** Two of the submitted key kinds carry the same public key → `422 Unprocessable Entity` / `4016 PROVISIONING_KEY_REUSE` ([Chapter 06 §4.3](06-security.md)). A `4016` rejection **MUST NOT** consume the token and **MUST NOT** create or alter any binding.
+5. **Comparison against the bound set.** A key kind carries a different key, or the set of key kinds differs → `409 Conflict` / `4015 PROVISIONING_KEY_MISMATCH` ([Chapter 07 §3.4](07-errors.md)). Reachable only on a well-formed request bearing a valid token, a decodable CSR, and pairwise-distinct keys.
 
-The order is not arbitrary. An invalid token fails fast with the only answer that helps — obtain a new token — and no key comparison could change that. Reused keys are a defect in the request itself, visible without reference to any stored state; judging them before the bound-set comparison means a station whose firmware derived two roles from one key slot is told the one thing it can act on, and is told it while the token is still usable. `4015` is last because it is the only one of the three that depends on state the requester cannot see, and because its recovery — obtain a new token — is the most expensive of the three.
+The order is not arbitrary. A body that fails schema validation is judged first because it is the only failure that can prevent the server reading the token at all, and because its recovery — correct the body — is free. An invalid token then fails fast with the only answer that helps, obtain a new token, and no key comparison could change that. CSR decodability precedes both key comparisons for a mechanical reason rather than a policy one: those comparisons operate on decoded keys, so a CSR that will not decode makes them undecidable rather than merely unequal. Reused keys are a defect in the request itself, visible without reference to any stored state; judging them before the bound-set comparison means a station whose firmware derived two roles from one key slot is told the one thing it can act on, and is told it while the token is still usable. `4015` is last because it is the only one that depends on state the requester cannot see, and because its recovery — obtain a new token — is the most expensive of the five.
+
+**An undecodable CSR, before and after consumption.** The *code* is `4010` in both cases, because the defect is the same. The state it leaves behind, and the only safe recovery, are opposite:
+
+- **Before this token has issued a certificate.** Nothing is bound. The server answers `4010`, the token remains unconsumed, and the station **MAY** regenerate its keypair and CSR and retry on the same token. This is the case the code's recovery advice was originally written for, and it remains correct here.
+- **After this token has issued a certificate.** The binding exists and the server cannot decode the key it would compare against it. It **MUST NOT** answer as a replay — the identity is unverified — and **MUST NOT** answer as drift, because drift is unproven; it **MUST** answer `4010`, leaving the binding and the issued certificate untouched. The station **MUST NOT** regenerate its keypair: the bound key is what the already-issued certificate certifies, so a fresh key is answered `4015` on this and every later attempt, and `4015` is `recoverable: false`. The station **MUST** resubmit a well-formed CSR over the key already bound. A station that can no longer produce one has lost the identity rather than merely the request, and its recovery is a **new** provisioning token and [re-provisioning](#re-provisioning-an-already-provisioned-station) — not a retry.
+
+The server can always tell the two apart, because it knows whether the token has been consumed; a station retrying after a transport failure often cannot, because it cannot distinguish a lost response from a rejected request. The server therefore **MUST** carry the case in `details.phase` — `first-provision` or `retry` — on **both** `4010` and `4016`, the two codes whose correct recovery inverts between them. A station that receives no `details.phase` **MUST** assume `retry` and leave its keys alone: regenerating when it should not have is unrecoverable, while resubmitting when it need not have costs one round trip.
 
 **Retention.** The server **MUST** retain the issued certificate and the bound set of public keys, associated with the consumed token, for **at least the token's full TTL**. This is what makes the rules above executable: a retry may legitimately arrive at any point up to expiry, and the comparison has nothing to compare against once the binding is discarded. The generic ≥ 24 h floor of [Transport §9.3](02-transport.md#93-idempotency) is **not** sufficient here — a deployment issuing tokens with a TTL longer than 24 hours that retained for only 24 would leave a window in which a retry is still permitted but no longer decidable.
 
