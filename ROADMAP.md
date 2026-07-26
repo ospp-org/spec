@@ -142,3 +142,31 @@ A registry-wide audit was attempted in the 0.8.0 cycle and its output was discar
 3. **The auditor MUST follow outbound links from a cell before declaring a remedy absent.** Of five findings withdrawn on re-read, **three** were refuted by text one link away from the cell being judged — the cell was read, the document it pointed at was not.
 4. **Withdrawal is explicitly permitted and expected.** The re-read that retracted five of eleven sampled findings only worked because retraction was allowed; a pass that treats its own output as something to defend will over-report.
 5. **Report what the pass does not cover.** Reachability depends on §4, which is itself unsound (above), so any reachability-based verdict inherits that uncertainty and should say so rather than presenting a count.
+
+### BLE response schemas cannot carry the errors the protocol assigns them
+
+Deferred deliberately: it needs schema changes and therefore an SDK re-vendor, and BLE is spec-ahead-of-code — the server accepts no `stationPubKey` and issues no StationIdentity. But the production station declares `bleSupported: true`, so this becomes live the moment BLE is implemented.
+
+**The three BLE response schemas disagree with each other and with §2.3.** All three are `additionalProperties: false` with `required: ["type", "result"]`:
+
+| Schema | Error members declared | `Rejected` branch |
+|---|---|---|
+| `schemas/ble/auth-response.schema.json` | `reason` (maxLength 256, L41-45), `errorCode` (L46-49) — **no `errorText`** | yes → requires `["reason","errorCode"]` (L67) |
+| `schemas/ble/start-service-response.schema.json` | `errorCode` (L34-37), `errorText` (maxLength 128, L38-42) — **no `reason`** | yes → requires `["errorCode","errorText"]` (L60) |
+| `schemas/ble/stop-service-response.schema.json` | **none at all** | **none** — `allOf` has only an `Accepted` branch (L43) |
+
+Three defects follow:
+
+- **(a)** `07-errors.md` §2.3 states "The `errorCode` and `errorText` **MUST NOT** be truncated", but `auth-response` declares no `errorText` — it uses `reason`. The requirement is unsatisfiable on that message.
+- **(b)** `stop-service-response` declares no error member and has no `Rejected` branch, while `07-errors.md` §4.3 assigns it **3006** and **3007**, and `profiles/offline/ble-session.md:157` **MUST**s a `Rejected` response for an unmatched `sessionId`. The protocol says it can return an error the schema gives it no way to express.
+- **(c)** §2.3 and `07-errors.md` §1.3 describe the BLE error as nested under an **`error`** member. **None** of the three declares `error`, and all three are closed — so the documented BLE error shape validates against nothing.
+
+**Minimal change:** settle one error shape across the three (either `errorCode` + `errorText`, or `errorCode` + `reason`), add the missing member and a `Rejected` branch to `stop-service-response`, and reconcile §2.3 to whichever is chosen — including whether the `error` wrapper exists at all. Adding members to a closed schema is backward-compatible on the wire; removing or renaming one is not.
+
+**Ripple, if that change is made.** Hard-gated (CI fails without them): the three schemas re-vendored into `sdk-ts/src/schemas/ble/` and `ospp-sdk-php/schemas/ble/`, plus a `.spec-ref` bump in both — the byte-identity gates (`sdk-ts/.github/workflows/ci.yml`, `ospp-sdk-php/.github/workflows/tests.yml`) diff against the pinned tag, and `ospp-sdk-php` is at `v0.7.0`, two minors behind. Conditionally gated: `tests/crypto/fixtures/ble-handshake-keyschedule.json` in **both** SDKs embeds the serialized AuthResponse as AEAD plaintext, so it must be regenerated (`tools/generate-ble-vectors.mjs`) **only if the `Accepted` wire bytes change** — a `Rejected`-only change leaves it untouched. Ungated but stale otherwise: 15 vendored vectors under `sdk-ts/src/test-vectors/{valid,invalid}/offline/` — note no test consumes them, since `SchemaValidator.test.ts` skips the `offline` category and `SchemaPath.ts` registers no BLE key. Spec-internal: 15 conformance vectors, 4 example payloads under `examples/payloads/ble/`, and `schemas/README.md`. **No type-layer work in either SDK** — no TypeScript interface or PHP class mirrors these three schemas (`sdk-ts`'s `StartServiceResponse` / `StopServiceResponse` are the MQTT `status`-discriminated variants and are unaffected).
+
+### Eight MQTT response schemas cannot carry an `errorCode`
+
+`07-errors.md` §2.1 requires a rejection to carry `status`, `errorCode` and `errorText`, and §4 assigns error codes per action — but eight response schemas declare no `errorCode`/`errorText` and are closed: `transaction-event`, `authorize-offline-pass`, `boot-notification`, `heartbeat`, `change-configuration`, `get-configuration`, `data-transfer`, `trigger-message`. §2.1 now names them and says how a rejection is signalled on each instead.
+
+Not all are defects. `heartbeat-response` and `get-configuration-response` declare no `status` at all and arguably need none; `change-configuration-response` carries `errorCode` per key inside `results[]`, which is richer than a top-level code. The real gaps are the ones where a code is assigned and cannot be sent — most sharply `boot-notification-response`, where `2001`, `1005`, `1007` and `6001` are all indistinguishable on the wire except that `supportedVersions` implies `1007`. Deciding each requires a schema change and an SDK re-vendor, so it is recorded rather than taken here.
