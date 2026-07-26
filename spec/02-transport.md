@@ -866,8 +866,8 @@ All timestamps MUST use **ISO 8601** format with **millisecond precision** and *
 | MQTT connection lost | MQTT | PINGRESP timeout / TCP reset | Continue BLE, buffer messages, backoff |
 | Keep-alive timeout (server side) | MQTT | No heartbeat for 3.5 × interval | Mark station offline, fire LWT |
 | Message expired | MQTT | Message Expiry Interval | Discard, log warning |
-| Invalid JSON received | MQTT / BLE | JSON parse error | Send ERROR message with `1005`, discard |
-| Unknown action | MQTT / BLE | Action not recognized | Send ERROR message with `1006`, discard |
+| Invalid JSON received | MQTT / BLE | JSON parse error | Log `1005` and discard. No reply is possible: the `messageId` cannot be read, and [07-errors §2.1](07-errors.md#21-mqtt-error-response) requires a RESPONSE to echo it. MAY be reported as an unsolicited EVENT ([07-errors §2.2](07-errors.md#22-mqtt-error-event)) |
+| Unknown action | MQTT / BLE | Action not recognized | If the action is known to the protocol but unsupported here, reply `status: "Rejected"` with `1006` on that action's RESPONSE (§2.1). If the action is unknown to the protocol, no RESPONSE schema exists — log `1006` and discard. MAY be reported as an unsolicited EVENT (§2.2) |
 | Protocol version mismatch | MQTT | BootNotification Rejected | Log `1007`, record `supportedVersions`, stay in limited mode and keep retrying BootNotification at `retryInterval` per [CORE-011](profiles/core/README.md) — the station cannot deliver service, but it MUST NOT stop retrying |
 | BLE scan timeout | BLE | No advertisement found in 30s | Return to IDLE, show error to user |
 | BLE connection drops | BLE | GATT disconnect event | Service continues on timer; receipt retained |
