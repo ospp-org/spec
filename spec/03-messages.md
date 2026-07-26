@@ -269,7 +269,9 @@ The station MAY include a human-readable name configurable via `StationName` (se
   "status": "Rejected",
   "serverTime": "2026-01-30T12:00:00.123Z",
   "heartbeatIntervalSec": 30,
-  "retryInterval": 60
+  "retryInterval": 60,
+  "errorCode": 2001,
+  "errorText": "STATION_NOT_REGISTERED"
 }
 ```
 
@@ -281,6 +283,8 @@ The station MAY include a human-readable name configurable via `StationName` (se
   "serverTime": "2026-01-30T12:00:00.123Z",
   "heartbeatIntervalSec": 30,
   "retryInterval": 60,
+  "errorCode": 1007,
+  "errorText": "PROTOCOL_VERSION_MISMATCH",
   "supportedVersions": ["0.1.0", "0.2.0"]
 }
 ```

@@ -105,18 +105,19 @@ The last clause is the load-bearing one. A receiver generally cannot tell which 
 
 When a station or server rejects a REQUEST, it **MUST** respond with a RESPONSE message whose `payload` carries `status: "Rejected"`, `errorCode`, and `errorText`.
 
-That holds wherever the message's own response schema declares those members. **Eight do not**, and every response schema is closed (`additionalProperties: false`), so on those messages an `errorCode` cannot be placed on the wire at all:
+That holds wherever the message's own response schema declares those members. **Seven do not**, and every response schema is closed (`additionalProperties: false`), so on those messages an `errorCode` cannot be placed on the wire at all:
 
 | Response schema | How a rejection is signalled | `errorCode` on the wire |
 |---|---|:---:|
 | `transaction-event-response` | `status` + `reason` (REQUIRED when not `Accepted`) — see [reconciliation §6.4](profiles/offline/reconciliation.md#64-response) | no |
 | `authorize-offline-pass-response` | `status` + `reason` | no |
-| `boot-notification-response` | `status`; `supportedVersions` distinguishes `1007` alone | no |
 | `data-transfer-response` | `status` (`Rejected`, `UnknownVendor`, `UnknownData`) | no |
 | `trigger-message-response` | `status` (`Rejected`, `NotImplemented`) | no |
 | `change-configuration-response` | per-key `results[].status`, with `results[].errorCode` / `results[].errorText` | per key, not top level |
 | `get-configuration-response` | declares no `status`; a rejection is not expressible | no |
 | `heartbeat-response` | declares no `status`; a rejection is not expressible | no |
+
+`boot-notification-response` **was** on this list and is not any more: it now declares `errorCode` and `errorText`, both **REQUIRED when `status` is `Rejected`**. That message carries four codes with four different recoveries — `2001`, `1005`, `1007`, `6001` — so a station that could not read the code could not select among them, and the per-code recoveries in §3 could not execute on the one path every station traverses at every boot.
 
 This is a **known gap, not a permission**. §4 assigns error codes to several of these actions that their schemas cannot carry, and closing it requires schema changes and an SDK re-vendor; it is recorded as unscheduled work in [ROADMAP.md](../ROADMAP.md). An implementation **MUST NOT** read this as licence to omit `errorCode` on a message whose schema does declare it.
 

@@ -35,9 +35,23 @@
       "minimum": 1,
       "description": "Seconds to wait before retrying. Required when status is Rejected or Pending."
     },
+    "errorCode": {
+      "type": "integer",
+      "minimum": 1000,
+      "maximum": 9999,
+      "description": "OSPP error code explaining the rejection. Required when status is Rejected."
+    },
+    "errorText": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]+$",
+      "maxLength": 64,
+      "description": "Machine-readable error name in UPPER_SNAKE_CASE. Required when status is Rejected."
+    },
     "configuration": {
       "type": "object",
-      "additionalProperties": { "type": "string" },
+      "additionalProperties": {
+        "type": "string"
+      },
       "description": "Optional key-value configuration pairs pushed to the station."
     },
     "sessionKey": {
@@ -59,20 +73,38 @@
   "allOf": [
     {
       "if": {
-        "properties": { "status": { "const": "Rejected" } },
-        "required": ["status"]
+        "properties": {
+          "status": {
+            "const": "Rejected"
+          }
+        },
+        "required": [
+          "status"
+        ]
       },
       "then": {
-        "required": ["retryInterval"]
+        "required": [
+          "retryInterval",
+          "errorCode",
+          "errorText"
+        ]
       }
     },
     {
       "if": {
-        "properties": { "status": { "const": "Pending" } },
-        "required": ["status"]
+        "properties": {
+          "status": {
+            "const": "Pending"
+          }
+        },
+        "required": [
+          "status"
+        ]
       },
       "then": {
-        "required": ["retryInterval"]
+        "required": [
+          "retryInterval"
+        ]
       }
     }
   ]

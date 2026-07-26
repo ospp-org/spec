@@ -47,7 +47,7 @@ Verify that a station sends BootNotification as the first message after establis
 
 13. Reboot the station.
 14. Observe BootNotification is sent.
-15. Send a server response: `{ "status": "Rejected", "retryInterval": 60, "serverTime": "2026-01-15T10:00:30.000Z", "heartbeatIntervalSec": 30 }`.
+15. Send a server response: `{ "status": "Rejected", "retryInterval": 60, "serverTime": "2026-01-15T10:00:30.000Z", "heartbeatIntervalSec": 30, "errorCode": 2001, "errorText": "STATION_NOT_REGISTERED" }`.
 16. Immediately send a GetConfiguration command.
 17. Verify that the station does NOT respond to the GetConfiguration command (station is in limited mode).
 18. Wait `retryInterval` seconds (60s).
@@ -87,6 +87,8 @@ Verify that a station sends BootNotification as the first message after establis
       "serverTime": "2026-01-15T10:02:00.000Z",
       "heartbeatIntervalSec": 30,
       "retryInterval": 300,
+      "errorCode": 1007,
+      "errorText": "PROTOCOL_VERSION_MISMATCH",
       "supportedVersions": ["0.1.0", "0.2.0"]
     }
     ```
