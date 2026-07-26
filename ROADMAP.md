@@ -127,7 +127,7 @@ Known work with no target version. Recorded so it is not rediscovered from scrat
 
 §4 ("Error Code Usage per Message") is three hand-maintained tables — Station→Server MQTT, Server→Station MQTT, BLE message types, plus REST endpoints — that must agree with the per-message error lists in `03-messages.md` and with each profile's own error table. Nothing enforces that agreement, so the four surfaces drift independently, and §4 is the surface most likely to be stale because it is the only one not co-located with the message it describes.
 
-This matters more than presentation. §1.4's every-path rule is written **in terms of §4**: a `recommendedAction` must be correct in every context from which its code is reachable, "([§4](#4-error-code-usage-per-message))". If §4 does not actually enumerate reachability, the rule has no reliable oracle and cannot be checked mechanically.
+This matters more than presentation. §1.4's every-path rule is written **in terms of §4**: a `recommendedAction` must be correct in every context from which its code is reachable, and it cites [§4](spec/07-errors.md#4-error-code-usage-per-message) as the authority for what those contexts are. If §4 does not actually enumerate reachability, the rule has no reliable oracle and cannot be checked mechanically.
 
 Proposed direction: make the profile check-lists and per-message error tables the single source, and **generate** §4 from them (the repo already generates and verifies other artifacts — `tools/verify-schemas.py`, `tools/generate-types.sh`), with a CI check that fails on divergence rather than a periodic manual sweep.
 
