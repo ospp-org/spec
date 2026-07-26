@@ -144,11 +144,13 @@ On any gate failure the server **MUST** respond with:
 ```json
 {
   "status": "Rejected",
-  "errorCode": <code from §6.1>,
-  "errorText": "<corresponding errorText from 07-errors.md §3.2>",
-  "reason": "<short human-readable reason; full forensic detail in the SecurityEvent>"
+  "reason": "<short human-readable reason identifying the failed check; full forensic detail in the SecurityEvent>"
 }
 ```
+
+The response carries **no** `errorCode` and **no** `errorText`. [`transaction-event-response.schema.json`](../../../schemas/mqtt/transaction-event-response.schema.json) is closed (`additionalProperties: false`) over exactly `status` and `reason`, so a response carrying either member is not schema-valid and no conforming body could satisfy both this section and the wire contract.
+
+The failing gate remains identifiable, by two routes. On the wire, the `reason` **MUST** identify the failed check — its §6.1 number, or its `errorText` as free text — well enough to be actionable without opening the audit trail; the schema bounds it at 256 characters. For machine-readable detail, the `OfflinePassRejected` SecurityEvent that [§6.3](#63-securityevent-emission) already **MUST** emit for the same failure carries the failed check number and the rejection `errorCode` in its `details`, and correlates to this response through the originating REQUEST's `messageId`. The §6.1 error codes are therefore recorded rather than transmitted: they identify the check in the audit trail, not on the TransactionEvent response.
 
 The station, on receiving `Rejected`, **MUST NOT** retry the same TransactionEvent. The transaction is permanently rejected at the server; the station MAY flag it for manual investigation.
 
