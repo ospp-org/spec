@@ -53,31 +53,39 @@ Every error code is assigned a fixed severity level that indicates its impact an
 
 ### 1.3 Error Object Fields
 
-Every error — whether in an MQTT RESPONSE, BLE AuthResponse, or REST API response — MUST include the following fields:
+An error is described by the fields below. Five of them are **per-code** and are defined once, in the [§3](#3-error-code-registry) registry — any implementation holding an `errorCode` can look them up without them being transmitted. The rest are **per-occurrence** and only the emitter can supply them.
 
-| Field | Type | Required | Description |
-|-------|------|:--------:|-------------|
-| `errorCode` | integer | **REQUIRED** | Numeric error code from the ranges in §1.1. |
-| `errorText` | string | **REQUIRED** | Machine-readable error name in `UPPER_SNAKE_CASE` (e.g., `BAY_BUSY`). Stable across versions — clients MAY use this for programmatic matching. |
-| `errorDescription` | string | **REQUIRED** | Human-readable description of **this occurrence** and its context — the bay, field, threshold, or identifier involved. Varies per occurrence; see §1.4. |
-| `severity` | string | **REQUIRED** | One of: `Critical`, `Error`, `Warning`, `Info`. |
-| `recoverable` | boolean | **REQUIRED** | `true` if the error can be resolved by retry, user action, or automatic recovery. `false` if manual intervention or system repair is required. |
-| `recommendedAction` | string | **REQUIRED** | The corrective action the §3 registry gives for this `errorCode`. Per-**code**, not per-occurrence; see §1.4. |
-| `timestamp` | string | **REQUIRED** | ISO 8601 UTC with milliseconds — when the error was detected. |
-| `vendorErrorCode` | string | OPTIONAL | Vendor-specific sub-code for proprietary diagnostics (see §8). |
-| `details` | object | OPTIONAL | Additional structured context (e.g., which field failed validation, threshold values, etc.). OPTIONAL in general, but **REQUIRED** for a code whose registry entry branches on a member of it — see §1.4, and Appendix C, whose conditional blocks enforce it. |
+The *Required* column below describes the **Error Object**: the complete structure, which is what REST carries as its response body (§2.4) and what Appendix C validates. It is **not** a claim that every field travels on every transport — see *Wire carriage* below.
 
-The field set above is identical on every transport. Where the object *sits* differs: inside `payload` for MQTT (§2.1), nested under `error` for BLE (§2.3, which must also carry the `type` and `result` discriminators), and as the entire top-level body for REST (§2.4).
+| Field | Type | Source | Required | Description |
+|-------|------|--------|:--------:|-------------|
+| `errorCode` | integer | per-code | **REQUIRED** | Numeric error code from the ranges in §1.1. |
+| `errorText` | string | per-code | **REQUIRED** | Machine-readable error name in `UPPER_SNAKE_CASE` (e.g., `BAY_BUSY`). Stable across versions — clients MAY use this for programmatic matching. |
+| `errorDescription` | string | per-occurrence | **REQUIRED** | Human-readable description of **this occurrence** and its context — the bay, field, threshold, or identifier involved. Varies per occurrence; see §1.4. |
+| `severity` | string | per-code | **REQUIRED** | One of: `Critical`, `Error`, `Warning`, `Info`. |
+| `recoverable` | boolean | per-code | **REQUIRED** | `true` if the error can be resolved by retry, user action, or automatic recovery. `false` if manual intervention or system repair is required. |
+| `recommendedAction` | string | per-code | **REQUIRED** | The corrective action the §3 registry gives for this `errorCode`. Per-**code**, not per-occurrence; see §1.4. |
+| `timestamp` | string | per-occurrence | **REQUIRED** | ISO 8601 UTC with milliseconds — when the error was detected. |
+| `vendorErrorCode` | string | per-occurrence | OPTIONAL | Vendor-specific sub-code for proprietary diagnostics (see §8). |
+| `details` | object | per-occurrence | OPTIONAL | Additional structured context (e.g., which field failed validation, threshold values, etc.). OPTIONAL in general, but **REQUIRED** for a code whose registry entry branches on a member of it — see §1.4, and Appendix C, whose conditional blocks enforce it. |
+
+**Wire carriage is per transport.** The registry is universal; the wire representation is not.
+
+- **REST** ([§2.4](#24-rest-api-error-response)) — the full Error Object above **is** the response body.
+- **MQTT** ([§2.1](#21-mqtt-error-response)) — `status`, `errorCode` and `errorText`, inside `payload`, and only where the message's own schema declares those members; §2.1 names the messages whose schemas do not. The per-code fields not carried are **derivable from `errorCode`** via §3; `errorDescription` is not carried at all.
+- **BLE** ([§2.3](#23-ble-error-response)) — as §2.3 states, under the MTU constraints given there.
+
+The asymmetry is principled rather than incidental. `recommendedAction` and `errorDescription` are written **for a human**. On REST the caller is frequently a technician or an integrator debugging a live request — precisely the case where a missing recovery action is expensive, and the reason `recommendedAction` is REQUIRED in the object at all. On MQTT the receiver is **firmware**: it branches on `errorCode`, logs the code, and the technician who later reads that log looks the code up in §3, so transmitting the prose adds nothing at the point of receipt. Several hundred characters of human-readable text on every error would also be charged, per byte, on a metered cellular link — the transport least able to afford it.
 
 ### 1.4 Provenance of `errorDescription` and `recommendedAction`
 
 The two prose fields are not interchangeable, and only one of them is free text.
 
-**`recommendedAction` is per-code and comes from the registry.** It **MUST** carry the *Recommended Action* that [§3](#3-error-code-registry) gives for that `errorCode`. It is a property of the **code**, not of the occurrence: two errors carrying the same `errorCode` **MUST** carry the same `recommendedAction`. That equality is on the **corrective action, not on the bytes**: one `errorCode` **MUST NOT** carry two different instructions, while a translation — or a shortening permitted below — satisfies the rule provided the action itself is preserved. Byte-identity is not achievable in any case, since translation is expressly permitted, so a conformance test **MUST NOT** assert it. An implementation **MUST NOT** substitute a generic string derived from `severity` or `recoverable` — "Review the error details and take corrective action" is not a conforming value for a code whose registry entry says which token to request and which keys not to regenerate. Where a registry entry addresses more than one party (`Station: … Operator: …`), the emitted value **MUST** preserve the part addressed to the receiver and **MAY** carry the rest. A server **MAY** translate it, and **MAY** shorten it to fit the bound in Appendix C, provided the corrective action itself survives.
+**`recommendedAction` is per-code and comes from the registry.** Wherever it is carried — the REST body (§2.4), and any other transport whose message schema declares the member (§1.3, *Wire carriage*) — it **MUST** carry the *Recommended Action* that [§3](#3-error-code-registry) gives for that `errorCode`. It is a property of the **code**, not of the occurrence: two errors carrying the same `errorCode` **MUST** carry the same `recommendedAction`. That equality is on the **corrective action, not on the bytes**: one `errorCode` **MUST NOT** carry two different instructions, while a translation — or a shortening permitted below — satisfies the rule provided the action itself is preserved. Byte-identity is not achievable in any case, since translation is expressly permitted, so a conformance test **MUST NOT** assert it. An implementation **MUST NOT** substitute a generic string derived from `severity` or `recoverable` — "Review the error details and take corrective action" is not a conforming value for a code whose registry entry says which token to request and which keys not to regenerate. Where a registry entry addresses more than one party (`Station: … Operator: …`), the emitted value **MUST** preserve the part addressed to the receiver and **MAY** carry the rest. A server **MAY** translate it, and **MAY** shorten it to fit the bound in Appendix C, provided the corrective action itself survives.
 
 **A registry cell MUST fit the wire bound.** Because the value is per-code, every *Recommended Action* cell in [§3](#3-error-code-registry) **MUST** itself fit the `recommendedAction` `maxLength` of Appendix C. A cell that cannot be emitted as written has no canonical form: each emitter would have to shorten it independently, and two conforming servers would then carry different values for one `errorCode`, which the per-code equality rule above forbids. An entry added or revised with an over-length cell is a defect in that entry, and is fixed by shortening the cell — never by leaving emitters to shorten it for themselves. Rationale belongs in the *Description* column, which has no wire bound; the *Recommended Action* column carries instruction only.
 
-This is the field the receiver acts on, and it is the reason the field is REQUIRED. A code whose recommended action is *request a new token, and do not regenerate keys first* is actionable only if that sentence actually reaches the station; a placeholder derived from severity tells the reader nothing the HTTP status did not already say.
+This is the field the receiver acts on, and it is the reason the field is REQUIRED in the Error Object. A code whose recommended action is *request a new token, and do not regenerate keys first* is actionable only if that sentence actually reaches the reader; a placeholder derived from severity tells them nothing the HTTP status did not already say. The worked examples throughout this section — the provisioning codes `2019`, `4010`, `4015`, `4016`, `4017` — are all reached over **REST**, where the full object is the body and the sentence does arrive. Where a transport carries only `errorCode` (§1.3, *Wire carriage*), the obligation is discharged by the code itself: the receiver looks the action up in §3, which is why every entry there must be correct and none may be a placeholder.
 
 **Recommended actions are per-code, so they must hold on every path.** This is a rule for *authoring this registry*, and it binds the entry — not a second obligation on the emitter, which discharges §1.4 by carrying what §3 gives. A `recommendedAction` **MUST** be correct in every context from which its `errorCode` is reachable ([§4](#4-error-code-usage-per-message)). Where a code is reachable from two paths whose safe recovery differs, the entry **MUST** either be split into two codes, or state the branches and name the `details` member that selects them — which the emitter then **MUST** carry. A branching entry is emitted **in full**; emitting only the selected branch violates the per-code equality rule above. Where branches disagree on safety, the entry **MUST** name the branch a receiver assumes when the discriminator is absent, and that default **MUST** be the one whose failure mode is recoverable.
 
@@ -95,7 +103,22 @@ The last clause is the load-bearing one. A receiver generally cannot tell which 
 
 ### 2.1 MQTT Error Response
 
-When a station or server rejects a REQUEST, it MUST respond with a RESPONSE message containing `status: "Rejected"`, `errorCode`, and `errorText`. Individual message schemas define the exact payload structure.
+When a station or server rejects a REQUEST, it **MUST** respond with a RESPONSE message whose `payload` carries `status: "Rejected"`, `errorCode`, and `errorText`.
+
+That holds wherever the message's own response schema declares those members. **Eight do not**, and every response schema is closed (`additionalProperties: false`), so on those messages an `errorCode` cannot be placed on the wire at all:
+
+| Response schema | How a rejection is signalled | `errorCode` on the wire |
+|---|---|:---:|
+| `transaction-event-response` | `status` + `reason` (REQUIRED when not `Accepted`) — see [reconciliation §6.4](profiles/offline/reconciliation.md#64-response) | no |
+| `authorize-offline-pass-response` | `status` + `reason` | no |
+| `boot-notification-response` | `status`; `supportedVersions` distinguishes `1007` alone | no |
+| `data-transfer-response` | `status` (`Rejected`, `UnknownVendor`, `UnknownData`) | no |
+| `trigger-message-response` | `status` (`Rejected`, `NotImplemented`) | no |
+| `change-configuration-response` | per-key `results[].status`, with `results[].errorCode` / `results[].errorText` | per key, not top level |
+| `get-configuration-response` | declares no `status`; a rejection is not expressible | no |
+| `heartbeat-response` | declares no `status`; a rejection is not expressible | no |
+
+This is a **known gap, not a permission**. §4 assigns error codes to several of these actions that their schemas cannot carry, and closing it requires schema changes and an SDK re-vendor; it is recorded as unscheduled work in [ROADMAP.md](../ROADMAP.md). An implementation **MUST NOT** read this as licence to omit `errorCode` on a message whose schema does declare it.
 
 ```json
 {
@@ -911,7 +934,7 @@ This table consolidates all timeout values from the protocol for implementer ref
 
 ## Appendix C — Error Code JSON Schema
 
-The following JSON Schema validates error objects in OSPP messages.
+The following JSON Schema validates the **Error Object** — the complete structure of §1.3, which is what a REST error body carries (§2.4). It is **not** the schema of an MQTT or BLE response payload: those carry a per-transport subset (§1.3, *Wire carriage*) and each has its own schema under `schemas/`. This schema is not referenced by any message schema.
 
 ```json
 {
