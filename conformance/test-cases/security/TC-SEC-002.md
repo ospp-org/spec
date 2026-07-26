@@ -106,4 +106,4 @@ Verify that the station presents a valid X.509 client certificate during the TLS
 5. Station does not log error `1003` or `1004` on certificate rejection.
 6. Station sends MQTT messages (including BootNotification) without a successful TLS handshake.
 7. Station enters provisioning mode, or discards or overwrites stored credentials, on an expired, revoked, self-signed or otherwise invalid certificate. `1004` forbids both on every branch: re-provisioning is operator-initiated, and on the `expired` branch the station enters offline-only BLE mode instead.
-8. TLS version negotiated is below 1.3.
+8. TLS version negotiated is below **1.2** — the floor is TLS 1.2, with TLS 1.3 RECOMMENDED and negotiated whenever both peers support it (`spec/02-transport.md` §1.3). Negotiating 1.2 is **not** a failure: the floor exists for constrained cellular modems that cap at 1.2 with no firmware path to 1.3.
