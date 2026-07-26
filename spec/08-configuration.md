@@ -42,9 +42,9 @@ Each key has one of three access modes that govern server interaction:
 | **ReadOnly** | R | Returned | MUST be rejected with status `Rejected` |
 | **WriteOnly** | W | MUST NOT be returned | Accepted (subject to validation) |
 
-The station MUST reject any ChangeConfiguration request targeting a ReadOnly key. The RESPONSE MUST include `status: "Rejected"`, `errorCode: 5108`, and `errorText: "CONFIGURATION_KEY_READONLY"`.
+The station MUST reject any ChangeConfiguration request targeting a ReadOnly key. That key's entry in the RESPONSE `results` array MUST carry `status: "Rejected"`, `errorCode: 5108`, and `errorText: "CONFIGURATION_KEY_READONLY"`. Because the operation is atomic, no key in the request is applied.
 
-If a station receives a ChangeConfiguration request for a key it does not recognize (neither a standard key from Sections 2--6 nor a recognized `Vendor_` key), it MUST respond with `status: "NotSupported"`.
+If a station receives a ChangeConfiguration request for a key it does not recognize (neither a standard key from Sections 2--6 nor a recognized `Vendor_` key), that key's `results` entry MUST carry `status: "NotSupported"`, and no key in the request is applied.
 
 WriteOnly keys (e.g., security credentials) are accepted via ChangeConfiguration but MUST NOT be included in GetConfiguration responses to prevent credential leakage.
 
@@ -54,8 +54,8 @@ Each key is classified by when a new value takes effect:
 
 | Mutability | Behavior |
 |------------|----------|
-| **Dynamic** | The new value takes effect **immediately** after the station applies it. The ChangeConfiguration RESPONSE returns `status: "Accepted"`. |
-| **Static** | The new value is persisted but takes effect only after a **station reboot**. The ChangeConfiguration RESPONSE returns `status: "RebootRequired"`. |
+| **Dynamic** | The new value takes effect **immediately** after the station applies it. That key's ChangeConfiguration `results` entry returns `status: "Accepted"`. |
+| **Static** | The new value is persisted but takes effect only after a **station reboot**. That key's ChangeConfiguration `results` entry returns `status: "RebootRequired"`. |
 
 The server SHOULD track keys that returned `RebootRequired` and issue a [Reset](03-messages.md#63-reset) command when appropriate.
 
@@ -216,20 +216,20 @@ The server retrieves configuration values by sending a **GetConfiguration** REQU
 
 ### 8.2 ChangeConfiguration
 
-The server sets a single configuration key by sending a **ChangeConfiguration** REQUEST to the station.
+The server sets one or more configuration keys by sending a **ChangeConfiguration** REQUEST to the station, carrying a `keys` array of `{key, value}` pairs (1–20). The change is **atomic**: the station validates every key first and applies none unless all pass. The RESPONSE carries a `results` array with one entry per requested key, in request order — there is no top-level `status`. See [`change-configuration.md`](profiles/device-management/change-configuration.md) for the full message definition.
 
 **Behavior:**
 
 1. The station MUST validate the key name, value type, and value range.
-2. If the key is **ReadOnly**, the station MUST respond with `status: "Rejected"`.
-3. If the key is **unknown** (not a standard key and not a recognized vendor key), the station MUST respond with `status: "NotSupported"`.
-4. If the value fails type parsing or range validation, the station MUST respond with `status: "Rejected"`.
-5. If the key is **Dynamic**, the station MUST apply the new value immediately and respond with `status: "Accepted"`.
-6. If the key is **Static**, the station MUST persist the new value and respond with `status: "RebootRequired"`. The new value takes effect only after the next reboot.
+2. If a key is **ReadOnly**, its `results` entry MUST carry `status: "Rejected"`.
+3. If a key is **unknown** (not a standard key and not a recognized vendor key), its `results` entry MUST carry `status: "NotSupported"`.
+4. If a value fails type parsing or range validation, that key's `results` entry MUST carry `status: "Rejected"`.
+5. If a key is **Dynamic** and the request is applied, the station MUST apply the new value immediately and its `results` entry MUST carry `status: "Accepted"`.
+6. If a key is **Static** and the request is applied, the station MUST persist the new value and its `results` entry MUST carry `status: "RebootRequired"`. The new value takes effect only after the next reboot.
 
 **Wire format:** See the [ChangeConfiguration schemas](../schemas/mqtt/change-configuration-request.schema.json) and [response schema](../schemas/mqtt/change-configuration-response.schema.json).
 
-**Response status values:**
+**Per-key `results[].status` values:**
 
 | Status | Meaning |
 |--------|---------|
@@ -238,20 +238,23 @@ The server sets a single configuration key by sending a **ChangeConfiguration** 
 | `Rejected` | Value rejected -- ReadOnly key, invalid type, or out-of-range value. |
 | `NotSupported` | Key not recognized by this station. |
 
-When `Rejected` or `NotSupported`, the RESPONSE SHOULD include `errorCode` and `errorText` fields to assist diagnostics.
+When a `results` entry is `Rejected` or `NotSupported`, it SHOULD also carry `results[].errorCode` and `results[].errorText` to assist diagnostics.
 
 **Example -- accepted:**
 
 ```json
 {
-  "key": "HeartbeatIntervalSeconds",
-  "value": "60"
+  "keys": [
+    { "key": "HeartbeatIntervalSeconds", "value": "60" }
+  ]
 }
 ```
 
 ```json
 {
-  "status": "Accepted"
+  "results": [
+    { "key": "HeartbeatIntervalSeconds", "status": "Accepted" }
+  ]
 }
 ```
 
@@ -259,14 +262,17 @@ When `Rejected` or `NotSupported`, the RESPONSE SHOULD include `errorCode` and `
 
 ```json
 {
-  "key": "StationName",
-  "value": "Bay Alpha - Downtown"
+  "keys": [
+    { "key": "StationName", "value": "Bay Alpha - Downtown" }
+  ]
 }
 ```
 
 ```json
 {
-  "status": "RebootRequired"
+  "results": [
+    { "key": "StationName", "status": "RebootRequired" }
+  ]
 }
 ```
 
@@ -274,16 +280,22 @@ When `Rejected` or `NotSupported`, the RESPONSE SHOULD include `errorCode` and `
 
 ```json
 {
-  "key": "ProtocolVersion",
-  "value": "2.0.0"
+  "keys": [
+    { "key": "ProtocolVersion", "value": "2.0.0" }
+  ]
 }
 ```
 
 ```json
 {
-  "status": "Rejected",
-  "errorCode": 5108,
-  "errorText": "CONFIGURATION_KEY_READONLY"
+  "results": [
+    {
+      "key": "ProtocolVersion",
+      "status": "Rejected",
+      "errorCode": 5108,
+      "errorText": "CONFIGURATION_KEY_READONLY"
+    }
+  ]
 }
 ```
 
