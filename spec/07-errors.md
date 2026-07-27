@@ -21,7 +21,7 @@ Error codes are organized into six functional categories. Each category occupies
 | 1000–1999 | **Transport Errors** | Protocol | 15 | Network, protocol, message format, and message integrity errors |
 | 2000–2999 | **Authentication & Authorization Errors** | Protocol | 20 | Identity verification, credential validation, and access control |
 | 3000–3999 | **Session & Bay Errors** | Application | 17 | Bay state, session lifecycle, reservation, and service errors |
-| 4000–4999 | **Payment & Credit Errors** | Application | 17 | Wallet balance, payment processing, refunds, offline credit limits, and certificate management |
+| 4000–4999 | **Payment & Credit Errors** | Application | 19 | Wallet balance, payment processing, refunds, offline credit limits, and certificate management |
 | 5000–5999 | **Station Hardware & Software Errors** | Application | 34 | Physical hardware faults and embedded software errors |
 | 6000–6999 | **Server Errors** | Application | 8 | Server-side processing, timeouts, and infrastructure errors |
 | 9000–9999 | **Vendor-Specific** | Vendor | — | Reserved for vendor-defined error codes |
@@ -32,7 +32,7 @@ Error codes are organized into six functional categories. Each category occupies
 - **Application tier** (3000–6999): Errors related to business logic, state violations, hardware conditions, and server-side processing. These errors indicate that the message was received and understood, but the requested operation could not be completed. Application-tier errors are handled by the application layer.
 - **Vendor tier** (9000–9999): Reserved for implementation-specific error codes. Vendors **MUST** document their vendor error codes separately.
 
-**Total: 111 standard error codes.**
+**Total: 113 standard error codes.**
 
 ### 1.2 Severity Levels
 
@@ -89,7 +89,7 @@ This is the field the receiver acts on, and it is the reason the field is REQUIR
 
 **Recommended actions are per-code, so they must hold on every path.** This is a rule for *authoring this registry*, and it binds the entry — not a second obligation on the emitter, which discharges §1.4 by carrying what §3 gives. A `recommendedAction` **MUST** be correct in every context from which its `errorCode` is reachable ([§4](#4-error-code-usage-per-message)). Where a code is reachable from two paths whose safe recovery differs, the entry **MUST** either be split into two codes, or state the branches and name the `details` member that selects them — which the emitter then **MUST** carry. A branching entry is emitted **in full**; emitting only the selected branch violates the per-code equality rule above. Where branches disagree on safety, the entry **MUST** name the branch a receiver assumes when the discriminator is absent, and that default **MUST** be the one whose failure mode is recoverable.
 
-The last clause is the load-bearing one. A receiver generally cannot tell which path it is on — that is precisely why the discriminator exists — so an absent discriminator must not leave it guessing. Defaulting to the recoverable branch means the worst consequence of an emitter that omits the field is a wasted round trip, never a state the receiver cannot leave. `4010` and `4016` are the worked examples: both default to `retry`, under which the station leaves its keys alone.
+The last clause is the load-bearing one. A receiver generally cannot tell which path it is on — that is precisely why the discriminator exists — so an absent discriminator must not leave it guessing. Defaulting to the recoverable branch means the worst consequence of an emitter that omits the field is a wasted round trip, never a state the receiver cannot leave. `4010`, `4016` and `4019` are the worked examples: all three default to `retry`, under which the station leaves its keys alone. `4018` is the same rule on a different discriminator: its `already_consumed` branch is the recoverable one and is therefore the default, and neither branch permits regenerating a key.
 
 **This does not make `details` mandatory in general.** [§1.3](#13-error-object-fields) marks `details` **OPTIONAL**, and it remains optional for every code whose registry entry does not branch. The requirement here is conditional and code-scoped: for a code whose entry names a discriminator inside `details`, that member is **REQUIRED** on that code, and the code's own registry row is where the obligation is stated. A branching entry is a stated exception to §1.3's default, not a revision of it.
 
@@ -301,7 +301,7 @@ Authentication errors cover identity verification (mTLS, JWT, BLE handshake, Off
 | 2016 | `OFFLINE_USER_MISMATCH` | Error | false | OfflinePass `user_id` does not match the `userId` carried in the TransactionEvent envelope. The pass is bound to a different user than the one claimed by the station. | Server: log SecurityEvent [MSG-012] with `type: "OfflinePassRejected"`. Indicates either a station bug, station-side state corruption, or a deliberate user-id forgery. |
 | 2017 | `OFFLINE_RECEIPT_MISMATCH` | Critical | false | One or more of the cryptographically signed fields in `receipt.data` (`offlineTxId`, `offlinePassId`, `userId`, or `deviceId`) does not match the corresponding cross-check target (the TransactionEvent envelope for `offlineTxId` / `offlinePassId` / `userId`; the resolved pass record's `device_id` for `deviceId`). The signature itself verified, but the signed payload disagrees with the envelope's claim or the pass's device binding. | Server: log SecurityEvent [MSG-012] with `type: "OfflinePassRejected"`. The `details.field` element identifies the mismatched field (`offlineTxId` / `offlinePassId` / `userId` / `deviceId`); `details.signedValue` and `details.expectedValue` carry the forensic pair. This is a strong indicator of envelope tampering or station-side state corruption. |
 | 2018 | `SERVER_AUTH_NONCE_MISMATCH` | Critical | false | The `appNonce` claim inside a `ServerSignedAuth` payload (Partial A, `profiles/offline/ble-handshake.md` §4.2.2 check #2) does not match the `Hello.appNonce` of the current BLE handshake. The ECDSA P-256 signature itself verified, so this is a captured-and-replayed authorization being relayed into a different handshake — the primary, clock-independent anti-replay defence. | Station: reject the handshake and disconnect. App: SHOULD obtain a fresh `signedAuthorization` bound to the current `appNonce` and retry. Server: log SecurityEvent [MSG-012] with `type: "ServerSignedAuthReplay"` on the next reconciliation. |
-| 2019 | `PROVISIONING_TOKEN_INVALID` | Error | false | The provisioning token presented to `POST /api/v1/stations/provision` is unusable: past its TTL, **superseded** by a re-issuance for that station, or administratively **revoked**. All three are terminal. Servers **SHOULD** carry the discriminator in `details.reason` (`expired`, `superseded`, `revoked`). HTTP `401 Unauthorized`. Evaluated **first** — see *Error precedence* in [Flows §2](04-flows.md#single-use-and-idempotent-retry). Contrast `4015`: valid token, changed identity. | Station: display the error and **await a new provisioning token** — no retry with this token can succeed. Operator: issue a fresh token. Do not regenerate keys in response to this error; the keys are not what was rejected. |
+| 2019 | `PROVISIONING_TOKEN_INVALID` | Error | false | The provisioning token presented to `POST /api/v1/stations/provision` did not authenticate: it does **not resolve** to a token bound to the requested station, or it is past its TTL, **superseded** by a re-issuance for that station, or administratively **revoked**. All four are terminal. Servers **SHOULD** carry the discriminator in `details.reason` (`not_found`, `expired`, `superseded`, `revoked`). `not_found` answers here rather than with a distinct status **deliberately**: a status that separated an unknown token from a known-but-dead one would let an unauthenticated caller test token values for existence. HTTP `401 Unauthorized`. Evaluated **first** — see *Error precedence* in [Flows §2](04-flows.md#single-use-and-idempotent-retry). Contrast `4018`: the token authenticated but is already consumed; and `4015`: valid token, changed identity. | Station: display the error and **await a new provisioning token** — no retry with this token can succeed. Operator: issue a fresh token. Do not regenerate keys in response to this error; the keys are not what was rejected. |
 
 > **Note on `2003 OFFLINE_PASS_EXPIRED` context-dependent semantics (v0.4.2):**
 > At **authorize-time** (`profiles/offline/authorize-offline-pass.md` §5 check #2 / `offline-pass.md` §4 check #2): severity = `Warning`, recoverable = `true`. The app retries with a fresh pass.
@@ -359,6 +359,13 @@ Payment errors cover wallet balance, credit limits, payment processing, refunds,
 | 4015 | `PROVISIONING_KEY_MISMATCH` | Error | false | A retry did not match the **bound set** — the key kinds bound at first provision and the key each carried. Either a bound kind carried a **different** public key, or the **set** of kinds differed (one added, or one dropped). This is not a replay, and no second certificate is issued on that token. HTTP `409 Conflict`. Evaluated **last**, after `2019` and `4016` — see *Error precedence* in [Flows §2](04-flows.md#single-use-and-idempotent-retry). | Station: **do NOT retry with this token** — no retry can succeed, because the token is permanently bound to the earlier key. Request a **new** provisioning token from the operator, then provision again with the keys currently held. Server: log the mismatch; the already-issued certificate is unaffected. |
 | 4016 | `PROVISIONING_KEY_REUSE` | Error | true | The request submitted the **same public key** for two roles. Submitted keys **MUST** be pairwise distinct, and all three pairs are covered: `tlsCsr` subject key / `receiptSigningPublicKey`, `tlsCsr` subject key / `stationPubKey`, and `receiptSigningPublicKey` / `stationPubKey` ([Chapter 06 §4.3](06-security.md)). HTTP `422 Unprocessable Entity`. Evaluated **after** `2019` and `4010`, and **before** `4015`. Servers **SHOULD** name the colliding pair in `details`, and **MUST** carry `details.phase` (`first-provision` or `retry`): this code is reachable both before and after the token has issued a certificate, and the safe recovery inverts between them. | Station: recovery depends on `details.phase`. `first-provision` — generate a separate key pair for the colliding role and resubmit; this rejection does not consume the token. `retry` — do NOT regenerate: the bound keys are what was certified, and a fresh key is answered `4015`, which is not recoverable. Resubmit the keys already bound, or request a new token. If `details.phase` is absent, assume `retry`. Firmware deriving two roles from one key slot must be updated. |
 | 4017 | `PROVISIONING_REQUEST_INVALID` | Error | true | The body sent to `POST /api/v1/stations/provision` failed schema validation against [`provisioning-request.schema.json`](../schemas/provisioning-request.schema.json) — a required property is absent, or a value violates its declared type, pattern, or bound. Distinct from `4010`, which is a structurally present but cryptographically invalid `tlsCsr`, and from `3015 PAYLOAD_INVALID`, which is a session-scoped semantic failure on a structurally complete body. HTTP `400 Bad Request`. Evaluated **first**, before `2019` — every later check reads a field out of this body; see *Error precedence* in [Flows §2](04-flows.md#single-use-and-idempotent-retry). The rejection does not consume the token and alters no binding. | Station: correct the offending property and resubmit on the **same** token — this rejection does not consume it. Inspect `details` for the failing property path. Do **not** regenerate keys: the keys are not what was rejected, and on a retry a fresh key would be answered `4015`, which is not recoverable. Server: name the failing property and the constraint it violated in `details`. |
+| 4018 | `PROVISIONING_TOKEN_CONSUMED` | Error | true | The provisioning token presented to `POST /api/v1/stations/provision` **authenticated**, but has already been consumed and this request is not a replay of the provision that consumed it. Two causes, whose recoveries differ, so this is a branching entry per §1.4: servers **MUST** carry `details.reason`. `already_consumed` — a concurrent request consumed the token between this caller's read and its write; **transient**, and once the winner writes its certificate the same request replays it. `consumed_without_certificate` — the consuming request failed before issuing, so the token is spent and no certificate exists; **terminal**. An absent discriminator defaults to `already_consumed`, the recoverable branch (§1.4). HTTP `409 Conflict`. Evaluated with the token, after `2019`. Contrast `2019`: the token did not authenticate at all. Contrast `4015`: the token authenticated and *was* replayed, but the identity presented differs from the bound set. | Station: do NOT regenerate keys on any branch — a fresh key is answered `4015`. Branch on `details.reason`. `already_consumed` — another request holds this token; retry unchanged after a short delay, bounded, until it resolves to the certificate or to the branch below. `consumed_without_certificate` — this token can never issue one; request a new provisioning token. If `details.reason` is absent, assume `already_consumed`. Operator: issue a fresh token. |
+| 4019 | `PUBLIC_KEY_INVALID` | Error | true | A **bare public key** submitted to `POST /api/v1/stations/provision` — `receiptSigningPublicKey`, or `stationPubKey` when present — is unusable: it does not decode, or it decodes to something other than an ECDSA P-256 public key (wrong algorithm, or a curve outside the allow-list). The bare-key counterpart of `4010`, which covers the identical defect for the key carried **inside** the `tlsCsr`; both answer `400 Bad Request`, because the same defect in the same request must not vary by how the key was packaged. Schema validation (`4017`) catches only the PEM armour and the SEC1 length and alphabet — neither the DER body, the SEC1 prefix, nor whether the point is on the curve — so a key can pass the schema and still fail here. Servers **SHOULD** name the rejected member in `details.field`. Reachable both before and after the token has issued a certificate, whose safe recoveries are **opposite**, so servers **MUST** carry `details.phase` (`first-provision` or `retry`). Evaluated after `4010` and before `4016` — see *Error precedence* in [Flows §2](04-flows.md#single-use-and-idempotent-retry). The rejection does not consume the token and alters no binding. | Station: submit ECDSA P-256 key material only. Recovery depends on `details.phase`. `first-provision` — generate a correct P-256 key for the named role and resubmit on the same token; nothing is bound yet. `retry` — do NOT generate a new key: a fresh key is answered `4015`. Resubmit the key already bound, or request a new token if it cannot be produced. If `details.phase` is absent, assume `retry`. Server: name the rejected member in `details.field`. |
+
+> **The `4.01x` decade is now full.** `4010`–`4019` are all assigned. A further certificate- or
+> provisioning-management code needs a new sub-range heading (`4.02x`) rather than an extension of
+> this table; the heading is what carries the grouping, and silently spilling past `4019` would
+> leave the sub-range title describing only part of its contents.
 
 ### 3.5 Station Hardware & Software Errors (5xxx)
 
@@ -499,7 +506,7 @@ This table maps which error codes can appear in the RESPONSE or rejection of eac
 | `POST /me/offline-txs` | 400, 401 | 2009, 2010, 3015, 6004 |
 | `POST /sessions/offline-auth` | 401, 402 | 2009, 4001 |
 | `POST /webhooks/payment-gateway/notification` | 401 | 4008 |
-| `POST /api/v1/stations/provision` | 400, 401, 409, 422 | 2019, 4010, 4015, 4016, 4017 |
+| `POST /api/v1/stations/provision` | 400, 401, 409, 422 | 2019, 4010, 4015, 4016, 4017, 4018, 4019 |
 
 ---
 
@@ -863,6 +870,8 @@ Vendors MAY define custom error codes in the **9000–9999** range for proprieta
 | 4015 | `PROVISIONING_KEY_MISMATCH` | Error | P |
 | 4016 | `PROVISIONING_KEY_REUSE` | Error | P |
 | 4017 | `PROVISIONING_REQUEST_INVALID` | Error | P |
+| 4018 | `PROVISIONING_TOKEN_CONSUMED` | Error | P |
+| 4019 | `PUBLIC_KEY_INVALID` | Error | P |
 | 5000 | `HARDWARE_GENERIC` | Warning | H |
 | 5001 | `PUMP_SYSTEM` | Critical | H |
 | 5002 | `FLUID_SYSTEM` | Warning | H |
@@ -1070,6 +1079,46 @@ The following JSON Schema validates the **Error Object** — the complete struct
           }
         }
       }
+    },
+    {
+      "$comment": "4018 branches on details.reason (§3.4). Token state, not token authentication — the 2019 reasons are a different set.",
+      "if": {
+        "properties": { "errorCode": { "const": 4018 } },
+        "required": ["errorCode"]
+      },
+      "then": {
+        "required": ["details"],
+        "properties": {
+          "details": {
+            "required": ["reason"],
+            "properties": {
+              "reason": {
+                "enum": ["already_consumed", "consumed_without_certificate"]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "$comment": "4019 branches on details.phase (§3.4). Not reachable from renewal, which submits no bare key.",
+      "if": {
+        "properties": { "errorCode": { "const": 4019 } },
+        "required": ["errorCode"]
+      },
+      "then": {
+        "required": ["details"],
+        "properties": {
+          "details": {
+            "required": ["phase"],
+            "properties": {
+              "phase": {
+                "enum": ["first-provision", "retry"]
+              }
+            }
+          }
+        }
+      }
     }
   ],
   "additionalProperties": false
@@ -1078,6 +1127,6 @@ The following JSON Schema validates the **Error Object** — the complete struct
 
 **On the conditional blocks.** `details` stays OPTIONAL in general — the `required` array above is the same seven fields it has always been, and the general case is unchanged. The `allOf` adds one `if`/`then` per **branching** entry (§1.4), which makes the discriminator a validation error rather than a matter of trust. This is expressible in the dialect in use: the schema declares JSON Schema **draft 2020-12**, where `if`/`then` is standard, so the constraint is machine-checkable by any conforming validator and no reader need assume validation covers something it does not.
 
-Exactly three entries branch today — `1004` on `details.cause`, `4010` and `4016` on `details.phase` — and each has a block above. **Any entry that gains a branch MUST gain a block here in the same change**, or the discriminator it declares is unenforced.
+Exactly five entries branch today — `1004` on `details.cause`, `4010`, `4016` and `4019` on `details.phase`, and `4018` on `details.reason` — and each has a block above. **Any entry that gains a branch MUST gain a block here in the same change**, or the discriminator it declares is unenforced. Note that `2019` carries `details.reason` as a **SHOULD** rather than a branch: its four causes share one recovery, so there is nothing for a receiver to select between and no block is required.
 
 This does **not** retire the fail-safe defaults. Schema validation binds the **emitter**; the defaults in §1.4 tell a **receiver** what to assume when a non-conforming emitter omits the discriminator anyway, and a receiver is not entitled to assume every peer validates its output. Both hold: the emitter MUST send the member, and the receiver MUST still default to the recoverable branch if it is absent.

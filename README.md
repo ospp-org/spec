@@ -21,7 +21,7 @@ OSPP is an **open, vendor-neutral communication protocol** for self-service stat
 
 Think of it as **OCPP for self-service industries**. Where OCPP standardized EV charger-to-server communication, OSPP does the same for any station that delivers a time-bounded service through a physical bay. The protocol supports **online operation** (MQTT 5.0 over TLS 1.2+, TLS 1.3 recommended), **offline operation** (BLE 4.2+ GATT with cryptographically signed passes), and **four hybrid connectivity scenarios** — ensuring service continuity even when internet is unavailable.
 
-OSPP covers **40 messages** (27 MQTT + 13 BLE), **85 JSON Schemas**, **111 error codes**, **5 compliance profiles**, and a complete security model with mTLS, selective HMAC-SHA256 message signing, ECDSA P-256 offline authorization and receipt signing, and ECDSA P-384 root CA. It does NOT cover server-to-app REST APIs, payment gateway integration, business logic, or hardware internals — those are implementation-specific.
+OSPP covers **40 messages** (27 MQTT + 13 BLE), **85 JSON Schemas**, **113 error codes**, **5 compliance profiles**, and a complete security model with mTLS, selective HMAC-SHA256 message signing, ECDSA P-256 offline authorization and receipt signing, and ECDSA P-384 root CA. It does NOT cover server-to-app REST APIs, payment gateway integration, business logic, or hardware internals — those are implementation-specific.
 
 ---
 
@@ -131,7 +131,7 @@ npx ajv-cli validate \
 | [04](spec/04-flows.md) | Protocol Flows | 12 end-to-end flows with sequence diagrams and step-by-step detail | Draft |
 | [05](spec/05-state-machines.md) | State Machines | Bay, Session, Reservation, BLE Connection, Firmware Update FSMs | Draft |
 | [06](spec/06-security.md) | Security | Threat model, mTLS, HMAC-SHA256, PKI, OfflinePass, receipts, fraud scoring | Draft |
-| [07](spec/07-errors.md) | Error Codes | 111 codes (6 categories), retry policies, circuit breaker, graceful degradation | Draft |
+| [07](spec/07-errors.md) | Error Codes | 113 codes (6 categories), retry policies, circuit breaker, graceful degradation | Draft |
 | [08](spec/08-configuration.md) | Configuration | 29 standard configuration keys, data types, access modes | Draft |
 | [--](spec/glossary.md) | Glossary | Terms and definitions | Draft |
 
@@ -317,7 +317,7 @@ ospp/
 │   ├── 04-flows.md              Chapter 04: Protocol Flows (12 flows)
 │   ├── 05-state-machines.md     Chapter 05: State Machines
 │   ├── 06-security.md           Chapter 06: Security Model
-│   ├── 07-errors.md             Chapter 07: Error Codes (111 codes)
+│   ├── 07-errors.md             Chapter 07: Error Codes (113 codes)
 │   ├── 08-configuration.md      Chapter 08: Configuration Keys
 │   ├── glossary.md              Glossary of terms
 │   └── profiles/                Profile specifications
