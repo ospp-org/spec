@@ -262,8 +262,6 @@ sequenceDiagram
 
 ### Error Paths
 
-| Error | Cause | SSP Action |
-|-------|-------|------------|
 Rows are listed in the order the server evaluates them (see *Error precedence* below).
 
 | Error | Cause | SSP Action |
