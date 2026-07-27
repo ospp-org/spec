@@ -178,6 +178,7 @@ Conformance reports **SHOULD** include:
 | TC-SEC-003 | Certificate Renewal Lifecycle | Security | Standard |
 | TC-SEC-004 | SecurityEvent Verification | Security | Standard |
 | TC-SEC-005 | Provisioning Retry Idempotency & Key Binding | Security | Standard |
+| TC-SEC-006 | Bare Public Key Validity & Precedence at Provisioning | Security | Standard |
 | TC-DM-001 | Configuration Read/Write | Device Management | Extended |
 | TC-DM-002 | Firmware Update | Device Management | Extended |
 | TC-DM-003 | Reset | Device Management | Extended |
