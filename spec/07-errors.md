@@ -21,7 +21,7 @@ Error codes are organized into six functional categories. Each category occupies
 | 1000–1999 | **Transport Errors** | Protocol | 15 | Network, protocol, message format, and message integrity errors |
 | 2000–2999 | **Authentication & Authorization Errors** | Protocol | 20 | Identity verification, credential validation, and access control |
 | 3000–3999 | **Session & Bay Errors** | Application | 17 | Bay state, session lifecycle, reservation, and service errors |
-| 4000–4999 | **Payment & Credit Errors** | Application | 19 | Wallet balance, payment processing, refunds, offline credit limits, and certificate management |
+| 4000–4999 | **Payment & Credit Errors** | Application | 20 | Wallet balance, payment processing, refunds, offline credit limits, and certificate and provisioning management |
 | 5000–5999 | **Station Hardware & Software Errors** | Application | 34 | Physical hardware faults and embedded software errors |
 | 6000–6999 | **Server Errors** | Application | 8 | Server-side processing, timeouts, and infrastructure errors |
 | 9000–9999 | **Vendor-Specific** | Vendor | — | Reserved for vendor-defined error codes |
@@ -32,7 +32,7 @@ Error codes are organized into six functional categories. Each category occupies
 - **Application tier** (3000–6999): Errors related to business logic, state violations, hardware conditions, and server-side processing. These errors indicate that the message was received and understood, but the requested operation could not be completed. Application-tier errors are handled by the application layer.
 - **Vendor tier** (9000–9999): Reserved for implementation-specific error codes. Vendors **MUST** document their vendor error codes separately.
 
-**Total: 113 standard error codes.**
+**Total: 114 standard error codes.**
 
 ### 1.2 Severity Levels
 
