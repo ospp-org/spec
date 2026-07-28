@@ -94,6 +94,40 @@ A release is **complete** when:
    `version` + `CHANGELOG.md`).
 3. The git tag `vX.Y.Z` is pushed on all three repositories.
 
+### SDK-pair releases against a spec tag
+
+The three-repository release above is one shape, not the only one. The SDKs also
+release **as a pair, at a version the spec does not carry**, against a spec tag that
+already exists. `0.9.0` is such a release: `ospp-sdk-php` and `sdk-ts` both go to
+`v0.9.0`, and both vendor and pin spec **`v0.8.0`**.
+
+This is consistent with the scope rule above rather than an exception to it. What
+lockstep guarantees is that a version number means the same thing wherever it
+appears; the pair satisfies that by being **identical to each other**, which is what
+a consumer of the two SDKs needs in order to tell which pair is coherent. The spec's
+version answers a different question — which revision of the contract the pair
+implements — and `.spec-ref` is where that is recorded and CI-enforced.
+
+For an SDK-pair release, "complete" is:
+
+1. The CHANGELOG entry exists in **both SDKs** under the same version header, naming
+   the spec tag implemented.
+2. `ospp-sdk-php/.spec-ref` and `sdk-ts/.spec-ref` both pin that tag, and the tag
+   **exists on the spec remote** — each SDK's byte-identity CI gate clones it by
+   name, so a pin to an unreleased version breaks the gate rather than failing it.
+3. `sdk-ts/package.json` `version` equals the tag without its `v` (its publish
+   workflow guards on exactly this), and `ospp-sdk-php` derives its version from the
+   tag.
+4. The git tag `vX.Y.Z` is pushed on **both SDKs**. The spec is **not** re-tagged:
+   its contract did not change, and re-tagging it to chase an SDK version would make
+   the tag mean the SDK's release cadence rather than the contract's.
+
+The rule this replaces — "a release tag `vX.Y.Z` MUST exist on all three repositories
+before the release is considered published" — governs a **spec** release. It was
+never meant to forbid the SDKs from shipping a fix, a re-vendor, or a lockstep
+alignment against a contract that did not move, and read literally it would have
+required a content-free spec tag for every such release.
+
 The first lockstep release is `0.5.0`. It folds in:
 
 - the Deferred-enum batch on `spec` (extends `transaction-event-response.schema.json`
