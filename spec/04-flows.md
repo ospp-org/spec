@@ -250,9 +250,10 @@ sequenceDiagram
 5. SSP generates a TLS key pair (ECDSA P-256) and produces a Certificate Signing Request (CSR) with CN = `stn_{station_id}`
 6. SSP generates an ECDSA P-256 key pair for offline receipt signing (private key never leaves the device)
 6a. A station that supports BLE generates a **dedicated static ECDH P-256** key pair for the BLE handshake — distinct from the keys above, per the key-separation rule in [Chapter 06 — Security §6.5.2](06-security.md) (private key never leaves the device)
+6b. **Before** step 7 leaves the device, the SSP **MUST** commit every private key generated in steps 5–6a to non-volatile storage, durably — the write **MUST** be flushed, not merely buffered — and **MUST** retain them until the provision succeeds or reaches a terminal outcome. See *Persisting the key set* under this flow's *Postconditions*
 7. SSP sends `POST /api/v1/stations/provision` with the provisioning token, serial number, bay count, TLS CSR, receipt-signing public key, and — when BLE is supported — the static BLE ECDH public key (`stationPubKey`), over which the server signs the StationIdentity certificate returned in the response — see [`provisioning-request.schema.json`](../schemas/provisioning-request.schema.json) for the canonical field set and constraints
 8. Server validates the token (not expired, not used), signs the CSR with the Station CA, and returns the provisioning response per [`provisioning-response.schema.json`](../schemas/provisioning-response.schema.json) — see schema for the canonical field set and constraints (`stationId`, `bayIds[]`, `clientCert`, `stationCaChain`, `brokerRootCa` (optional, broker server-cert trust anchor), `rootCaThumbprint` (optional, SHA-256 Root CA thumbprint for local trust-anchor pinning), `serverVerifyKey`, and the `mqttConfig` block: broker host/port/URI, client-ID template, topic prefix, QoS level, keep-alive, clean-start, session-expiry, TLS version, MQTT version, optional LWT topic). Defaults align with the normative MQTT connection parameters in [Chapter 02 — Transport §1.2](02-transport.md#12-connection-parameters)
-9. SSP stores all credentials and configuration in NVS, marks itself as provisioned
+9. SSP stores the response — issued certificate, `stationCaChain`, `brokerRootCa`, `rootCaThumbprint`, `serverVerifyKey`, `mqttConfig`, `stationId`, `bayIds` — in NVS alongside the keys already committed at step 6b, and marks itself as provisioned
 10. SSP exits provisioning mode and reboots
 11. SSP proceeds to [Station Boot & Registration (Flow §1)](#1-station-boot--registration)
 
@@ -293,6 +294,15 @@ Rows are listed in the order the server evaluates them (see *Error precedence* b
 | SSP | Provisioned, ready to boot |
 | Server | Station registered, certificate issued, provisioning token consumed. The server **MUST** retain every public key submitted in the request, bound to the consumed token — this binding is what a later retry is compared against (see [Single-use and idempotent retry](#single-use-and-idempotent-retry)); without it the comparison cannot be performed |
 | Provisioning Token | Invalidated (single-use) |
+
+**Persisting the key set — before the request, not after.** The station **MUST** commit the complete set of private keys it generated for this provision — the mTLS client key, the receipt-signing key, and the static BLE ECDH key where BLE is supported — to non-volatile storage **before** it sends the first `POST /api/v1/stations/provision`. The write **MUST** be durable: flushed to NVS, not left in a buffer that a reset discards. The station **MUST** retain that key set until one of:
+
+- the provision **succeeds** and the issued certificate has itself been persisted; or
+- a **terminal** outcome is reached — `4015 PROVISIONING_KEY_MISMATCH`, or `4018 PROVISIONING_TOKEN_CONSUMED` with `details.reason: consumed_without_certificate`, or the token's TTL elapses ([Chapter 07 §3.4](07-errors.md)).
+
+Until then the keys **MUST** survive a power cut, a watchdog reset, and a firmware restart, and the station **MUST** resubmit **those** keys on every retry rather than generating new ones.
+
+The ordering is the whole requirement, and generating-then-posting-then-persisting inverts it. The submitted keys *are* the identity the token binds: from the moment the server answers step 8, that token can certify no other key. A station that loses its keys in the window between the request and the response cannot recover by regenerating — the retry it makes on the same token presents a fresh key for a bound kind, which is drift, and drift is answered `409 Conflict` / `4015`, which is `recoverable: false` and from which **no** retry on that token can succeed. Recovery then requires an operator to mint a new token, which is out of band by construction. The station cannot even detect that this has happened, because it cannot distinguish a lost response from a rejected request — that is the same asymmetry `details.phase` exists to close. Committing the keys first costs one flash write before a network round trip; committing them last costs the station its identity and the operator a site visit.
 
 **Persisting the response — the station side of the replay rule.** The station **MUST** persist the trust and configuration fields of the provisioning response — `stationCaChain`, `brokerRootCa`, `rootCaThumbprint`, `serverVerifyKey`, `mqttConfig` — **exactly as received**, replacing any values it already holds. This applies to **every** successful response, **including a replay of an already-completed provision**.
 
