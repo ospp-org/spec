@@ -21,8 +21,12 @@ as described in [VERSIONING.md](VERSIONING.md).
 > Offline profile's MQTT half — `offline-pass.md`, `authorize-offline-pass.md`, `reconciliation.md` —
 > is implemented and exercised against a second implementation, and marking it experimental would
 > have declared running code provisional. The compliance ladder itself is **unchanged**; restructuring
-> it belongs in the revision that implements BLE. No schema content changed, so `spec/schemas/`
-> byte-parity with the vendored SDK copies is unaffected by this pass.
+> it belongs in the revision that implements BLE. The marking itself changes **no** schema — it is
+> prose, headers and links only, and no BLE schema was edited to carry it. One schema did change
+> elsewhere in this pass: `provisioning-request.schema.json`'s `receiptSigningPublicKey`
+> **description** gained the forward-compatibility rationale below. It is a description string, so
+> it changes no validation behaviour, but it does add to the re-vendor delta the SDKs already owe
+> at the 0.8.0 lockstep tag (see the provisioning blockquote below, which lists the others).
 
 > **Configuration vocabulary alignment.** Reconciles the `08-configuration.md` catalog with the keys the SDKs and server actually implement: removes 12 configuration keys that were documented but never wired to any behaviour, corrects the defaults/ranges of 4 surviving keys to their canonical values, and relaxes the web-payment / idempotency token format from "UUID v4" to any RFC 4122 UUID. Configuration-key total drops **41 → 29**. The wire `protocolVersion` field is **unchanged at `0.2.1`**, no message schema changes, and `spec/schemas/` is byte-identical (`verify-schemas.py` stays `306/306`).
 
