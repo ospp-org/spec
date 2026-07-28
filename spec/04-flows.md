@@ -311,6 +311,10 @@ The ordering is the whole requirement, and generating-then-posting-then-persisti
 
 The replay case is the one that matters, and it is the one firmware is most likely to skip: a station retrying after a transport failure may treat itself as already provisioned and ignore the body. It **MUST NOT**. A replay can legitimately carry a Station CA chain extended by a rotation, a re-anchored broker trust anchor, a rotated `serverVerifyKey`, or a migrated `mqttConfig` — see *What a replay returns* under [Single-use and idempotent retry](#single-use-and-idempotent-retry) — and a station that keeps its stored copy is left holding a trust anchor that no longer validates or a broker address that no longer answers, with no in-band way to be told. Re-persisting the identity fields is a no-op, since those are byte-identical on a replay; it is the trust and configuration fields that change, and they are the reason the body must be read.
 
+**`bayIds` carries the bay-number mapping, and carries it by order.** The array is **ordered and dense**: the element at index *i* is the `bayId` of the bay whose `bayNumber` is *i + 1*, so `bayIds[0]` is bay number 1. It **MUST** cover `bayNumber` 1..`bayCount` with no gaps, and its length **MUST** equal the station's registered bay count — the same count step 5 of *Error precedence* validates the request's `bayCount` against.
+
+This is the **only** mapping the station is given, and it exists because the station is required to produce the pair. A station knows how many bays it physically has and can number them, but `bayId` values are **server-assigned** ([Chapter 01 — Architecture §3.2](01-architecture.md)) and arrive only here; nothing else in any profile relates one to a bay number. Yet the first message the station sends after `BootNotification` `Accepted` is one StatusNotification per bay carrying **both** `bayId` and `bayNumber` ([Core profile CORE-004](profiles/core/README.md), [StatusNotification §7](profiles/core/status-notification.md)) — so if the correspondence were not fixed here, it could not be established anywhere. Servers **MUST NOT** reorder `bayIds` between the original response and a replay; that is part of why the field is byte-identical above.
+
 ### Single-use and idempotent retry
 
 A provisioning token is **single-use**: it authorises the issuance of **exactly one certificate**. The token is consumed on the first successful `POST /api/v1/stations/provision`, which binds the issued certificate to the token.
@@ -326,7 +330,7 @@ Because provisioning traverses unreliable links, the station **MAY** retry with 
 | Field | Why it is fixed |
 |---|---|
 | `stationId` | the identifier the token is bound to; re-provisioning **MUST NOT** allocate a new one (§ *Re-provisioning*) |
-| `bayIds` | assigned at station registration, before the token was issued |
+| `bayIds` | assigned at station registration, before the token was issued; **order included**, since the order is what carries the bay-number mapping (below) |
 | `clientCert` | the issued certificate itself |
 | `stationIdentity` | where present — the certificate issued over the station's **bound** BLE ECDH key |
 

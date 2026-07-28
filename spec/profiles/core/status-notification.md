@@ -18,7 +18,7 @@ Each notification reports the bay identifier, the new status, the previous statu
 | Field | Type | Required | Description |
 |-------------------|-----------------|----------|-----------------------------------------------|
 | `bayId` | string | Yes | Bay identifier within the station (`bay_` prefix). |
-| `bayNumber` | integer | Yes | Ordinal bay number (minimum 1). |
+| `bayNumber` | integer | Yes | Ordinal bay number (minimum 1). Its correspondence to `bayId` is fixed by the **order** of `bayIds` in the provisioning response — `bayIds[i]` is bay number *i + 1* ([Flows §2](../../04-flows.md#2-station-provisioning)). That is the only place the mapping is supplied. |
 | `status` | string | Yes | New bay status (see Bay States below). |
 | `previousStatus` | string | No | Previous bay status before this transition. |
 | `services` | array\<object\> | Yes | Service availability list (minimum 1 item). |
