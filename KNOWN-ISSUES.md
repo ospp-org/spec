@@ -179,3 +179,48 @@ routing resolves, so a server cannot always know whether a failing request was e
 specification's surface. That is an implementation concern rather than a spec one, and is
 recorded in csms-server's KNOWN-ISSUES; it is noted here only because both stem from the same
 question — what the envelope obliges for failures that are not really the endpoint's.
+
+---
+
+## OPEN — no conformance case exercises the provisioning success path from the station's side
+
+`POST /api/v1/stations/provision` is named by three conformance cases and covered from one
+direction only.
+
+`TC-SEC-005` and `TC-SEC-006` both open "Verify that the **server's** provisioning endpoint
+…". They are server-side cases: a harness posts crafted bodies and checks status, `errorCode`,
+`details.phase`, precedence between `4010`/`4019`/`4016`/`4015`, and that a rejection consumes
+no token and mints no certificate. `TC-DM-003` Part C reaches provisioning, but only as the
+recovery leg of a Hard reset, and only where an operator capability is available.
+
+**What no case covers.** The station's own conduct on the path where nothing goes wrong:
+
+- that the complete key set is committed to NVS **before** the first POST, and the *same* keys
+  are resubmitted on every retry (`04-flows.md` §2, *Persisting the key set*, and happy-path
+  step 6b) — the repair for the incident that motivated 0.8.0's provisioning work, and the one
+  station behaviour with no test at all;
+- that the CSR's Subject CN is the `stationId` the station was configured with;
+- that the three submitted keys are pairwise distinct and each is a fresh on-device P-256 key;
+- that the response's trust and configuration fields are persisted **exactly as received**,
+  replacing what was held, **including on a replay** (`04-flows.md` §2, *Persisting the
+  response*) — the obligation that section calls "the one firmware is most likely to skip";
+- that `bayIds` order is consumed as the bay-number mapping, observable at the first
+  StatusNotification after boot (`bayIds[i]` ↔ `bayNumber` *i+1*);
+- that `mqttConfig` is honoured on connect, with `keepAliveSeconds` taken from the response and
+  the Client ID fixed to `{stationId}` regardless of what was advertised (`02-transport.md`
+  §1.2).
+
+**Why the absence went unnoticed.** The error paths are tested unusually well. `TC-SEC-005` runs
+seven parts and `TC-SEC-006` seven more, between them covering every provisioning error code and
+the full precedence chain — enough that "provisioning" reads as covered in the Test Case Index
+and in the compliance-level tables. What they cover is the **server's** half of the failure
+modes. Neither the index nor the profile tables distinguish the two directions, so a station
+implementer scanning for provisioning coverage finds two dense cases and no indication that
+neither tests a station.
+
+**Not built here.** It is a pre-existing gap rather than a consequence of the 0.8.0 repairs, and
+it is a new case — plausibly two, one for first provision and one for the retry and replay
+behaviour — with its own harness requirements: the harness must act as the provisioning
+endpoint, must be able to cut the response to test the persist-before-POST rule, and must
+inspect station-side NVS or infer it from the next connection. That deserves its own scoping
+rather than being absorbed into a repair pass.
