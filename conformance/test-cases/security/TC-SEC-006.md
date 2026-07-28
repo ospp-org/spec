@@ -14,7 +14,7 @@ Position is the point of the case, not merely the code. A bare key that parses a
 
 ## References
 
-- `spec/04-flows.md` §2 — *Error precedence*, step 5 (submitted public key validity) and its position relative to steps 4, 6 and 7
+- `spec/04-flows.md` §2 — *Error precedence*, step 6 (submitted public key validity) and its position relative to steps 4, 5, 7 and 8
 - `spec/07-errors.md` §3.4 — `4019 PUBLIC_KEY_INVALID` (severity `Error`, `recoverable: true`, HTTP `400`, branches on `details.phase`)
 - `spec/07-errors.md` §3.4 — `4010 CSR_INVALID` (the same defect for the key carried inside the `tlsCsr`)
 - `spec/07-errors.md` §1.4 — recommended actions are per-code and must hold on every path; branching entries and their fail-safe default
