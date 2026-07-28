@@ -224,3 +224,41 @@ behaviour — with its own harness requirements: the harness must act as the pro
 endpoint, must be able to cut the response to test the persist-before-POST rule, and must
 inspect station-side NVS or infer it from the next connection. That deserves its own scoping
 rather than being absorbed into a repair pass.
+
+---
+
+## OPEN — `StationIdentityCertificate` is named as a ChangeConfiguration key but is not in the Chapter 08 registry
+
+`06-security.md:1208` defines how the BLE StationIdentity certificate reaches the station:
+
+> "**Delivery to the station.** Provisioning response, and thereafter ChangeConfiguration [MSG-013]
+> (key `StationIdentityCertificate`) for re-issuance — mirroring `OfflinePassPublicKey`
+> distribution (§6.7)."
+
+and `provisioning-response.schema.json:66` repeats it for the `stationIdentity` field. But
+`StationIdentityCertificate` does not appear anywhere in `08-configuration.md`, whose §2–§6
+tables are the registry of standard keys — 29 of them, and this is not one.
+
+`08-configuration.md:47` then decides the outcome:
+
+> "If a station receives a ChangeConfiguration request for a key it does not recognize (neither a
+> standard key from Sections 2--6 nor a recognized `Vendor_` key), that key's `results` entry
+> **MUST** carry `status: "NotSupported"`, and no key in the request is applied."
+
+So a **conforming** station **MUST** reject the re-issuance write, and the rotation path §6.5.2
+depends on cannot complete. The certificate still arrives at first provisioning, so the defect is
+confined to re-issuance — which is exactly the path `:1209` says the server relies on, since
+`expiresAt` "SHOULD be short" and "the server re-issues before expiry".
+
+**Not fixed here** because closing it means authoring a registry row, and every column is a
+decision rather than a transcription: access mode (`W` would mirror `OfflinePassPublicKey`, which
+is write-only so GetConfiguration cannot leak credential material), mutability, whether the key
+is required only for BLE stations, and what a station does with the previous certificate during
+the overlap window `:1209` describes. Recording it rather than inventing those.
+
+Found by a sweep of the Chapter 08 key table for keys whose delivery channel does not exist. That
+sweep also confirms the table is otherwise sound: 29 keys, counts agreeing across
+`README.md:135`, `08-configuration.md:352` and the §1.5 profile grouping; the three keys with no
+default (`FirmwareVersion`, `CertificateSerialNumber`, `OfflinePassPublicKey`) each have a
+working source; and no key encodes `stationId` or any other certificate-bound identity, so no
+configuration write can alter what the client certificate binds.
