@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-28
 **Protocol Version:** 0.8.0
-**Status:** 3 blockers open (all BLE), 4 non-blocking issues open
+**Status:** 3 blockers open (all BLE), 3 non-blocking issues open
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle
 
 ---
