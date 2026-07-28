@@ -519,6 +519,41 @@ This table maps which error codes can appear in the RESPONSE or rejection of eac
 | `POST /webhooks/payment-gateway/notification` | 401 | 4008 |
 | `POST /api/v1/stations/provision` | 400, 401, 409, 422 | 2019, 4010, 4015, 4016, 4017, 4018, 4019, 4020 |
 
+**What these lists are.** The statuses and codes above are the set this specification **models**
+for each endpoint — the failures it defines, and the answers it fixes. They are **not** an
+exhaustive enumeration of what a conforming server may emit. Every endpoint in scope can also
+fail for reasons that belong to the deployment rather than to the protocol: the process is out
+of memory, a dependency is unreachable, the operator has taken the service down, a request
+arrives larger than the transport accepts. This specification does not model those, and a server
+answering one of them is **not** thereby non-conforming.
+
+**What a server does outside the list.** Two obligations, and only two:
+
+1. The response body **MUST** still be the Error Object of [§1.3](#13-error-object-fields), with
+   the closest registry code. `6001 SERVER_INTERNAL_ERROR` for an unhandled fault; `6007
+   SERVICE_DEGRADED` for a dependency that is transiently unavailable; `6006
+   RATE_LIMIT_EXCEEDED` for throttling. The rule at [§2.4](#24-rest-api-error-response) that
+   `errorCode` is REQUIRED on every error of an in-scope endpoint is not relaxed here — an
+   unmodelled *status* never licenses an unmodelled *body*.
+2. The HTTP status **MUST** be the one that is true. A server **MUST NOT** downgrade an accurate
+   status to one that appears in the list above.
+
+**The status is not a property of the code.** [§2.4](#24-rest-api-error-response)'s mapping table
+is headed *Typical Error Codes* and groups codes by the status they are usually seen with; it is
+illustrative and assigns no code a fixed status. Nothing in [§3](#3-error-code-registry) carries
+an HTTP status column. A code and a status answer different questions — *what failed* and *how
+the client should treat this response* — and one code can honestly appear with more than one
+status where the same fault is reachable in states the client must treat differently.
+
+`6007 SERVICE_DEGRADED` is the worked example, and the reason this paragraph exists. When
+provisioning cannot proceed because crypto material is temporarily unreadable, the condition is
+transient and operator-fixable, so the correct answer is **`503 Service Unavailable` with
+`Retry-After`** — which tells the station *when* to come back. `500` would tell it only to back
+off blindly, discarding information it acts on. A server **MUST** answer `503` there and **MUST
+NOT** substitute `500` to make the response match the enumeration above. Implementations that
+previously emitted `500` for this condition to satisfy the list were working around a gap in the
+list, not conforming to a requirement.
+
 ---
 
 ## 5. Retry Policies

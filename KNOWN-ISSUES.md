@@ -12,8 +12,8 @@
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 4 | 4xxx grouping · REST 5xx enumeration · provisioning station-side conformance · `StationIdentityCertificate` |
-| **Total open** | **7** | |
+| OPEN | 3 | 4xxx grouping · provisioning station-side conformance · `StationIdentityCertificate` |
+| **Total open** | **6** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
@@ -216,11 +216,31 @@ two categories). Whichever is chosen, the arithmetic derivation is the part that
 
 ---
 
-## OPEN — an in-scope endpoint has failure modes the registry cannot express, and §4.4 lists no 5xx
+## CLOSED (0.8.0) — an in-scope endpoint has failure modes the registry cannot express, and §4.4 lists no 5xx
 
 **Raised 2026-07-28 implementing the flat envelope on `POST /api/v1/stations/provision`.
-Recorded as SPEC debt, not an implementation decision — the implementation had to diverge
-because the registry offered nothing better.**
+Closed 2026-07-28 in [`07-errors.md` §4.4](spec/07-errors.md), by the third of the three options
+below — the one this entry called "the smallest and probably right".**
+
+**Resolution.** §4.4's per-endpoint lists are now stated to be the set the specification
+*models*, not an enumeration of what a server may emit, with two obligations outside them: the
+body **MUST** still be the Error Object carrying the closest registry code, and the status
+**MUST** be the true one, never downgraded to match the list. The premise that the registry
+"maps `6007` to 500" turned out to be false — §2.4's table is headed *Typical Error Codes*, it
+never lists `6007` at all, and no registry row carries an HTTP status. The 500 came from SDK
+defaults, not from this specification. So `6007` with `503` + `Retry-After` needed no new code
+and no per-code status variance: it needed §4.4 to stop reading as exhaustive. `6007` + `503` is
+now the worked example in that section and is **required**, not merely permitted.
+
+The reference implementation's divergence is retired by this: it is now the conforming answer,
+and the call-site note recording the divergence can go.
+
+The other two failure modes this entry raised are **not** closed by it and remain unmodelled by
+choice: a request body over the transport limit (`413`) and a maintenance window (`503`) are both
+deployment conditions rather than protocol ones, and §4.4 now says explicitly that a server
+answering them is not thereby non-conforming.
+
+*Original entry follows.*
 
 `07-errors.md:227` makes `errorCode` REQUIRED on every error of an endpoint this specification
 defines, and `:509` lists this endpoint's statuses as **400, 401, 409, 422**. A real server on
