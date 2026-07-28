@@ -1,6 +1,20 @@
 # OSPP JSON Schemas
 
-> **Schema Version:** 0.2.5 | **JSON Schema Draft:** 2020-12
+> **OSPP Version:** 0.8.0 | **JSON Schema Draft:** 2020-12
+>
+> **The 15 schemas under [`ble/`](ble/) are EXPERIMENTAL artefacts** — published for review, not
+> for implementation, and subject to incompatible change without a MAJOR bump. Three of them are
+> blocker [B-3](../KNOWN-ISSUES.md#b-3--the-three-ble-response-schemas-disagree-with-each-other-and-with-chapter-07):
+> `auth-response`, `start-service-response` and `stop-service-response` define rejections three
+> different ways, none matching [Chapter 07 §2.3](../spec/07-errors.md), and
+> `stop-service-response` cannot express a rejection at all. See
+> [Release status](../README.md#ble-is-experimental-in-08).
+>
+> `common/offline-pass.schema.json` is stable for the MQTT path but cannot express the
+> station-scoping constraint the BLE path requires — blocker
+> [B-2](../KNOWN-ISSUES.md#b-2--a-station-scoped-offlinepass-is-unrepresentable-in-the-authoritative-schema).
+>
+> Every other schema here is **stable**.
 
 This directory contains JSON Schema definitions for every message in the OSPP protocol. Schemas are generated from the normative message catalog in [Chapter 03 — Message Catalog](../spec/03-messages.md).
 
@@ -12,7 +26,7 @@ This directory contains JSON Schema definitions for every message in the OSPP pr
 schemas/
 ├── common/                              21 shared type definitions ($ref targets)
 ├── mqtt/                                47 MQTT message payload schemas
-├── ble/                                 15 BLE schemas (13 message types + StationIdentity + secure frame)
+├── ble/                                 15 BLE schemas (13 message types + StationIdentity + secure frame) — EXPERIMENTAL
 ├── provisioning-request.schema.json     HTTP provisioning request (Flow §2)
 ├── provisioning-response.schema.json    HTTP provisioning response (Flow §2)
 └── README.md                            This file
