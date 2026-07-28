@@ -135,3 +135,47 @@ renaming `§3.4` touches every cross-reference to it; re-ranging the provisionin
 `4xxx` is a breaking change to a published vocabulary; making `category` a per-code property
 rather than a derived one is a cross-SDK change (PHP and TS must agree, or the same code reports
 two categories). Whichever is chosen, the arithmetic derivation is the part that must stop.
+
+---
+
+## OPEN — an in-scope endpoint has failure modes the registry cannot express, and §4.4 lists no 5xx
+
+**Raised 2026-07-28 implementing the flat envelope on `POST /api/v1/stations/provision`.
+Recorded as SPEC debt, not an implementation decision — the implementation had to diverge
+because the registry offered nothing better.**
+
+`07-errors.md:227` makes `errorCode` REQUIRED on every error of an endpoint this specification
+defines, and `:509` lists this endpoint's statuses as **400, 401, 409, 422**. A real server on
+that endpoint also answers:
+
+| condition | what the server must say | what the registry offers |
+|---|---|---|
+| crypto material missing (CA key/cert unreadable) | `503` + `Retry-After` — transient, operator-fixable, and the station acts on the hint | `6007 SERVICE_DEGRADED`, which the registry maps to **500** |
+| unhandled server fault | `500` | `6001 SERVER_INTERNAL_ERROR` — fits, but 500 is not in `:509` |
+| request body over the transport limit | `413` | **nothing.** `1014 MESSAGE_TOO_LARGE` is a transport code for MQTT/BLE, not REST |
+| server in a maintenance window | `503` | **nothing** |
+
+The first is the sharp one. A server that downgrades its 503 to 6007's registry 500 to satisfy
+the mapping **loses information the station uses** — 500 invites a retry with backoff, while
+503 + `Retry-After` states when. The reference implementation therefore emits `503` with the
+`6007` body and marks the divergence at its call site rather than resolving it silently. That is
+a defensible local choice; it should not become precedent by inheritance.
+
+**The gap is `:509` listing no 5xx, not the server exceeding it.** An endpoint whose statuses the
+specification enumerates, but whose real failure modes exceed that list, forces every
+implementation to invent the same answer independently — which is what the enumeration exists to
+prevent.
+
+**Not decided here.** Options, each with a cost: give `6007` a status that varies by context
+(breaks the per-code fixity that makes the registry derivable); add REST codes for
+payload-too-large and maintenance (extends the vocabulary toward transport concerns the
+boundary at `:233` deliberately excludes); or state that `:509`'s status list is the set the
+specification *models* rather than the set an endpoint may *emit*, and say what a server should
+do outside it. The third is the smallest and probably right, but it is a change to what §4.4
+means and belongs in a revision, not a patch.
+
+Related: the same envelope work found that Laravel-class frameworks reject some requests before
+routing resolves, so a server cannot always know whether a failing request was even *on* the
+specification's surface. That is an implementation concern rather than a spec one, and is
+recorded in csms-server's KNOWN-ISSUES; it is noted here only because both stem from the same
+question — what the envelope obliges for failures that are not really the endpoint's.
