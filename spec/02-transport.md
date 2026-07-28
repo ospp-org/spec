@@ -507,6 +507,20 @@ The broker distributes incoming station messages across all server instances in 
 
 ## 8. BLE Transport (Offline Mode)
 
+> **EXPERIMENTAL — this entire section.** Published for review, **not** for implementation; it
+> may change incompatibly without a MAJOR bump. See
+> [Release status](../README.md#ble-is-experimental-in-08) and the three blockers in
+> [KNOWN-ISSUES](../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-three-defects).
+>
+> **[§8.6](#86-fragmentation-protocol) below is one half of blocker
+> [B-1](../KNOWN-ISSUES.md#b-1--two-incompatible-fragmentation-protocols-are-simultaneously-normative).**
+> [`profiles/offline/ble-transport.md` §11](profiles/offline/ble-transport.md) defines a
+> *different*, incompatible fragmentation protocol as an equally normative MUST, and nothing in
+> either chapter ranks them. Do not implement either until this is resolved.
+>
+> The rest of this chapter — MQTT, TLS, topics, QoS, connection lifecycle, ACL, and the HTTPS
+> REST surface — is **stable** and unaffected by this marking.
+
 When the MQTT connection is unavailable (station offline, phone offline, or both), OSPP supports direct communication between a mobile app and a station via **Bluetooth Low Energy (BLE)**.
 
 BLE transport is part of the **Offline/BLE Profile** and is OPTIONAL. Stations that do not support BLE MUST set `capabilities.offlineModeSupported: false` in their BootNotification.

@@ -1,6 +1,18 @@
 # BLE Session Lifecycle
 
-> **Status:** Draft | **OSPP Version:** 0.8.0
+> **Status: EXPERIMENTAL** | **OSPP Version:** 0.8.0
+>
+> Published for review, **not** for implementation. May change incompatibly without a MAJOR
+> bump. See [Release status](../../../README.md#ble-is-experimental-in-08).
+>
+> **This document is the visible half of blocker
+> [B-3](../../../KNOWN-ISSUES.md#b-3--the-three-ble-response-schemas-disagree-with-each-other-and-with-chapter-07).**
+> §3 below requires the station to answer `Rejected` when the `sessionId` matches no active
+> session, but [`stop-service-response.schema.json`](../../../schemas/ble/stop-service-response.schema.json)
+> declares no error member, branches only on `Accepted`, and is closed with
+> `additionalProperties: false` — so a conforming station can refuse but cannot say why, and
+> cannot add a field to do so. `StartServiceResponse` and `AuthResponse` each carry a *different*
+> rejection shape again, and none matches [Chapter 07 §2.3](../../07-errors.md).
 
 ## 1. Starting a Service
 

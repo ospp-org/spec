@@ -1,6 +1,18 @@
 # BLE Handshake Protocol
 
-> **Status:** Draft | **OSPP Version:** 0.8.0
+> **Status: EXPERIMENTAL** | **OSPP Version:** 0.8.0
+>
+> Published for review, **not** for implementation. May change incompatibly without a MAJOR
+> bump. See [Release status](../../../README.md#ble-is-experimental-in-08) and the three
+> blockers in [KNOWN-ISSUES](../../../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-three-defects).
+>
+> Two bear directly on this document: the `AuthResponse` rejection shape is blocker
+> [B-3](../../../KNOWN-ISSUES.md#b-3--the-three-ble-response-schemas-disagree-with-each-other-and-with-chapter-07)
+> (its schema carries flat `reason` + `errorCode`, where [Chapter 07 §2.3](../../07-errors.md)
+> mandates a nested seven-field `error` object), and the `2006 OFFLINE_STATION_MISMATCH`
+> row in this document's error table is blocker
+> [B-2](../../../KNOWN-ISSUES.md#b-2--a-station-scoped-offlinepass-is-unrepresentable-in-the-authoritative-schema)
+> (the pass cannot carry the constraint the station is asked to check).
 
 ## 1. Handshake Overview
 

@@ -1,6 +1,16 @@
 # BLE Transport
 
-> **Status:** Draft | **OSPP Version:** 0.8.0
+> **Status: EXPERIMENTAL** | **OSPP Version:** 0.8.0
+>
+> Published for review, **not** for implementation. May change incompatibly without a MAJOR
+> bump. See [Release status](../../../README.md#ble-is-experimental-in-08).
+>
+> **§11 of this document is blocker [B-1](../../../KNOWN-ISSUES.md#b-1--two-incompatible-fragmentation-protocols-are-simultaneously-normative).**
+> [Chapter 02 §8.6](../../02-transport.md) defines a *different*, incompatible fragmentation
+> protocol as an equally normative MUST — printable `{F:M/N}` headers, 1-based numbering, and a
+> timeout measured from the previous fragment, against the 3-byte binary header, 0-based
+> `sequenceNumber` and first-fragment timeout defined here. Nothing ranks them. Do not implement
+> either until this is resolved.
 
 ## 1. Hardware Requirements
 
