@@ -448,6 +448,13 @@ Before first boot, the station must be configured with network and security cred
 | MQTT broker URL | `mqtts://{broker}:8883` (TLS 1.2+/1.3, port 8883) |
 | TLS credentials | Station certificate + CA chain → stored in secure element or encrypted NVS |
 | `stationId` | Confirmed (matches certificate CN) |
+| Provisioning endpoint origin | Absolute `https://` origin — scheme, host, port — of the server answering `POST /api/v1/stations/provision`. [Chapter 02 — Transport §9.1](02-transport.md#91-general-requirements) fixes the `/api/v1/` path prefix and nothing else; the origin is deployment-specific and is **not** derivable from any other value in this table, the MQTT broker URL included |
+| HTTPS trust policy | What validates that server's TLS certificate on that call: an explicit trust anchor (PEM), or an explicit instruction to use the station's system trust store. The response's `brokerRootCa` cannot serve here — it arrives *in* the response to the very call it would have to validate, and it anchors the **broker**, not the provisioning server ([Chapter 06 — Security §2.1](06-security.md)) |
+| Initial time source | A clock good enough to evaluate certificate validity periods **before** Boot. Both OSPP clock sources — `serverTime` in the BootNotification and Heartbeat responses — arrive only once an mTLS session exists, while TLS 1.2+ on the HTTPS call *and* on the MQTT connection requires checking `notBefore`/`notAfter` first ([Chapter 02 — Transport §1.3, §9.1](02-transport.md)) |
+
+The last three rows are **required on every pattern**, and the runtime path of §7.1's *Runtime alternative* note cannot proceed without them: a field-installed station holds no certificate yet, so its first act is an HTTPS call it must be able to address, validate and date. What is deliberately left open is only the **transport** of these values — the same latitude §7.1 already takes for `stationId`. The methods table above is the menu; this table is the manifest. A deployment MUST supply every row by some means, and MAY choose which.
+
+> **Rows 3 and 4 read for the manufacturing pattern.** *TLS credentials* and the parenthetical on `stationId` presume a certificate that already exists, which is true at manufacturing time and not at field installation — there the certificate is what the provisioning call returns. The requirement each row states still holds on both patterns; only the phrasing is written around §7.1.
 
 ### 7.3 First Boot
 

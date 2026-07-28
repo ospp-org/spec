@@ -191,6 +191,7 @@ sequenceDiagram
 - Administrator has created the station entry in the management portal
 - A provisioning token has been generated (single-use, with a TTL fixed at issuance)
 - The station has network connectivity (Ethernet, WiFi, or cellular)
+- The station holds the out-of-band bootstrap inputs this call consumes — its `stationId`, the **absolute HTTPS origin** of the provisioning endpoint, the **HTTPS trust policy** that validates that server's certificate, and an **initial time source** able to evaluate a certificate validity period. These are the *Required configuration* of [Chapter 01 — Architecture §7.2](01-architecture.md#72-physical-configuration); none of them is carried by this flow, and none can be derived from the provisioning token, which is opaque and **MUST NOT** be parsed
 - The station is in "not provisioned" state (no certificates in NVS) **or** is being deliberately re-provisioned (see [Re-provisioning an already provisioned station](#re-provisioning-an-already-provisioned-station))
 
 ### Sequence Diagram

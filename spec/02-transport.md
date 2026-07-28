@@ -697,6 +697,8 @@ OSPP does not normatively define the HTTPS API between the server and end-user c
 | **API versioning** | URL path prefix: `/api/v1/` |
 | **Timestamps** | ISO 8601 UTC with milliseconds (e.g., `2026-01-30T12:00:00.000Z`) |
 
+This table fixes the **path prefix only**. The absolute origin — scheme, host, port — is deployment-specific, and for the one endpoint a station calls before it holds any credential (`POST /api/v1/stations/provision`, [Flows §2](04-flows.md#2-station-provisioning)) the origin, the trust anchor that validates the server's certificate, and a clock able to evaluate that certificate's validity period are all **out-of-band station configuration**, listed in [Chapter 01 — Architecture §7.2](01-architecture.md#72-physical-configuration).
+
 ### 9.2 Authentication
 
 OSPP defines three authentication methods for HTTPS channels:
