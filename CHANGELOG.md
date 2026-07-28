@@ -8,6 +8,35 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.8.1] — 2026-07-28
+
+> **§4.4's per-endpoint code lists were incomplete, and the table is now readable.** A
+> correctness patch to the endpoint tables in `07-errors.md` §4.4. **No behaviour change, no
+> schema change, no new or altered error code** — `spec/schemas/` is byte-identical to `v0.8.0`,
+> so the SDKs re-pin `.spec-ref` without re-vendoring.
+
+### Fixed
+
+- **§4.4's session rows omitted the relayed failure domain.** `POST /sessions/start` and `POST /pay/{code}/start` dispatch **StartService [MSG-005]** and relay its outcome; `POST /sessions/{id}/stop` relays **StopService [MSG-006]**. Their rows listed only failures the *server* originates — 3–7 codes each — and omitted the action's own set from §4.1, including the `5000–5009` / `5111` hardware faults the station raises that reach the REST caller unchanged. `3004 INVALID_SERVICE` was absent from `/sessions/start` while the reference server emits it from exactly that path, and `3000 SESSION_GENERIC` appeared in **no** row in the table. Each session row is now the dispatched action's set from §4.1 plus the REST-specific codes, and the HTTP column is widened to match (`422`, `500`, `503`, `504` where the codes now listed require them).
+- **Four codes reachable from every endpoint were repeated inconsistently or omitted.** `6004 VALIDATION_ERROR`, `6001 SERVER_INTERNAL_ERROR`, `6006 RATE_LIMIT_EXCEEDED` and `6007 SERVICE_DEGRADED` are properties of serving an HTTP request, not of any one endpoint. They are hoisted into a note at the head of §4.4 and removed from the rows, so a row now carries only what is **particular** to its endpoint. `6004`'s note records the one exception: an endpoint that registers its own schema-validation code, as `POST /api/v1/stations/provision` does with `4017`.
+
+### Changed
+
+- **§4.4 opens with a normative reading note.** Three points, stated before the table and referenced from its own header (`Particular Error Codes (+ the four universal codes above)`): a row is not the complete set; read each row as *its own codes plus the four*; and absence from a row is not a claim of unreachability. Placement is deliberate — the previous *What these lists are* paragraph sat **below** the table, where a reader who took a row at face value never reached it.
+
+### Verification
+
+Found by using §4.4 as a strict allowlist while scoping an SDK change, which immediately produced a false result: 15 codes carrying deliberate REST statuses in `ospp-sdk-php` would have been discarded, five of them (`3004`, `3008`, `3010`, `3012`, `3014`) reachable from endpoints §4.4 itself carries. Confirmed from the other direction by enumerating every `OsppErrorCode` the reference server emits from a REST controller and comparing against the table.
+
+**How §4.4 should be read, for anyone revisiting earlier conclusions.** It is reliable in the **positive** direction — every code it names is genuinely reachable from that endpoint. It was **not** reliable in the **negative**: before 0.8.1, absence from a row did not mean a code was unreachable there. Any earlier reasoning that used "absent from §4.4" to conclude "not reachable over REST" was drawn against incomplete rows and should be re-checked. Reasoning that used §4.4 positively — including the REST-reachable set behind `ospp-sdk-php`'s `httpStatus()` arms — is unaffected.
+
+**Limitations of the fix, stated rather than left to be discovered.** Both are reductions, not eliminations:
+
+1. **The four universal codes are not machine-verifiable against a row.** They live in the note, not in the table, so a generator or conformance check that reads rows alone will under-approximate every endpoint by those four. The header cross-reference tells a *reader*; it does not tell a parser. A machine-readable form of §4.4 would need them expanded per row or expressed as a separate declared set.
+2. **The note is still missable.** It is stated before the table and referenced from the header, which is the most discoverable placement available in prose — but a reader who scrolls to the table and reads one row can still take that row as complete. The previous placement (below the table) made this near-certain; this makes it unlikely. It does not make it impossible.
+
+---
+
 ## [0.8.0] — 2026-07-28
 
 > **BLE ships EXPERIMENTAL; the rest of 0.8 is stable.** The BLE transport, handshake and session

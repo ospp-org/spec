@@ -507,17 +507,50 @@ This table maps which error codes can appear in the RESPONSE or rejection of eac
 
 ### 4.4 REST API Endpoints
 
-| Endpoint | HTTP | Possible Error Codes |
+> **READ THIS BEFORE THE TABLE — a row is not the complete set of codes an endpoint returns.**
+>
+> **(1) Four codes are reachable from EVERY endpoint below and are not repeated per row.** They
+> are properties of serving an HTTP request at all, not of any one endpoint:
+>
+> | Code | When |
+> |------|------|
+> | `6004 VALIDATION_ERROR` | the request body failed schema validation — except where an endpoint registers its own code for this, as `POST /api/v1/stations/provision` does with `4017` |
+> | `6001 SERVER_INTERNAL_ERROR` | an unhandled server fault |
+> | `6006 RATE_LIMIT_EXCEEDED` | the caller exceeded the endpoint's rate limit (Chapter 06 §7.1) |
+> | `6007 SERVICE_DEGRADED` | a dependency is transiently unavailable — answered `503` with `Retry-After`, see *What these lists are* below |
+>
+> **(2) A row lists what is PARTICULAR to that endpoint.** Read every row as *its own codes, plus
+> the four above.* A conformance check derived from a row alone will under-approximate; it must
+> add the four.
+>
+> **(3) Absence from a row is not a claim that a code is unreachable.** See *What these lists
+> are* below: these are the failures this specification **models**, not an exhaustive
+> enumeration of what a conforming server may emit.
+
+| Endpoint | HTTP | Particular Error Codes (**+ the four universal codes above**) |
 |----------|:----:|---------------------|
-| `POST /sessions/start` | 400, 402, 404, 409, 504 | 3001, 3002, 3005, 4001, 6002, 6003, 6005 |
-| `POST /sessions/{id}/stop` | 404, 409 | 3006, 3007, 6002 |
+| `POST /sessions/start` | 400, 402, 404, 409, 422, 500, 504 | 3000, 3001, 3002, 3003, 3004, 3005, 3008, 3009, 3010, 3011, 3012, 3013, 3014, 4001, 5000–5009, 5111, 6002, 6003, 6005 |
+| `POST /sessions/{id}/stop` | 404, 409, 503 | 3000, 3005, 3006, 3007, 3011, 6002 |
 | `GET /sessions/{id}` | 404 | 3006 |
-| `POST /pay/{code}/start` | 400, 404, 409 | 3001, 3005, 6003 |
-| `GET /pay/sessions/{token}/status` | 401, 404 | 2011, 2012 |
-| `POST /me/offline-txs` | 400, 401 | 2009, 2010, 3015, 6004 |
-| `POST /sessions/offline-auth` | 401, 402 | 2009, 4001 |
+| `POST /pay/{code}/start` | 400, 402, 404, 409, 422, 500, 504 | 3000, 3001, 3002, 3003, 3004, 3005, 3008, 3009, 3010, 3011, 3012, 3013, 3014, 4001, 5000–5009, 5111, 6002, 6003 |
+| `GET /pay/sessions/{token}/status` | 401, 404 | 2011, 2012, 3006 |
+| `POST /me/offline-txs` | 400, 401 | 2009, 2010, 3015 |
+| `POST /sessions/offline-auth` | 400, 401, 402, 403 | 2008, 2009, 2010, 4001 |
 | `POST /webhooks/payment-gateway/notification` | 401 | 4008 |
 | `POST /api/v1/stations/provision` | 400, 401, 409, 422 | 2019, 4010, 4015, 4016, 4017, 4018, 4019, 4020 |
+
+**Where the session rows come from.** `POST /sessions/start` and `POST /pay/{code}/start`
+dispatch **StartService [MSG-005]** to the station and relay its outcome, so their code sets are
+that action's set from [§4.1](#41-station--server-mqtt-actions) — including the `5000–5009` and
+`5111` hardware faults the *station* raises, which reach the REST caller unchanged. `POST
+/sessions/{id}/stop` relays **StopService [MSG-006]** the same way. This is why those rows are
+long: a REST endpoint that dispatches an MQTT action inherits that action's failure domain, and
+listing only the failures the *server* originates would have described half of it.
+
+Before this revision these rows listed 3–7 codes each and omitted the relayed set entirely —
+`3004` was absent from `/sessions/start` while the reference server emitted it from that path,
+and `3000` appeared in no row at all. Corrected in 0.8.1; see the *Verification* note in the
+CHANGELOG for how the omission was found.
 
 **What these lists are.** The statuses and codes above are the set this specification **models**
 for each endpoint — the failures it defines, and the answers it fixes. They are **not** an

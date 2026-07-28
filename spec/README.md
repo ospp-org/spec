@@ -14,7 +14,7 @@ ospp-version: 0.8.0
 | Field | Value |
 |-------|-------|
 | Status | Draft |
-| OSPP Version | 0.8.0 |
+| OSPP Version | 0.8.1 |
 | Last Updated | 2026-07-28 |
 
 > **Not all of this specification is at the same maturity.** The MQTT station↔server surface,
