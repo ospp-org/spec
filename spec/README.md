@@ -15,7 +15,18 @@ ospp-version: 0.8.0
 |-------|-------|
 | Status | Draft |
 | OSPP Version | 0.8.0 |
-| Last Updated | 2026-07-10 |
+| Last Updated | 2026-07-28 |
+
+> **Not all of this specification is at the same maturity.** The MQTT station↔server surface,
+> HTTPS provisioning, and offline reconciliation are **stable** — implemented and exercised
+> against an independent implementation. The **BLE transport, handshake and session are
+> EXPERIMENTAL**: published for review, not for implementation, and carrying three known
+> blockers that make them unimplementable as written. See
+> [Release status](../README.md#release-status) and
+> [KNOWN-ISSUES](../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-three-defects).
+>
+> **Extended** and **Complete** compliance cannot be claimed against 0.8, because both require
+> the BLE half of the Offline profile. **Development** and **Standard** are unaffected.
 
 ## Document Map
 
@@ -30,7 +41,7 @@ domain-specific behavior.
 | -- | [glossary.md](glossary.md) | Glossary | Draft | Normative definitions of all terms used across the specification. |
 | 00 | [00-introduction.md](00-introduction.md) | Introduction | Draft | Scope, audience, document conventions, normative and informative references. |
 | 01 | [01-architecture.md](01-architecture.md) | Architecture | Draft | System topology, hardware model, identity scheme, controller topologies, communication stack. |
-| 02 | [02-transport.md](02-transport.md) | Transport | Draft | MQTT 5.0 / TLS 1.2+/1.3, BLE GATT, HTTPS REST, topic structure, QoS, connection lifecycle, ACL. |
+| 02 | [02-transport.md](02-transport.md) | Transport | Draft | MQTT 5.0 / TLS 1.2+/1.3, HTTPS REST, topic structure, QoS, connection lifecycle, ACL. **§8 (BLE GATT) is EXPERIMENTAL** — and §8.6 is one of the two conflicting fragmentation definitions ([B-1](../KNOWN-ISSUES.md#b-1--two-incompatible-fragmentation-protocols-are-simultaneously-normative)). |
 | 03 | [03-messages.md](03-messages.md) | Message Catalog | Draft | Normative reference for every OSPP message: payload schemas, metadata, examples. |
 | 04 | [04-flows.md](04-flows.md) | Protocol Flows | Draft | End-to-end protocol flows for boot, sessions, reservations, offline scenarios. |
 | 05 | [05-state-machines.md](05-state-machines.md) | State Machines | Draft | Bay, Session, Reservation, BLE Connection, and Firmware Update FSMs. |
@@ -46,7 +57,7 @@ domain-specific behavior.
 | Transaction | [profiles/transaction/README.md](profiles/transaction/README.md) | Session start/stop, meter values, reservation lifecycle. |
 | Device Management | [profiles/device-management/README.md](profiles/device-management/README.md) | Configuration, firmware update, diagnostics, remote commands. |
 | Security | [profiles/security/README.md](profiles/security/README.md) | Security event reporting — real-time incident notifications (tamper, auth failure, firmware integrity). |
-| Offline | [profiles/offline/README.md](profiles/offline/README.md) | BLE transport, OfflinePass authorization, offline transaction log. |
+| Offline | [profiles/offline/README.md](profiles/offline/README.md) | OfflinePass authorization, offline transaction log, reconciliation — **stable**. BLE transport, handshake and session — **EXPERIMENTAL**, see [B-1/B-2/B-3](../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-three-defects). |
 
 ## Normative Language
 

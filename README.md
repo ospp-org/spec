@@ -4,7 +4,7 @@
 [![Status: Draft](https://img.shields.io/badge/status-draft-orange)]()
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 [![Messages: 40](https://img.shields.io/badge/messages-40-green)]()
-[![Schemas: 84](https://img.shields.io/badge/schemas-85-green)]()
+[![Schemas: 85](https://img.shields.io/badge/schemas-85-green)]()
 
 ---
 
@@ -12,6 +12,53 @@
 > It has NOT been security-audited, is NOT production-ready, and
 > breaking changes SHOULD be expected before v1.0.0 stable.
 > Feedback and contributions are welcome via [Issues](https://github.com/ospp-org/ospp/issues).
+
+---
+
+## Release status
+
+Not every part of this specification is at the same maturity. Read this before implementing.
+
+| Surface | Status in 0.8 | Basis |
+|---|---|---|
+| MQTT station↔server (Core, Transaction, Security, Device Management) | **Stable** | Implemented by a server and exercised by an independent station implementation |
+| HTTPS provisioning (`POST /api/v1/stations/provision`) | **Stable** | Implemented; error vocabulary and precedence chain covered by conformance cases |
+| Offline reconciliation, OfflinePass lifecycle, AuthorizeOfflinePass | **Stable** | Implemented and exercised over MQTT |
+| **BLE transport, handshake and session** | **EXPERIMENTAL** | See below |
+
+### BLE is experimental in 0.8
+
+The BLE surface — [`ble-transport.md`](spec/profiles/offline/ble-transport.md),
+[`ble-handshake.md`](spec/profiles/offline/ble-handshake.md),
+[`ble-session.md`](spec/profiles/offline/ble-session.md), the 15 schemas under
+[`schemas/ble/`](schemas/ble/), [Chapter 02 §8](spec/02-transport.md),
+[ADR-002](adr/ADR-002-ble-handshake-security-architecture.md), and conformance cases
+[TC-OFF-001](conformance/test-cases/offline/TC-OFF-001.md) and
+[TC-OFF-002](conformance/test-cases/offline/TC-OFF-002.md) — is **EXPERIMENTAL**. It is
+published for review, **not** for implementation, and it may change incompatibly without a MAJOR
+bump.
+
+**It carries three known blockers that make it unimplementable as written.** Each is stated in
+full in [KNOWN-ISSUES](KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-three-defects):
+
+- **B-1** — two incompatible fragmentation protocols are simultaneously normative, one in
+  Chapter 02 §8.6 and one in `ble-transport.md` §11.
+- **B-2** — a station-scoped OfflinePass is required by validation check 5 and by TC-OFF-002,
+  but cannot be expressed in `offline-pass.schema.json`.
+- **B-3** — the three BLE response schemas disagree with each other and with Chapter 07 §2.3;
+  `stop-service-response` has no rejection branch at all, while the profile mandates a
+  `Rejected` reply.
+
+Why it is marked rather than repaired: BLE is implemented nowhere. The server accepts no BLE key
+at provisioning and issues no `StationIdentity`, the firmware implementer has not begun it, and
+no second implementation exercises the transport. Repairing the three blockers means making
+design choices with nothing to validate them against — the pattern that produced the offline
+sequencing layer this cycle removed. They will be repaired against a real implementation.
+
+**Consequence for conformance.** The **Extended** and **Complete** compliance levels require the
+Offline / BLE profile, whose BLE half is experimental. **Neither level can be claimed against
+0.8.** **Development** and **Standard** are unaffected and remain claimable — see
+[Compliance Levels](conformance/README.md#2-compliance-levels).
 
 ---
 
