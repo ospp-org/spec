@@ -306,7 +306,7 @@ The ordering is the whole requirement, and generating-then-posting-then-persisti
 
 **Persisting the response — the station side of the replay rule.** The station **MUST** persist the trust and configuration fields of the provisioning response — `stationCaChain`, `brokerRootCa`, `rootCaThumbprint`, `serverVerifyKey`, `mqttConfig` — **exactly as received**, replacing any values it already holds. This applies to **every** successful response, **including a replay of an already-completed provision**.
 
-The replay case is the one that matters, and it is the one firmware is most likely to skip: a station retrying after a transport failure may treat itself as already provisioned and ignore the body. It **MUST NOT**. A replay can legitimately carry a rotated Station CA chain, a re-anchored broker trust anchor, a rotated `serverVerifyKey`, or a migrated `mqttConfig` — see *What a replay returns* under [Single-use and idempotent retry](#single-use-and-idempotent-retry) — and a station that keeps its stored copy is left holding a trust anchor that no longer validates or a broker address that no longer answers, with no in-band way to be told. Re-persisting the identity fields is a no-op, since those are byte-identical on a replay; it is the trust and configuration fields that change, and they are the reason the body must be read.
+The replay case is the one that matters, and it is the one firmware is most likely to skip: a station retrying after a transport failure may treat itself as already provisioned and ignore the body. It **MUST NOT**. A replay can legitimately carry a Station CA chain extended by a rotation, a re-anchored broker trust anchor, a rotated `serverVerifyKey`, or a migrated `mqttConfig` — see *What a replay returns* under [Single-use and idempotent retry](#single-use-and-idempotent-retry) — and a station that keeps its stored copy is left holding a trust anchor that no longer validates or a broker address that no longer answers, with no in-band way to be told. Re-persisting the identity fields is a no-op, since those are byte-identical on a replay; it is the trust and configuration fields that change, and they are the reason the body must be read.
 
 ### Single-use and idempotent retry
 
@@ -316,7 +316,7 @@ Because provisioning traverses unreliable links, the station **MAY** retry with 
 
 **Descriptive drift MUST be ignored.** A retry whose descriptive fields differ — `serialNumber`, `bayCount` — is a replay. These are the only descriptive fields the request carries: the body is a closed field set ([`provisioning-request.schema.json`](../schemas/provisioning-request.schema.json)), and station model and firmware version are reported in BootNotification ([Chapter 03 — Messages](03-messages.md)), not at provisioning. The server **MUST** return `200 OK` with the **byte-identical** certificate already issued and **MUST NOT** mint a second certificate. For these fields the token, not the body, determines the certificate. What the rest of the response carries is governed by *What a replay returns* below.
 
-**What a replay returns.** A replay is answered with `200 OK` and a response that is **schema-valid in full** ([`provisioning-response.schema.json`](../schemas/provisioning-response.schema.json)). Its fields divide into two groups, and the division is normative — byte-identity applies to one group and **MUST NOT** be applied to the other.
+**What a replay returns.** A replay is answered with `200 OK` and a response that is **schema-valid in full** ([`provisioning-response.schema.json`](../schemas/provisioning-response.schema.json)). Its fields divide into three groups, and the division is normative: byte-identity applies to the first group and **MUST NOT** be applied to the third; the second is bound to the certificate the response itself carries.
 
 **Identity — MUST be byte-identical to the original response.** These are what the token bound and certified; returning anything else would mean one token issued two identities:
 
@@ -327,19 +327,28 @@ Because provisioning traverses unreliable links, the station **MAY** retry with 
 | `clientCert` | the issued certificate itself |
 | `stationIdentity` | where present — the certificate issued over the station's **bound** BLE ECDH key |
 
+**Bound to the certificate in this response — MUST verify the `clientCert` returned alongside them.** These are not free to track current state on their own, because their whole function is to make the returned certificate usable:
+
+| Field | What binds it |
+|---|---|
+| `stationCaChain` | it is the chain the broker walks to verify **this** `clientCert` ([`provisioning-response.schema.json`](../schemas/provisioning-response.schema.json); [Chapter 06 §2.1](06-security.md)) |
+| `rootCaThumbprint` | it pins the apex of the chain actually returned, so it moves with that chain and not with any other |
+
+The rule is intra-response: **`stationCaChain` MUST contain a chain that verifies the `clientCert` carried in the same response, up to the apex `rootCaThumbprint` names.** On a first provision that is trivially the current chain. On a **replay after a Station CA rotation** it is not, because `clientCert` is frozen to the certificate the token issued and the current Station CA did not sign it. In that case the server **MUST** return a chain that still verifies the frozen leaf, and **MUST** additionally carry the current Station CA in the same field — the schema permits multiple concatenated PEM blocks precisely so one field can carry both — so the station holds the path that validates the certificate it is using **and** the path it will need once it renews. `rootCaThumbprint` **MUST** pin the apex of what was returned.
+
+> **Why this is not in the current-state group.** `stationCaChain` is not the station's trust anchor — it is what the station **presents** so the broker can build a path to *its* anchor ([Chapter 06 §2.1](06-security.md)). The station's own anchor for the broker is `brokerRootCa`. Grouping the two together, as earlier revisions did, produced a requirement no server could satisfy: replace the chain with the current one, and it no longer verifies the frozen certificate returned beside it; keep the issuing chain, and it is not current. Separating them dissolves that: the chain follows the certificate, the anchor follows the broker. No cross-signing or validity-overlap requirement exists anywhere in this specification, so a rotated Station CA cannot be assumed to verify leaves it did not sign.
+
 **Trust and configuration — MUST reflect the server's current state**, even where that differs from the original response:
 
 | Field | Why it is current |
 |---|---|
-| `stationCaChain` | the CA may have been rotated since issuance |
 | `brokerRootCa` | the broker's server-certificate trust anchor may have been re-anchored |
-| `rootCaThumbprint` | pins the apex of `stationCaChain`, so it moves with it |
 | `serverVerifyKey` | the server signing key has its own rotation protocol ([Chapter 06 §6.7](06-security.md)) |
 | `mqttConfig` | the broker may have moved, or its parameters changed |
 
 This is a **requirement, not a tolerance.** A token's TTL is fixed at issuance and may be days, so a replay can legitimately arrive after a CA rotation, a broker migration, or a server-key rotation. A server that froze these fields would hand the station a trust anchor that no longer validates, a broker address that no longer answers, or a verify key that cannot check the next OfflinePass — and each of those is unrecoverable **in band**, because the station needs a working connection before it can be told anything else. The station is required to persist what the response carries, replacing what it holds — see *Persisting the response* under this flow's *Postconditions* above — so a replay **MUST** carry values that work at the moment it is answered.
 
-Where these fields are interdependent the values returned **MUST** be mutually consistent **within the one response**: a rotated `stationCaChain` **MUST** be accompanied by the matching `rootCaThumbprint`, never the superseded one.
+Where these fields are interdependent the values returned **MUST** be mutually consistent **within the one response**, in both directions the response spans: `stationCaChain` **MUST** verify the `clientCert` returned beside it, and `rootCaThumbprint` **MUST** pin the apex of the `stationCaChain` returned beside *it* — never a superseded one, and never the apex of some other chain the server also holds.
 
 **Key drift MUST be rejected.** A retry that presents a **different public key** than the one bound to the already-issued certificate **MUST NOT** be treated as a replay. The server **MUST** reject it with `409 Conflict` and error `4015 PROVISIONING_KEY_MISMATCH` ([Chapter 07 §3.4](07-errors.md)), and **MUST NOT** issue a second certificate on that token. Returning a certificate bound to a key the requester does not hold is not idempotency — it is a failure the requester cannot detect.
 
