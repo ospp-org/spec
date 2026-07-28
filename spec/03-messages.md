@@ -1504,7 +1504,7 @@ Commands the station to perform a soft or hard reset. The station **MUST** rejec
 
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
-| `type` | string | Yes | `"Soft"` (restart application) or `"Hard"` (full hardware reboot) |
+| `type` | string | Yes | `"Soft"` (restart application) or `"Hard"` (factory reset) |
 
 #### RESPONSE Payload
 
@@ -1517,7 +1517,7 @@ Commands the station to perform a soft or hard reset. The station **MUST** rejec
 **Behavior:**
 - If active sessions exist, the station **MUST** respond with `Rejected` and error code `3016 ACTIVE_SESSIONS_PRESENT`. The server **SHOULD** send StopService for each active session first, then re-issue Reset.
 - `Soft` reset: Station sends `Accepted`, then restarts the application. After reboot, the station goes through the full [BootNotification](#11-bootnotification) sequence.
-- `Hard` reset: Station sends `Accepted`, then restores factory defaults — clearing all local configuration, cached credentials, and session history. The server **SHOULD** expect a re-provisioning flow after a hard reset.
+- `Hard` reset: Station sends `Accepted`, then restores factory defaults — clearing its provisioned identity, its server-supplied configuration and its session history, but **not** the out-of-band bootstrap inputs it needs to be provisioned again ([Reset §5.1](profiles/device-management/reset.md) draws that line exactly, and is normative). The station **MUST NOT** send a BootNotification on the restart that follows: it holds no client certificate, and Boot requires one. It restarts **unprovisioned** and re-enters [Station Provisioning](04-flows.md#2-station-provisioning). A server issuing a `Hard` reset **MUST** be prepared to mint a new provisioning token and have it delivered out of band ([Reset §5](profiles/device-management/reset.md) rule 6) — the station has no in-band way to request one.
 
 #### Example
 
