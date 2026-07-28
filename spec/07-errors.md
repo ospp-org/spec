@@ -244,7 +244,7 @@ A server implementing OSPP **MAY** expose other HTTP APIs alongside that surface
 | 403 | 2008 | Forbidden — action not permitted for this role |
 | 404 | 3005, 3006, 3012 | Not found — resource does not exist |
 | 409 | 3001, 3014, 4015, 6005 | Conflict — resource state conflict |
-| 422 | 3004, 3008, 3010, 4016 | Unprocessable — valid format but invalid values |
+| 422 | 3004, 3008, 3010, 4016, 4020 | Unprocessable — valid format but invalid values |
 | 429 | 6006 | Too many requests — rate limit exceeded |
 | 500 | 6000, 6001 | Internal server error |
 | 502 | 6003 | Bad gateway — station unreachable |
@@ -362,10 +362,21 @@ Payment errors cover wallet balance, credit limits, payment processing, refunds,
 | 4018 | `PROVISIONING_TOKEN_CONSUMED` | Error | true | The provisioning token presented to `POST /api/v1/stations/provision` **authenticated**, but has already been consumed and this request is not a replay of the provision that consumed it. Two causes, whose recoveries differ, so this is a branching entry per §1.4: servers **MUST** carry `details.reason`. `already_consumed` — a concurrent request consumed the token between this caller's read and its write; **transient**, and once the winner writes its certificate the same request replays it. `consumed_without_certificate` — the consuming request failed before issuing, so the token is spent and no certificate exists; **terminal**. An absent discriminator defaults to `already_consumed`, the recoverable branch (§1.4). HTTP `409 Conflict`. Evaluated with the token, after `2019`. Contrast `2019`: the token did not authenticate at all. Contrast `4015`: the token authenticated and *was* replayed, but the identity presented differs from the bound set. | Station: do NOT regenerate keys on any branch — a fresh key is answered `4015`. Branch on `details.reason`. `already_consumed` — another request holds this token; retry unchanged after a short delay, bounded, until it resolves to the certificate or to the branch below. `consumed_without_certificate` — this token can never issue one; request a new provisioning token. If `details.reason` is absent, assume `already_consumed`. Operator: issue a fresh token. |
 | 4019 | `PUBLIC_KEY_INVALID` | Error | true | A **bare public key** submitted to `POST /api/v1/stations/provision` — `receiptSigningPublicKey`, or `stationPubKey` when present — is unusable: it does not decode, or it decodes to something other than an ECDSA P-256 public key (wrong algorithm, or a curve outside the allow-list). The bare-key counterpart of `4010`, which covers the identical defect for the key carried **inside** the `tlsCsr`; both answer `400 Bad Request`, because the same defect in the same request must not vary by how the key was packaged. Schema validation (`4017`) catches only the PEM armour and the SEC1 length and alphabet — neither the DER body, the SEC1 prefix, nor whether the point is on the curve — so a key can pass the schema and still fail here. Servers **SHOULD** name the rejected member in `details.field`. Reachable both before and after the token has issued a certificate, whose safe recoveries are **opposite**, so servers **MUST** carry `details.phase` (`first-provision` or `retry`). Evaluated after `4010` and before `4016` — see *Error precedence* in [Flows §2](04-flows.md#single-use-and-idempotent-retry). The rejection does not consume the token and alters no binding. | Station: submit ECDSA P-256 key material only. Recovery depends on `details.phase`. `first-provision` — generate a correct P-256 key for the named role and resubmit on the same token; nothing is bound yet. `retry` — do NOT generate a new key: a fresh key is answered `4015`. Resubmit the key already bound, or request a new token if it cannot be produced. If `details.phase` is absent, assume `retry`. Server: name the rejected member in `details.field`. |
 
-> **The `4.01x` decade is now full.** `4010`–`4019` are all assigned. A further certificate- or
-> provisioning-management code needs a new sub-range heading (`4.02x`) rather than an extension of
-> this table; the heading is what carries the grouping, and silently spilling past `4019` would
-> leave the sub-range title describing only part of its contents.
+> **The `4.01x` decade is full.** `4010`–`4019` are all assigned. A further certificate- or
+> provisioning-management code goes in `4.02x` below rather than extending this table; the heading
+> is what carries the grouping, and silently spilling past `4019` would leave the sub-range title
+> describing only part of its contents. `4.02x` was opened by `4020` on this basis.
+
+#### 4.02x — Provisioning Errors
+
+Opened because `4.01x` is full (see the note above). `4.01x` is titled *Certificate Management
+Errors* and holds `4015`–`4019`, which are provisioning codes rather than certificate ones; this
+sub-range is named for what it holds rather than inheriting that. See
+[KNOWN-ISSUES](../KNOWN-ISSUES.md) for the grouping defect this makes visible.
+
+| Code | errorText | Severity | Recoverable | Description | Recommended Action |
+|:----:|-----------|:--------:|:-----------:|-------------|-------------------|
+| 4020 | `BAY_COUNT_MISMATCH` | Error | true | The `bayCount` declared in the body of `POST /api/v1/stations/provision` does not equal the number of bays registered for the station the token is bound to. A **submitted-vs-stored** mismatch, structurally the same as `4015` but on a descriptive attribute rather than on key material, and therefore not a key error: no binding is created or altered and no certificate is issued. Distinct from `4017`, which is schema validation — a `bayCount` outside its declared type or bounds is rejected there and never reaches this comparison. HTTP `422 Unprocessable Entity`. Evaluated **after** `4010` and **before** `4019`: it depends only on the token and one declared integer, so it is decidable without examining any key, and failing it early avoids key validation on a request that cannot succeed. Reachable **only** on a first provision — on a replay the token is the key and body drift is ignored ([Flows §2](04-flows.md#single-use-and-idempotent-retry)), so there is no consumed-token branch and no discriminator. The rejection does not consume the token and alters no binding. | Station: correct the declared `bayCount` and resubmit on the **same** token — this rejection does not consume it. Do **not** regenerate keys: they are not what was rejected, and a fresh key on a later retry is answered `4015`, which is not recoverable. If the declared count is right, the operator corrects the station record instead. Server: carry both counts in `details`. |
 
 ### 3.5 Station Hardware & Software Errors (5xxx)
 
@@ -506,7 +517,7 @@ This table maps which error codes can appear in the RESPONSE or rejection of eac
 | `POST /me/offline-txs` | 400, 401 | 2009, 2010, 3015, 6004 |
 | `POST /sessions/offline-auth` | 401, 402 | 2009, 4001 |
 | `POST /webhooks/payment-gateway/notification` | 401 | 4008 |
-| `POST /api/v1/stations/provision` | 400, 401, 409, 422 | 2019, 4010, 4015, 4016, 4017, 4018, 4019 |
+| `POST /api/v1/stations/provision` | 400, 401, 409, 422 | 2019, 4010, 4015, 4016, 4017, 4018, 4019, 4020 |
 
 ---
 
@@ -872,6 +883,7 @@ Vendors MAY define custom error codes in the **9000–9999** range for proprieta
 | 4017 | `PROVISIONING_REQUEST_INVALID` | Error | P |
 | 4018 | `PROVISIONING_TOKEN_CONSUMED` | Error | P |
 | 4019 | `PUBLIC_KEY_INVALID` | Error | P |
+| 4020 | `BAY_COUNT_MISMATCH` | Error | P |
 | 5000 | `HARDWARE_GENERIC` | Warning | H |
 | 5001 | `PUMP_SYSTEM` | Critical | H |
 | 5002 | `FLUID_SYSTEM` | Warning | H |

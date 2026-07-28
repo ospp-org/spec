@@ -88,3 +88,50 @@ The following 30 issues were resolved in the backlog batch fix:
 | ID | Category | Severity | Resolution |
 |----|----------|----------|------------|
 | V2-035 | Buffer | MAJOR | Categorized buffering: MUST buffer TransactionEvent (1000) + SecurityEvent (200); MAY discard 6 regenerable message types. Single source of truth in 01-architecture.md §6.5; 02-transport.md and 07-errors.md reference it. Hardware: 512 KB MUST, 1 MB SHOULD. |
+
+---
+
+## OPEN — 4xxx grouping: the provisioning codes sit under a payment heading, and the SDKs derive `category` from the range
+
+**Raised 2026-07-28, opening `4.02x`. Recorded rather than fixed: renaming a section heading is
+not within the arc that found it, and the wire-visible half needs a cross-SDK decision.**
+
+Three layers disagree about what the `4xxx` range holds.
+
+1. **`spec/07-errors.md:334` — `### 3.4 Payment & Credit Errors (4xxx)`**, whose intro at `:336`
+   reads *"Payment errors cover wallet balance, credit limits, payment processing, refunds, and
+   offline spending constraints."* Eleven of its codes are provisioning or certificate codes and
+   none of them is any of those things.
+2. **`spec/07-errors.md:350` — `#### 4.01x — Certificate Management Errors`** holds `4010`–`4019`.
+   Only `4010`–`4014` are certificate codes; `4015`–`4019` are provisioning codes
+   (`PROVISIONING_KEY_MISMATCH`, `PROVISIONING_KEY_REUSE`, `PROVISIONING_REQUEST_INVALID`,
+   `PROVISIONING_TOKEN_CONSUMED`, `PUBLIC_KEY_INVALID`). The new `4.02x — Provisioning Errors`
+   is named for its contents, which makes the older mislabelling more visible, not less.
+3. **The SDKs derive `category` arithmetically from the numeric range.** In
+   `ospp-sdk-php`, `src/Enums/OsppErrorCode.php:143-155`:
+
+   ```php
+   public function category(): string
+   {
+       return match (intdiv($this->value, 1000)) {
+           1 => 'transport', 2 => 'auth', 3 => 'session',
+           4 => 'payment',  5 => 'station', 6 => 'server',
+           default => 'unknown',
+       };
+   }
+   ```
+
+**This third one has teeth: it is wrong on the wire, not merely in a heading.** Every
+provisioning code reports `category: "payment"` — `4015`, `4016`, `4017`, `4018`, `4019` and now
+`4020`. A consumer routing or filtering by category files a station-provisioning failure as a
+payment failure. Verified at runtime against `ospp/protocol v0.8.3`.
+
+`category` is **not** one of the seven REQUIRED Error Object fields (`07-errors.md:62-68`), so
+this does not make an emitted envelope non-conforming today. It is wrong wherever a consumer
+reads the accessor, which is why it is recorded as a defect rather than a cosmetic note.
+
+**Not decided here**, and deliberately so — each option has a cost this arc cannot weigh:
+renaming `§3.4` touches every cross-reference to it; re-ranging the provisioning codes out of
+`4xxx` is a breaking change to a published vocabulary; making `category` a per-code property
+rather than a derived one is a cross-SDK change (PHP and TS must agree, or the same code reports
+two categories). Whichever is chosen, the arithmetic derivation is the part that must stop.
