@@ -1,22 +1,27 @@
 # OSPP Known Issues
 
-**Date:** 2026-02-27
-**Protocol Version:** 0.2.4
-**Status:** All issues resolved
-**Source:** ospp_audit_v2.md (post-correction audit)
+**Date:** 2026-07-28
+**Protocol Version:** 0.8.0
+**Status:** 3 blockers open (all BLE), 4 non-blocking issues open
+**Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle
 
 ---
 
 ## Summary
 
-| Severity | Count |
-|----------|------:|
-| MAJOR | 0 |
-| MINOR | 0 |
-| **Total** | **0** |
+| Severity | Count | Where |
+|----------|------:|-------|
+| BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
+| OPEN | 4 | 4xxx grouping · REST 5xx enumeration · provisioning station-side conformance · `StationIdentityCertificate` |
+| **Total open** | **7** | |
 
-All 3 CRITICAL issues (AUDIT-V2-001, V2-009, V2-024) have been resolved.
-All 31 MAJOR/MINOR issues have been resolved (see resolution tables below).
+**The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
+EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
+not affect the MQTT surface, offline reconciliation, or provisioning, all of which are
+implemented and exercised against a second implementation.
+
+The 0.2.x audit issues below are all resolved and retained for history: all 3 CRITICAL
+(AUDIT-V2-001, V2-009, V2-024) and all 31 MAJOR/MINOR.
 
 ### Resolved in Focused Audits (21 issues removed)
 
@@ -88,6 +93,79 @@ The following 30 issues were resolved in the backlog batch fix:
 | ID | Category | Severity | Resolution |
 |----|----------|----------|------------|
 | V2-035 | Buffer | MAJOR | Categorized buffering: MUST buffer TransactionEvent (1000) + SecurityEvent (200); MAY discard 6 regenerable message types. Single source of truth in 01-architecture.md §6.5; 02-transport.md and 07-errors.md reference it. Hardware: 512 KB MUST, 1 MB SHOULD. |
+
+---
+
+## BLOCKER — the BLE surface is not implementable as written (three defects)
+
+**Raised 2026-07-28, scoping the 0.8.0 tag. These are the reason the BLE artefacts are marked
+EXPERIMENTAL — see [BLE release status](README.md#ble-is-experimental-in-08). Recorded, not
+repaired: each fix is a design decision, and BLE is implemented nowhere — the server rejects the
+BLE key at provisioning, no `StationIdentity` is issued, and no second implementation exercises
+the transport. Designing against nothing is what produced the sequencing layer this cycle
+removed.**
+
+### B-1 — two incompatible fragmentation protocols are simultaneously normative
+
+[`02-transport.md` §8.6](spec/02-transport.md) and
+[`profiles/offline/ble-transport.md` §11](spec/profiles/offline/ble-transport.md) both define, as
+a MUST, how a BLE message longer than the effective MTU is split — and they disagree on every
+element:
+
+| | `02-transport.md` §8.6 | `ble-transport.md` §11 |
+|---|---|---|
+| header | printable ASCII `{F:M/N}` | 3 binary bytes |
+| numbering | 1-based (`Fragment numbering starts at 1`) | 0-based `sequenceNumber` |
+| terminator | implicit, `M == N` | explicit `flags` bit 0 |
+| 5 s timeout runs from | the **previous** fragment | the **first** fragment |
+
+A sender obeying one is unintelligible to a receiver obeying the other, and nothing in either
+chapter ranks them. `ble-transport.md` §11 is the more complete definition (it specifies
+encrypt-then-fragment ordering against the AEAD channel), but §8.6 is in a numbered chapter and
+carries a worked example, so neither is safely deletable without deciding which the eventual
+implementation follows.
+
+### B-2 — a station-scoped OfflinePass is unrepresentable in the authoritative schema
+
+Validation check 5 requires the station's ID to be permitted by the pass
+([`offline-pass.md`:66](spec/profiles/offline/offline-pass.md), rejecting with
+`2006 OFFLINE_STATION_MISMATCH`), and
+[`TC-OFF-002`:17-19](conformance/test-cases/offline/TC-OFF-002.md) instructs a tester to "Create
+an OfflinePass whose station-scoping constraint does not include the test station".
+
+[`offline-pass.schema.json`](schemas/common/offline-pass.schema.json) has no member that can
+carry that constraint — not at the top level, not inside `constraints` — and sets
+`additionalProperties: false` at **both** levels, so the pass the conformance case asks for
+cannot be constructed and remain schema-valid.
+
+This bites on the **BLE** path only. On the MQTT path the constraint is server-side state, not a
+wire field — [`authorize-offline-pass.md`:49](spec/profiles/offline/authorize-offline-pass.md)
+is explicit that `allowed_station_ids` belongs to "the **server's stored pass record** (not a
+wire field)", and [`reconciliation.md`:92](spec/profiles/offline/reconciliation.md) reads it from
+there. A station validating a pass locally over BLE has no server to ask and can only read the
+pass, which cannot say.
+
+### B-3 — the three BLE response schemas disagree with each other and with Chapter 07
+
+[`07-errors.md` §2.3](spec/07-errors.md) defines the BLE error shape as a **nested** `error`
+object carrying seven fields. No BLE schema implements it, and no two agree:
+
+| schema | rejection fields | matches §2.3? |
+|---|---|---|
+| [`ble/auth-response`](schemas/ble/auth-response.schema.json) | flat `reason` (≤256) + `errorCode` | no — flat, no `errorText` |
+| [`ble/start-service-response`](schemas/ble/start-service-response.schema.json) | flat `errorCode` + `errorText` (≤128) | no — flat, no `reason` |
+| [`ble/stop-service-response`](schemas/ble/stop-service-response.schema.json) | **none** | no |
+
+`stop-service-response` is the sharp one. Its `result` enum admits `Rejected`, its `allOf`
+branches only on `Accepted`, and `additionalProperties: false` closes it — so a station obeying
+[`ble-session.md`:157](spec/profiles/offline/ble-session.md) ("If the `sessionId` does not match
+any active session, the station **MUST** respond with `Rejected`") can state that it refused but
+has no conforming way to say why, and cannot add a field to do so.
+
+Fixing this means choosing whether BLE carries the full Error Object under MTU pressure — §2.3
+already concedes truncation of `errorDescription` — or a deliberate subset, and then applying one
+answer to all three schemas plus the profile prose that mirrors them
+([`ble-session.md`:29-33](spec/profiles/offline/ble-session.md) and `:146-147`).
 
 ---
 
