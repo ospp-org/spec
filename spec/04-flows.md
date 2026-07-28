@@ -261,6 +261,9 @@ sequenceDiagram
 
 - The station MUST use `mqttConfig.brokerUri` from the provisioning response as the MQTT connection target on every connect attempt. If the field is absent, the station MAY use a pre-configured fallback URL.
 - Other `mqttConfig` fields follow the same MUST/MAY pattern: when present in the provisioning response, the station MUST honor them (`brokerHost`, `brokerPort`, `tlsVersion`, `qosLevel`, `cleanStart`, `mqttVersion`, `clientIdTemplate`, `topicPrefix`, `keepAliveSeconds`); when absent, the station MAY use pre-configured defaults.
+- Two of those fields were also fixed by [Chapter 02 — Transport §1.2](02-transport.md#12-connection-parameters), which left a station holding two MUSTs and no rule for choosing. Each now has **one** authority:
+  - **`clientIdTemplate` — Transport governs.** The value is `{stationId}` and the schema pins it there. The Client ID is not a tunable: the broker enforces topic ACLs on the certificate CN ([Chapter 06 §3.3](06-security.md)), so a Client ID that is anything other than the `stationId` is a Client ID whose ACL does not match its own topics. A server **MUST NOT** advertise another value, and a station that receives one **MUST** use `{stationId}` regardless.
+  - **`keepAliveSeconds` — the provisioning response governs.** Transport's `30` is the value to use **when the field is absent**, not a ceiling on what may be advertised. Keep Alive is a liveness parameter with no cryptographic binding, and deployments on constrained cellular links legitimately need a different one; the broker's 1.5× disconnect multiplier follows whatever value is in force.
 
 ### Error Paths
 

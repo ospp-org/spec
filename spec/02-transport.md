@@ -40,13 +40,15 @@ The station MUST establish the MQTT connection with the following parameters:
 |-----------|-------|-----------|
 | **Clean Start** | `false` | Persistent sessions — queued messages survive brief disconnects |
 | **Session Expiry Interval** | `3600` (1 hour) | Session state is retained for up to 1 hour after disconnect |
-| **Keep Alive** | `30` seconds | Balance between liveness detection and bandwidth |
+| **Keep Alive** | `30` seconds — **default; overridden by `mqttConfig.keepAliveSeconds`** when the provisioning response carries it ([Flows §2](04-flows.md#2-station-provisioning)) | Balance between liveness detection and bandwidth |
 | **Receive Maximum** | `10` | Flow control — max 10 unacknowledged messages in flight |
 | **Maximum Packet Size** | `65536` (64 KB) | Practical limit; typical messages are 200–500 bytes |
-| **Client ID** | `{stationId}` (e.g., `stn_a1b2c3d4`) | MUST match the CN in the station's X.509 client certificate. The `stationId` already includes the `stn_` prefix — do not add it again. |
+| **Client ID** | `{stationId}` (e.g., `stn_a1b2c3d4`) — **fixed; not overridable by `mqttConfig.clientIdTemplate`** | MUST match the CN in the station's X.509 client certificate. The `stationId` already includes the `stn_` prefix — do not add it again. The broker enforces topic ACLs on that CN (§3.3 of [Chapter 06](06-security.md)), so this value is bound to the certificate rather than configured. |
 | **Will Delay Interval** | `10` seconds | Grace period before LWT fires (prevents false disconnects) |
 
-The broker MUST be configured with a keep-alive multiplier of **1.5**, meaning it will disconnect a station after **45 seconds** without any MQTT packet (PINGREQ, PUBLISH, etc.).
+The broker MUST be configured with a keep-alive multiplier of **1.5**, meaning it will disconnect a station after **45 seconds** without any MQTT packet (PINGREQ, PUBLISH, etc.) — or after 1.5× whatever Keep Alive is actually in force, where the provisioning response advertised a different one.
+
+> **Where this table is a default and where it is absolute.** Every row here is what the station uses when the provisioning response says nothing. `mqttConfig` ([Flows §2](04-flows.md#2-station-provisioning)) may carry a different **Keep Alive**, and the advertised value then governs. It may **not** carry a different **Client ID**: that one is bound to the certificate CN, not configured, and the schema pins `clientIdTemplate` accordingly. The remaining advertised parameters — QoS, Clean Start, MQTT version, TLS floor — are pinned by the response schema to the values in this chapter and cannot disagree with it. **Receive Maximum**, **Maximum Packet Size** and **Will Delay Interval** have no `mqttConfig` field at all and are therefore always taken from this table.
 
 ### 1.3 TLS (1.2 floor, 1.3 recommended)
 

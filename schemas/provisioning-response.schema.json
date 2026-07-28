@@ -105,10 +105,9 @@
         },
         "clientIdTemplate": {
           "type": "string",
-          "minLength": 1,
-          "maxLength": 128,
+          "const": "{stationId}",
           "default": "{stationId}",
-          "description": "MQTT 5.0 Client ID template. The station substitutes {stationId} with its own stationId before sending CONNECT. The resulting Client ID MUST equal the CN in the station's TLS client certificate (Chapter 02 — Transport §1.2 / Chapter 06 — Security §3.3)."
+          "description": "MQTT 5.0 Client ID template. The station substitutes {stationId} with its own stationId before sending CONNECT. PINNED: Chapter 02 — Transport §1.2 governs this field and the only conforming value is the literal \"{stationId}\". The resulting Client ID MUST equal the CN in the station's TLS client certificate, because the broker enforces topic ACLs on that CN (Chapter 06 — Security §3.3) — a Client ID that is not the stationId is one whose ACL does not match its own topics. Previously an unconstrained 1..128 string, which let a schema-valid response contradict §1.2 with no rule for resolving it."
         },
         "topicPrefix": {
           "type": "string",
@@ -129,7 +128,7 @@
           "minimum": 10,
           "maximum": 65535,
           "default": 30,
-          "description": "MQTT 5.0 Keep Alive interval the station MUST use on CONNECT. Chapter 02 — Transport §1.2 specifies 30 seconds (broker disconnects after 45s of silence using a 1.5x multiplier)."
+          "description": "MQTT 5.0 Keep Alive interval the station MUST use on CONNECT. AUTHORITATIVE: where this field is present the advertised value governs, and the broker's 1.5x disconnect multiplier follows it. Chapter 02 — Transport §1.2's 30 seconds is the value to use when this field is ABSENT, not a ceiling on what may be advertised — Keep Alive carries no cryptographic binding and constrained cellular deployments legitimately need a different one."
         },
         "cleanStart": {
           "type": "boolean",
@@ -164,7 +163,7 @@
           "description": "OPTIONAL Last Will and Testament topic template. When present the station SHOULD publish a ConnectionLost LWT (MSG-011) on this topic at MQTT CONNECT. The {stationId} placeholder, if present, is substituted by the station. Defaults to {topicPrefix}/stations/{stationId}/to-server when omitted (Chapter 02 — Transport §4.3)."
         }
       },
-      "description": "MQTT 5.0 broker connection parameters. Defaults align with Chapter 02 — Transport §1.2 normative values; servers SHOULD NOT advertise values that contradict §1.2 (the schema rejects QoS≠1, cleanStart≠false, mqttVersion≠5.0, tlsVersion below the 1.2 floor to enforce this)."
+      "description": "MQTT 5.0 broker connection parameters. Each field has ONE authority. PINNED to Chapter 02 — Transport §1.2 and rejected by this schema if they disagree: qosLevel (≠1), cleanStart (≠false), mqttVersion (≠5.0), tlsVersion (below the 1.2 floor), and clientIdTemplate (≠\"{stationId}\", because the Client ID is bound to the certificate CN the broker runs its topic ACL on). ADVERTISED, i.e. this response governs and §1.2 supplies the value only when the field is absent: brokerHost, brokerPort, brokerUri, topicPrefix, keepAliveSeconds, sessionExpirySeconds, lastWillTopic. Note that §1.2's Receive Maximum, Maximum Packet Size and Will Delay Interval have no field here and are therefore always taken from §1.2."
     }
   }
 }
