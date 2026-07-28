@@ -369,6 +369,27 @@ The comparison is **per key kind**, against the bound set. **A retry is a replay
 | `receiptSigningPublicKey` | offline receipt signatures | the server verifies receipts against a key the station no longer holds — every offline receipt fails at reconciliation, days later |
 | static BLE ECDH public key ([Chapter 06 §6.5.2](06-security.md)) — **only when BLE is supported** | the StationIdentity certificate | `es = ECDH(appEphemeral, stationStaticPub)` is never reproduced — every BLE handshake fails |
 
+**Why `receiptSigningPublicKey` is required of every station.** It is the one key in the table
+whose purpose lies outside the profiles every station must implement — receipts are an offline
+concern, and a station that never runs an offline session never signs one. It is REQUIRED
+anyway, deliberately. Provisioning is the only moment at which the server can bind a key to this
+station's identity under a single-use token: the key set is frozen when the token is consumed
+([*Persisting the key set*](#single-use-and-idempotent-retry)), and a station that later gains
+offline capability — by firmware update, or by an operator enabling it — cannot add a key
+without a whole new provisioning cycle, on hardware that is already in the field. Collecting it
+unconditionally costs one secure-element slot and one key generation on a station that never
+uses it. Making it conditional would cost a site visit or a re-provision on every station that
+ever does.
+
+This is forward compatibility, not a dependency of the online path on the offline one. Nothing
+in the Core, Transaction or Security profiles reads this key; the server stores it and uses it
+only at reconciliation. The obligation it creates on a station is to generate and retain a
+second P-256 key pair — not to implement anything offline. Note that the BLE key in the row
+above is treated the *opposite* way, and is conditional on `bleSupported`: that key's
+consequence is a failed handshake on a transport the station does not have, whereas an
+unusable receipt key is discovered days later at reconciliation, when the transactions it was
+meant to protect are already spent.
+
 A retry whose key kinds and keys match the bound set exactly is a replay, and is answered as described above.
 
 **Comparison basis.** The comparison **MUST** be made on the **decoded public key**, never on the transmitted bytes. For the CSR this means the DER-encoded `SubjectPublicKeyInfo`, **not** the raw CSR bytes: a CSR is self-signed with ECDSA, whose signatures are randomised, so two honest CSRs for the same key differ byte-wise and a byte comparison would reject a legitimate retry. Equivalently, for the other keys a re-encoding of the same point — compressed vs. uncompressed SEC1, PEM whitespace — is **not** drift, whereas a different point **is**.
