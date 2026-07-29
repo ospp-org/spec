@@ -38,6 +38,7 @@
           },
           "errorText": {
             "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]+$",
             "maxLength": 128,
             "description": "Machine-readable error name (present when status is Rejected or NotSupported)"
           }

@@ -23,8 +23,9 @@
     },
     "errorText": {
       "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]+$",
       "maxLength": 128,
-      "description": "Human-readable error description. Present when status is Rejected."
+      "description": "Machine-readable error name in UPPER_SNAKE_CASE. Present when status is Rejected."
     }
   },
   "allOf": [
