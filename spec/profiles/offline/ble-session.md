@@ -201,7 +201,7 @@ After the service ends (manual stop or auto-stop), the app reads characteristic 
 
 1. The app **SHOULD** read FFF6 after receiving a `ReceiptReady` notification on FFF5.
 2. The app **MUST** store the receipt in local secure storage for later upload to the server.
-3. The receipt includes a `txCounter` field for transaction ordering and gap detection during reconciliation. The app **MUST** preserve this field unmodified.
+3. The receipt includes a `txCounter` field carried as forensic evidence for reconciliation. The app **MUST** preserve this field unmodified — it is inside the signed body, so altering it invalidates the signature.
 4. The receipt's `signature` is an ECDSA-P256-SHA256 signature computed by the station over the canonical `data` field using the station's private key. The server verifies this signature during reconciliation.
 5. The FFF6 value is served as an AEAD frame under the **current** connection's `k_station_to_app` (06-security.md §6.5.3): only the authenticated handshake peer can read the receipt, which carries `userId`/`deviceId`/amounts (finding N15). The financial **record** persists in the station's NVS independently of the BLE channel. If the app is unable to read FFF6 (e.g., BLE disconnect), it **MAY** reconnect later — but because the per-connection session key is discarded on disconnect ([ble-transport.md §13](ble-transport.md)), the app **MUST** complete a fresh handshake first; the station then re-seals the retained receipt under the new channel's key for retrieval. The station **MUST** retain the receipt record until the next session begins on the same bay or the station reboots.
 

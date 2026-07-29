@@ -60,7 +60,7 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 **Countermeasures:**
 - **OfflinePass** (see §6.1) enforces hard limits: `maxTotalCredits`, `maxUses`, `maxCreditsPerTx`, `allowedServiceTypes` (see §6.1).
 - **Epoch-based revocation** (§6.6) — incrementing the global `RevocationEpoch` invalidates ALL passes issued before that epoch. Constant-time check on station; no CRL distribution required.
-- **ECDSA P-256 signed receipts with txCounter** (§6.2) — stations cryptographically sign every transaction including a monotonic counter. Counter gaps trigger fraud alerts. Unsigned or incorrectly signed transactions are flagged as CRITICAL.
+- **ECDSA P-256 signed receipts with txCounter** (§6.2) — stations cryptographically sign every transaction including a monotonic counter. Unsigned or incorrectly signed transactions are flagged as CRITICAL. The counter itself is forensic (§6.3): a discontinuity raises an operator alert on the station and never withholds settlement.
 - **Fraud scoring** (§7.4) — post-reconciliation scoring with automatic response (disable offline, revoke pass, block user).
 
 ### T04 - Unauthorized Station Access
@@ -1022,7 +1022,7 @@ Every offline transaction produces a cryptographically signed receipt, ensuring 
 
 > **Note 2:** The mandatory fields listed in `receipt_fields` for the applicable form — pass-form or auth-form (plus `meterValues` when present — see Note 4) — are the only fields canonicalized for signing. The receipt envelope's `data`, `signature`, and `signatureAlgorithm` fields are **not** part of the signed input — they are the output container produced by the signing process. Implementations MUST NOT include them in the canonicalized receipt body.
 
-> **Note 3:** The `txCounter` field is included in the signed receipt data to enable gap detection during reconciliation. The server can verify monotonically increasing counters and detect missing transactions (e.g., counter 5 → 7 indicates a missing transaction) without requiring a hash chain.
+> **Note 3:** The `txCounter` field is included in the signed receipt data so that the counter a station emitted is bound to the transaction and cannot be restated afterwards. It gives an operator a reconstructable view of the station's offline log without a hash chain. It is **not** a completeness proof and is not used as one — see §6.3.1.
 
 > **Note 4 (v0.4.2):** `meterValues` is signed **when present** in the transaction payload and **omitted from the canonical body when absent** — implementations MUST NOT emit an empty `meterValues: {}` object into the canonical form (doing so would change the canonical bytes and break signature verification on the server). The server-side verifier reconstructs the canonical body conditionally on `meterValues` presence, matching the station's omit-when-absent behavior.
 
@@ -1050,26 +1050,36 @@ During reconciliation ([Flow §10](04-flows.md#10-offline--online-reconciliation
 
 The cross-check semantics on the verified canonical body (`receipt_fields` decoded from `canonical_bytes`) are defined in `profiles/offline/reconciliation.md` §6 (Reconcile-Time Re-validation Gate) checks #1, #2, #3, #6.
 
-### 6.3 Signed Counter — Transaction Ordering and Gap Detection
+### 6.3 Signed Counter — Forensic Evidence
 
-Each offline transaction includes a monotonically increasing `txCounter` (per station) in the ECDSA-signed receipt data (§6.2). This provides ordering and tamper detection without the complexity of a hash chain.
+Each offline transaction includes a monotonically increasing `txCounter` (per station) in the ECDSA-signed receipt data (§6.2). It is an **audit aid, not an access control**: it lets an operator reconstruct a station's offline log and see that something is missing, without the complexity of a hash chain.
 
 **Properties:**
-- **Ordering:** The `txCounter` ensures transactions are processed in the correct order during reconciliation.
-- **Gap detection:** A counter gap (e.g., 5 → 7) reveals a missing transaction. The reconciliation-time handling of a gap — its HIGH-severity fraud classification and the `Deferred` hold until the missing transactions arrive or an operator manually resolves it — is defined normatively in [reconciliation.md §4.2](profiles/offline/reconciliation.md#42-txcounter-gap-detection); this chapter does not restate it.
-- **Non-repudiation:** The `txCounter` is included in the ECDSA-signed receipt data. A station cannot retroactively change the counter without invalidating the signature.
+- **Reconstruction:** The `txCounter` lets an operator order a station's offline transactions as they occurred, after the fact.
+- **Discontinuity is a signal to a human.** A gap (e.g., 5 → 7) is visible, and worth an operator alert on the station. It is **not** a control: the server settles the transaction regardless, and the counter gates nothing. See [reconciliation.md §4.2](profiles/offline/reconciliation.md#42-what-the-server-does-with-it), which is normative and which this chapter does not restate.
+- **Non-repudiation:** The `txCounter` is included in the ECDSA-signed receipt data. A station cannot retroactively change the counter without invalidating the signature — but note this binds a station to a counter it *did* emit; it does not oblige a station to emit one for every transaction (§6.3.1).
 - **Crash resilience:** The station only needs to persist a single integer (`txCounter`) atomically to NVS. No hash chain state to corrupt on power loss.
+
+#### 6.3.1 What the counter does not defend against
+
+The `txCounter` is generated by the station and signed with a key the station holds. Against a firmware-level adversary it therefore proves nothing about **completeness**: an adversary suppressing a transaction does not create a gap, it simply never assigns that transaction a counter, and the sequence it emits is contiguous. The observable causes of a real discontinuity are overwhelmingly benign — reboot, NVS corruption, board replacement — so a discontinuity is evidence of a **station fault**, not of fraud, and must not be treated as an accusation against the user.
+
+Completeness and anti-replay are carried elsewhere, on values the station does not choose:
+
+- **`(offlinePassId, passCounter)` uniqueness** — `reconciliation.md` §6.1 check #13, a deterministic hard reject (`2005`). `passCounter` is generated by the **app** and merely echoed by the station into the signed receipt.
+- **Cross-station cumulative `maxUses` / `maxTotalCredits`** — §7.4, which catches the disjoint-counter-stream clone that check #13 cannot see.
+- **The app-side receipt upload path**, which puts a station-signed receipt in the hands of an independent party before the station reconciles at all. A station cannot renumber bytes it has already signed and handed to a third party.
 
 **Station requirements:**
 - The station MUST maintain a monotonically increasing `txCounter` per station, starting at 1.
 - The `txCounter` MUST be persisted to NVS before the transaction receipt is signed.
 - The `txCounter` MUST be included in the `receipt_fields` before signing (see §6.2).
 
-**Server verification during reconciliation:**
+**Server handling during reconciliation:**
 1. Receive TransactionEvent [MSG-007] with `txCounter` and `receipt`
-2. Verify ECDSA signature on the receipt (§6.2)
-3. Verify that `txCounter` is strictly greater than the previous transaction's counter for this station
-4. If a counter gap is detected, apply the normative gap handling defined in [reconciliation.md §4.2](profiles/offline/reconciliation.md#42-txcounter-gap-detection): flag the gap, log a SecurityEvent, and **defer** reconciliation of the affected transactions (`status: "Deferred"`) until the missing in-sequence transactions arrive or an operator manually unblocks. `reconciliation.md` is the single source of truth for gap severity and handling; this chapter does not restate it. (The earlier "process anyway / +0.30" text here was a stale mirror that contradicted §4.2.)
+2. Verify ECDSA signature on the receipt (§6.2) — this is the check that gates
+3. Persist the `txCounter` on the transaction record as forensic evidence
+4. If the counter is discontinuous with what is already recorded for this station, raise an **operator alert on the station** and settle the transaction normally. The server **MUST NOT** condition settlement, deduplication or response status on the `txCounter`. [reconciliation.md §4.2](profiles/offline/reconciliation.md#42-what-the-server-does-with-it) is the single source of truth; this chapter does not restate it.
 
 ### 6.4 BLE Transport Security
 
@@ -1363,7 +1373,6 @@ During reconciliation ([Flow §10](04-flows.md#10-offline--online-reconciliation
 
 | Factor | Score | Detection |
 |--------|------:|-----------|
-| Counter gap detected | +0.30 | `txCounter` gap indicates missing transaction (e.g., 5 → 7) |
 | Invalid timestamps | +0.50 | Timestamps out of order, in the future, or impossibly spaced |
 | Duration exceeds allowance | +0.20 | `durationSeconds` exceeds `maxSessionDuration` or pass limits |
 | High offline frequency | +0.20 | > 10 transactions from same user in 24 hours |
@@ -1374,6 +1383,8 @@ During reconciliation ([Flow §10](04-flows.md#10-offline--online-reconciliation
 | Cumulative uses exceed `maxUses` (cross-station) | +0.30 | Total reconciled transactions for this `offlinePassId` across **all** stations exceed `maxUses` |
 | Cumulative credits exceed `maxTotalCredits` (cross-station) | +0.30 | Total reconciled credits for this `offlinePassId` across **all** stations exceed `maxTotalCredits` |
 | User has negative wallet balance | +0.10 | Wallet balance below zero after deduction |
+
+> **`txCounter` discontinuity is deliberately absent from this table.** It carried `+0.30` up to 0.8.1 and was removed in 0.9.0, not overlooked. Two reasons, either sufficient. First, **wiring**: `txCounter` is a **station** property, while every automated response below acts on the **user** — *disable offline mode for user*, *revoke pass, block user account*. A station reboot or an NVS fault would have been scored against the account of whoever happened to charge next. Second, **the signal does not carry**: the counter is generated and signed by the station itself, so an adversary with firmware control emits a contiguous sequence and never produces a gap (§6.3.1); the discontinuities that actually occur are hardware faults. A discontinuity is now an **operator alert on the station**, scored against nothing — see [`profiles/offline/reconciliation.md` §4.2](profiles/offline/reconciliation.md#42-what-the-server-does-with-it). The clone and replay coverage this factor was imagined to provide is delivered by check #13 and by the two cumulative factors below, neither of which reads `txCounter`.
 
 > **Cross-station cumulative computation (finding N7).** The two cumulative factors are evaluated **server-side across the full fleet**, not per-station: at each reconcile the server sums the count of distinct reconciled `offlineTxId`s (and the sum of settled credits) for the transaction's `offlinePassId` **over all stations**, then compares to the pass's `maxUses` / `maxTotalCredits`. This is what catches the **disjoint-counter-stream clone** — two copies of a pass run on separate, non-overlapping counter ranges never collide on `(offlinePassId, passCounter)`, so the `reconciliation.md` §6.1 check #13 hard-gate misses them, but their transactions sum past `maxUses` in the aggregate. The hard gate (check #13) stops the same-value replay/clone; this soft cumulative signal flags the disjoint clone for manual review. Together they deliver the N7 "complementary defenses" (§6.5.2; `reconciliation.md` §6.1 check #13 + §7).
 

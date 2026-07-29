@@ -144,8 +144,8 @@ specification. Where a definition involves a requirement, normative language
 
 **Hash-Chain** *(removed)*
 : Previously used for transaction log integrity. Replaced by **signed counter** (`txCounter`)
-  in ECDSA-signed receipts. The server detects missing transactions via counter gaps
-  during reconciliation. See [Chapter 06 — Security](06-security.md).
+  in ECDSA-signed receipts, which is forensic evidence only — a discontinuity raises an
+  operator alert on the station and gates nothing. See [Chapter 06 — Security §6.3](06-security.md).
 
 **Heartbeat**
 : A periodic liveness message sent by the station to the server. The heartbeat

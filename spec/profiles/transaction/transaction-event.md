@@ -42,8 +42,8 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 
 | Field | Type | Required | Description |
 |------------|---------|----------|-----------------------------------------------|
-| `status` | string | Yes | `Accepted`, `Duplicate`, `Rejected`, `RetryLater`, or `Deferred`. |
-| `reason` | string | Cond. | Human-readable explanation. Required when `status` is `Rejected`, `Duplicate`, `RetryLater`, or `Deferred`. |
+| `status` | string | Yes | `Accepted`, `Duplicate`, `Rejected`, or `RetryLater`. |
+| `reason` | string | Cond. | Human-readable explanation. Required when `status` is `Rejected`, `Duplicate`, or `RetryLater`. |
 
 ### 5.1 Response Status Values
 
@@ -53,29 +53,29 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 | `Duplicate` | Transaction already exists (matched by `offlineTxId`). Station **MUST** delete local copy. |
 | `Rejected` | Transaction is invalid (bad receipt, revoked pass). Station **MUST** flag for manual review. |
 | `RetryLater` | Server is temporarily unable to process. Station **MUST** retry after backoff. |
-| `Deferred` | Server detected a `txCounter` gap and is holding the transaction server-side pending arrival of the missing in-sequence transactions or operator-manual unblock. Station **MUST NOT** auto-resend; see [`reconciliation.md §4.2`](../offline/reconciliation.md) for the full state machine. |
+
+**Every response is terminal for the station's copy except `RetryLater`**, which is the only status that directs the station to send the same transaction again. The server never holds a transaction in an unresolved state: an offline transaction that reaches the server is settled, deduplicated, or rejected on its own merits, and the station always learns which.
 
 ## 6. Processing Rules
 
 1. The station **MUST** send TransactionEvent for each offline transaction after establishing an MQTT connection and receiving an `Accepted` BootNotification.
-2. The station **MUST** send transactions in `txCounter` order (oldest first) to preserve counter continuity.
+2. The station **SHOULD** send transactions in `txCounter` order (oldest first), so the operator's forensic view matches the order events occurred. This is a preference, not a correctness requirement: the server settles each transaction on its own merits in the order it arrives (`reconciliation.md` §2).
 3. The station **MUST NOT** send the next TransactionEvent until the previous one has been acknowledged.
 4. On `Accepted` or `Duplicate`: the station **MUST** delete the transaction from its local offline log.
 5. On `Rejected`: the station **MUST** mark the transaction as rejected in its local log and **MUST NOT** retry. The station **SHOULD** report the rejection via a SecurityEvent if the `reason` indicates credential issues.
 6. On `RetryLater`: the station **MUST** retry with exponential backoff (initial 5s, cap 300s (online retry scenario -- server responds RetryLater)). The station **MUST NOT** skip the transaction or proceed to the next.
-7. On `Deferred`: the server has detected a `txCounter` gap and is holding the transaction pending arrival of the missing in-sequence transactions or operator-manual unblock (see [`reconciliation.md §4.2`](../offline/reconciliation.md)). The station **MUST NOT** auto-resend the same `offlineTxId` (this is the key behavioural distinction from `RetryLater`) and **MUST NOT** delete the local copy. The station **MAY** proceed to send the next pending transaction; re-arrivals of the same `offlineTxId` (e.g., a queued retry from before the wire-response was processed) **MUST** be expected to continue returning `Deferred` until the gap is resolved upstream.
 7. The server **MUST** validate the `receipt.signature` against the station's known ECDSA public key. If verification fails, the server **MUST** respond with `Rejected`.
-8. The server **MUST** validate the `txCounter` sequence for gap detection. If the counter is not contiguous with the server's record of the previous transaction, the server **SHOULD** accept the transaction but flag it for reconciliation audit.
+8. The server **MUST** record the `txCounter` as forensic evidence and **MUST NOT** condition the response on it. If the counter is not contiguous with the server's record for this station, the server **SHOULD** raise an operator alert on the station and **MUST** process the transaction normally (`reconciliation.md` §4.2).
 
 ## 7. Offline Transaction Integrity
 
 ### 7.1 Transaction Counter
 
-Each offline transaction includes a monotonic `txCounter` for ordering and gap detection:
+Each offline transaction includes a monotonic `txCounter`, carried as forensic evidence:
 
 - `txCounter` is a monotonically increasing integer starting at 1 for each station.
 - The `txCounter` is included in the signed receipt data, ensuring its integrity is protected by the receipt signature.
-- The server verifies that received `txCounter` values form a contiguous sequence with no gaps. Gaps indicate missing transactions and are flagged as a HIGH-severity fraud signal.
+- The server records the `txCounter` and does not gate on it. A discontinuity is an operator alert on the **station**, not a fraud signal against the **user**, and never withholds settlement — see `reconciliation.md` §4.2 and `06-security.md` §6.3.1 for why a station-generated counter cannot carry a completeness guarantee.
 
 > **`txCounter` vs `seqNo`:** The offline `txCounter` (per-pass, per-station) and the online per-session `seqNo` defined in [`02-transport.md §3.2`](../../02-transport.md) are independent counters with distinct scopes. `txCounter` orders offline transactions across the station's full offline log; `seqNo` orders session-scoped EVENTs within a single online session. A station may simultaneously increment `txCounter` for a freshly completed offline transaction queued for reconciliation and `seqNo` for an unrelated active online session. Both counters MUST be persisted to NVS before the corresponding message is published.
 

@@ -12,15 +12,17 @@ The reconciliation sync follows this ordered flow:
 
 1. **Station reconnects** and sends a BootNotification with `pendingOfflineTransactions` > 0.
 2. **Server acknowledges** with `Accepted`. The server notes the pending count and prepares for incoming offline transaction events.
-3. **Station sends TransactionEvent(Ended)** for each offline transaction, ordered by `txCounter` (ascending). Each event includes the full offline payload: `offlineTxId`, `offlinePassId`, `passCounter`, `userId`, `bayId`, `serviceId`, timing data, `creditsCharged`, signed `receipt`, `txCounter`, and optional `meterValues`.
-4. **Server processes each event** -- performs (a) deduplication (§3), (b) txCounter gap detection (§4), (c) receipt signature verification (§5), (d) **reconcile-time re-validation gate (§6)**, and (e) fraud scoring (§7). The server responds with `Accepted` for each valid event. Any gate failure (§6) produces a `Rejected` response with the listed error code and emits a SecurityEvent.
+3. **Station sends TransactionEvent(Ended)** for each offline transaction. Each event includes the full offline payload: `offlineTxId`, `offlinePassId`, `passCounter`, `userId`, `bayId`, `serviceId`, timing data, `creditsCharged`, signed `receipt`, `txCounter`, and optional `meterValues`.
+4. **Server processes each event** -- performs (a) deduplication (§3), (b) receipt signature verification (§5), (c) **reconcile-time re-validation gate (§6)**, and (d) fraud scoring (§7). The `txCounter` is recorded as forensic evidence (§4) and gates nothing. The server responds with `Accepted` for each valid event. Any gate failure (§6) produces a `Rejected` response with the listed error code and emits a SecurityEvent.
 5. **Station marks synced transactions** as reconciled in its local storage. Successfully synced transactions **MAY** be purged from local storage after 72 hours.
 
 **Retry logic:** If the station does not receive a response within 30 seconds for any TransactionEvent, it **MUST** retry with exponential backoff (initial 5s, max 60s (offline batch reconciliation -- optimized for throughput), up to 10 retries). If all retries fail, the station **MUST** retain the transaction and attempt sync on the next successful connection.
 
 > **Note:** This profile uses a shorter response timeout (30s) than the standard TransactionEvent timeout (60s). During reconciliation, the server performs validation, deduplication, and record-keeping but does not make external payment authorization calls, allowing faster processing. The shorter timeout optimizes batch upload throughput when clearing large offline queues.
 
-**Ordering guarantee:** The station **MUST** send offline transactions in strict `txCounter` order. Where a `txCounter` gap shows transactions are missing, the server **MUST** defer them — see [§4.2 step 4](#42-txcounter-gap-detection), whose wire response is `status: "Deferred"`. The server **MUST NOT** answer that condition with `1005 INVALID_MESSAGE_FORMAT`: an out-of-order transaction is well-formed and was understood, so the sender has nothing to correct, and this response object carries no error code at all — [`transaction-event-response.schema.json`](../../../schemas/mqtt/transaction-event-response.schema.json) is closed over `status` and `reason`.
+**No ordering obligation.** The station **SHOULD** send offline transactions in ascending `txCounter` order, because doing so keeps the operator's forensic view (§4) in the order events occurred. It is a transmission preference, not a correctness requirement: **each transaction is settled on its own merits, in the order it arrives.** A station that sends out of order, or whose counter is discontinuous, is answered exactly as one that does not — the server **MUST NOT** withhold, hold, or re-order settlement on counter grounds, and **MUST NOT** answer an out-of-order arrival with `1005 INVALID_MESSAGE_FORMAT`: such a transaction is well-formed and was understood, so the sender has nothing to correct.
+
+Replay and clone protection does **not** depend on this ordering, and never did — it is delivered by the global `(offlinePassId, passCounter)` uniqueness hard-gate, §6.1 check #13, on a counter the **app** generates and the station cannot choose. See §4.
 
 ## 3. Deduplication (offlineTxId)
 
@@ -31,7 +33,7 @@ The server uses the `offlineTxId` field to deduplicate offline transaction event
 3. If the `offlineTxId` already exists in the server's ledger, the server **MUST** respond with `Accepted` without re-processing (idempotent acknowledgement). This handles retransmission after network failures.
 4. The server **MUST** retain `offlineTxId` values for at least 30 days for deduplication purposes.
 
-## 4. Transaction Counter Verification
+## 4. Transaction Counter (Forensic)
 
 ### 4.1 txCounter
 
@@ -39,27 +41,22 @@ The station maintains a monotonically increasing transaction counter per station
 
 1. The counter starts at 1 for the first offline transaction after a station boot or sync.
 2. The counter increments by exactly 1 for each subsequent offline transaction.
-3. The server verifies that received `txCounter` values form a contiguous sequence with no gaps.
-4. **Gaps in the counter** indicate missing transactions -- this is a HIGH-severity fraud signal. The server **MUST** flag the gap and defer reconciliation of subsequent transactions until the missing ones are received or the gap is manually resolved. The wire response on this path is `status: "Deferred"` (see §4.2 step 4).
+3. The `txCounter` is included in the ECDSA-signed receipt (§5, `06-security.md` §6.2), so a station cannot retroactively restate it without invalidating the signature.
 
-### 4.2 txCounter Gap Detection
+### 4.2 What the server does with it
 
-The server detects missing offline transactions by monitoring `txCounter` continuity:
+**The `txCounter` is evidence, not a control. It gates nothing.**
 
-1. For each station, the server tracks the last successfully reconciled `txCounter` value.
-2. When a TransactionEvent arrives, the server compares its `txCounter` to `lastReconciledCounter + 1`.
-3. If `txCounter` equals `lastReconciledCounter + 1`, the sequence is intact and the server proceeds normally.
-4. If `txCounter` is greater than `lastReconciledCounter + 1`, the server **MUST** flag the gap, log a SecurityEvent, and defer reconciliation of subsequent transactions until the missing ones are received or the gap is manually resolved. The wire response **MUST** be:
+1. The server **MUST** persist the received `txCounter` on the transaction record.
+2. The server **MUST NOT** make settlement, deduplication, or any response status conditional on the `txCounter`'s value, its continuity with previously received counters, or its ordering relative to them. There is no server-side "last reconciled counter" watermark, and a transaction is never withheld, held, or re-ordered on counter grounds.
+3. Where the counter is discontinuous with what the server has already recorded for that station, the server **SHOULD** raise an **operator alert on the station** and **MAY** log a SecurityEvent. It **MUST** settle the transaction normally regardless.
+4. A discontinuity is **not** a fraud-score input. See §7 and [`06-security.md` §7.4](../../06-security.md#74-fraud-detection--offline-transactions).
 
-   ```json
-   {
-     "status": "Deferred",
-     "reason": "<short human-readable explanation referencing the gap>"
-   }
-   ```
+**Why the counter cannot be a control.** It is generated by the station — the party a fraud control would be auditing — and signed with a key that station holds. An adversary with firmware control never produces a gap; it simply never assigns a counter to the transaction it is hiding. What *does* produce discontinuities is ordinary hardware behaviour: reboots, NVS corruption, board replacement. Blocking settlement on the counter therefore penalises only honest stations, and the missing transaction it waits for can never arrive.
 
-   `Deferred` is distinct from `RetryLater` in semantics: `RetryLater` directs the station to back off and re-send the same transaction (transient server condition); `Deferred` directs the station that the transaction is held server-side pending operator-manual unblock or arrival of the missing in-sequence transactions, and the station **MUST NOT** auto-resend the same offline transaction. Re-arrivals of a previously-deferred `offlineTxId` **MUST** continue to return `Deferred` (without re-emitting the `§4.2:52` SecurityEvent) until one of the two exits named above occurs — the operator-manual unblock, or the arrival of the missing in-sequence transactions.
-5. If `txCounter` is less than or equal to `lastReconciledCounter`, the server **MUST** treat it as a duplicate or replay and respond with `Duplicate`.
+**What actually stops a replay.** Clone and replay protection is delivered by the global `(offlinePassId, passCounter)` uniqueness hard-gate — §6.1 **check #13**, error `2005 OFFLINE_COUNTER_REPLAY` — and by the cross-station cumulative factors of [`06-security.md` §7.4](../../06-security.md#74-fraud-detection--offline-transactions). Both key on `passCounter`, which the **app** generates and the station only echoes into the signed receipt; a station cannot renumber a value it did not choose. Neither depends on `txCounter`, and neither is affected by anything in this section.
+
+> **A repeated `offlineTxId`** is handled by deduplication (§3) and answered `Accepted`, whatever its `txCounter` says. A **lower or repeated `txCounter` is not, by itself, a duplicate** and **MUST NOT** be answered `Duplicate`: a station that reboots legitimately restarts its counter at 1 (§4.1 step 1), and answering that `Duplicate` would direct the station to delete a payment that was never settled (`profiles/transaction/transaction-event.md` §5.1).
 
 ## 5. Receipt Signature Verification
 
@@ -197,7 +194,8 @@ The server **MUST** apply a fraud scoring model to each reconciled offline trans
 
 Two reconcile-time anchors connect that model to this profile:
 
-- **Deterministic violations are §6 hard-reject gate checks, not fraud factors.** Invalid receipt signature (§5), expiry (#9, `2003`), epoch-at-tx (#10, `2004` / §6.6), user/org/station/device mismatches (#5–#8), and **same-value** counter reuse (#13, `2005`) are deterministic security-property violations the §6 gate handles with `Rejected` + a SecurityEvent — never probabilistic scoring. A `txCounter` gap is handled by §4.2 (`Deferred`), not a score.
+- **Deterministic violations are §6 hard-reject gate checks, not fraud factors.** Invalid receipt signature (§5), expiry (#9, `2003`), epoch-at-tx (#10, `2004` / §6.6), user/org/station/device mismatches (#5–#8), and **same-value** counter reuse (#13, `2005`) are deterministic security-property violations the §6 gate handles with `Rejected` + a SecurityEvent — never probabilistic scoring.
+- **A `txCounter` discontinuity is neither.** It is not a gate check and it is not a fraud factor. The counter is persisted as forensic evidence and **gates nothing** (§4.2); a discontinuity raises an operator alert **on the station** and the transaction settles normally. It is deliberately absent from the §7.4 factor table: `txCounter` is a **station** property, whereas §7.4's automated responses (*disable offline mode for user*; *revoke pass, block user account*) are **user** sanctions — scoring a station's reboot against a user's account was a wiring error, not a policy. The replay guard that does the work here is check #13's `(offlinePassId, passCounter)` uniqueness, on an **app**-generated counter (§4.2).
 - **Note (finding N7 — complementary counter defenses).** The §6.1 check #13 hard-gate (`(offlinePassId, passCounter)` uniqueness) and the §7.4 **cumulative cross-station `maxUses` / `maxTotalCredits`** factors are **complementary**: check #13 deterministically hard-rejects the *same-value* clone/replay; the §7.4 cumulative factors flag the *disjoint-counter-stream* clone — whose copies run on non-overlapping counter ranges and never collide on a `(offlinePassId, passCounter)` tuple — once the **fleet-wide** aggregate exceeds `maxUses`. Neither alone is sufficient; together they bound cross-station double-spend (the N7 guarantee, now delivered by a defined computation — §7.4).
 
 ## 8. Wallet Reconciliation

@@ -677,7 +677,7 @@ When the station regains MQTT connectivity, it performs the reconciliation flow 
 The server:
 1. Deduplicates by `offlineTxId` (`otx_a3b4c5d6e7f8`)
 2. Verifies the ECDSA receipt signature against the station's registered public key
-3. Verifies txCounter continuity (txCounter 8, no gaps from last known counter)
+3. Records txCounter 8 as forensic evidence (contiguous with the last known counter — noted, not gated on)
 4. Validates the OfflinePass was valid at transaction time
 5. Debits 30 credits from Bob's wallet
 6. Creates a session record
@@ -769,7 +769,7 @@ The station removes the transaction from its local queue.
 
 3. **ECDSA P-256 receipts for non-repudiation.** The station signs every offline transaction receipt with its ECDSA P-256 private key (generated during provisioning, never leaves the device). This means neither the station operator nor the user can forge a receipt. During reconciliation, the server verifies the signature against the station's registered public key.
 
-4. **Monotonic txCounter for tamper detection.** Each receipt includes a `txCounter` that increments by exactly 1 for each offline transaction. If a station operator tries to delete transactions, the server will detect gaps in the txCounter sequence during reconciliation and flag a WARNING.
+4. **Monotonic txCounter as forensic evidence.** Each receipt includes a `txCounter` that increments by exactly 1 for each offline transaction, signed into the receipt so it cannot be restated later. A discontinuity is surfaced to the operator as a **station** alert and never withholds settlement. Note what it does *not* prove: an operator who suppresses transactions before they are counted produces no gap at all, so this is an aid to reconstruction, not a completeness guarantee — the guarantees live in point 5 and in `(offlinePassId, passCounter)` uniqueness (`06-security.md` §6.3.1).
 
 5. **Dual reconciliation paths.** Both the station (via TransactionEvent over MQTT) and the app (via `POST /me/offline-txs` over HTTPS) can submit the offline transaction to the server. The server deduplicates by `offlineTxId`. This redundancy ensures that even if one path fails (e.g., the station is decommissioned before reconnecting), the transaction is still settled.
 

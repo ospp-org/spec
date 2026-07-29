@@ -247,7 +247,7 @@ The first offline transaction. Alice used bay 1 around 10:30, using a BLE Offlin
 
 - offlineTxId: `otx_a1b2c3d4`, txCounter: 3
 - Server session: `sess_01a2b3c4d5e6`
-- txCounter verified: yes (expected 3, no gap)
+- txCounter recorded: 3 (forensic only — settlement does not depend on it)
 - OfflinePass verified: yes (opass_alice_001, not expired)
 - Wallet debit: sub_alice2026, 50 credits debited (120 -> 70)
 - Fraud score: 0.03 (normal)
@@ -314,7 +314,7 @@ The second offline transaction. Bob used bay 2 around 12:15, using the Standard 
 
 - offlineTxId: `otx_e5f6a7b8d9c0`, txCounter: 4
 - Server session: `sess_02a2b3c4d5e6`
-- txCounter verified: yes (expected 4, no gap)
+- txCounter recorded: 4 (forensic only — settlement does not depend on it)
 - OfflinePass verified: yes (opass_bob_003, not expired)
 - Wallet debit: sub_bob2026, 24 credits debited (85 -> 61)
 - Fraud score: 0.05 (normal)
@@ -382,7 +382,7 @@ Alice returned for a second session at bay 3 around 13:10. Same OfflinePass, dif
 
 - offlineTxId: `otx_a9b0c1d2e3f4`, txCounter: 5
 - Server session: `sess_03a2b3c4d5e6`
-- txCounter verified: yes (expected 5, no gap)
+- txCounter recorded: 5 (forensic only — settlement does not depend on it)
 - OfflinePass verified: yes (opass_alice_001, 2nd use, within limits)
 - Wallet debit: sub_alice2026, 40 credits debited (70 -> 30)
 - Fraud score: 0.08 (normal, slightly elevated due to 2nd use of same OfflinePass)
@@ -517,7 +517,7 @@ Alice also receives a push notification for each offline transaction:
 
 ## txCounter Continuity
 
-The monotonic txCounter ensures no transactions were removed during the offline period:
+The monotonic txCounter gives the operator a reconstructable view of the station's offline log. In this example it is contiguous:
 
 ```
 Transaction 0 (last online):
@@ -536,7 +536,9 @@ Transaction 3 (offline):
   txCounter: 5 (= previous + 1, no gap)
 ```
 
-Each transaction's `txCounter` must increment by exactly 1. If any transaction were deleted, the server would detect a gap in the sequence during reconciliation (e.g., 3 -> 5 indicates a missing transaction). Combined with ECDSA-signed receipts, this provides tamper detection for the offline transaction log.
+Each transaction's `txCounter` increments by exactly 1, and the counter is inside the ECDSA-signed receipt, so a station cannot restate a counter it already emitted. A discontinuity (e.g. 3 -> 5) is surfaced to the operator as a **station** alert; the transactions on either side of it settle normally.
+
+What this does **not** provide is a completeness guarantee. An operator suppressing a transaction before it is ever counted produces a contiguous sequence and no alert, and the discontinuities that occur in practice are reboots, NVS corruption and board swaps. Tamper resistance for the *financial* record comes from the signed receipt itself, from `(offlinePassId, passCounter)` uniqueness on an app-generated counter, and from the app-side upload path — see [`06-security.md` §6.3.1](../../spec/06-security.md).
 
 ## Message Sequence Diagram
 

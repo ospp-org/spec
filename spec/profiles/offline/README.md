@@ -61,7 +61,7 @@ This role assignment also aligns with mobile OS power management: iOS and Androi
 | [BLE Handshake](ble-handshake.md) | HELLO / CHALLENGE / AUTH authentication sequence, ECDH P-256 + StationIdentity certificate, session key derivation (HKDF-SHA256), AEAD channel — **EXPERIMENTAL** |
 | [BLE Session](ble-session.md) | Service start, real-time monitoring, stop, receipt retrieval, connection drop handling — **EXPERIMENTAL** ([B-3](../../../KNOWN-ISSUES.md#b-3--the-three-ble-response-schemas-disagree-with-each-other-and-with-chapter-07)) |
 | [OfflinePass](offline-pass.md) | Server-signed offline credential structure, 10-check validation, epoch revocation, lifecycle — **stable**, except that check 5 (station scoping) is unrepresentable over BLE ([B-2](../../../KNOWN-ISSUES.md#b-2--a-station-scoped-offlinepass-is-unrepresentable-in-the-authoritative-schema)) |
-| [Reconciliation](reconciliation.md) | Offline transaction sync, deduplication, txCounter gap detection, fraud detection, wallet debit — **stable** |
+| [Reconciliation](reconciliation.md) | Offline transaction sync, deduplication, receipt verification, the re-validation gate, fraud detection, wallet debit — **stable** |
 
 ## 5. Compliance Requirements
 
@@ -71,6 +71,6 @@ This role assignment also aligns with mobile OS power management: iOS and Androi
 2. The station MUST support at least the Full Offline and Partial B connectivity scenarios. Partial A support is RECOMMENDED but MAY be omitted if the station does not store server-signed authorization verification keys.
 3. The station MUST support BLE 4.2 or later; BLE 5.0 is RECOMMENDED. BLE pairing (LESC) is OPTIONAL — channel security is provided at the application layer (ECDH P-256 handshake + StationIdentity certificate + ChaCha20-Poly1305 AEAD; see [06-security.md §6.4/§6.5](../../06-security.md)), not by link-layer pairing.
 4. All BLE handshakes MUST complete within 10 seconds. The station MUST reject handshakes that exceed this timeout.
-5. The station MUST generate ECDSA-P256-SHA256 signed receipts for every offline transaction and MUST maintain a monotonic `txCounter` across transactions for gap detection during reconciliation.
+5. The station MUST generate ECDSA-P256-SHA256 signed receipts for every offline transaction and MUST maintain a monotonic `txCounter` across transactions, carried in the signed receipt as forensic evidence. The server does not gate on it (`reconciliation.md` §4.2).
 6. The station MUST buffer offline transactions and synchronize them via TransactionEvent upon reconnection.
 7. **AuthorizeOfflinePass** (Partial B) is required only at **Complete** compliance level. When the station has MQTT connectivity and receives an OfflinePass via BLE (Partial B), it MUST forward the pass to the server for validation rather than validating locally. Stations implementing only Basic offline compliance (Full Offline and Partial A) are not required to implement AuthorizeOfflinePass.
