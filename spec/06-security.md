@@ -186,12 +186,13 @@ OSPP uses **channel-specific authentication** — each communication channel has
 | **Protocol** | TLS 1.2+ (1.3 recommended) |
 | **Authentication** | Mutual — both station and broker present X.509 certificates |
 | **Station Certificate CN** | `stn_{station_id}` (e.g., `stn_a1b2c3d4`) |
-| **Applies to** | MQTT (port 8883), Station REST fallback (mTLS) |
+| **Applies to** | MQTT (port 8883), Station REST fallback (mTLS), and — for the station-side certificate-validation requirements below only — the pre-credential HTTPS provisioning call ([Chapter 04 — Flows §2](04-flows.md#2-station-provisioning)), which is server-authenticated rather than mutual |
 
 **Requirements:**
 - The station MUST present a valid X.509 client certificate signed by the OSPP Station CA.
 - The broker MUST verify the station certificate against the OSPP trust chain (Root CA → Station CA → Station Cert).
 - The station MUST verify the broker's server certificate. If the provisioning response includes `brokerRootCa`, the station MUST use it as the trust anchor for this verification; otherwise, the station MAY use its system trust store.
+- **A station that cannot validate MUST refuse.** This applies to both legs and to both failure modes: on the MQTT connection and on the HTTPS provisioning call ([Chapter 04 — Flows §2](04-flows.md#2-station-provisioning)), whether no trust anchor is obtainable at all or an anchor is present and the presented chain does not validate against it. *Refuse* means the connection is not completed and the call is not made — the station **MUST NOT** proceed on an unvalidated certificate. Recording the failure and continuing is **not** a conforming outcome. Where no anchor is obtainable the deployment has failed to supply a required row of [Chapter 01 — Architecture §7.2](01-architecture.md#72-physical-configuration) (*Broker trust policy*, *HTTPS trust policy*); the station's obligation is unchanged by that.
 - The broker MUST extract the CN from the client certificate and use it for **topic ACL enforcement** (see §3.3).
 - TLS session resumption is RECOMMENDED for reconnection performance. **0-RTT MUST NOT be used** (replay risk).
 
