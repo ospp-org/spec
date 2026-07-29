@@ -65,6 +65,7 @@ A hard reset that erased everything would be unrecoverable by design: re-provisi
 | Network configuration | Nothing can be reached without it |
 | Provisioning endpoint origin | The station cannot address the call that restores everything else |
 | HTTPS trust policy | The station cannot validate the server that answers that call |
+| Broker trust policy | The station cannot validate the broker. Recoverable in band **only** under a private CA hierarchy, where the provisioning response's `brokerRootCa` carries it — that field is a row of the *cleared* table above, and this row is not it. Under a publicly-trusted hierarchy `brokerRootCa` is absent by design and nothing in band supplies the anchor |
 | Initial time source | The station cannot evaluate that server's certificate validity period |
 | Root CA public certificate | Embedded in firmware ([Chapter 06 §4.2](../../06-security.md)), so unaffected by a configuration reset |
 
