@@ -10,89 +10,286 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ## [0.9.0] — 2026-07-29
 
-> **`Deferred` is retired, and so is the machinery it was invented to express.** The
-> `TransactionEventResponse.status` enum returns to four values. This is **breaking for the response
-> enum** — a station or SDK that switches exhaustively over five arms will no longer compile or match
-> — and it requires a re-vendor and a release of both SDKs. Nothing else on the wire changes: no
-> request schema, no error code, no `protocolVersion`.
+> **Three independent bodies of work share this tag, and all three are breaking — each for a
+> different audience.** They share it because none of them cut a tag of their own: `v0.8.1`
+> (2026-07-28) predates all three, and every commit in this release is dated 2026-07-29.
+>
+> | | Body | Breaking for | Wire change |
+> |:-:|---|---|:-:|
+> **A** | A station that cannot validate a server certificate **MUST refuse** | **conformance claims** | none |
+> **B** | `Deferred` retired from `TransactionEventResponse.status` | **consumers** | enum narrowed |
+> **C** | `errorText` constrained to UPPER_SNAKE_CASE on 15 schemas | **producers** | validation tightened |
+>
+> A and C are **not** consequences of B and are not scoped by it. Read each on its own.
 
-### Removed
+> **A — Station certificate validation is now fail-closed.** The specification required
+> verification and never stated the consequence of its failure. §2.1 mandated that the station
+> verify the broker's server certificate and fixed which anchor to use; it said nothing about what
+> happens when no anchor validates the presented chain. `01-architecture.md` bound the
+> **deployment** to supply a trust policy and never bound the **station** to behave any particular
+> way when that policy failed. Both existing TLS-failure rows in `04-flows.md` were on the
+> MQTT/mTLS leg; nothing covered the provisioning HTTPS leg, and nothing on either leg said
+> *refuse*. **Under that gap, a station that connects without authenticating the server was a
+> conforming outcome — and on hardware with no system trust store it was the *default* outcome,
+> because it was the only one that connected.** The omission did not degrade to "does not
+> connect"; it degraded to "connects without verifying", the exact failure mTLS exists to prevent.
+> That is how it reached production. The new clause covers **all four cells** — no anchor
+> obtainable, and anchor present with a failing chain, on each of two legs (MQTT, and the
+> pre-credential HTTPS provisioning call) — and defines *refuse* as the connection not completed
+> and the call not made. *"Recording the failure and continuing is not a conforming outcome"* is
+> stated explicitly, because that is the reading the silence permitted.
+>
+> **This is breaking for conformance claims, not for the wire.** No schema, field or value
+> changed. An implementation previously conforming may now be non-conforming.
 
-- **`Deferred` (`transaction-event-response.schema.json`).** The `status` enum drops from five values
-  to `Accepted` / `Duplicate` / `Rejected` / `RetryLater`, and the fourth `allOf` branch that made
-  `reason` required on `Deferred` goes with it. **The value never had a design rationale of its own.**
-  `00-introduction.md:240` records what it was: added to the schema in 0.5.0 on 2026-06-06 to close a
-  gap where *"server already emitted the value, schema didn't admit it"* — the server shipped it
-  2026-06-04, the schema was amended to admit it two days later. It was invented solely to give the
-  §4.2 gap rule an emittable wire value. Remove the gap rule and there is nothing for it to express.
-- **The `txCounter` gap-blocking rule (`reconciliation.md` §4.2).** With it: the `lastReconciledCounter`
-  watermark, the `txCounter > lastReconciledCounter + 1 → Deferred` branch, the sticky per-`offlineTxId`
-  deferred state and its re-arrival rule, and the `txCounter <= lastReconciledCounter → Duplicate`
-  branch. That last one was **actively dangerous**: §4.1 step 1 resets the counter "after a station boot
-  **or** sync", and `Duplicate` obliges the station to delete its local copy, so a station that power-cycled
-  had every subsequent offline payment answered `Duplicate` and deleted — with no server-side row. No
-  adversary required.
-- **"Operator-manual unblock."** `Deferred`'s only reachable exit, referenced normatively in
-  `reconciliation.md`, `transaction-event.md`, `03-messages.md`, `06-security.md` and
-  `00-introduction.md` — and **defined nowhere**, in violation of `07-errors.md:229` ("Mention is not
-  definition"). No route, command, admin action or state transition implements it in any of the four
-  repositories. Every reference is removed.
-- **The `Counter gap detected` `+0.30` fraud factor (`06-security.md` §7.4).** Removed on two
-  independent grounds, either sufficient. **Wiring:** `txCounter` is a *station* property while every
-  §7.4 automated response is a *user* sanction (*disable offline mode for user*; *revoke pass, block
-  user account*) — a reboot would have been scored against whoever charged next. **Signal:** the
-  counter is generated and signed by the station, so a firmware-level adversary emits a contiguous
-  sequence and never produces a gap; the discontinuities that actually occur are hardware faults. The
-  factor table also **contradicted `reconciliation.md`:200**, which asserted a gap was "handled by §4.2
-  (`Deferred`), **not a score**" while §7.4 — which §7 names as the authoritative model — scored it.
+> **B — `Deferred` is retired, and so is the machinery it was invented to express.** The
+> `TransactionEventResponse.status` enum returns to four values. A station or SDK that switches
+> exhaustively over five arms will no longer compile or match, so this requires a re-vendor and a
+> release of both SDKs. Nothing else on the wire changes: no request schema, no error code, no
+> `protocolVersion`.
+
+> **C — `errorText` is a machine-readable name, and is now enforced as one.** §1.3 defines it as
+> *"Machine-readable error name in UPPER_SNAKE_CASE (e.g. `BAY_BUSY`). Stable across versions —
+> clients MAY use this for programmatic matching"*, and §2.1 requires it on every MQTT rejection.
+> Exactly **one** of the sixteen schemas declaring it enforced that shape. The other fifteen
+> constrained length only, so any string passed — which is how a raw validator diagnostic,
+> `"/payload: The data (array) must match the type: object"`, reached firmware in the reference
+> server, in the field the spec reserves for programmatic matching. The schema had no opinion, so
+> nothing caught it.
+>
+> **This is breaking for producers.** A previously-valid payload carrying prose in `errorText` is
+> now invalid. No *shipped valid vector* breaks — all 158 still validate — so the break falls on
+> emitters, not on the conformance corpus. It is a different audience from B's consumers and the
+> two must not be read together.
+
+### Added
+
+- **`01-architecture.md` §7.2 gains a *Broker trust policy* row.** The Required-configuration
+  manifest gave the provisioning server's anchor its own row (*HTTPS trust policy*) and gave the
+  broker none. Because §7.2 binds a deployment to "supply every row by some means", an absent row
+  was an **absent obligation**: nothing required a deployment to tell the station what validates
+  the broker's certificate. That asymmetry is what a station with no system trust store falls
+  through — `brokerRootCa` is absent by design under a publicly-trusted hierarchy, and no row
+  obliged anyone to supply the anchor another way. Placement was chosen, not defaulted: inserted
+  as **row 5** so the footnote's "Rows 3 and 4" still names TLS credentials and `stationId`, and
+  the "last three rows" sentence still names origin/trust-policy/clock. Appending would have
+  falsified both sentences silently. `brokerRootCa` itself is unchanged.
+- **`profiles/device-management/reset.md`: the Broker trust policy survives a reset**, as the
+  HTTPS row already did. That table states its rows **are** §7.2's manifest, so adding a row to
+  §7.2 left it one row short of what it claims to reproduce. Without it, a Hard reset on a
+  public-CA deployment was permitted to discard the only anchor the station has for the broker,
+  with nothing to restore it — the in-band `brokerRootCa` path does not exist in that deployment
+  shape. That is the bricking failure the section's closing paragraph already warns about, reached
+  through a row the table did not list. The **field** and the **policy** are kept distinct and the
+  field is untouched: `brokerRootCa` remains in the first table, cleared by a reset and restored
+  by the provisioning response.
+- **`conformance/TC-SEC-008` — the station side of broker certificate validation.** The first case
+  in the suite with the **station as implementation under test**; every one of the previous 29
+  treated the station as the harness and the server as the subject, so §2.1's single station-side
+  MUST had never been expressible as a test and no implementation was ever asked to demonstrate
+  it. *That is why the defect reached production rather than being caught: nothing was pointed at
+  it.* Covers both failure modes, requires refusal in both, and defines refusal as a non-completed
+  handshake with no MQTT CONNECT. Part A is **two isolation controls** that gate every later
+  observation, because the trap has a side facing each way: on the **harness** side `openssl
+  verify` consults the default trust store alongside `-CAfile` and `-no-CAfile -no-CApath` is
+  insufficient on OpenSSL 3.x without `-no-CAstore` (a recon pass returned six false PASSes to
+  exactly this), so a run whose negative control passed is declared **VOID**; on the **station**
+  side a system trust store containing a validating root makes every refusal test false-PASS, so
+  enumeration is by **SHA-256 fingerprint, not subject name**, and the case is recorded **NOT RUN**
+  rather than PASS when the store cannot be excluded. Parts B and F are positive controls and
+  refusing either is a listed failure — a station that refuses everything would otherwise satisfy
+  the negative parts without implementing anything. Part E pins the incident itself:
+  `stationCaChain` loaded into the server-anchor slot must refuse, a substitution **two integrators
+  made independently** with nothing in the suite testing it.
+- **`conformance/TC-SEC-007` — what a successful provision returns.** TC-SEC-005/006 covered this
+  endpoint's error paths thoroughly and between them traversed four successful provisions without
+  looking past `clientCert`; nothing pinned the success response, and *the absence was hard to see
+  precisely because the error coverage looked like coverage*. Pins every member of
+  `provisioning-response.schema.json` plus three relationships a schema-valid response can still
+  violate: `bayIds` **order is** the `bayNumber` mapping (a server returning the right ids in the
+  wrong order silently re-points every bay); `stationCaChain` verifies the `clientCert` in the
+  **same** response, with `rootCaThumbprint` pinning that chain's apex; and the three-group replay
+  split (frozen / current / regenerated). TC-SEC-007 is **server-side by its own statement** and is
+  not edited by TC-SEC-008 — it is correct for what it tests.
+- **`errorText` pattern `^[A-Z][A-Z0-9_]+$`** on the 16 declarations across 15 files where
+  `errorText` is **paired with `errorCode` at the same object level** — which is what makes it the
+  §1.3 field. `boot-notification-response` already had it.
 
 ### Changed
 
-- **`reconciliation.md` §4 is now "Transaction Counter (Forensic)".** The counter is persisted as
-  evidence and **gates nothing**: the server **MUST NOT** condition settlement, deduplication or
-  response status on its value, continuity or ordering. A discontinuity **SHOULD** raise an **operator
-  alert on the station** and the transaction settles normally. §2's "Ordering guarantee" MUST becomes a
-  SHOULD — transmission preference, not correctness — and states that each transaction is settled on
-  its own merits in arrival order. `transaction-event.md` §6 rule 2 and `03-messages.md` §4.1 follow.
+- **`06-security.md` §2.1 — the fail-closed clause** (body A above), plus three cross-references
+  placed where an implementer actually looks rather than only in §2.1: `04-flows.md` §2
+  preconditions (the bullet naming the HTTPS trust policy now states the consequence of its
+  failure); `04-flows.md` §2 Error Paths (a row beside "Network unreachable", the other
+  pre-response transport condition, marked a **station-side refusal with no error code** since no
+  request reaches the server); and `01-architecture.md` §7.2 (one sentence turning the deployment
+  obligation into the station obligation it never implied).
+- **§2.1's "Applies to" row** now names the pre-credential HTTPS provisioning call as in scope for
+  the station-side validation requirements **only**, and records that it is server-authenticated
+  rather than mutual. The section is titled mTLS and that call is not mTLS; without the row a
+  later reader would take the mismatch for a drafting slip and remove it.
+- **`profiles/offline/reconciliation.md` §4 is now "Transaction Counter (Forensic)".** The counter
+  is persisted as evidence and **gates nothing**: the server **MUST NOT** condition settlement,
+  deduplication or response status on its value, continuity or ordering. A discontinuity **SHOULD**
+  raise an **operator alert on the station** and the transaction settles normally. §2's "Ordering
+  guarantee" MUST becomes a SHOULD — transmission preference, not correctness — and states that
+  each transaction is settled on its own merits in arrival order. `transaction-event.md` §6 rule 2
+  and `03-messages.md` §4.1 follow, as do `02-transport.md`, `04-flows.md` §10, `glossary.md`,
+  `profiles/offline/README.md`, `ble-session.md`, `guides/implementors-guide.md`, two `examples/`
+  flows and two diagram labels.
 - **`06-security.md` §6.3 is reframed** from "Transaction Ordering and Gap Detection" to "Forensic
-  Evidence", and gains **§6.3.1 — What the counter does not defend against**, which states plainly that
-  a station-generated, station-signed counter carries no completeness guarantee against the party
-  generating it, and names the three mechanisms that do the work instead.
-- **`07-errors.md` `1005`** no longer routes the out-of-order condition to `Deferred`. There is no error
-  condition there at all: such a transaction settles normally.
-- **What is explicitly *not* removed.** The `status` field itself, and its remaining four values — the
-  station needs them to decide whether to delete its local copy. `txCounter` remains a required,
-  signed receipt field. The §6 reconcile-time re-validation gate is untouched.
+  Evidence", and gains **§6.3.1 — What the counter does not defend against**, which states plainly
+  that a station-generated, station-signed counter carries no completeness guarantee against the
+  party generating it, and names the three mechanisms that do the work instead.
+- **`07-errors.md` `1005`** no longer routes the out-of-order condition to `Deferred`. There is no
+  error condition there at all: such a transaction settles normally.
+- **`schemas/provisioning-response.schema.json` — `stationCaChain` description.** It told the
+  reader what the field is not and named `brokerRootCa` as what the station's own anchor **is** —
+  true only under a private CA hierarchy. Under a public one `brokerRootCa` is absent by design, so
+  the sentence pointed at a field not in the response, leaving the one PEM-chain-shaped field that
+  **is** present as the only candidate for a `cacert` slot. **Two integrators independently made
+  exactly that substitution.** The negative half is the load-bearing half and is strengthened
+  rather than softened: this field is not the station's anchor under **any** deployment shape.
+  **Description-only — no validation behaviour changes.**
+- **Eight `errorText` descriptions** that contradicted §1.3 outright, calling the field
+  "Human-readable error description" or "Error description when status is Rejected". A schema
+  describing the field as prose while the spec defines it as a machine-readable name is how the
+  divergence stayed invisible.
+- **Five invalid conformance vectors** carried prose `errorText` incidentally. They still rejected,
+  but for two reasons instead of the one they are named for, so each now carries the registry name
+  of the `errorCode` it already declared: `3016 ACTIVE_SESSIONS_PRESENT`, `3001 BAY_BUSY`,
+  `5017 INSUFFICIENT_STORAGE`, `3012 RESERVATION_NOT_FOUND`, `3014 BAY_RESERVED`.
+- **`03-messages.md` §6.4's UpdateFirmware example** was missing the `signature` the same section
+  lists as Required. An implementer building from the example — as implementers do — ships a
+  firmware-update path that transmits no signature, and discovers it only when a station that
+  checks rejects the update, or worse, when one that does not check accepts an unsigned image.
+  Value reused verbatim from the profile document's complete example, so the corpus carries one
+  placeholder rather than two.
+- **`conformance/TC-OFF-003` / `TC-OFF-004`** — gap-detection steps and criteria retired; two
+  failure criteria rewritten from dead assertions into live ones, and a positive part added. See
+  **Verification**.
+
+### Removed
+
+- **`Deferred` (`transaction-event-response.schema.json`).** The `status` enum drops from five
+  values to `Accepted` / `Duplicate` / `Rejected` / `RetryLater`, and the fourth `allOf` branch that
+  made `reason` required on `Deferred` goes with it. **The value never had a design rationale of its
+  own.** `00-introduction.md` records what it was: added to the schema in 0.5.0 on 2026-06-06 to
+  close a gap where *"server already emitted the value, schema didn't admit it"* — the server
+  shipped it 2026-06-04, the schema was amended to admit it two days later. It was invented solely
+  to give the §4.2 gap rule an emittable wire value. Remove the gap rule and there is nothing for
+  it to express.
+- **The `txCounter` gap-blocking rule (`reconciliation.md` §4.2).** With it: the
+  `lastReconciledCounter` watermark, the `txCounter > lastReconciledCounter + 1 → Deferred` branch,
+  the sticky per-`offlineTxId` deferred state and its re-arrival rule, and the
+  `txCounter <= lastReconciledCounter → Duplicate` branch. That last one was **actively
+  dangerous**: §4.1 step 1 resets the counter "after a station boot **or** sync", and `Duplicate`
+  obliges the station to delete its local copy, so a station that power-cycled had every subsequent
+  offline payment answered `Duplicate` and deleted — with no server-side row. No adversary
+  required.
+- **"Operator-manual unblock."** `Deferred`'s only reachable exit, referenced normatively in
+  `reconciliation.md`, `transaction-event.md`, `03-messages.md`, `06-security.md` and
+  `00-introduction.md` — and **defined nowhere**, in violation of `07-errors.md`'s own "Mention is
+  not definition". No route, command, admin action or state transition implements it in any of the
+  four repositories. Every reference is removed.
+- **The `Counter gap detected` `+0.30` fraud factor (`06-security.md` §7.4).** Removed on two
+  independent grounds, either sufficient. **Wiring:** `txCounter` is a *station* property while
+  every §7.4 automated response is a *user* sanction (*disable offline mode for user*; *revoke
+  pass, block user account*) — a reboot would have been scored against whoever charged next.
+  **Signal:** the counter is generated and signed by the station, so a firmware-level adversary
+  emits a contiguous sequence and never produces a gap; the discontinuities that actually occur are
+  hardware faults. The factor also **contradicted `reconciliation.md` §7**, which asserted a gap was
+  "handled by §4.2 (`Deferred`), **not a score**" while §7.4 — which §7 itself names as the
+  authoritative model — scored it.
+
+### Deferred (tracked, not in this revision)
+
+- **The HTTPS-leg companion to TC-SEC-008.** §2.1's refusal requirement binds both legs and the
+  pre-credential HTTPS call is subject to the identical four conditions, but the harness is
+  different in kind: it requires a provisioning **server** presenting a controllable certificate
+  rather than an MQTT broker, and the station's *HTTPS trust policy* rather than its *Broker trust
+  policy*. **No such harness exists anywhere in the suite.** Folding both into one case would
+  produce a fixture that tests neither cleanly. Recorded in TC-SEC-008's own Scope section rather
+  than left implicit.
+- **`errorText` on `diagnostics-notification` and `firmware-status-notification`.** Both declare
+  `errorText` with **no `errorCode` anywhere in the message**, so they are not carrying the §1.3
+  pair at all — there is no code for the name to be derived from and nothing for a client to match
+  against. Their own valid vectors hold per-occurrence prose, and the firmware vector settles what
+  the field is being used for: a value carrying two runtime SHA-256 digests cannot be a stable
+  per-code name, and no registry entry could ever supply it. §1.3 has a field for exactly that text
+  and it is `errorDescription`. Renaming is a breaking schema change and a naming decision the spec
+  has to make, so both are left alone and both valid vectors still pass.
+- **`httpStatus()` and `category()` model what the spec declines to define.** Enumerating both SDK
+  registries against each other for the 0.9.0 SDK release turned up **51 of 114 codes disagreeing
+  on `httpStatus`**, and the 5xxx category label differing outright. The cause both share: each
+  accessor answers a question §4.4 says has no answer — *"the status is not a property of the
+  code"* — and one code can honestly appear with more than one status (§2.4's own table lists
+  `2008` under both 401 and 403, which no code→status function can represent). The open question is
+  not which mapping is right but whether these accessors should exist, and if so whether each code
+  declares its values in the registry instead of having them inferred by rule.
 
 ### Verification
 
-**No safeguard is lost, and the claim is checkable.** OSPP has two counters and only one of them ever
-worked. `txCounter` is generated by the **station** — the party a fraud control would be auditing.
-`passCounter` is generated by the **app**, an independent party, and merely echoed by the station into
-the signed receipt; a station cannot renumber a value it did not choose. Clone and replay protection is
-carried entirely by the global `(offlinePassId, passCounter)` uniqueness hard-gate (`reconciliation.md`
-§6.1 **check #13**, error `2005`) and by §7.4's cross-station cumulative `maxUses` / `maxTotalCredits`
-factors — for the disjoint-counter-stream clone check #13 cannot see. **Neither reads `txCounter`, and
-neither is touched by this release.** The accurate description of this change is not *"a safeguard is
-removed"* but *"a broken duplicate of a safeguard that lives elsewhere and works is removed"*.
+**A — how the gap was found, and what it cost.** The premise is recorded in
+`RECON-TRUST-ANCHOR-PRE-AMENDMENT.md` (R2a–R2d) and `AUDIT-BROKER-TRUST-ANCHOR.md`, whose ABSENT
+verdicts were re-confirmed at HEAD before each amendment rather than inherited. Both documents live
+in the reference server's repository, not this one — a cross-repository citation worth knowing about
+if these commits are ever re-read. The decisive framing came from the conformance side: *no case
+among the 29 asked a station to validate a broker certificate*, and the one whose title suggested it
+tested the opposite direction. A requirement no test can express is a requirement no implementation
+is ever asked to demonstrate.
 
-**Precedent.** OCPP 1.6 §3.6 carried a normative chronological-ordering requirement; OCPP 2.0.1
-deliberately removed it (*Part 2 Specification Ed2* §E.1.2 p.116; OCA whitepaper *"What is new in OCPP
-2.0.1"* v1.0 §2.3.4: *"The restriction that transaction-related messages be transmitted in chronological
-order has also been lifted"*), keeping a per-transaction sequence number for **reconstruction only**.
-OCPP has never used it to withhold settlement — in 2.0.1 `TransactionEventResponse` has no status field
-at all, so a CSMS cannot decline, hold or re-request a transaction. This release makes the same trade:
-ordering guarantee out, counter retained as evidence.
+**B — no safeguard is lost, and the claim is checkable.** OSPP has two counters and only one of them
+ever worked. `txCounter` is generated by the **station** — the party a fraud control would be
+auditing. `passCounter` is generated by the **app**, an independent party, and merely echoed by the
+station into the signed receipt; a station cannot renumber a value it did not choose. Clone and
+replay protection is carried entirely by the global `(offlinePassId, passCounter)` uniqueness
+hard-gate (`reconciliation.md` §6.1 **check #13**, error `2005`) and by §7.4's cross-station
+cumulative `maxUses` / `maxTotalCredits` factors — for the disjoint-counter-stream clone check #13
+cannot see. **Neither reads `txCounter`, and neither is touched by this release.** The accurate
+description of this change is not *"a safeguard is removed"* but *"a broken duplicate of a safeguard
+that lives elsewhere and works is removed"*.
 
-**Timing.** No firmware has implemented offline. Removing an obligation no implementer has met costs
-nothing today and removes three items from their list — maintain a never-resetting global counter across
-reboots and board swaps, transmit in strict counter order, and handle a fifth response status with
-bespoke non-retry semantics.
+**B — precedent.** OCPP 1.6 §3.6 carried a normative chronological-ordering requirement; OCPP 2.0.1
+deliberately removed it (*Part 2 Specification Ed2* §E.1.2 p.116; OCA whitepaper *"What is new in
+OCPP 2.0.1"* v1.0 §2.3.4: *"The restriction that transaction-related messages be transmitted in
+chronological order has also been lifted"*), keeping a per-transaction sequence number for
+**reconstruction only**. OCPP has never used it to withhold settlement — in 2.0.1
+`TransactionEventResponse` has no status field at all, so a CSMS cannot decline, hold or re-request a
+transaction. This release makes the same trade: ordering guarantee out, counter retained as evidence.
 
-**Mechanical check.** `tools/verify-schemas.py` isolates the single downstream consequence of the enum
-change: `conformance/test-vectors/valid/transaction/transaction-event-response-deferred.json` — the
-positive vector minted for the value in 0.5.0 — no longer validates. It is deleted. `305/306` before
-deletion with that one FAIL; `305/305` after.
+**B — timing.** No firmware has implemented offline. Removing an obligation no implementer has met
+costs nothing today and removes three items from their list — maintain a never-resetting global
+counter across reboots and board swaps, transmit in strict counter order, and handle a fifth
+response status with bespoke non-retry semantics.
+
+**B — conformance.** `TC-OFF-003`'s gap-detection part, its Expected Result and its Failure
+Criterion are deleted, and two criteria were rewritten from dead assertions into live ones: a
+failure criterion for a rule that became a SHOULD asserted nothing, and now names the live defect
+(**the server answering `Duplicate` on counter grounds**). A **positive** part replaces the deleted
+negative one, in the same slot for a reason that is correctness rather than tidiness — the preceding
+part leaves the wallet at `23.0` credits, so the new assertions read a positive balance rather than a
+debt. It covers both a forward discontinuity and **the counter reset after a reboot**, then
+re-sends the same `offlineTxId` so the change cannot be read as having weakened deduplication. A
+second new criterion fails a server that accepts a discontinuity **silently**: recording the counter
+without surfacing a discontinuity would make its retention a fiction.
+
+**C — enforcement proven non-hollow.** The registry name is accepted; both the prose and the raw
+validator diagnostic above are rejected. `reset-response-missing-required` was verified to fail
+**only** on the missing `status` rather than incidentally on its `errorText`.
+
+**Mechanical check.** `tools/verify-schemas.py` **306/306 PASS, 0 FAIL** — the same total as
+`v0.8.1`, reached differently. The enum change's single downstream consequence was the positive
+vector minted for `Deferred` in 0.5.0, which no longer validates; it is **deleted and replaced by
+its inverse** under `invalid/`, so the count is preserved and the retirement is pinned. That
+replacement was **falsified before being trusted**: re-adding `Deferred` to the enum makes the gate
+fail by name (`schema accepted an invalid test vector`), then reverted. Deletion alone would have
+left `305/305`.
+
+**Not a gate.** `tools/validate-schemas.sh` (85 FAIL) and `tools/validate-examples.sh` (52 FAIL)
+fail blanket because `npx ajv` is unavailable, **identically at `v0.8.1`** — verified against a
+detached worktree, so `+0` differential. They look like gates and are not. `verify-schemas.py` is
+the gate.
 
 ---
 
