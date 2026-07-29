@@ -557,7 +557,7 @@ What this does **not** provide is a completeness guarantee. An operator suppress
      |  TransactionEvent #1           |
      |  (otx_a1b2c3d4, Alice, Eco Program)    |
      |------------------------------->|
-     |                                | verify txCounter
+     |                                | record txCounter 
      |                                | verify arming pkg
      |                                | debit Alice 50 credits
      |  Accepted (fraud: 0.03)        |
@@ -566,7 +566,7 @@ What this does **not** provide is a completeness guarantee. An operator suppress
      |  TransactionEvent #2           |
      |  (otx_e5f6a7b8d9c0, Bob, Standard Program) |
      |------------------------------->|
-     |                                | verify txCounter
+     |                                | record txCounter 
      |                                | verify arming pkg
      |                                | debit Bob 24 credits
      |  Accepted (fraud: 0.05)        |
@@ -575,7 +575,7 @@ What this does **not** provide is a completeness guarantee. An operator suppress
      |  TransactionEvent #3           |
      |  (otx_a9b0c1d2e3f4, Alice, Eco Program)    |
      |------------------------------->|
-     |                                | verify txCounter
+     |                                | record txCounter 
      |                                | verify arming pkg
      |                                | debit Alice 40 credits
      |  Accepted (fraud: 0.08)        |
@@ -592,10 +592,10 @@ What this does **not** provide is a completeness guarantee. An operator suppress
 
 ## Key Design Decisions
 
-1. **Monotonic txCounter for tamper detection.** The `txCounter` must increment by exactly 1 for each transaction. A gap (e.g., 3 -> 5) would indicate a deleted transaction. A duplicate (e.g., 3 -> 3) would indicate a replay attack. Combined with ECDSA-signed receipts, this provides integrity verification without the complexity of a hash chain.
+1. **Monotonic txCounter as forensic evidence.** The `txCounter` increments by exactly 1 per transaction and is signed into the receipt, so a station cannot restate a counter it already emitted. A discontinuity (e.g. 3 -> 5) is surfaced to the operator as a **station** alert; it does not withhold settlement, and it is not a fraud signal against the user. Note the limit: an operator who suppresses a transaction before it is ever counted produces no discontinuity at all. Replay protection comes from `(offlinePassId, passCounter)` uniqueness on an **app**-generated counter, not from this one — see [`06-security.md` §6.3.1](../../spec/06-security.md).
 
 3. **Fraud scoring per transaction.** Each offline transaction is individually scored. Factors include OfflinePass age, device attestation validity, meter value plausibility, and duplicate detection. Alice's third transaction scores slightly higher (0.08 vs 0.03) because it reuses the same OfflinePass, which is a mild anomaly signal but within acceptable bounds.
 
-4. **Sequential reconciliation.** Transactions are replayed one at a time, in order, with the server responding to each before the next is sent. This ensures the server can verify txCounter continuity and stop reconciliation if a fraudulent transaction is detected.
+4. **Sequential reconciliation.** Transactions are replayed one at a time, with the server responding to each before the next is sent. This bounds the station's in-flight state; it is not an ordering guarantee, and the server never stops reconciliation on counter grounds — each transaction is settled or rejected on its own merits.
 
 5. **Wallet debits are deferred.** Credits are not debited at the time of the offline session (the station has no authority to debit). They are only debited during reconciliation. Users see a reduced "estimated balance" in their app during offline mode, but the actual debit happens here.

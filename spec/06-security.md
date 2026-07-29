@@ -1539,7 +1539,8 @@ Diagnostic uploads via GetDiagnostics [MSG-018] **MUST** apply the same redactio
 - [ ] Reject provisioning requests in which **any two** submitted keys are the same key — CSR subject key / `receiptSigningPublicKey`, CSR subject key / `stationPubKey`, or `receiptSigningPublicKey` / `stationPubKey` — comparing **decoded** keys, not transmitted encodings; `422` / `4016 PROVISIONING_KEY_REUSE`, no certificate issued, token NOT consumed (§4.3, §6.5.2)
 - [ ] Retain **every** receipt-signing key ever bound to a station, with each key's validity window; never overwrite a superseded key in place (§4.3)
 - [ ] Select the verification key from a **server-authoritative anchor** (the OfflinePass's validity window, or the authorization record for the auth form) — never from a station-supplied timestamp, and never by trying every retained key (§4.3)
-- [ ] txCounter sequence verification during reconciliation
+- [ ] txCounter persisted on the transaction record as forensic evidence — and **not** used to gate settlement, deduplication or response status (§6.3, §6.3.1)
+- [ ] Operator alert on the **station** when the txCounter is discontinuous, with the transaction settled normally
 - [ ] Fraud scoring for offline transactions
 - [ ] Webhook HMAC-SHA512 verification (timing-safe)
 - [ ] IP whitelist for webhook endpoints

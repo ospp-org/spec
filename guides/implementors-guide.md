@@ -456,10 +456,11 @@ Each offline transaction has a monotonically increasing `txCounter`:
 txCounter: monotonically increasing integer (1, 2, 3, ...)
 
 Each transaction increments txCounter by exactly 1.
-The server detects gaps during reconciliation (e.g., 3 -> 5 = missing transaction).
+The counter is signed into the receipt and recorded by the server as
+forensic evidence. It does NOT gate settlement.
 ```
 
-This is append-only. If anyone removes transactions, the server will detect gaps in the txCounter sequence during reconciliation (fraud score +0.30).
+This is append-only. A discontinuity (e.g. 3 -> 5) raises an operator alert on the **station** and the transaction settles normally — it is not scored against the user, and it never withholds money. Be clear about what it does *not* buy you: a counter you generate and sign yourself cannot prove to anyone else that you reported everything. Replay protection comes from `(offlinePassId, passCounter)` uniqueness, on a counter the **app** generates ([`06-security.md` §6.3.1](../spec/06-security.md)).
 
 ### 2.13 Configuration Keys
 
@@ -754,7 +755,7 @@ PG → POST /webhooks/payment-gateway/notification (HMAC-SHA512 signed)
 
 When a station reconnects after being offline, it sends TransactionEvent REQUESTs for each offline session:
 
-1. **Verify txCounter continuity:** Each transaction has a `txCounter`. Verify there are no gaps in the sequence from the last reconciled counter.
+1. **Record the txCounter:** Persist it on the transaction row as forensic evidence. Do **not** gate on it — no watermark, no continuity check, no "last reconciled counter". If it is discontinuous with what you already hold for that station, alert the operator on the **station** and carry on. A low or repeated `txCounter` is **not** a duplicate: a station that reboots legitimately restarts at 1, and answering `Duplicate` tells it to delete a payment you never settled.
 2. **Verify the receipt signature:** Use a **receipt-signing** ECDSA P-256 public key — never the station's mTLS key; the two are required to be distinct. Which one is not a given: a station that has been re-provisioned has more than one retained key, and the receipt may predate the current one. Select from the **server-authoritative anchor**, per [Chapter 06 — Security §4.3](../spec/06-security.md): for a pass-form receipt that is the OfflinePass's own `issuedAt`/`expiresAt` window, and for an auth-form receipt the server-issued authorization record named by `authId`. Take only the key(s) bound during that window. Do **not** default to the station's current key, do **not** use a station-supplied timestamp such as the receipt's `endedAt`, and do **not** try every retained key — try-all makes every superseded key valid forever. If the receipt carries `keyId`, treat it as a hint only: check it matches the key the anchor selected, and reject on disagreement rather than following it.
 3. **Verify the OfflinePass:** Check that it was valid at the time of the transaction (signature, epoch, limits).
 4. **Debit user wallets:** The credits weren't debited at session time (user was offline), so debit them now. If the user's balance goes negative, record it as a debt.
@@ -962,7 +963,7 @@ Walk through each flow using the narrative examples in `/examples/flows/`:
 3. **Web payment** — Does the reservation → payment → start flow work end-to-end?
 4. **Full offline** — Can your station validate an OfflinePass, run a session, and sign a receipt?
 5. **Partial A/B** — Do the hybrid online/offline flows work?
-6. **Reconciliation** — Can you replay offline transactions with txCounter gap detection?
+6. **Reconciliation** — Can you replay offline transactions, including out of order and after a counter reset?
 
 ### 5.5 Error Scenario Testing
 
@@ -982,7 +983,7 @@ Test the error scenarios in `/examples/error-scenarios/`:
 - [ ] Replay protection — does your deduplication catch a replayed `messageId`?
 - [ ] OfflinePass validation — do all 10 checks work? Test each failure mode individually.
 - [ ] Receipt verification — can the server verify ECDSA P-256 signatures from your station?
-- [ ] txCounter gap detection — does the gap detection work?
+- [ ] txCounter is forensic — does an out-of-order or reset counter still settle, with an operator alert and no `Duplicate`?
 - [ ] Constant-time comparison — are you using timing-safe HMAC comparison?
 
 ---
@@ -1041,7 +1042,7 @@ Test the error scenarios in `/examples/error-scenarios/`:
 
 **Not persisting offline state.** If the station loses power during an offline session, it needs crash recovery. Persist the current session state, offline pass usage counters, and transaction log to flash/NVS. On power-up, check for unfinished sessions.
 
-**Not initializing txCounter correctly.** The first offline transaction after provisioning must use `txCounter: 1`. If you start with 0 or skip values, the server will detect gaps during reconciliation and flag it as fraud.
+**Not initializing txCounter correctly.** The first offline transaction after provisioning must use `txCounter: 1`. Starting at 0 or skipping values will not cost you a settlement — the server records the counter and does not gate on it — but it produces operator alerts on your station and makes your own offline log harder to audit.
 
 **Not capping duration by `maxCreditsPerTx`.** If the OfflinePass allows 30 credits max per transaction and the user requests a 5-minute service at 10 credits/min (= 50 credits), you must cap the session to 3 minutes (30 credits). Don't reject — cap.
 
@@ -1153,7 +1154,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[OFFLINE]** ECDSA P-256 signature verification for OfflinePass
 - [ ] **[OFFLINE]** Key rotation support: accept `OfflinePassPublicKey` and cached previous key during grace period (300 s)
 - [ ] **[OFFLINE]** ECDSA P-256 receipt signing
-- [ ] **[OFFLINE]** Monotonic txCounter: increment by exactly 1 per offline transaction, server detects gaps
+- [ ] **[OFFLINE]** Monotonic txCounter: increment by exactly 1 per offline transaction (forensic evidence; the server records it and does not gate on it)
 - [ ] **[OFFLINE]** Receipt retention on FFF6 for 5 minutes after session ends
 - [ ] **[OFFLINE]** Persist offline state: pass usage counters, transaction log, session state
 - [ ] **[OFFLINE]** Cap session duration by `maxCreditsPerTx` (don't reject — cap)

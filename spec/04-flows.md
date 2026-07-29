@@ -1354,7 +1354,7 @@ sequenceDiagram
 
         Server->>Server: 1. Deduplicate by offlineTxId
         Server->>Server: 2. Verify ECDSA receipt signature
-        Server->>Server: 3. Verify txCounter sequence
+        Server->>Server: 3. Record txCounter (forensic, no gating)
         Server->>Server: 4. Validate OfflinePass
         Server->>Server: 5. Debit user wallet (allow negative balance)
         Server->>Server: 6. Run fraud scoring
@@ -1380,13 +1380,13 @@ sequenceDiagram
 ### Happy Path
 
 1. SSP boot is complete; all bays have been reported via StatusNotification [MSG-009]
-2. SSP begins sending offline transactions **in order of `txCounter`** (ascending)
+2. SSP begins sending offline transactions, **ascending `txCounter` RECOMMENDED** (not required — the server settles each on its own merits in arrival order)
 3. For each transaction, SSP sends **TransactionEvent REQUEST** [MSG-007] containing the full transaction data, signed receipt, `txCounter`, and meter values
-4. SSP waits for the RESPONSE before sending the next transaction (sequential processing preserves `txCounter` order)
+4. SSP waits for the RESPONSE before sending the next transaction
 5. **Server** processes each transaction:
    - **Step 1:** Deduplicate by `offlineTxId` (if already seen → `Duplicate`)
    - **Step 2:** Verify ECDSA P-256 receipt signature — CRITICAL alert if invalid
-   - **Step 3:** Verify `txCounter` sequence (monotonically increasing, no gaps) — WARNING if gap detected, process anyway
+   - **Step 3:** Record `txCounter` as forensic evidence — never gated on. If discontinuous: WARNING + operator alert on the **station**, process anyway (`profiles/offline/reconciliation.md` §4.2)
    - **Step 4:** Validate that the OfflinePass was valid at transaction time (check epoch, expiry, limits)
    - **Step 5:** Debit user wallet (allow negative balance for offline transactions)
    - **Step 6:** Run fraud scoring (see below)

@@ -289,7 +289,7 @@ sequenceDiagram
         Broker->>Server: MeterValues [MSG-010]
         Station->>Broker: TransactionEvent (offlineTxId, receipt, txCounter)
         Broker->>Server: TransactionEvent [MSG-007]
-        Server->>Server: Validate receipt + txCounter
+        Server->>Server: Validate receipt (txCounter recorded, not gated)
         Server-->>Broker: TransactionEvent RESPONSE (Accepted)
         Broker-->>Station: Accepted
     end
