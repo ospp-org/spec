@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-28
 **Protocol Version:** 0.8.0
-**Status:** 3 blockers open (all BLE), 3 non-blocking issues open
+**Status:** 3 blockers open (all BLE), 4 non-blocking issues open
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle
 
 ---
@@ -12,8 +12,8 @@
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 3 | 4xxx grouping · provisioning station-side conformance · `StationIdentityCertificate` |
-| **Total open** | **6** | |
+| OPEN | 4 | 4xxx grouping · `httpStatus()`/`category()` accessors · provisioning station-side conformance · `StationIdentityCertificate` |
+| **Total open** | **7** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
@@ -213,6 +213,88 @@ renaming `§3.4` touches every cross-reference to it; re-ranging the provisionin
 `4xxx` is a breaking change to a published vocabulary; making `category` a per-code property
 rather than a derived one is a cross-SDK change (PHP and TS must agree, or the same code reports
 two categories). Whichever is chosen, the arithmetic derivation is the part that must stop.
+
+The finding directly below generalises this one: `category` is one of **two** accessors that
+answer a question the spec declines to define, and they should be decided together.
+
+---
+
+## OPEN — `httpStatus()` and `category()` model properties the spec declines to give a code, and the two SDKs invented different answers
+
+**Raised 2026-07-29 during the SDK 0.9.0 release, by enumerating both SDKs' registries against
+each other. Recorded rather than fixed: the question is not which mapping is right, and settling
+it is a cross-SDK and spec decision, not a release task.**
+
+Both SDKs expose an accessor mapping an error code to an HTTP status, and one mapping it to a
+category. **The spec defines neither as a property of a code.**
+
+On status, `07-errors.md` §4.4 is explicit — the paragraph is headed *"The status is not a
+property of the code"*:
+
+> §2.4's mapping table is headed *Typical Error Codes* and groups codes by the status they are
+> usually seen with; **it is illustrative and assigns no code a fixed status.** Nothing in §3
+> carries an HTTP status column. A code and a status answer different questions — *what failed*
+> and *how the client should treat this response* — and **one code can honestly appear with more
+> than one status** where the same fault is reachable in states the client must treat differently.
+
+On category, see the finding above: the spec has section *headings*, not a per-code category, and
+both SDKs derive one arithmetically from the numeric range.
+
+**Both SDKs invented answers anyway, and invented different ones.** Enumerated at
+`ospp-sdk-php` v0.8.4 + `sdk-ts` v0.7.0 working trees, 114 codes each:
+
+| Field | Result |
+|-------|--------|
+| code numbers, names | identical |
+| `severity`, `recoverable` | identical — 0 diffs |
+| category *partition* | identical — 15 / 20 / 17 / 20 / 34 / 8 |
+| category *label* | **differs**: `5xxx` is `station` (PHP) vs `Hardware` (TS) |
+| `httpStatus` | **51 of 114 disagree** |
+
+The 51 split into three kinds, and only the third is a disagreement about fact:
+
+1. **PHP has no arm, TS invented one** (~49 codes). PHP falls to `default => 500`; TS asserts a
+   specific status. TS's own registry docblock concedes these are *"sensible defaults derived by
+   category/semantics (SDK extension)"*. TS emits `410`, `413`, `501`, `507` — statuses PHP never
+   produces for any code.
+2. **Both chose, and chose differently** — `2001 STATION_NOT_REGISTERED` php=`422` ts=`401`;
+   `2008 ACTION_NOT_PERMITTED` php=`401` ts=`403`.
+3. **The spec itself is dual** — §2.4's table lists `2008` under **both** `401` and `403`, so no
+   single value is correct for it. This is the case that shows the accessor's shape is wrong, not
+   just its contents: a function from code to status cannot represent a code with two statuses.
+
+**Nothing consumes either accessor for a decision.** Checked at the time of writing:
+`ts-station-simulator` references neither `httpStatus` nor `OSPP_ERROR_REGISTRY`. `csms-server`
+calls `httpStatus()` from exactly two production sites — `app/Shared/Protocol/ErrorCodeRegistry.php:147`
+and `app/Shared/Protocol/Rest/OsppErrorObject.php:124` — both as a *fallback* under `??` or a
+`match` default, never as the primary answer. So the blast radius of changing or removing these
+is small, and it is small **now**.
+
+**The open question is therefore not "which mapping is right".** It is:
+
+1. **Should these accessors exist at all?** An SDK answering a question the spec declines to
+   define invites consumers to treat the answer as protocol. Neither accessor's value is carried
+   on the wire — `category` is not among the seven REQUIRED Error Object fields
+   (`07-errors.md:62-68`), and the status is a property of a *response*, chosen by the server that
+   knows the state, not of the code.
+2. **If they do exist, should each code declare its values in the registry rather than have them
+   inferred?** Both defects have the same shape: a value derived by rule — arithmetic on the range
+   for `category`, a `match` default for `httpStatus` — rather than stated per code and reviewed.
+   A declared registry makes a wrong value a visible edit; a derived one makes it invisible until
+   enumerated, which is how 51 disagreements accumulated unnoticed across two published SDKs.
+
+**Superseded instruction, recorded so it is not re-attempted.** An earlier arc (C2) directed that
+PHP's `httpStatus()` return `null` instead of defaulting to `500`, with the return type widened so
+callers must handle it. It was never implemented. It is now **withdrawn**: it predates the §4.4
+language above, and once the spec declines to make status a property of a code, returning `null`
+for the codes the spec does not map is a smaller instance of the same error — it still asserts a
+total function from code to status, merely with a hole in it. `0.9.0` ships `httpStatus()` as
+`int`, documented in the release notes as a divergent SDK extension rather than a contract.
+
+**What 0.9.0 did change**, and deliberately: four PHP codes that fell to the `500` default now
+answer as TS already did — `4008`→`401`, `3002`→`409`, `3007`→`409`, `6007`→`503`. Each is cited
+to §4.4's endpoint table, and `6007`→`503` matches the `MUST` that §4.4 states outright. This
+reduced the divergence from 55 codes to 51; it does not resolve the finding.
 
 ---
 
