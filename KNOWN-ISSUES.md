@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-28
 **Protocol Version:** 0.8.0
-**Status:** 3 blockers open (all BLE), 4 non-blocking issues open
+**Status:** 3 blockers open (all BLE), 5 non-blocking issues open
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle
 
 ---
@@ -12,8 +12,8 @@
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 4 | 4xxx grouping · `httpStatus()`/`category()` accessors · provisioning station-side conformance · `StationIdentityCertificate` |
-| **Total open** | **7** | |
+| OPEN | 5 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` |
+| **Total open** | **8** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
@@ -295,6 +295,78 @@ total function from code to status, merely with a hole in it. `0.9.0` ships `htt
 answer as TS already did — `4008`→`401`, `3002`→`409`, `3007`→`409`, `6007`→`503`. Each is cited
 to §4.4's endpoint table, and `6007`→`503` matches the `MUST` that §4.4 states outright. This
 reduced the divergence from 55 codes to 51; it does not resolve the finding.
+
+---
+
+## OPEN — two messages carry `errorDescription` semantics under the name `errorText`
+
+**Raised 2026-07-29, adding the `UPPER_SNAKE_CASE` pattern to every `errorText` that pairs with
+an `errorCode`. These two were deliberately left out of that change, because fixing them is a
+breaking schema change and a naming decision this specification has to make. Recorded in full so
+whoever takes it has the whole set rather than rediscovering it.**
+
+§1.3 defines `errorText` as *"Machine-readable error name in `UPPER_SNAKE_CASE` (e.g.,
+`BAY_BUSY`). **Stable across versions — clients MAY use this for programmatic matching.**"* It is
+a **per-code** field: §1.3's own table marks it `Source: per-code`, meaning it is derivable from
+`errorCode` via the §3 registry and carried only so a receiver need not perform the lookup.
+
+**Two schemas declare `errorText` with no `errorCode` anywhere in the message.** They are
+therefore not carrying the §1.3 pair at all — there is no code for the name to be derived from,
+and nothing for a client to match against:
+
+| Schema | `errorText` | `errorCode` |
+|---|---|---|
+| `schemas/mqtt/diagnostics-notification.schema.json` | `{"type":"string","maxLength":128}` | **absent** |
+| `schemas/mqtt/firmware-status-notification.schema.json` | `{"type":"string","maxLength":128}` | **absent** |
+
+**Every example and vector for these two carries per-occurrence prose**, which is exactly what
+§1.3 defines `errorDescription` to be — *"Human-readable description of **this occurrence** and
+its context — the bay, field, threshold, or identifier involved."* The full set:
+
+*Conformance vectors (both `valid/`, both still passing — the pattern was not applied here):*
+
+| File | Value |
+|---|---|
+| `conformance/test-vectors/valid/device-management/firmware-status-notification-full.json` | `"Checksum verification failed after download, expected sha256:a3f7b2c1 but computed sha256:e8d9c0b1"` |
+| `conformance/test-vectors/valid/device-management/diagnostics-notification-full.json` | `"Upload in progress to remote server"` |
+
+*Markdown examples:*
+
+| Location | Value | Message |
+|---|---|---|
+| `spec/03-messages.md:1679` | `"Checksum mismatch after download"` | FirmwareStatusNotification |
+| `spec/profiles/device-management/firmware-status.md:141` | `"Download failed: connection timeout after 3 retries"` | FirmwareStatusNotification |
+| `spec/profiles/device-management/diagnostics-status.md:60` | `"HTTP PUT returned 503 Service Unavailable"` | DiagnosticsNotification (narrative, not a JSON block) |
+
+The first vector settles what the field is being used for: a value containing two runtime SHA-256
+digests cannot be a stable per-code name, and no registry entry could ever supply it.
+
+**The contrast is inside the same family.** `status-notification.schema.json` declares **both**
+`errorCode` and `errorText`, and its vector carries `errorCode: 5008` with
+`errorText: "SENSOR_FAILURE"` — the §1.3 pair, used correctly, in a notification. So this is not
+"notifications differ from responses". It is these two messages specifically.
+
+**Why it matters beyond tidiness.** A client written against §1.3 may match on `errorText`
+programmatically. On these two messages that match is against free prose that varies per
+occurrence, so it silently never fires — and the schema cannot warn, because a `maxLength`-only
+string accepts anything. This is the same failure mode that let a raw validator diagnostic reach
+firmware on `sign-certificate-response` (fixed 2026-07-29); it survives here because the field is
+misnamed rather than merely unconstrained.
+
+**Not decided here**, and each option has a cost this arc cannot weigh:
+
+1. **Rename to `errorDescription`** — most correct against §1.3, and breaking: the member name
+   changes on two messages, both schemas are `additionalProperties: false`, and every emitter and
+   consumer of them must move together.
+2. **Add `errorCode` and make `errorText` the registry name** — keeps the member names, but
+   requires registry codes for conditions that may not have one (`"Upload in progress"` is not an
+   error at all), and changes what the two messages mean.
+3. **Document these two as a deliberate exception to §1.3** — cheapest, and the worst of the
+   three: it makes `errorText` mean two different things depending on the message, which is
+   precisely what a client matching programmatically cannot discover.
+
+Whichever is chosen, the pattern added elsewhere on 2026-07-29 should extend to these two once
+the field means what §1.3 says.
 
 ---
 
