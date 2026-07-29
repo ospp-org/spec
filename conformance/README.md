@@ -224,6 +224,7 @@ Conformance reports **SHOULD** include:
 | TC-SEC-005 | Provisioning Retry Idempotency & Key Binding | Security | Standard |
 | TC-SEC-006 | Bare Public Key Validity & Precedence at Provisioning | Security | Standard |
 | TC-SEC-007 | Provisioning Success Response: Shape, Bindings and Replay Grouping | Security | Standard |
+| TC-SEC-008 | Station Refuses a Broker Certificate It Cannot Anchor | Security | Standard — **station under test** |
 | TC-DM-001 | Configuration Read/Write | Device Management | Extended |
 | TC-DM-002 | Firmware Update | Device Management | Extended |
 | TC-DM-003 | Reset | Device Management | Extended |
