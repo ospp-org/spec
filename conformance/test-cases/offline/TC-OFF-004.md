@@ -6,7 +6,7 @@ Offline Profile
 
 ## Purpose
 
-Verify that the station correctly performs offline transaction reconciliation after MQTT reconnection: uploading accumulated TransactionEvents in chronological `txCounter` order, handling `Duplicate` deduplication, retrying on `RetryLater` with backoff, and correctly transitioning from BLE offline mode back to online operation.
+Verify that the station correctly performs offline transaction reconciliation after MQTT reconnection: uploading accumulated TransactionEvents (ascending `txCounter` RECOMMENDED, not required), handling `Duplicate` deduplication, retrying on `RetryLater` with backoff, and correctly transitioning from BLE offline mode back to online operation.
 
 ## References
 
@@ -27,7 +27,7 @@ Verify that the station correctly performs offline transaction reconciliation af
 
 ## Steps
 
-### Part A — Normal Batch Upload (Chronological Order)
+### Part A — Normal Batch Upload
 
 1. Observe the station begins reconciliation automatically after BootNotification `Accepted`.
 2. Observe the first TransactionEvent (txCounter=1):
@@ -129,7 +129,7 @@ Verify that the station correctly performs offline transaction reconciliation af
 
 ## Expected Results
 
-1. TransactionEvents are sent in strict `txCounter` order (chronological).
+1. TransactionEvents are sent in ascending `txCounter` order. This is RECOMMENDED (`reconciliation.md` §2); a station that sends out of order still conforms, and the server settles each transaction on its own merits either way.
 2. Station waits for each RESPONSE before sending the next TransactionEvent.
 3. `Duplicate` response causes the station to skip the transaction (no retry).
 4. `RetryLater` response causes the station to retry with backoff.
@@ -139,7 +139,7 @@ Verify that the station correctly performs offline transaction reconciliation af
 
 ## Failure Criteria
 
-1. TransactionEvents are sent out of `txCounter` order.
+1. The station fails to increment `txCounter` by exactly 1 per offline transaction, or fails to persist it across a reboot. (Transmission **order** is not a failure criterion — only the counter the station assigns is.)
 2. Station sends the next TransactionEvent before receiving RESPONSE for the previous one.
 3. Station retries after `Duplicate` response.
 4. Station does not retry after `RetryLater` response.

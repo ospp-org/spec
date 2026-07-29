@@ -1,0 +1,4 @@
+{
+  "status": "Deferred",
+  "reason": "Retired in 0.9.0. This vector MUST be rejected — if it validates, Deferred has been re-added to the status enum."
+}

@@ -6,11 +6,11 @@ Offline/BLE Profile
 
 ## Purpose
 
-Verify that when a station reconnects to the server after an offline period, it correctly sends buffered offline transactions via TransactionEvent (ordered by `txCounter`), the server deduplicates by `offlineTxId`, the `txCounter` continuity is verified for integrity (no gaps), receipt signatures are validated, and wallet billing reconciliation is performed accurately.
+Verify that when a station reconnects to the server after an offline period, it correctly sends buffered offline transactions via TransactionEvent, the server deduplicates by `offlineTxId`, receipt signatures are validated, the `txCounter` is recorded as forensic evidence **without gating any outcome**, and wallet billing reconciliation is performed accurately.
 
 ## References
 
-- `spec/profiles/offline/reconciliation.md` — Sync procedure, deduplication, txCounter gap detection, fraud detection, wallet reconciliation
+- `spec/profiles/offline/reconciliation.md` — Sync procedure, deduplication, §4.2 (txCounter is forensic and gates nothing), fraud detection, wallet reconciliation
 - `spec/profiles/transaction/transaction-event.md` — TransactionEvent with `offlineTxId`, `txCounter`
 - `spec/profiles/core/boot-notification.md` — BootNotification on reconnect
 - `spec/profiles/core/status-notification.md` — Bay state sync after reconnect
@@ -27,7 +27,7 @@ Verify that when a station reconnects to the server after an offline period, it 
    - **TX-C:** `offlineTxId: "otx_c3d4e5f6a7b8"`, `txCounter: 7`, `creditsCharged: 6`.
 2. Each transaction has a signed receipt (ECDSA-P256-SHA256 with station private key).
 3. The server has the station's ECDSA public key for receipt verification.
-4. The server knows the station's last reconciled `txCounter` is `4`.
+4. The server has previously recorded `txCounter: 4` for this station (forensic history only — the server keeps no watermark and does not compare against it).
 5. The user's wallet balance on the server is `50.0` credits.
 6. The MQTT broker is now reachable (connectivity restored).
 
@@ -66,17 +66,17 @@ Verify that when a station reconnects to the server after an offline period, it 
   "passCounter": 4
 }
 ```
-8. Verify TX-A is received BEFORE TX-B and TX-C (ordered by `txCounter`).
+8. Observe the arrival order. Ascending `txCounter` is RECOMMENDED, so TX-A is expected first — but arrival order is **not** a pass/fail condition here (`reconciliation.md` §2).
 9. Server validates:
-   - `txCounter` (5) == station's last reconciled counter (4) + 1 (no gap).
-   - Receipt signature (ECDSA-P256-SHA256) is valid.
+   - Receipt signature (ECDSA-P256-SHA256) is valid — this is the check that gates.
+   - `txCounter` (5) is recorded on the transaction row. Verify the server does **not** compare it to any prior counter and does **not** condition its response on it.
 10. Respond to TX-A: `{ "status": "Accepted" }`.
 11. Observe TransactionEvent(Ended) for TX-B (`txCounter: 6`).
-12. Verify `txCounter` (6) == previous txCounter (5) + 1 (no gap).
+12. Verify `txCounter` (6) is recorded, and that the response would be identical had it been any other value.
 13. Verify receipt signature for TX-B.
 14. Respond Accepted.
 15. Observe TransactionEvent(Ended) for TX-C (`txCounter: 7`).
-16. Verify the complete txCounter sequence: 4(known) -> 5 -> 6 -> 7 (no gaps).
+16. Verify the complete recorded sequence 4 -> 5 -> 6 -> 7 is available to an operator as forensic history.
 17. Verify receipt signature for TX-C.
 18. Respond Accepted.
 
@@ -98,40 +98,31 @@ Verify that when a station reconnects to the server after an offline period, it 
 28. Verify the server debits the user's wallet: `50.0 - 27 = 23.0` credits remaining.
 29. Verify the server stores each transaction with its receipt for audit purposes.
 
-### Part E — txCounter Gap Detection (Negative Test)
+### Part E — Negative Balance Handling
 
-30. Simulate a missing transaction: inject a TransactionEvent with `txCounter: 9` (skipping 8) after the last reconciled counter was 7.
-31. Server detects the txCounter gap (expected 8, received 9).
-32. Verify the server flags this transaction for fraud investigation (does not auto-accept).
-33. Verify the server logs a security alert indicating a txCounter gap (possible deleted transaction).
-
-### Part F — Negative Balance Handling
-
-34. Set up a scenario where the user's wallet has `5.0` credits remaining.
-35. Reconcile an offline transaction with `creditsCharged: 12`.
-36. Verify the server allows the debit (negative balance permitted per spec: "allows negative balance").
-37. Verify the user's wallet is now `-7.0` credits.
-38. Verify the server triggers a top-up reminder notification for the user.
+30. Set up a scenario where the user's wallet has `5.0` credits remaining.
+31. Reconcile an offline transaction with `creditsCharged: 12`.
+32. Verify the server allows the debit (negative balance permitted per spec: "allows negative balance").
+33. Verify the user's wallet is now `-7.0` credits.
+34. Verify the server triggers a top-up reminder notification for the user.
 
 ## Expected Results
 
 1. Station sends BootNotification on reconnect, followed by StatusNotification for each bay.
-2. Buffered TransactionEvents are sent in strict `txCounter` order (ascending).
-3. Each transaction's `txCounter` increments by exactly 1 from the previous (no gaps).
+2. Buffered TransactionEvents are sent in ascending `txCounter` order. This is RECOMMENDED, not required — out-of-order arrival is not a conformance failure.
+3. The server records each `txCounter` and settles every transaction on its own merits. No response status is conditional on the counter's value, its continuity, or its ordering.
 4. All receipt signatures (ECDSA-P256-SHA256) are valid when verified with the station's public key.
 5. Duplicate `offlineTxId` submissions are handled idempotently (Accepted without re-processing).
 6. The server correctly calculates total charges and debits the user's wallet.
-7. A txCounter gap is detected and flagged for fraud investigation.
-8. Negative wallet balances are permitted; the server notifies the user to top up.
+7. Negative wallet balances are permitted; the server notifies the user to top up.
 
 ## Failure Criteria
 
 1. Station does not send BootNotification on reconnect.
-2. Buffered transactions are sent out of `txCounter` order.
-3. `txCounter` sequence has unexpected gaps for legitimate transactions.
+2. The server withholds, holds, re-orders, or answers `Duplicate` on `txCounter` grounds. A station that reboots legitimately restarts its counter at 1 (`reconciliation.md` §4.1), and `Duplicate` directs the station to delete its local copy — so gating on the counter destroys a payment that was never settled.
+3. The station's `txCounter` is discontinuous across legitimate transactions, indicating it failed to persist the counter. This is a **station** defect and is reported to the operator as one; it is never a reason for the server to withhold settlement.
 4. Receipt signature verification fails for legitimate (non-tampered) receipts.
 5. Duplicate `offlineTxId` causes double-billing (deducted twice from wallet).
-6. Server does not detect a txCounter gap on a missing transaction.
-7. Server rejects a transaction that would cause a negative wallet balance (should allow it).
-8. Station does not retransmit unacknowledged transactions after a reconnection.
-9. Total wallet deduction does not match the sum of `creditsCharged` across all reconciled transactions.
+6. Server rejects a transaction that would cause a negative wallet balance (should allow it).
+7. Station does not retransmit unacknowledged transactions after a reconnection.
+8. Total wallet deduction does not match the sum of `creditsCharged` across all reconciled transactions.
