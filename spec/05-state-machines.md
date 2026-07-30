@@ -62,7 +62,35 @@ stateDiagram-v2
 | **Finishing** | The session has ended (via StopService or duration elapsed). The station is performing post-session hardware wind-down (depressurization, actuator retraction, etc.). |
 | **Faulted** | The bay has encountered a hardware or software fault. The station MUST include `errorCode` and `errorText` in the StatusNotification. The bay MUST NOT accept StartService or ReserveBay while faulted. |
 | **Unavailable** | The bay is administratively disabled or under maintenance. Entered via SetMaintenanceMode [MSG-020] or as a consequence of a fault requiring manual intervention. |
-| **Unknown** | The bay state is indeterminate. This is the initial state after station power-on or reboot, and the state the server transitions to when it receives a ConnectionLost [MSG-011] (LWT). The station MUST resolve this state by sending a StatusNotification on boot. |
+| **Unknown** | The bay state is indeterminate. This is the initial state after station power-on or reboot, and the state the server transitions to when it receives a ConnectionLost [MSG-011] (LWT). The station MUST resolve this state by sending a StatusNotification on boot. **Never transmitted** — see below. |
+
+> **`Unknown` is held by both parties and transmitted by neither.** It is the one
+> state of the seven that no message carries, and it is absent from
+> [`bay-status.schema.json`](../schemas/common/bay-status.schema.json) for that
+> reason. A station **MUST NOT** report `Unknown` in the `status` or
+> `previousStatus` field of any message, on any transport; it resolves the state
+> by reporting what it resolved **to** — `Available`, `Faulted` or `Unavailable`,
+> per the three transitions in section 1.3. A server holds a bay at `Unknown`
+> whenever it has no current report — from the station's boot until the post-boot
+> report arrives, and from connection loss ([CORE-008](profiles/core/README.md))
+> until the next accepted StatusNotification.
+>
+> Note that the two entries are asymmetric in who observes them. Power-on is the
+> **station's** own state, and the station acts on it: it rejects StartService and
+> ReserveBay with `3002 BAY_NOT_READY` while a bay is `Unknown`
+> ([start-service.md §4](profiles/transaction/start-service.md),
+> [reserve-bay.md §4](profiles/transaction/reserve-bay.md)). Connection loss is the
+> **server's** inference about a station it can no longer hear. Neither observation
+> is something the other party could report.
+>
+> This follows settled practice for a state one party infers rather than observes:
+> TR-069 names the same case (§1.6, *Seen Missing*) and gives it no wire slot,
+> observing that the device cannot determine it about itself, and OCPP defines no
+> connector status for connection loss at all. The process-control protocols carry
+> such a fact as a companion quality flag beside the value rather than as a member
+> of the value's own vocabulary — and OSPP already has that channel, since the LWT
+> [MSG-011] is itself the freshness signal; putting `Unknown` in the status enum
+> stated the same fact a second time, in the weaker place.
 
 ### 1.3 Transition Table
 
@@ -91,6 +119,8 @@ A station MUST send a StatusNotification EVENT [MSG-009] in the following circum
 
 1. **Post-boot report:** One StatusNotification per bay immediately after a successful BootNotification [MSG-001], reporting `bayNumber`, `status`, and available `services[]`.
 2. **State transition:** On every bay state transition listed in section 1.3.
+
+In both cases the reported `status` MUST be one of the six reportable states. A station that has not yet determined a bay's state has not yet met trigger 1: it completes its self-test first and reports the result. It **MUST NOT** report `Unknown` as a placeholder for a bay it has not finished evaluating, and **MUST NOT** report `Unknown` to acknowledge a state the server assigned — the server leaves `Unknown` on the report's arrival, not on being told about it.
 
 ### 1.5 Invalid Transitions
 
