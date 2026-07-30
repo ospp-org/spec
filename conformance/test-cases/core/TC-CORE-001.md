@@ -15,8 +15,11 @@ Verify that a station sends BootNotification as the first message after establis
 - `spec/profiles/core/connection-lost.md` — LWT configuration
 - `spec/07-errors.md` §5.2 — BootNotification retry policy
 - `spec/07-errors.md` §3.2 — Error code 2001 `STATION_NOT_REGISTERED`
+- `spec/05-state-machines.md` §1.2, §1.4 — the six reportable bay states; `Unknown` is not transmitted
+- `spec/profiles/core/status-notification.md` §5 rule 2, §7 rule 2 — `previousStatus` omitted on the post-boot report
 - `schemas/mqtt/boot-notification-request.schema.json`
 - `schemas/mqtt/boot-notification-response.schema.json`
+- `schemas/mqtt/status-notification.schema.json`
 
 ## Preconditions
 
@@ -37,7 +40,10 @@ Verify that a station sends BootNotification as the first message after establis
 5. Validate that the message `action` is `BootNotification`.
 6. Validate the request payload against `boot-notification-request.schema.json` — fields: `stationId`, `firmwareVersion`, `stationModel`, `stationVendor`, `bayCount`, `serialNumber`, `uptimeSeconds`, `pendingOfflineTransactions`, `timezone`, `bootReason`, `capabilities`, `networkInfo`.
 7. Send a server response: `{ "status": "Accepted", "heartbeatIntervalSec": 30, "serverTime": "<current UTC>" }`.
-8. Verify that the station publishes a StatusNotification for each bay (reporting current bay state).
+8. Verify that the station publishes a StatusNotification for each bay, and inspect each payload:
+   - `status` is one of the six reportable states — `Available`, `Reserved`, `Occupied`, `Finishing`, `Faulted`, `Unavailable`. A payload carrying `Unknown` fails this case; `Unknown` is not a wire value ([`05-state-machines.md` §1.2](../../../spec/05-state-machines.md)).
+   - `previousStatus` is **absent**. This is the post-boot report, and the state it left was `Unknown`, which the field cannot carry ([`status-notification.md` §5 rule 2](../../../spec/profiles/core/status-notification.md)).
+   - the payload validates against `status-notification.schema.json`.
 9. Send a GetConfiguration command to the station.
 10. Verify that the station responds to the GetConfiguration command (confirming it accepts commands post-Accepted).
 11. Wait for `heartbeatIntervalSec` seconds.
@@ -103,7 +109,7 @@ Verify that a station sends BootNotification as the first message after establis
 3. The BootNotification request payload validates against the JSON schema.
 4. All required fields (`stationId`, `firmwareVersion`, `stationModel`, `stationVendor`, `bayCount`, `serialNumber`, `uptimeSeconds`, `pendingOfflineTransactions`, `timezone`, `bootReason`, `capabilities`, `networkInfo`) are present and correctly typed.
 5. After Accepted, the station adopts the `heartbeatIntervalSec` and sends Heartbeat messages at the correct cadence.
-6. After Accepted, the station publishes StatusNotification for every bay.
+6. After Accepted, the station publishes StatusNotification for every bay, each reporting a determinate state — one of the six reportable values, never `Unknown` — and each omitting `previousStatus`.
 7. After Rejected, the station enters limited mode and does not process server commands.
 8. After Rejected, the station retries BootNotification at the specified `retryInterval`.
 9. After Pending, the station enters a restricted state (same as Rejected), does not send other messages, does not process server commands, and retries BootNotification at `retryInterval`.
@@ -120,3 +126,5 @@ Verify that a station sends BootNotification as the first message after establis
 6. LWT is absent from the MQTT CONNECT packet.
 7. Station does not send StatusNotification for all bays after Accepted.
 8. Station stops retrying BootNotification after receiving Rejected with `1007 PROTOCOL_VERSION_MISMATCH`. A station that stops cannot be recovered over the protocol — it accepts no commands while rejected, so it can be handed no firmware update — and it will not recover if the server later regains support for its MAJOR version.
+9. Station reports `Unknown` in `status` on any bay. `Unknown` is a state the station holds at power-on and resolves by self-test; reporting it transmits the absence of an answer in place of an answer, and leaves the server holding the bay where it refuses payment and StartService (`3002 BAY_NOT_READY`). A station that has not finished evaluating a bay has not yet satisfied result 6 — it reports when it knows.
+10. Station includes `previousStatus` on the post-boot report. The only truthful value there is `Unknown`, which is not a wire value; the field's absence is what marks this message as the boot report.

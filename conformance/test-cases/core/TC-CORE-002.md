@@ -65,7 +65,10 @@ Verify that the station correctly handles MQTT disconnection scenarios: graceful
       "serverTime": "2026-01-15T12:00:00.000Z"
     }
     ```
-17. Verify the station publishes StatusNotification for each bay.
+17. Verify the station publishes StatusNotification for each bay, and inspect each payload. This is the reconnect path, and it is the one that resolves the server's `Unknown`: the server set every bay on this station to `Unknown` when it received the ConnectionLost ([CORE-008](../../../spec/profiles/core/README.md)), and only an accepted report clears it.
+    - `status` is one of the six reportable states, and reflects the bay's **actual** state as the station observes it — including `Occupied` if a session survived the disconnection.
+    - `status` is **not** `Unknown`. `Unknown` is the server's own bookkeeping for "I have no current report"; a station echoing it back reports nothing and leaves the bay refusing payment and StartService.
+    - `previousStatus` is **absent**. The station's bays did not necessarily transition at all here — the station may never have rebooted — so there is no previous state to name, and the state the *server* is leaving is `Unknown`, which the field cannot carry.
 18. Wait `heartbeatIntervalSec` seconds (30s).
 19. Verify the station sends a Heartbeat within the expected interval (30s +/- 10%).
 20. Verify the server marks the station as `Online`.
@@ -90,7 +93,7 @@ Verify that the station correctly handles MQTT disconnection scenarios: graceful
 4. The server starts the `ConnectionLostGracePeriod` timer upon receiving ConnectionLost.
 5. After the grace period expires without reconnection, the server marks the station Offline.
 6. On reconnection, the station sends a fresh BootNotification as its first message.
-7. After BootNotification `Accepted`, the station resumes Heartbeat at the configured interval and sends StatusNotification for all bays.
+7. After BootNotification `Accepted`, the station resumes Heartbeat at the configured interval and sends StatusNotification for all bays, each carrying a determinate state — one of the six reportable values, never `Unknown` — and each omitting `previousStatus`. The server's `Unknown` for every bay on this station is cleared by these reports and by nothing else.
 8. If the station reconnects before the grace period expires (Part D), the server does NOT mark it Offline.
 
 ## Failure Criteria
@@ -102,3 +105,5 @@ Verify that the station correctly handles MQTT disconnection scenarios: graceful
 5. Server marks station Offline before `ConnectionLostGracePeriod` has elapsed.
 6. Server does NOT mark station Offline after `ConnectionLostGracePeriod` with no reconnection.
 7. Station does not include LWT in the MQTT CONNECT packet on reconnection.
+8. Station reports `Unknown` in `status` on any bay after reconnection. This is the failure the reconnect path is most likely to produce: the server has just marked every bay `Unknown`, and a station that mirrors server state rather than reporting its own hardware will echo it back. The echo resolves nothing — the bay stays where it refuses payment and StartService (`3002 BAY_NOT_READY`).
+9. Station includes `previousStatus` on any post-boot report.
