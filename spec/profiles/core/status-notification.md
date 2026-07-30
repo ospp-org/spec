@@ -20,7 +20,7 @@ Each notification reports the bay identifier, the new status, the previous statu
 | `bayId` | string | Yes | Bay identifier within the station (`bay_` prefix). |
 | `bayNumber` | integer | Yes | Ordinal bay number (minimum 1). Its correspondence to `bayId` is fixed by the **order** of `bayIds` in the provisioning response — `bayIds[i]` is bay number *i + 1* ([Flows §2](../../04-flows.md#2-station-provisioning)). That is the only place the mapping is supplied. |
 | `status` | string | Yes | New bay status (see Bay States below). |
-| `previousStatus` | string | No | Previous bay status before this transition. |
+| `previousStatus` | string | No | Previous bay status before this transition. Required on a transition report, omitted on the post-boot report (§5 rule 2). |
 | `services` | array\<object\> | Yes | Service availability list (minimum 1 item). |
 | `errorCode` | integer | No | OSPP numeric error code (when `status` is `Faulted`). |
 | `errorText` | string | No | Machine-readable error name in `UPPER_SNAKE_CASE`. |
@@ -71,7 +71,7 @@ Unknown    --> Unavailable   (maintenance mode detected after reconnection)
 ```
 
 1. The server **MUST** validate incoming transitions against this table. Invalid transitions **MUST** be logged but **SHOULD NOT** cause the server to drop the message -- the server **SHOULD** accept the reported state as authoritative and log a warning.
-2. The station **MUST** include `previousStatus` whenever the state changes. The field **MAY** be omitted only on the initial status report after BootNotification.
+2. The station **MUST** include `previousStatus` whenever the state changes, and **MUST** omit it on the post-boot report. The post-boot report is the station leaving `Unknown`, and `Unknown` is not a value this field can carry (rule 2 of section 7) — so there is nothing truthful to put there. Its absence is therefore load-bearing: on a StatusNotification, no `previousStatus` means *this is the boot report*, and a server MAY read it that way.
 3. When a bay transitions to `Faulted`, the station **MUST** include `errorCode` and `errorText` from the 5xxx error range.
 
 ## 6. Error Reporting (Faulted State)
