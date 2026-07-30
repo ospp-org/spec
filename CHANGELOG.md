@@ -8,6 +8,126 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.10.0] — 2026-07-30
+
+> **One change, breaking for stations only: `Unknown` is no longer a value any message can
+> carry.** The bay state machine still has seven states and its transition table is untouched.
+> What narrowed is the wire — `bay-status.schema.json` now enumerates the six **reportable**
+> states, and `previousStatus` is omitted on the post-boot report rather than merely permitted to
+> be. No SDK loses an enum member; `protocolVersion` does not move.
+
+### Removed
+
+- **`Unknown` from `schemas/common/bay-status.schema.json`.** The enum goes from seven values to
+  six: `Available`, `Reserved`, `Occupied`, `Finishing`, `Faulted`, `Unavailable`.
+
+  `Unknown` is entered from exactly two places and neither is a message. A station enters it at
+  power-on ([`01-architecture.md` §7.3](spec/01-architecture.md), First Boot step 1) and leaves it
+  by self-test; a server enters it on connection loss
+  ([CORE-008](spec/profiles/core/README.md)) and leaves it on the next accepted report. Both
+  parties hold it, neither transmits it. The three transitions *out* of it are all
+  StatusNotification-triggered and all target a determinate state, and `Unknown → Unknown` was
+  never in the transition table, which [§1.5](spec/05-state-machines.md) makes invalid.
+
+  So a station reporting `Unknown` was already non-conforming — but the schema accepted it, no
+  prose forbade it, `TC-CORE-001` asserted only that a message arrived and never its value, and
+  the conformance corpus shipped `status-notification-unknown.json` as a **valid** vector. A
+  firmware author reading the schema was led into a message the protocol does not permit and
+  nothing caught them. This is not hypothetical: the reference station simulator emits it today,
+  on its default boot path, by reading its bay state machine's power-on value straight into the
+  payload.
+
+  Two schemas consume this enum and both are wire, so both narrow:
+  `status-notification.schema.json` (`status` **and** `previousStatus`) and
+  `ble/available-services.schema.json` (`bays[].status`). A station advertising its own bays over
+  BLE is as authoritative about them as it is over MQTT.
+
+  This follows settled practice for a state one party infers rather than observes. TR-069 names
+  the same case (§1.6, *Seen Missing*) and gives it no wire slot, noting the device cannot
+  determine it about itself; OCPP defines no connector status for connection loss in either 1.6-J
+  or 2.0.1. The process-control protocols carry such a fact as a companion quality flag beside
+  the value rather than as a member of the value's own vocabulary — and OSPP already has that
+  channel, since the LWT is itself the freshness signal. Recorded in
+  [§1.2](spec/05-state-machines.md) so it is not re-litigated.
+
+### Changed
+
+- **`previousStatus` is omitted on the post-boot report, not merely permitted to be**
+  ([`status-notification.md` §5 rule 2](spec/profiles/core/status-notification.md)). `MAY be
+  omitted` → `MUST omit`. This is the field the narrowing would otherwise have broken: the
+  post-boot report *is* the station leaving `Unknown`, so `Unknown` was the truthful value there,
+  and it was schema-valid. Narrowing while the field stayed permitted would have made a conforming
+  station's mandatory first report fail validation — and on a receiver that validates inbound
+  messages, a schema-invalid EVENT has no RESPONSE path, so the whole message is dropped and the
+  bay holds no report at all.
+
+  The two documents already disagreed: [`03-messages.md`](spec/03-messages.md) described the field
+  as *"absent on post-boot report"* while the profile said `MAY`. The catalog was right.
+
+  Absence is now load-bearing: no `previousStatus` on a StatusNotification means *this is the boot
+  report*, and a server MAY read it that way.
+
+- **The StatusNotification ordering floor is named, and its provenance constrained**
+  ([`02-transport.md` §3.2](spec/02-transport.md)). `last processed` → `last **accepted**`, plus
+  two rules that were previously absent: a *discarded* report MUST NOT advance the floor, and **no
+  server-internal state change advances it** — not a boot reset, not CORE-008, not a heartbeat
+  sweep, not a row-modification timestamp any of them touch. The floor is a station-clock value
+  that arrived on the wire and a server-clock event is not commensurable with it. Where no report
+  has been accepted there is no floor, and a bay's first report MUST NOT be discarded on ordering
+  grounds.
+
+  Discarding stays a SHOULD. What is now a MUST is what the floor is *made of*, because a floor
+  built from the wrong clock domain makes the discard unsound rather than merely lenient.
+
+  [`status-notification.md`](spec/profiles/core/status-notification.md) rule 6 stated a second,
+  weaker rule — *"latest timestamp wins"*, naming no floor and no provenance. It now points at the
+  transport chapter. One rule, one home. The reference server built the defect from exactly this
+  split: the provenance-bearing rule sat in the chapter a server implementer does not read.
+
+- **`TC-CORE-001` and `TC-CORE-002` assert the reported value**, not merely that a message
+  arrived. Both cases previously passed a station that reported `Unknown` for every bay.
+  `TC-CORE-002` is the more important of the two — it is the reconnect path, where the server has
+  just set every bay to `Unknown` and a station that mirrors server state will echo it back.
+
+- **`conformance/test-vectors/valid/core/status-notification-unknown.json`** moves to
+  `invalid/core/`, unannotated, matching how 0.9.0 retired `Deferred`. Vector counts: valid
+  157 → 156, invalid 149 → 150, total **306** unchanged. `tools/verify-schemas.py`: **306/306
+  PASS, 0 FAIL, 0 SKIP**.
+
+### What breaks
+
+| Audience | Breaks? | What |
+|---|:---:|---|
+| **Stations** | **yes** | A station reporting `Unknown` in `status` or `previousStatus` now fails schema validation. A station sending `previousStatus` on its post-boot report is now non-conforming. |
+| **Servers** | no | The wire narrows; a server's *internal* `Unknown` is untouched and still required by CORE-008. Servers that validate inbound messages will begin rejecting a message they previously accepted — which is the point. |
+| **SDK consumers** | **partly** | Neither SDK loses its `BayStatus` enum member: it remains the FSM's power-on state and, in PHP, a persisted domain value. What narrows is the *wire boundary* — PHP's `BayStatus::fromOspp('Unknown')` will throw, and TypeScript's `StatusNotificationPayload.status` no longer accepts `BayStatus.UNKNOWN`. Code that only *holds* the state is unaffected. |
+| **`protocolVersion`** | no | Unchanged. This is an enum narrowing, not a structural wire change — the same call 0.9.0 made for `Deferred`. |
+
+Both SDKs require a re-vendor: their CI gates clone the spec at `.spec-ref` and demand
+byte-identical schemas. They release as a pair at **0.11.0** against `.spec-ref = v0.10.0`, and
+the spec must be tagged first — a `.spec-ref` naming an unreleased tag breaks the gate rather
+than failing it ([VERSIONING.md](VERSIONING.md)).
+
+### Not changed, deliberately
+
+The bay FSM still has **seven** states and [§1.3](spec/05-state-machines.md)'s transition table is
+untouched. This narrows the wire, not the model.
+
+Found and **recorded rather than fixed** — see [KNOWN-ISSUES.md](KNOWN-ISSUES.md): the bay FSM is
+specified twice and the two copies disagree, on `Unavailable → Faulted`, on whether anything
+transitions *into* `Unknown`, and — in four separate statements, two of them 23 lines apart in one
+file — on whether an invalid transition is rejected or accepted as authoritative. Each SDK
+implemented one copy exactly: `ospp-sdk-php` has the profile's 18 transitions, `sdk-ts` has
+Chapter 05's 23. The root cause is that Chapter 05 §1 merges the station's physical FSM with the
+server's belief about it into one table, and separating them is a design question with a
+wire-visible answer, not a text edit.
+
+Also recorded, not built: no conformance case asserts CORE-008 itself — that a server marks all
+bays `Unknown` when a station disconnects. Both core cases are station-facing; CORE-008 is a
+server obligation and wants its own case.
+
+---
+
 ## [0.9.0] — 2026-07-29
 
 > **Three independent bodies of work share this tag, and all three are breaking — each for a

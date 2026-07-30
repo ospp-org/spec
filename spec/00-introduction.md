@@ -1,6 +1,6 @@
 # Chapter 00 — Introduction
 
-> **Status:** Draft | **OSPP Version:** 0.9.0
+> **Status:** Draft | **OSPP Version:** 0.10.0
 
 This chapter establishes the purpose, scope, and conventions for the Open Self-Service Point Protocol (OSPP) specification. It identifies the target audience, defines how normative language is used throughout the document, describes notation and formatting conventions, and provides the normative and informative reference bibliography.
 
