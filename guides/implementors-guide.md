@@ -299,18 +299,23 @@ The constant-time comparison is critical. Use `crypto.timingSafeEqual()` in Node
 Each bay has a state machine:
 
 ```
-Unknown (power-on / reboot / ConnectionLost)
-    ↓
+Unknown (your bays, at power-on — NEVER PUT ON THE WIRE)
+    ↓  self-test decides which of these you report
 Available → Reserved → Occupied → Finishing → Available
     ↓                      ↓
  Faulted              Faulted
     ↓
 Unavailable (maintenance)
 
-Any state → Unknown (on ConnectionLost LWT)
+  server-side only, you never see or report it:
+  any state → Unknown (when the server receives your ConnectionLost LWT)
 ```
 
-**Unknown** is the initial state after power-on, reboot, or when the server receives a ConnectionLost LWT. Transitions: Unknown → Available (healthy boot), Unknown → Faulted (fault detected), Unknown → Unavailable (maintenance mode). All bays transition to Unknown when the server receives a ConnectionLost event.
+**Unknown is the one state you never send.** Your bays start there at power-on; you leave it by finishing your self-test and reporting what you found — `Available`, `Faulted` or `Unavailable`. It is not a value of `status` or `previousStatus` and it is not in `bay-status.schema.json`; a StatusNotification carrying it is non-conforming, and a server that validates its inbound messages will reject the whole message, not just the field. While a bay is `Unknown` **you** reject StartService and ReserveBay on it with `3002 BAY_NOT_READY` — that is what the state is for, on your side.
+
+The server keeps its own `Unknown` for any bay it has no current report on: from your boot until your post-boot report arrives, and from your ConnectionLost LWT until your next report. You never observe that, and you must not try to acknowledge it. Reporting `Unknown` back on reconnect is the natural mistake and it resolves nothing — the bay stays where it refuses card payment and StartService.
+
+**Practical consequence:** do not build your post-boot StatusNotification out of whatever your bay state machine currently holds. At the moment the BootNotification response lands, that is still `Unknown`. Run the self-test, transition the bay locally, *then* report.
 
 When you receive a **StartService REQUEST**:
 
@@ -1123,7 +1128,9 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** StatusNotification for each bay after boot
 - [ ] **[MUST]** Heartbeat at server-specified `heartbeatIntervalSec`
 - [ ] **[MUST]** Clock sync from Heartbeat RESPONSE `serverTime`
-- [ ] **[MUST]** Bay state machine: Unknown → Available → Reserved → Occupied → Finishing → Available / Faulted / Unavailable / Unknown
+- [ ] **[MUST]** Bay state machine: Unknown → Available → Reserved → Occupied → Finishing → Available / Faulted / Unavailable
+- [ ] **[MUST NOT]** Report `Unknown` in `status` or `previousStatus` — it is your power-on state, not a wire value (§2.6)
+- [ ] **[MUST]** Omit `previousStatus` on the post-boot report
 - [ ] **[MUST]** Report actual duration and meter values in StopService RESPONSE
 - [ ] **[MUST]** `Finishing` state between `Occupied` and `Available` (hardware wind-down)
 
