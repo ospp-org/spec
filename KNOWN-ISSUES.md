@@ -1,8 +1,8 @@
 # OSPP Known Issues
 
-**Date:** 2026-07-28
+**Date:** 2026-07-30
 **Protocol Version:** 0.8.0
-**Status:** 3 blockers open (all BLE), 5 non-blocking issues open
+**Status:** 3 blockers open (all BLE), 6 non-blocking issues open
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle
 
 ---
@@ -12,8 +12,8 @@
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 5 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` |
-| **Total open** | **8** | |
+| OPEN | 6 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · [the bay FSM specified twice](#open--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) |
+| **Total open** | **9** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
@@ -514,3 +514,96 @@ sweep also confirms the table is otherwise sound: 29 keys, counts agreeing acros
 default (`FirmwareVersion`, `CertificateSerialNumber`, `OfflinePassPublicKey`) each have a
 working source; and no key encodes `stationId` or any other certificate-bound identity, so no
 configuration write can alter what the client certificate binds.
+
+---
+
+## OPEN — the bay FSM is specified twice, the two copies disagree, and each SDK implemented a different one
+
+**Raised 2026-07-30, by the arc that took `Unknown` off the wire. Recorded rather than fixed:
+reconciling them is not a text edit. The two tables differ because they are describing two
+different things, and deciding which is which is a design question with a wire-visible answer.**
+
+The bay state machine has two normative homes and they are not copies of each other.
+
+- **[`spec/05-state-machines.md` §1.3](spec/05-state-machines.md)** — 23 transitions.
+- **[`spec/profiles/core/status-notification.md` §5](spec/profiles/core/status-notification.md)** — 18 transitions.
+
+### 1. They disagree on `Unavailable → Faulted`
+
+`status-notification.md:67` lists it:
+
+> `Unavailable --> Faulted      (fault detected during maintenance)`
+
+Chapter 05 does not have it, in either the diagram or the table. Its hardware-error row
+(`05-state-machines.md:110`) enumerates the source states explicitly and `Unavailable` is not
+among them:
+
+> `| Hardware error detected | Available, Reserved, Occupied, Finishing | Faulted | ... |`
+
+A bay that faults while under maintenance is reportable by one document and invalid by the other.
+
+### 2. They invert on `Unknown`
+
+Chapter 05 carries six `→ Unknown` rows, one per state, all triggered by LWT
+(`05-state-machines.md:47-52`, and the table row at `:86`). `status-notification.md` §5 carries
+**none** — it has the three transitions *out* of `Unknown` and no way in.
+
+Neither is wrong on its own terms, which is the tell. Chapter 05 is describing what the
+**server's** model does, where connection loss really does move a bay to `Unknown`.
+`status-notification.md` is describing what a **station** can report, where nothing ever moves a
+bay to `Unknown` after power-on. The two documents are modelling two different observers and
+neither says so.
+
+### 3. Each SDK implemented a different table — exactly, and neither knows the other exists
+
+This is not drift. Both are faithful; they are faithful to different chapters.
+
+| | transitions | `unavailable → faulted` | `→ unknown` | implements |
+|---|---:|:---:|:---:|---|
+| `status-notification.md` §5 | 18 | yes | none | — |
+| `ospp-sdk-php` `BayTransitions.php:13-19` | **18** | yes | none | **the profile** |
+| `05-state-machines.md` §1.3 | 23 | no | 6 rows | — |
+| `sdk-ts` `BayStateMachine.ts:15-21` | **23** | no | 6 rows | **chapter 05** |
+
+The two SDKs release as a pair at one version and are meant to be interchangeable. They are not:
+hand a PHP server and a TS server the same `Unavailable → Faulted` report and one accepts it and
+one rejects it.
+
+The `→ Unknown` half of that divergence is now partly moot — no station may report `Unknown`, so
+the six rows are unreachable from the wire. They are still reachable from a **server's** own
+model, which is exactly the point: `BayStateMachine` in `sdk-ts` is one class doing two jobs, and
+the LWT rows only make sense in one of them.
+
+### 4. Four statements about what an invalid transition does, and they do not agree
+
+| where | says |
+|---|---|
+| `05-state-machines.md:5` | *"any transition not explicitly listed here is invalid and MUST be rejected"* |
+| `05-state-machines.md:127` (§1.5) | *"the server SHOULD log a warning and MAY request a station Reset"* |
+| `status-notification.md:50` | *"Any transition not listed below is invalid and **MUST** be rejected by the server with a log entry."* |
+| `status-notification.md:73` | *"Invalid transitions **MUST** be logged but **SHOULD NOT** cause the server to drop the message -- the server **SHOULD** accept the reported state as authoritative and log a warning."* |
+
+The last two are in the same file, twenty-three lines apart, and are direct opposites: reject the
+report, versus accept it as authoritative. A server author can comply with either and cite the
+spec for it. The reference server accepts-and-logs, which is `:73`.
+
+### The root cause, and why this is its own arc
+
+**Chapter 05 §1 merges the station's physical FSM with the server's belief about it into one
+table.** The bay a station operates and the bay a server thinks it has are different objects with
+different transition sets, and §1 draws them as one. Every contradiction above falls out of that:
+the `→ Unknown` rows are the server's and only the server's; `Unavailable → Faulted` is the
+station's and only the station's; and "reject or accept an invalid transition" has no single
+answer because a server validating its *own* model and a server receiving a *station's* report
+are not doing the same thing.
+
+Reconciling this is not a matter of picking one table and deleting the other. It needs the
+design question answered first — **which transitions belong to the station's FSM, which to the
+server's, and which document owns each** — and the answer changes what both SDKs ship. Recorded
+here so the next reader does not "fix" it by copying one table over the other, which would
+silently pick a winner for a decision nobody has made.
+
+Adjacent, and already fixed: the ordering rule was specified twice the same way, with the
+provenance-bearing version in the chapter a server implementer does not read
+([`02-transport.md` §3.2](spec/02-transport.md)) and a weaker one in the profile they do. That
+one **was** a text edit and was settled in this arc.
