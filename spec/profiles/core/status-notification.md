@@ -89,7 +89,7 @@ Unknown    --> Unavailable   (maintenance mode detected after reconnection)
 3. The station **MUST** send a StatusNotification within 1 second of any bay state change.
 4. StatusNotification is an EVENT -- no response is expected. The station **MUST NOT** wait for an acknowledgement before continuing.
 5. If MQTT is disconnected, the station **MUST** buffer StatusNotification events locally (up to 1000 events or 24 hours (StatusNotification-specific recommendation)) and replay them in chronological order upon reconnection.
-6. The server **MUST** update the bay state record atomically. If multiple StatusNotifications arrive out of order, the server **MUST** use the `timestamp` in the message envelope to resolve conflicts (latest timestamp wins).
+6. The server **MUST** update the bay state record atomically. StatusNotifications may arrive out of order; the ordering rule — which report wins, and what does and does not advance the discard floor — is [`02-transport.md §3.2`](../../02-transport.md) and is deliberately **not** restated here. An earlier revision of this rule said only "latest timestamp wins", which named no floor and no provenance for it; a server implementer who read this profile and not the transport chapter had everything they needed to build the wrong thing.
 
 ## 8. Examples
 
