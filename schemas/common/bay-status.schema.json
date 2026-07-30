@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/common/bay-status.schema.json",
   "title": "Bay Status",
-  "description": "Current operational status of a service bay",
+  "description": "A bay status as it appears on the wire: the six REPORTABLE states. The bay state machine has seven states -- `Unknown` is the seventh and is deliberately absent here, because no party transmits it. See Chapter 05 -- State Machines, section 1.2.",
   "type": "string",
   "enum": [
     "Available",
@@ -10,7 +10,6 @@
     "Occupied",
     "Finishing",
     "Faulted",
-    "Unavailable",
-    "Unknown"
+    "Unavailable"
   ]
 }

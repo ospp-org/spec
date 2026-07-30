@@ -975,7 +975,7 @@ Reports the current status of a single bay. Sent in two contexts:
 | `errorCode` | integer | No | Error code when `status` is `"Faulted"` |
 | `errorText` | string | No | Error description when `status` is `"Faulted"` |
 
-**`status` enum values** (see [Chapter 05 — State Machines](05-state-machines.md)):
+**`status` enum values** — the six reportable states (see [Chapter 05 — State Machines](05-state-machines.md)):
 
 | Value | Description |
 |-------|-------------|
@@ -985,7 +985,8 @@ Reports the current status of a single bay. Sent in two contexts:
 | `Finishing` | Service complete, hardware winding down |
 | `Faulted` | Hardware error — see `errorCode` |
 | `Unavailable` | Bay is in maintenance mode |
-| `Unknown` | Bay state is unknown, typically after station boot before first status report. The station MUST resolve this by sending a StatusNotification. |
+
+The FSM's seventh state, `Unknown`, is **not** a value of this field. A station in `Unknown` resolves it by reporting the state it resolved *to* — never by reporting `Unknown` itself ([Chapter 05 §1.2](05-state-machines.md)).
 
 #### Example
 
@@ -2357,7 +2358,7 @@ Returns the full service catalog with pricing for all bays. The app uses this to
 | `bays` | array | Yes | List of bays — see fields below |
 | `bays[].bayId` | string | Yes | Bay identifier (`bay_{uuid}`) |
 | `bays[].bayNumber` | integer | Yes | Physical bay number (1-indexed) |
-| `bays[].status` | string | Yes | Current bay status (`"Available"`, `"Reserved"`, `"Occupied"`, `"Finishing"`, `"Faulted"`, `"Unavailable"`, `"Unknown"`) |
+| `bays[].status` | string | Yes | Current bay status — one of the six reportable states (`"Available"`, `"Reserved"`, `"Occupied"`, `"Finishing"`, `"Faulted"`, `"Unavailable"`). `"Unknown"` is not among them ([Chapter 05 §1.2](05-state-machines.md)) |
 | `bays[].services` | array | Yes | Services available on this bay |
 | `bays[].services[].serviceId` | string | Yes | Service identifier (`svc_{id}`) |
 | `bays[].services[].serviceName` | string | Yes | Human-readable name |

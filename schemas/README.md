@@ -53,7 +53,7 @@ Shared definitions referenced by message schemas via `$ref`.
 | [`device-id.schema.json`](common/device-id.schema.json) | string | Mobile device identifier |
 | [`timestamp.schema.json`](common/timestamp.schema.json) | string | ISO 8601 UTC with milliseconds |
 | [`credit-amount.schema.json`](common/credit-amount.schema.json) | integer | Credit amount (atomic integer unit) |
-| [`bay-status.schema.json`](common/bay-status.schema.json) | string | Bay state enum (Available, Reserved, Occupied, Finishing, Faulted, Unavailable, Unknown) |
+| [`bay-status.schema.json`](common/bay-status.schema.json) | string | Reportable bay state enum (Available, Reserved, Occupied, Finishing, Faulted, Unavailable). The FSM's seventh state, `Unknown`, is not on the wire |
 | [`meter-values.schema.json`](common/meter-values.schema.json) | object | Consumption readings (liquidMl, consumableMl, energyWh) |
 | [`offline-pass.schema.json`](common/offline-pass.schema.json) | object | Complete OfflinePass with allowance, constraints, ECDSA P-256 signature |
 | [`receipt.schema.json`](common/receipt.schema.json) | object | ECDSA P-256 signed receipt (data + signature + algorithm) |

@@ -32,7 +32,9 @@ Each notification reports the bay identifier, the new status, the previous statu
 | `serviceId` | string | Yes | Service identifier (`svc_` prefix). |
 | `available` | boolean | Yes | Whether this service is currently available on the bay. |
 
-## 4. Bay States
+## 4. Reportable Bay States
+
+These are the six values `status` and `previousStatus` may carry. The bay state machine has a seventh state, `Unknown`, which is not one of them ([Chapter 05 — State Machines §1.2](../../05-state-machines.md)).
 
 | State | Description |
 |-----------------|---------------------------------------------------------------|
@@ -42,7 +44,6 @@ Each notification reports the bay identifier, the new status, the previous statu
 | `Finishing` | Service has ended; bay is in cool-down or wrap-up. |
 | `Faulted` | Bay has a hardware or software fault. |
 | `Unavailable` | Bay is in maintenance mode or otherwise out of service. |
-| `Unknown` | Bay state is indeterminate (e.g., after connection loss). |
 
 ## 5. Transition Rules
 
