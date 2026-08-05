@@ -8,6 +8,141 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [Unreleased]
+
+> **Breaking on the wire, and the wire version moves with it: `protocolVersion` goes to
+> `0.3.0`.** The document version does **not** move here — [`02-transport.md` §2.2](spec/02-transport.md)
+> makes the two independent and this change respects that.
+>
+> **Partial.** Parts 3 (signing), 4 (boot) and 6.2 (the exempt-count reconciliation) of this
+> arc are **not** in this entry. See *Not in this revision* at the end.
+
+### Changed (BREAKING — wire)
+
+- **`protocolVersion` → `0.3.0`.** 209 occurrences of the old value were counted across 59
+  files; 175 are `"protocolVersion"` value sites in 44 files and all moved, as did the
+  normative `ProtocolVersion` configuration default in both places `08-configuration.md`
+  states it. `bleProtocolVersion` is a **different** version on a different transport and is
+  untouched (17 sites). Revision-history and delivered-release tables keep the old value —
+  they are history.
+
+  **Deployment order: server configuration must accept `0.3.0` before any station emits it.**
+  Measured: every station that has ever booted emits the *old* value, and both servers are
+  configured for a value no station has ever emitted. Enforcement ahead of configuration
+  rejects the entire connecting fleet.
+
+- **`bayIds` and `bayCount` are deleted from the wire.** The station declares `bays[]`; the
+  provisioning response returns `bays[]` pairing each `bayId` with its `bayNumber`. Nothing
+  else. There is no compatibility window and no deprecation marker: this protocol is
+  unreleased, and a window would have left two ways to express one thing — the defect class
+  this arc exists to remove. A non-dense bay set (`{1, 3}`) is legal everywhere, and a server
+  **MUST NOT** reject a declaration for being non-dense.
+
+- **Reset: remote credential wipe leaves the wire.** `Hard`/`Soft` are gone. One reboot
+  operation remains, carrying an optional `force`. Without it an active session is refused
+  with `3016`; with it the session settles under the operator-disable policy — stopped,
+  metered, reported as an operator-initiated stop — and only then does the station reboot.
+
+  OSPP keeps no bootstrap credential. TR-069 and LwM2M permit a remote wipe and both retain
+  one across it so the device can be re-enrolled; OCPP offers no remote factory reset at all.
+  OSPP retained nothing, so `Hard` was a supported command whose success left a station
+  unreachable by every channel it had — which `reset.md` admitted in its own text. Factory
+  reset is now **physical**, and `reset.md` §5.2 keeps the normative scope of what such a
+  reset must preserve.
+
+  Provenance, because it explains the defect: `Hard`/`Soft` came from OCPP 1.6, where the
+  pair means abrupt versus graceful **restart** and touches no credential. The wipe meaning
+  was attached later, in a **conformance case** rather than in a design decision.
+
+- **`start-service-response` echoes the refused `programNumber`**, required whenever `status`
+  is `Rejected`. Matter requires the refused path in every `CommandStatus`; MDB's Remote Vend
+  `SELECTION DENIED` carries the item number it refused. Modbus omits it, and that omission
+  is the documented reason Modbus debugging is painful. Applied to the BLE response too.
+
+- **`3015 PAYLOAD_INVALID` is narrowed.** Its text covered "unknown enum values" and therefore
+  already reached an undeclared ordinal. It now covers only values that are wrong *in
+  themselves*; well-formed identifiers that refer to nothing are **reference** failures and
+  each identifier kind has its own code. The recoveries differ — a bad value is fixed by
+  correcting the message, a dangling reference by correcting server-side state — and one code
+  covering both left an operator unable to tell which.
+
+### Added
+
+- **`3017 PROGRAM_NOT_DECLARED`** — the `programNumber` was never declared for that bay. The
+  station **fails closed**: reject, echo the ordinal, activate nothing. It **MUST NOT**
+  substitute a neighbouring ordinal or clamp to the highest declared one; MDB permits exactly
+  that clamp for vending selections, and it is worse than refusing because it charges for one
+  thing and delivers another. Accept-and-do-nothing is a customer who paid and got no wash.
+
+- **`3018 TOPOLOGY_MISMATCH`** — the boot declaration disagrees with the provisioned topology,
+  in either direction. In **3xxx**, not the transport range: it is a disagreement about
+  hardware, not a transport failure. Carried on a **`Pending`** response, never `Rejected`,
+  with a `details` object naming what was expected and what arrived. `Pending` keeps the
+  command channel open so an operator can repair it; `Rejected` would close the only channel
+  through which it could be repaired.
+
+  3xxx is dense with no gaps, so allocation is dense and gaps are never back-filled. Registry
+  totals move **114 → 116** in all five places that state one.
+
+- **`programNumber` now travels in all three places the decision names.** The previous arc
+  landed only the declarations, so the ordinal could not be echoed because it was never sent.
+  It now also travels in **StartService** — so the station acts on a field rather than
+  indexing its catalog by `serviceId`, and so a service minted since the last catalog push
+  still starts — and in the **catalog**, where `service-item` gains `bindings[]` of
+  `{bayNumber, programNumber}`. The catalog leg is what lets the station act **offline**,
+  where no StartService exists to carry the ordinal.
+
+- **`bootReason: "RemoteReset"`** — so the server can tell a return it asked for from a
+  spontaneous one. `ManualReset` (a human at the station) and `ScheduledReset` (the station's
+  own timer) remain; neither ever denoted a wipe.
+
+### Removed
+
+- The deprecation convention introduced in the previous session, in full — `"deprecated"`
+  annotations, description prefixes, prose admonitions, the `### Deprecated` section, and
+  every `0.11.0`/`0.12.0` removal reference.
+- The rule requiring a server to reject a non-dense bay set. It existed only because `bayIds`
+  was retained and could not encode one.
+- `reset-request-invalid-enum.json` and `reset-request-missing-required.json` — the enum and
+  the required member they tested no longer exist. A new `reset-request-additional-properties`
+  vector pins `{"type": "Hard"}` as **rejected**, so the old value is actively refused rather
+  than merely absent.
+
+### Verification
+
+- `tools/verify-schemas.py`: **305/305 PASS, 0 FAIL, 0 SKIP**.
+- Example payloads against their schemas (CI's `validate-examples` script): **51/51**.
+- All schemas compile: **85/85**.
+- `tools/verify-protocol.sh`: failure set **byte-identical** to the branch baseline — the same
+  15 pre-existing failures, **+0 regressions**. It caught three real defects during this work
+  that a passing example set did not: two field rows inserted into the wrong response table
+  (`errorCode`/`errorText` is not a unique anchor — it matched ReserveBay and Reset before
+  StartService), and an empty minimal fixture.
+- Not run: `markdownlint` and `lychee` (CI-only, absent here); `verify-all-signatures.sh`
+  (**mutates tracked files** — do not run it).
+
+### Not in this revision
+
+Parts 3, 4 and 6.2 of this arc are unstarted, and the session stopped at a context limit
+rather than at a gate:
+
+- **Signing** — sign everything, remove the now-meaningless middle mode, reclassify the
+  configuration key as fixed, resolve the enum case drift, make `sessionKey` unconditional,
+  state the broker inside the trust boundary and delete any non-repudiation claim, bind the
+  key to the MQTT session, and make the sign path fail closed.
+- **Boot** — exact-match version negotiation (the "same MAJOR" rule survives in ~8 sites), the
+  `bootReason` reconnect value, StatusNotification reporting **programs** rather than
+  services, program-level fault reporting, the `Pending` restricted-state reconciliation, the
+  missing station-level state machine, and first-boot topology.
+- **6.2** — the security chapter states an exempt-message count and then names a different
+  number.
+
+`3018 TOPOLOGY_MISMATCH` and the `Pending` behaviour it depends on are **defined but not yet
+structurally homed**: `05-state-machines.md` still has no station-level state machine. That is
+Part 4.6 and it is the first thing the next session should land.
+
+---
+
 ## [0.10.0] — 2026-07-30
 
 > **One change, breaking for stations only: `Unknown` is no longer a value any message can
