@@ -19,7 +19,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 |-------------------|---------|----------|-----------------------------------------------|
 | `sessionId` | string | Yes | Unique session identifier (server-generated, `sess_` prefix). |
 | `bayId` | string | Yes | Target bay identifier (`bay_` prefix). |
-| `serviceId` | string | Yes | Service program to activate (`svc_` prefix). |
+| `serviceId` | string | Yes | Catalog service to activate (`svc_` prefix) — the commercial offering, minted by the server. Not the station's physical program; see `programNumber`. |
 | `durationSeconds` | integer | Yes | Authorized duration in seconds (minimum 1). |
 | `sessionSource` | string | Yes | Origin of the session: `MobileApp` or `WebPayment`. |
 | `reservationId` | string | No | Associated reservation identifier, if the bay was pre-reserved. |

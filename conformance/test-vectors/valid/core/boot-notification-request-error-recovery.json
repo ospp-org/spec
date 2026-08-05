@@ -5,6 +5,24 @@
   "stationVendor": "AcmeCorp",
   "serialNumber": "SN-2025-007890",
   "bayCount": 2,
+  "bays": [
+    {
+      "bayNumber": 1,
+      "programNumbers": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "bayNumber": 2,
+      "programNumbers": [
+        1,
+        2,
+        3
+      ]
+    }
+  ],
   "uptimeSeconds": 0,
   "pendingOfflineTransactions": 1,
   "timezone": "Europe/London",

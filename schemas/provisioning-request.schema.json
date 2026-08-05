@@ -8,7 +8,7 @@
   "required": [
     "provisioningToken",
     "serialNumber",
-    "bayCount",
+    "bays",
     "tlsCsr",
     "receiptSigningPublicKey"
   ],
@@ -27,10 +27,62 @@
       "description": "Manufacturer serial number of the hardware serving this station. DESCRIPTIVE: it identifies the hardware, not the station (Chapter 01 — Architecture §2.1), and it MAY change across the station's life without changing the stationId. Drift in this field on a retry with the same token MUST be ignored. Matches the BootNotification serialNumber constraint."
     },
     "bayCount": {
+      "deprecated": true,
       "type": "integer",
       "minimum": 1,
-      "maximum": 255,
-      "description": "Number of service bays the station reports. DESCRIPTIVE — drift on a retry MUST be ignored. Maximum bay count per controller is 255 (Chapter 01 — Architecture §4.2), matching the bayIds maxItems in the provisioning response."
+      "maximum": 64,
+      "description": "DEPRECATED (since 0.11.0, removed in 0.12.0): use bays instead, which declares the bay NUMBERS rather than only how many there are. A scalar count cannot express a non-dense bay set — a station with bays {1,3} declaring bayCount 2 asserts a bay 2 it does not have — and cannot carry the per-bay program list at all. Retained for one release so a station built against 0.10.0 still validates. When both are present bays is authoritative and bayCount MUST equal bays.length; a server MUST NOT derive topology from bayCount when bays is present. DESCRIPTIVE — drift on a retry MUST be ignored. Maximum bay count per controller is 64 (Chapter 01 — Architecture §4.2)."
+    },
+    "bays": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "description": "The station's DECLARED PHYSICAL TOPOLOGY: the bays it has, and per bay the programs that bay can run. Declared here, at provisioning, because this is the moment the server creates the bay records the station will be addressed by. The station declares bay NUMBERS, not a count: the set need not be dense, so a station with bays {1,3} declares exactly those two and asserts nothing about a bay 2 (Chapter 04 — Protocol Flows §2). A PROGRAM is a complete station-defined physical operation ('simple wash'), not a composable element ('brush', 'water'); it is identified within its bay by the ordinal programNumber. Programs are PHYSICAL and station-owned; SERVICES are commercial and server-minted, and the binding between them is created on the server by an operator and delivered to the station in the service catalog — the station never originates it (Chapter 01 — Architecture §4.2). Maximum 64 bays (Chapter 01 — Architecture §4.2): a real installation has 4-8, and 64 keeps the boot re-declaration far below the 64 KB MQTT Maximum Packet Size of Chapter 02 — Transport §1.2 even at the maximum programs per bay. A faulted bay or program is declared present-but-unavailable, never omitted: absence means the hardware itself changed and requires re-provisioning (Chapter 04 — Protocol Flows §2).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "bayNumber",
+          "programs"
+        ],
+        "properties": {
+          "bayNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 64,
+            "description": "The station-assigned ordinal identifying this bay physically. Unique within the request. The set of bayNumber values across bays need NOT be dense — {1,3} is a conforming declaration for a station whose bay 2 was never fitted."
+          },
+          "programs": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 32,
+            "description": "The programs this bay can run. Ordered by the station; order carries no meaning, programNumber does.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "programNumber",
+                "label"
+              ],
+              "properties": {
+                "programNumber": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 32,
+                  "description": "The ordinal identifying this program within its bay. Unique within the bay; need NOT be dense. This is the value that travels in the service catalog and in StartService (Chapter 03 — Messages)."
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32,
+                  "pattern": "^[\\x20-\\x7E]+$",
+                  "description": "Human-readable name of the program, printable ASCII, unique within its bay. DESCRIPTIVE: it exists so an operator can tell which physical program is which when creating the service binding. It is declared here and is NOT compared at boot — a corrected typo in a firmware constant MUST NOT put a station into Pending (Chapter 04 — Protocol Flows §2, descriptive drift). Drift in this field on a retry MUST be ignored, exactly as for serialNumber."
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "tlsCsr": {
       "type": "string",

@@ -14,9 +14,10 @@ constraints, and — the part no schema can express — the **relationships betw
 Three of those relationships are the point of the case, because each of them is a requirement that a
 response can satisfy field-by-field and still violate:
 
-1. **`bayIds` carries the bay-number mapping by ORDER.** The array is the only place the station is
+1. **`bays` carries the bay-number mapping EXPLICITLY.** The array is the only place the station is
    ever told which `bayId` is which `bayNumber`. A response whose every element is a valid bay-id, and
-   whose length is right, can still be wrong.
+   whose length is right, can still pair them wrongly. The deprecated `bayIds` carries the same mapping
+   by order until 0.12.0, and the two MUST agree.
 2. **`stationCaChain` and `rootCaThumbprint` are bound to the `clientCert` in the SAME response**, not
    to the server's current CA. On a replay after a Station CA rotation these two requirements diverge,
    and only one of them is correct.
@@ -34,7 +35,8 @@ This case does that.
 ## References
 
 - `spec/04-flows.md` §2 — the flow, its *Postconditions*, and *Persisting the response*
-- `spec/04-flows.md` §2 — "**`bayIds` carries the bay-number mapping, and carries it by order**"
+- `spec/04-flows.md` §2 — "**`bays` pairs each `bayId` with its `bayNumber` explicitly**", and the
+  *Deprecated (0.11.0)* note governing `bayIds` for the deprecation window
 - `spec/04-flows.md` §2 — *Single-use and idempotent retry* → "**What a replay returns**" (the three groups)
 - `spec/02-transport.md` §1.1 §1.2 §1.3 §1.4 — MQTT 5.0, the pinned CONNECT parameters, the TLS floor,
   port 8883 and the prohibition on 1883
@@ -87,8 +89,9 @@ This case does that.
 3. Verify the response status is **`200 OK`** and the `Content-Type` is `application/json`.
 4. Verify the body validates against `provisioning-response.schema.json`. Retain the raw bytes as
    `RESP_1`.
-5. Verify the six **required** members are present at the **top level**: `stationId`, `bayIds`,
-   `clientCert`, `stationCaChain`, `serverVerifyKey`, `mqttConfig`.
+5. Verify the seven **required** members are present at the **top level**: `stationId`, `bays`,
+   `bayIds` (deprecated, required until 0.12.0), `clientCert`, `stationCaChain`, `serverVerifyKey`,
+   `mqttConfig`.
 6. Verify the body carries **no member outside** the schema's declared set — the schema is
    `additionalProperties: false`, so any extra top-level member is a conformance failure. In particular
    verify the body is **not wrapped**: a body of the form `{"data": { … }}`, or one carrying the response
@@ -121,28 +124,30 @@ This case does that.
     **is** a failure. This is the extension a revoked certificate is checked against, and it cannot be
     added retroactively to a certificate already in a station's secure element.
 
-### Part D — `bayIds` is an ordered, dense array of bay-id **strings**
+### Part D — `bays` pairs each `bayId` with its `bayNumber` explicitly
 
-17. Verify `bayIds` is a **JSON array of strings**, each matching `^bay_[a-f0-9]{8,}$`, length 12..64.
-    Verify specifically that the elements are **strings and not objects** — a response carrying an array
-    of `{"bayId": …, "bayNumber": …}` members, or any other object form, is non-conforming: the schema
-    declares `items` as `bay-id.schema.json`, a string. There is no object-valued bay member anywhere in
-    the provisioning response.
-18. Verify the array has `uniqueItems` — no `bayId` appears twice.
-19. Verify `bayIds.length` equals **3**, the station's **registered** bay count. This is the same count
-    that step 5 of *Error precedence* validates the request's `bayCount` against with
-    `4020 BAY_COUNT_MISMATCH`, so a response whose length disagrees with it contradicts the check the
-    same request already passed.
-20. Verify the array is **dense and 1-based**: taken together with the registered mapping from
-    Precondition 2, `bayIds[0]` is the `bayId` of the bay whose `bayNumber` is **1**, `bayIds[1]` is
-    `bayNumber` **2**, `bayIds[2]` is `bayNumber` **3** — element at index *i* is `bayNumber` *i + 1*,
-    covering 1..`bayCount` with **no gaps** and no `bayNumber` outside that range.
+17. Verify `bays` is a **JSON array of objects**, each carrying exactly `bayId` (matching
+    `^bay_[a-f0-9]{8,}$`, length 12..64) and `bayNumber` (integer, 1..64). Verify that no member carries
+    any other property — the schema is `additionalProperties: false`.
+18. Verify no `bayId` appears twice and no `bayNumber` appears twice.
+19. Verify `bays.length` equals **3**, the station's **registered** bay count, and that the **set** of
+    `bayNumber` values equals the registered set exactly. This is the same set that step 5 of *Error
+    precedence* validates the request's `bays` against with `4020 BAY_COUNT_MISMATCH`, so a response
+    whose set disagrees with it contradicts the check the same request already passed.
+20. Verify the pairing is carried by the **fields, not the position**: re-request a replay (Part G) and
+    verify each `bayNumber` is still paired with the same `bayId` even if the members arrive in a
+    different order. Order is not significant and a station MUST NOT infer anything from it. Verify
+    specifically that a **non-dense** bay set is expressible — a station registered with bays `{1, 3}`
+    receives two members naming `bayNumber` **1** and **3**, and no member naming 2.
 21. Verify the mapping end-to-end on the wire, where the harness can drive a boot: connect over mTLS with
     the issued `clientCert`, send `BootNotification` and obtain `Accepted`, then send one
-    StatusNotification per bay, pairing each `bayId` with the `bayNumber` derived from its **index** in
-    step 20. Verify the server accepts all three and that the status it records for each bay is the one
-    the harness sent for that bay number. A server that assigned the array in a different order records
-    the statuses against the wrong bays, which is observable and is a failure.
+    StatusNotification per bay, pairing each `bayId` with the `bayNumber` **read from its own member** in
+    step 17. Verify the server accepts all three and that the status it records for each bay is the one
+    the harness sent for that bay number. A server that paired them differently records the statuses
+    against the wrong bays, which is observable and is a failure.
+22. **Deprecation window.** Verify `bayIds` is also present and **agrees** with `bays`: it lists exactly
+    the same `bayId` values, ordered so that index *i* is the bay whose `bayNumber` is *i + 1*. A
+    disagreement between the two is a failure. This step is removed when `bayIds` is removed in 0.12.0.
 
 > Steps 17 and 20 are what this Part exists for. `bayIds` is the **only** mapping the station is ever
 > given: bay identifiers are server-assigned, they arrive nowhere else in any profile, and the first
@@ -284,11 +289,11 @@ This case does that.
 2. `stationId` is the identifier the token was bound to, and is the Subject CN of `clientCert`.
 3. `clientCert` certifies the **submitted CSR key**, is ECDSA P-256, X.509 v3, asserts `digitalSignature`
    and `clientAuth`, and carries a CRL Distribution Points extension.
-4. `bayIds` is an array of bay-id **strings** — never objects — unique, dense, of length equal to the
-   station's registered bay count, and **ordered** so that index *i* is the bay whose `bayNumber` is
-   *i + 1*.
-5. The order in `bayIds` is the mapping the station actually uses: StatusNotifications paired by that
-   order are recorded against the right bays.
+4. `bays` is an array of **objects**, each pairing a `bayId` with its `bayNumber`, unique in both, of
+   length equal to the station's registered bay count, and carrying exactly the registered set of bay
+   numbers — dense or not. `bayIds` is present alongside it, agreeing, until 0.12.0.
+5. The pairing in `bays` is the mapping the station actually uses: StatusNotifications paired by the
+   `bayNumber` read from each member are recorded against the right bays.
 6. `stationCaChain` verifies the `clientCert` returned **in the same response**, and `rootCaThumbprint`
    pins the apex of **that** chain.
 7. `serverVerifyKey` is an ECDSA P-256 public key distinct from every key the station submitted, and is
@@ -315,13 +320,13 @@ The implementation **fails** this test case if any of the following occur:
 2. `clientCert` certifies a public key other than the one submitted in the CSR, or its Subject CN is not
    the `stationId` returned beside it, or it lacks `clientAuth`, or it lacks a CRL Distribution Points
    extension.
-3. **`bayIds` is returned as an array of objects** — for example `{"bayId": …, "bayNumber": …}` — or in
-   any shape other than an array of bay-id strings.
-4. `bayIds` is sparse, contains a duplicate, or has a length other than the station's registered bay
-   count.
-5. **`bayIds` is ordered such that index *i* is not the bay whose `bayNumber` is *i + 1***, or the order
-   differs between the original response and a replay. This is the silent one: every element is valid,
-   the length is right, and every bay in the station is mis-identified.
+3. **`bays` is returned in any shape other than an array of `{bayId, bayNumber}` objects** — a bare
+   array of bay-id strings, or a member carrying an additional property.
+4. `bays` contains a duplicate `bayId` or a duplicate `bayNumber`, or its set of `bayNumber` values is
+   not exactly the station's registered set.
+5. **A member of `bays` pairs a `bayId` with the wrong `bayNumber`**, or the pairing differs between the
+   original response and a replay, or `bayIds` disagrees with `bays`. This is the silent one: every
+   element is valid, the length is right, and every bay in the station is mis-identified.
 6. `stationCaChain` does not verify the `clientCert` returned in the same response, or
    `rootCaThumbprint` pins an apex other than that of the chain returned in the same response.
 7. Any pinned `mqttConfig` value is other than its single conforming setting, or `brokerPort` is `1883`,

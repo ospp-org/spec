@@ -21,7 +21,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 | `offlinePassId` | string | Yes | OfflinePass used for authorization (`opass_` prefix). |
 | `userId` | string | Yes | User who initiated the transaction (`sub_` prefix). |
 | `bayId` | string | Yes | Bay where the service ran (`bay_` prefix). |
-| `serviceId` | string | Yes | Service program that was executed (`svc_` prefix). |
+| `serviceId` | string | Yes | Catalog service that was executed (`svc_` prefix) — the commercial offering, and therefore the field that identifies the price paid. Not the station's physical program. |
 | `startedAt` | string | Yes | ISO 8601 UTC timestamp of service activation. |
 | `endedAt` | string | Yes | ISO 8601 UTC timestamp of service completion. |
 | `durationSeconds` | integer | Yes | Actual duration in seconds (minimum 1). |

@@ -2,6 +2,42 @@
   "provisioningToken": "a3f1c8e07b924d6ab5e2109f4c7d83be",
   "serialNumber": "SSP3000-2026-004217",
   "bayCount": 2,
+  "bays": [
+    {
+      "bayNumber": 1,
+      "programs": [
+        {
+          "programNumber": 1,
+          "label": "Simple wash"
+        },
+        {
+          "programNumber": 2,
+          "label": "Standard wash"
+        },
+        {
+          "programNumber": 3,
+          "label": "Deluxe wash"
+        }
+      ]
+    },
+    {
+      "bayNumber": 2,
+      "programs": [
+        {
+          "programNumber": 1,
+          "label": "Simple wash"
+        },
+        {
+          "programNumber": 2,
+          "label": "Standard wash"
+        },
+        {
+          "programNumber": 3,
+          "label": "Deluxe wash"
+        }
+      ]
+    }
+  ],
   "tlsCsr": "-----BEGIN CERTIFICATE REQUEST-----\nMIH2MIGdAgEAMDsxFTATBgNVBAMMDHN0bl9hMWIyYzNkNDEVMBMGA1UECgwMT1NQ\nUCBFeGFtcGxlMQswCQYDVQQGEwJSTzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IA\nBOqKa6wJhVLizc0r2hQ3+vCqwYdeERlPiCLb+wNnKD8cjltocEjsZvIMYRQcKpX3\ncw0b1RacmUr5GbuRpRzmKM2gADAKBggqhkjOPQQDAgNIADBFAiB0n2765THWrfax\n2HNKUz5iAW4JJshqg6t8dxBk3M87rAIhAI2aYqyFMu2yJaRVTZMXzg7LRzLh5o4h\n5BeSPvbwhoWe\n-----END CERTIFICATE REQUEST-----",
   "receiptSigningPublicKey": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEaPNa8zilpnrmF+J4g06Y7kIsXSm4\nMEdG6ELLQC3jEeZxV+zVU8HgvwW0TsMPNhmRmdVTTViOAJSA3+m6OxyQAw==\n-----END PUBLIC KEY-----",
   "stationPubKey": "AhdArIVVOC7eriy2MB21pXk2hfYrBeAm8AnvCTG7vz/b"

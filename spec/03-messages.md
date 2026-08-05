@@ -161,7 +161,8 @@ The station MAY include a human-readable name configurable via `StationName` (se
 | `stationModel` | string | Yes | Hardware model name (e.g., `"SSP-3000"`) |
 | `stationVendor` | string | Yes | Manufacturer name (e.g., `"AcmeCorp"`) |
 | `serialNumber` | string | Yes | Hardware serial number |
-| `bayCount` | integer | Yes | Number of service bays (>= 1) |
+| `bays` | array | Yes | Re-declared physical topology; one entry per bay, each `{bayNumber, programNumbers[]}`. Max 64 bays, 32 programs/bay |
+| `bayCount` | integer | No | **Deprecated (0.11.0)**, superseded by `bays`; MUST equal `bays.length` when present |
 | `uptimeSeconds` | integer | Yes | Seconds since last boot (>= 0) |
 | `pendingOfflineTransactions` | integer | Yes | Count of unsynced offline transactions (>= 0) |
 | `timezone` | string | Yes | IANA timezone identifier (e.g., `"Europe/London"`), configurable via `TimeZone` (see §8 Configuration) |

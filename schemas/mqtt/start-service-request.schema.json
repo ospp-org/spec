@@ -23,7 +23,7 @@
     },
     "serviceId": {
       "$ref": "../common/service-id.schema.json",
-      "description": "Identifier of the service program to start."
+      "description": "Identifier of the CATALOG SERVICE to start — the commercial offering the customer paid for, minted by the server. Not the station's physical program: that is programNumber, which names the operation the bay physically runs. One program MAY carry several services (the same hardware sold at a promotional rate and a standard rate), so the two are not interchangeable, and the receipt names the serviceId — never the program — so the price actually paid stays identifiable."
     },
     "durationSeconds": {
       "type": "integer",

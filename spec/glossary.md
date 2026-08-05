@@ -34,8 +34,13 @@ specification. Where a definition involves a requirement, normative language
 
 **Bay**
 : The unit of service delivery within a **Station**. A bay has its own state machine,
-  meter, and set of available **Services**. Bays are identified by the `bay_` prefix
-  followed by 8 or more lowercase hexadecimal characters (e.g., `bay_a1b2c3d4`).
+  meter, a set of **Programs** it can physically run, and the set of **Services** bound to
+  those programs. Bays carry two identifiers: the server-assigned `bayId` (the `bay_` prefix
+  followed by 8 or more lowercase hexadecimal characters, e.g. `bay_a1b2c3d4`) and the
+  station-declared `bayNumber`, the physical ordinal. The station declares its `bayNumber`
+  set at provisioning and re-declares it at every boot; the server pairs each `bayId` with
+  its `bayNumber` explicitly in the provisioning response. The set need **not** be dense — a
+  station whose second bay was never fitted declares `{1, 3}`.
   See [Chapter 01, Section 2.2](01-architecture.md).
 
 **BLE (Bluetooth Low Energy)**
@@ -245,6 +250,16 @@ specification. Where a definition involves a requirement, normative language
   JSON object whose schema is determined by the `action` and `messageType` fields
   of the enclosing envelope. See [Chapter 03](03-messages.md).
 
+**Program**
+: A **physical**, complete, station-defined operation that a **Bay** can perform — "simple
+  wash", "deluxe wash". A program is a whole operation, **not** a composable element: "brush"
+  and "water" are not programs. Programs are owned by the station, which knows its own
+  hardware and is the only party that can declare them: the station declares its programs per
+  bay at **Provisioning**, giving each a `programNumber` (its ordinal within that bay) and a
+  descriptive `label`, and re-declares the ordinals at every boot. One program **MAY** carry
+  several **Services**. Contrast **Service**, which is commercial and server-minted.
+  See [Chapter 01, Section 4.2](01-architecture.md).
+
 **Profile**
 : A modular grouping of related OSPP actions and behaviors. Profiles allow
   implementations to support subsets of the full specification. OSPP defines five
@@ -306,10 +321,14 @@ specification. Where a definition involves a requirement, normative language
 : The central management system that stations connect to. Synonymous with **CSMS**.
 
 **Service**
-: A discrete operation that a **Bay** can perform (e.g., eco program, standard program,
-  deluxe program, auxiliary service). Each service has an identifier (prefixed `svc_`), display
-  name, metering unit, and pricing. Services are reported via `StatusNotification`
-  events and updated via `UpdateServiceCatalog` commands.
+: A **commercial** offering sold to a **Subscriber** — the thing a customer buys and is
+  charged for. Minted by the server, identified by the `svc_` prefix, and carrying a display
+  name, metering unit and pricing. A service is **bound to a Program** by an operator on the
+  server; the station never originates that binding, it receives it in the catalog via
+  `UpdateServiceCatalog`. Several services **MAY** be bound to one program — the same physical
+  operation sold at a standard and a promotional rate — which is why a receipt names the
+  `serviceId` and never the program: the `serviceId` is what identifies the price paid.
+  Contrast **Program**, which is physical and station-owned.
   See [Chapter 01, Section 2.3](01-architecture.md).
 
 **Session**

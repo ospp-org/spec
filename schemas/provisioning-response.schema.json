@@ -2,11 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/provisioning-response.schema.json",
   "title": "ProvisioningResponse",
-  "description": "HTTP 200 response body returned by the server's provisioning endpoint (POST /api/v1/stations/provision) per Chapter 04 — Protocol Flows §2. Contains the station's signed identity, trust anchors, server signing key, and the MQTT connection parameters required to bootstrap the operational mTLS session described in Chapter 02 — Transport §1. On an idempotent retry (replay) the response is schema-valid in full, and its fields divide normatively into THREE groups. (1) stationId, bayIds, clientCert and stationIdentity MUST be byte-identical to the original response. (2) stationCaChain and rootCaThumbprint are bound to the certificate in the same response: the chain MUST verify that clientCert, and the thumbprint MUST pin that chain's apex — after a Station CA rotation the chain therefore still carries the issuing CA, and carries the current one alongside it. (3) brokerRootCa, serverVerifyKey and mqttConfig MUST reflect the server's CURRENT state — a replay arriving after a broker migration or server-key rotation must carry the current values or the station cannot connect. See Chapter 04 — Protocol Flows §2, 'What a replay returns'.",
+  "description": "HTTP 200 response body returned by the server's provisioning endpoint (POST /api/v1/stations/provision) per Chapter 04 — Protocol Flows §2. Contains the station's signed identity, trust anchors, server signing key, and the MQTT connection parameters required to bootstrap the operational mTLS session described in Chapter 02 — Transport §1. On an idempotent retry (replay) the response is schema-valid in full, and its fields divide normatively into THREE groups. (1) stationId, bays, bayIds, clientCert and stationIdentity MUST be byte-identical to the original response. (2) stationCaChain and rootCaThumbprint are bound to the certificate in the same response: the chain MUST verify that clientCert, and the thumbprint MUST pin that chain's apex — after a Station CA rotation the chain therefore still carries the issuing CA, and carries the current one alongside it. (3) brokerRootCa, serverVerifyKey and mqttConfig MUST reflect the server's CURRENT state — a replay arriving after a broker migration or server-key rotation must carry the current values or the station cannot connect. See Chapter 04 — Protocol Flows §2, 'What a replay returns'.",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "stationId",
+    "bays",
     "bayIds",
     "clientCert",
     "stationCaChain",
@@ -18,15 +19,42 @@
       "$ref": "common/station-id.schema.json",
       "description": "Server-assigned station identifier. MUST equal the CN in the issued client certificate (Chapter 06 — Security §4.4)."
     },
-    "bayIds": {
+    "bays": {
       "type": "array",
       "minItems": 1,
-      "maxItems": 255,
+      "maxItems": 64,
+      "description": "Server-assigned bay identifiers, each paired EXPLICITLY with the bayNumber the station declared for it. This is the mapping the station needs and the only one it is given: bayId values are server-assigned (Chapter 01 — Architecture §3.2) and arrive only here, yet the first message the station sends after BootNotification Accepted is one StatusNotification per bay carrying BOTH bayId and bayNumber (Core profile CORE-004). Carrying the pair as an object rather than by array position is what lets a non-dense bay set be expressed at all: a station with bays {1,3} receives two objects naming 1 and 3, where a positional array would have had to invent a bay 2 to reach index 2. There is exactly one entry per bay the station declared in its provisioning request, and the set of bayNumber values MUST equal the declared set exactly. Order is NOT significant — the pairing is carried by the fields, so a server MAY emit the entries in any order and a station MUST NOT infer anything from their sequence. Maximum 64 bays (Chapter 01 — Architecture §4.2).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "bayId",
+          "bayNumber"
+        ],
+        "properties": {
+          "bayId": {
+            "$ref": "common/bay-id.schema.json",
+            "description": "The server-assigned identifier for this bay."
+          },
+          "bayNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 64,
+            "description": "The bay number the station declared for this bay in its provisioning request. Unique within the response."
+          }
+        }
+      }
+    },
+    "bayIds": {
+      "deprecated": true,
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
       "uniqueItems": true,
       "items": {
         "$ref": "common/bay-id.schema.json"
       },
-      "description": "Server-assigned bay identifiers belonging to this station. ORDER IS NORMATIVE and is the only mapping the station is given: the element at index i is the bayId of the bay whose bayNumber is i+1, so bayIds[0] is bayNumber 1. The array MUST be dense, MUST cover bayNumber 1..bayCount with no gaps, and its length MUST equal the station's registered bay count — the same count 4020 BAY_COUNT_MISMATCH validates the request against. Without this the station could not emit the (bayId, bayNumber) pair that StatusNotification requires on its first message after boot (schemas/mqtt/status-notification.schema.json; Core profile CORE-004). Maximum bay count per controller is 255 (Chapter 01 — Architecture §4.2)."
+      "description": "DEPRECATED (since 0.11.0, removed in 0.12.0): use bays instead, which pairs each bayId with its bayNumber explicitly. This array carried that correspondence by POSITION — the element at index i was the bayId of the bay whose bayNumber is i+1 — which is expressible only for a dense bay set and therefore cannot describe a station with bays {1,3} at all. It remains REQUIRED for this one release, deliberately: it is the server that emits it, and a station built against 0.10.0 reads it, so dropping it would break every deployed station on the release that introduces the replacement. A server MUST emit both, and they MUST agree — bayIds MUST list exactly the bayId values in bays, ordered so that index i is the bay whose bayNumber is i+1. A server that cannot satisfy that ordering because the station's bay set is NOT dense MUST reject the provisioning request rather than emit a bayIds array that misstates the mapping; a non-dense topology is therefore usable only once both parties have moved to bays. A station implementing 0.11.0 or later MUST read bays and MUST ignore bayIds. Maximum bay count per controller is 64 (Chapter 01 — Architecture §4.2)."
     },
     "clientCert": {
       "type": "string",

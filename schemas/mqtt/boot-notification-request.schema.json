@@ -11,7 +11,7 @@
     "stationModel",
     "stationVendor",
     "serialNumber",
-    "bayCount",
+    "bays",
     "uptimeSeconds",
     "pendingOfflineTransactions",
     "timezone",
@@ -48,9 +48,45 @@
       "description": "Unique serial number of the station unit."
     },
     "bayCount": {
+      "deprecated": true,
       "type": "integer",
       "minimum": 1,
-      "description": "Number of service bays available at this station."
+      "maximum": 64,
+      "description": "DEPRECATED (since 0.11.0, removed in 0.12.0): use bays instead. A scalar count cannot express a non-dense bay set and cannot carry program ordinals. Retained for one release so a station built against 0.10.0 still validates. When both are present bays is authoritative and bayCount MUST equal bays.length. Maximum bay count per controller is 64 (Chapter 01 — Architecture §4.2)."
+    },
+    "bays": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "description": "The station's RE-DECLARED PHYSICAL TOPOLOGY — the same bays and program ordinals it declared at provisioning, restated on every boot so the server can detect that the two no longer agree. Labels are NOT re-declared and are NOT compared: they are descriptive (Chapter 04 — Protocol Flows §2), and comparing them would put a station into Pending for a corrected typo in a firmware constant. The declaration MUST be STABLE between boots while the hardware is unchanged; how firmware achieves that — NVS, a compiled-in table, a hardware scan — is its own business, and the contract is the stability, not the mechanism. A MISMATCH in either direction against the provisioned topology puts the station in Pending, NOT Rejected: Pending keeps the command channel open so an operator can repair the disagreement, and Rejected would remove the only channel through which it could be repaired (Chapter 05 — State Machines §1, station state machine). Provisioning creates the bays and boot never does, so a FIRST boot always matches unless the provisioning declaration and this one disagree — which is the same mismatch and the same Pending. A faulted bay or program is re-declared present-but-unavailable, never omitted: omission means the hardware changed and requires re-provisioning. At the 64-bay and 32-program maxima this field is under 8 KB, far below the 64 KB MQTT Maximum Packet Size of Chapter 02 — Transport §1.2.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "bayNumber",
+          "programNumbers"
+        ],
+        "properties": {
+          "bayNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 64,
+            "description": "The station-assigned ordinal identifying this bay physically, as declared at provisioning. Unique within the message. The set need NOT be dense."
+          },
+          "programNumbers": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 32,
+            "uniqueItems": true,
+            "description": "The programNumber of every program this bay has, as declared at provisioning. Ordinals only — the label is not restated here, because it is descriptive and is not compared. Order carries no meaning; the server compares this as a SET. The set need NOT be dense.",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32
+            }
+          }
+        }
+      }
     },
     "uptimeSeconds": {
       "type": "integer",

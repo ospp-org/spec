@@ -79,7 +79,7 @@ A **Station** is a logical self-service installation, identified by a stable `st
 - **Network Connectivity** — Ethernet, WiFi, or cellular. The controller MUST support at least one network interface and SHOULD support failover between interfaces where hardware permits.
 - **BLE Interface** (OPTIONAL) — A Bluetooth Low Energy peripheral for offline authorization scenarios. Stations that declare `capabilities.bleSupported: true` in their BootNotification MUST implement the BLE GATT service defined in [Chapter 02 — Transport](02-transport.md), Section 8.
 
-A station is identified by a unique `stationId` with the `stn_` prefix (see Section 3). The station reports its hardware metadata — `stationModel`, `stationVendor`, `serialNumber`, `firmwareVersion`, `bayCount`, capabilities, and network information — in the BootNotification message sent at startup (see [Chapter 03 — Message Catalog](03-messages.md), Section 1.1).
+A station is identified by a unique `stationId` with the `stn_` prefix (see Section 3). The station reports its hardware metadata — `stationModel`, `stationVendor`, `serialNumber`, `firmwareVersion`, its declared physical topology in `bays`, capabilities, and network information — in the BootNotification message sent at startup (see [Chapter 03 — Message Catalog](03-messages.md), Section 1.1).
 
 The `stationId` identifies the **service installation**, not the hardware currently serving it. It is allocated by the server during provisioning, before first boot (see Section 3.2) — that is, before any hardware is associated with it — and is **stable for the life of the station**. The hardware described by `serialNumber`, `stationModel`, and `stationVendor` **MAY** change without changing the `stationId`; replacing a failed controller board does not create a new station.
 
@@ -194,7 +194,7 @@ The simplest topology: one controller manages exactly one bay.
 
 All implementations MUST support the single-bay topology. This is the default and the most common deployment for standalone self-service points.
 
-In this topology, the `bayId` in all messages refers to the single bay. The `bayCount` field in BootNotification MUST be `1`.
+In this topology, the `bayId` in all messages refers to the single bay. The `bays` array in BootNotification MUST carry exactly one entry.
 
 ### 4.2 Multi-Bay
 
@@ -223,11 +223,30 @@ A single controller manages **N** bays (e.g., a station site with 4 bays). The c
 - The controller establishes a **single MQTT connection** using the station's `stationId` as the client ID.
 - All messages include a `bayId` field to identify which bay the message pertains to. The controller MUST correctly dispatch incoming commands to the appropriate bay and aggregate outgoing status from all bays.
 - Each bay maintains **independent state** — one bay may be `Occupied` while another is `Available`.
-- The `bayCount` field in BootNotification MUST equal the total number of bays.
+- The `bays` array in BootNotification MUST re-declare every bay the station has.
 - StatusNotification events MUST include the specific `bayId` that changed state.
 - Session commands (StartService, StopService) are always addressed to a specific `bayId`.
 
-Implementations SHOULD support multi-bay topologies. The maximum number of bays per controller is implementation-defined but MUST NOT exceed **255**.
+Implementations SHOULD support multi-bay topologies. The maximum number of bays per controller is implementation-defined but MUST NOT exceed **64**.
+
+#### Programs and Services
+
+A bay runs **programs**. A **program** is a complete, station-defined physical operation — "simple wash", "deluxe wash" — identified within its bay by the ordinal `programNumber`. It is **not** a composable element: "brush" and "water" are not programs. Programs are **physical and station-owned**: the station is the only party that knows what its own hardware can do, so the station declares them.
+
+A **service** is **commercial and server-minted** — the offering a customer buys, identified by `serviceId`. The **binding** between a service and a program is created **on the server by an operator**; the station never originates it and receives it in the service catalog. One program **MAY** carry several services — the same physical operation sold at a standard and a promotional rate — which is why a receipt names the `serviceId` and never the program: `serviceId` is what identifies the price actually paid.
+
+The station declares its topology twice, for two different reasons:
+
+| Where | What it declares | Why |
+|---|---|---|
+| Provisioning request | bay numbers, and per bay each program's `programNumber` **and** `label` | This is the moment the server creates the bay records and the moment an operator needs the labels to build the service bindings. |
+| BootNotification | bay numbers, and per bay the set of `programNumber` values — **no labels** | So the server can detect that the declared topology and the provisioned one no longer agree. Labels are descriptive and are deliberately not compared. |
+
+The declaration **MUST** be **stable between boots while the hardware is unchanged**. How firmware achieves that — non-volatile storage, a compiled-in table, a hardware scan — is its own business; the contract is the stability, not the mechanism.
+
+A **faulted** bay or program is declared **present-but-unavailable**, never omitted. Absence means the hardware itself changed, and a hardware change requires re-provisioning. Reporting a fault by dropping the item would make a blown fuse indistinguishable from a removed bay.
+
+The maximum number of programs per bay MUST NOT exceed **32**. Together with the 64-bay maximum this bounds the boot re-declaration below 8 KB, far under the 64 KB MQTT Maximum Packet Size of [Chapter 02 — Transport §1.2](02-transport.md#12-connection-parameters). A real installation has 4–8 bays; the maxima exist to bound the payload, not to describe expected deployments.
 
 ### 4.3 Gateway
 
