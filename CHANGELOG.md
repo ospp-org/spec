@@ -121,8 +121,9 @@ as described in [VERSIONING.md](VERSIONING.md).
   third, GetDiagnostics, was wrong in a direction the criterion could not see at all — it uploads
   a configuration dump and session history to a URL the command supplies.
 
-  Cost: **53 bytes** per message and nothing else — no `keyId`, no `alg`, no nonce — about
-  **16 KB per hour** per station. On constrained hardware the bytes are not the cost; canonical
+  **13 message types are newly signed** — the 16 that were exempt in the old default, minus the
+  3 that are structurally exempt and always were. Cost: **53 bytes** per message and nothing
+  else — no `keyId`, no `alg`, no nonce — about **16 KB per hour** per station. On constrained hardware the bytes are not the cost; canonical
   re-serialization is, and it is heavier **inbound**, the direction verification runs. That path
   was already mandatory for most message types, so this adds no new firmware code path.
 
