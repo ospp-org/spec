@@ -1104,7 +1104,7 @@ Reports consumption telemetry during an active session. Sent at the interval con
 | `values.liquidMl` | integer | No | Liquid consumed in milliliters |
 | `values.consumableMl` | integer | No | Consumable consumed in milliliters |
 | `values.energyWh` | integer | No | Energy consumed in watt-hours |
-| `seqNo` | integer | No | Per-session monotonic counter starting at 0, incrementing by 1 per session-scoped EVENT (MeterValues, SessionEnded). See [`02-transport.md §3.2`](02-transport.md) (ordering) and [`05-state-machines.md §2.5`](05-state-machines.md) (NVS persistence). |
+| `seqNo` | integer | No | Per-session monotonic counter starting at 0, incrementing by 1 per session-scoped EVENT (MeterValues, SessionEnded). See [`02-transport.md §3.2`](02-transport.md) (ordering) and [`05-state-machines.md §3.5`](05-state-machines.md) (NVS persistence). |
 
 > Sensor sampling occurs at the `MeterValuesSampleInterval` (default: 10 seconds). The `MeterValuesInterval` controls how often the aggregated values are reported to the server.
 
