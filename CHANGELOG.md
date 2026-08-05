@@ -342,6 +342,29 @@ shipped different sets.
   originate one. CORE-002 now says that rather than banning "any other messages", which banned
   the answer too.
 
+- **What a restricted station does with a session it may not report** ([§1.4](spec/05-state-machines.md#14-the-restricted-states)),
+  found by composing the restricted-state rules against the money path and **not** by either arc
+  on its own. §1.4 requires a station that enters `Pending` or `Rejected` with a session running
+  to "continue it, meter it, and settle it" — and every message carrying any of those three verbs
+  is one the table three lines above forbids: MeterValues and SessionEnded are EVENTs,
+  TransactionEvent is a REQUEST the station originates, and the section states explicitly that the
+  prohibition has no carve-out. A conforming station had three moves and all three were wrong:
+  emit and break the unsolicited rule, stay silent and strand the money for a service already
+  delivered, or abandon the session and break the MUST.
+
+  Resolved the way the bay half already was — reachable, unreported, resolved in one step at
+  `Operational`. The station runs the session on its local timer, meters it locally, and
+  **buffers** what it owes under [§6.5](spec/01-architecture.md#65-offline-message-buffering),
+  flushing on the boot that is accepted. The pointer to `02-transport.md` §4.4 was part of the
+  trap: that section describes a station that reconnects and is *accepted*, so a station held at
+  `Pending` never reaches its flush step.
+
+  `SessionEnded` is added to §6.5's **MUST buffer** category, which listed only TransactionEvent
+  and SecurityEvent. It is the sole billing source for a session that ended with no StopService to
+  answer and it is not regenerable, so the omission would have licensed discarding the only record
+  of a delivered service — on the offline path as much as this one. `02-transport.md` §5.1 already
+  classified it as never-expiring and required its payload be retained; §6.5 now agrees.
+
 - **First-boot topology is defined** ([`boot-notification.md` §6.1](spec/profiles/core/boot-notification.md)):
   the same rule as any other boot. Provisioning creates the bay records and boot never does, so
   the two declarations come from one commissioning act and a first boot **matches**; when they

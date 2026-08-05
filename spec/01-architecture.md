@@ -382,6 +382,7 @@ During connectivity loss (MQTT disconnection), the station MUST implement select
 | Message | Min Capacity | Discard Policy | Justification |
 |---------|-------------|----------------|---------------|
 | TransactionEvent | 1000 events | MUST NOT discard | Billing-critical. Each offline transaction must be reconciled. 1000 events covers 3+ days at high-traffic stations (300 events/day). |
+| SessionEnded | 1 per session that ended while unable to send | MUST NOT discard | Billing-critical and **not** regenerable, which is what separates it from MeterValues below. It is the sole billing source for a session that terminated autonomously with no StopService to answer, so losing it loses the record of a service already delivered. [Chapter 02 §5.1](02-transport.md) already classifies it as a critical event that never expires and requires its payload be retained for retransmission. |
 | SecurityEvent | 200 events | FIFO (oldest discarded first) | Audit trail for compliance. Recent events are more actionable than older ones. |
 
 When the TransactionEvent buffer reaches 90% capacity (900 of 1000 events), the station SHOULD reject new session requests (StartService → Rejected with error `5111 BUFFER_FULL`) to prevent buffer overflow. The station MUST NOT discard existing TransactionEvent messages under any circumstances. If the buffer reaches 100% capacity despite rejecting new sessions, the station MUST enter degraded mode: continue reporting status via StatusNotification but refuse all new sessions until buffered events are delivered after reconnection.

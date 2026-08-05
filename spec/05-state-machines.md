@@ -97,6 +97,10 @@ Any transition not listed here is invalid. In particular there is **no** edge fr
 
 **Serving no customers is not the same as stopping.** A station that enters a restricted state with a session already running **MUST** continue it, meter it, and settle it, exactly as it does while `Disconnected` ([Chapter 02 §4.4](02-transport.md)) — a customer who has paid is served. What it **MUST NOT** do is begin a new one. While `Pending` or `Rejected` the station **MUST** reject StartService [MSG-005] and ReserveBay [MSG-003] with `3002 BAY_NOT_READY`, on every transport, and **MUST NOT** authorize a BLE offline session. In `Pending` that rejection is sent as a RESPONSE; in `Rejected` the command is not processed at all.
 
+**Metering and settling are not the same as reporting, and this is where the paragraph above would otherwise contradict the table above it.** Every message that carries any of those three verbs is one a restricted state forbids: MeterValues [MSG-010] and SessionEnded [MSG-040] are EVENTs, and TransactionEvent [MSG-007] is a REQUEST the station originates. The `MUST NOT` covers all three and no carve-out is intended. What the station does instead is what it does while `Disconnected`: it runs the session on its **local** timer, meters it **locally**, and **buffers** what it owes under the categorised policy of [Chapter 01 §6.5](01-architecture.md#65-offline-message-buffering), emitting nothing until the boot that reaches `Operational`, at which point it flushes. The categories carry the distinction that matters — intermediate MeterValues are regenerable and **MAY** be discarded; SessionEnded and TransactionEvent are billing evidence and **MUST NOT** be, because a session that ended while the station was restricted has no other record of what was delivered.
+
+This is the session-scope twin of the bay rule below: reachable, unreported, and resolved in one step once the station is `Operational`. It is stated because the three readings a station is otherwise left with are all wrong — emitting breaks the unsolicited row, staying silent permanently strands the money for a service the customer has already received, and abandoning the session breaks the **MUST** above. Note that the reference to [Chapter 02 §4.4](02-transport.md) describes a station that reconnects and is **accepted**; one held at `Pending` has completed that same boot and been refused, so it reaches §4.4's flush step only on a later boot.
+
 **A command whose only effect is an EVENT cannot be honoured while restricted, and must be refused rather than half-done.** The `MUST NOT` on unsolicited messages has no carve-out, so a `Pending` station that accepts such a command and then emits the EVENT breaks the row above, and one that accepts it and stays silent has answered `Accepted` to something it did not do. Neither is conforming. Concretely:
 
 | Command sent to a `Pending` station | What it does |
@@ -266,7 +270,7 @@ deliberately not equal.
 session ([§3.5 rule 2](#35-per-session-sequence-number-seqno-and-crash-resilience)) — the reboot may
 be a watchdog, a power cycle or a crash, none of which the server chose or can refuse. A commanded
 Reset cannot reach this state (it is refused with `3016`, or settles the session first —
-[reset.md §5](profiles/device-management/reset.md)), and a firmware update cannot either
+[reset.md §6](profiles/device-management/reset.md)), and a firmware update cannot either
 ([§7.4](#74-firmware-update----bay-constraint)); an uncommanded reboot has no such gate. On the boot
 that follows, the bay is physically `Occupied`, and every bay owes a post-boot report
 ([§2.4](#24-statusnotification-triggers), [CORE-004](profiles/core/README.md)). With only the three
@@ -717,7 +721,7 @@ The station machine ([§1](#1-station-state-machine)) is the outer scope of ever
 |---------------|------|----------|
 | NotProvisioned | No bay records exist server-side until provisioning creates them | None possible |
 | Booting | Station-side `Unknown`; server-side `Unknown` | Existing sessions continue; none may start |
-| Pending | Station-side resolved by self-test but **not reported**; server-side `Unknown` | Existing sessions continue; none may start — StartService and ReserveBay are refused with `3002 BAY_NOT_READY` |
+| Pending | Station-side resolved by self-test but **not reported**; server-side `Unknown` | Existing sessions continue on the local timer and what they owe is buffered, not emitted ([§1.4](#14-the-restricted-states)); none may start — StartService and ReserveBay are refused with `3002 BAY_NOT_READY` |
 | Rejected | As `Pending` | As `Pending`, and the commands are not processed at all |
 | Operational | Reported and current on both sides; `Unknown` is left on the post-boot report | Full lifecycle available |
 | Disconnected | Station-side current; server-side `Unknown` for every bay ([CORE-008](profiles/core/README.md)) | Existing sessions continue on the local timer; BLE offline sessions may start |
