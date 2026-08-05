@@ -315,7 +315,7 @@ Session errors cover bay state transitions, session lifecycle, reservation manag
 |:----:|-----------|:--------:|:-----------:|-------------|-------------------|
 | 3000 | `SESSION_GENERIC` | Error | true | Unclassified session or bay error. | Inspect the `errorDescription` for specific context. |
 | 3001 | `BAY_BUSY` | Warning | true | The requested bay is currently in `Occupied` or `Finishing` state and cannot accept new sessions or reservations. | Wait for the current session to complete, or select a different bay. Server: refund 100% if this rejects a StartService [MSG-005]. |
-| 3002 | `BAY_NOT_READY` | Warning | true | The bay is not in `Available` state (may be in `Unknown`, `Faulted`, `Unavailable`, or transitioning). `Unknown` occurs during the post-boot window before StatusNotification is received. | Wait and retry. Check StatusNotification [MSG-009] for the bay's current state. |
+| 3002 | `BAY_NOT_READY` | Warning | true | The bay cannot take a session. Either the bay is not in `Available` state — `Unknown`, `Faulted`, `Unavailable`, or transitioning, where `Unknown` covers the post-boot window before StatusNotification is received — **or the station as a whole is in a restricted state** (`Pending` or `Rejected`), in which it answers commands but serves no customers ([Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states)). | Wait and retry. Check StatusNotification [MSG-009] for the bay's current state; if none has arrived at all, the station is not `Operational` and the boot is what needs attention. |
 | 3003 | `SERVICE_UNAVAILABLE` | Warning | true | The requested service is not available on this bay (hardware not present, disabled by configuration, or temporarily out of chemicals). | Select a different service or a different bay that supports the requested service. |
 | 3004 | `INVALID_SERVICE` | Error | false | The `serviceId` in the request does not exist in the station's service catalog. | Verify the service ID against the station's UpdateServiceCatalog [MSG-021] data. |
 | 3005 | `BAY_NOT_FOUND` | Error | false | The `bayId` in the request does not match any bay registered on this station. | Verify the bay ID. The bay may have been decommissioned or the ID may be incorrect. |
@@ -465,7 +465,7 @@ This table maps which error codes can appear in the RESPONSE or rejection of eac
 |--------|---------------------|
 | BootNotification [MSG-001] | **2001**, **3018**, 1005, 1007, 6001 |
 | Heartbeat [MSG-008] | 1005, 1010, 5106, 6001 |
-| StatusNotification [MSG-009] | *(EVENT — no RESPONSE, but may carry 5xxx error details in payload)* |
+| StatusNotification [MSG-009] | *(EVENT — no RESPONSE. Carries 5xxx error details in the payload: at bay level when `status` is `Faulted`, and optionally per program on any `programs[]` entry reported `available: false`)* |
 | MeterValues [MSG-010] | *(EVENT — no RESPONSE)* |
 | TransactionEvent [MSG-007] | **2002**, **2003**, **2004**, **2005**, **2006**, **2014**, **2015**, **2016**, **2017**, 1005, 3015, 6001 |
 | AuthorizeOfflinePass [MSG-002] | **2002**, **2003**, **2004**, **2005**, **2006**, 1005, 4002, 4003, 4004, 6001 |

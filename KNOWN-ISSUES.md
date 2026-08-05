@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-30
 **Protocol Version:** 0.8.0
-**Status:** 3 blockers open (all BLE), 6 non-blocking issues open
+**Status:** 3 blockers open (all BLE), 7 non-blocking issues open
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle
 
 ---
@@ -12,8 +12,8 @@
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 6 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · [the bay FSM specified twice](#open--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) |
-| **Total open** | **9** | |
+| OPEN | 7 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · [the bay FSM specified twice](#open--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) |
+| **Total open** | **10** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
@@ -514,6 +514,48 @@ sweep also confirms the table is otherwise sound: 29 keys, counts agreeing acros
 default (`FirmwareVersion`, `CertificateSerialNumber`, `OfflinePassPublicKey`) each have a
 working source; and no key encodes `stationId` or any other certificate-bound identity, so no
 configuration write can alter what the client certificate binds.
+
+---
+
+## OPEN — the online money path carries only a symmetric MAC, and a symmetric MAC proves nothing to a third party
+
+**Raised 2026-08-05, by the signing arc. Scoped and deliberately not written: it is a decision,
+not a clause, and the scope below is why.**
+
+[Chapter 06 §5.8](spec/06-security.md) now states plainly that the HMAC provides **no
+non-repudiation** — the server holds the key it verifies with, so it can produce any MAC a station
+could. That is correct and it is the honest position. It also leaves the online money path with no
+evidence a third party can check.
+
+OSPP already owns the right instrument and does not use it here. [§6.2](spec/06-security.md)
+defines ECDSA P-256 transaction-receipt signing with a private key **the station alone holds**, and
+[`provisioning-request.schema.json`](schemas/provisioning-request.schema.json) requires
+`receiptSigningPublicKey` of **every** station — deliberately, including stations that will never
+run an offline session. Today nothing in the Core, Transaction or Security profiles reads that key.
+It is wired to the offline path only.
+
+### What extending it would touch
+
+| Surface | What changes | Size |
+|---|---|---|
+| **Messages** | `SessionEnded` [MSG-040] and `StopService` RESPONSE [MSG-006]. These are the online money path: `SessionEnded.creditsCharged` is the sole billing source when no StopService was issued, and the StopService RESPONSE is the billing source when one was. `TransactionEvent` is **not** in scope — it already carries a signed receipt, and it is offline-only (`offlineTxId` and `txCounter` are both required) | 2 messages |
+| **Schemas** | A `receipt` member on both, plus a conditional making it required — on `SessionEnded` unconditionally, on `stop-service-response` only when `status` is `Accepted`, which is a shape that response does not currently have (its only required member is `status`) | 2 schemas + 1 new conditional |
+| **Receipt structure** | **It cannot carry this unchanged.** [`receipt-data.schema.json`](schemas/common/receipt-data.schema.json) is a two-way `oneOf` — pass-form and auth-form — and *both* require `offlineTxId` and `txCounter`, neither of which an online session has. A third **online-form** is needed, keyed on `sessionId`, and the reconcile gate branches on which form is present, so [`reconciliation.md` §6.1](spec/profiles/offline/reconciliation.md) has to learn a form it must never see | 1 new discriminated form + gate branch |
+| **Station** | Sign one more canonical body with a key it already holds, using a code path it already implements. The new cost is **when**: an ECDSA P-256 signature now lands on the StopService RESPONSE path, inside that action's 10-second timeout, where nothing asymmetric ran before. Software P-256 on an ESP32-class part is tens of milliseconds and a secure element is faster, so it fits — but it is on the response deadline, not on a background flush | Bounded, on a new deadline |
+| **Server** | Retain the receipt **and the public key it verifies against**, for as long as the transaction is auditable. That obligation does not exist today: `CertificateSerialNumber` is single-valued by design, [§4.7.6](spec/06-security.md) bounds certificate multiplicity but says nothing about retaining a **superseded receipt-signing key**, and a receipt signed before a rotation is unverifiable afterwards without one. This is the largest new requirement and it is a data-retention rule, not a protocol field | New retention obligation |
+| **Conformance** | New cases. The existing offline cases verify offline receipts; nothing exercises an online one | 1–2 new cases |
+
+### Why it is not a clause
+
+Three of those six are structural: a new discriminated form in a schema whose `oneOf` currently
+encodes "offline, one of two ways"; a conditional on a response that has never had one; and a
+server-side key-history requirement that touches certificate lifecycle rather than the wire. Any
+one of them alone would be a clause. Together they are a decision with its own blast radius, and
+writing it inside a signing arc would bury it.
+
+**What is settled and should not be re-litigated when it is taken up:** the MAC does not provide
+non-repudiation, the key to fix that already exists on every station, and the online money path is
+where it is missing.
 
 ---
 

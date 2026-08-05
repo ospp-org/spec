@@ -2,7 +2,7 @@
 
 > **Status:** Draft
 
-Perform a soft or hard reset on the station. The station **MUST** handle active sessions gracefully before resetting.
+Reboot the station. There is exactly one reset operation and it preserves everything the station has persisted; the only choice the command offers is `force`, whether to reboot while a session is running. The station **MUST** handle active sessions per §5 before rebooting.
 
 ## 1. Overview
 

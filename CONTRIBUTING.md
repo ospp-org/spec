@@ -372,11 +372,32 @@ Breaking changes require:
 6. VERSIONING.md update if the change affects versioning policy
 7. Major version bump discussion (if accumulated breaking changes warrant it)
 
-**Preferred alternatives to breaking changes:**
+**Preferred alternatives to breaking changes — from 1.0 onwards:**
 - Add a new optional field instead of changing an existing one
 - Add a new message action instead of modifying an existing one
 - Deprecate (with spec note) before removing
 - Use the `protocolVersion` field for version-gated behavior
+
+> **These do not apply before 1.0, and applying them now is a defect.** The list above is a
+> post-1.0 process rule: it exists to protect an installed base, and it trades correctness for
+> continuity, which is the right trade only once there is continuity worth protecting.
+>
+> OSPP is **unreleased**. There is no installed base, and [VERSIONING.md](VERSIONING.md) already
+> licences breaking changes between `0.x` minors. In that state a deprecation window has no
+> beneficiary and one guaranteed cost: two ways to express the same thing, both live, both
+> implementable, for as long as the window lasts — which is the defect class the current arcs
+> exist to remove, not one to add. Two of them were removed in this cycle after having been
+> introduced by an earlier session that read this list as unconditional.
+>
+> **Before 1.0: change it, remove the old form entirely, and record the break in
+> [CHANGELOG.md](CHANGELOG.md) with the order it must ship in.** Where the old form is a value
+> a sender might still emit, pin it as **rejected** with a negative conformance vector rather
+> than leaving it merely absent — actively refused beats silently tolerated.
+>
+> The one thing that does carry over from the list is **deployment order**, and it carries over
+> for a different reason: not compatibility, but sequencing. A receiver must be able to accept a
+> new form before any sender emits it, and enforcement of a narrowed rule must not ship ahead of
+> the configuration that satisfies it.
 
 ---
 
