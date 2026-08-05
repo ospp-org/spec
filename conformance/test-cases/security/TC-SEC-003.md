@@ -32,7 +32,7 @@ Verify the complete certificate renewal lifecycle: automatic station-initiated r
 3. Station has an existing valid X.509 client certificate with a known expiry date.
 4. `CertificateRenewalEnabled` is `true` (default).
 5. `CertificateRenewalThresholdDays` is set to `30` (default).
-6. `MessageSigningMode` is set to `Critical` (HMAC signing enabled for security messages).
+6. `MessageSigningMode` is set to `All` (its default — HMAC on every message but the three structural exemptions).
 7. Test harness has a CA capable of signing CSRs with ECDSA P-256.
 8. Test harness can inspect the station's CSR content and certificate installation state.
 
@@ -54,7 +54,7 @@ Verify the complete certificate renewal lifecycle: automatic station-initiated r
    - Key algorithm: ECDSA P-256
    - Subject CN: `stn_a1b2c3d4`
    - A valid PKCS#10 structure
-6. Verify the HMAC signature (`mac` field) is present in the MQTT envelope (Critical mode).
+6. Verify the HMAC signature (`mac` field) is present in the MQTT envelope.
 7. Send SignCertificate RESPONSE within 30 seconds:
    ```json
    {
@@ -210,7 +210,7 @@ Verify the complete certificate renewal lifecycle: automatic station-initiated r
 
 1. Station detects certificate within renewal threshold and initiates SignCertificate automatically.
 2. CSR uses ECDSA P-256 with correct Subject CN matching station ID.
-3. All SignCertificate, CertificateInstall, and TriggerCertificateRenewal messages have HMAC signatures in Critical mode.
+3. All SignCertificate, CertificateInstall, and TriggerCertificateRenewal messages carry HMAC signatures.
 4. Station installs a valid certificate and updates `CertificateSerialNumber` config.
 5. Server-triggered renewal (TriggerCertificateRenewal) results in Accepted + asynchronous SignCertificate flow.
 6. Each renewal generates a new keypair (different public key in CSR).
@@ -226,7 +226,7 @@ Verify the complete certificate renewal lifecycle: automatic station-initiated r
 1. Station does not initiate renewal when certificate is within the threshold.
 2. CSR uses an algorithm other than ECDSA P-256.
 3. CSR Subject CN does not match the station ID.
-4. HMAC signature is missing from any of the three certificate messages in Critical mode.
+4. HMAC signature is missing from any of the three certificate messages.
 5. Station does not update `CertificateSerialNumber` after successful certificate installation.
 6. Station does not retry after first CSR rejection.
 7. Station retries more than once after CSR rejection (3+ attempts).

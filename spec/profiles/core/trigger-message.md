@@ -41,7 +41,7 @@ The TriggerMessage action allows the server to request the station to send a spe
 5. If `requestedMessage` is `SignCertificate`, the station MUST generate a new CSR and initiate the certificate renewal flow.
 6. If `requestedMessage` is `DiagnosticsNotification` or `FirmwareStatusNotification`, the station MUST send the current status of the most recent diagnostics or firmware update operation. If no operation has occurred, the station SHOULD respond `Rejected`.
 7. The station MUST NOT queue multiple triggered messages for the same `requestedMessage` — if a new TriggerMessage arrives while the previous triggered message has not yet been sent, the station MAY discard the older trigger.
-8. TriggerMessage is HMAC-signed in both `Critical` and `All` modes (server command that causes station behavior change).
+8. TriggerMessage is HMAC-signed, like every other message ([Chapter 06 §5.6](../../06-security.md#56-message-signing-classification)).
 9. The server **SHOULD NOT** send more than **1 TriggerMessage per `requestedMessage` type per 30-second window**. The station **MAY** ignore duplicate triggers for the same `requestedMessage` within this window.
 
 ## 6. Error Handling

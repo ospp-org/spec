@@ -19,7 +19,7 @@ Verify that the station generates SecurityEvent [MSG-012] messages with correct 
 
 1. Station `stn_a1b2c3d4` is booted and has received BootNotification `Accepted`.
 2. MQTT connection is stable; Heartbeat exchange is functioning.
-3. `MessageSigningMode` is set to `Critical` (HMAC signing enabled).
+3. `MessageSigningMode` is set to `All` (its default — HMAC signing enabled on every message but the three structural exemptions, GetConfiguration and GetDiagnostics included).
 4. Test harness is subscribed to the station's `to-server` topic and can capture all SecurityEvent messages.
 5. Test harness can send messages with invalid HMAC signatures.
 6. Test harness can send firmware update commands with version numbers.

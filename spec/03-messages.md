@@ -14,7 +14,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHALL NOT**, **S
 
 ### MQTT Messages
 
-All MQTT messages are wrapped in the standard OSPP envelope (see the Conventions section below, Section 1). The payload tables below document only the **`payload` field** of the envelope. The envelope fields (`messageId`, `messageType`, `action`, `timestamp`, `source`, `protocolVersion`) are always present. The `mac` field is conditionally present based on `MessageSigningMode` configuration. Exempt messages: BootNotification REQUEST, BootNotification RESPONSE, ConnectionLost (LWT).
+All MQTT messages are wrapped in the standard OSPP envelope (see the Conventions section below, Section 1). The payload tables below document only the **`payload` field** of the envelope. The envelope fields (`messageId`, `messageType`, `action`, `timestamp`, `source`, `protocolVersion`) are always present. The `mac` field is present on **every** message except the three that structurally cannot carry one — BootNotification REQUEST, BootNotification RESPONSE, ConnectionLost (LWT) — and is absent everywhere under the development-only `None` signing mode. See [Chapter 06 §5.6](06-security.md#56-message-signing-classification).
 
 MQTT topics follow the patterns defined in [Chapter 02 — Transport](02-transport.md), Section 2:
 
@@ -2260,7 +2260,7 @@ DataTransfer does not define message-specific error codes. Unknown vendors and d
 
 The `data` field **MUST NOT** exceed **64 KB** when JSON-serialized. Payloads exceeding this limit **SHOULD** be rejected by the receiver with status `Rejected`. Both station and server **SHOULD** rate-limit DataTransfer messages to a maximum of **10 per minute per vendor**.
 
-DataTransfer is not HMAC-signed in `Critical` mode by design — vendor extensions are not protocol-critical. Vendor extensions requiring message integrity **SHOULD** implement application-level signing within the `data` payload. In `All` mode, DataTransfer is HMAC-signed like all other messages.
+DataTransfer is HMAC-signed like every other message ([Chapter 06 §5.6](06-security.md#56-message-signing-classification)); an earlier revision exempted it as "not protocol-critical", and that class of per-message judgement is withdrawn. Vendor extensions requiring integrity **beyond** the transport MAC **SHOULD** implement application-level signing within the `data` payload. In `All` mode, DataTransfer is HMAC-signed like all other messages.
 
 ---
 

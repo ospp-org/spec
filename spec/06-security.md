@@ -610,7 +610,7 @@ Upon receiving a TriggerCertificateRenewal REQUEST, the station responds with `A
 - The station **MUST** generate the new private key on-device. The private key **MUST NOT** be transmitted to the server or included in the CSR.
 - The CSR **MUST** use ECDSA P-256. Other algorithms **MUST** be rejected by the server.
 - The server **MUST** verify that the CSR's Subject CN matches the station ID from the mTLS session.
-- All three certificate lifecycle messages **MUST** be HMAC-signed in `Critical` and `All` modes (see §5.6).
+- All three certificate lifecycle messages **MUST** be HMAC-signed, like every other message (see §5.6).
 - The station **SHOULD** keep the old certificate until the new certificate is successfully used for a TLS connection — and no longer; the retention window is bounded by §4.7.6.
 
 For the complete certificate renewal profile, see [Certificate Renewal](profiles/security/certificate-renewal.md).
@@ -726,17 +726,33 @@ A future OSPP version MAY adopt RFC 8785 strictly if message vocabulary is exten
 
 ### 5.1 Overview
 
-The `MessageSigningMode` configuration key controls HMAC-SHA256 message signing. Three modes are defined:
+**Everything on the wire is signed.** Every MQTT message MUST carry an HMAC-SHA256 message authentication code in the `mac` envelope field, except the three that structurally cannot — see [§5.6](#56-message-signing-classification). This provides **defense-in-depth**: message integrity independent of TLS.
+
+The `MessageSigningMode` configuration key selects between that and no signing at all. Two modes are defined:
 
 | Mode | Behavior | Use Case |
 |------|----------|----------|
-| `All` | HMAC on every MQTT message | High-security deployments |
-| `Critical` **(default)** | HMAC only on financial and command messages (see §5.6) | Production deployments |
-| `None` | No HMAC — TLS-only integrity | Development/testing |
+| `All` **(default)** | HMAC on every MQTT message except the three structural exemptions (§5.6) | Every deployment |
+| `None` | No HMAC — TLS-only integrity | Development and test harnesses only |
 
-When `MessageSigningMode` is `Critical` or `All`, applicable MQTT messages MUST include an HMAC-SHA256 message authentication code in the `mac` envelope field. This provides **defense-in-depth** — message integrity protection independent of TLS.
+`None` exists so that a test suite can exercise the message layer without a key-management fixture, and for no other reason. It **MUST NOT** be used in production, and a deployment running it has no defence against a publish-capable adversary (§5.6).
 
-> **Rationale for selective signing:** The MQTT broker terminates TLS on both sides (Server↔Broker and Broker↔Station are separate TLS sessions). A compromised broker sees plaintext — and because the per-station session key is itself delivered through the broker at boot (§5.2), HMAC does **not** defend against a fully-compromised broker. What it does protect against is an adversary that can **publish** to the broker without intercepting its traffic — a leaked management-API credential, an ACL regression, or another publish-capable service — which is the realistic threat for financial and command messages. However, high-frequency informational messages (Heartbeat, StatusNotification, MeterValues) have zero financial impact, and signing them adds CPU overhead with no security value.
+The middle mode, `Critical`, is **removed** rather than deprecated. With everything signed it selected nothing, and the protocol is unreleased, so there is no installed base a compatibility window would serve. Both values are **PascalCase** — `"All"`, `"None"` — as every enumeration in OSPP is ([Chapter 00 §Conventions](00-introduction.md)); lowercase spellings that appeared in three places were drift, not an alternative form, and a receiver **MUST NOT** accept them.
+
+> **Why signing is not selective, and what replaced the criterion that made it so.**
+>
+> The threat HMAC answers is precise. The MQTT broker terminates TLS on both sides — Server↔Broker and Broker↔Station are separate TLS sessions — so TLS alone protects each hop and nothing end to end. HMAC does **not** defend against a fully compromised broker, because the session key is itself delivered through it ([§5.2](#52-session-key-establishment)). What it defends against is an adversary that can **publish** to the broker without intercepting its traffic: a leaked management-API credential, an ACL regression, another publish-capable service on the same broker. That adversary can inject any message the ACL lets through, on any topic the ACL lets through.
+>
+> An earlier revision exempted messages judged to have **zero financial impact** — naming Heartbeat, StatusNotification and MeterValues. That criterion has been withdrawn, and not because it was applied carelessly. It was applied carefully and it was wrong twice:
+>
+> - **StatusNotification does not have zero financial impact.** Bay status and program availability are what [start-service.md §4](profiles/transaction/start-service.md) checks before a paid service may start. A forged `Faulted` denies revenue on a working bay. A forged `Available` induces a start that fails into `3009 HARDWARE_ACTIVATION_FAILED`, whose registry entry directs the server to refund 100%. Availability gates money; it is not adjacent to money.
+> - **Heartbeat is worse.** Forged heartbeats keep a dead station looking alive, so [CORE-007](profiles/core/README.md)'s 3.5× timeout never fires, [CORE-008](profiles/core/README.md) never marks its bays `Unknown`, and the server keeps selling sessions on hardware that is not there. A message with no payload of its own turns out to gate every sale on the station.
+>
+> A third exemption was as bad in a direction the criterion could not see at all: **GetDiagnostics** was exempt as "non-financial", and it is — it is an *exfiltration* primitive. [get-diagnostics.md](profiles/device-management/get-diagnostics.md) has the station upload an archive containing its complete configuration dump and its session history to a URL **the command supplies**. Unsigned, under exactly the publish-capable adversary named above, that is one message to make a station post its customer records anywhere.
+>
+> **The new criterion is that there is no criterion.** A rule requiring per-message judgement produced three wrong answers out of forty-seven, each defensible when written, each discovered later and separately, and each discovered because someone happened to look. The failure mode is structural: the judgement is made once, at authoring time, against the uses a message has *then*, and it is never revisited when a new use makes an informational message load-bearing — which is precisely what happened to StatusNotification when program availability began gating starts. The only exemptions that survive are the ones that cannot be otherwise, and they are enumerated exhaustively rather than reasoned about.
+>
+> The cost is small and is stated rather than assumed. The MAC adds **53 bytes** per message — `,"mac":"…"` with 44 base64 characters — and nothing else: no `keyId`, no `alg`, no nonce, no signing-only timestamp. At one station's normal cadence that is roughly **16 KB per hour**. On constrained hardware the bytes are not the cost either: canonical re-serialization is, and it is heavier **inbound**, which is the direction verification runs. That work was already mandatory for most message types, so widening the rule adds no new firmware code path — it runs the existing one more often.
 
 ### 5.2 Session Key Establishment
 
@@ -801,79 +817,34 @@ The receiver MUST verify the MAC before processing the payload:
 
 ### 5.6 Message Signing Classification
 
-#### Mode `All`
+**Rule:** every MQTT message MUST carry a valid `mac`, in either direction, with exactly three exceptions. There are no other exemptions, no per-message judgement, and no "informational" category ([§5.1](#51-overview) records why).
 
-All MQTT messages MUST include a valid `mac` field, except BootNotification (REQUEST and RESPONSE) and ConnectionLost (exempt — see below).
+Of the **47** message types in [Chapter 03](03-messages.md)'s catalogue, **44 are signed and 3 are exempt**.
 
-#### Mode `Critical` (default)
+#### The Three Structural Exemptions
 
-Messages are classified as **critical** (HMAC required) or **exempt** (HMAC not required) based on their financial impact, command authority, and state-changing potential:
+These three cannot carry a verifiable MAC. Each is exempt because of what it *is*, not because of what it is judged to be worth.
 
-| # | Action | Direction | HMAC Required | Rationale |
-|--:|--------|-----------|:---:|-----------|
-| 1 | BootNotification REQ | Station → Server | **NO** | Informational. No HMAC key available yet (key is issued in the response). |
-| 2 | BootNotification RES | Server → Station | **NO** | Carries the session key that would verify it — the MAC is cryptographically void; delivery integrity is provided by mTLS, not HMAC. |
-| 3 | AuthorizeOfflinePass REQ | Station → Server | **YES** | Auth decision — financial gate. |
-| 4 | AuthorizeOfflinePass RES | Server → Station | **YES** | Auth verdict — controls resource access. |
-| 5 | ReserveBay REQ | Server → Station | **YES** | Blocks physical resources. |
-| 6 | ReserveBay RES | Station → Server | **YES** | Confirms resource allocation. |
-| 7 | CancelReservation REQ | Server → Station | **YES** | Releases resources, triggers refund. |
-| 8 | CancelReservation RES | Station → Server | **YES** | Confirms release. |
-| 9 | StartService REQ | Server → Station | **YES** | Activates hardware. Direct financial impact. |
-| 10 | StartService RES | Station → Server | **YES** | Confirms hardware activation. |
-| 11 | StopService REQ | Server → Station | **YES** | Terminates service, triggers finalization. |
-| 12 | StopService RES | Station → Server | **YES** | Confirms termination. |
-| 13 | TransactionEvent REQ | Station → Server | **YES** | Financial record. |
-| 14 | TransactionEvent RES | Server → Station | **YES** | Financial acknowledgement. |
-| 15 | Heartbeat REQ | Station → Server | **NO** | Zero financial impact, high frequency. |
-| 16 | Heartbeat RES | Server → Station | **NO** | Time sync only. |
-| 17 | StatusNotification | Station → Server | **NO** | Informational, high frequency. |
-| 18 | MeterValues | Station → Server | **NO** | Informational, high frequency. |
-| 19 | SessionEnded EVENT | Station → Server | **YES** | Contains `creditsCharged` used directly for online billing at timer expiry — sole billing source when no StopService command is issued. |
-| 20 | ConnectionLost (LWT) | Broker → Server | **NO** | Broker-generated. Station cannot pre-sign. |
-| 21 | SecurityEvent | Station → Server | **NO** | Station-originated report, not a command. |
-| 22 | ChangeConfiguration REQ | Server → Station | **YES** | Modifies station behavior. |
-| 23 | ChangeConfiguration RES | Station → Server | **YES** | Confirms configuration applied. |
-| 24 | GetConfiguration REQ | Server → Station | **NO** | Read-only query. |
-| 25 | GetConfiguration RES | Station → Server | **NO** | Read-only response. |
-| 26 | Reset REQ | Server → Station | **YES** | Reboots station. Availability impact. |
-| 27 | Reset RES | Station → Server | **YES** | Confirms reset accepted. |
-| 28 | UpdateFirmware REQ | Server → Station | **YES** | Supply chain security critical. |
-| 29 | UpdateFirmware RES | Station → Server | **YES** | Confirms update accepted. |
-| 30 | FirmwareStatusNotification | Station → Server | **NO** | Informational progress. |
-| 31 | GetDiagnostics REQ | Server → Station | **NO** | Non-financial. |
-| 32 | GetDiagnostics RES | Station → Server | **NO** | Non-financial. |
-| 33 | DiagnosticsNotification | Station → Server | **NO** | Informational progress. |
-| 34 | SetMaintenanceMode REQ | Server → Station | **YES** | Changes operational state. |
-| 35 | SetMaintenanceMode RES | Station → Server | **YES** | Confirms maintenance mode change. |
-| 36 | UpdateServiceCatalog REQ | Server → Station | **YES** | Modifies pricing/services. |
-| 37 | UpdateServiceCatalog RES | Station → Server | **YES** | Confirms catalog applied. |
-| 38 | SignCertificate REQ | Station → Server | **YES** | Certificate material — security critical. |
-| 39 | SignCertificate RES | Server → Station | **YES** | Certificate material — security critical. |
-| 40 | CertificateInstall REQ | Server → Station | **YES** | Certificate material — security critical. |
-| 41 | CertificateInstall RES | Station → Server | **YES** | Certificate material — security critical. |
-| 42 | TriggerCertificateRenewal REQ | Server → Station | **YES** | Certificate management command. |
-| 43 | TriggerCertificateRenewal RES | Station → Server | **YES** | Confirms renewal initiated. |
-| 44 | DataTransfer REQ | Bidirectional | **NO** | Vendor data — not critical by default. Signed in `All` mode only. |
-| 45 | DataTransfer RES | Bidirectional | **NO** | Vendor data response. Signed in `All` mode only. |
-| 46 | TriggerMessage REQ | Server → Station | **YES** | Server command that triggers station behavior. |
-| 47 | TriggerMessage RES | Station → Server | **YES** | Confirms trigger accepted. |
+| Message | Why no MAC is possible |
+|---------|------------------------|
+| BootNotification **REQUEST** [MSG-001] | It **precedes** the session key. There is no key to sign with. |
+| BootNotification **RESPONSE** [MSG-001] | It **carries** the session key. A MAC computed with the key delivered inside the same message is cryptographically void — a forger who could substitute the message could substitute the key and produce a matching MAC. |
+| ConnectionLost (LWT) [MSG-011] | It **replaces** the station. It is registered with the broker at CONNECT time and published by the broker after the station is gone. On a first connection there is no key yet; on a reconnect the station holds the *previous* key, and by the time the will is delivered the server has rotated to the new one — so a will-MAC is not merely absent, it is guaranteed stale on arrival. |
 
-**Summary:** 31 of 47 message types require HMAC in `Critical` mode, 16 are exempt. The exempt messages (BootNotification REQ, BootNotification RES, Heartbeat, StatusNotification, MeterValues, ConnectionLost, SecurityEvent, GetConfiguration, GetDiagnostics, FirmwareStatusNotification, DiagnosticsNotification, DataTransfer) represent ~70% of message *volume* in normal operation.
+Integrity for all three is provided by mTLS, not by HMAC. Their exemption is unconditional: it holds in `All` mode, and it is not something a deployment can turn off.
+
+> **The rule is machine-expressible and is nonetheless prose. This is a known cost.**
+> The exemption keys on `action`, which *is* a field of the envelope, so an `if`/`then` on
+> [`mqtt-envelope.schema.json`](../schemas/common/mqtt-envelope.schema.json) could require `mac`
+> everywhere else. What blocks it is the `None` mode: under `None` no message carries a `mac`, so a
+> schema that required one would make every `None`-mode message invalid and would take the test
+> harness `None` exists for with it. `mac` therefore stays optional in the envelope schema, and the
+> requirement is enforced by implementations rather than by validation. A reader should know that a
+> message passing schema validation has **not** been checked for a MAC.
 
 #### Mode `None`
 
-No messages require HMAC. TLS provides the only integrity protection. This mode is intended for development and testing only and **SHOULD NOT** be used in production.
-
-#### Always-Exempt Messages
-
-Regardless of `MessageSigningMode`, the following messages are always exempt:
-
-| Message | Reason |
-|---------|--------|
-| BootNotification REQUEST [MSG-001] | Session key not yet established |
-| BootNotification RESPONSE [MSG-001] | Carries the session key that would verify it; integrity via mTLS, not HMAC |
-| ConnectionLost (LWT) [MSG-011] | Pre-configured at CONNECT time, published by broker |
+No message carries a MAC. TLS provides the only integrity protection, and there is none end to end: a publish-capable adversary can inject any message the broker's ACL permits, in either direction, and neither peer can tell. This mode exists for development and test harnesses and **MUST NOT** be used in production.
 
 ### 5.7 Failure Handling
 
@@ -1520,8 +1491,8 @@ Diagnostic uploads via GetDiagnostics [MSG-018] **MUST** apply the same redactio
 - [ ] TLS 1.2+ mandatory; TLS 1.3 RECOMMENDED and negotiated when supported; 0-RTT MUST NOT be enabled
 - [ ] mTLS client certificate with CN = `stn_{station_id}`
 - [ ] Private keys stored in secure element / TPM (never exported)
-- [ ] HMAC-SHA256 verification on all incoming messages per `MessageSigningMode` (except LWT and BootNotification RESPONSE)
-- [ ] HMAC-SHA256 signing on outgoing messages per `MessageSigningMode` (default: `Critical` — signs security-sensitive messages only; except BootNotification REQUEST which is always exempt)
+- [ ] HMAC-SHA256 verification on **every** incoming message except the LWT and BootNotification RESPONSE — and reject, never accept-unverified, when the MAC is absent or the key is not held (§5.7)
+- [ ] HMAC-SHA256 signing on **every** outgoing message except BootNotification REQUEST, which is always exempt — and refuse to send, never send unsigned, when no key is held (§5.7)
 - [ ] Timing-safe HMAC comparison
 - [ ] OfflinePass 10-check validation for Full Offline mode
 - [ ] ECDSA P-256 signature verification for ServerSignedAuth

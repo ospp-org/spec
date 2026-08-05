@@ -261,17 +261,26 @@ LWT is exempt from HMAC signing (no session key at CONNECT time). Set Will Delay
 
 ### 2.5 Message Signing (HMAC-SHA256)
 
-HMAC-SHA256 signing is controlled by the `MessageSigningMode` configuration key. Three modes are defined:
+**Sign everything.** Every message you send carries a `mac`, and every message you receive must have one you verify — 44 of the 47 message types. The three that do not are structural and you cannot opt anything else into their company:
+
+| Exempt message | Why |
+|----------------|-----|
+| BootNotification REQUEST | precedes the key |
+| BootNotification RESPONSE | carries the key |
+| ConnectionLost (LWT) | published by the broker after you are gone |
+
+`MessageSigningMode` selects between signing and not signing at all:
 
 | Mode | Behavior | Use Case |
 |------|----------|----------|
-| `None` | No HMAC signing | Development/testing only |
-| `Critical` **(default)** | HMAC on security-sensitive messages only (31 of 47) | Production deployments |
-| `All` | HMAC on all messages (except BootNotification REQUEST/RESPONSE and LWT) | High-security deployments |
+| `All` **(default)** | HMAC on every message except the three above | Every deployment |
+| `None` | No HMAC signing | Development and test harnesses only |
 
-The default mode `Critical` signs only security-sensitive messages (31 of 47). Non-critical messages like Heartbeat, MeterValues, and StatusNotification are exempt unless mode is set to `All`. BootNotification (REQUEST and RESPONSE) and ConnectionLost (LWT) are always exempt regardless of mode.
+The key is `Static` — a change takes effect at the next reboot, not immediately, because the mode is bound to the session key and the reboot is what re-issues it. Do not implement it as a live toggle.
 
-When HMAC is required for a message, include a `mac` field:
+There is no "sign the important ones" mode. There used to be, and it exempted StatusNotification (which gates whether a paid service can start), Heartbeat (which gates whether the server thinks your station exists at all) and GetDiagnostics (which uploads your configuration and session history to a URL the command supplies). Read `06-security.md` §5.1 before arguing for a fourth exemption.
+
+When you send a message, include a `mac` field:
 
 ```
 1. Build your message JSON (without the `mac` field)
@@ -481,7 +490,7 @@ Supported keys:
 | `ReservationDefaultTTL` | int (seconds) | 300 | Reservation expiry |
 | `OfflineModeEnabled` | bool | true | Accept BLE offline sessions |
 | `RevocationEpoch` | int | 0 | Minimum accepted OfflinePass epoch |
-| `MessageSigningMode` | string | `"Critical"` | HMAC signing: `"All"`, `"Critical"`, or `"None"` |
+| `MessageSigningMode` | string | `"All"` | HMAC signing: `"All"` or `"None"`. Static — takes effect at the next reboot |
 | `LogLevel` | string | `"Info"` | Log verbosity: `"Debug"`, `"Info"`, `"Warn"`, `"Error"` |
 
 Respond to GetConfiguration with the current values of all known keys. Unknown keys go in the `unknownKeys` array.
@@ -568,7 +577,7 @@ Receiver responds:
 - The `data` field MUST NOT exceed **64 KB** when JSON-serialized. Payloads exceeding this limit are rejected.
 - Both station and server SHOULD rate-limit DataTransfer to max **10 per minute per vendor**
 - `UnknownVendor` / `UnknownData` are status values, not error codes
-- NOT signed in `Critical` HMAC mode (vendor data is not critical by default). Signed in `All` mode.
+- Signed like every other message — there is no vendor-data exemption
 - Idempotency is vendor-defined — the protocol does not enforce deduplication
 - Timeout: 30 seconds
 
@@ -599,7 +608,7 @@ TriggerMessage [MSG-026] lets the server request the station to send a specific 
 - `NotImplemented` means the station doesn't support triggering this message type — it's a status value, not an error code
 - `Rejected` if the request doesn't make sense (e.g., `MeterValues` with no active session)
 - Server SHOULD NOT send more than **1 TriggerMessage per action type per 30-second window**
-- Signed in both `Critical` and `All` HMAC modes (server command)
+- Signed like every other message
 - Timeout: 10 seconds
 
 ---
@@ -1103,7 +1112,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 
 ### Security
 
-- [ ] **[MUST]** HMAC-SHA256 signing per `MessageSigningMode` (default `Critical`: 31 of 47 messages; `All`: every message except BootNotification REQUEST/RESPONSE and LWT)
+- [ ] **[MUST]** HMAC-SHA256 on every message except BootNotification REQUEST/RESPONSE and the LWT (44 of 47); refuse to send rather than send unsigned when you hold no key
 - [ ] **[MUST]** Canonical JSON for HMAC: sorted keys (recursive), compact, UTF-8
 - [ ] **[MUST]** Constant-time HMAC comparison (timing-safe)
 - [ ] **[MUST]** Session key from BootNotification RESPONSE, stored in RAM only

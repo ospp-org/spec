@@ -6,7 +6,7 @@ Security Profile
 
 ## Purpose
 
-Verify that the station correctly computes and attaches HMAC-SHA256 signatures to outgoing messages when `MessageSigningMode` is configured (mode `"all"` or `"critical"`), and that the station rejects incoming messages with invalid or missing HMAC signatures with appropriate error codes (`1012 MAC_VERIFICATION_FAILED`, `1013 MAC_MISSING`).
+Verify that the station correctly computes and attaches HMAC-SHA256 signatures to **every** outgoing message except the three structural exemptions, and that it rejects incoming messages with invalid or missing HMAC signatures with the appropriate error codes (`1012 MAC_VERIFICATION_FAILED`, `1013 MAC_MISSING`). The mode under test is `"All"` — PascalCase, as every OSPP enum is.
 
 ## References
 
@@ -18,7 +18,7 @@ Verify that the station correctly computes and attaches HMAC-SHA256 signatures t
 ## Preconditions
 
 1. Station is booted and has received BootNotification ACCEPTED.
-2. `MessageSigningMode` configuration key is set to `"all"` on the station.
+2. `MessageSigningMode` configuration key is set to `"All"` on the station — this is its default, and the only other value is `"None"`.
 3. A shared HMAC secret key is provisioned on both the station and the test harness.
 4. MQTT connection is stable.
 5. The test harness can compute valid HMAC-SHA256 signatures using the same shared secret.
@@ -72,7 +72,7 @@ Verify that the station correctly computes and attaches HMAC-SHA256 signatures t
 
 ## Expected Results
 
-1. All outgoing station messages include a `mac` field when `MessageSigningMode` is `"all"`.
+1. All outgoing station messages include a `mac` field, except BootNotification REQUEST and the LWT. A Heartbeat, StatusNotification or MeterValues without one fails this case: there is no informational exemption.
 2. The `mac` field contains a correct HMAC-SHA256 computed over the message payload using the shared secret.
 3. The station processes incoming messages with valid HMAC signatures normally.
 4. Messages with invalid HMAC are rejected with error `1012 MAC_VERIFICATION_FAILED` and severity `Critical`.
@@ -83,7 +83,7 @@ Verify that the station correctly computes and attaches HMAC-SHA256 signatures t
 
 ## Failure Criteria
 
-1. Station sends messages without `mac` field when `MessageSigningMode` requires signing.
+1. Station sends any message without a `mac` field while `MessageSigningMode` is `"All"`, other than BootNotification REQUEST or the LWT.
 2. Station's `mac` value does not match the independently computed HMAC-SHA256.
 3. Station accepts and processes a message with an invalid HMAC signature.
 4. Station accepts and processes a message with a missing HMAC when signing is enabled.

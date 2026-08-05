@@ -317,7 +317,7 @@ The **online path** is the primary communication channel between the station and
 - **Direction:** Bidirectional. The station publishes to a station-to-server topic; the server publishes to a server-to-station topic.
 - **Topic pattern:** `ospp/v1/stations/{station_id}/to-server` and `ospp/v1/stations/{station_id}/to-station`.
 - **QoS:** All messages use QoS 1 (at-least-once delivery).
-- **Security:** mTLS with X.509 client certificates. HMAC-SHA256 message integrity on applicable envelopes per `MessageSigningMode` configuration (see [Chapter 06 — Security](06-security.md), §5.6).
+- **Security:** mTLS with X.509 client certificates. HMAC-SHA256 message integrity on **every** envelope except the three structural exemptions (see [Chapter 06 — Security](06-security.md), §5.6).
 
 For full transport details — connection parameters, TLS requirements, topic structure, QoS, session persistence, reconnection, and Last Will and Testament — see [Chapter 02 — Transport](02-transport.md).
 

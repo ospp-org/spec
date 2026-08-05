@@ -42,7 +42,7 @@ DataTransfer is **bidirectional** — both the station and the server may initia
 1. The receiver MUST respond with `UnknownVendor` if it does not recognize the `vendorId`. The receiver MUST NOT respond with an error code — this is not an error condition.
 2. The receiver MUST respond with `UnknownData` if it recognizes the `vendorId` but does not implement the requested `dataId`.
 3. Stations and servers MUST NOT rely on DataTransfer for safety-critical or billing-critical operations. DataTransfer is intended for diagnostic, monitoring, and vendor-specific configuration use cases.
-4. DataTransfer payloads are NOT covered by HMAC in `Critical` signing mode. In `All` signing mode, they are signed like any other MQTT message.
+4. DataTransfer messages are HMAC-signed like any other MQTT message ([Chapter 06 §5.6](../../06-security.md#56-message-signing-classification)). An earlier revision exempted them as "not protocol-critical"; per-message judgement of that kind is withdrawn.
 5. Idempotency is vendor-defined — the protocol does not enforce idempotency for DataTransfer.
 6. Implementations SHOULD impose a maximum payload size limit consistent with their MQTT message size configuration.
 7. The `data` field **MUST NOT** exceed **64 KB** when JSON-serialized. Receivers **SHOULD** reject payloads exceeding this limit with status `Rejected`.

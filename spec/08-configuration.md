@@ -111,7 +111,7 @@ A station MUST support all keys in the required profiles. A station that adverti
 |-----|------|---------|:------:|:----------:|-------|-------------|
 | `CertificateSerialNumber` | string | -- | R | Static | -- | Serial number of the station's **CURRENT** X.509 client certificate. ReadOnly; updated when a new certificate is provisioned. A PREVIOUS certificate retained during rotation is deliberately not represented here — this key is single-valued by design, and the overlap it does not show is bounded by [Chapter 06 — Security](06-security.md), §4.7.6. |
 | `AuthorizationCacheEnabled` | boolean | `true` | RW | Dynamic | -- | When `true`, the station caches authorization responses locally for faster repeat authorizations. |
-| `MessageSigningMode` | string | `"Critical"` | RW | Dynamic | `"All"`, `"Critical"`, `"None"` | Controls HMAC-SHA256 message signing. `All` = every message, `Critical` = financial/command messages only (see [Chapter 06](06-security.md), §5.6), `None` = disabled. |
+| `MessageSigningMode` | string | `"All"` | RW | **Static** | `"All"`, `"None"` | Controls HMAC-SHA256 message signing. `All` = every message except the three structural exemptions (see [Chapter 06](06-security.md), §5.6); `None` = disabled, development and test harnesses only. **Static**, not Dynamic: the mode is bound to the session key, which is issued at boot, so a mid-session change would leave one peer signing and the other not — and verification fails closed while signing fails closed too, so the station goes silent in both directions. Taking effect at the next reboot means the change and the new key land on the same event. |
 | `OfflinePassPublicKey` | string | -- | W | Dynamic | valid SEC1 key | Server's ECDSA P-256 public key for OfflinePass signature verification (uncompressed or compressed SEC1 format). Updated via ChangeConfiguration during key rotation. Stations MUST accept passes signed by the current or immediately previous key. |
 | `CertificateRenewalThresholdDays` | integer | `30` | RW | Dynamic | 7--90 | Days before certificate expiry to initiate automatic renewal. The station checks daily and starts the SignCertificate flow when within this threshold. See [Chapter 06 — Security](06-security.md), §4.7. |
 | `CertificateRenewalEnabled` | boolean | `true` | RW | Dynamic | -- | Master switch for automatic certificate renewal. When `false`, the station does not initiate renewal automatically but still responds to server-triggered renewal (TriggerCertificateRenewal [MSG-024]). |
@@ -336,7 +336,7 @@ The following table provides a consolidated reference of all standard configurat
 | 15 | `DefaultCreditsPerSession` | integer | `100` | RW | Dynamic | Transaction |
 | 16 | `CertificateSerialNumber` | string | -- | R | Static | Security |
 | 17 | `AuthorizationCacheEnabled` | boolean | `true` | RW | Dynamic | Security |
-| 18 | `MessageSigningMode` | string | `"Critical"` | RW | Dynamic | Security |
+| 18 | `MessageSigningMode` | string | `"All"` | RW | Static | Security |
 | 19 | `OfflinePassPublicKey` | string | -- | W | Dynamic | Security |
 | 20 | `CertificateRenewalThresholdDays` | integer | `30` | RW | Dynamic | Security |
 | 21 | `CertificateRenewalEnabled` | boolean | `true` | RW | Dynamic | Security |
