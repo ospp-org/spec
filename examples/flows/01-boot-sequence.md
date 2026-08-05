@@ -192,7 +192,7 @@ The station now waits up to 30 seconds for a response. During this wait, it MUST
 
 ### Step 6: BootNotification RESPONSE - Accepted (10:00:03.100)
 
-The server validates the station: certificate matches the registered station ID, firmware version is supported, protocol version is compatible. It returns Accepted.
+The server validates the station: certificate matches the registered station ID, firmware version is supported, and the declared `protocolVersion` is an exact member of the set the server supports. It returns Accepted.
 
 **MQTT Topic:** `ospp/v1/stations/stn_a1b2c3d4/to-station`
 

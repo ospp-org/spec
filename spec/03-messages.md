@@ -303,7 +303,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
 | Error Code | Condition |
 |------------|-----------|
 | `1005` | `INVALID_MESSAGE_FORMAT` — request is not valid JSON or missing required fields |
-| `1007` | `PROTOCOL_VERSION_MISMATCH` — major version incompatible |
+| `1007` | `PROTOCOL_VERSION_MISMATCH` — the declared `protocolVersion` is not in the server's supported set. Exact match; a shared MAJOR implies nothing |
 | `2001` | `STATION_NOT_REGISTERED` — station unknown to server |
 | `3018` | `TOPOLOGY_MISMATCH` — the declared `bays[]` disagrees with the provisioned topology. Carried on a **`Pending`** response, never `Rejected`, with `details` |
 | `6001` | `SERVER_INTERNAL_ERROR` — server encountered an unexpected error during processing |
@@ -1154,7 +1154,7 @@ This message is NOT sent when the session is stopped by a server-initiated StopS
 | `LocalOutOfCredit` | Offline credit pool exhausted mid-session — `OfflinePass.maxTotalCredits` would be exceeded by the next meter reading or by elapsed time, forcing the station to stop. Session MUST be billed at zero (no valid credits available). |
 | `Deauthorized` | Offline pass revoked while the session was active — typically a `RevocationEpoch` bump propagated through ChangeConfiguration that invalidates the pass under which the session was authorized. Session MUST be billed at zero. |
 
-> **Version note:** The `reason` enum was extended in v0.4.0 from `["TimerExpired", "Fault"]` to add `Local`, `LocalOutOfCredit`, and `Deauthorized`. v0.3.0 servers do not recognize these values and will reject SessionEnded messages containing them with a JSON-schema validation error. Pre-launch deployment of v0.4.0 requires coordinated station + server upgrade. Mixed-version production deployments are not supported in v0.4.0; future minor versions will revisit backwards-compat strategy (e.g., per-message envelope `protocolVersion` discrimination, BootNotification capability negotiation) as the ecosystem matures.
+> **Version note, and the case that decided version negotiation.** The `reason` enum was extended from `["TimerExpired", "Fault"]` to add `Local`, `LocalOutOfCredit`, and `Deauthorized`. A server built against the narrower enum rejects a SessionEnded carrying one of the new values on schema validation — and SessionEnded is the sole billing source when no StopService command was issued, so that rejection loses a delivered session's money silently. Mixed-version deployment is **not** supported, and this is precisely why boot negotiation is **exact match** and not "same MAJOR" ([VERSIONING.md](../VERSIONING.md)): both versions here share MAJOR `0`, so a MAJOR gate would have accepted the pairing at boot and surfaced the incompatibility at settlement instead. Exact match refuses it at boot, where refusing is cheap and visible.
 
 > **Reasons not in v0.4.0:** `Remote` (server-initiated stop) is intentionally excluded — server-initiated stops produce a StopService RESPONSE [MSG-006] which already carries final billing data; emitting both StopService RESPONSE and SessionEnded for the same stop would force double-emission ambiguity. Remote-stop semantics belong in a dedicated flow refactor. `EnergyLimitReached` is deferred to a future version pending consumable-meter implementation maturity.
 

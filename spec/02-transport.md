@@ -140,9 +140,9 @@ ospp/v1/stations/stn_a1b2c3d4/to-station   ← station subscribes here
 
 The `v1` segment in the topic path is a **namespace identifier**, NOT the protocol version.
 
-- The protocol version is negotiated inside the message envelope via the `protocolVersion` field (see [Chapter 03 — Messages](03-messages.md)).
-- The topic namespace `v1` MUST remain `v1` for all OSPP 1.x protocol versions.
-- A new topic namespace (e.g., `v2`) would only be introduced for a fundamental transport-level change that cannot be handled by protocol version negotiation.
+- The protocol version is carried inside the message envelope via the `protocolVersion` field (see [Chapter 03 — Messages](03-messages.md)) and checked at boot by **exact match** against the set the server supports ([VERSIONING.md](../VERSIONING.md)). "Negotiation" here means that check and its `1007` outcome; the two peers do not converge on a version, and a shared MAJOR implies nothing.
+- The topic namespace `v1` MUST remain `v1` for every OSPP protocol version, regardless of that version's MAJOR component. The two numbers are unrelated: the namespace identifies the topic layout, the envelope field identifies the message contract.
+- A new topic namespace (e.g., `v2`) would only be introduced for a fundamental transport-level change — a different topic shape or a different addressing scheme — not for any change the envelope's `protocolVersion` can express.
 - The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.9.0*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.3.0`): the two version numbers evolve separately and need not match.
 
 ### 2.3 Server Subscription Patterns
@@ -891,7 +891,7 @@ All timestamps MUST use **ISO 8601** format with **millisecond precision** and *
 | Message expired | MQTT | Message Expiry Interval | Discard, log warning |
 | Invalid JSON received | MQTT / BLE | JSON parse error | Log `1005` and discard. No reply is possible: the `messageId` cannot be read, and [07-errors §2.1](07-errors.md#21-mqtt-error-response) requires a RESPONSE to echo it. MAY be reported as an unsolicited EVENT ([07-errors §2.2](07-errors.md#22-mqtt-error-event)) |
 | Unknown action | MQTT / BLE | Action not recognized | If the action is known to the protocol but unsupported here, reply `status: "Rejected"` with `1006` on that action's RESPONSE (§2.1). If the action is unknown to the protocol, no RESPONSE schema exists — log `1006` and discard. MAY be reported as an unsolicited EVENT (§2.2) |
-| Protocol version mismatch | MQTT | BootNotification Rejected | Log `1007`, record `supportedVersions`, stay in limited mode and keep retrying BootNotification at `retryInterval` per [CORE-011](profiles/core/README.md) — the station cannot deliver service, but it MUST NOT stop retrying |
+| Protocol version mismatch | MQTT | Declared `protocolVersion` not in the server's supported set (exact match) | Log `1007`, record `supportedVersions`, stay in the `Rejected` restricted state and keep retrying BootNotification at `retryInterval` per [CORE-011](profiles/core/README.md) — the station cannot deliver service, but it MUST NOT stop retrying |
 | BLE scan timeout | BLE | No advertisement found in 30s | Return to IDLE, show error to user |
 | BLE connection drops | BLE | GATT disconnect event | Service continues on timer; receipt retained |
 | BLE fragment timeout | BLE | 5s without next fragment | Discard buffered fragments |
