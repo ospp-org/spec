@@ -2,7 +2,9 @@
 
 > **Status:** Draft | **OSPP Version:** 0.10.0
 
-This chapter defines all finite state machines (FSMs) governing OSPP entities. Each FSM specifies the complete set of states, valid transitions, guards, actions, and a Mermaid diagram. Implementations MUST enforce these state machines; any transition not explicitly listed here is invalid and MUST be rejected.
+This chapter defines all finite state machines (FSMs) governing OSPP entities — the station, its bays, sessions, reservations, BLE connections and firmware updates. Each FSM specifies the complete set of states, valid transitions, guards, actions, and a Mermaid diagram. Implementations MUST enforce these state machines; any transition not explicitly listed here is invalid and MUST be rejected.
+
+The **station** machine ([§1](#1-station-state-machine)) is the outermost: every other machine on a station is scoped inside it, and [§7.1](#71-station----bay----session-coupling) states how.
 
 The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHALL NOT**, **SHOULD**, **SHOULD NOT**, **RECOMMENDED**, **MAY**, and **OPTIONAL** in this document are to be interpreted as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119) and [RFC 8174](https://www.rfc-editor.org/rfc/rfc8174).
 
@@ -10,11 +12,106 @@ For message references, see [Chapter 03 — Message Catalog](03-messages.md). Me
 
 ---
 
-## 1. Bay State Machine
+## 1. Station State Machine
+
+The station state machine governs the station as a whole — whether it may talk to the server, whether it may accept commands, and whether it may serve a customer. Every other machine in this chapter is scoped inside it: a bay transition is only reportable, and a session only startable, while the station is `Operational`. A station MUST be in exactly one of the six defined states at all times.
+
+Two other machines in this chapter also have a state named `Pending` — the session machine ([§3.2](#32-states-6)) and the reservation machine ([§4.2](#42-states-5)). They are unrelated. Where ambiguity is possible this specification writes **station-`Pending`**, and it is the only `Pending` a BootNotification RESPONSE can carry.
+
+### 1.1 State Diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> NotProvisioned : Manufactured / physically configured
+
+    NotProvisioned --> Booting : Credential obtained (provisioning, out of band or HTTP)
+
+    Booting --> Operational : BootNotification RESPONSE (Accepted)
+    Booting --> Pending : BootNotification RESPONSE (Pending)
+    Booting --> Rejected : BootNotification RESPONSE (Rejected)
+    Booting --> Booting : Response timeout (30s) / retry
+
+    Pending --> Booting : retryInterval elapsed / retry
+    Rejected --> Booting : retryInterval elapsed / retry
+
+    Operational --> Disconnected : MQTT connection lost
+    Booting --> Disconnected : MQTT connection lost
+    Pending --> Disconnected : MQTT connection lost
+    Rejected --> Disconnected : MQTT connection lost
+
+    Disconnected --> Booting : MQTT reconnected, BootNotification sent
+
+    Operational --> Booting : Reboot (Reset, firmware update, watchdog, power cycle)
+```
+
+### 1.2 States (6)
+
+| State | Description |
+|-------|-------------|
+| **NotProvisioned** | The station holds no operator-issued client certificate and cannot open an mTLS connection to the broker. OSPP does not begin here: the exit is provisioning ([Chapter 04 — Flows §2](04-flows.md#2-station-provisioning)) or the out-of-band manufacturing path ([Chapter 01 — Architecture §7.1](01-architecture.md)). A station **MUST NOT** enter this state autonomously — there is no remote credential wipe ([Reset §5.1](profiles/device-management/reset.md)). |
+| **Booting** | The MQTT connection is established, the station has subscribed to its `to-station` topic and published a BootNotification REQUEST [MSG-001], and it is waiting for the RESPONSE. Restricted exactly as `Pending`, and additionally holds no session key, so it can neither sign nor verify. |
+| **Pending** | The server accepted the connection but has not cleared the station for service — an operator approval is outstanding, or a `3018 TOPOLOGY_MISMATCH` needs repair. A **restricted** state: the station answers commands and sends nothing unsolicited. See [§1.4](#14-the-restricted-states). |
+| **Rejected** | The server refused the boot and said why, with `errorCode` and `errorText`. A **restricted** state, and stricter than `Pending`: the station also refuses commands, because the server that would send them does not consider it registered. See [§1.4](#14-the-restricted-states). |
+| **Operational** | The boot was `Accepted`. The station has a session key, has reported every bay, is heartbeating, accepts and executes commands, and serves customers. This is the only state in which a bay may leave `Unknown` ([§2.2](#22-states-7)) and the only state in which a session may start. |
+| **Disconnected** | No MQTT connection. Hardware keeps running: active sessions continue on the station's local timer, BLE stays available, and TransactionEvent and SecurityEvent are buffered ([Chapter 02 — Transport §4.4](02-transport.md)). The station is not idle here — it is operating without a server. The server infers this state from the LWT [MSG-011] or a heartbeat timeout and holds every bay at `Unknown` ([CORE-008](profiles/core/README.md)). |
+
+> **Which party holds which state.** The station holds all six about itself. The server holds five: it never observes `Booting` as a state, because the REQUEST that opens it and the RESPONSE that closes it are one exchange the server completes synchronously. `NotProvisioned` is the server's record of a station it has registered but not yet credentialled; a station it has never heard of has no state at all, and its boot is answered `Rejected` with `2001 STATION_NOT_REGISTERED`. `Disconnected` is the server's inference, exactly as `Unknown` is for a bay, and the two are the same event seen at two scopes.
+
+### 1.3 Transition Table
+
+| Trigger | From | To | Condition | Action |
+|---------|------|----|-----------|--------|
+| Credential obtained | NotProvisioned | Booting | The station holds a client certificate whose Subject CN carries its `stationId`, and a broker trust anchor | Station connects (mTLS), subscribes to `to-station`, publishes BootNotification [MSG-001] |
+| BootNotification RESPONSE `Accepted` | Booting | Operational | Server recognises the `stationId`, the declared topology matches, and the protocol version matches | Station stores `sessionKey`, applies `configuration`, syncs its clock to `serverTime`, sends one StatusNotification [MSG-009] per bay, starts the heartbeat timer |
+| BootNotification RESPONSE `Pending` | Booting | Pending | Operator approval outstanding, or `3018 TOPOLOGY_MISMATCH` | Station enters the restricted state of [§1.4](#14-the-restricted-states) and waits `retryInterval` |
+| BootNotification RESPONSE `Rejected` | Booting | Rejected | `2001`, `1005`, `1007` or `6001` — see [boot-notification.md §6](profiles/core/boot-notification.md) | Station records `errorCode`, `errorText` and any `supportedVersions`, and waits `retryInterval` |
+| Response timeout | Booting | Booting | No RESPONSE within 30 seconds | Station logs `1010 MESSAGE_TIMEOUT`, waits 60 seconds, re-publishes BootNotification. Retries are unlimited |
+| `retryInterval` elapsed | Pending, Rejected | Booting | The interval from the response has passed (default 30 s, `BootRetryInterval`) | Station re-publishes BootNotification [MSG-001]. Retries are unlimited ([CORE-011](profiles/core/README.md)) |
+| MQTT connection lost | Booting, Pending, Rejected, Operational | Disconnected | PINGRESP timeout, TCP reset, or broker unavailable | Station continues active sessions, keeps BLE available, buffers per [Chapter 01 §6.5](01-architecture.md#65-offline-message-buffering); server receives the LWT [MSG-011] and marks every bay `Unknown`. Both sides discard the session key |
+| MQTT reconnected | Disconnected | Booting | Transport re-established with backoff ([Chapter 02 §4.5](02-transport.md)) | Station re-subscribes and publishes BootNotification with `bootReason: "Reconnect"` if it did not reboot |
+| Reboot | Operational | Booting | Reset [MSG-015], firmware update, watchdog, or power cycle | Station restarts, reconnects, and publishes BootNotification with the `bootReason` that names the cause |
+
+Any transition not listed here is invalid. In particular there is **no** edge from `Pending` or `Rejected` directly to `Operational`: a station leaves a restricted state only by re-sending BootNotification and receiving `Accepted`. The server cannot promote a station in place, and a station **MUST NOT** infer promotion from a command arriving while it is `Pending`.
+
+### 1.4 The Restricted States
+
+`Pending` and `Rejected` are both restricted, and they differ in exactly one respect: whether the station answers commands.
+
+| | `Booting` | `Pending` | `Rejected` | `Operational` |
+|---|:---:|:---:|:---:|:---:|
+| Sends BootNotification retries | — | **MUST** | **MUST** | — |
+| Sends anything else unsolicited (EVENT, or a REQUEST it originates) | **MUST NOT** | **MUST NOT** | **MUST NOT** | MAY |
+| Receives and processes server commands | **MUST NOT** | **MUST** | **MUST NOT** | **MUST** |
+| Answers a server command with a RESPONSE | **MUST NOT** | **MUST** | **MUST NOT** | **MUST** |
+| Starts new customer service | **MUST NOT** | **MUST NOT** | **MUST NOT** | MAY |
+| Continues a session already running | **MUST** | **MUST** | **MUST** | **MUST** |
+
+**Why `Pending` answers commands and `Rejected` does not.** `Pending` exists so that a human can repair something — approve a registration, or correct a topology record — and the repair may need the command channel: ChangeConfiguration, GetConfiguration, GetDiagnostics, UpdateServiceCatalog, TriggerMessage, a certificate operation, or a Reset. Closing that channel would leave the operator no way to do the very thing the window exists for. `Rejected` carries no such expectation: the server has said the station is not registered, or is speaking a protocol version it does not support, and it has nothing to configure. This is the shape OCPP 2.0.1 uses for the same case — in *B02 Cold Boot — Pending* the charging station sends nothing but its boot retries while the CSMS is free to issue requests.
+
+**The distinction is carried by the envelope, not by the action.** `messageType` is `Request`, `Response` or `Event` ([Chapter 03 §1](03-messages.md)). A restricted station is forbidden `Event` and forbidden any `Request` other than BootNotification; `Response` is permitted in `Pending` because a RESPONSE is not something the station initiates.
+
+**Serving no customers is not the same as stopping.** A station that enters a restricted state with a session already running **MUST** continue it, meter it, and settle it, exactly as it does while `Disconnected` ([Chapter 02 §4.4](02-transport.md)) — a customer who has paid is served. What it **MUST NOT** do is begin a new one. While `Pending` or `Rejected` the station **MUST** reject StartService [MSG-005] and ReserveBay [MSG-003] with `3002 BAY_NOT_READY`, on every transport, and **MUST NOT** authorize a BLE offline session. In `Pending` that rejection is sent as a RESPONSE; in `Rejected` the command is not processed at all.
+
+**What the server may assume.** A `Pending` or `Rejected` station has sent no StatusNotification, so the server holds every one of its bays at `Unknown` and **MUST NOT** offer them for sale. The absence of bay reports is the signal, and it is the same signal a `Disconnected` station produces — which is why no new state value is needed on the wire to express it.
+
+### 1.5 Topology at Boot
+
+The station re-declares its physical topology in every BootNotification: `bays[]`, one entry per bay, each carrying `bayNumber` and that bay's `programNumbers` ([Chapter 01 — Architecture §4.2](01-architecture.md)). The server compares that declaration, as a set in both directions, against the topology recorded for the station at provisioning.
+
+1. **Match → `Accepted`.** The station proceeds to `Operational`.
+2. **Mismatch → `Pending`, with `3018 TOPOLOGY_MISMATCH`.** Never `Rejected`: `Pending` keeps the command channel open so an operator can repair the disagreement, and `Rejected` would close the only channel through which it could be repaired. The response **MUST** carry a `details` object naming what the server expected and what arrived.
+3. **First boot.** Provisioning creates the bay records and boot never does, so the two declarations come from the same act and a first boot **matches**. It can fail only if the topology submitted at provisioning and the topology declared at boot disagree — which is the same mismatch as any other, carries the same `3018`, and puts the station in the same `Pending`. There is no first-boot exemption and no bootstrap window: a station whose two declarations disagree has a firmware or a commissioning fault, and the fault is worth the same held state at boot 1 as at boot 100.
+4. **The station does not adapt.** A station **MUST NOT** alter its declaration to match what the server expected. The declaration describes hardware; silently agreeing would hide a real hardware change. It keeps declaring the same topology and keeps retrying.
+
+The mismatch is symmetric: a bay or a program ordinal present on one side and absent on the other is a mismatch in either direction. Program **labels** are descriptive, are not re-declared at boot, and are never compared.
+
+---
+
+## 2. Bay State Machine
 
 The bay state machine governs the operational status of each physical service bay on a station. Every bay MUST be in exactly one of the seven defined states at all times. The station MUST send a StatusNotification [MSG-009] on every state transition.
 
-### 1.1 State Diagram
+### 2.1 State Diagram
 
 ```mermaid
 stateDiagram-v2
@@ -52,7 +149,7 @@ stateDiagram-v2
     Unavailable --> Unknown : LWT / connection lost
 ```
 
-### 1.2 States (7)
+### 2.2 States (7)
 
 | State | Description |
 |-------|-------------|
@@ -70,7 +167,7 @@ stateDiagram-v2
 > reason. A station **MUST NOT** report `Unknown` in the `status` or
 > `previousStatus` field of any message, on any transport; it resolves the state
 > by reporting what it resolved **to** — `Available`, `Faulted` or `Unavailable`,
-> per the three transitions in section 1.3. A server holds a bay at `Unknown`
+> per the three transitions in section 2.3. A server holds a bay at `Unknown`
 > whenever it has no current report — from the station's boot until the post-boot
 > report arrives, and from connection loss ([CORE-008](profiles/core/README.md))
 > until the next accepted StatusNotification.
@@ -92,7 +189,7 @@ stateDiagram-v2
 > [MSG-011] is itself the freshness signal; putting `Unknown` in the status enum
 > stated the same fact a second time, in the weaker place.
 
-### 1.3 Transition Table
+### 2.3 Transition Table
 
 | Trigger | From | To | Condition | Action |
 |---------|------|----|-----------|--------|
@@ -113,26 +210,26 @@ stateDiagram-v2
 | SetMaintenanceMode OFF [MSG-020] | Unavailable | Available | Operator completes maintenance | Station sends StatusNotification |
 | LWT / connection lost | Any except Unknown | Unknown | Broker publishes ConnectionLost [MSG-011] | Server marks bay as Unknown; station resolves via StatusNotification on reconnect |
 
-### 1.4 StatusNotification Triggers
+### 2.4 StatusNotification Triggers
 
 A station MUST send a StatusNotification EVENT [MSG-009] in the following circumstances:
 
 1. **Post-boot report:** One StatusNotification per bay immediately after a successful BootNotification [MSG-001], reporting `bayNumber`, `status`, and available `services[]`.
-2. **State transition:** On every bay state transition listed in section 1.3.
+2. **State transition:** On every bay state transition listed in section 2.3.
 
 In both cases the reported `status` MUST be one of the six reportable states. A station that has not yet determined a bay's state has not yet met trigger 1: it completes its self-test first and reports the result. It **MUST NOT** report `Unknown` as a placeholder for a bay it has not finished evaluating, and **MUST NOT** report `Unknown` to acknowledge a state the server assigned — the server leaves `Unknown` on the report's arrival, not on being told about it.
 
-### 1.5 Invalid Transitions
+### 2.5 Invalid Transitions
 
-Any state transition not explicitly listed in section 1.3 is invalid. If the server receives a StatusNotification with an invalid transition (e.g., `Available` directly to `Finishing`), the server SHOULD log a warning and MAY request a station Reset [MSG-015]. If the station receives a command that would require an invalid transition (e.g., StopService while bay is `Available`), the station MUST reject the command with the appropriate error code from [Chapter 07](07-errors.md) (e.g., `3006 SESSION_NOT_FOUND`).
+Any state transition not explicitly listed in section 2.3 is invalid. If the server receives a StatusNotification with an invalid transition (e.g., `Available` directly to `Finishing`), the server SHOULD log a warning and MAY request a station Reset [MSG-015]. If the station receives a command that would require an invalid transition (e.g., StopService while bay is `Available`), the station MUST reject the command with the appropriate error code from [Chapter 07](07-errors.md) (e.g., `3006 SESSION_NOT_FOUND`).
 
 ---
 
-## 2. Session State Machine
+## 3. Session State Machine
 
 The session state machine governs the lifecycle of a single service session from initiation through completion or failure. Sessions are managed primarily by the server, with the station reporting bay transitions via StatusNotification [MSG-009] and stop confirmations via StopService Response [MSG-006] and responding to StartService/StopService commands.
 
-### 2.1 State Diagram
+### 3.1 State Diagram
 
 ```mermaid
 stateDiagram-v2
@@ -155,7 +252,7 @@ stateDiagram-v2
     Failed --> [*]
 ```
 
-### 2.2 States (6)
+### 3.2 States (6)
 
 | State | Description |
 |-------|-------------|
@@ -166,7 +263,7 @@ stateDiagram-v2
 | **Completed** | The session has ended normally. The station has confirmed the stop, final MeterValues have been received, and the receipt has been generated. |
 | **Failed** | The session terminated abnormally due to an error, timeout, or fault. The server MUST initiate a refund if payment was collected and no service was delivered. |
 
-### 2.3 Transition Table
+### 3.3 Transition Table
 
 | Trigger | From | To | Condition | Action |
 |---------|------|----|-----------|--------|
@@ -185,7 +282,7 @@ stateDiagram-v2
 | Mid-session deauthorization | Active | Failed | Station detects offline pass revocation via `RevocationEpoch` bump (e.g., received through ChangeConfiguration) and stops the active session; sends SessionEnded EVENT [MSG-040] with `reason: Deauthorized` and `creditsCharged: 0` | Server records terminal state; full refund of pre-authorized amount; flag for security audit (mid-session revocation usually indicates fraud or compromise) |
 | Connection lost | Active | Failed | ConnectionLost [MSG-011] received and station does not reconnect within `ConnectionLostGracePeriod` (default: 300s) | Server marks session as failed after grace period; on reconnect, reconciles via TransactionEvent |
 
-### 2.4 Timeouts
+### 3.4 Timeouts
 
 | Timeout | Duration | Configurable | Behavior on Expiry |
 |---------|----------|:------------:|-------------------|
@@ -197,7 +294,7 @@ stateDiagram-v2
 | Session inactivity | `SessionTimeout` config key (see §8 Configuration) | Yes | If no MeterValues or user interaction within the timeout period, session transitions to `Stopping` |
 | Connection lost grace | `ConnectionLostGracePeriod` config key (default: 300s) | Yes | If station reconnects within grace period, session continues; otherwise transitions to `Failed` |
 
-### 2.5 Per-Session Sequence Number (seqNo) and Crash Resilience
+### 3.5 Per-Session Sequence Number (seqNo) and Crash Resilience
 
 For stations that emit the optional per-session `seqNo` field on session-scoped EVENTs (MeterValues, SessionEnded — see [`02-transport.md §3.2`](02-transport.md)), the following rules apply to the Session FSM:
 
@@ -211,11 +308,11 @@ These requirements are consistent with the existing `txCounter` persistence rule
 
 ---
 
-## 3. Reservation State Machine
+## 4. Reservation State Machine
 
 The reservation state machine governs the lifecycle of a bay reservation. Reservations hold a bay for a specific user for a limited time, allowing them to arrive and start a session without risk of the bay being taken.
 
-### 3.1 State Diagram
+### 4.1 State Diagram
 
 ```mermaid
 stateDiagram-v2
@@ -233,7 +330,7 @@ stateDiagram-v2
     Cancelled --> [*]
 ```
 
-### 3.2 States (5)
+### 4.2 States (5)
 
 | State | Description |
 |-------|-------------|
@@ -243,7 +340,7 @@ stateDiagram-v2
 | **Expired** | The `expirationTime` was reached without the reservation being consumed. The station automatically releases the bay back to `Available`. |
 | **Cancelled** | The reservation was explicitly cancelled via CancelReservation [MSG-004], or was rejected by the station at creation time. |
 
-### 3.3 Transition Table
+### 4.3 Transition Table
 
 | Trigger | From | To | Condition | Action |
 |---------|------|----|-----------|--------|
@@ -255,14 +352,14 @@ stateDiagram-v2
 | CancelReservation [MSG-004] by user | Confirmed | Cancelled | User cancels from app or web | Station releases bay to `Available`; sends StatusNotification |
 | CancelReservation by server | Confirmed | Cancelled | Server cancels (e.g., payment failure, administrative action) | Station releases bay to `Available`; sends StatusNotification |
 
-### 3.4 TTL Behavior
+### 4.4 TTL Behavior
 
 - The default reservation TTL is defined by the `ReservationDefaultTTL` configuration key (default: 300 seconds).
 - The `expirationTime` in the ReserveBay request is an absolute ISO 8601 UTC timestamp. The station MUST use this timestamp, not a relative duration, to determine expiry.
 - The station MUST automatically release the bay when `expirationTime` is reached, transitioning it back to `Available` and sending a StatusNotification.
 - The server SHOULD send a CancelReservation if it determines the reservation should end before `expirationTime` (e.g., user cancels, payment fails).
 
-### 3.5 Conversion to Session
+### 4.5 Conversion to Session
 
 When the reservation holder starts a session:
 
@@ -275,11 +372,11 @@ When the reservation holder starts a session:
 
 ---
 
-## 4. BLE Connection State Machine
+## 5. BLE Connection State Machine
 
 The BLE connection state machine governs the Bluetooth Low Energy link between the mobile application (central) and the station (peripheral). This FSM operates independently of the MQTT connection and enables offline session scenarios.
 
-### 4.1 State Diagram
+### 5.1 State Diagram
 
 ```mermaid
 stateDiagram-v2
@@ -314,7 +411,7 @@ stateDiagram-v2
     Handshake --> Disconnected : Connection lost during handshake
 ```
 
-### 4.2 States (9)
+### 5.2 States (9)
 
 | State | Description |
 |-------|-------------|
@@ -328,7 +425,7 @@ stateDiagram-v2
 | **Error** | A BLE error has occurred: scan timeout, connection failure, authentication failure, or unexpected disconnection. Recovery actions are pending. |
 | **Disconnected** | The BLE connection has been gracefully terminated by either side, or lost due to the station or app moving out of range. |
 
-### 4.3 Transition Table
+### 5.3 Transition Table
 
 | Trigger | From | To | Condition | Action |
 |---------|------|----|-----------|--------|
@@ -348,7 +445,7 @@ stateDiagram-v2
 | Connection lost | Ready, Connected, Handshake, Scanning, Connecting | Error or Disconnected | BLE link lost unexpectedly (out of range, hardware failure) | App detects disconnection callback; if in Ready state, marks as Error for recovery |
 | Reset | Error, Disconnected | Idle | Retry delay elapsed or user initiates new scan | App clears BLE state, returns to Idle |
 
-### 4.4 Error Recovery
+### 5.4 Error Recovery
 
 When the BLE connection enters the `Error` state, the app SHOULD follow this recovery procedure:
 
@@ -362,11 +459,11 @@ When the BLE connection enters the `Error` state, the app SHOULD follow this rec
 
 ---
 
-## 5. Firmware Update State Machine
+## 6. Firmware Update State Machine
 
 The firmware update state machine governs the over-the-air (OTA) update process for station firmware. The station uses an A/B partition scheme, writing new firmware to the inactive partition while the active partition continues running. This ensures safe rollback on failure.
 
-### 5.1 State Diagram
+### 6.1 State Diagram
 
 ```mermaid
 stateDiagram-v2
@@ -394,7 +491,7 @@ stateDiagram-v2
     Activated --> [*]
 ```
 
-### 5.2 States (10)
+### 6.2 States (10)
 
 | State | Description |
 |-------|-------------|
@@ -409,7 +506,7 @@ stateDiagram-v2
 | **Activated** | The station has successfully booted on the new firmware and sent a BootNotification [MSG-001] with the new `firmwareVersion` and `reason: "FirmwareUpdate"`. The new partition is committed as active. |
 | **Failed** | The firmware update failed at some stage. The station automatically rolls back to the previous partition and resumes normal operation. |
 
-### 5.3 Transition Table
+### 6.3 Transition Table
 
 | Trigger | From | To | Condition | Action |
 |---------|------|----|-----------|--------|
@@ -430,7 +527,7 @@ stateDiagram-v2
 
 | Rollback complete | Failed | Idle | Station is running on previous (known-good) firmware | Station resumes normal operation; server records update failure |
 
-### 5.4 A/B Partition Scheme
+### 6.4 A/B Partition Scheme
 
 The station MUST maintain two firmware partitions:
 
@@ -449,7 +546,7 @@ At any time, exactly one partition is **active** (the one the station booted fro
 
 This scheme ensures the station always has a known-good firmware image to fall back to.
 
-### 5.5 Rollback Behavior
+### 6.5 Rollback Behavior
 
 Rollback MUST be automatic and safe:
 
@@ -459,7 +556,7 @@ Rollback MUST be automatic and safe:
 4. **Notification:** After a rollback, the station MUST send a FirmwareStatusNotification [MSG-017] with `status: "Failed"` and an `errorText` describing the rollback reason.
 5. **Scheduling constraint:** The station MUST NOT begin a firmware update (transition from Idle to Downloading) while any bay is in `Occupied` or `Finishing` state. If sessions are active, the station MUST wait until all sessions complete before proceeding. The UpdateFirmware command MAY include a `scheduledAt` field to defer the update.
 
-### 5.6 FirmwareStatusNotification Mapping
+### 6.6 FirmwareStatusNotification Mapping
 
 Each state transition maps to a FirmwareStatusNotification [MSG-017] `status` value:
 
@@ -474,11 +571,26 @@ Each state transition maps to a FirmwareStatusNotification [MSG-017] `status` va
 
 ---
 
-## 6. Cross-Machine Interactions
+## 7. Cross-Machine Interactions
 
-The five state machines defined in this chapter are not isolated; they interact at well-defined synchronization points.
+The six state machines defined in this chapter are not isolated; they interact at well-defined synchronization points.
 
-### 6.1 Bay -- Session Coupling
+### 7.1 Station -- Bay -- Session Coupling
+
+The station machine ([§1](#1-station-state-machine)) is the outer scope of every other machine on the station. Its coupling rules subsume the ones below: where they disagree, the station machine wins, because a bay cannot be reported and a session cannot start on a station that may not talk.
+
+| Station State | Bays | Sessions |
+|---------------|------|----------|
+| NotProvisioned | No bay records exist server-side until provisioning creates them | None possible |
+| Booting | Station-side `Unknown`; server-side `Unknown` | Existing sessions continue; none may start |
+| Pending | Station-side resolved by self-test but **not reported**; server-side `Unknown` | Existing sessions continue; none may start — StartService and ReserveBay are refused with `3002 BAY_NOT_READY` |
+| Rejected | As `Pending` | As `Pending`, and the commands are not processed at all |
+| Operational | Reported and current on both sides; `Unknown` is left on the post-boot report | Full lifecycle available |
+| Disconnected | Station-side current; server-side `Unknown` for every bay ([CORE-008](profiles/core/README.md)) | Existing sessions continue on the local timer; BLE offline sessions may start |
+
+The last row is the one that is easy to get wrong: `Disconnected` permits a *new* offline session over BLE, while `Pending` and `Rejected` do not. The difference is that a disconnected station has been cleared for service and has merely lost its channel, whereas a restricted station has not been cleared.
+
+### 7.2 Bay -- Session Coupling
 
 The bay and session state machines are tightly coupled:
 
@@ -490,7 +602,7 @@ The bay and session state machines are tightly coupled:
 | Completed | Available | Bay MUST return to `Available` after session `Completed` |
 | Failed | Available or Faulted | Bay returns to `Available` if failure was non-hardware; transitions to `Faulted` if caused by hardware error |
 
-### 6.2 Reservation -- Bay -- Session Coupling
+### 7.3 Reservation -- Bay -- Session Coupling
 
 | Event | Reservation State | Bay State | Session State |
 |-------|-------------------|-----------|---------------|
@@ -499,6 +611,6 @@ The bay and session state machines are tightly coupled:
 | Reservation expires | Expired | Available | -- |
 | Reservation cancelled | Cancelled | Available | -- |
 
-### 6.3 Firmware Update -- Bay Constraint
+### 7.4 Firmware Update -- Bay Constraint
 
 A firmware update MUST NOT proceed to the `Rebooting` state while any bay is in `Occupied` or `Finishing` state. The station MUST complete or fail all active sessions before rebooting. If the `scheduledAt` field is provided in UpdateFirmware, the station SHOULD download and verify the firmware immediately but defer the reboot until the scheduled time and all bays are idle.

@@ -44,7 +44,7 @@ domain-specific behavior.
 | 02 | [02-transport.md](02-transport.md) | Transport | Draft | MQTT 5.0 / TLS 1.2+/1.3, HTTPS REST, topic structure, QoS, connection lifecycle, ACL. **§8 (BLE GATT) is EXPERIMENTAL** — and §8.6 is one of the two conflicting fragmentation definitions ([B-1](../KNOWN-ISSUES.md#b-1--two-incompatible-fragmentation-protocols-are-simultaneously-normative)). |
 | 03 | [03-messages.md](03-messages.md) | Message Catalog | Draft | Normative reference for every OSPP message: payload schemas, metadata, examples. |
 | 04 | [04-flows.md](04-flows.md) | Protocol Flows | Draft | End-to-end protocol flows for boot, sessions, reservations, offline scenarios. |
-| 05 | [05-state-machines.md](05-state-machines.md) | State Machines | Draft | Bay, Session, Reservation, BLE Connection, and Firmware Update FSMs. |
+| 05 | [05-state-machines.md](05-state-machines.md) | State Machines | Draft | Station, Bay, Session, Reservation, BLE Connection, and Firmware Update FSMs. |
 | 06 | [06-security.md](06-security.md) | Security | Draft | Four-layer security model, PKI trust chain, crypto key inventory, provisioning. |
 | 07 | [07-errors.md](07-errors.md) | Error Codes & Resilience | Draft | Error codes across categories with severity, recoverability, and recommended actions. |
 | 08 | [08-configuration.md](08-configuration.md) | Configuration | Draft | Configuration keys with types, defaults, access modes, and value ranges. |

@@ -60,11 +60,47 @@ graph TB
 
 ---
 
-## 2. Session Lifecycle State Machine
+## 2. Station State Machine
+
+The 6-state station FSM. `Pending` and `Rejected` are **restricted** states — the station sends
+nothing unsolicited and serves no customers; `Pending` answers commands, `Rejected` does not.
+
+**Source:** [`state-machine-station.mmd`](state-machine-station.mmd) | **Spec ref:** [Chapter 05 — State Machines, Section 1](../spec/05-state-machines.md)
+
+```mermaid
+stateDiagram-v2
+    [*] --> NotProvisioned : Manufactured /<br/>physically configured
+
+    NotProvisioned --> Booting : Credential obtained<br/>(provisioning)
+
+    Booting --> Operational : BootNotification<br/>RESPONSE (Accepted)
+    Booting --> Pending : BootNotification<br/>RESPONSE (Pending)
+    Booting --> Rejected : BootNotification<br/>RESPONSE (Rejected)
+    Booting --> Booting : Response timeout (30s)<br/>wait 60s, retry
+
+    Pending --> Booting : retryInterval elapsed<br/>retry
+    Rejected --> Booting : retryInterval elapsed<br/>retry
+
+    Operational --> Disconnected : MQTT connection lost
+    Booting --> Disconnected : MQTT connection lost
+    Pending --> Disconnected : MQTT connection lost
+    Rejected --> Disconnected : MQTT connection lost
+
+    Disconnected --> Booting : MQTT reconnected,<br/>BootNotification sent
+
+    Operational --> Booting : Reboot (Reset, firmware<br/>update, watchdog, power)
+```
+
+**Restricted-state rule:** a station leaves `Pending` or `Rejected` only by re-sending
+BootNotification and receiving `Accepted`. There is no edge straight to `Operational`.
+
+---
+
+## 3. Session Lifecycle State Machine
 
 The 6-state session FSM from initiation through completion or failure.
 
-**Source:** [`state-machine-session.mmd`](state-machine-session.mmd) | **Spec ref:** [Chapter 05 — State Machines, Section 2](../spec/05-state-machines.md)
+**Source:** [`state-machine-session.mmd`](state-machine-session.mmd) | **Spec ref:** [Chapter 05 — State Machines, Section 3](../spec/05-state-machines.md)
 
 ```mermaid
 stateDiagram-v2
@@ -90,11 +126,11 @@ stateDiagram-v2
 
 ---
 
-## 3. Bay State Machine
+## 4. Bay State Machine
 
 The 7-state bay FSM governing each physical service bay on a station.
 
-**Source:** [`state-machine-station.mmd`](state-machine-station.mmd) | **Spec ref:** [Chapter 05 — State Machines, Section 1](../spec/05-state-machines.md)
+**Source:** [`state-machine-bay.mmd`](state-machine-bay.mmd) | **Spec ref:** [Chapter 05 — State Machines, Section 2](../spec/05-state-machines.md)
 
 ```mermaid
 stateDiagram-v2
@@ -134,7 +170,7 @@ stateDiagram-v2
 
 ---
 
-## 4. Online Payment Session Sequence
+## 5. Online Payment Session Sequence
 
 The most common flow: mobile app user starts a session at a station.
 
@@ -182,7 +218,7 @@ sequenceDiagram
 
 ---
 
-## 5. Full Offline BLE Session Sequence
+## 6. Full Offline BLE Session Sequence
 
 Complete offline session via BLE when both phone and station lack internet.
 
@@ -239,7 +275,7 @@ sequenceDiagram
 
 ---
 
-## 6. Error Recovery Sequence
+## 7. Error Recovery Sequence
 
 Station reconnection and message replay after an MQTT disconnection.
 

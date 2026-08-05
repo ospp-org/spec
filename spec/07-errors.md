@@ -621,8 +621,8 @@ Attempt  Delay    Max Delay
 | Scenario | Delay | Max Attempts | Escalation |
 |----------|-------|:------------:|------------|
 | RESPONSE: `ACCEPTED` | — | — | Normal operation |
-| RESPONSE: `REJECTED` | `retryInterval` from response (default 30s) | Unlimited | Station stays in limited mode — no commands accepted except BootNotification |
-| RESPONSE: `PENDING` | `retryInterval` from response (default 30s) | Unlimited | Station operates normally but server may push config updates |
+| RESPONSE: `REJECTED` | `retryInterval` from response (default 30s) | Unlimited | Station enters the `Rejected` restricted state — accepts no commands, sends nothing but its retries, serves no customers ([Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states)) |
+| RESPONSE: `PENDING` | `retryInterval` from response (default 30s) | Unlimited | Station enters the `Pending` restricted state — **answers** commands so an operator can repair it, sends nothing unsolicited, refuses StartService and ReserveBay with `3002 BAY_NOT_READY` ([Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states)) |
 | Timeout (no response in 30s) | 60s fixed | Unlimited | Log `1010 MESSAGE_TIMEOUT`, retry indefinitely |
 
 The default retry interval (30s) is configurable via `BootRetryInterval` (see §8 Configuration).

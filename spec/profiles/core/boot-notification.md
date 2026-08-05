@@ -6,7 +6,7 @@
 
 BootNotification is the first message a station sends after establishing an MQTT connection. It announces the station identity, firmware version, hardware capabilities, and network information. The server responds with an acceptance status, a heartbeat interval, the current server time for clock synchronization, and optionally a session key and configuration parameters.
 
-The station **MUST NOT** process any incoming commands until it receives an `Accepted` response. If the response is `Rejected` or `Pending`, the station **MUST** retry according to the retry policy defined in section 5.
+If the response is `Rejected` or `Pending`, the station **MUST** retry according to the retry policy defined in section 5. Both are **restricted** states of the station state machine, and they differ in one respect: a `Pending` station receives and answers server commands, a `Rejected` station does not. Neither serves customers and neither sends anything unsolicited. [Chapter 05 — State Machines §1.4](../../05-state-machines.md#14-the-restricted-states) is normative for both and is not restated here.
 
 ## 2. Direction and Type
 
@@ -60,13 +60,15 @@ The station **MUST NOT** process any incoming commands until it receives an `Acc
 ## 5. Processing Rules
 
 1. The station **MUST** send a BootNotification as the first message after every MQTT connection (including reconnections).
-2. The station **MUST NOT** send any other messages before receiving a BootNotification response.
-3. On `Accepted`: the station **MUST** store the `heartbeatIntervalSec`, apply any `configuration` values, store the `sessionKey` (if present), synchronize its internal clock to `serverTime`, and transition to normal operation.
-4. On `Rejected`: the station **MUST** wait `retryInterval` seconds (default 30s) and retry the BootNotification. The station **MUST NOT** accept any commands while in `Rejected` state. Retries are unlimited.
-5. On `Pending`: the station **MUST** wait `retryInterval` seconds (default 30s) and retry. The station **MAY** operate normally but **SHOULD** expect configuration updates.
+2. The station **MUST NOT** send any other message before receiving a BootNotification response. "Any other message" means any EVENT and any REQUEST the station originates; it does not reach a RESPONSE, because a station cannot originate one.
+3. On `Accepted`: the station **MUST** store the `heartbeatIntervalSec`, apply any `configuration` values, store the `sessionKey`, synchronize its internal clock to `serverTime`, and transition to `Operational` ([Chapter 05 §1.2](../../05-state-machines.md#12-states-6)).
+4. On `Rejected`: the station **MUST** wait `retryInterval` seconds (default 30s) and retry the BootNotification. Retries are unlimited. The station enters the `Rejected` restricted state: it accepts no commands, sends nothing but its retries, and serves no customers.
+5. On `Pending`: the station **MUST** wait `retryInterval` seconds (default 30s) and retry. Retries are unlimited. The station enters the `Pending` restricted state: it **MUST** receive, process and answer server commands, **MUST NOT** send anything unsolicited, and **MUST NOT** begin new customer service — StartService [MSG-005] and ReserveBay [MSG-003] are answered `Rejected` with `3002 BAY_NOT_READY`, and no BLE offline session is authorized. A session already running continues, is metered, and is settled. The command channel stays open precisely because `Pending` is the window in which an operator repairs whatever is outstanding, and the repair usually needs a command.
 6. If no response is received within 30 seconds, the station **MUST** log error `1010 MESSAGE_TIMEOUT`, wait 60 seconds, and retry indefinitely.
 7. After a successful `Accepted` response, the station **MUST** send a StatusNotification for each bay to report current bay states.
 8. If `pendingOfflineTransactions` > 0, the server **SHOULD** schedule offline transaction synchronization after acceptance.
+
+> **Why `Pending` is not "normal operation with a retry timer".** An earlier revision of rule 5 said the station **MAY** operate normally, eleven lines below rule 3, which defines "normal operation" as the post-`Accepted` state. Read together they permitted a `Pending` station to activate hardware on a StartService — while rule 2 and [CORE-002](README.md) forbade it from sending anything at all. Two conforming stations could take opposite arms of that, and one of them would deliver an unpaid wash. The restricted reading is also the one mature practice takes: OCPP 2.0.1's *B02 Cold Boot — Pending* has the charging station send nothing but its boot retries while the CSMS is free to issue requests.
 
 ### 5.1 Capability Semantics — absence means NOT STATED
 
@@ -86,9 +88,19 @@ This section fixes the meaning of an **absent** capability. It does not define c
 |-------------------------------------|---------------------|-----------------------------------------------|
 | Station ID not recognized by server | `2001 STATION_NOT_REGISTERED` | Server responds with `Rejected`. Station **MUST** keep retrying BootNotification per CORE-011, and **MUST NOT** enter provisioning mode or alter stored credentials: it holds credentials the broker accepted, and [Flows §2](../../04-flows.md#re-provisioning-an-already-provisioned-station) forbids re-provisioning autonomously in that state. The cause is fixed operator-side (register the `stationId`), after which the next retry succeeds. |
 | Invalid message format | `1005 INVALID_MESSAGE_FORMAT` | Server drops the message. Station does not receive a response and retries after timeout. |
-| Declared topology does not match the provisioned topology | `3018 TOPOLOGY_MISMATCH` | Server responds **`Pending`**, never `Rejected`, and **MUST** include a `details` object naming what it expected and what arrived. `Pending` keeps the command channel open so an operator can repair the disagreement; `Rejected` would close the only channel through which it could be repaired. The station keeps retrying and answers commands meanwhile. |
+| Declared topology does not match the provisioned topology | `3018 TOPOLOGY_MISMATCH` | Server responds **`Pending`**, never `Rejected`, and **MUST** include a `details` object carrying `expected` and `declared`. `Pending` keeps the command channel open so an operator can repair the disagreement; `Rejected` would close the only channel through which it could be repaired. The station keeps retrying, answers commands meanwhile, and **MUST NOT** alter its declaration to match. Applies identically on a **first** boot — see §6.1. |
 | Protocol version mismatch | `1007 PROTOCOL_VERSION_MISMATCH` | Server responds with `Rejected`, and includes both the `supportedVersions` array and a `retryInterval`. Station **MUST** keep retrying BootNotification per CORE-011 and **MUST NOT** stop: it accepts no commands while rejected, so it cannot be handed a firmware update in that state, and the retry is also what recovers it if the server regains support for its MAJOR version. The cause is fixed by upgrading station firmware to a supported MAJOR, or by restoring server-side support, after which a retry succeeds. |
 | Server internal error | `6001 SERVER_INTERNAL_ERROR` | Server responds with `Rejected` and `retryInterval`. Station retries. |
+
+### 6.1 Topology on a First Boot
+
+Provisioning creates the station's bay records; BootNotification never does. The two declarations — the one submitted at provisioning and the one restated at boot — therefore originate from the same station within one commissioning act, and a **first boot matches**.
+
+It can fail in exactly one way: the station declared one topology at provisioning and a different one at boot. That is the same disagreement as any other, and it takes the same path — `3018 TOPOLOGY_MISMATCH` on a **`Pending`** response, with `details`.
+
+There is **no first-boot exemption**, and deliberately so. An exemption would have the server record whatever the first boot happened to say, which makes the provisioning declaration decorative and turns the one boot where a commissioning error is cheapest to catch into the one boot that cannot catch it. A station whose two declarations disagree has a firmware fault or a commissioning fault; both are worth the same held state at boot 1 as at boot 100, and `Pending` is a held state an operator can act on.
+
+The server **MUST NOT** create, extend or trim bay records from a BootNotification, on a first boot or any other. Re-provisioning is what changes a station's topology.
 
 ## 7. Examples
 
@@ -156,10 +168,44 @@ This section fixes the meaning of an **absent** capability. It does not define c
 }
 ```
 
+### 7.3 Response (Pending — topology mismatch)
+
+The station declared a third bay the server has no record of. It stays reachable and answers commands; it serves nobody until an operator resolves the disagreement.
+
+```json
+{
+  "messageId": "msg_b1a2c3d4-e5f6-7890-abcd-ef1234567890",
+  "messageType": "Response",
+  "action": "BootNotification",
+  "timestamp": "2026-02-13T10:00:00.250Z",
+  "source": "Server",
+  "protocolVersion": "0.3.0",
+  "payload": {
+    "status": "Pending",
+    "serverTime": "2026-02-13T10:00:00.250Z",
+    "heartbeatIntervalSec": 30,
+    "retryInterval": 300,
+    "errorCode": 3018,
+    "errorText": "TOPOLOGY_MISMATCH",
+    "details": {
+      "expected": [
+        { "bayNumber": 1, "programNumbers": [1, 2, 3] },
+        { "bayNumber": 2, "programNumbers": [1, 2, 3] }
+      ],
+      "declared": [
+        { "bayNumber": 1, "programNumbers": [1, 2, 3] },
+        { "bayNumber": 2, "programNumbers": [1, 2, 3] },
+        { "bayNumber": 3, "programNumbers": [1, 2, 3] }
+      ]
+    }
+  }
+}
+```
+
 ## 8. Related Schemas
 
 - Request: [`boot-notification-request.schema.json`](../../../schemas/mqtt/boot-notification-request.schema.json)
 - Response: [`boot-notification-response.schema.json`](../../../schemas/mqtt/boot-notification-response.schema.json)
 - Station ID: [`station-id.schema.json`](../../../schemas/common/station-id.schema.json)
 - Timestamp: [`timestamp.schema.json`](../../../schemas/common/timestamp.schema.json)
-- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 2001, 1005, 1007, 6001)
+- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 2001, 1005, 1007, 3018, 6001)

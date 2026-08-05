@@ -1,58 +1,43 @@
-%% OSPP Bay State Machine
+%% OSPP Station State Machine
 %% Reference: spec/05-state-machines.md, Section 1
-%% Each bay on a station MUST be in exactly one of these 7 states
+%% A station MUST be in exactly one of these 6 states at all times.
+%% Pending and Rejected are RESTRICTED states -- see Section 1.4.
 
 stateDiagram-v2
-    [*] --> Unknown : Power on / reboot
+    [*] --> NotProvisioned : Manufactured /<br/>physically configured
 
-    Unknown --> Available : StatusNotification (healthy)
-    Unknown --> Faulted : StatusNotification (fault detected)
-    Unknown --> Unavailable : StatusNotification (maintenance mode)
+    NotProvisioned --> Booting : Credential obtained<br/>(provisioning)
 
-    Available --> Reserved : ReserveBay accepted
-    Available --> Occupied : StartService accepted<br/>(no reservation)
-    Available --> Faulted : Hardware error detected
-    Available --> Unavailable : SetMaintenanceMode ON
+    Booting --> Operational : BootNotification<br/>RESPONSE (Accepted)
+    Booting --> Pending : BootNotification<br/>RESPONSE (Pending)
+    Booting --> Rejected : BootNotification<br/>RESPONSE (Rejected)
+    Booting --> Booting : Response timeout (30s)<br/>wait 60s, retry
 
-    Reserved --> Occupied : StartService by<br/>reservation holder
-    Reserved --> Available : Reservation expires<br/>or CancelReservation
-    Reserved --> Faulted : Hardware error detected
+    Pending --> Booting : retryInterval elapsed<br/>retry
+    Rejected --> Booting : retryInterval elapsed<br/>retry
 
-    Occupied --> Finishing : StopService accepted<br/>or duration elapsed
-    Occupied --> Faulted : Hardware error detected
+    Operational --> Disconnected : MQTT connection lost
+    Booting --> Disconnected : MQTT connection lost
+    Pending --> Disconnected : MQTT connection lost
+    Rejected --> Disconnected : MQTT connection lost
 
-    Finishing --> Available : Cleanup complete
-    Finishing --> Faulted : Error during cleanup
+    Disconnected --> Booting : MQTT reconnected,<br/>BootNotification sent
 
-    Faulted --> Available : Fault cleared<br/>(automatic reset)
-    Faulted --> Unavailable : SetMaintenanceMode ON<br/>(manual intervention)
+    Operational --> Booting : Reboot (Reset, firmware<br/>update, watchdog, power)
 
-    Unavailable --> Available : SetMaintenanceMode OFF<br/>(maintenance complete)
-
-    %% Connection lost transitions (any → Unknown)
-    Available --> Unknown : LWT / connection lost
-    Reserved --> Unknown : LWT / connection lost
-    Occupied --> Unknown : LWT / connection lost
-    Finishing --> Unknown : LWT / connection lost
-    Faulted --> Unknown : LWT / connection lost
-    Unavailable --> Unknown : LWT / connection lost
-
-    note right of Unknown
-        Initial state after boot
-        Resolves on first StatusNotification
+    note right of Pending
+        RESTRICTED: answers commands,
+        sends nothing unsolicited,
+        serves no customers
     end note
 
-    note right of Occupied
-        Active session in progress
-        MeterValues being reported
+    note right of Rejected
+        RESTRICTED, stricter:
+        also refuses commands
     end note
 
-    note left of Faulted
-        Error codes: 5000-5009
-        Operator notification sent
-    end note
-
-    note left of Unavailable
-        Administrative disable
-        No sessions accepted
+    note left of Disconnected
+        Sessions continue on the
+        local timer; BLE stays up;
+        server holds bays Unknown
     end note

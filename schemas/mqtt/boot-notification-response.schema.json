@@ -68,6 +68,29 @@
       },
       "minItems": 1,
       "description": "Protocol versions supported by server. Required when Rejected with 1007 PROTOCOL_VERSION_MISMATCH."
+    },
+    "details": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Diagnostic detail for the accompanying errorCode. REQUIRED on a Pending response carrying 3018 TOPOLOGY_MISMATCH, where it MUST name what the server expected and what arrived; absent otherwise. A station held out of service for a reason nobody can see is a station nobody can repair, which is why this is required rather than recommended. Closed, like every other object in this schema set: a future error code that needs its own detail adds its member here, and the protocol is unreleased, so that costs a schema edit and nothing else.",
+      "properties": {
+        "expected": {
+          "type": "array",
+          "maxItems": 64,
+          "description": "The topology recorded for this station at provisioning, in the same shape as the request's bays[].",
+          "items": {
+            "$ref": "../common/bay-topology.schema.json"
+          }
+        },
+        "declared": {
+          "type": "array",
+          "maxItems": 64,
+          "description": "The topology this BootNotification declared, echoed back so an operator can compare the two without correlating two messages.",
+          "items": {
+            "$ref": "../common/bay-topology.schema.json"
+          }
+        }
+      }
     }
   },
   "allOf": [

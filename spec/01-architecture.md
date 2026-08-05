@@ -353,9 +353,9 @@ A station participating in the OSPP protocol MUST fulfill the following core res
 
 ### 6.1 Boot and Registration
 
-- On startup, the station MUST establish an MQTT connection and send a **BootNotification** message to the server, reporting its firmware version, hardware model, serial number, bay count, capabilities, network information, boot reason, and pending offline transactions.
-- The station MUST NOT process session commands (StartService, StopService) until it has received an **Accepted** BootNotification response from the server.
-- If the server responds with **Pending** or **Rejected**, the station MUST follow the retry behavior defined in [Chapter 03 — Message Catalog](03-messages.md), Section 1.1.
+- On startup, the station MUST establish an MQTT connection and send a **BootNotification** message to the server, reporting its firmware version, hardware model, serial number, declared bay topology, capabilities, network information, boot reason, and pending offline transactions.
+- The station MUST NOT serve a customer — MUST NOT accept StartService, StopService or ReserveBay — until it has received an **Accepted** BootNotification response from the server.
+- If the server responds with **Pending** or **Rejected**, the station enters the corresponding **restricted** state of [Chapter 05 — State Machines §1.4](05-state-machines.md#14-the-restricted-states) and retries per [Chapter 03 — Message Catalog](03-messages.md), Section 1.1. The two differ in whether commands are answered: `Pending` answers them, `Rejected` does not.
 
 ### 6.2 Heartbeat
 
@@ -485,9 +485,9 @@ The last three rows are **required on every pattern**, and the runtime path of �
 
 | Status | Meaning | Station Behavior |
 |--------|---------|------------------|
-| **Accepted** | Station is registered and authorized | Proceed to operational state |
-| **Pending** | Admin approval needed | Enter restricted state, retry BootNotification at `retryInterval` |
-| **Rejected** | Invalid credentials or policy violation | Enter restricted state, retry with exponential backoff |
+| **Accepted** | Station is registered and authorized | Proceed to `Operational` |
+| **Pending** | Admin approval outstanding, or a `3018 TOPOLOGY_MISMATCH` to repair | Enter the `Pending` restricted state — answer commands, send nothing unsolicited, serve no customers — and retry BootNotification at `retryInterval` |
+| **Rejected** | Invalid credentials or policy violation | Enter the `Rejected` restricted state — refuse commands too — and retry at `retryInterval` |
 
 ### 7.4 Server-Side Registration
 

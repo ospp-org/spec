@@ -247,8 +247,10 @@ The station MUST follow this sequence on power-on or reconnect:
 │  8. PUBLISH BootNotification REQUEST                    │
 │  9. Wait for BootNotification RESPONSE (timeout: 30s)   │
 │     ├── Accepted → sync clock, apply config → step 10   │
-│     ├── Rejected → wait retryInterval, goto step 8      │
-│     ├── Pending  → wait retryInterval, goto step 8      │
+│     ├── Rejected → restricted: refuse commands;         │
+│     │              wait retryInterval, goto step 8      │
+│     ├── Pending  → restricted: ANSWER commands, serve   │
+│     │              no customers; wait, goto step 8      │
 │     └── Timeout  → wait 60s, goto step 8                │
 │  10. PUBLISH StatusNotification per bay (with services)  │
 │  11. Start heartbeat timer                              │
@@ -257,7 +259,7 @@ The station MUST follow this sequence on power-on or reconnect:
 └─────────────────────────────────────────────────────────┘
 ```
 
-**Critical rule:** The station MUST NOT process any server commands (StartService, Reset, etc.) until it has received a BootNotification RESPONSE with `status: "Accepted"`. Commands received before acceptance MUST be queued and processed after boot completes, or rejected with error `2001` (`STATION_NOT_REGISTERED`).
+**Critical rule:** While the station is `Booting` — the BootNotification REQUEST is published and no RESPONSE has arrived — it MUST NOT process any server command. Commands received in that window MUST be queued and processed after boot completes, or rejected with error `2001` (`STATION_NOT_REGISTERED`). What happens next depends on the response, and the two restricted states differ: a `Rejected` station continues to refuse commands, while a **`Pending` station MUST process and answer them** — that channel is how an operator repairs whatever is holding the boot — but MUST still refuse StartService and ReserveBay with `3002 BAY_NOT_READY`. [Chapter 05 — State Machines §1.4](05-state-machines.md#14-the-restricted-states) is normative.
 
 **BLE before MQTT:** A station that declares `capabilities.bleSupported: true` MUST initialize BLE advertising **before** attempting the MQTT connection, so that BLE offline sessions are available even if the MQTT broker is unreachable.
 

@@ -34,7 +34,7 @@ Each notification reports the bay identifier, the new status, the previous statu
 
 ## 4. Reportable Bay States
 
-These are the six values `status` and `previousStatus` may carry. The bay state machine has a seventh state, `Unknown`, which is not one of them ([Chapter 05 — State Machines §1.2](../../05-state-machines.md)).
+These are the six values `status` and `previousStatus` may carry. The bay state machine has a seventh state, `Unknown`, which is not one of them ([Chapter 05 — State Machines §2.2](../../05-state-machines.md)).
 
 | State | Description |
 |-----------------|---------------------------------------------------------------|
@@ -85,7 +85,7 @@ Unknown    --> Unavailable   (maintenance mode detected after reconnection)
 ## 7. Processing Rules
 
 1. The station **MUST** send a StatusNotification for every bay immediately after BootNotification `Accepted` to establish the initial fleet state.
-2. The station **MUST NOT** report `Unknown` in `status` or `previousStatus`. `Unknown` is the bay FSM's seventh state and is not a wire value ([Chapter 05 §1.2](../../05-state-machines.md)): the station enters it at power-on and leaves it by self-test, and the server enters it on connection loss and leaves it on the next accepted report. Neither party tells the other. A station whose self-test has not finished has not yet satisfied rule 1 — it reports once it knows, rather than reporting that it does not.
+2. The station **MUST NOT** report `Unknown` in `status` or `previousStatus`. `Unknown` is the bay FSM's seventh state and is not a wire value ([Chapter 05 §2.2](../../05-state-machines.md)): the station enters it at power-on and leaves it by self-test, and the server enters it on connection loss and leaves it on the next accepted report. Neither party tells the other. A station whose self-test has not finished has not yet satisfied rule 1 — it reports once it knows, rather than reporting that it does not.
 3. The station **MUST** send a StatusNotification within 1 second of any bay state change.
 4. StatusNotification is an EVENT -- no response is expected. The station **MUST NOT** wait for an acknowledgement before continuing.
 5. If MQTT is disconnected, the station **MUST** buffer StatusNotification events locally (up to 1000 events or 24 hours (StatusNotification-specific recommendation)) and replay them in chronological order upon reconnection.

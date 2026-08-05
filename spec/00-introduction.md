@@ -64,7 +64,7 @@ This specification covers the following areas:
 | **Message Catalog** | Normative payload schemas, metadata, and examples for every OSPP message | [03](03-messages.md) |
 | **Protocol Flows** | End-to-end sequences for boot, sessions, reservations, offline scenarios | [04](04-flows.md) |
 | **Security** | Threat model, PKI trust chain, cryptographic key inventory, provisioning | [06](06-security.md) |
-| **State Machines** | Finite state machines for bays, sessions, reservations, BLE connections | [05-state-machines](05-state-machines.md) |
+| **State Machines** | Finite state machines for the station, bays, sessions, reservations, BLE connections | [05-state-machines](05-state-machines.md) |
 | **Error Handling** | Error code registry, severity levels, retry policies, circuit breakers | [07](07-errors.md) |
 | **Configuration** | Configuration key registry with types, defaults, and access modes | [08](08-configuration.md) |
 

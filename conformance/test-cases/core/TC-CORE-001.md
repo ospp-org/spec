@@ -6,7 +6,7 @@ Core Profile
 
 ## Purpose
 
-Verify that a station sends BootNotification as the first message after establishing the MQTT transport connection, correctly handles all three response statuses (Accepted, Rejected, Pending), configures the MQTT Last Will and Testament (LWT), and does not process server commands before receiving an Accepted response.
+Verify that a station sends BootNotification as the first message after establishing the MQTT transport connection, correctly handles all three response statuses (Accepted, Rejected, Pending), configures the MQTT Last Will and Testament (LWT), and observes the restricted-state rules of [`05-state-machines.md` §1.4](../../../spec/05-state-machines.md#14-the-restricted-states) — answering commands while `Pending`, refusing them while `Rejected`, and serving no customer in either.
 
 ## References
 
@@ -15,7 +15,8 @@ Verify that a station sends BootNotification as the first message after establis
 - `spec/profiles/core/connection-lost.md` — LWT configuration
 - `spec/07-errors.md` §5.2 — BootNotification retry policy
 - `spec/07-errors.md` §3.2 — Error code 2001 `STATION_NOT_REGISTERED`
-- `spec/05-state-machines.md` §1.2, §1.4 — the six reportable bay states; `Unknown` is not transmitted
+- `spec/05-state-machines.md` §1.2, §1.3, §1.4 — the station state machine and its restricted states
+- `spec/05-state-machines.md` §2.2, §2.4 — the six reportable bay states; `Unknown` is not transmitted
 - `spec/profiles/core/status-notification.md` §5 rule 2, §7 rule 2 — `previousStatus` omitted on the post-boot report
 - `schemas/mqtt/boot-notification-request.schema.json`
 - `schemas/mqtt/boot-notification-response.schema.json`
@@ -41,7 +42,7 @@ Verify that a station sends BootNotification as the first message after establis
 6. Validate the request payload against `boot-notification-request.schema.json` — fields: `stationId`, `firmwareVersion`, `stationModel`, `stationVendor`, `bays`, `serialNumber`, `uptimeSeconds`, `pendingOfflineTransactions`, `timezone`, `bootReason`, `capabilities`, `networkInfo`.
 7. Send a server response: `{ "status": "Accepted", "heartbeatIntervalSec": 30, "serverTime": "<current UTC>" }`.
 8. Verify that the station publishes a StatusNotification for each bay, and inspect each payload:
-   - `status` is one of the six reportable states — `Available`, `Reserved`, `Occupied`, `Finishing`, `Faulted`, `Unavailable`. A payload carrying `Unknown` fails this case; `Unknown` is not a wire value ([`05-state-machines.md` §1.2](../../../spec/05-state-machines.md)).
+   - `status` is one of the six reportable states — `Available`, `Reserved`, `Occupied`, `Finishing`, `Faulted`, `Unavailable`. A payload carrying `Unknown` fails this case; `Unknown` is not a wire value ([`05-state-machines.md` §2.2](../../../spec/05-state-machines.md)).
    - `previousStatus` is **absent**. This is the post-boot report, and the state it left was `Unknown`, which the field cannot carry ([`status-notification.md` §5 rule 2](../../../spec/profiles/core/status-notification.md)).
    - the payload validates against `status-notification.schema.json`.
 9. Send a GetConfiguration command to the station.
@@ -55,7 +56,7 @@ Verify that a station sends BootNotification as the first message after establis
 14. Observe BootNotification is sent.
 15. Send a server response: `{ "status": "Rejected", "retryInterval": 60, "serverTime": "2026-01-15T10:00:30.000Z", "heartbeatIntervalSec": 30, "errorCode": 2001, "errorText": "STATION_NOT_REGISTERED" }`.
 16. Immediately send a GetConfiguration command.
-17. Verify that the station does NOT respond to the GetConfiguration command (station is in limited mode).
+17. Verify that the station does NOT respond to the GetConfiguration command — `Rejected` is the restricted state that refuses commands.
 18. Wait `retryInterval` seconds (60s).
 19. Verify that the station sends another BootNotification (retry).
 20. Send an Accepted response this time.
@@ -66,27 +67,31 @@ Verify that a station sends BootNotification as the first message after establis
 22. Reboot the station.
 23. Observe BootNotification is sent.
 24. Send a server response: `{ "status": "Pending", "retryInterval": 30, "serverTime": "2026-01-15T10:01:00.000Z", "heartbeatIntervalSec": 30 }`.
-25. Verify the station enters a restricted state — MUST NOT send Heartbeat, StatusNotification, or other messages. MUST NOT process server commands. Only retries BootNotification after `retryInterval`.
+25. Verify the station enters the `Pending` restricted state — it MUST NOT send Heartbeat, StatusNotification, or any other message it originates. Only BootNotification retries, after `retryInterval`.
 26. Send a GetConfiguration command to the station.
-27. Verify that the station does NOT respond to the GetConfiguration command (station is in restricted state, same as Rejected).
-28. Wait `retryInterval` seconds (30s).
-29. Verify that the station sends another BootNotification.
-30. Send an Accepted response.
+27. Verify that the station **does** answer the GetConfiguration command with a RESPONSE. `Pending` is the state in which an operator repairs the station, and the command channel is how they do it. A station that stays silent here fails this case.
+28. Send a ChangeConfiguration command setting `HeartbeatIntervalSeconds` to `60`.
+29. Verify that the station answers it and applies the value. This is the behaviour `Pending` exists for.
+30. Send a StartService command for any bay.
+31. Verify that the station answers `Rejected` with `errorCode: 3002`, `errorText: "BAY_NOT_READY"`, and that **no hardware activates**. A restricted station answers commands; it does not serve customers.
+32. Wait `retryInterval` seconds (30s).
+33. Verify that the station sends another BootNotification.
+34. Send an Accepted response.
 
 ### Part D — Timeout (No Response)
 
-31. Reboot the station.
-32. Observe BootNotification is sent.
-33. Do NOT send any response for 30 seconds.
-34. Verify that the station logs a `1010 MESSAGE_TIMEOUT` error.
-35. Wait 60 seconds (fixed retry delay per spec).
-36. Verify that the station retries BootNotification.
+35. Reboot the station.
+36. Observe BootNotification is sent.
+37. Do NOT send any response for 30 seconds.
+38. Verify that the station logs a `1010 MESSAGE_TIMEOUT` error.
+39. Wait 60 seconds (fixed retry delay per spec).
+40. Verify that the station retries BootNotification.
 
 ### Part E — Protocol Version Mismatch (1007)
 
-37. Reboot the station.
-38. Observe BootNotification is sent.
-39. Send a server response with `Rejected` status and `supportedVersions`:
+41. Reboot the station.
+42. Observe BootNotification is sent.
+43. Send a server response with `Rejected` status and `supportedVersions`:
     ```json
     {
       "status": "Rejected",
@@ -98,9 +103,9 @@ Verify that a station sends BootNotification as the first message after establis
       "supportedVersions": ["0.1.0", "0.2.0"]
     }
     ```
-40. Verify that the station enters limited mode (same as Part B Rejected).
-41. Verify that the station **does** retry BootNotification at the `retryInterval` from the response (300 s above), per CORE-011. `1007` is `recoverable: false` because someone must act — it does not mean the station stops retrying, and a rejected station cannot be sent a firmware update, so stopping would leave on-site service as its only recovery.
-42. Verify that the station logs or stores the `supportedVersions` array for diagnostic purposes.
+44. Verify that the station enters the `Rejected` restricted state (same as Part B).
+45. Verify that the station **does** retry BootNotification at the `retryInterval` from the response (300 s above), per CORE-011. `1007` is `recoverable: false` because someone must act — it does not mean the station stops retrying, and a rejected station cannot be sent a firmware update, so stopping would leave on-site service as its only recovery.
+46. Verify that the station logs or stores the `supportedVersions` array for diagnostic purposes.
 
 ## Expected Results
 
@@ -110,17 +115,17 @@ Verify that a station sends BootNotification as the first message after establis
 4. All required fields (`stationId`, `firmwareVersion`, `stationModel`, `stationVendor`, `bays`, `serialNumber`, `uptimeSeconds`, `pendingOfflineTransactions`, `timezone`, `bootReason`, `capabilities`, `networkInfo`) are present and correctly typed.
 5. After Accepted, the station adopts the `heartbeatIntervalSec` and sends Heartbeat messages at the correct cadence.
 6. After Accepted, the station publishes StatusNotification for every bay, each reporting a determinate state — one of the six reportable values, never `Unknown` — and each omitting `previousStatus`.
-7. After Rejected, the station enters limited mode and does not process server commands.
+7. After Rejected, the station enters the `Rejected` restricted state and does not process server commands.
 8. After Rejected, the station retries BootNotification at the specified `retryInterval`.
-9. After Pending, the station enters a restricted state (same as Rejected), does not send other messages, does not process server commands, and retries BootNotification at `retryInterval`.
+9. After Pending, the station enters the `Pending` restricted state: it sends nothing it originates, **answers** server commands, refuses StartService and ReserveBay with `3002 BAY_NOT_READY`, and retries BootNotification at `retryInterval`.
 10. On timeout, the station retries after 60 seconds.
-11. After Rejected with `supportedVersions` (1007), the station enters limited mode and continues retrying BootNotification at `retryInterval`, exactly as for any other Rejected — consistent with results 7 and 8 above, and with CORE-011.
+11. After Rejected with `supportedVersions` (1007), the station enters the `Rejected` restricted state and continues retrying BootNotification at `retryInterval`, exactly as for any other Rejected — consistent with results 7 and 8 above, and with CORE-011.
 
 ## Failure Criteria
 
 1. Station sends any MQTT message before BootNotification.
 2. BootNotification payload fails JSON schema validation.
-3. Station processes server commands while in Rejected or Pending state.
+3. Station processes server commands while `Rejected`; or fails to answer one while `Pending`; or activates hardware for a StartService in either state.
 4. Station does not retry BootNotification after Rejected or Pending within the expected interval (+/- 15% tolerance).
 5. Station does not adopt the server-provided `heartbeatIntervalSec` (Heartbeat sent at a different cadence).
 6. LWT is absent from the MQTT CONNECT packet.

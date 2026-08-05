@@ -15,7 +15,7 @@ Verify that the station correctly handles firmware update lifecycle including su
 - `spec/03-messages.md` §6.5 — FirmwareStatusNotification event
 - `spec/06-security.md` §4.6 — Firmware code-signing (ECDSA P-256)
 - `spec/07-errors.md` §3.5 — Error codes 5014, 5015, 5112, 1011
-- `spec/05-state-machines.md` §3 — Firmware watchdog timer (5 minutes)
+- `spec/05-state-machines.md` §6 — Firmware watchdog timer (5 minutes)
 - `schemas/mqtt/update-firmware-response.schema.json`
 
 ## Preconditions

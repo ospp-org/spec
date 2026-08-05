@@ -146,7 +146,7 @@ Each message below includes:
 | **Idempotency** | Yes — server MUST accept duplicate BootNotification and respond identically |
 | **Message Expiry** | Never (exempt from message expiry) |
 
-The station MUST send a BootNotification REQUEST immediately after subscribing to its `to-station` topic on every MQTT connection. The station MUST NOT send any other messages until it receives an `Accepted` response.
+The station MUST send a BootNotification REQUEST immediately after subscribing to its `to-station` topic on every MQTT connection. Until it receives an `Accepted` response the station MUST NOT send any message it originates — any EVENT, or any REQUEST other than BootNotification. A RESPONSE to a server command is permitted while `Pending`, which is the restricted state in which the station answers commands ([Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states)).
 
 > **Note:** BootNotification does NOT include bay status or services. Bay layout is reported via [StatusNotification](#52-statusnotification) events sent immediately after a successful boot.
 
@@ -196,17 +196,20 @@ The station MAY include a human-readable name configurable via `StationName` (se
 | `serverTime` | string | Yes | Server UTC time (ISO 8601) for clock synchronization |
 | `heartbeatIntervalSec` | integer | Yes | Heartbeat interval in seconds (range: 10–3600 seconds) (e.g., `30`) |
 | `retryInterval` | integer | Cond. | Seconds to wait before retry (REQUIRED when `Rejected` or `Pending`) |
+| `errorCode` | integer | Cond. | OSPP error code explaining the outcome (1000–9999). REQUIRED when `Rejected`. Carried on a `Pending` response when the reason is `3018 TOPOLOGY_MISMATCH`. |
+| `errorText` | string | Cond. | Machine-readable error name in `UPPER_SNAKE_CASE`. REQUIRED when `Rejected`; accompanies `errorCode` whenever that is present. |
 | `configuration` | object | No | Key-value pairs to apply immediately (see [Chapter 08](08-configuration.md)) |
 | `sessionKey` | string | Cond. | Base64-encoded 32-byte HMAC session key (REQUIRED when `MessageSigningMode` is `"critical"` or `"all"`) |
 | `supportedVersions` | array | Cond. | Protocol versions supported by server. Array of semver strings (e.g., `["0.1.0", "0.2.0"]`). REQUIRED when `Rejected` with error `1007 PROTOCOL_VERSION_MISMATCH`. |
+| `details` | object | Cond. | Diagnostic detail for `errorCode`. REQUIRED on a `Pending` response carrying `3018 TOPOLOGY_MISMATCH`, where it carries `expected` and `declared` — the provisioned topology and the one this boot declared, each shaped like the request's `bays[]`. Optional otherwise, and deliberately open so a future code can carry its own detail without a schema change. |
 
 **`status` behavior:**
 
 | Status | Station Action |
 |--------|---------------|
 | `Accepted` | Sync clock → apply configuration → send StatusNotification per bay → start heartbeat → enter normal operation |
-| `Rejected` | Wait `retryInterval` seconds → retry BootNotification |
-| `Pending` | Wait `retryInterval` seconds → retry BootNotification (server is not ready) |
+| `Rejected` | Enter the `Rejected` restricted state — refuse commands, send nothing but retries, serve no customers → wait `retryInterval` seconds → retry BootNotification |
+| `Pending` | Enter the `Pending` restricted state — **answer** commands, send nothing unsolicited, refuse StartService/ReserveBay with `3002 BAY_NOT_READY` → wait `retryInterval` seconds → retry BootNotification. See [Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states) |
 
 **Heartbeat interval precedence:** If both `heartbeatIntervalSec` (dedicated field) and `configuration.HeartbeatIntervalSeconds` (config map) are present, the dedicated field `heartbeatIntervalSec` takes precedence. Stations MUST use the dedicated field value and SHOULD ignore the config map entry for this key.
 
@@ -300,6 +303,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
 | `1005` | `INVALID_MESSAGE_FORMAT` — request is not valid JSON or missing required fields |
 | `1007` | `PROTOCOL_VERSION_MISMATCH` — major version incompatible |
 | `2001` | `STATION_NOT_REGISTERED` — station unknown to server |
+| `3018` | `TOPOLOGY_MISMATCH` — the declared `bays[]` disagrees with the provisioned topology. Carried on a **`Pending`** response, never `Rejected`, with `details` |
 | `6001` | `SERVER_INTERNAL_ERROR` — server encountered an unexpected error during processing |
 
 > **Signing note:** Both directions of BootNotification are **exempt** from HMAC-SHA256 signing. The REQUEST is exempt because the session key has not yet been established. The RESPONSE is exempt because its MAC would be cryptographically void — the `sessionKey` that would verify it is delivered *in* that message; delivery integrity is provided by mTLS, not HMAC.
@@ -993,7 +997,7 @@ Reports the current status of a single bay. Sent in two contexts:
 | `Faulted` | Hardware error — see `errorCode` |
 | `Unavailable` | Bay is in maintenance mode |
 
-The FSM's seventh state, `Unknown`, is **not** a value of this field. A station in `Unknown` resolves it by reporting the state it resolved *to* — never by reporting `Unknown` itself ([Chapter 05 §1.2](05-state-machines.md)).
+The FSM's seventh state, `Unknown`, is **not** a value of this field. A station in `Unknown` resolves it by reporting the state it resolved *to* — never by reporting `Unknown` itself ([Chapter 05 §2.2](05-state-machines.md)).
 
 #### Example
 
@@ -2369,7 +2373,7 @@ Returns the full service catalog with pricing for all bays. The app uses this to
 | `bays` | array | Yes | List of bays — see fields below |
 | `bays[].bayId` | string | Yes | Bay identifier (`bay_{uuid}`) |
 | `bays[].bayNumber` | integer | Yes | Physical bay number (1-indexed) |
-| `bays[].status` | string | Yes | Current bay status — one of the six reportable states (`"Available"`, `"Reserved"`, `"Occupied"`, `"Finishing"`, `"Faulted"`, `"Unavailable"`). `"Unknown"` is not among them ([Chapter 05 §1.2](05-state-machines.md)) |
+| `bays[].status` | string | Yes | Current bay status — one of the six reportable states (`"Available"`, `"Reserved"`, `"Occupied"`, `"Finishing"`, `"Faulted"`, `"Unavailable"`). `"Unknown"` is not among them ([Chapter 05 §2.2](05-state-machines.md)) |
 | `bays[].services` | array | Yes | Services available on this bay |
 | `bays[].services[].serviceId` | string | Yes | Service identifier (`svc_{id}`) |
 | `bays[].services[].serviceName` | string | Yes | Human-readable name |

@@ -206,8 +206,8 @@ Power on
   → PUBLISH BootNotification REQUEST
   → Wait for RESPONSE (30s timeout)
     - Accepted → sync clock, store sessionKey, apply config
-    - Rejected → station stays in **limited mode** (no commands accepted except BootNotification); wait retryInterval, retry
-    - Pending → station MUST NOT send any messages other than BootNotification retries; wait retryInterval, re-send BootNotification. Normal operation begins only after receiving `Accepted`
+    - Rejected → **restricted state**: accept no commands, send nothing but BootNotification retries, serve no customers; wait retryInterval, retry
+    - Pending → **restricted state**: receive and ANSWER commands, send nothing unsolicited, serve no customers; wait retryInterval, re-send BootNotification. Normal operation begins only after receiving `Accepted`
     - Timeout → wait 60s, retry
   → PUBLISH StatusNotification for EACH bay
   → Start heartbeat timer
@@ -216,7 +216,7 @@ Power on
 
 **Critical rules:**
 - BLE advertising starts BEFORE MQTT connection (users can browse even while MQTT connects)
-- Do NOT process any commands until BootNotification is accepted. Queue them (max 10 pending commands). If queue overflows, reject with `6001 SERVER_INTERNAL_ERROR`.
+- Do NOT process commands while `Booting` or `Rejected`. Queue them (max 10 pending commands); if the queue overflows, reject with `6001 SERVER_INTERNAL_ERROR`. While `Pending` you MUST process and answer them — that is the channel an operator repairs you through — but you MUST still refuse StartService and ReserveBay with `3002 BAY_NOT_READY`, because a restricted station serves no customers. See [Chapter 05 §1.4](../spec/05-state-machines.md#14-the-restricted-states).
 - The `sessionKey` from the server response is your HMAC-SHA256 signing key for this session. Store it in RAM only.
 
 ### 2.4 MQTT Connection Details
@@ -1123,7 +1123,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 
 - [ ] **[MUST]** BLE advertising starts BEFORE MQTT connection
 - [ ] **[MUST]** BootNotification on every connect/reconnect
-- [ ] **[MUST]** Do NOT process commands until BootNotification ACCEPTED
+- [ ] **[MUST]** Do NOT process commands while `Booting` or `Rejected`; DO answer them while `Pending`, refusing StartService/ReserveBay with `3002`
 - [ ] **[MUST]** Sync clock from BootNotification RESPONSE `serverTime`
 - [ ] **[MUST]** StatusNotification for each bay after boot
 - [ ] **[MUST]** Heartbeat at server-specified `heartbeatIntervalSec`

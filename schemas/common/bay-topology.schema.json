@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/common/bay-topology.schema.json",
+  "title": "Bay Topology Entry",
+  "description": "One bay of a station's physical topology: its ordinal and the program ordinals that bay can run. This is the unit the station re-declares in every BootNotification (bays[]) and the unit the server echoes in a 3018 TOPOLOGY_MISMATCH `details` object. Labels are NOT part of it -- they are descriptive and are never compared.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "bayNumber",
+    "programNumbers"
+  ],
+  "properties": {
+    "bayNumber": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 64,
+      "description": "The station-assigned ordinal identifying this bay physically, as declared at provisioning. Unique within the message. The set need NOT be dense."
+    },
+    "programNumbers": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
+      "description": "The programNumber of every program this bay has, as declared at provisioning. Ordinals only. Order carries no meaning; the server compares this as a SET. The set need NOT be dense.",
+      "items": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 32
+      }
+    }
+  }
+}

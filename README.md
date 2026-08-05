@@ -176,7 +176,7 @@ npx ajv-cli validate \
 | [02](spec/02-transport.md) | Transport | MQTT 5.0, TLS 1.2+, topic structure, QoS, BLE GATT, reconnection | Draft |
 | [03](spec/03-messages.md) | Message Catalog | JSON envelope, messageType, correlation, timestamps; all 40 messages — fields, types, constraints, directions | Draft |
 | [04](spec/04-flows.md) | Protocol Flows | 12 end-to-end flows with sequence diagrams and step-by-step detail | Draft |
-| [05](spec/05-state-machines.md) | State Machines | Bay, Session, Reservation, BLE Connection, Firmware Update FSMs | Draft |
+| [05](spec/05-state-machines.md) | State Machines | Station, Bay, Session, Reservation, BLE Connection, Firmware Update FSMs | Draft |
 | [06](spec/06-security.md) | Security | Threat model, mTLS, HMAC-SHA256, PKI, OfflinePass, receipts, fraud scoring | Draft |
 | [07](spec/07-errors.md) | Error Codes | 116 codes (6 categories), retry policies, circuit breaker, graceful degradation | Draft |
 | [08](spec/08-configuration.md) | Configuration | 29 standard configuration keys, data types, access modes | Draft |

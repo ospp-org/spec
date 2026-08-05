@@ -26,7 +26,7 @@ The Core profile establishes the foundation upon which all other profiles (Sessi
 | Requirement ID | Requirement | Normative Level |
 |----------------|---------------------------------------------------------------|-----------------|
 | CORE-001 | The station MUST send BootNotification as the first message after every MQTT connection. | MUST |
-| CORE-002 | The station MUST NOT send any other messages before receiving a BootNotification `Accepted` response. | MUST NOT |
+| CORE-002 | The station MUST NOT send any message it originates — any EVENT, or any REQUEST other than BootNotification — before receiving a BootNotification `Accepted` response. A RESPONSE to a server command is not originated by the station and is permitted while `Pending`, which is the state in which the station answers commands ([Chapter 05 §1.4](../../05-state-machines.md#14-the-restricted-states)). | MUST NOT |
 | CORE-003 | The station MUST send Heartbeat messages every `heartbeatIntervalSec` seconds after BootNotification is accepted. | MUST |
 | CORE-004 | The station MUST send a StatusNotification for each bay immediately after BootNotification is accepted. | MUST |
 | CORE-005 | The station MUST send a StatusNotification within 1 second of any bay state change. | MUST |

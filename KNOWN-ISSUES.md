@@ -525,7 +525,7 @@ different things, and deciding which is which is a design question with a wire-v
 
 The bay state machine has two normative homes and they are not copies of each other.
 
-- **[`spec/05-state-machines.md` §1.3](spec/05-state-machines.md)** — 23 transitions.
+- **[`spec/05-state-machines.md` §2.3](spec/05-state-machines.md)** — 23 transitions.
 - **[`spec/profiles/core/status-notification.md` §5](spec/profiles/core/status-notification.md)** — 18 transitions.
 
 ### 1. They disagree on `Unavailable → Faulted`
@@ -535,7 +535,7 @@ The bay state machine has two normative homes and they are not copies of each ot
 > `Unavailable --> Faulted      (fault detected during maintenance)`
 
 Chapter 05 does not have it, in either the diagram or the table. Its hardware-error row
-(`05-state-machines.md:110`) enumerates the source states explicitly and `Unavailable` is not
+(`05-state-machines.md` §2.3) enumerates the source states explicitly and `Unavailable` is not
 among them:
 
 > `| Hardware error detected | Available, Reserved, Occupied, Finishing | Faulted | ... |`
@@ -545,7 +545,7 @@ A bay that faults while under maintenance is reportable by one document and inva
 ### 2. They invert on `Unknown`
 
 Chapter 05 carries six `→ Unknown` rows, one per state, all triggered by LWT
-(`05-state-machines.md:47-52`, and the table row at `:86`). `status-notification.md` §5 carries
+(`05-state-machines.md` §2.1 diagram, and the last row of §2.3). `status-notification.md` §5 carries
 **none** — it has the three transitions *out* of `Unknown` and no way in.
 
 Neither is wrong on its own terms, which is the tell. Chapter 05 is describing what the
@@ -562,7 +562,7 @@ This is not drift. Both are faithful; they are faithful to different chapters.
 |---|---:|:---:|:---:|---|
 | `status-notification.md` §5 | 18 | yes | none | — |
 | `ospp-sdk-php` `BayTransitions.php:13-19` | **18** | yes | none | **the profile** |
-| `05-state-machines.md` §1.3 | 23 | no | 6 rows | — |
+| `05-state-machines.md` §2.3 | 23 | no | 6 rows | — |
 | `sdk-ts` `BayStateMachine.ts:15-21` | **23** | no | 6 rows | **chapter 05** |
 
 The two SDKs release as a pair at one version and are meant to be interchangeable. They are not:
@@ -578,8 +578,8 @@ the LWT rows only make sense in one of them.
 
 | where | says |
 |---|---|
-| `05-state-machines.md:5` | *"any transition not explicitly listed here is invalid and MUST be rejected"* |
-| `05-state-machines.md:127` (§1.5) | *"the server SHOULD log a warning and MAY request a station Reset"* |
+| `05-state-machines.md` (chapter preamble) | *"any transition not explicitly listed here is invalid and MUST be rejected"* |
+| `05-state-machines.md` §2.5 | *"the server SHOULD log a warning and MAY request a station Reset"* |
 | `status-notification.md:50` | *"Any transition not listed below is invalid and **MUST** be rejected by the server with a log entry."* |
 | `status-notification.md:73` | *"Invalid transitions **MUST** be logged but **SHOULD NOT** cause the server to drop the message -- the server **SHOULD** accept the reported state as authoritative and log a warning."* |
 
@@ -589,9 +589,9 @@ spec for it. The reference server accepts-and-logs, which is `:73`.
 
 ### The root cause, and why this is its own arc
 
-**Chapter 05 §1 merges the station's physical FSM with the server's belief about it into one
+**Chapter 05 §2 merges the station's physical FSM with the server's belief about it into one
 table.** The bay a station operates and the bay a server thinks it has are different objects with
-different transition sets, and §1 draws them as one. Every contradiction above falls out of that:
+different transition sets, and §2 draws them as one. Every contradiction above falls out of that:
 the `→ Unknown` rows are the server's and only the server's; `Unavailable → Faulted` is the
 station's and only the station's; and "reject or accept an invalid transition" has no single
 answer because a server validating its *own* model and a server receiving a *station's* report

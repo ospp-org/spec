@@ -1,0 +1,19 @@
+{
+  "status": "Pending",
+  "serverTime": "2026-03-01T10:00:00.000Z",
+  "heartbeatIntervalSec": 30,
+  "retryInterval": 300,
+  "errorCode": 3018,
+  "errorText": "TOPOLOGY_MISMATCH",
+  "details": {
+    "expected": [
+      { "bayNumber": 1, "programNumbers": [1, 2, 3] },
+      { "bayNumber": 2, "programNumbers": [1, 2, 3] }
+    ],
+    "declared": [
+      { "bayNumber": 1, "programNumbers": [1, 2, 3] },
+      { "bayNumber": 2, "programNumbers": [1, 2, 3] },
+      { "bayNumber": 3, "programNumbers": [1, 2, 3] }
+    ]
+  }
+}

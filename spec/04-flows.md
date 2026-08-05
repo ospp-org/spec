@@ -122,12 +122,16 @@ sequenceDiagram
         Note over SSP: Enter normal operation
 
     else Rejected
-        Server-->>SSP: BootNotification RESPONSE (Rejected, retryInterval)
+        Server-->>SSP: BootNotification RESPONSE (Rejected, retryInterval, errorCode)
+        Note over SSP: Restricted: refuse commands,<br/>send nothing, serve nobody
         Note over SSP: Wait retryInterval seconds
         SSP->>Server: BootNotification REQUEST (retry)
 
     else Pending
         Server-->>SSP: BootNotification RESPONSE (Pending, retryInterval)
+        Note over SSP: Restricted: ANSWER commands,<br/>send nothing unsolicited,<br/>serve nobody
+        Server->>SSP: ChangeConfiguration REQUEST [MSG-013]
+        SSP-->>Server: ChangeConfiguration RESPONSE
         Note over SSP: Wait retryInterval seconds
         SSP->>Server: BootNotification REQUEST (retry)
 
@@ -155,9 +159,11 @@ sequenceDiagram
 
 **A1 — Rejected:** Server returns `Rejected` with `retryInterval`. The SSP waits `retryInterval` seconds and retries from step 6. Common causes: station not registered, certificate revoked, station decommissioned.
 
-**A2 — Pending:** Server returns `Pending` with `retryInterval`. The SSP waits and retries. This occurs when the server is starting up or performing maintenance.
+**A2 — Pending:** Server returns `Pending` with `retryInterval`. The SSP enters the `Pending` **restricted** state ([Chapter 05 — State Machines §1.4](05-state-machines.md#14-the-restricted-states)): it answers server commands, sends nothing unsolicited, and serves no customer — StartService and ReserveBay are refused with `3002 BAY_NOT_READY`. It waits and retries. This occurs when an operator approval is outstanding, when the server is starting up or under maintenance, or on a `3018 TOPOLOGY_MISMATCH`.
 
 **A3 — Timeout:** No response received within 30 seconds. The SSP waits 60 seconds and retries from step 6. The SSP MUST NOT send any other messages until BootNotification succeeds.
+
+**A2a — Topology mismatch:** The `bays[]` the SSP declared disagrees with the topology recorded for it at provisioning, in either direction. The server returns **`Pending`** with `3018 TOPOLOGY_MISMATCH` and a `details` object carrying `expected` and `declared`. The SSP behaves exactly as in A2 and **MUST NOT** change its declaration to match. This path is reachable on a **first** boot too: provisioning creates the bay records and boot never does, so the two declarations come from one commissioning act and normally agree — when they do not, that is the same fault and takes the same path ([boot-notification.md §6.1](profiles/core/boot-notification.md)).
 
 **A4 — Reconnect (not first boot):** If the SSP was previously connected and has `pendingOfflineTransactions > 0`, it proceeds through the normal boot sequence first, then begins [Offline → Online Reconciliation (Flow §10)](#10-offline--online-reconciliation) after step 11.
 
