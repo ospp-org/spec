@@ -2,5 +2,6 @@
   "type": "StartServiceRequest",
   "bayId": "bay_f6e5d4c3b2a10987",
   "serviceId": "svc_premium",
+  "programNumber": 1,
   "requestedDurationSeconds": 900
 }

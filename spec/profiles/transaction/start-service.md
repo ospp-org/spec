@@ -20,6 +20,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 | `sessionId` | string | Yes | Unique session identifier (server-generated, `sess_` prefix). |
 | `bayId` | string | Yes | Target bay identifier (`bay_` prefix). |
 | `serviceId` | string | Yes | Catalog service to activate (`svc_` prefix) — the commercial offering, minted by the server. Not the station's physical program; see `programNumber`. |
+| `programNumber` | integer | Yes | Ordinal of the **physical program** to run on the target bay, as the station declared it at provisioning. Carried so the station acts on a field rather than indexing its catalog by `serviceId`, and so a service minted since the last catalog push still starts. |
 | `durationSeconds` | integer | Yes | Authorized duration in seconds (minimum 1). |
 | `sessionSource` | string | Yes | Origin of the session: `MobileApp` or `WebPayment`. |
 | `reservationId` | string | No | Associated reservation identifier, if the bay was pre-reserved. |
@@ -38,6 +39,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 | `status` | string | `Rejected` |
 | `errorCode` | integer | OSPP error code (see section 6). |
 | `errorText` | string | Machine-readable error name in `UPPER_SNAKE_CASE`. |
+| `programNumber` | integer | **Echo** of the requested ordinal. The rejection names the ordinal it refused, so an operator need not correlate against the request to find out which one was wrong. |
 
 ## 6. Processing Rules
 
@@ -46,11 +48,12 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 3. If the bay has an active reservation held by a different `reservationId`, the station **MUST** respond with `3014 BAY_RESERVED`.
 4. If the bay is in `Unavailable` state due to maintenance, the station **MUST** respond with `3011 BAY_MAINTENANCE`.
 5. The station **MUST** validate that the `serviceId` exists in its service catalog. If not, it **MUST** respond with `3004 INVALID_SERVICE`.
-6. The station **MUST** validate that the requested service is physically available on the specified bay. If not, it **MUST** respond with `3003 SERVICE_UNAVAILABLE`.
-7. The station **MUST** validate that `durationSeconds` is positive and does not exceed `MaxSessionDurationSeconds`. If zero or negative, respond with `3008 DURATION_INVALID`. If exceeding the maximum, respond with `3010 MAX_DURATION_EXCEEDED`.
-8. Upon accepting the request, the station **MUST** attempt to physically activate the hardware (pump, valve, motor). If hardware fails to start within the activation timeout, the station **MUST** respond with `3009 HARDWARE_ACTIVATION_FAILED` and transition the bay to `Faulted`.
-9. On success, the station **MUST** respond with `status: "Accepted"` and transition the bay to `Occupied` state.
-10. If a `reservationId` is present and matches an active reservation, the station **MUST** consume the reservation upon successful activation.
+6. The station **MUST** validate that `programNumber` was **declared for that bay** at provisioning. If it was not, the station **MUST** respond with `3017 PROGRAM_NOT_DECLARED`, echoing the refused ordinal, and **MUST NOT** activate any hardware. It **MUST NOT** substitute a neighbouring ordinal or clamp to the highest declared one — that charges for one thing and delivers another.
+7. The station **MUST** validate that the requested service is physically available on the specified bay. If not, it **MUST** respond with `3003 SERVICE_UNAVAILABLE`. This is availability, not existence: the program **is** declared, it is merely not deliverable right now.
+8. The station **MUST** validate that `durationSeconds` is positive and does not exceed `MaxSessionDurationSeconds`. If zero or negative, respond with `3008 DURATION_INVALID`. If exceeding the maximum, respond with `3010 MAX_DURATION_EXCEEDED`.
+9. Upon accepting the request, the station **MUST** attempt to physically activate the hardware (pump, valve, motor). If hardware fails to start within the activation timeout, the station **MUST** respond with `3009 HARDWARE_ACTIVATION_FAILED` and transition the bay to `Faulted`.
+10. On success, the station **MUST** respond with `status: "Accepted"` and transition the bay to `Occupied` state.
+11. If a `reservationId` is present and matches an active reservation, the station **MUST** consume the reservation upon successful activation.
 
 ## 7. Error Codes
 
@@ -60,6 +63,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 | 3002 | `BAY_NOT_READY` | Warning | Bay is not in `Available` state. |
 | 3003 | `SERVICE_UNAVAILABLE` | Warning | Service not available on this bay (hardware absent or consumables depleted). |
 | 3004 | `INVALID_SERVICE` | Error | `serviceId` not found in the station's service catalog. |
+| 3017 | `PROGRAM_NOT_DECLARED` | Error | `programNumber` was never declared for the target bay. Fail closed — reject, never accept and do nothing. |
 | 3005 | `BAY_NOT_FOUND` | Error | `bayId` does not match any bay on this station. |
 | 3008 | `DURATION_INVALID` | Error | `durationSeconds` is zero, negative, or below the service minimum. |
 | 3009 | `HARDWARE_ACTIVATION_FAILED` | Error | Hardware failed to start within the activation timeout. |
@@ -94,6 +98,7 @@ If the `sessionId` matches a completed or failed session, the station **MUST** r
     "sessionId": "sess_f7e8d9c0",
     "bayId": "bay_a1b2c3d4",
     "serviceId": "svc_eco",
+    "programNumber": 2,
     "durationSeconds": 300,
     "sessionSource": "MobileApp",
     "reservationId": "rsv_e5f6a7b8",
@@ -134,7 +139,8 @@ If the `sessionId` matches a completed or failed session, the station **MUST** r
   "payload": {
     "status": "Rejected",
     "errorCode": 3001,
-    "errorText": "BAY_BUSY"
+    "errorText": "BAY_BUSY",
+    "programNumber": 2
   }
 }
 ```

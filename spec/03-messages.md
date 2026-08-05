@@ -591,7 +591,8 @@ Instructs the station to activate a specific service on a bay. The station MUST 
 |-------|------|:--------:|-------------|
 | `sessionId` | string | Yes | Server-assigned session identifier (`sess_{uuid}`) |
 | `bayId` | string | Yes | Target bay identifier (`bay_{uuid}`) |
-| `serviceId` | string | Yes | Service to activate (`svc_{id}`) |
+| `serviceId` | string | Yes | Catalog service to activate (`svc_{id}`) — the commercial offering |
+| `programNumber` | integer | Yes | Ordinal of the physical program to run on that bay, as the station declared it. Rejected with `3017 PROGRAM_NOT_DECLARED` if the bay never declared it |
 | `durationSeconds` | integer | Yes | Maximum session duration in seconds |
 | `sessionSource` | string | Yes | `"MobileApp"` or `"WebPayment"` |
 | `reservationId` | string | No | Reservation to consume (`rsv_{uuid}`), if bay was reserved |
@@ -604,6 +605,7 @@ Instructs the station to activate a specific service on a bay. The station MUST 
 | `status` | string | Yes | `"Accepted"` or `"Rejected"` |
 | `errorCode` | integer | Cond. | Error code (when `Rejected`) |
 | `errorText` | string | Cond. | Error code name (when `Rejected`) |
+| `programNumber` | integer | Cond. | **Echo** of the requested ordinal (when `Rejected`), so the refusal names what it refused |
 
 Upon `Accepted`, the station MUST:
 1. Activate the hardware for the specified service
@@ -620,6 +622,7 @@ Upon `Accepted`, the station MUST:
   "sessionId": "sess_a1b2c3d4",
   "bayId": "bay_c1d2e3f4a5b6",
   "serviceId": "svc_eco",
+  "programNumber": 2,
   "durationSeconds": 300,
   "sessionSource": "MobileApp",
   "reservationId": "rsv_e5f6a7b8c9d0",
@@ -1897,6 +1900,7 @@ Pushes the complete service catalog to the station. This is a **full replacement
 | `services` | array | Yes | Complete list of services — see fields below |
 | `services[].serviceId` | string | Yes | Service identifier (`svc_{id}`) |
 | `services[].serviceName` | string | Yes | Human-readable name (e.g., `"Eco Program"`) |
+| `services[].bindings` | array | Yes | Where this service physically runs: one `{bayNumber, programNumber}` per bay-and-program it is bound to. Created on the server by an operator; the station never originates it, and it is what lets the station start the right program offline |
 | `services[].pricingType` | string | Yes | `"PerMinute"` or `"Fixed"` |
 | `services[].priceCreditsPerMinute` | integer | Cond. | Credit price per minute (when `PerMinute`) |
 | `services[].priceCreditsFixed` | integer | Cond. | Fixed credit price per session (when `Fixed`) |
@@ -2729,7 +2733,8 @@ Requests the station to start a service on a specific bay. Only valid after a su
 |-------|------|:--------:|-------------|
 | `type` | string | Yes | `"StartServiceRequest"` |
 | `bayId` | string | Yes | Target bay identifier (`bay_{uuid}`) |
-| `serviceId` | string | Yes | Service to activate (`svc_{id}`) |
+| `serviceId` | string | Yes | Catalog service to activate (`svc_{id}`) |
+| `programNumber` | integer | Yes | Ordinal of the physical program to run on that bay. Offline there is no StartService command, so the app reads the binding from the catalog the station holds |
 | `requestedDurationSeconds` | integer | Yes | Requested session duration in seconds |
 
 #### Example
@@ -2768,6 +2773,7 @@ Confirmation that the service has started (or was rejected). On `Accepted`, the 
 | `offlineTxId` | string | Cond. | Offline transaction identifier (`otx_{uuid}`) for receipt tracking (when `Accepted`) |
 | `errorCode` | integer | Cond. | Error code (when `Rejected`) |
 | `errorText` | string | Cond. | Error description (when `Rejected`) |
+| `programNumber` | integer | Cond. | **Echo** of the requested ordinal, so a refusal names what it refused |
 
 #### Example
 
@@ -3108,6 +3114,8 @@ Error codes referenced in this chapter. For the full catalog, see [Chapter 07 �
 | 3014 | `BAY_RESERVED` | StartService, ReserveBay |
 | 3015 | `PAYLOAD_INVALID` | ChangeConfiguration, TransactionEvent, UpdateServiceCatalog |
 | 3016 | `ACTIVE_SESSIONS_PRESENT` | Reset |
+| 3017 | `PROGRAM_NOT_DECLARED` | StartService |
+| 3018 | `TOPOLOGY_MISMATCH` | BootNotification |
 
 ### 4xxx Payment & Credit Errors
 

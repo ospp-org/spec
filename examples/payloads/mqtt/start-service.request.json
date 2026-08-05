@@ -2,6 +2,7 @@
   "sessionId": "sess_f7e8d9c0",
   "bayId": "bay_a1b2c3d4",
   "serviceId": "svc_eco",
+  "programNumber": 1,
   "durationSeconds": 300,
   "sessionSource": "MobileApp",
   "reservationId": "rsv_e5f6a7b8",

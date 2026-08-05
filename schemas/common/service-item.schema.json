@@ -8,7 +8,8 @@
     "serviceId",
     "serviceName",
     "pricingType",
-    "available"
+    "available",
+    "bindings"
   ],
   "properties": {
     "serviceId": {
@@ -23,7 +24,10 @@
     },
     "pricingType": {
       "type": "string",
-      "enum": ["PerMinute", "Fixed"],
+      "enum": [
+        "PerMinute",
+        "Fixed"
+      ],
       "description": "How this service is priced"
     },
     "priceCreditsPerMinute": {
@@ -49,6 +53,34 @@
     "available": {
       "type": "boolean",
       "description": "Whether this service is currently available for use"
+    },
+    "bindings": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "description": "Where this commercial service physically runs: one entry per (bay, program) pair it is bound to. The binding is created on the SERVER by an operator (Chapter 01 — Architecture §4.2); the station never originates it and only receives it here. This is what lets the station act OFFLINE, where no StartService command exists to carry the ordinal — BLE start requests name a serviceId, and this is the only mapping from that to a physical program. One program MAY carry several services, so two catalog entries MAY name the same (bayNumber, programNumber); the reverse is also allowed — one service bound to the same program on several bays.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "bayNumber",
+          "programNumber"
+        ],
+        "properties": {
+          "bayNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 64,
+            "description": "The bay this binding applies to, as the station declared it."
+          },
+          "programNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 32,
+            "description": "The program on that bay which this service runs."
+          }
+        }
+      }
     }
   },
   "additionalProperties": false

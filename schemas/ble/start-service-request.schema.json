@@ -8,7 +8,8 @@
     "type",
     "bayId",
     "serviceId",
-    "requestedDurationSeconds"
+    "requestedDurationSeconds",
+    "programNumber"
   ],
   "additionalProperties": false,
   "properties": {
@@ -22,6 +23,12 @@
     },
     "serviceId": {
       "$ref": "../common/service-id.schema.json"
+    },
+    "programNumber": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 32,
+      "description": "The ordinal of the PHYSICAL PROGRAM to run on the target bay, as the station declared it at provisioning. Carried explicitly so the station acts on a field rather than indexing its own catalog by serviceId, and so a service minted since the last catalog push still starts. The station MUST verify the ordinal was declared for that bay and, if it was not, MUST reject with 3017 PROGRAM_NOT_DECLARED — never accept and do nothing, which is a customer who paid and got no wash."
     },
     "requestedDurationSeconds": {
       "type": "integer",

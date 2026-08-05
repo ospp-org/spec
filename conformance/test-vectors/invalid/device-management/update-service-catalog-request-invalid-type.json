@@ -5,7 +5,13 @@
       "serviceId": "svc_basic",
       "serviceName": "Basic Service",
       "pricingType": "PerMinute",
-      "available": true
+      "available": true,
+      "bindings": [
+        {
+          "bayNumber": 1,
+          "programNumber": 1
+        }
+      ]
     }
   ]
 }

@@ -5,7 +5,13 @@
       "serviceId": "svc_basic",
       "serviceName": "Basic Service",
       "pricingType": "per_session",
-      "available": true
+      "available": true,
+      "bindings": [
+        {
+          "bayNumber": 1,
+          "programNumber": 1
+        }
+      ]
     }
   ]
 }

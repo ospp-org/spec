@@ -37,6 +37,7 @@ Each entry in the `services` array **MUST** conform to the service-item schema:
 |-------------------------|---------|----------|-----------------------------------------------|
 | `serviceId` | string | Yes | Unique service identifier (e.g., `svc_eco`). |
 | `serviceName` | string | Yes | Human-readable service name (e.g., "Eco Program"). |
+| `bindings` | array | Yes | Where this service physically runs: one `{bayNumber, programNumber}` entry per bay-and-program it is bound to. Created on the **server** by an operator; the station never originates it. This is what lets the station start the right program **offline**, where no StartService command exists to carry the ordinal. |
 | `pricingType` | string | Yes | `PerMinute` or `Fixed`. |
 | `priceCreditsPerMinute` | integer | No | Price in credits per minute. Required when `pricingType` is `PerMinute`. |
 | `priceCreditsFixed` | integer | No | Fixed price in credits. Required when `pricingType` is `Fixed`. |

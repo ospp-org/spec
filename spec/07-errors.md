@@ -20,7 +20,7 @@ Error codes are organized into six functional categories. Each category occupies
 |:------|----------|:----:|:-----:|-------------|
 | 1000–1999 | **Transport Errors** | Protocol | 15 | Network, protocol, message format, and message integrity errors |
 | 2000–2999 | **Authentication & Authorization Errors** | Protocol | 20 | Identity verification, credential validation, and access control |
-| 3000–3999 | **Session & Bay Errors** | Application | 17 | Bay state, session lifecycle, reservation, and service errors |
+| 3000–3999 | **Session & Bay Errors** | Application | 19 | Bay state, session lifecycle, reservation, and service errors |
 | 4000–4999 | **Payment & Credit Errors** | Application | 20 | Wallet balance, payment processing, refunds, offline credit limits, and certificate and provisioning management |
 | 5000–5999 | **Station Hardware & Software Errors** | Application | 34 | Physical hardware faults and embedded software errors |
 | 6000–6999 | **Server Errors** | Application | 8 | Server-side processing, timeouts, and infrastructure errors |
@@ -32,7 +32,7 @@ Error codes are organized into six functional categories. Each category occupies
 - **Application tier** (3000–6999): Errors related to business logic, state violations, hardware conditions, and server-side processing. These errors indicate that the message was received and understood, but the requested operation could not be completed. Application-tier errors are handled by the application layer.
 - **Vendor tier** (9000–9999): Reserved for implementation-specific error codes. Vendors **MUST** document their vendor error codes separately.
 
-**Total: 114 standard error codes.**
+**Total: 116 standard error codes.**
 
 ### 1.2 Severity Levels
 
@@ -328,8 +328,10 @@ Session errors cover bay state transitions, session lifecycle, reservation manag
 | 3012 | `RESERVATION_NOT_FOUND` | Error | false | The referenced `reservationId` does not exist or has already been cancelled/expired. | Do not retry. Start a new reservation flow if needed. |
 | 3013 | `RESERVATION_EXPIRED` | Warning | true | The reservation's TTL has elapsed. The bay has been automatically released. | Create a new reservation. Default TTL is `ReservationDefaultTTL` (300 seconds). |
 | 3014 | `BAY_RESERVED` | Warning | true | The bay has an active reservation held by another user/session. | Wait for the reservation to expire, or select a different bay. |
-| 3015 | `PAYLOAD_INVALID` | Error | false | The request payload is structurally valid JSON but contains semantically invalid values (e.g., negative credits, empty required strings, unknown enum values). | Fix the payload values. Inspect the `details` field for specific validation errors. |
+| 3015 | `PAYLOAD_INVALID` | Error | false | The request payload is structurally valid JSON but a **value is wrong in itself** — negative credits, an empty required string, a value outside its declared range, a member outside a closed enumeration. **Scope, narrowed:** this code covers a value that could never be valid. It does **NOT** cover a well-formed identifier that simply refers to nothing — those are **reference** failures and each identifier kind has its own code (`3004` `serviceId`, `3005` `bayId`, `3006` `sessionId`, `3012` `reservationId`, `3017` `programNumber`). The distinction matters because the recoveries differ: a bad value is fixed by correcting the message, whereas a dangling reference is usually fixed by correcting server-side state, and a single code covering both would give an operator no way to tell which. Malformed JSON is not this code either — that is `1005 INVALID_MESSAGE_FORMAT`. | Fix the payload values. Inspect the `details` field for specific validation errors. If the offending member is an identifier that is well-formed but unknown, the correct code is the one for that identifier kind, not this one. |
 | 3016 | `ACTIVE_SESSIONS_PRESENT` | Warning | true | One or more bays have active sessions. The requested operation (e.g., Reset) cannot proceed until all sessions are completed or stopped. | Stop all active sessions first, then retry the operation. |
+| 3017 | `PROGRAM_NOT_DECLARED` | Error | false | The `programNumber` in the request was never declared for the target bay. The station declares its bays and, per bay, the program ordinals it can run — at provisioning and again at every boot ([Chapter 01 — Architecture §4.2](01-architecture.md)) — and this code says the ordinal received is not in that set for that bay. A **reference** failure, not a value failure: the ordinal is well-formed and in range, it simply names nothing. That is why it is not `3015`, which is about a value being wrong in itself, and not `3003`, which presupposes the program **is** declared and is merely unavailable right now. It follows the registry's own pattern of one code per identifier KIND — `3004` for `serviceId`, `3005` for `bayId`, `3006` for `sessionId`, `3012` for `reservationId` — and a program ordinal is a new kind. The station **MUST** fail closed: reject explicitly, and **MUST NOT** accept the command and do nothing. Accept-and-do-nothing is a customer who paid and received no service, with nothing anywhere recording that it did not happen. | Station: reject, echo the refused `programNumber` in the response, and run nothing. Do **NOT** substitute a neighbouring ordinal or clamp to the highest declared one — MDB permits exactly that clamp for vending selections and it is worse than refusing, because it charges for one thing and delivers another. Server: the service→program binding names an ordinal this station does not have. Correct the binding, or re-provision the station if its hardware genuinely changed. Operator: compare the station's declared topology against the catalog binding. |
+| 3018 | `TOPOLOGY_MISMATCH` | Error | true | The topology the station declared in BootNotification does not match the topology recorded for it at provisioning — a bay number present on one side and not the other, or a program ordinal present on one side and not the other, in **either** direction. Program **labels** are descriptive and are never compared, so a corrected typo in a firmware constant does not reach this code. Carried on a **`Pending`** BootNotification response, never `Rejected`: `Pending` keeps the command channel open so an operator can repair the disagreement, and `Rejected` would remove the only channel through which it could be repaired. `recoverable: true` records exactly that — the station is out of service but reachable. The response **MUST** carry a `details` object naming what was expected and what arrived, because a station held out of service for a reason nobody can see is a station nobody can repair. | Station: keep the declaration stable and keep retrying BootNotification per [CORE-011](profiles/core/README.md); answer commands while `Pending`. Do **NOT** alter the declaration to match the server — the declaration describes hardware, and silently agreeing would hide a real hardware change. Operator: read `details`; if the hardware genuinely changed, re-provision the station, which is what re-creates the bay records. If it did not, the station record is wrong and is corrected server-side, after which the next boot is accepted. |
 
 ### 3.4 Payment & Credit Errors (4xxx)
 
@@ -461,7 +463,7 @@ This table maps which error codes can appear in the RESPONSE or rejection of eac
 
 | Action | Possible Error Codes |
 |--------|---------------------|
-| BootNotification [MSG-001] | **2001**, 1005, 1007, 6001 |
+| BootNotification [MSG-001] | **2001**, **3018**, 1005, 1007, 6001 |
 | Heartbeat [MSG-008] | 1005, 1010, 5106, 6001 |
 | StatusNotification [MSG-009] | *(EVENT — no RESPONSE, but may carry 5xxx error details in payload)* |
 | MeterValues [MSG-010] | *(EVENT — no RESPONSE)* |
@@ -482,7 +484,7 @@ This table maps which error codes can appear in the RESPONSE or rejection of eac
 |--------|---------------------|
 | ReserveBay [MSG-003] | **3001**, **3002**, 3005, 3011, 3014, 5000–5009 |
 | CancelReservation [MSG-004] | **3012**, **3013**, 3005 |
-| StartService [MSG-005] | **3001**, **3002**, **3004**, **3009**, 3003, 3005, 3008, 3010, 3011, 3012, 3013, 3014, 5000–5009, 5111 |
+| StartService [MSG-005] | **3001**, **3002**, **3004**, **3009**, **3017**, 3003, 3005, 3008, 3010, 3011, 3012, 3013, 3014, 5000–5009, 5111 |
 | StopService [MSG-006] | **3006**, **3007**, 3005, 3011 |
 | Reset [MSG-015] | **3016**, 5107, 5110 |
 | ChangeConfiguration [MSG-013] | **3015**, 1012, 2008, 5108, 5109 |
@@ -932,6 +934,8 @@ Vendors MAY define custom error codes in the **9000–9999** range for proprieta
 | 3014 | `BAY_RESERVED` | Warning | S |
 | 3015 | `PAYLOAD_INVALID` | Error | S |
 | 3016 | `ACTIVE_SESSIONS_PRESENT` | Warning | S |
+| 3017 | `PROGRAM_NOT_DECLARED` | Error | S |
+| 3018 | `TOPOLOGY_MISMATCH` | Error | S |
 | 4000 | `PAYMENT_GENERIC` | Error | P |
 | 4001 | `INSUFFICIENT_BALANCE` | Warning | P |
 | 4002 | `OFFLINE_LIMIT_EXCEEDED` | Error | P |

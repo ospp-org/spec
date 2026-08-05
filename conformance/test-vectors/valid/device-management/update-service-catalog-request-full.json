@@ -7,7 +7,13 @@
       "pricingType": "PerMinute",
       "priceCreditsPerMinute": 5,
       "priceLocalPerMinute": 150,
-      "available": true
+      "available": true,
+      "bindings": [
+        {
+          "bayNumber": 1,
+          "programNumber": 1
+        }
+      ]
     },
     {
       "serviceId": "svc_premium",
@@ -15,7 +21,13 @@
       "pricingType": "PerMinute",
       "priceCreditsPerMinute": 8,
       "priceLocalPerMinute": 250,
-      "available": true
+      "available": true,
+      "bindings": [
+        {
+          "bayNumber": 1,
+          "programNumber": 2
+        }
+      ]
     },
     {
       "serviceId": "svc_deluxe",
@@ -23,7 +35,13 @@
       "pricingType": "Fixed",
       "priceCreditsFixed": 25,
       "priceLocalFixed": 750,
-      "available": true
+      "available": true,
+      "bindings": [
+        {
+          "bayNumber": 1,
+          "programNumber": 3
+        }
+      ]
     },
     {
       "serviceId": "svc_auxiliary",
@@ -31,7 +49,13 @@
       "pricingType": "PerMinute",
       "priceCreditsPerMinute": 4,
       "priceLocalPerMinute": 120,
-      "available": false
+      "available": false,
+      "bindings": [
+        {
+          "bayNumber": 1,
+          "programNumber": 4
+        }
+      ]
     }
   ]
 }
