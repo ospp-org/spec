@@ -71,6 +71,7 @@ level to enable rapid local development and testing.
 | Boot lifecycle (Accepted/Rejected/Pending) | TC-CORE-001 |
 | Heartbeat at configured interval | TC-CORE-001 (Part D) |
 | StatusNotification on every bay state change | TC-CORE-001 (Part C) |
+| Invalid bay transition accepted, recorded, session reconciled | TC-CORE-003 |
 | LWT configured at MQTT CONNECT | TC-CORE-001 (Part A) |
 
 ### 2.2 Standard Compliance
@@ -210,6 +211,7 @@ Conformance reports **SHOULD** include:
 |----|-------|---------|-----------------|
 | TC-CORE-001 | Boot Notification Lifecycle | Core | Development |
 | TC-CORE-002 | Connection Lost & Recovery | Core | Development |
+| TC-CORE-003 | Server Accepts an Invalid Bay Transition as Authoritative | Core | Development — **server under test** |
 | TC-TX-001 | Online Session Full Lifecycle | Transaction | Standard |
 | TC-TX-002 | Reservation and Conversion | Transaction | Standard |
 | TC-TX-003 | Early Stop with Refund | Transaction | Standard |

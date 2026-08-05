@@ -2,7 +2,9 @@
 
 > **Status:** Draft | **OSPP Version:** 0.10.0
 
-This chapter defines all finite state machines (FSMs) governing OSPP entities — the station, its bays, sessions, reservations, BLE connections and firmware updates. Each FSM specifies the complete set of states, valid transitions, guards, actions, and a Mermaid diagram. Implementations MUST enforce these state machines; any transition not explicitly listed here is invalid and MUST be rejected.
+This chapter defines all finite state machines (FSMs) governing OSPP entities — the station, its bays, sessions, reservations, BLE connections and firmware updates. Each FSM specifies the complete set of states, valid transitions, guards, actions, and a Mermaid diagram. A transition not listed for a machine is invalid, and implementations MUST NOT perform one.
+
+**What a party does on *receiving* a report of an invalid transition is stated per machine, not here, because the answer is not the same for all of them.** It turns on who owns the fact being reported. Where the sender is the authority — a station reporting its own hardware — the receiver accepts and records rather than refuses, because refusing does not undo the fact, it only discards the news of it; that is the bay machine, and the rule is [§2.5](#25-invalid-transitions). Where the receiver owns the fact — a station being commanded into a state it cannot be in — the receiver refuses, with an error code. A single chapter-wide "MUST be rejected" collapsed those two into one answer and was the source of a direct contradiction with the rule the reference server actually implements.
 
 The **station** machine ([§1](#1-station-state-machine)) is the outermost: every other machine on a station is scoped inside it, and [§7.1](#71-station----bay----session-coupling) states how.
 
@@ -258,7 +260,71 @@ In both cases the reported `status` MUST be one of the six reportable states. A 
 
 ### 2.5 Invalid Transitions
 
-Any state transition not explicitly listed in section 2.3 is invalid. If the server receives a StatusNotification with an invalid transition (e.g., `Available` directly to `Finishing`), the server SHOULD log a warning and MAY request a station Reset [MSG-015]. If the station receives a command that would require an invalid transition (e.g., StopService while bay is `Available`), the station MUST reject the command with the appropriate error code from [Chapter 07](07-errors.md) (e.g., `3006 SESSION_NOT_FOUND`).
+Any bay transition not in [§2.3](#23-transition-table) is invalid. **This is the only statement in
+this specification of what an invalid one costs.** There were four, in two documents, and two of
+them were direct opposites twenty-three lines apart in the same file.
+
+**On the wire, the station is authoritative about its own hardware.** A server that receives a
+StatusNotification [MSG-009] whose transition §2.3 does not contain:
+
+1. **MUST** accept the reported `status` and record it as the bay's current state. It **MUST NOT**
+   drop the message, **MUST NOT** hold the bay at its previous state, and **MUST NOT** answer the
+   station — StatusNotification is an EVENT and has no response ([§7 rule 4](profiles/core/status-notification.md)).
+
+   This says nothing about **staleness**, which is a separate test with a separate answer. A report
+   older than the last accepted one for the same bay is discarded under the ordering rule at
+   [`02-transport.md` §3.2](02-transport.md), and that rule is unchanged: it discards for arriving
+   late, not for naming a transition the table lacks. Apply ordering first. A report that survives
+   it is the bay's current state whether or not §2.3 contains the transition.
+2. **MUST** record the event durably, attributing it to the station, the bay, and the `(from, to)`
+   pair, and **MUST** make that record reachable by an operator — the same fleet-dashboard surface
+   `status-notification.md` §6.0 already requires for a bay fault. A line in a process log that no
+   dashboard queries, no alert reads and no retention preserves does not satisfy this: the report
+   is the only evidence that a station's model and the server's have diverged, and evidence nobody
+   can retrieve is not evidence.
+3. **MUST** reconcile anything the newly accepted state contradicts, and **MUST NOT** leave the bay
+   and the session disagreeing. The case that matters is a bay leaving `Occupied` or `Finishing`
+   for a state that is not one of them while a session is live on it: the customer has paid, the
+   station says the bay is no longer serving them, and the two records now disagree about a
+   transaction. The server **MUST** terminate that session and settle it under the refund policy
+   for the reported state ([Chapter 04 §6](04-flows.md)), exactly as it does when the bay reports
+   `Faulted`. Accepting the bay state and silently keeping the session is the one outcome this rule
+   must not produce — it frees a bay that is physically busy while continuing to bill for it.
+4. **MUST NOT** send a Reset [MSG-015] on account of the transition alone. An earlier revision
+   permitted it. Reset is now a reboot that preserves everything the station has persisted
+   ([reset.md](profiles/device-management/reset.md)), so it cannot repair a model disagreement; it
+   would reboot working hardware — with `force`, ending a paying customer's session — on the
+   strength of a report that may well be true.
+
+**Then what is the table for, if the server accepts everything?** It is a **producer** rule and a
+**detector**, and it was only ever the second thing to a server:
+
+- **Normative on the station.** The eighteen `Station` rows are the complete set of transitions a
+  station may effect and report. A station that reports `Available → Finishing` is non-conforming
+  and a conformance case fails it. This is where the table has teeth, and it is the same place
+  OCPP puts its own: the 1.6 connector transition table lives in *Operations Initiated by Charge
+  Point* and states which transitions a Charge Point **MAY** send a notification for — the
+  Central System's entire stated duty on receipt is to acknowledge, and `StatusNotification.conf`
+  defines **no fields**, so the response cannot carry a rejection even in principle. OCPP 2.0.1
+  fills its Status Notification use case's own *Error handling* field in as **"n/a"**.
+- **A detector for the server.** An invalid transition means one of three things: a firmware
+  defect, a message lost or reordered in transit, or a real hardware event the model does not
+  describe. All three are worth an operator's attention. None is worth refusing the report — the
+  server's alternative is to hold a state the hardware has contradicted, and a bay it believes is
+  `Available` because it declined to be told otherwise is worse than a bay whose history has a gap
+  in it.
+- **Not a server-side authorization rule.** That is what changed here, and it is the whole of the
+  change.
+
+This is the same allocation of authority the topology rules already make: the station declares
+what hardware it has and the server does not overrule the declaration ([§1.5](#15-topology-at-boot)).
+
+**The station's side is unchanged and is a separate rule.** If a *station* receives a command that
+would require an invalid transition — StopService while the bay is `Available` — it **MUST** reject
+the command with the appropriate code from [Chapter 07](07-errors.md) (here, `3006
+SESSION_NOT_FOUND`). A station refusing a command is not a server refusing a report: the station
+is the party that knows, and it is refusing to act on something false rather than refusing to hear
+something true.
 
 ---
 
