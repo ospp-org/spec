@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-30
 **Protocol Version:** 0.8.0
-**Status:** 3 blockers open (all BLE), 7 non-blocking issues open
+**Status:** 3 blockers open (all BLE), 6 non-blocking issues open
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle
 
 ---
@@ -12,8 +12,9 @@
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 7 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · [the bay FSM specified twice](#open--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) |
-| **Total open** | **10** | |
+| OPEN | 6 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) |
+| CLOSED | 1 | [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc; the entry is retained with its resolution |
+| **Total open** | **9** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
@@ -566,7 +567,50 @@ where it is missing.
 
 ---
 
-## OPEN — the bay FSM is specified twice, the two copies disagree, and each SDK implemented a different one
+## CLOSED — the bay FSM is specified twice, the two copies disagree, and each SDK implemented a different one
+
+> **Closed by the bay-FSM arc.** The record below is left standing because it states the problem
+> better than a summary of the fix would, and because the root cause it identified turned out to be
+> exactly right. What was decided:
+>
+> **1. `Unavailable → Faulted` is legal.** A bay taken out of service can still develop a fault,
+> and a technician working on it is the most likely person to find one. Forbidding the transition
+> does not prevent the fault, only the report of it. Added to the chapter, both diagrams and the
+> diagram README; `ospp-sdk-php` already had it, `sdk-ts` pins it false in a test and must change.
+>
+> **2. One canonical table, at [`05-state-machines.md` §2.3](spec/05-state-machines.md#23-transition-table).**
+> The count in this entry was low: the machine was stated in full in **five** places, not two — the
+> two named below plus the chapter's own diagram, `state-machine-bay.mmd`, and a second copy of
+> that diagram embedded in `diagrams/README.md`. Every other site now references §2.3 and states
+> only what is local to it. A sixth site, `set-maintenance-mode.md`, restated a *slice* of the
+> table and got it wrong in a way this entry never caught — it permitted maintenance only from
+> `Available`, so a station built from it could not be told to stop offering a faulted bay.
+>
+> **3. The root cause is fixed at the root, not by picking a winner.** This entry's diagnosis —
+> that the section "merges the station's physical FSM with the server's belief about it into one
+> table" — is correct and is what the repair addresses. §2.3 gains an **`Effected by`** column.
+> **20 `Station` rows and 6 `Server` rows, 26 in all.** A station implements the 20 and **MUST
+> NOT** implement the 6; a server implements all 26. Neither document's copy was overwritten by
+> the other's: the profile's 18 turned out to be the `Station` sub-table (+ the two below), and the
+> chapter's 23 the whole of it (+ `Unavailable → Faulted`). Both were faithful to a real thing;
+> neither said which.
+>
+> **4. On an invalid transition the server accepts the report as authoritative** — the station is
+> the authority on its own hardware, the same allocation §1.5 already makes for topology — records
+> it durably where an operator can retrieve it, and reconciles any session the new state
+> contradicts. It **MUST NOT** Reset the station over one: Reset is now a reboot that preserves
+> everything persisted, so it repairs no model disagreement. All four contradicting statements are
+> gone; [§2.5](spec/05-state-machines.md#25-invalid-transitions) is the only one. The line numbers
+> quoted below had drifted by the time this was closed — `:50` and `:73` were `:56` and `:79`.
+>
+> **5. Found while composing, and not in this entry:** `Unknown` had three exits and needed five.
+> §3.5 requires a station that reboots mid-session to resume the session, and on the next boot the
+> bay is physically `Occupied` with a post-boot report owed — for which `Available` would have
+> freed a bay running a paid session, `Faulted` would have been a lie, and silence would have
+> breached CORE-004. `Unknown → Occupied` and `Unknown → Finishing` added.
+>
+> Conformance: **TC-CORE-003** (new, the server under test), **TC-DM-007 Part E**, two vectors.
+
 
 **Raised 2026-07-30, by the arc that took `Unknown` off the wire. Recorded rather than fixed:
 reconciling them is not a text edit. The two tables differ because they are describing two

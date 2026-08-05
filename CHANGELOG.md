@@ -14,9 +14,10 @@ as described in [VERSIONING.md](VERSIONING.md).
 > `0.3.0`.** The document version does **not** move here — [`02-transport.md` §2.2](spec/02-transport.md)
 > makes the two independent and this change respects that.
 >
-> **Complete.** All three arcs — topology, wire/errors/reset, and boot/signing — are in this
-> entry. The wire version does **not** move a second time: `0.3.0` has never shipped, so the
-> boot and signing breaks fold into the same unreleased value rather than minting another.
+> **Complete.** All four arcs — topology, wire/errors/reset, boot/signing, and the bay state
+> machine — are in this entry. The wire version does **not** move again: `0.3.0` has never
+> shipped, so every later break folds into the same unreleased value rather than minting another.
+> The bay-FSM arc changes no message shape at all, so it would not have moved it in any case.
 >
 > **Ship order matters and is stated per decision.** The consolidated order is in
 > *Breaking changes, and the order they must ship in* at the end of this entry.
@@ -160,6 +161,92 @@ as described in [VERSIONING.md](VERSIONING.md).
 - **`3002 BAY_NOT_READY` gains a cause.** A station in a restricted state refuses StartService and
   ReserveBay with it. The registry entry now says so, and tells an operator that no
   StatusNotification at all means the boot needs attention, not the bay.
+
+### Changed (BREAKING — bay state machine)
+
+Four arcs are in this entry now. This one is text, schema and diagrams only: no message field
+changes shape, and `bay-status.schema.json` is untouched. It is breaking for **implementations**,
+because the set of transitions each side must accept moves in both directions and the two SDKs
+shipped different sets.
+
+- **`Unavailable → Faulted` is legal.** It was listed in `status-notification.md` §5 and absent
+  from the chapter, the chapter's diagram, `state-machine-bay.mmd`, and the copy of that diagram
+  in `diagrams/README.md`. A bay taken out of service can still develop a fault, and a technician
+  working on it is the most likely person to find one; forbidding the transition does not prevent
+  the fault, it forbids the report of it. `ospp-sdk-php` already has it (it followed the profile);
+  `sdk-ts` pins it **false** in a test (it followed the chapter) and must change.
+
+  `set-maintenance-mode.md` carried the mirror-image defect and it was never recorded: it said the
+  bay "MUST transition **from `Available`**" into maintenance, where the canonical table permits
+  `Available` **and `Faulted`**. A station built from that profile could not be told to stop
+  offering the one bay that was broken — which is the usual reason to send the command.
+
+- **One canonical transition table: [`05-state-machines.md` §2.3](spec/05-state-machines.md#23-transition-table).**
+  It was stated in full in **five** places — the chapter's diagram and its table,
+  `status-notification.md` §5, `state-machine-bay.mmd`, and a second copy of that diagram inside
+  `diagrams/README.md` — disagreeing on seven edges. Every other site now references it:
+  `status-notification.md` §5, `03-messages.md` §5.2, `01-architecture.md` §2.2, `04-flows.md`
+  Appendix C, `implementors-guide.md` §2.6 and its checklist, `diagrams/README.md` §4, and seven
+  conformance cases. Sites keep local detail — `previousStatus` rules, fault fields, per-flow
+  paths, which refusal applies to which source state — and state no transitions.
+
+- **§2.3 gains an `Effected by` column, and this is the root-cause fix.** The table merged two
+  different objects: the bay a station operates and the bay a server believes in. A station never
+  moves a bay to `Unknown` — that is the server giving up on hearing from it — yet the six
+  `→ Unknown` rows sat in one undifferentiated list with `Available → Occupied`. Each SDK read the
+  merge the other way and implemented half of it. **20 `Station` rows, 6 `Server` rows, 26 in
+  all.** A station implements the 20 and **MUST NOT** implement the 6; a server implements all 26.
+
+- **`Unknown` has five exits, not three — `Occupied` and `Finishing` are added.** §3.5 rule 2
+  requires a station that reboots mid-session to resume the session, and the reboot it describes
+  is a watchdog, a power cycle or a crash: a commanded Reset is refused with `3016` or settles
+  first, and a firmware update is gated by §7.4, but an uncommanded reboot has no gate. On the
+  next boot the bay is physically `Occupied` and owes a post-boot report (CORE-004). The three
+  determinate-idle exits gave that station no truthful report: `Available` frees a bay running a
+  paid session, `Faulted` is a lie, silence breaches CORE-004.
+
+- **BREAKING (server behaviour): an invalid transition is accepted as authoritative, recorded so
+  an operator can retrieve it, and reconciled against any session it contradicts. The server
+  MUST NOT Reset the station over one.** Four statements said four things — reject (chapter
+  preamble), log and MAY Reset (§2.5), reject (`status-notification.md` §5 preamble), accept
+  (`status-notification.md` §5 rule 1, twenty-three lines below the one it contradicts). §2.5 is
+  now the only one.
+
+  The station is the authority on its own hardware, the same allocation §1.5 already makes for
+  topology. This matches where mature protocols put the rule: OCPP 1.6's connector transition
+  matrix lives in *Operations Initiated by Charge Point* and governs what a Charge Point **MAY**
+  send; the Central System's entire stated duty on receipt is to acknowledge, and
+  `StatusNotification.conf` **defines no fields**, so the response cannot carry a rejection even
+  in principle. OCPP 2.0.1 fills its Status Notification use case's own *Error handling* field in
+  as **"n/a"**. The OCA's own compliance tool tolerates reversed StatusNotification ordering and
+  routes unexpected ones to a human rather than failing the run.
+
+  Two clauses came out of checking the decision rather than assuming it, and without them the rule
+  would have been decoration. **The record must be durable and operator-retrievable** — in the
+  reference server the warning goes to a file inside a container whose log directory is not a
+  volume and whose stdout it never reaches, no metric distinguishes a valid transition from an
+  invalid one, no alert can fire on it and no audit row records it. **And accepting the state is
+  not the end of it** — `Occupied → Available` with a live paid session frees the bay into the
+  availability cache while the session keeps billing, because nothing in the reference server
+  reacts to a bay status change except the cache, SSE and a counter. The server must reconcile and
+  settle, as it already does for a fault.
+
+  Reset is forbidden as a response. It was a `MAY`. Reset is now a reboot that preserves everything
+  persisted, so it repairs no model disagreement — it reboots working hardware, and with `force`
+  ends a paying customer's session, over a report that may well be true.
+
+- **`Occupied → Available` does not exist, and §7.2 assumed it did.** Its `Completed` and `Failed`
+  rows both had the bay returning straight to `Available`; three session rows reach a terminal
+  state directly from `Active`. Every exit from `Occupied` is to `Finishing` or `Faulted` — the
+  wind-down is physical and happens whatever ended the session. The `Failed` row also ignored
+  connection loss, where the bay is `Unknown` server-side.
+
+- **A restricted station `Rejects` every TriggerMessage except `BootNotification`, and applies
+  SetMaintenanceMode without reporting it.** §1.4 listed TriggerMessage among the repair commands a
+  `Pending` station must answer while the row above forbade every EVENT — and TriggerMessage exists
+  to produce one. `BootNotification` is the exception and the useful one: it ends the restriction
+  now instead of after `retryInterval`. §1.4 also now states which bay states are reachable while
+  restricted, which nothing did.
 
 ### Added
 
@@ -327,7 +414,7 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ### Breaking changes, and the order they must ship in
 
-Merged across all three arcs. The ordering rule is the same everywhere and it has one shape:
+Merged across all four arcs. The ordering rule is the same everywhere and it has one shape:
 **a receiver must accept a new form before any sender emits it, and enforcement of a narrowed
 rule must never ship ahead of the configuration that satisfies it.** Violating it does not
 degrade the fleet, it disconnects it.
@@ -340,6 +427,27 @@ degrade the fleet, it disconnects it.
 | 4 | **Station emits** | `bays[]`, `programs[]`, `bootReason: "Reconnect"`, a `mac` on every message. Refuse to send when it holds no key | The server accepted all of these at phase 2. **The server still does not enforce** — it logs MAC results, it does not reject on them |
 | 5 | **Server enforces** | Exact-version match; topology mismatch → `Pending` with `3018`; MAC required; refuse to send unsigned | Only now, and only after phase 4 has soaked. Each of these rejects a station that has not moved |
 | 6 | **Narrow** | Reduce the supported-version set to one value; default `MessageSigningMode` to `All` on the station | Cleanup. Safe once the fleet is uniform |
+
+**The bay-FSM arc slots into this table rather than extending it, and every item is early.** It
+changes no message shape, so nothing in it gates on a station moving first:
+
+| # | Phase | What ships |
+|--:|-------|-----------|
+| 2 | **Server accepts, enforces nothing** | Accept `Unavailable → Faulted`, `Unknown → Occupied` and `Unknown → Finishing`. Stop treating an unlisted transition as a reason to refuse a report. **Stop sending Reset on account of one** — this one is not additive to a station and is the only bay-FSM item that can end a customer's session if left in place |
+| 2 | **Server accepts, enforces nothing** | Route the invalid-transition record to a durable, operator-retrievable surface, and make the session reconciliation fire on it. Both are server-only |
+| 4 | **Station emits** | Report `Occupied`/`Finishing` post-boot where a session was resumed; accept `SetMaintenanceMode` from `Faulted`; `Reject` a TriggerMessage a restricted state forbids |
+
+**Never do this early:** the two new `Unknown` exits **before** the server accepts them. A station
+that reports `Occupied` post-boot to a server still enforcing the old three-exit table hands it a
+transition it will refuse — and the bay it refuses is the one running a paid session.
+
+**The SDKs are not symmetric here and the asymmetry is the whole cost.** `ospp-sdk-php`'s 18
+transitions were already exactly the `Station` sub-table before this arc, so it needs only the two
+new `Unknown` exits — its `Unavailable → Faulted` was right all along. `sdk-ts` needs the same two
+**and** `Unavailable → Faulted`, and it must delete the test that pins that transition **false**.
+Its six `→ Unknown` rows are correct for a server and wrong for a station, and nothing in either
+SDK says which job the class is doing; the class is exported and never invoked, so no shipped code
+depends on the current answer.
 
 **Never do these early**, each for a named reason:
 
@@ -356,8 +464,8 @@ degrade the fleet, it disconnects it.
 
 ### Document version — not bumped here
 
-Per the brief for this arc the version headers and tags are **untouched**. Recorded for whoever
-takes the release:
+Per the brief for each arc the version headers and tags are **untouched** — the bay-FSM arc included.
+Recorded for whoever takes the release:
 
 - **Document version: `0.10.0` → `0.11.0`.** Pre-1.0, so MINOR carries breaking changes
   ([VERSIONING.md](VERSIONING.md) §Pre-1.0 Policy). MAJOR stays `0`.
@@ -399,6 +507,21 @@ at reboot, not immediately.
 scalar; the MAJOR-comparison in version handling; any session-key TTL or expiry timer; the
 `Critical`-mode message classification table.
 
+**What the bay-FSM arc adds, on top of the three above.** Very little, and one line of it is a
+deletion:
+
+| Item | Cost |
+|---|---|
+| Report `Occupied` or `Finishing` in the post-boot StatusNotification where a session was resumed | The **only real item.** A station that already implements §3.5 crash recovery has the state in hand and is currently reporting something false; it changes which value it writes. A station that does *not* persist session state across reboot never reaches this and owes nothing |
+| Accept `SetMaintenanceMode` when the bay is `Faulted` | Widen one guard. Most implementations have this as a single `if (state == Available)` |
+| Report a fault from `Unavailable` rather than suppressing it | Remove a guard. Likely already the natural behaviour |
+| `Reject` a TriggerMessage while `Pending`, except `BootNotification` | One branch, in code the restricted-state work of the boot arc already touches |
+| **Delete:** any station-side handling of a transition *into* `Unknown` | A station never performs one. Code that models it is modelling the server's job |
+
+**Zero** new fields, zero schema changes, zero new persistence. The state count stays at seven and
+`bay-status.schema.json` is untouched. A station's transition table grows from 18 entries to 20 —
+if it stores one at all; most encode the rules as guards and never materialise a table.
+
 **The single most important cost fact:** the expensive items are the two reshaped messages, and
 the cheapest high-value item is signing — because the primitive is already there. The real
 constraint on constrained hardware is not the MAC but the **canonical re-serialization**, which is
@@ -406,19 +529,27 @@ cheap outbound and heavier inbound, the direction verification runs.
 
 ### Verification (all three arcs)
 
-- `tools/verify-schemas.py`: **314/314 PASS, 0 FAIL, 0 SKIP** — up from 305 at the start of the
+- `tools/verify-schemas.py`: **316/316 PASS, 0 FAIL, 0 SKIP** after the bay-FSM arc (+2: a
+  `previousStatus: "Unknown"` negative — the existing negative covered `status` only, and
+  `previousStatus` is the wire-visible consequence of a station implementing a `Server` row — and a
+  positive for a fault reported from `Unavailable`. Each was checked to fail, or pass, for exactly
+  one reason: the negative trips `/previousStatus enum` and nothing else). Before that arc,
+  **314/314** — up from 305 at the start of the
   boot/signing arc, +9 vectors: a `Pending`/`3018` response with `details`, a `Reconnect` boot, a
   program-level fault report, and six negatives pinning the new rules as actively refused —
   `services[]` on a StatusNotification, `Accepted` without `sessionKey`, `Pending` without
   `sessionKey`, a `Pending`/`3018` without `details`, a `Faulted` bay without an error code, and a
   program marked available that carries one anyway.
-- All schemas compile: **86/86** (+1: `bay-topology.schema.json`).
+- All schemas compile: **86/86** (+1: `bay-topology.schema.json`). Unchanged by the bay-FSM arc,
+  which touches no schema.
 - Example payloads against their schemas (CI's `validate-examples` script): **51/51**.
 - Every internal cross-reference resolves, checked with GitHub's own slug rules. The only
   non-resolving targets are three placeholders inside style-guide prose — the illustrative
   `link`, `#section` and `NN-name.md` in `CONTRIBUTING.md` §Style and `00-introduction.md` — none
   of which is a real target.
-- `tools/verify-protocol.sh`: **14 failures, down from the 15-failure branch baseline, +0 new.**
+- `tools/verify-protocol.sh`: **14 failures, unchanged across the bay-FSM arc** — measured at
+  `d4db331` before it began and again after every commit in it. Down from the 15-failure branch
+  baseline, +0 new.
   The one that cleared is `boot-notification-response`'s `errorCode`/`errorText` being absent from
   `03-messages.md`, fixed as a side effect of adding the `details` row. The remaining 14 are all
   pre-existing and none is in this arc's scope: three `08-configuration.md` numeric-consistency
@@ -551,7 +682,9 @@ The bay FSM still has **seven** states and its transition table is untouched. Th
 not the model. (The bay table was §1.3 when this was written; the station machine was inserted ahead
 of it afterwards and it is now [§2.3](spec/05-state-machines.md#23-transition-table).)
 
-Found and **recorded rather than fixed** — see [KNOWN-ISSUES.md](KNOWN-ISSUES.md): the bay FSM is
+Found and **recorded rather than fixed** — see [KNOWN-ISSUES.md](KNOWN-ISSUES.md). *(Fixed later, in
+the bay-FSM arc; see the Unreleased entry above. The count below is low — the machine was stated in
+full in five places, not two.)* The bay FSM is
 specified twice and the two copies disagree, on `Unavailable → Faulted`, on whether anything
 transitions *into* `Unknown`, and — in four separate statements, two of them 23 lines apart in one
 file — on whether an invalid transition is rejected or accepted as authoritative. Each SDK
