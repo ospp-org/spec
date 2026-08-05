@@ -146,11 +146,12 @@ Verify that a station sends BootNotification as the first message after establis
 1. Station sends any MQTT message before BootNotification.
 2. BootNotification payload fails JSON schema validation.
 3. Station processes server commands while `Rejected`; or fails to answer one while `Pending`; or activates hardware for a StartService in either state.
-3a. Station enters normal operation after an `Accepted` that carried no `sessionKey`. Proceeding keyless is the worst available failure: it can sign nothing, the server rejects everything it sends, and the resulting MAC-failure events name the station as the suspect.
-4. Station does not retry BootNotification after Rejected or Pending within the expected interval (+/- 15% tolerance).
-5. Station does not adopt the server-provided `heartbeatIntervalSec` (Heartbeat sent at a different cadence).
-6. LWT is absent from the MQTT CONNECT packet.
-7. Station does not send StatusNotification for all bays after Accepted.
-8. Station stops retrying BootNotification after receiving Rejected with `1007 PROTOCOL_VERSION_MISMATCH`. A station that stops cannot be recovered over the protocol — it accepts no commands while rejected, so it can be handed no firmware update — and it will not recover if the server later adds its version to the supported set.
-9. Station reports `Unknown` in `status` on any bay. `Unknown` is a state the station holds at power-on and resolves by self-test; reporting it transmits the absence of an answer in place of an answer, and leaves the server holding the bay where it refuses payment and StartService (`3002 BAY_NOT_READY`). A station that has not finished evaluating a bay has not yet satisfied result 6 — it reports when it knows.
-10. Station includes `previousStatus` on the post-boot report. The only truthful value there is `Unknown`, which is not a wire value; the field's absence is what marks this message as the boot report.
+4. Station enters normal operation after an `Accepted` that carried no `sessionKey`. Proceeding keyless is the worst available failure: it can sign nothing, the server rejects everything it sends, and the resulting MAC-failure events name the station as the suspect.
+5. Station does not retry BootNotification after Rejected or Pending within the expected interval (+/- 15% tolerance).
+6. Station does not adopt the server-provided `heartbeatIntervalSec` (Heartbeat sent at a different cadence).
+7. LWT is absent from the MQTT CONNECT packet.
+8. Station does not send StatusNotification for all bays after Accepted.
+9. Station stops retrying BootNotification after receiving Rejected with `1007 PROTOCOL_VERSION_MISMATCH`. A station that stops cannot be recovered over the protocol — it accepts no commands while rejected, so it can be handed no firmware update — and it will not recover if the server later adds its version to the supported set.
+10. Station reports `Unknown` in `status` on any bay. `Unknown` is a state the station holds at power-on and resolves by self-test; reporting it transmits the absence of an answer in place of an answer, and leaves the server holding the bay where it refuses payment and StartService (`3002 BAY_NOT_READY`). A station that has not finished evaluating a bay has not yet satisfied result 6 — it reports when it knows.
+11. Station reports `services[]` on a StatusNotification, or omits a program the bay declared at provisioning instead of reporting it `available: false`.
+12. Station includes `previousStatus` on the post-boot report. The only truthful value there is `Unknown`, which is not a wire value; the field's absence is what marks this message as the boot report.
