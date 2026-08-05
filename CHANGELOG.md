@@ -136,14 +136,22 @@ as described in [VERSIONING.md](VERSIONING.md).
   leaves one peer signing and the other not, and with both directions failing closed the station
   goes silent both ways. `Static` makes the change and the new key land on the same event.
 
-- **`sessionKey` is REQUIRED on every `Accepted` boot response (BREAKING — server).** It was
-  conditional on `MessageSigningMode`, which is station configuration and therefore unreachable
+- **`sessionKey` is REQUIRED on every `Accepted` and every `Pending` boot response (BREAKING —
+  server).** It was conditional on `MessageSigningMode`, which is station configuration and therefore unreachable
   from this message's schema — so the rule could never be enforced and would have stayed prose
   indefinitely. A third `allOf` branch now enforces it, mirroring the two that exist for
   `Rejected` and `Pending`. Under `None` the key is issued and unused; the cost is 44 base64
   characters once per connection.
 
-  **The station's side of it was undefined and is now defined.** An `Accepted` with no
+  **`Pending` is included, and leaving it out would have been fatal.** A `Pending` station answers
+  server commands; every command is signed; both the sending and receiving paths fail closed on a
+  missing key. Withhold the key on `Pending` and the server may not send, the station may not
+  accept, and it may not answer — the repair channel the `Pending` window exists for would have
+  been closed by the signing rules landed in the same arc. `Rejected` needs no key: it answers
+  nothing. This also makes §5.9's rule literally true — the key is scoped to the MQTT session, and
+  a `Pending` station has one.
+
+  **The station's side of it was undefined and is now defined.** An `Accepted` or `Pending` with no
   `sessionKey` is **malformed**: log `1005`, do not enter normal operation, retry per
   [CORE-011](spec/profiles/core/README.md). Explicitly **not** a downgrade to unsigned — a station
   that proceeds keyless can sign nothing, has everything it sends rejected, and is named as the
@@ -398,10 +406,12 @@ cheap outbound and heavier inbound, the direction verification runs.
 
 ### Verification (all three arcs)
 
-- `tools/verify-schemas.py`: **310/310 PASS, 0 FAIL, 0 SKIP** — up from 305 at the start of the
-  boot/signing arc, +5 vectors: a `Pending`/`3018` response with `details`, a `Reconnect` boot, a
-  program-level fault report, `services[]` pinned as **rejected** on StatusNotification, and
-  `Accepted`-without-`sessionKey` pinned as rejected.
+- `tools/verify-schemas.py`: **314/314 PASS, 0 FAIL, 0 SKIP** — up from 305 at the start of the
+  boot/signing arc, +9 vectors: a `Pending`/`3018` response with `details`, a `Reconnect` boot, a
+  program-level fault report, and six negatives pinning the new rules as actively refused —
+  `services[]` on a StatusNotification, `Accepted` without `sessionKey`, `Pending` without
+  `sessionKey`, a `Pending`/`3018` without `details`, a `Faulted` bay without an error code, and a
+  program marked available that carries one anyway.
 - All schemas compile: **86/86** (+1: `bay-topology.schema.json`).
 - Example payloads against their schemas (CI's `validate-examples` script): **51/51**.
 - Every internal cross-reference resolves: 0 broken anchor links and 0 broken file links across

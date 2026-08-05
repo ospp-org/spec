@@ -60,7 +60,51 @@
             "maxLength": 128,
             "description": "OPTIONAL. Machine-readable name for the program-level errorCode, in UPPER_SNAKE_CASE. Accompanies errorCode whenever that is present."
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "available": {
+                  "const": true
+                }
+              },
+              "required": [
+                "available"
+              ]
+            },
+            "then": {
+              "properties": {
+                "errorCode": false,
+                "errorText": false
+              }
+            }
+          },
+          {
+            "if": {
+              "required": [
+                "errorCode"
+              ]
+            },
+            "then": {
+              "required": [
+                "errorText"
+              ]
+            }
+          },
+          {
+            "if": {
+              "required": [
+                "errorText"
+              ]
+            },
+            "then": {
+              "required": [
+                "errorCode"
+              ]
+            }
+          }
+        ]
       }
     },
     "errorCode": {
@@ -73,5 +117,25 @@
       "maxLength": 128,
       "description": "Bay-level machine-readable error name in UPPER_SNAKE_CASE. REQUIRED when `status` is Faulted."
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "Faulted"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "errorCode",
+          "errorText"
+        ]
+      }
+    }
+  ]
 }

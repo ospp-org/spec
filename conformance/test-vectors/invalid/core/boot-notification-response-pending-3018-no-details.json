@@ -1,0 +1,9 @@
+{
+  "status": "Pending",
+  "serverTime": "2026-03-01T10:00:00.000Z",
+  "heartbeatIntervalSec": 30,
+  "retryInterval": 300,
+  "errorCode": 3018,
+  "errorText": "TOPOLOGY_MISMATCH",
+  "sessionKey": "cGVuZGluZy1uby1kZXRhaWxzLXNlc3Npb24ta2V5LTAwMDAwMCE="
+}

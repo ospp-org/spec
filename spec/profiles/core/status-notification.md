@@ -77,9 +77,13 @@ Unknown    --> Unavailable   (maintenance mode detected after reconnection)
 ```
 
 1. The server **MUST** validate incoming transitions against this table. Invalid transitions **MUST** be logged but **SHOULD NOT** cause the server to drop the message -- the server **SHOULD** accept the reported state as authoritative and log a warning.
-2. The station **MUST** include `previousStatus` whenever the state changes, and **MUST** omit it on the post-boot report. The post-boot report is the station leaving `Unknown`, and `Unknown` is not a value this field can carry (rule 2 of section 7) — so there is nothing truthful to put there. Its absence is therefore load-bearing: on a StatusNotification, no `previousStatus` means *this is the boot report*, and a server MAY read it that way.
+2. The station **MUST** include `previousStatus` when this report's `status` differs from the last `status` it reported for the bay, and **MUST** omit it otherwise. Two cases omit it, and they are the only two:
+   - **The post-boot report.** The station is leaving `Unknown`, and `Unknown` is not a value this field can carry (§7 rule 2), so there is nothing truthful to put there.
+   - **A program-only report** (rule 4). The bay's status did not change, so there is no transition to name; writing `status` into `previousStatus` would assert a `X → X` transition that no transition table contains and that [Chapter 05 §2.5](../../05-state-machines.md) therefore makes invalid.
+
+   The field's absence is load-bearing but narrower than it looks: it means **this report is not a bay transition**. A server distinguishes the post-boot case by position — it is the first report after an accepted boot — not by the absence alone.
 3. When a bay transitions to `Faulted`, the station **MUST** include the bay-level `errorCode` and `errorText` from the 5xxx error range.
-4. Program availability is reported on **every** StatusNotification, not only on a transition. A program that becomes unavailable while the bay stays `Available` — one consumable exhausted, one nozzle blocked — is itself a bay state change for the purposes of §7 rule 3, and the station **MUST** report it within 1 second.
+4. Program availability is reported on **every** StatusNotification, not only on a bay transition. A program that becomes unavailable while the bay stays `Available` — one consumable exhausted, one nozzle blocked — **MUST** be reported within 1 second, on the same deadline §7 rule 3 sets for a bay transition. Such a report is **not** a bay transition: `status` is unchanged and `previousStatus` is omitted (rule 2). The server updates program availability and leaves the bay's state alone.
 
 ## 6. Error Reporting
 
@@ -134,6 +138,10 @@ A bay can be perfectly healthy and still have one program it cannot run — a co
       {
         "programNumber": 2,
         "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
       }
     ]
   }
@@ -162,6 +170,10 @@ A bay can be perfectly healthy and still have one program it cannot run — a co
       },
       {
         "programNumber": 2,
+        "available": false
+      },
+      {
+        "programNumber": 3,
         "available": false
       }
     ],

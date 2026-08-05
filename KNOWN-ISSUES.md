@@ -53,7 +53,13 @@ The following issues were resolved during the 7 focused audit phases (error-code
 
 ### Resolved in Backlog Batch (30 issues removed)
 
-The following 30 issues were resolved in the backlog batch fix:
+The following 30 issues were resolved in the backlog batch fix.
+
+> **This table is a record of what was decided then, not a statement of the current rules.** Some
+> of its resolutions have since been superseded — the `MessageSigningMode` enum lost `Critical`
+> and its default moved to `All`, the `mac` field is no longer conditional, and `bootReason` gained
+> `Reconnect` for the case V2-047 resolved as `ErrorRecovery`. Read [CHANGELOG.md](CHANGELOG.md)
+> for what is normative; read this for why a thing was once written the way it was.
 
 | ID | Category | Severity | Resolution |
 |----|----------|----------|------------|

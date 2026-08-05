@@ -429,6 +429,10 @@ Since the station is online, it also reports the session start to the server via
         "available": true
       },
       {
+        "programNumber": 2,
+        "available": true
+      },
+      {
         "programNumber": 3,
         "available": true
       }
@@ -595,6 +599,10 @@ Since the station is online, it reports the bay status change in real-time:
         "available": true
       },
       {
+        "programNumber": 2,
+        "available": true
+      },
+      {
         "programNumber": 3,
         "available": true
       }
@@ -691,6 +699,10 @@ After the hardware wind-down, Bay 2 returns to `Available`:
     "programs": [
       {
         "programNumber": 1,
+        "available": true
+      },
+      {
+        "programNumber": 2,
         "available": true
       },
       {

@@ -223,6 +223,10 @@ Bay 1 transitions from `Available` to `Occupied`.
       {
         "programNumber": 2,
         "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
       }
     ]
   }
@@ -461,6 +465,10 @@ No StopService command from the server is needed — the station knows the autho
       {
         "programNumber": 2,
         "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
       }
     ]
   }
@@ -495,6 +503,10 @@ After the drain cycle completes (about 1.4 seconds), bay 1 returns to `Available
       },
       {
         "programNumber": 2,
+        "available": true
+      },
+      {
+        "programNumber": 3,
         "available": true
       }
     ]

@@ -759,11 +759,11 @@ The middle mode, `Critical`, is **removed** rather than deprecated. With everyth
 
 1. Station sends BootNotification REQUEST [MSG-001] (exempt from signing — no key yet)
 2. Server generates a cryptographically random 32-byte key
-3. Server includes `sessionKey` (Base64-encoded) in the BootNotification RESPONSE [MSG-001]. This is **unconditional on every `Accepted` response** — not conditional on `MessageSigningMode`, which is station configuration and therefore unreachable from this message's schema. Under `None` the key is issued and unused.
+3. Server includes `sessionKey` (Base64-encoded) in the BootNotification RESPONSE [MSG-001]. This is **unconditional on every `Accepted` and every `Pending` response** — not conditional on `MessageSigningMode`, which is station configuration and therefore unreachable from this message's schema. `Pending` is included because a `Pending` station answers signed commands ([Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states)); without a key that channel could not exist. Under `None` the key is issued and unused.
 4. The session key is protected in transit by TLS 1.2+ encryption
 5. Both sides store the key in volatile memory for the duration of the MQTT session, and discard it when that session ends
 
-A station that receives `Accepted` **without** a `sessionKey` treats the response as malformed and re-boots rather than proceeding keyless — [`boot-notification.md` §5.3](profiles/core/boot-notification.md) is normative. Proceeding keyless is the worst of the available failures: the station cannot sign, every message it sends is rejected, and the MAC-failure events raised against it name it as the suspect.
+A station that receives `Accepted` or `Pending` **without** a `sessionKey` treats the response as malformed and re-boots rather than proceeding keyless — [`boot-notification.md` §5.3](profiles/core/boot-notification.md) is normative. Proceeding keyless is the worst of the available failures: the station cannot sign, every message it sends is rejected, and the MAC-failure events raised against it name it as the suspect.
 
 ### 5.3 Canonical Form
 
@@ -853,6 +853,8 @@ No message carries a MAC. TLS provides the only integrity protection, and there 
 
 The signing path and the verification path **MUST** both fail closed. Neither peer may substitute an unsigned message for a signed one, and neither may accept an unverified message in place of a verified one.
 
+Everything in this section applies **while `MessageSigningMode` is `All`** — that is, in every production deployment. Under `None` no message carries a MAC and none is expected, so none of these conditions can arise; that mode is development and test only ([§5.6](#56-message-signing-classification)).
+
 #### Receiving
 
 | Condition | Error Code | Action |
@@ -867,7 +869,7 @@ The signing path and the verification path **MUST** both fail closed. Neither pe
 | Condition | Action |
 |-----------|--------|
 | No session key held for the peer | **Refuse to send.** The sender **MUST NOT** publish the message unsigned. It **MUST** log the refusal and surface it to the operator, and **MUST NOT** silently drop it without a record |
-| Sender is a **server** with no key for the target station | Withhold the command. The station is not in a state where it can act on one: no key means no accepted boot, or a session that has ended. Treat the command as undeliverable and fail whatever operation depended on it, rather than emitting something the station must reject |
+| Sender is a **server** with no key for the target station | Withhold the command. The station is not in a state where it can act on one: no key means the station is `Rejected`, or its session has ended — a `Pending` station holds a key precisely so this case does not close its repair channel ([`boot-notification.md` §5.3](profiles/core/boot-notification.md)). Treat the command as undeliverable and fail whatever operation depended on it, rather than emitting something the station must reject |
 | Sender is a **station** with no key | It is not `Operational` — it is `Booting`, restricted, or disconnected ([Chapter 05 §1](05-state-machines.md#1-station-state-machine)) — and in none of those states is it permitted to originate a message anyway. Boot first |
 
 > **Why the sending half is normative, and why it is the more important half.**
@@ -923,7 +925,7 @@ Where OSPP does have non-repudiation it comes from an **asymmetric** signature, 
 
 1. The key is issued in the BootNotification RESPONSE and both peers hold it in volatile memory only ([§4.3](#43-key-management-lifecycle)).
 2. Both peers **MUST** discard it when the MQTT session ends — the station on disconnect, the server on the LWT or on any broker-reported disconnect.
-3. Neither peer **MUST** expire it while the session is alive. A key that outlives nothing and expires on a clock is a fuse that can only ever fire early: the station is online and healthy, its messages start being rejected, the server's commands start being refused, and the security events raised name the station.
+3. A peer **MUST NOT** expire the key while the MQTT session is alive. A clock-based TTL on this key is forbidden. A key that outlives nothing and expires on a clock is a fuse that can only ever fire early: the station is online and healthy, its messages start being rejected, the server's commands start being refused, and the security events raised name the station.
 4. Any reconnect produces a BootNotification ([CORE-001](profiles/core/README.md)), which issues a new key. That is the whole of the rotation story, and it is why no separate mechanism is needed: the event that would justify re-keying is the same event that already re-keys.
 
 > **Divergence from TLS, SSH and IPsec, and why none of their drivers apply.**

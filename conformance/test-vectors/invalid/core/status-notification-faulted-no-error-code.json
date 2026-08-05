@@ -1,0 +1,11 @@
+{
+  "bayId": "bay_a1b2c3d4e5f6",
+  "bayNumber": 1,
+  "status": "Faulted",
+  "previousStatus": "Available",
+  "programs": [
+    { "programNumber": 1, "available": false },
+    { "programNumber": 2, "available": false },
+    { "programNumber": 3, "available": false }
+  ]
+}

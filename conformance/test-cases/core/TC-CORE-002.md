@@ -62,7 +62,8 @@ Verify that the station correctly handles MQTT disconnection scenarios: graceful
     {
       "status": "Accepted",
       "heartbeatIntervalSec": 30,
-      "serverTime": "2026-01-15T12:00:00.000Z"
+      "serverTime": "2026-01-15T12:00:00.000Z",
+      "sessionKey": "cmVjb25uZWN0LWJvb3Qtc2Vzc2lvbi1rZXktMDAwMDAwMDAwMCE="
     }
     ```
 17. Verify the station publishes StatusNotification for each bay, and inspect each payload. This is the reconnect path, and it is the one that resolves the server's `Unknown`: the server set every bay on this station to `Unknown` when it received the ConnectionLost ([CORE-008](../../../spec/profiles/core/README.md)), and only an accepted report clears it.
@@ -81,7 +82,7 @@ Verify that the station correctly handles MQTT disconnection scenarios: graceful
 24. Wait 299 seconds (just before `ConnectionLostGracePeriod` expires).
 25. Reconnect the station to the MQTT broker.
 26. Observe the station sends BootNotification.
-27. Send BootNotification response with `status: "Accepted"`.
+27. Send BootNotification response with `status: "Accepted"`, carrying a `sessionKey`. Every acceptance does; a response without one is malformed and a conforming station refuses it (`TC-CORE-001` Part F).
 28. Verify the server did NOT mark the station as `Offline` (grace period was not exceeded).
 29. Verify the station resumes normal operation (Heartbeat, StatusNotification).
 

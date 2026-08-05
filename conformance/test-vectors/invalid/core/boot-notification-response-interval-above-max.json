@@ -1,5 +1,6 @@
 {
   "status": "Accepted",
   "serverTime": "2026-03-01T10:00:00.000Z",
-  "heartbeatIntervalSec": 3601
+  "heartbeatIntervalSec": 3601,
+  "sessionKey": "aXNvbGF0ZS10aGUtb25lLWRlZmVjdC10aGlzLXZlY3Rvci1uYW1lcyE="
 }

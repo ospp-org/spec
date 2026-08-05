@@ -7,13 +7,49 @@
   "errorText": "TOPOLOGY_MISMATCH",
   "details": {
     "expected": [
-      { "bayNumber": 1, "programNumbers": [1, 2, 3] },
-      { "bayNumber": 2, "programNumbers": [1, 2, 3] }
+      {
+        "bayNumber": 1,
+        "programNumbers": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "bayNumber": 2,
+        "programNumbers": [
+          1,
+          2,
+          3
+        ]
+      }
     ],
     "declared": [
-      { "bayNumber": 1, "programNumbers": [1, 2, 3] },
-      { "bayNumber": 2, "programNumbers": [1, 2, 3] },
-      { "bayNumber": 3, "programNumbers": [1, 2, 3] }
+      {
+        "bayNumber": 1,
+        "programNumbers": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "bayNumber": 2,
+        "programNumbers": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "bayNumber": 3,
+        "programNumbers": [
+          1,
+          2,
+          3
+        ]
+      }
     ]
-  }
+  },
+  "sessionKey": "dG9wb2xvZ3ktcGVuZGluZy1zZXNzaW9uLWtleS0yMDI2LTAzLTAxISE="
 }

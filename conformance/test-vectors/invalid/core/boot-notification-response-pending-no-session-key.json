@@ -2,6 +2,5 @@
   "status": "Pending",
   "serverTime": "2026-03-01T10:00:00.000Z",
   "heartbeatIntervalSec": 30,
-  "retryInterval": 30,
-  "sessionKey": "cGVuZGluZy1zZXNzaW9uLWtleS0yMDI2LTAzLTAxVDEwOjAwOjAwWiE="
+  "retryInterval": 30
 }

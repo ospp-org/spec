@@ -100,7 +100,7 @@ The app connects to the station over BLE. The BLE connection state transitions: 
 
 The app verifies:
 - `stationId` matches the expected station from the scan
-- `bleProtocolVersion` is compatible (major version 1)
+- `bleProtocolVersion` is one the app supports. There is no compatibility relation derived from a version component — a shared MAJOR implies nothing ([VERSIONING.md](../../VERSIONING.md)) — and this station reports `0.2.1`
 - `connectivity` is `"Offline"` -- confirms the Full Offline flow is needed
 
 The BLE connection state transitions: `CONNECTED` -> `HANDSHAKE`.

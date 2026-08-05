@@ -171,6 +171,10 @@ The bay transitions from `Occupied` to `Finishing` while the drain cycle complet
       {
         "programNumber": 2,
         "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
       }
     ]
   }
@@ -306,6 +310,10 @@ After the drain cycle completes (about 3 seconds), bay 1 returns to `Available`.
       },
       {
         "programNumber": 2,
+        "available": true
+      },
+      {
+        "programNumber": 3,
         "available": true
       }
     ]

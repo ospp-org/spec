@@ -6,6 +6,14 @@
     {
       "programNumber": 1,
       "available": true
+    },
+    {
+      "programNumber": 2,
+      "available": true
+    },
+    {
+      "programNumber": 3,
+      "available": true
     }
   ]
 }

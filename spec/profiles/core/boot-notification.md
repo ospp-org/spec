@@ -54,8 +54,12 @@ If the response is `Rejected` or `Pending`, the station **MUST** retry according
 | `serverTime` | string | Yes | ISO 8601 UTC server timestamp for clock sync. |
 | `heartbeatIntervalSec` | integer | Yes | Heartbeat interval in seconds (10--3600). |
 | `retryInterval` | integer | Cond. | Seconds to wait before retrying. Required when `status` is `Rejected` or `Pending`. |
+| `errorCode` | integer | Cond. | OSPP error code explaining the outcome. **Required** when `status` is `Rejected`; carried on a `Pending` response when the reason is `3018 TOPOLOGY_MISMATCH`. |
+| `errorText` | string | Cond. | Machine-readable error name in `UPPER_SNAKE_CASE`. **Required** when `status` is `Rejected`; accompanies `errorCode` whenever that is present. |
+| `supportedVersions` | array | Cond. | Every protocol version the server supports. **Required** when `Rejected` with `1007 PROTOCOL_VERSION_MISMATCH`. |
+| `details` | object | Cond. | Diagnostic detail for `errorCode`, carrying `expected` and `declared`. **Required** on a `Pending` response with `3018`; absent otherwise. See §6.1. |
 | `configuration` | object | No | Key-value configuration pairs pushed to the station. |
-| `sessionKey` | string | Cond. | Base64-encoded 32-byte HMAC session key for message authentication. **Required on every `Accepted` response**, unconditionally — see §5.3. Absent on `Rejected` and `Pending`, which establish no session. |
+| `sessionKey` | string | Cond. | Base64-encoded 32-byte HMAC session key for message authentication. **Required on every `Accepted` and every `Pending` response**, unconditionally — see §5.3. Absent on `Rejected`. |
 
 ## 5. Processing Rules
 
@@ -63,7 +67,7 @@ If the response is `Rejected` or `Pending`, the station **MUST** retry according
 2. The station **MUST NOT** send any other message before receiving a BootNotification response. "Any other message" means any EVENT and any REQUEST the station originates; it does not reach a RESPONSE, because a station cannot originate one.
 3. On `Accepted`: the station **MUST** store the `heartbeatIntervalSec`, apply any `configuration` values, store the `sessionKey`, synchronize its internal clock to `serverTime`, and transition to `Operational` ([Chapter 05 §1.2](../../05-state-machines.md#12-states-6)).
 4. On `Rejected`: the station **MUST** wait `retryInterval` seconds (default 30s) and retry the BootNotification. Retries are unlimited. The station enters the `Rejected` restricted state: it accepts no commands, sends nothing but its retries, and serves no customers.
-5. On `Pending`: the station **MUST** wait `retryInterval` seconds (default 30s) and retry. Retries are unlimited. The station enters the `Pending` restricted state: it **MUST** receive, process and answer server commands, **MUST NOT** send anything unsolicited, and **MUST NOT** begin new customer service — StartService [MSG-005] and ReserveBay [MSG-003] are answered `Rejected` with `3002 BAY_NOT_READY`, and no BLE offline session is authorized. A session already running continues, is metered, and is settled. The command channel stays open precisely because `Pending` is the window in which an operator repairs whatever is outstanding, and the repair usually needs a command.
+5. On `Pending`: the station **MUST** store the `sessionKey` — a `Pending` station answers signed commands and needs it (§5.3) — then wait `retryInterval` seconds (default 30s) and retry. Retries are unlimited. The station enters the `Pending` restricted state: it **MUST** receive, process and answer server commands, **MUST NOT** send anything unsolicited, and **MUST NOT** begin new customer service — StartService [MSG-005] and ReserveBay [MSG-003] are answered `Rejected` with `3002 BAY_NOT_READY`, and no BLE offline session is authorized. A session already running continues, is metered, and is settled. The command channel stays open precisely because `Pending` is the window in which an operator repairs whatever is outstanding, and the repair usually needs a command.
 6. If no response is received within 30 seconds, the station **MUST** log error `1010 MESSAGE_TIMEOUT`, wait 60 seconds, and retry indefinitely.
 7. After a successful `Accepted` response, the station **MUST** send a StatusNotification for each bay to report current bay states.
 8. If `pendingOfflineTransactions` > 0, the server **SHOULD** schedule offline transaction synchronization after acceptance.
@@ -103,13 +107,17 @@ Rule 1 requires a BootNotification after **every** MQTT connection, reconnection
 
 ### 5.3 An `Accepted` Without a `sessionKey` Is Malformed
 
-Every `Accepted` response **MUST** carry `sessionKey`. The requirement is unconditional and is enforced by the schema.
+Every `Accepted` **and every `Pending`** response **MUST** carry `sessionKey`. The requirement is unconditional and is enforced by the schema.
+
+`Pending` is included for a reason that is easy to miss and fatal to omit. A `Pending` station **answers server commands** (§5 rule 5) and **every command is signed** ([Chapter 06 §5.6](../../06-security.md#56-message-signing-classification)), while both the sending and the receiving path fail closed on a missing key ([§5.7](../../06-security.md#57-failure-handling--both-directions-fail-closed)). Withhold the key on `Pending` and the server may not send the command, the station may not accept it, and the station may not answer it — which closes the exact channel the `Pending` window exists to keep open. `Rejected` needs no key: it accepts no commands and establishes nothing.
+
+This is also what makes [§5.9](../../06-security.md#59-session-key-lifetime)'s rule literally true. The key is scoped to the **MQTT session**, and a `Pending` station has one — it connected, subscribed, and is exchanging messages.
 
 It used to be conditional — required only when `MessageSigningMode` was not `None` — and that form could never be enforced, because the mode is **station configuration, not a field of this message**. No JSON Schema `if`/`then` can reach it, so the rule would have stayed prose indefinitely while the schema accepted a keyless acceptance. Making it unconditional costs 44 base64 characters on a message sent once per connection; under `None` the key is simply unused.
 
 **What the station does when it arrives anyway** — this is the half that makes the requirement enforceable, and it was undefined:
 
-1. A station that receives `status: "Accepted"` with no `sessionKey` **MUST** treat the response as **malformed**. It **MUST NOT** transition to `Operational`.
+1. A station that receives `status: "Accepted"` or `status: "Pending"` with no `sessionKey` **MUST** treat the response as **malformed**. It **MUST NOT** transition to `Operational`, and **MUST NOT** enter `Pending` and begin answering commands it cannot verify.
 2. It **MUST** log `1005 INVALID_MESSAGE_FORMAT`, remain in `Booting`, and retry the BootNotification per [CORE-011](README.md) — where retry is already defined, already unlimited, and already the recovery for every other bad boot response.
 3. It **MUST NOT** fall back to unsigned operation. That is the failure mode this rule exists to prevent: a station that proceeds keyless cannot sign, the server rejects every unsigned message it sends and raises MAC-failure security events naming *the station* — so a silent downgrade transacts into a black hole and gets blamed for it.
 
@@ -218,6 +226,7 @@ The station declared a third bay the server has no record of. It stays reachable
     "serverTime": "2026-02-13T10:00:00.250Z",
     "heartbeatIntervalSec": 30,
     "retryInterval": 300,
+    "sessionKey": "dGFwbHktcGVuZGluZy1rZXktMjAyNi0wMi0xM1QxMDowMDowMFo=",
     "errorCode": 3018,
     "errorText": "TOPOLOGY_MISMATCH",
     "details": {

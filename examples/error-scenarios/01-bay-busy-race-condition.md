@@ -173,6 +173,14 @@ reports the bay is already running a cycle. The station responds with error code
       {
         "programNumber": 1,
         "available": true
+      },
+      {
+        "programNumber": 2,
+        "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
       }
     ]
   },

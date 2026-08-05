@@ -262,6 +262,10 @@ The station controller checks that bay 2 is Available, transitions it to Reserve
       {
         "programNumber": 2,
         "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
       }
     ]
   }
@@ -413,6 +417,10 @@ The station controller:
       {
         "programNumber": 2,
         "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
       }
     ]
   }
@@ -552,6 +560,10 @@ After 300 seconds, the station's session timer fires. The station controller:
       {
         "programNumber": 2,
         "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
       }
     ]
   }
@@ -586,6 +598,10 @@ After the drain cycle completes (~2 seconds), bay 2 returns to Available.
       },
       {
         "programNumber": 2,
+        "available": true
+      },
+      {
+        "programNumber": 3,
         "available": true
       }
     ]

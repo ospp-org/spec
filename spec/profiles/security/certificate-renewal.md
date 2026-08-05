@@ -124,7 +124,7 @@ If the station's secure element or crypto hardware cannot generate a new keypair
 - The station **MUST** generate the new private key on-device. The private key **MUST NOT** be transmitted to the server or included in the CSR (the CSR contains only the public key).
 - The CSR **MUST** use ECDSA P-256. Other algorithms **MUST** be rejected by the server.
 - The server **MUST** verify that the CSR's Subject CN matches the station ID from the mTLS session. This prevents a compromised station from requesting certificates for other stations.
-- All three messages (SignCertificate, CertificateInstall, TriggerCertificateRenewal) **MUST** be HMAC-signed, like every other message because they handle security-critical certificate material.
+- All three messages (SignCertificate, CertificateInstall, TriggerCertificateRenewal) **MUST** be HMAC-signed, like every other message. No per-message judgement is involved and none is needed — the rule is universal ([Chapter 06 §5.6](../../06-security.md#56-message-signing-classification)).
 - The station **SHOULD** keep the old certificate and private key until the new certificate is successfully used for a TLS connection. If the new certificate causes a connection failure, the station **MAY** fall back to the old certificate. This overlap is bounded: at most **one CURRENT plus one PREVIOUS** certificate may be valid at a time, and the old one **MUST** be discarded once the new one has been proven on a TLS connection — see [Chapter 06 — Security §4.7.6](../../06-security.md).
 
 ## 8. Configuration

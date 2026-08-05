@@ -143,6 +143,10 @@ SessionEnded is an EVENT (fire-and-forget) — no response is sent by the server
       {
         "programNumber": 2,
         "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
       }
     ]
   }

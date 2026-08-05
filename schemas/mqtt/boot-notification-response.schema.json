@@ -58,7 +58,7 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 1024,
-      "description": "Base64-encoded 32-byte HMAC session key. REQUIRED on every Accepted response, unconditionally. It was previously conditional on MessageSigningMode -- which is station configuration, not a field of this message, so the condition was not expressible in JSON Schema and would have stayed prose forever. Under MessageSigningMode None the key is simply unused; issuing one costs 44 bytes and makes the requirement machine-checkable. A station that receives Accepted WITHOUT it MUST treat the response as malformed (Core profile -- BootNotification section 5.3)."
+      "description": "Base64-encoded 32-byte HMAC session key. REQUIRED on every Accepted AND every Pending response, unconditionally. Pending is included because a Pending station answers server commands (Chapter 05 section 1.4) and every command is signed -- without a key the server could not send one and the station could not answer, which would close the exact channel the Pending window exists to keep open. Absent on Rejected, which accepts no commands and establishes nothing. It was previously conditional on MessageSigningMode -- which is station configuration, not a field of this message, so the condition was not expressible in JSON Schema and would have stayed prose forever. Under MessageSigningMode None the key is simply unused; issuing one costs 44 bytes and makes the requirement machine-checkable. A station that receives Accepted or Pending WITHOUT it MUST treat the response as malformed (Core profile -- BootNotification section 5.3)."
     },
     "supportedVersions": {
       "type": "array",
@@ -134,7 +134,10 @@
       "if": {
         "properties": {
           "status": {
-            "const": "Accepted"
+            "enum": [
+              "Accepted",
+              "Pending"
+            ]
           }
         },
         "required": [
@@ -145,6 +148,37 @@
         "required": [
           "sessionKey"
         ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "Pending"
+          },
+          "errorCode": {
+            "const": 3018
+          }
+        },
+        "required": [
+          "status",
+          "errorCode"
+        ]
+      },
+      "then": {
+        "required": [
+          "errorCode",
+          "errorText",
+          "details"
+        ],
+        "properties": {
+          "details": {
+            "required": [
+              "expected",
+              "declared"
+            ]
+          }
+        }
       }
     }
   ]
