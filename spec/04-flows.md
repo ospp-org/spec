@@ -181,7 +181,7 @@ sequenceDiagram
 | Component | State |
 |-----------|-------|
 | SSP | Normal operation, heartbeat timer running |
-| SSP Bays | Reported to Server (Available, Faulted, Unavailable, etc.) |
+| SSP Bays | Reported to Server (Available, Faulted, Unavailable; Occupied or Finishing where a session survived the reboot) |
 | Server | Station marked online, last boot time recorded, bay status updated |
 | BLE | Advertising active (independent of MQTT) |
 | HMAC Session Key | Established (if signing enabled) |
@@ -1764,7 +1764,7 @@ transition table — and is not restated here. Every path below is a walk throug
 
 | Flow | Transition |
 |------|------------|
-| Boot (§1) | Unknown → reported state (Available, Faulted, Unavailable) |
+| Boot (§1) | Unknown → reported state (Available, Faulted, Unavailable; Occupied or Finishing where a session survived the reboot) |
 | Online Session (§3) | Available → Reserved* → Occupied → Finishing → Available |
 | Web Payment (§4) | Available → Reserved → Occupied → Finishing → Available |
 | BLE Session (§5a/b/c) | Available → Occupied → Finishing → Available |

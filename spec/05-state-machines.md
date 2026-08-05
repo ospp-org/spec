@@ -330,7 +330,7 @@ StatusNotification [MSG-009] whose transition §2.3 does not contain:
 **Then what is the table for, if the server accepts everything?** It is a **producer** rule and a
 **detector**, and it was only ever the second thing to a server:
 
-- **Normative on the station.** The eighteen `Station` rows are the complete set of transitions a
+- **Normative on the station.** The twenty `Station` rows are the complete set of transitions a
   station may effect and report. A station that reports `Available → Finishing` is non-conforming
   and a conformance case fails it. This is where the table has teeth, and it is the same place
   OCPP puts its own: the 1.6 connector transition table lives in *Operations Initiated by Charge

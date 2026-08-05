@@ -312,8 +312,8 @@ Each bay has a state machine. **The transition table is
 not reproduce it** — it was reproduced in several places once, the copies drifted, and two SDKs
 shipped different tables. Read it there. Two things about it decide how much work you have:
 
-**You implement 18 of the 24 rows, not all of them.** The table's *Effected by* column marks each
-transition `Station` or `Server`. The 18 `Station` rows are yours: they are the transitions your
+**You implement 20 of the 26 rows, not all of them.** The table's *Effected by* column marks each
+transition `Station` or `Server`. The 20 `Station` rows are yours: they are the transitions your
 hardware performs and therefore exactly the transitions your StatusNotification reports. The 6
 `Server` rows are every state → `Unknown` on connection loss — that is the server *guessing* about
 you because it stopped hearing from you. **Do not implement them.** Your bays do not change state
@@ -325,7 +325,7 @@ The common path through the table is the one your firmware will spend its life i
 reservation is involved. That is one path, not the machine — faults, maintenance and the post-boot
 resolution are all in the table too.
 
-**Unknown is the one state you never send.** Your bays start there at power-on; you leave it by finishing your self-test and reporting what you found — `Available`, `Faulted` or `Unavailable`. It is not a value of `status` or `previousStatus` and it is not in `bay-status.schema.json`; a StatusNotification carrying it is non-conforming, and a server that validates its inbound messages will reject the whole message, not just the field. While a bay is `Unknown` **you** reject StartService and ReserveBay on it with `3002 BAY_NOT_READY` — that is what the state is for, on your side.
+**Unknown is the one state you never send.** Your bays start there at power-on; you leave it by finishing your self-test and reporting what you found — `Available`, `Faulted` or `Unavailable` on a bay that holds no session, and `Occupied` or `Finishing` on one where a session survived the reboot and you resumed it ([`05-state-machines.md` §3.5 rule 2](../spec/05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience)). Those five are all of `Unknown`'s exits, and reporting an idle state on a bay that is still running a paid session is the mistake they exist to prevent. It is not a value of `status` or `previousStatus` and it is not in `bay-status.schema.json`; a StatusNotification carrying it is non-conforming, and a server that validates its inbound messages will reject the whole message, not just the field. While a bay is `Unknown` **you** reject StartService and ReserveBay on it with `3002 BAY_NOT_READY` — that is what the state is for, on your side.
 
 The server keeps its own `Unknown` for any bay it has no current report on: from your boot until your post-boot report arrives, and from your ConnectionLost LWT until your next report. You never observe that, and you must not try to acknowledge it. Reporting `Unknown` back on reconnect is the natural mistake and it resolves nothing — the bay stays where it refuses card payment and StartService.
 
@@ -1142,7 +1142,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** StatusNotification for each bay after boot
 - [ ] **[MUST]** Heartbeat at server-specified `heartbeatIntervalSec`
 - [ ] **[MUST]** Clock sync from Heartbeat RESPONSE `serverTime`
-- [ ] **[MUST]** Bay state machine: the 18 `Station` rows of [`05-state-machines.md` §2.3](../spec/05-state-machines.md#23-transition-table) — all of them, and none of the 6 `Server` rows
+- [ ] **[MUST]** Bay state machine: the 20 `Station` rows of [`05-state-machines.md` §2.3](../spec/05-state-machines.md#23-transition-table) — all of them, and none of the 6 `Server` rows
 - [ ] **[MUST NOT]** Implement any transition into `Unknown` — those are the server's inference, not yours (§2.6)
 - [ ] **[MUST NOT]** Report `Unknown` in `status` or `previousStatus` — it is your power-on state, not a wire value (§2.6)
 - [ ] **[MUST]** Omit `previousStatus` on the post-boot report

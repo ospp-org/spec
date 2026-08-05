@@ -582,7 +582,8 @@ where it is missing.
 > The count in this entry was low: the machine was stated in full in **five** places, not two — the
 > two named below plus the chapter's own diagram, `state-machine-bay.mmd`, and a second copy of
 > that diagram embedded in `diagrams/README.md`. Every other site now references §2.3 and states
-> only what is local to it. A sixth site, `set-maintenance-mode.md`, restated a *slice* of the
+> only what is local to it — with the exception of its *size*, which six of them went on asserting
+> at the pre-arc figure for another two arcs (point 6). A sixth site, `set-maintenance-mode.md`, restated a *slice* of the
 > table and got it wrong in a way this entry never caught — it permitted maintenance only from
 > `Available`, so a station built from it could not be told to stop offering a faulted bay.
 >
@@ -608,6 +609,22 @@ where it is missing.
 > bay is physically `Occupied` with a post-boot report owed — for which `Available` would have
 > freed a bay running a paid session, `Faulted` would have been a lie, and silence would have
 > breached CORE-004. `Unknown → Occupied` and `Unknown → Finishing` added.
+>
+> **6. The count outlived the table, and this entry was closed six sites early.** Deleting the
+> duplicate tables did not delete the *sizes* they had been stated at, and nothing re-derived them
+> when point 5 added two rows. [`03-messages.md`](spec/03-messages.md),
+> [`status-notification.md` §5](spec/profiles/core/status-notification.md), this chapter's own
+> [§2.5](spec/05-state-machines.md#25-invalid-transitions) and the implementor's guide in three
+> places all went on asserting **18** `Station` rows while linking to a §2.3 that had held **20**
+> since point 5; the guide additionally put the total at **24**. Two further sites — the guide
+> again, and `04-flows.md`'s Appendix C — still carried `Unknown`'s exits as the three idle states
+> in prose. A reader who trusted the sentence in front of them rather than counting the table
+> would have built the machine two edges short, and those two edges are precisely the ones that
+> stop a rebooting station from freeing a bay that is still running a paid session. All eight
+> reconciled against a mechanical count of §2.3 — **20 `Station` / 6 `Server` / 26** — which the
+> chapter's counts paragraph, both diagrams and the diagram README had stated correctly
+> throughout. The lesson is the entry's own: a count is a restatement of the table, and the rule
+> against restating it has to reach the numbers as well as the rows.
 >
 > Conformance: **TC-CORE-003** (new, the server under test), **TC-DM-007 Part E**, two vectors.
 

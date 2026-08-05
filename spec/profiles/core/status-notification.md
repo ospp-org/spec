@@ -60,7 +60,7 @@ section states is what is local to *this message*: which half of the table it ca
 `previousStatus` is present, and what accompanies a fault.
 
 1. **This message carries the `Station` rows and only those.** §2.3 marks each transition with the
-   party that effects it. The eighteen `Station` rows are exactly the transitions a station
+   party that effects it. The twenty `Station` rows are exactly the transitions a station
    performs and therefore exactly the transitions this EVENT reports. The six `Server` rows — every
    state to `Unknown`, on connection loss — are the server's own inference; no message carries them,
    this one included, and a station **MUST NOT** implement them. What a server does with a
