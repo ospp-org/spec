@@ -14,10 +14,12 @@ as described in [VERSIONING.md](VERSIONING.md).
 > `0.3.0`.** The document version does **not** move here — [`02-transport.md` §2.2](spec/02-transport.md)
 > makes the two independent and this change respects that.
 >
-> **Complete.** All four arcs — topology, wire/errors/reset, boot/signing, and the bay state
-> machine — are in this entry. The wire version does **not** move again: `0.3.0` has never
+> **Complete.** All five arcs are in this entry — topology, wire/errors/reset, boot/signing, the
+> bay state machine, and the reconcile-and-release pass that closed the counts and cross-references
+> the first four left inconsistent. The wire version does **not** move again: `0.3.0` has never
 > shipped, so every later break folds into the same unreleased value rather than minting another.
-> The bay-FSM arc changes no message shape at all, so it would not have moved it in any case.
+> Neither the bay-FSM arc nor the reconcile arc changes a message shape at all, so neither would
+> have moved it in any case.
 >
 > **Ship order matters and is stated per decision.** The consolidated order is in
 > *Breaking changes, and the order they must ship in* at the end of this entry.
@@ -162,9 +164,43 @@ as described in [VERSIONING.md](VERSIONING.md).
   ReserveBay with it. The registry entry now says so, and tells an operator that no
   StatusNotification at all means the boot needs attention, not the bay.
 
+- **Maximum bays per controller: 255 → 64**, and a new maximum of **32 programs per bay**. Stated
+  in every site that carries a bound: `01-architecture.md` §4.2, `provisioning-request`,
+  `provisioning-response`, `bay-topology.schema.json`, `status-notification` and
+  `boot-notification-request` — the last of which carried **none** before this arc, because it
+  had no `bays[]` to bound. A real installation has 4–8 bays. At 255 bays the boot re-declaration
+  exceeded the 64 KB MQTT Maximum Packet Size of `02-transport.md` §1.2 at roughly 4 programs per
+  bay; at 64×32 it is under 8 KB.
+
+- **`4020 BAY_COUNT_MISMATCH` compares topology, not a count.** The declared `bayNumber` set
+  **MUST** equal the registered set **as a set** — `{1,3}` against a registered `{1,2}` is a
+  mismatch though both have two bays. The name is now the only thing about it that mentions a
+  count.
+
+### Changed (BREAKING — TLS server identity, no wire change)
+
+- **The station MUST verify the server certificate's identity, not only its chain**
+  ([`06-security.md` §2.1](spec/06-security.md)). Normative over
+  [RFC 9525](https://www.rfc-editor.org/rfc/rfc9525): match the reference identity against
+  `subjectAltName` — `dNSName` for a hostname, `iPAddress` for an IP literal — **MUST NOT** fall
+  back to Subject CN, and **refuse on mismatch**. Binds **both** the MQTT leg and the
+  pre-credential HTTPS provisioning call.
+
+  No normative clause required this before. Chain validation does not imply it and, on the
+  embedded stacks these stations use, does not perform it: mbedTLS and wolfSSL require the
+  expected name to be set explicitly and the handshake succeeds if it is omitted. A station that
+  verified the chain but not the name accepted **any** certificate from **any** publicly-trusted
+  CA for **any** domain — which reduced §2.1's system-trust-store fallback to no authentication
+  at all. It matters most on the HTTPS leg, which carries the provisioning token and runs
+  *before* the station holds any credential of its own.
+
+  **Breaking for conformance claims; no wire change.** Measured as satisfiable: both deployed
+  environments advertise hostnames rather than IP literals, and both hostnames are `dNSName` SANs
+  on the certificate actually presented on 8883.
+
 ### Changed (BREAKING — bay state machine)
 
-Four arcs are in this entry now. This one is text, schema and diagrams only: no message field
+This one is text, schema and diagrams only: no message field
 changes shape, and `bay-status.schema.json` is untouched. It is breaking for **implementations**,
 because the set of transitions each side must accept moves in both directions and the two SDKs
 shipped different sets.
@@ -368,6 +404,13 @@ shipped different sets.
   disconnects holds one key indefinitely, and a deployment that wants that bounded already has
   `TriggerMessage(BootNotification)`.
 
+- **`TC-SEC-009` — Station Refuses a Certificate Whose Name Does Not Match.** Every assertion in
+  it is a **refusal**. A case asserting that a connection *succeeds* proves nothing: a harness
+  built on a general-purpose TLS library name-checks by default and passes whether or not the
+  firmware ever asked for the check. Covers both legs, wildcard scope, the `dNSName`-vs-IP-literal
+  confusion, CN fallback, and that the provisioning token does not leave the station. This is the
+  companion case `TC-SEC-008` said should exist, and `TC-SEC-008` now links it.
+
 - **[§5.7](spec/06-security.md) — both directions fail closed.** Verification already did; signing
   did not. A sender holding no key **MUST refuse to send**, **MUST NOT** publish unsigned, and
   **MUST NOT** silently drop without a record. Written the other way the two are the same
@@ -376,6 +419,58 @@ shipped different sets.
   prevented it. This is also the more important half: a server that publishes an unsigned
   `StartService` has produced exactly the message the MAC exists to stop, and has taught the fleet
   to accept it.
+
+### Fixed
+
+- **`03-messages.md` said the service catalog arrives "via BootNotification response."** That
+  schema is closed and declares no field that could carry it — the only candidate,
+  `configuration`, is a string-to-string configuration map. Corrected to what actually happens:
+  the catalog arrives **only** through `UpdateServiceCatalog`, and a freshly provisioned station
+  has none until the server pushes one, which is why the server **SHOULD** push promptly after
+  accepting a boot.
+
+- **`06-security.md` §4.2 still named the system trust store as the sole fallback**, two hundred
+  lines from the §2.1 clause that qualifies it. Marked as a summary of §2.1, which is
+  authoritative, and it now states what the fallback does **not** relax.
+
+- **`serviceId` is the catalog service, not "the service program."** Corrected in all three prose
+  sites plus the glossary (`start-service-request.schema.json`,
+  `profiles/transaction/start-service.md`, `profiles/transaction/transaction-event.md`).
+
+- **`TC-SEC-007` Part D converged.** It named an array of `{bayId, bayNumber}` objects a
+  conformance **FAILURE** for the provisioning response, while `ble/available-services.schema.json`
+  already carried exactly that shape — two surfaces contradicting each other at HEAD. Part D now
+  asserts the explicit pairing, that order is **not** significant, and adds the non-dense case the
+  positional scheme could not express.
+
+- **The bay transition *count* was a restatement of the table, and six sites kept the old one.**
+  §2.3 has held twenty `Station` rows since `Unknown` gained its two extra exits; `03-messages.md`,
+  `status-notification.md` §5, §2.5 itself and the implementor's guide in three places still said
+  eighteen, and the guide put the total at twenty-four. Every one of them linked to §2.3 while
+  contradicting its size. Re-derived mechanically — **20 `Station`, 6 `Server`, 26**, from 18
+  markdown rows — which the counts paragraph, both diagrams and the diagram README already had
+  right. Two further sites still gave `Unknown` the three idle exits in prose. The rule against
+  restating the table now reaches its numbers.
+
+- **Five chapter-05 references still named the machines by their pre-insertion numbers.** The
+  station machine became §1 and everything renumbered under it; two pointers in the 0.10.0 entry
+  and three in the 0.4.0/0.4.1 entries were written before that and now landed on a real section
+  about a different machine — §1.5 for *Invalid Transitions*, §1.2 for the bay's seven states,
+  §2.5 and §2.3 for the session FSM. Each now carries an anchor, so the next renumber breaks them
+  loudly.
+
+- **Fourteen cross-references elsewhere resolved to the wrong section or to none**, and eleven
+  statements of the repo's own size were wrong — the schema count appeared as 85 in one place and
+  67 in two others. Both swept mechanically and reconciled; the detail is in the two commits.
+
+- **This entry had lost an arc.** The commit that deleted the deprecation machinery rewrote
+  `[Unreleased]` and took the topology arc's own entries with it — including a **normative
+  BREAKING** requirement, the station's server-certificate identity check, and the conformance
+  case pinning it. Six entries restored from the commit that wrote them, each re-verified against
+  HEAD rather than trusted: the identity MUST, `TC-SEC-009`, the 64-bay/32-program bounds,
+  `4020`'s set comparison, the `serviceId` correction, `TC-SEC-007` Part D, and the two prose
+  fixes. The `### Deprecated` section was **not** restored — that machinery was deleted
+  deliberately and `bayIds`/`bayCount` no longer exist to deprecate.
 
 ### Removed
 
@@ -414,7 +509,8 @@ shipped different sets.
 
 ### Breaking changes, and the order they must ship in
 
-Merged across all four arcs. The ordering rule is the same everywhere and it has one shape:
+Merged across all five arcs; the fifth adds nothing to this table, because it changes no wire
+form and no behaviour. The ordering rule is the same everywhere and it has one shape:
 **a receiver must accept a new form before any sender emits it, and enforcement of a narrowed
 rule must never ship ahead of the configuration that satisfies it.** Violating it does not
 degrade the fleet, it disconnects it.
@@ -475,9 +571,11 @@ Recorded for whoever takes the release:
   ceremony, not information.
 - The two are independent by [`02-transport.md` §2.2](spec/02-transport.md), which this respects.
 
-### Firmware cost — the aggregate across all three arcs
+### Firmware cost — the aggregate across the arcs that change firmware
 
 For one integrator, on constrained hardware, assuming a station built against the pre-arc spec.
+The three wire-changing arcs are aggregated first, the bay-FSM arc's delta follows, and the
+reconcile arc adds nothing: it changed no wire form, no schema and no behaviour.
 
 **Fields to emit (new or reshaped):**
 
@@ -527,7 +625,7 @@ the cheapest high-value item is signing — because the primitive is already the
 constraint on constrained hardware is not the MAC but the **canonical re-serialization**, which is
 cheap outbound and heavier inbound, the direction verification runs.
 
-### Verification (all three arcs)
+### Verification (all five arcs)
 
 - `tools/verify-schemas.py`: **316/316 PASS, 0 FAIL, 0 SKIP** after the bay-FSM arc (+2: a
   `previousStatus: "Unknown"` negative — the existing negative covered `status` only, and
@@ -543,13 +641,21 @@ cheap outbound and heavier inbound, the direction verification runs.
 - All schemas compile: **86/86** (+1: `bay-topology.schema.json`). Unchanged by the bay-FSM arc,
   which touches no schema.
 - Example payloads against their schemas (CI's `validate-examples` script): **51/51**.
-- Every internal cross-reference resolves, checked with GitHub's own slug rules. The only
-  non-resolving targets are three placeholders inside style-guide prose — the illustrative
-  `link`, `#section` and `NN-name.md` in `CONTRIBUTING.md` §Style and `00-introduction.md` — none
-  of which is a real target.
-- `tools/verify-protocol.sh`: **14 failures, unchanged across the bay-FSM arc** — measured at
-  `d4db331` before it began and again after every commit in it. Down from the 15-failure branch
-  baseline, +0 new.
+- Every internal cross-reference resolves, checked with GitHub's own slug rules: 409 anchors,
+  983 file links, 122 schema `$ref`s, 40 conformance citations. The only non-resolving targets are
+  three placeholders inside style-guide prose — the illustrative `link`, `#section` and
+  `NN-name.md` in `CONTRIBUTING.md` §Style and `00-introduction.md` — none of which is a real
+  target.
+
+  **This claim was previously made and was not true.** Slug-resolution is necessary and not
+  sufficient: it cannot see a reference that resolves to a real section about something else, and
+  the reconcile arc found fourteen of those plus six pointing at sections that do not exist at all.
+  What is checked now is the pair — that the anchor resolves *and* that the heading it lands on is
+  the subject the citing sentence names.
+- `tools/verify-protocol.sh`: **14 failures, unchanged across the bay-FSM and reconcile arcs** —
+  measured at `d4db331` before the first began, at `dfd76a8` before the second, and again after
+  every commit in both. Down from the 15-failure branch baseline, +0 new. Its total check count
+  rose 3317 → 3332 over the reconcile arc as the new anchors gave it more to check.
   The one that cleared is `boot-notification-response`'s `errorCode`/`errorText` being absent from
   `03-messages.md`, fixed as a side effect of adding the `details` row. The remaining 14 are all
   pre-existing and none is in this arc's scope: three `08-configuration.md` numeric-consistency
@@ -1466,9 +1572,9 @@ Focused tightening of the SecurityEvent dedup contract — closes one implicit-b
 
 ### Changed
 
-- **spec:** `profiles/security/security-event.md` §6.2 — added normative **MUST** that the `eventId` assigned at incident detection **MUST** remain stable across all subsequent transmissions and buffered replays of the same logical incident. Closes the implicit-but-unstated stability requirement on which the server's dedup-by-`eventId` contract (`profiles/security/README.md` §3) relies. A fresh `eventId` per transmission attempt is now explicitly forbidden as a protocol-level dedup-defeat. No behavior change for compliant stations.
+- **spec:** `profiles/security/security-event.md` §6 (rule 2) — added normative **MUST** that the `eventId` assigned at incident detection **MUST** remain stable across all subsequent transmissions and buffered replays of the same logical incident. Closes the implicit-but-unstated stability requirement on which the server's dedup-by-`eventId` contract (`profiles/security/README.md` §3) relies. A fresh `eventId` per transmission attempt is now explicitly forbidden as a protocol-level dedup-defeat. No behavior change for compliant stations.
 
-- **spec:** `profiles/offline/authorize-offline-pass.md` §6.7 — upgraded the server-side SecurityEvent emit from **SHOULD** to **MUST** for signature verification failures (check #1) and counter-replay failures (check #5). Made explicit that these are the only two cases in which the server itself emits a SecurityEvent on behalf of a station-presented credential — other `Rejected` outcomes (expiry, epoch revocation, station mismatch, usage limits, rate limit) are policy decisions, not security incidents, and **MUST NOT** be emitted as SecurityEvents by the server. Added normative requirements on the emitted SecurityEvent: `type` **MUST** be `OfflinePassRejected` (from the spec-defined enum in `security-event.md` §4); `eventId` **MUST** be deterministically derived from the originating REQUEST's `messageId` so that N distinct authorization REQUESTs produce N distinct audit rows (preserving attack-attempt visibility — an attacker probing different forged signatures or replaying the same credential across multiple stations is recorded as N incidents, not collapsed to one); recommended SHA-256-based derivation provided. True QoS 1 retransmits of the same REQUEST collapse via the transport-layer dedup at `02-transport.md` §3.3 before reaching the handler; the audit-layer dedup is defense-in-depth for cases beyond the transport dedup window.
+- **spec:** `profiles/offline/authorize-offline-pass.md` §6 (rule 7) — upgraded the server-side SecurityEvent emit from **SHOULD** to **MUST** for signature verification failures (check #1) and counter-replay failures (check #5). Made explicit that these are the only two cases in which the server itself emits a SecurityEvent on behalf of a station-presented credential — other `Rejected` outcomes (expiry, epoch revocation, station mismatch, usage limits, rate limit) are policy decisions, not security incidents, and **MUST NOT** be emitted as SecurityEvents by the server. Added normative requirements on the emitted SecurityEvent: `type` **MUST** be `OfflinePassRejected` (from the spec-defined enum in `security-event.md` §4); `eventId` **MUST** be deterministically derived from the originating REQUEST's `messageId` so that N distinct authorization REQUESTs produce N distinct audit rows (preserving attack-attempt visibility — an attacker probing different forged signatures or replaying the same credential across multiple stations is recorded as N incidents, not collapsed to one); recommended SHA-256-based derivation provided. True QoS 1 retransmits of the same REQUEST collapse via the transport-layer dedup at `02-transport.md` §3.3 before reaching the handler; the audit-layer dedup is defense-in-depth for cases beyond the transport dedup window.
 
 - **spec:** version cascade `0.4.0` → `0.4.1` across all spec chapter headers, guides, conformance docs, READMEs, and badges, matching the v0.4.0 cascade convention.
 
@@ -1497,12 +1603,12 @@ Comprehensive patch covering 8 spec gaps surfaced by the Phase 0.5 + 0.6 OSPP in
 - **schema:** optional `seqNo` (integer ≥ 0) on `meter-values-event.schema.json` and `session-ended-event.schema.json` — per-session monotonic counter starting at 0, incrementing by 1 per session-scoped EVENT (Item 3).
 - **schema:** optional `finalSeqNo` (integer ≥ 0) on `session-ended-event.schema.json` and `stop-service-response.schema.json` — canonical session-final marker. Servers MUST discard MeterValues with `seqNo > finalSeqNo` for the same `sessionId` post-stop (Item 3).
 - **spec:** `02-transport.md §3.2` ordering rule for seqNo — server verifies `seqNo` increments by 1, logs warning on gap, MUST flag HIGH-severity reconciliation audit when missing range crosses a billing-milestone boundary (mirrors txCounter rule at `transaction-event.md §7.1`). finalSeqNo discard rule defined here too (Item 3).
-- **spec:** `05-state-machines.md §2.5` Session FSM crash-resilience rules — station MUST persist seqNo to NVS before publishing the corresponding event; MUST resume the prior counter on reboot during Active/Stopping; MUST orphan the prior session if the persisted state is unrecoverable; sessionId MUST NOT be reused across station reboot; finalSeqNo MUST be set on terminal events when the station has emitted any seqNo-bearing events (Item 3).
+- **spec:** `05-state-machines.md §3.5` Session FSM crash-resilience rules — station MUST persist seqNo to NVS before publishing the corresponding event; MUST resume the prior counter on reboot during Active/Stopping; MUST orphan the prior session if the persisted state is unrecoverable; sessionId MUST NOT be reused across station reboot; finalSeqNo MUST be set on terminal events when the station has emitted any seqNo-bearing events (Item 3).
 - **spec:** `profiles/transaction/transaction-event.md §7.1` clarifies that `txCounter` (offline, per-pass, per-station) and `seqNo` (online, per-session) are independent counters in disjoint scopes (Item 3).
 - **schema:** `session-ended-event.schema.json` reason enum extended from `["TimerExpired", "Fault"]` to `["TimerExpired", "Fault", "Local", "LocalOutOfCredit", "Deauthorized"]` (Item 8).
 - **spec:** `03-messages.md` MSG-040 trigger list expanded to 5 cases (timer expiry, hardware fault, local user stop, offline credit exhausted, mid-session deauthorization). Enum table includes 3 new value descriptions. Version note documents the coordinated v0.3.0 → v0.4.0 stack upgrade requirement (Item 8).
 - **spec:** `04-flows.md §6` refund policy table expanded with explicit rows for Local (pro-rated), LocalOutOfCredit (full refund — `creditsCharged` MUST be 0), Deauthorized (full refund — `creditsCharged` MUST be 0), and TimerExpired (charge full pre-auth) (Items 2 + 8 cross-interaction).
-- **spec:** `05-state-machines.md §2.3` Session FSM transition rows for Local (Active → Completed), LocalOutOfCredit (Active → Completed), Deauthorized (Active → Failed). Existing terminal states reused with reason field as discriminator — no new FSM states (Item 8).
+- **spec:** `05-state-machines.md §3.3` Session FSM transition rows for Local (Active → Completed), LocalOutOfCredit (Active → Completed), Deauthorized (Active → Failed). Existing terminal states reused with reason field as discriminator — no new FSM states (Item 8).
 - **conformance:** `TC-TX-007` Parts C (Local), D (LocalOutOfCredit), E (Deauthorized), F (forward-compat negative test against v0.3.0 schema) (Item 8).
 - **guides:** `implementors-guide.md §3.4` server-side SessionEnded handling — switch-on-reason covers all 5 values; LocalOutOfCredit and Deauthorized mandate `creditsCharged: 0` with CRITICAL anomaly logging if the station emits non-zero; Deauthorized triggers security review flag. seqNo gap detection, billing-milestone audit flag, finalSeqNo stale-event discard rule (Items 3 + 8).
 
