@@ -280,6 +280,8 @@ The key is `Static` — a change takes effect at the next reboot, not immediatel
 
 There is no "sign the important ones" mode. There used to be, and it exempted StatusNotification (which gates whether a paid service can start), Heartbeat (which gates whether the server thinks your station exists at all) and GetDiagnostics (which uploads your configuration and session history to a URL the command supplies). Read `06-security.md` §5.1 before arguing for a fourth exemption.
 
+Both directions fail closed. If you hold no session key you **refuse to send** — you do not publish unsigned, and you do not silently drop without a record. If a message arrives with no `mac`, or you hold no key to check one with, you **reject** it. The recovery for both is the same: boot, which is what issues a key.
+
 When you send a message, include a `mac` field:
 
 ```

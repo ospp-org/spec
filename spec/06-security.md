@@ -339,7 +339,8 @@ Each MQTT message has an implicit authorization based on its direction and the a
 | ReserveBay [MSG-003] | Server | Station verifies HMAC (session key) |
 | ChangeConfiguration [MSG-013] | Server | Station verifies HMAC (session key) |
 | UpdateFirmware [MSG-016] | Server | Station verifies HMAC + checksum |
-| All server→station commands | Server | Station MUST verify HMAC before execution |
+| All server→station commands | Server | Station MUST verify HMAC before execution, and MUST reject rather than execute when the MAC is absent or unverifiable ([§5.7](#57-failure-handling--both-directions-fail-closed)) |
+| All station→server messages | Station (via mTLS CN) | Server MUST verify HMAC before processing, on the same terms |
 
 ### 3.3 MQTT Topic ACL
 
@@ -848,13 +849,52 @@ Integrity for all three is provided by mTLS, not by HMAC. Their exemption is unc
 
 No message carries a MAC. TLS provides the only integrity protection, and there is none end to end: a publish-capable adversary can inject any message the broker's ACL permits, in either direction, and neither peer can tell. This mode exists for development and test harnesses and **MUST NOT** be used in production.
 
-### 5.7 Failure Handling
+### 5.7 Failure Handling — Both Directions Fail Closed
+
+The signing path and the verification path **MUST** both fail closed. Neither peer may substitute an unsigned message for a signed one, and neither may accept an unverified message in place of a verified one.
+
+#### Receiving
 
 | Condition | Error Code | Action |
 |-----------|------------|--------|
-| `mac` field missing (signing enabled) | `1013 MAC_MISSING` | Reject message, log SecurityEvent [MSG-012] |
-| `mac` verification fails | `1012 MAC_VERIFICATION_FAILED` | Reject message, log SecurityEvent [MSG-012] |
-| 3+ MAC failures from same station in 60s | — | Flag station as potentially compromised, alert operator |
+| `mac` field missing on a message that is not one of the three structural exemptions | `1013 MAC_MISSING` | Reject the message, log SecurityEvent [MSG-012]. Do **not** process it |
+| `mac` verification fails | `1012 MAC_VERIFICATION_FAILED` | Reject the message, log SecurityEvent [MSG-012] |
+| No session key held for the peer | `1013 MAC_MISSING` | Reject the message. A receiver that holds no key cannot verify, and cannot therefore accept |
+| 3+ MAC failures from the same station in 60s | — | Flag the station as potentially compromised, alert the operator |
+
+#### Sending
+
+| Condition | Action |
+|-----------|--------|
+| No session key held for the peer | **Refuse to send.** The sender **MUST NOT** publish the message unsigned. It **MUST** log the refusal and surface it to the operator, and **MUST NOT** silently drop it without a record |
+| Sender is a **server** with no key for the target station | Withhold the command. The station is not in a state where it can act on one: no key means no accepted boot, or a session that has ended. Treat the command as undeliverable and fail whatever operation depended on it, rather than emitting something the station must reject |
+| Sender is a **station** with no key | It is not `Operational` — it is `Booting`, restricted, or disconnected ([Chapter 05 §1](05-state-machines.md#1-station-state-machine)) — and in none of those states is it permitted to originate a message anyway. Boot first |
+
+> **Why the sending half is normative, and why it is the more important half.**
+>
+> The two paths are not symmetric by accident: it is easy to write a verifier that
+> fails closed and a signer that shrugs. A signer with no key faces a choice between
+> sending nothing and sending something unsigned, and "send it anyway" is the option
+> that makes the immediate symptom go away.
+>
+> It is also the option that hands the attacker the whole mechanism. The threat the
+> MAC exists to stop is an adversary who can publish a `StartService` the station will
+> act on. A server that publishes unsigned when it has no key has produced exactly
+> that message itself — and worse, has taught the fleet to accept it. A station that
+> tolerated one unsigned `StartService` for compatibility would have no defence left,
+> because "unsigned" is precisely what a forgery looks like.
+>
+> Note the asymmetry this rule removes. A receiver rejecting an unsigned message and a
+> sender emitting one are the same condition — no usable key — read from two ends. If
+> only the receiver fails closed, every such message is generated, published, delivered,
+> rejected, and logged as a **security event naming the peer that could not have
+> prevented it**. The fault is at the sender and the alarm rings at the receiver.
+>
+> The correct recovery is always the same and it already exists: get a key, which means
+> boot. For a station that is [CORE-011](profiles/core/README.md)'s retry. For a server
+> that means waiting for the station's next boot, or forcing one with
+> TriggerMessage(`BootNotification`) — which is itself signed, so it is available only
+> while a key is held, and a server with no key must simply wait.
 
 ---
 
