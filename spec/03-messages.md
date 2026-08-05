@@ -1884,7 +1884,7 @@ Transitions one or all bays to/from `Unavailable` (maintenance) status. The stat
 
 Pushes the complete service catalog to the station. This is a **full replacement** — the station MUST replace its entire catalog in NVS with the new data.
 
-The station also receives the catalog at boot (via [BootNotification](#11-bootnotification) response or a subsequent UpdateServiceCatalog). At boot, the station MAY retry once after 10 seconds if the catalog update fails.
+**The BootNotification response does not carry the catalog.** Its schema ([`boot-notification-response.schema.json`](../schemas/mqtt/boot-notification-response.schema.json)) is closed and declares no field that could: the `configuration` member is a string-to-string map of configuration keys ([Chapter 08 §8.3](08-configuration.md#83-configuration-via-bootnotification)), not a service list. A station therefore receives its catalog **only** through UpdateServiceCatalog, and a freshly provisioned station has **no** catalog until the server pushes one. The server **SHOULD** push the catalog promptly after accepting a boot, since until it does the station knows no `serviceId` and can start nothing. If a catalog update fails the station **MAY** retry once after 10 seconds.
 
 #### REQUEST Payload
 
