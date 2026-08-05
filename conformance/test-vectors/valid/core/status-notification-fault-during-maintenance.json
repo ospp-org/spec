@@ -1,0 +1,18 @@
+{
+  "bayId": "bay_e5f6a7b8c9d0",
+  "bayNumber": 2,
+  "status": "Faulted",
+  "previousStatus": "Unavailable",
+  "programs": [
+    {
+      "programNumber": 1,
+      "available": false
+    },
+    {
+      "programNumber": 2,
+      "available": false
+    }
+  ],
+  "errorCode": 5007,
+  "errorText": "MECHANICAL_SYSTEM"
+}

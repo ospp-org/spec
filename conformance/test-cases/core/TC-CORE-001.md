@@ -16,7 +16,7 @@ Verify that a station sends BootNotification as the first message after establis
 - `spec/07-errors.md` §5.2 — BootNotification retry policy
 - `spec/07-errors.md` §3.2 — Error code 2001 `STATION_NOT_REGISTERED`
 - `spec/05-state-machines.md` §1.2, §1.3, §1.4 — the station state machine and its restricted states
-- `spec/05-state-machines.md` §2.2, §2.4 — the six reportable bay states; `Unknown` is not transmitted
+- `spec/05-state-machines.md` §2.2, §2.3, §2.4 — the six reportable bay states, the canonical transition table, and the post-boot report trigger; `Unknown` is not transmitted
 - `spec/profiles/core/status-notification.md` §5 rule 2, §7 rule 2 — `previousStatus` omitted on the post-boot report
 - `schemas/mqtt/boot-notification-request.schema.json`
 - `schemas/mqtt/boot-notification-response.schema.json`

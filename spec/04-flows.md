@@ -1758,16 +1758,22 @@ Summary of state machine transitions triggered by each flow (see [Chapter 05 —
 
 ### Bay State Transitions
 
+The **path each flow takes** through the bay machine. Which transitions exist at all, and which
+party effects each, is [Chapter 05 §2.3](05-state-machines.md#23-transition-table) — the only
+transition table — and is not restated here. Every path below is a walk through it.
+
 | Flow | Transition |
 |------|------------|
-| Boot (§1) | → reported state (Available, Faulted, Unavailable) |
+| Boot (§1) | Unknown → reported state (Available, Faulted, Unavailable) |
 | Online Session (§3) | Available → Reserved* → Occupied → Finishing → Available |
 | Web Payment (§4) | Available → Reserved → Occupied → Finishing → Available |
 | BLE Session (§5a/b/c) | Available → Occupied → Finishing → Available |
 | Session Stop (§6) | Occupied → Finishing → Available |
 | Error during session | Occupied → Faulted |
-| Maintenance (§12.2) | Available ↔ Unavailable |
-| Error resolved | Faulted → Available |
+| Maintenance (§12.2) | Available **or Faulted** → Unavailable → Available |
+| Fault during maintenance | Unavailable → Faulted |
+| Error resolved | Faulted → Available (only where the code is `recoverable: true`; otherwise the [§7.2 Level 3 exit](07-errors.md#72-station-degradation-levels)) |
+| Connection lost | any → Unknown — **server-side inference, carried by no message** |
 
 *Reserved step is optional for mobile app sessions.
 

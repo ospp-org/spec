@@ -40,7 +40,7 @@ The **set** of `programNumber` values MUST equal the set this bay declared for t
 
 ## 4. Reportable Bay States
 
-These are the six values `status` and `previousStatus` may carry. The bay state machine has a seventh state, `Unknown`, which is not one of them ([Chapter 05 — State Machines §2.2](../../05-state-machines.md)).
+These are the six values `status` and `previousStatus` may carry. The bay state machine has a seventh state, `Unknown`, which is not one of them ([Chapter 05 — State Machines §2.2](../../05-state-machines.md#22-states-7)).
 
 | State | Description |
 |-----------------|---------------------------------------------------------------|
@@ -53,33 +53,23 @@ These are the six values `status` and `previousStatus` may carry. The bay state 
 
 ## 5. Transition Rules
 
-The following state transitions are valid. Any transition not listed below is invalid and **MUST** be rejected by the server with a log entry.
+**Which transitions are legal is [`05-state-machines.md` §2.3](../../05-state-machines.md#23-transition-table), and this profile does not restate it.** That table is the only
+one; an earlier revision of this section carried a second copy, the two drifted apart on seven
+edges, and the two SDKs implemented one copy each and rejected each other's traffic. What this
+section states is what is local to *this message*: which half of the table it can carry, when
+`previousStatus` is present, and what accompanies a fault.
 
-```
-Available  --> Reserved      (reservation accepted)
-Available  --> Occupied      (session started without reservation)
-Available  --> Faulted       (hardware fault detected)
-Available  --> Unavailable   (maintenance mode enabled)
-Reserved   --> Available     (reservation cancelled or expired)
-Reserved   --> Occupied      (session started by reservation holder)
-Reserved   --> Faulted       (hardware fault detected)
-Occupied   --> Finishing     (session timer expired or stop requested)
-Occupied   --> Faulted       (hardware fault during active session)
-Finishing  --> Available     (cool-down complete)
-Finishing  --> Faulted       (hardware fault during cool-down)
-Faulted    --> Available     (fault cleared, bay operational)
-Faulted    --> Unavailable   (maintenance mode enabled for repair)
-Unavailable --> Available    (maintenance mode cleared)
-Unavailable --> Faulted      (fault detected during maintenance)
-Unknown    --> Available     (state recovered after reconnection)
-Unknown    --> Faulted       (fault detected after reconnection)
-Unknown    --> Unavailable   (maintenance mode detected after reconnection)
-```
-
-1. The server **MUST** validate incoming transitions against this table. Invalid transitions **MUST** be logged but **SHOULD NOT** cause the server to drop the message -- the server **SHOULD** accept the reported state as authoritative and log a warning.
+1. **This message carries the `Station` rows and only those.** §2.3 marks each transition with the
+   party that effects it. The eighteen `Station` rows are exactly the transitions a station
+   performs and therefore exactly the transitions this EVENT reports. The six `Server` rows — every
+   state to `Unknown`, on connection loss — are the server's own inference; no message carries them,
+   this one included, and a station **MUST NOT** implement them. What a server does with a
+   transition §2.3 does not contain is
+   [`05-state-machines.md` §2.5](../../05-state-machines.md#25-invalid-transitions), stated there
+   once and deliberately not restated here.
 2. The station **MUST** include `previousStatus` when this report's `status` differs from the last `status` it reported for the bay, and **MUST** omit it otherwise. Two cases omit it, and they are the only two:
    - **The post-boot report.** The station is leaving `Unknown`, and `Unknown` is not a value this field can carry (§7 rule 2), so there is nothing truthful to put there.
-   - **A program-only report** (rule 4). The bay's status did not change, so there is no transition to name; writing `status` into `previousStatus` would assert a `X → X` transition that no transition table contains and that [Chapter 05 §2.5](../../05-state-machines.md) therefore makes invalid.
+   - **A program-only report** (rule 4). The bay's status did not change, so there is no transition to name; writing `status` into `previousStatus` would assert a `X → X` transition that the canonical table does not contain and that [Chapter 05 §2.5](../../05-state-machines.md#25-invalid-transitions) therefore makes invalid.
 
    The field's absence is load-bearing but narrower than it looks: it means **this report is not a bay transition**. A server distinguishes the post-boot case by position — it is the first report after an accepted boot — not by the absence alone.
 3. When a bay transitions to `Faulted`, the station **MUST** include the bay-level `errorCode` and `errorText` from the 5xxx error range.

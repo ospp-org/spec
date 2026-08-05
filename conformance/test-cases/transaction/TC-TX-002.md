@@ -13,7 +13,8 @@ Verify the complete reservation lifecycle: ReserveBay transitions the bay to Res
 - `spec/profiles/transaction/reserve-bay.md` — ReserveBay command and lifecycle
 - `spec/profiles/transaction/start-service.md` — StartService with `reservationId`
 - `spec/profiles/transaction/cancel-reservation.md` — CancelReservation
-- `spec/profiles/core/status-notification.md` — Bay state transitions (Available -> Reserved -> Occupied)
+- `spec/05-state-machines.md` §2.3 — the bay transition table (canonical); `Available` → `Reserved` → `Occupied` and `Reserved` → `Available` are `Station` rows of it
+- `spec/profiles/core/status-notification.md` — what the StatusNotification EVENT carries for each
 - `spec/07-errors.md` §3.3 — Error codes 3012 `RESERVATION_NOT_FOUND`, 3013 `RESERVATION_EXPIRED`, 3014 `BAY_RESERVED`
 - `spec/07-errors.md` Appendix B — Reserved -> 3DS timeout (3 min), Reserved -> payment timeout (30s)
 

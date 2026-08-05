@@ -1003,7 +1003,9 @@ Reports the current status of a single bay. Sent in two contexts:
 | `Faulted` | Hardware error — see `errorCode` |
 | `Unavailable` | Bay is in maintenance mode |
 
-The FSM's seventh state, `Unknown`, is **not** a value of this field. A station in `Unknown` resolves it by reporting the state it resolved *to* — never by reporting `Unknown` itself ([Chapter 05 §2.2](05-state-machines.md)).
+The FSM's seventh state, `Unknown`, is **not** a value of this field. A station in `Unknown` resolves it by reporting the state it resolved *to* — never by reporting `Unknown` itself ([Chapter 05 §2.2](05-state-machines.md#22-states-7)).
+
+Which transitions between these values are legal is [Chapter 05 §2.3](05-state-machines.md#23-transition-table), the only transition table in this specification; it is not restated here or in [`status-notification.md`](profiles/core/status-notification.md). This message carries the 18 transitions that table marks `Station`, and none of the 6 it marks `Server`.
 
 #### Example
 

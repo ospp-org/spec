@@ -13,6 +13,7 @@ Verify that the station sends periodic MeterValues events at the configured `Met
 - `spec/profiles/transaction/meter-values.md` — MeterValues behavior
 - `spec/03-messages.md` §5.3 — MeterValues payload (EVENT, no response)
 - `spec/08-configuration.md` §3 — `MeterValuesInterval` (default 60s), `MeterValuesSampleInterval` (default 10s)
+- `spec/05-state-machines.md` §2.3 — the bay transition table (canonical): a bay leaves `Occupied` only via `Finishing`
 - `schemas/mqtt/meter-values-event.schema.json`
 
 ## Preconditions

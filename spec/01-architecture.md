@@ -99,9 +99,9 @@ A bay MUST be in exactly one of the following seven states at any given time:
 | **Finishing** | The session has ended but the bay is performing post-session cleanup (e.g., draining, resetting actuator position). |
 | **Faulted** | The bay has detected a hardware or software fault and cannot provide service. Operator intervention MAY be required. |
 | **Unavailable** | The bay has been administratively disabled (e.g., for maintenance). |
-| **Unknown** | The bay state cannot be determined, typically during controller startup before the first status poll. |
+| **Unknown** | The bay state cannot be determined. Held by **both** parties and transmitted by neither: the station is in it from power-on until its self-test finishes, and the server is in it for any bay it has no current report on — from the station's boot until the post-boot report arrives, and from connection loss until the next accepted report. It is not a value of `status` or `previousStatus` and is absent from [`bay-status.schema.json`](../schemas/common/bay-status.schema.json). Nothing polls; StatusNotification is an EVENT the station originates. |
 
-State transitions are reported to the server via StatusNotification events (see [Chapter 03 — Message Catalog](03-messages.md), Section 5.2). The complete bay state machine is defined in [Chapter 05 — State Machines](05-state-machines.md).
+State transitions are reported to the server via StatusNotification events (see [Chapter 03 — Message Catalog](03-messages.md), Section 5.2). **The transition table is [Chapter 05 — State Machines §2.3](05-state-machines.md#23-transition-table) and is stated there and nowhere else** — this section lists the states, not the moves between them.
 
 ### 2.3 Service
 

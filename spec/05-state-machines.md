@@ -114,6 +114,22 @@ The mismatch is symmetric: a bay or a program ordinal present on one side and ab
 
 The bay state machine governs the operational status of each physical service bay on a station. Every bay MUST be in exactly one of the seven defined states at all times. The station MUST send a StatusNotification [MSG-009] on every state transition.
 
+> **[§2.3](#23-transition-table) is the only transition table for this machine in this
+> specification.** No profile, guide, diagram, conformance case or example restates it. Where one
+> of those needs to name a transition it names it and links here; where it needs to explain what
+> triggers a transition, it explains that and links here for the transition's legality. This rule
+> is not tidiness. The table was previously stated in full in five places, they disagreed on seven
+> edges, and the two SDKs — which release as a pair and are meant to be interchangeable —
+> implemented different copies and rejected each other's traffic.
+>
+> **The table has two parties in it, and the *Effected by* column says which.** A bay a station
+> operates and a bay a server believes in are different objects. The station effects and reports
+> the physical transitions; the server infers exactly one, the move to `Unknown` when it can no
+> longer hear the station. Merging them without saying so is what produced the divergence: a
+> station implementer read the `→ Unknown` rows as theirs to implement, and a server implementer
+> read the station's rows as the whole model. **A station implements the `Station` rows. A server
+> implements all of them.**
+
 ### 2.1 State Diagram
 
 ```mermaid
@@ -145,6 +161,8 @@ stateDiagram-v2
     Unavailable --> Available : SetMaintenanceMode OFF (maintenance complete)
     Unavailable --> Faulted : Hardware error detected during maintenance
 
+    %% SERVER rows below. Inferred, never reported: no message carries these
+    %% and a station MUST NOT implement them.
     Available --> Unknown : LWT / connection lost
     Reserved --> Unknown : LWT / connection lost
     Occupied --> Unknown : LWT / connection lost
@@ -195,24 +213,39 @@ stateDiagram-v2
 
 ### 2.3 Transition Table
 
-| Trigger | From | To | Condition | Action |
-|---------|------|----|-----------|--------|
-| StatusNotification (healthy) | Unknown | Available | Bay hardware passes self-test | Station sends StatusNotification [MSG-009] with the bay's status and its `programs[]` availability |
-| StatusNotification (fault) | Unknown | Faulted | Bay hardware fails self-test | Station sends StatusNotification with `errorCode` |
-| StatusNotification (maintenance) | Unknown | Unavailable | Bay was in maintenance before reboot | Station sends StatusNotification with `status: "Unavailable"` |
-| ReserveBay [MSG-003] accepted | Available | Reserved | Bay has no active session or existing reservation | Station starts reservation expiry timer, sends StatusNotification |
-| StartService [MSG-005] accepted (no reservation) | Available | Occupied | Bay has no reservation conflict; hardware activates successfully | Station activates hardware, starts session timer, sends StatusNotification |
-| StartService [MSG-005] by reservation holder | Reserved | Occupied | `reservationId` matches the active reservation; within TTL | Station consumes reservation, activates hardware, sends StatusNotification |
-| Reservation expires | Reserved | Available | `expirationTime` reached without StartService | Station releases bay, sends StatusNotification |
-| CancelReservation [MSG-004] accepted | Reserved | Available | Valid `reservationId` matches active reservation | Station releases bay, sends StatusNotification |
-| StopService [MSG-006] accepted | Occupied | Finishing | Session is active on this bay | Station begins hardware wind-down, sends StatusNotification |
-| Service duration elapsed | Occupied | Finishing | `durationSeconds` timer expires | Station auto-stops service, sends StatusNotification |
-| Post-session cleanup complete | Finishing | Available | Hardware wind-down finished (hardware off, actuator retracted) | Station sends StatusNotification; bay is ready for next session |
-| Hardware error detected | Available, Reserved, Occupied, Finishing, Unavailable | Faulted | Station detects hardware fault (actuator, fluid, consumable, electrical, or emergency stop). `Unavailable` is a source like any other: a bay taken out of service can still develop a fault, and a technician working on it is the most likely person to find one. Forbidding the transition would not prevent the fault, only the report of it | Station sends StatusNotification with `errorCode` (5001-5009) |
-| Fault cleared | Faulted | Available | The fault condition has ended **and** the reported error is `recoverable: true` in the [Chapter 07 registry](07-errors.md#3-error-code-registry) — automatic reset, or the operator clears it. A `recoverable: false` fault **MUST NOT** clear automatically, however the underlying reading may recover; it clears only by operator action. Where the code is a Level 3 entry trigger (`5001`, `5004`, `5009`, `5101` — [§7.2](07-errors.md#72-station-degradation-levels)) that action is specifically the Level 3 exit: physical intervention, operator verification, and station reboot. `5004 ELECTRICAL_SYSTEM` is the worked case: a welded relay or a lost phase persists while measured voltage reads nominal. | Station sends StatusNotification |
-| SetMaintenanceMode ON [MSG-020] | Available, Faulted | Unavailable | Operator initiates maintenance | Station sends StatusNotification |
-| SetMaintenanceMode OFF [MSG-020] | Unavailable | Available | Operator completes maintenance | Station sends StatusNotification |
-| LWT / connection lost | Any except Unknown | Unknown | Broker publishes ConnectionLost [MSG-011] | Server marks bay as Unknown; station resolves via StatusNotification on reconnect |
+This is the canonical table. Nothing else in this specification restates it.
+
+| Trigger | From | To | Effected by | Condition | Action |
+|---------|------|----|-------------|-----------|--------|
+| StatusNotification (healthy) | Unknown | Available | Station | Bay hardware passes self-test and holds no session | Station sends StatusNotification [MSG-009] with the bay's status and its `programs[]` availability |
+| StatusNotification (fault) | Unknown | Faulted | Station | Bay hardware fails self-test | Station sends StatusNotification with `errorCode` |
+| StatusNotification (maintenance) | Unknown | Unavailable | Station | Bay was in maintenance before reboot | Station sends StatusNotification with `status: "Unavailable"` |
+| ReserveBay [MSG-003] accepted | Available | Reserved | Station | Bay has no active session or existing reservation | Station starts reservation expiry timer, sends StatusNotification |
+| StartService [MSG-005] accepted (no reservation) | Available | Occupied | Station | Bay has no reservation conflict; hardware activates successfully | Station activates hardware, starts session timer, sends StatusNotification |
+| StartService [MSG-005] by reservation holder | Reserved | Occupied | Station | `reservationId` matches the active reservation; within TTL | Station consumes reservation, activates hardware, sends StatusNotification |
+| Reservation expires | Reserved | Available | Station | `expirationTime` reached without StartService | Station releases bay, sends StatusNotification |
+| CancelReservation [MSG-004] accepted | Reserved | Available | Station | Valid `reservationId` matches active reservation | Station releases bay, sends StatusNotification |
+| StopService [MSG-006] accepted | Occupied | Finishing | Station | Session is active on this bay | Station begins hardware wind-down, sends StatusNotification |
+| Service duration elapsed | Occupied | Finishing | Station | `durationSeconds` timer expires | Station auto-stops service, sends StatusNotification |
+| Post-session cleanup complete | Finishing | Available | Station | Hardware wind-down finished (hardware off, actuator retracted) | Station sends StatusNotification; bay is ready for next session |
+| Hardware error detected | Available, Reserved, Occupied, Finishing, Unavailable | Faulted | Station | Station detects hardware fault (actuator, fluid, consumable, electrical, or emergency stop). `Unavailable` is a source like any other: a bay taken out of service can still develop a fault, and a technician working on it is the most likely person to find one. Forbidding the transition would not prevent the fault, only the report of it | Station sends StatusNotification with `errorCode` (5001-5009) |
+| Fault cleared | Faulted | Available | Station | The fault condition has ended **and** the reported error is `recoverable: true` in the [Chapter 07 registry](07-errors.md#3-error-code-registry) — automatic reset, or the operator clears it. A `recoverable: false` fault **MUST NOT** clear automatically, however the underlying reading may recover; it clears only by operator action. Where the code is a Level 3 entry trigger (`5001`, `5004`, `5009`, `5101` — [§7.2](07-errors.md#72-station-degradation-levels)) that action is specifically the Level 3 exit: physical intervention, operator verification, and station reboot. `5004 ELECTRICAL_SYSTEM` is the worked case: a welded relay or a lost phase persists while measured voltage reads nominal. | Station sends StatusNotification |
+| SetMaintenanceMode ON [MSG-020] | Available, Faulted | Unavailable | Station | Operator initiates maintenance. A bay that is `Occupied` or `Finishing` is refused with `3001 BAY_BUSY`, and a `Reserved` bay with `3014 BAY_RESERVED` — neither is a source here ([set-maintenance-mode.md §5](profiles/device-management/set-maintenance-mode.md)) | Station sends StatusNotification |
+| SetMaintenanceMode OFF [MSG-020] | Unavailable | Available | Station | Operator completes maintenance | Station sends StatusNotification |
+| LWT / connection lost | Available, Reserved, Occupied, Finishing, Faulted, Unavailable | Unknown | **Server** | Broker publishes ConnectionLost [MSG-011], or the heartbeat times out ([CORE-007](profiles/core/README.md)) | Server marks the bay `Unknown` and **MUST NOT** offer it for sale. No message carries this transition and the station does not perform it: the station's own bays keep the states its hardware is in. The server leaves `Unknown` on the next accepted StatusNotification, not on being told about it |
+
+**Counts, because implementers have got these wrong in both directions.** Eighteen `Station` rows
+by distinct `(from, to)` pair, and six `Server` rows — twenty-four in all. The `Station` eighteen
+are the complete set a station may effect and therefore the complete set a StatusNotification
+[MSG-009] may report; a station needs no others and **MUST NOT** implement the `Server` six. A
+server implements all twenty-four. Multi-source rows expand to one pair per source, and two pairs
+have two triggers each (`Reserved → Available`, `Occupied → Finishing`), so the row count and the
+pair count are deliberately not equal.
+
+The `Server` rows are the reason `Unknown` exists and the reason it is not on the wire. They are
+the server's inference about a station it can no longer hear — see [§2.2](#22-states-7) and
+[`bay-status.schema.json`](../schemas/common/bay-status.schema.json), which omits `Unknown` for
+exactly this reason.
 
 ### 2.4 StatusNotification Triggers
 

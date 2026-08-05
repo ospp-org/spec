@@ -13,7 +13,8 @@ Verify that a station correctly handles the complete online session lifecycle fr
 - `spec/profiles/transaction/start-service.md` — StartService command and response
 - `spec/profiles/transaction/stop-service.md` — StopService command and response
 - `spec/profiles/transaction/meter-values.md` — MeterValues periodic events
-- `spec/profiles/core/status-notification.md` — Bay state transitions
+- `spec/05-state-machines.md` §2.3 — the bay transition table (canonical; `Available` → `Occupied` → `Finishing` → `Available` are four of its `Station` rows)
+- `spec/profiles/core/status-notification.md` — what the StatusNotification EVENT carries for each
 - `spec/07-errors.md` §5.3 — StartService/StopService retry policies
 - `schemas/mqtt/status-notification.schema.json`
 - `schemas/mqtt/meter-values-event.schema.json`

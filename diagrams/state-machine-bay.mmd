@@ -1,6 +1,12 @@
 %% OSPP Bay State Machine
 %% Reference: spec/05-state-machines.md, Section 2
 %% Each bay on a station MUST be in exactly one of these 7 states
+%%
+%% This diagram DEPICTS the canonical transition table at 05-state-machines.md §2.3;
+%% it does not define it. Where the two disagree the table governs, and the diagram
+%% is the defect. The table's "Effected by" column is rendered here as the split
+%% below: everything above the divider is a Station transition (18), the six edges
+%% into Unknown are the Server's inference (6). 24 in all.
 
 stateDiagram-v2
     [*] --> Unknown : Power on / reboot
@@ -24,13 +30,14 @@ stateDiagram-v2
     Finishing --> Available : Cleanup complete
     Finishing --> Faulted : Error during cleanup
 
-    Faulted --> Available : Fault cleared<br/>(automatic reset)
+    Faulted --> Available : Fault cleared<br/>(recoverable faults only)
     Faulted --> Unavailable : SetMaintenanceMode ON<br/>(manual intervention)
 
     Unavailable --> Available : SetMaintenanceMode OFF<br/>(maintenance complete)
     Unavailable --> Faulted : Hardware error detected<br/>during maintenance
 
-    %% Connection lost transitions (any → Unknown)
+    %% SERVER rows. Inferred, never reported: no message carries these and a
+    %% station MUST NOT implement them.
     Available --> Unknown : LWT / connection lost
     Reserved --> Unknown : LWT / connection lost
     Occupied --> Unknown : LWT / connection lost
@@ -39,8 +46,12 @@ stateDiagram-v2
     Unavailable --> Unknown : LWT / connection lost
 
     note right of Unknown
-        Initial state after boot
-        Resolves on first StatusNotification
+        Held by both parties, transmitted by neither.
+        Station: initial state at power-on, resolved by self-test.
+        Server: no current report — from boot until the post-boot
+        report, and from the LWT until the next accepted report.
+        Not a value of status or previousStatus, and absent from
+        bay-status.schema.json.
     end note
 
     note right of Occupied

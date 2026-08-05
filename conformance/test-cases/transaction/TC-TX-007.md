@@ -13,6 +13,7 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
 - `spec/03-messages.md` §5.4 — SessionEnded EVENT [MSG-040]
 - `spec/04-flows.md` §6 — Session Stop & Completion (timer expiry and fault paths)
 - `spec/05-state-machines.md` §3.3 — Session SM transitions: Timer elapsed, Hardware fault
+- `spec/05-state-machines.md` §2.3 — the bay transition table (canonical): every exit from `Occupied` is to `Finishing` or `Faulted`, never straight to `Available`
 - `schemas/mqtt/session-ended-event.schema.json`
 - `spec/07-errors.md` §7.4 — Refund policies
 

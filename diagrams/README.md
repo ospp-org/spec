@@ -128,46 +128,56 @@ stateDiagram-v2
 
 ## 4. Bay State Machine
 
-The 7-state bay FSM governing each physical service bay on a station.
+The 7-state bay FSM governing each physical service bay on a station. **24 transitions: 18
+effected by the station and reported over the wire, 6 inferred by the server and carried by no
+message at all.**
 
-**Source:** [`state-machine-bay.mmd`](state-machine-bay.mmd) | **Spec ref:** [Chapter 05 — State Machines, Section 2](../spec/05-state-machines.md)
+**Source:** [`state-machine-bay.mmd`](state-machine-bay.mmd) | **Spec ref:** [Chapter 05 — State Machines, Section 2.3](../spec/05-state-machines.md#23-transition-table)
 
 ```mermaid
 stateDiagram-v2
     [*] --> Unknown : Power on / reboot
 
     Unknown --> Available : StatusNotification (healthy)
-    Unknown --> Faulted : StatusNotification (fault)
-    Unknown --> Unavailable : StatusNotification (maintenance)
+    Unknown --> Faulted : StatusNotification (fault detected)
+    Unknown --> Unavailable : StatusNotification (maintenance mode)
 
     Available --> Reserved : ReserveBay accepted
-    Available --> Occupied : StartService accepted
-    Available --> Faulted : Hardware error
+    Available --> Occupied : StartService accepted<br/>(no reservation)
+    Available --> Faulted : Hardware error detected
     Available --> Unavailable : SetMaintenanceMode ON
 
-    Reserved --> Occupied : StartService (reservation holder)
-    Reserved --> Available : Reservation expires / cancelled
-    Reserved --> Faulted : Hardware error
+    Reserved --> Occupied : StartService by<br/>reservation holder
+    Reserved --> Available : Reservation expires<br/>or CancelReservation
+    Reserved --> Faulted : Hardware error detected
 
-    Occupied --> Finishing : StopService / duration elapsed
-    Occupied --> Faulted : Hardware error
+    Occupied --> Finishing : StopService accepted<br/>or duration elapsed
+    Occupied --> Faulted : Hardware error detected
 
     Finishing --> Available : Cleanup complete
     Finishing --> Faulted : Error during cleanup
 
-    Faulted --> Available : Fault cleared
-    Faulted --> Unavailable : SetMaintenanceMode ON
+    Faulted --> Available : Fault cleared<br/>(recoverable faults only)
+    Faulted --> Unavailable : SetMaintenanceMode ON<br/>(manual intervention)
 
-    Unavailable --> Available : SetMaintenanceMode OFF
-    Unavailable --> Faulted : Hardware error during maintenance
+    Unavailable --> Available : SetMaintenanceMode OFF<br/>(maintenance complete)
+    Unavailable --> Faulted : Hardware error detected<br/>during maintenance
 
-    Available --> Unknown : Connection lost
-    Reserved --> Unknown : Connection lost
-    Occupied --> Unknown : Connection lost
-    Finishing --> Unknown : Connection lost
-    Faulted --> Unknown : Connection lost
-    Unavailable --> Unknown : Connection lost
+    Available --> Unknown : LWT / connection lost
+    Reserved --> Unknown : LWT / connection lost
+    Occupied --> Unknown : LWT / connection lost
+    Finishing --> Unknown : LWT / connection lost
+    Faulted --> Unknown : LWT / connection lost
+    Unavailable --> Unknown : LWT / connection lost
 ```
+
+**Who effects what:** the six edges into `Unknown` are the **server's** inference about a station
+it can no longer hear. No message carries them and a station **MUST NOT** implement them — its own
+bays keep whatever state the hardware is in while the link is down. Everything else is the
+**station's**, and is exactly the set a StatusNotification [MSG-009] may report.
+
+**`Unavailable → Faulted` is legal.** A bay taken out of service can still develop a fault, and a
+technician working on it is the most likely person to find one.
 
 ---
 

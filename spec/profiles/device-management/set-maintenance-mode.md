@@ -35,18 +35,25 @@ SetMaintenanceMode is a server-initiated command that enables or disables mainte
 2. If the target bay is currently `Occupied` (has an active session), the station **MUST** respond with `Rejected` and error code `3001 BAY_BUSY`. Maintenance mode **MUST NOT** be set on an occupied bay.
 3. If `bayId` is absent, the station **MUST** apply the maintenance mode to all bays. If any bay is `Occupied`, the station **MUST** respond with `Rejected` and error code `3001 BAY_BUSY`.
 4. On `Accepted`, the station **MUST** send a StatusNotification for each affected bay reflecting the new state.
-5. When `enabled` is `true`, the bay **MUST** transition from `Available` to `Unavailable`.
+5. When `enabled` is `true`, the bay **MUST** transition to `Unavailable`. The legal sources are `Available` **and `Faulted`** — see the `SetMaintenanceMode ON` row of [`05-state-machines.md` §2.3](../../05-state-machines.md#23-transition-table), which is the only place the sources are enumerated. A faulted bay is the ordinary case, not an edge case: taking a bay out of service is usually what an operator does *because* it faulted, and a station that accepts maintenance only from `Available` cannot be told to stop offering the one bay that is broken.
 6. When `enabled` is `false`, the bay **MUST** transition from `Unavailable` to `Available`.
 7. If the bay is already in the requested state (e.g., already in maintenance and `enabled` is `true`), the station **MUST** respond with `Accepted` (idempotent).
 8. The response `messageId` **MUST** match the request `messageId`.
 
 ## 6. Bay State Transitions
 
-```
-Available  --[enabled=true]-->  Unavailable (maintenance)
-Unavailable (maintenance)  --[enabled=false]-->  Available
-Occupied  --[enabled=true]-->  REJECTED (BAY_BUSY)
-```
+The two transitions this command effects are the `SetMaintenanceMode ON` and `SetMaintenanceMode OFF` rows of [`05-state-machines.md` §2.3](../../05-state-machines.md#23-transition-table). That table is canonical and is not restated here. What is local to this command is which refusals apply to which source state:
+
+| Bay is | `enabled: true` | `enabled: false` |
+|---|---|---|
+| `Available` | → `Unavailable` | `Accepted`, no change (rule 7) |
+| `Faulted` | → `Unavailable` | `Accepted`, no change (rule 7) |
+| `Unavailable` | `Accepted`, no change (rule 7) | → `Available` |
+| `Occupied`, `Finishing` | `Rejected`, `3001 BAY_BUSY` (rule 2) | `Accepted`, no change (rule 7) |
+| `Reserved` | `Rejected`, `3014 BAY_RESERVED` | `Accepted`, no change (rule 7) |
+| `Unknown` | `Rejected`, `3002 BAY_NOT_READY` | `Rejected`, `3002 BAY_NOT_READY` |
+
+`Reserved` and `Unknown` are refused because §2.3 contains no transition from either to `Unavailable`, not because maintenance is undesirable on them: a reservation is a commitment to a named user and the station cancels it explicitly ([CancelReservation](../transaction/cancel-reservation.md)) before the bay can be taken out of service, and an `Unknown` bay has not yet been evaluated at all.
 
 When maintenance mode is enabled, the station **MUST** set the bay status to `Unavailable` with the reason stored internally for diagnostics. The bay **MUST NOT** accept StartService commands while in maintenance mode.
 
@@ -57,7 +64,9 @@ When maintenance mode is disabled, the bay **MUST** return to `Available` status
 | Error Code | Error Text | Severity | Description |
 |------------|-------------------------------|----------|-----------------------------------------------|
 | `3001` | `BAY_BUSY` | Warning | The bay has an active session and cannot enter maintenance mode. |
+| `3002` | `BAY_NOT_READY` | Warning | The bay is `Unknown` — the station has not finished evaluating it and has no state to move it out of. |
 | `3005` | `BAY_NOT_FOUND` | Error | The specified `bayId` does not exist on this station. |
+| `3014` | `BAY_RESERVED` | Warning | The bay is held for a named user. Cancel the reservation first ([CancelReservation](../transaction/cancel-reservation.md)); the release is explicit, never a side effect of maintenance. |
 
 ## 8. Examples
 

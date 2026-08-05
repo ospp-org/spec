@@ -15,6 +15,7 @@ Verify that when a session is stopped before its natural expiry (early stop), th
 - `spec/profiles/transaction/meter-values.md` — MeterValues for progress verification
 - `spec/07-errors.md` §7.4 — Refund policies: 100% refund if `actualDurationSeconds < 0.5 x durationSeconds`
 - `spec/07-errors.md` §3.3 — Error code 3006 `SESSION_NOT_FOUND`, 3007 `SESSION_MISMATCH`
+- `spec/05-state-machines.md` §2.3 — the bay transition table (canonical): a bay leaves `Occupied` only via `Finishing`
 
 ## Preconditions
 

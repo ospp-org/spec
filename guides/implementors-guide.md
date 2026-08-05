@@ -307,20 +307,23 @@ The constant-time comparison is critical. Use `crypto.timingSafeEqual()` in Node
 
 ### 2.6 Bay and Session Lifecycle
 
-Each bay has a state machine:
+Each bay has a state machine. **The transition table is
+[`05-state-machines.md` §2.3](../spec/05-state-machines.md#23-transition-table) and this guide does
+not reproduce it** — it was reproduced in several places once, the copies drifted, and two SDKs
+shipped different tables. Read it there. Two things about it decide how much work you have:
 
-```
-Unknown (your bays, at power-on — NEVER PUT ON THE WIRE)
-    ↓  self-test decides which of these you report
-Available → Reserved → Occupied → Finishing → Available
-    ↓                      ↓
- Faulted              Faulted
-    ↓
-Unavailable (maintenance)
+**You implement 18 of the 24 rows, not all of them.** The table's *Effected by* column marks each
+transition `Station` or `Server`. The 18 `Station` rows are yours: they are the transitions your
+hardware performs and therefore exactly the transitions your StatusNotification reports. The 6
+`Server` rows are every state → `Unknown` on connection loss — that is the server *guessing* about
+you because it stopped hearing from you. **Do not implement them.** Your bays do not change state
+because the link dropped; a session keeps running, a fault stays faulted, and when you reconnect
+you report what is actually true.
 
-  server-side only, you never see or report it:
-  any state → Unknown (when the server receives your ConnectionLost LWT)
-```
+The common path through the table is the one your firmware will spend its life in:
+`Available → Occupied → Finishing → Available`, with `Reserved` inserted before `Occupied` when a
+reservation is involved. That is one path, not the machine — faults, maintenance and the post-boot
+resolution are all in the table too.
 
 **Unknown is the one state you never send.** Your bays start there at power-on; you leave it by finishing your self-test and reporting what you found — `Available`, `Faulted` or `Unavailable`. It is not a value of `status` or `previousStatus` and it is not in `bay-status.schema.json`; a StatusNotification carrying it is non-conforming, and a server that validates its inbound messages will reject the whole message, not just the field. While a bay is `Unknown` **you** reject StartService and ReserveBay on it with `3002 BAY_NOT_READY` — that is what the state is for, on your side.
 
@@ -1139,7 +1142,8 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** StatusNotification for each bay after boot
 - [ ] **[MUST]** Heartbeat at server-specified `heartbeatIntervalSec`
 - [ ] **[MUST]** Clock sync from Heartbeat RESPONSE `serverTime`
-- [ ] **[MUST]** Bay state machine: Unknown → Available → Reserved → Occupied → Finishing → Available / Faulted / Unavailable
+- [ ] **[MUST]** Bay state machine: the 18 `Station` rows of [`05-state-machines.md` §2.3](../spec/05-state-machines.md#23-transition-table) — all of them, and none of the 6 `Server` rows
+- [ ] **[MUST NOT]** Implement any transition into `Unknown` — those are the server's inference, not yours (§2.6)
 - [ ] **[MUST NOT]** Report `Unknown` in `status` or `previousStatus` — it is your power-on state, not a wire value (§2.6)
 - [ ] **[MUST]** Omit `previousStatus` on the post-boot report
 - [ ] **[MUST]** Report actual duration and meter values in StopService RESPONSE
