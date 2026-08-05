@@ -282,9 +282,15 @@ A red critical alert banner appears at the top of the operator view:
    current draw under load, the technician uses the operator dashboard to clear
    the fault and unlock Bay 1.
 
-4. **Station recovery:** The operator sends a `Reset` REQUEST to Bay 1 via OSPP.
-   The station runs a self-test, confirms all readings are within tolerance, and
-   transitions Bay 1 from `Faulted` back to `Available`.
+4. **Station recovery:** `5001 PUMP_SYSTEM` is `recoverable: false` and a Level 3
+   entry trigger, so the bay does **not** clear on the readings returning to
+   tolerance — the exit is physical intervention, operator verification, and a
+   station reboot ([`07-errors.md` §7.2](../../spec/07-errors.md#72-station-degradation-levels)).
+   The operator sends `Reset` [MSG-015], which reboots the **station**; there is no
+   bay-scoped reset, and the message carries only `force`. All bays return to
+   `Unknown` on the reboot, and Bay 1's post-boot StatusNotification reports
+   `Available` once its self-test passes. The path is `Faulted` → `Unknown` →
+   `Available`, not a direct clear.
 
 5. **User compensation:** Alice already received her full 50-credit refund. No
    further action is needed unless Alice contacts support, in which case a

@@ -113,7 +113,8 @@ stateDiagram-v2
     Authorized --> Failed : StartService rejected / timeout
 
     Active --> Stopping : StopService requested
-    Active --> Failed : Hardware fault / connection lost
+    Active --> Completed : SessionEnded (Local, LocalOutOfCredit)
+    Active --> Failed : Hardware fault / connection lost / Deauthorized
 
     Stopping --> Completed : Station confirms stop
     Stopping --> Failed : Stop timeout (10s)
@@ -128,7 +129,7 @@ stateDiagram-v2
 
 ## 4. Bay State Machine
 
-The 7-state bay FSM governing each physical service bay on a station. **24 transitions: 18
+The 7-state bay FSM governing each physical service bay on a station. **26 transitions: 20
 effected by the station and reported over the wire, 6 inferred by the server and carried by no
 message at all.**
 
@@ -141,6 +142,8 @@ stateDiagram-v2
     Unknown --> Available : StatusNotification (healthy)
     Unknown --> Faulted : StatusNotification (fault detected)
     Unknown --> Unavailable : StatusNotification (maintenance mode)
+    Unknown --> Occupied : StatusNotification<br/>(session resumed after reboot)
+    Unknown --> Finishing : StatusNotification<br/>(wind-down resumed after reboot)
 
     Available --> Reserved : ReserveBay accepted
     Available --> Occupied : StartService accepted<br/>(no reservation)

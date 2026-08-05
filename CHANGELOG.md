@@ -547,15 +547,16 @@ than failing it ([VERSIONING.md](VERSIONING.md)).
 
 ### Not changed, deliberately
 
-The bay FSM still has **seven** states and [§1.3](spec/05-state-machines.md)'s transition table is
-untouched. This narrows the wire, not the model.
+The bay FSM still has **seven** states and its transition table is untouched. This narrows the wire,
+not the model. (The bay table was §1.3 when this was written; the station machine was inserted ahead
+of it afterwards and it is now [§2.3](spec/05-state-machines.md#23-transition-table).)
 
 Found and **recorded rather than fixed** — see [KNOWN-ISSUES.md](KNOWN-ISSUES.md): the bay FSM is
 specified twice and the two copies disagree, on `Unavailable → Faulted`, on whether anything
 transitions *into* `Unknown`, and — in four separate statements, two of them 23 lines apart in one
 file — on whether an invalid transition is rejected or accepted as authoritative. Each SDK
 implemented one copy exactly: `ospp-sdk-php` has the profile's 18 transitions, `sdk-ts` has
-Chapter 05's 23. The root cause is that Chapter 05 §1 merges the station's physical FSM with the
+Chapter 05's 23. The root cause is that the bay section of Chapter 05 merges the station's physical FSM with the
 server's belief about it into one table, and separating them is a design question with a
 wire-visible answer, not a text edit.
 

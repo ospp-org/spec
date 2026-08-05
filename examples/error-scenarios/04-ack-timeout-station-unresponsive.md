@@ -323,8 +323,10 @@ refunded when the ACK timeout fired.
 ### Recovery Path B — Station Remains Offline
 
 If the station does not reconnect within 3 consecutive circuit breaker open windows
-(3 × 30s = 90 seconds total), the server marks the station as `Unavailable` and
-notifies the operator:
+(3 × 30s = 90 seconds total), the server holds the station `Disconnected` — the
+station state for no MQTT connection ([`05-state-machines.md` §1.2](../../spec/05-state-machines.md#12-states-6));
+`Unavailable` is a **bay** state and never describes a station — and notifies the
+operator:
 
 ```json
 {

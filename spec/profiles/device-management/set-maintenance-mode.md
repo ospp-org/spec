@@ -34,7 +34,7 @@ SetMaintenanceMode is a server-initiated command that enables or disables mainte
 1. If `bayId` is provided and the bay does not exist, the station **MUST** respond with `Rejected` and error code `3005 BAY_NOT_FOUND`.
 2. If the target bay is currently `Occupied` (has an active session), the station **MUST** respond with `Rejected` and error code `3001 BAY_BUSY`. Maintenance mode **MUST NOT** be set on an occupied bay.
 3. If `bayId` is absent, the station **MUST** apply the maintenance mode to all bays. If any bay is `Occupied`, the station **MUST** respond with `Rejected` and error code `3001 BAY_BUSY`.
-4. On `Accepted`, the station **MUST** send a StatusNotification for each affected bay reflecting the new state.
+4. On `Accepted`, the station **MUST** send a StatusNotification for each affected bay reflecting the new state — **unless it is in a restricted state**, in which case it applies the change and sends nothing, because a restricted station may originate no EVENT ([`05-state-machines.md` §1.4](../../05-state-machines.md#14-the-restricted-states)). The server holds those bays at `Unknown` regardless, and the new state reaches it on the post-boot report.
 5. When `enabled` is `true`, the bay **MUST** transition to `Unavailable`. The legal sources are `Available` **and `Faulted`** — see the `SetMaintenanceMode ON` row of [`05-state-machines.md` §2.3](../../05-state-machines.md#23-transition-table), which is the only place the sources are enumerated. A faulted bay is the ordinary case, not an edge case: taking a bay out of service is usually what an operator does *because* it faulted, and a station that accepts maintenance only from `Available` cannot be told to stop offering the one bay that is broken.
 6. When `enabled` is `false`, the bay **MUST** transition from `Unavailable` to `Available`.
 7. If the bay is already in the requested state (e.g., already in maintenance and `enabled` is `true`), the station **MUST** respond with `Accepted` (idempotent).
@@ -144,4 +144,4 @@ When maintenance mode is disabled, the bay **MUST** return to `Available` status
 - Request: [`set-maintenance-mode-request.schema.json`](../../../schemas/mqtt/set-maintenance-mode-request.schema.json)
 - Response: [`set-maintenance-mode-response.schema.json`](../../../schemas/mqtt/set-maintenance-mode-response.schema.json)
 - Bay ID: [`bay-id.schema.json`](../../../schemas/common/bay-id.schema.json)
-- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 3001, 3005)
+- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 3001, 3002, 3005, 3014)

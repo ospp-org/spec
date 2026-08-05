@@ -11,7 +11,8 @@ stateDiagram-v2
     Authorized --> Failed : StartService rejected<br/>or timeout (10s)
 
     Active --> Stopping : StopService requested<br/>(user, server, or timer)
-    Active --> Failed : Hardware fault (SessionEnded EVENT [MSG-040])<br/>Connection lost (after grace period)
+    Active --> Completed : SessionEnded EVENT [MSG-040]<br/>(Local, LocalOutOfCredit)
+    Active --> Failed : Hardware fault (SessionEnded EVENT [MSG-040])<br/>Connection lost (after grace period)<br/>Deauthorized (RevocationEpoch bump)
 
     Stopping --> Completed : Station confirms stop<br/>StopService RESPONSE (user stop)<br/>or SessionEnded EVENT [MSG-040] (timer expiry)
     Stopping --> Failed : Stop timeout (10s)<br/>Station unresponsive

@@ -97,7 +97,20 @@ Any transition not listed here is invalid. In particular there is **no** edge fr
 
 **Serving no customers is not the same as stopping.** A station that enters a restricted state with a session already running **MUST** continue it, meter it, and settle it, exactly as it does while `Disconnected` ([Chapter 02 §4.4](02-transport.md)) — a customer who has paid is served. What it **MUST NOT** do is begin a new one. While `Pending` or `Rejected` the station **MUST** reject StartService [MSG-005] and ReserveBay [MSG-003] with `3002 BAY_NOT_READY`, on every transport, and **MUST NOT** authorize a BLE offline session. In `Pending` that rejection is sent as a RESPONSE; in `Rejected` the command is not processed at all.
 
+**A command whose only effect is an EVENT cannot be honoured while restricted, and must be refused rather than half-done.** The `MUST NOT` on unsolicited messages has no carve-out, so a `Pending` station that accepts such a command and then emits the EVENT breaks the row above, and one that accepts it and stays silent has answered `Accepted` to something it did not do. Neither is conforming. Concretely:
+
+| Command sent to a `Pending` station | What it does |
+|---|---|
+| TriggerMessage [MSG-018] with `requestedMessage: "BootNotification"` | **`Accepted`**, and the station boots immediately instead of waiting out `retryInterval`. This is the one message a restricted station may originate, and triggering it is exactly the act that ends the restriction once an operator has approved the registration or corrected the topology record |
+| TriggerMessage with any other `requestedMessage` | **`Rejected`**. StatusNotification, MeterValues, Heartbeat, DiagnosticsNotification, FirmwareStatusNotification and SecurityEvent are all EVENTs the station may not send; SignCertificate originates a REQUEST it may not send either |
+| SetMaintenanceMode [MSG-020] | **`Accepted`**, the bay state changes locally, and the StatusNotification the command would normally emit ([set-maintenance-mode.md §5 rule 4](profiles/device-management/set-maintenance-mode.md)) is **not sent**. Nothing is lost: the server holds every bay of a restricted station at `Unknown` regardless, and the new state is carried by the post-boot report when the station reaches `Operational` |
+| ChangeConfiguration, GetConfiguration, GetDiagnostics, UpdateServiceCatalog, a certificate operation, Reset | **Answered normally.** Each returns its result in a RESPONSE, which is not something the station originates |
+
+`Rejected` stations process none of this — they refuse every command, so the question does not arise.
+
 **What the server may assume.** A `Pending` or `Rejected` station has sent no StatusNotification, so the server holds every one of its bays at `Unknown` and **MUST NOT** offer them for sale. The absence of bay reports is the signal, and it is the same signal a `Disconnected` station produces — which is why no new state value is needed on the wire to express it.
+
+**Which bay states are reachable while restricted.** All seven, on the station's own side: a restricted station runs its self-test, continues a session that was already running, and can be put into maintenance — so its bays move through the `Station` rows of [§2.3](#23-transition-table) normally. None of it is reported. The server's view is `Unknown` for every bay throughout, and it resolves in one step at the post-boot report once the station is `Operational` — including, where a session survived, to `Occupied` or `Finishing`.
 
 ### 1.5 Topology at Boot
 
@@ -141,6 +154,8 @@ stateDiagram-v2
     Unknown --> Available : StatusNotification (healthy)
     Unknown --> Faulted : StatusNotification (fault detected)
     Unknown --> Unavailable : StatusNotification (maintenance mode)
+    Unknown --> Occupied : StatusNotification (session resumed after reboot)
+    Unknown --> Finishing : StatusNotification (wind-down resumed after reboot)
 
     Available --> Reserved : ReserveBay accepted
     Available --> Occupied : StartService accepted (no reservation)
@@ -190,8 +205,9 @@ stateDiagram-v2
 > [`bay-status.schema.json`](../schemas/common/bay-status.schema.json) for that
 > reason. A station **MUST NOT** report `Unknown` in the `status` or
 > `previousStatus` field of any message, on any transport; it resolves the state
-> by reporting what it resolved **to** — `Available`, `Faulted` or `Unavailable`,
-> per the three transitions in section 2.3. A server holds a bay at `Unknown`
+> by reporting what it resolved **to** — `Available`, `Faulted`, `Unavailable`,
+> or, where a session survived the reboot, `Occupied` or `Finishing`, per the five
+> `Unknown` rows of section 2.3. A server holds a bay at `Unknown`
 > whenever it has no current report — from the station's boot until the post-boot
 > report arrives, and from connection loss ([CORE-008](profiles/core/README.md))
 > until the next accepted StatusNotification.
@@ -222,6 +238,8 @@ This is the canonical table. Nothing else in this specification restates it.
 | StatusNotification (healthy) | Unknown | Available | Station | Bay hardware passes self-test and holds no session | Station sends StatusNotification [MSG-009] with the bay's status and its `programs[]` availability |
 | StatusNotification (fault) | Unknown | Faulted | Station | Bay hardware fails self-test | Station sends StatusNotification with `errorCode` |
 | StatusNotification (maintenance) | Unknown | Unavailable | Station | Bay was in maintenance before reboot | Station sends StatusNotification with `status: "Unavailable"` |
+| StatusNotification (session resumed) | Unknown | Occupied | Station | The station rebooted while a session on this bay was `Active`, and recovered it from non-volatile storage per [§3.5 rule 2](#35-per-session-sequence-number-seqno-and-crash-resilience) | Station sends StatusNotification with `status: "Occupied"` and resumes MeterValues at `persisted_seqNo + 1` |
+| StatusNotification (wind-down resumed) | Unknown | Finishing | Station | The station rebooted while a session on this bay was `Stopping`, recovered it per §3.5 rule 2, and the hardware wind-down has still to complete | Station sends StatusNotification with `status: "Finishing"`, then completes the wind-down |
 | ReserveBay [MSG-003] accepted | Available | Reserved | Station | Bay has no active session or existing reservation | Station starts reservation expiry timer, sends StatusNotification |
 | StartService [MSG-005] accepted (no reservation) | Available | Occupied | Station | Bay has no reservation conflict; hardware activates successfully | Station activates hardware, starts session timer, sends StatusNotification |
 | StartService [MSG-005] by reservation holder | Reserved | Occupied | Station | `reservationId` matches the active reservation; within TTL | Station consumes reservation, activates hardware, sends StatusNotification |
@@ -236,13 +254,26 @@ This is the canonical table. Nothing else in this specification restates it.
 | SetMaintenanceMode OFF [MSG-020] | Unavailable | Available | Station | Operator completes maintenance | Station sends StatusNotification |
 | LWT / connection lost | Available, Reserved, Occupied, Finishing, Faulted, Unavailable | Unknown | **Server** | Broker publishes ConnectionLost [MSG-011], or the heartbeat times out ([CORE-007](profiles/core/README.md)) | Server marks the bay `Unknown` and **MUST NOT** offer it for sale. No message carries this transition and the station does not perform it: the station's own bays keep the states its hardware is in. The server leaves `Unknown` on the next accepted StatusNotification, not on being told about it |
 
-**Counts, because implementers have got these wrong in both directions.** Eighteen `Station` rows
-by distinct `(from, to)` pair, and six `Server` rows — twenty-four in all. The `Station` eighteen
-are the complete set a station may effect and therefore the complete set a StatusNotification
-[MSG-009] may report; a station needs no others and **MUST NOT** implement the `Server` six. A
-server implements all twenty-four. Multi-source rows expand to one pair per source, and two pairs
-have two triggers each (`Reserved → Available`, `Occupied → Finishing`), so the row count and the
-pair count are deliberately not equal.
+**Counts, because implementers have got these wrong in both directions.** Twenty `Station` rows by
+distinct `(from, to)` pair, and six `Server` rows — twenty-six in all. The `Station` twenty are the
+complete set a station may effect and therefore the complete set a StatusNotification [MSG-009] may
+report; a station needs no others and **MUST NOT** implement the `Server` six. A server implements
+all twenty-six. Multi-source rows expand to one pair per source, and two pairs have two triggers
+each (`Reserved → Available`, `Occupied → Finishing`), so the row count and the pair count are
+deliberately not equal.
+
+**`Unknown` has five exits, not three.** A station that reboots mid-session **MUST** resume that
+session ([§3.5 rule 2](#35-per-session-sequence-number-seqno-and-crash-resilience)) — the reboot may
+be a watchdog, a power cycle or a crash, none of which the server chose or can refuse. A commanded
+Reset cannot reach this state (it is refused with `3016`, or settles the session first —
+[reset.md §5](profiles/device-management/reset.md)), and a firmware update cannot either
+([§7.4](#74-firmware-update----bay-constraint)); an uncommanded reboot has no such gate. On the boot
+that follows, the bay is physically `Occupied`, and every bay owes a post-boot report
+([§2.4](#24-statusnotification-triggers), [CORE-004](profiles/core/README.md)). With only the three
+determinate-idle exits, that station had no truthful report to send: `Available` would free a bay
+running a paid session and invite the server to sell it twice, `Faulted` would be a lie, and
+silence would breach CORE-004. `Occupied` and `Finishing` are the two states a resumed session can
+leave a bay in, and they are the two added.
 
 The `Server` rows are the reason `Unknown` exists and the reason it is not on the wire. They are
 the server's inference about a station it can no longer hear — see [§2.2](#22-states-7) and
@@ -346,7 +377,8 @@ stateDiagram-v2
 
     Active --> Stopping : StopService requested (user or server)
     Active --> Stopping : Service duration elapsed
-    Active --> Failed : Hardware fault / connection lost
+    Active --> Completed : SessionEnded (Local, LocalOutOfCredit)
+    Active --> Failed : Hardware fault / connection lost / Deauthorized
 
     Stopping --> Completed : Station confirms stop, final MeterValues received
     Stopping --> Failed : Stop timeout (10s) / station unresponsive
@@ -625,10 +657,9 @@ stateDiagram-v2
 | Station reboots | Installed | Rebooting | Station initiates reboot; all active sessions MUST be completed or stopped first | Station sends FirmwareStatusNotification `Installed`, disconnects MQTT, reboots |
 | Boot on new partition | Rebooting | Activated | Bootloader loads new partition; station passes self-test | Station reconnects, sends BootNotification with new `firmwareVersion` and `reason: "FirmwareUpdate"` |
 | Boot failure / watchdog | Rebooting | Failed | Station fails to send BootNotification within 5 minutes (watchdog timer) | Bootloader reverts to previous partition; station boots on old firmware and sends FirmwareStatusNotification `Failed` |
+| Rollback complete | Failed | Idle | Station is running on previous (known-good) firmware | Station resumes normal operation; server records update failure |
 
 > **Note:** The 5-minute watchdog includes ~3 minutes for boot and local health check (BootFailureTimeout 60s + HealthCheckTimeout 120s) plus ~2 minutes margin for MQTT/TLS connection establishment and BootNotification round-trip over potentially slow cellular networks.
-
-| Rollback complete | Failed | Idle | Station is running on previous (known-good) firmware | Station resumes normal operation; server records update failure |
 
 ### 6.4 A/B Partition Scheme
 
@@ -702,8 +733,16 @@ The bay and session state machines are tightly coupled:
 | Authorized | Available or Reserved | Bay MUST be in `Available` (direct start) or `Reserved` (with matching `reservationId`) for StartService to succeed |
 | Active | Occupied | Bay MUST transition to `Occupied` when session becomes `Active` |
 | Stopping | Finishing | Bay MUST transition to `Finishing` when session enters `Stopping` |
-| Completed | Available | Bay MUST return to `Available` after session `Completed` |
-| Failed | Available or Faulted | Bay returns to `Available` if failure was non-hardware; transitions to `Faulted` if caused by hardware error |
+| Completed | Finishing, then Available | Bay MUST reach `Available` after session `Completed`, **via `Finishing`** |
+| Failed | Finishing then Available, or Faulted, or Unknown | `Faulted` where a hardware fault caused the failure. `Unknown` where the failure was connection loss — that is the server's own inference and the bay's real state is whatever the station's hardware is in. Otherwise the bay winds down through `Finishing` and reaches `Available` |
+
+**There is no `Occupied → Available` edge, and this table used to assume one.** Every exit from
+`Occupied` in [§2.3](#23-transition-table) goes to `Finishing` or `Faulted` — the wind-down is
+physical (hardware off, actuator retracted) and happens whatever ended the session. Three session
+rows reach a terminal state directly from `Active` (user stop at the bay, offline credit exhausted,
+mid-session deauthorization) and the bay still passes through `Finishing` on each. A server that
+expects the bay to jump straight to `Available` will treat a conforming station's `Finishing` as
+unexpected, and a station built to satisfy it will skip a wind-down it physically performs.
 
 ### 7.3 Reservation -- Bay -- Session Coupling
 

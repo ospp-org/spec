@@ -34,6 +34,16 @@ The TriggerMessage action allows the server to request the station to send a spe
 
 ## 5. Processing Rules
 
+> **A restricted station answers `Rejected` to every `requestedMessage` except `BootNotification`.**
+> `Pending` and `Rejected` stations may originate no EVENT and no REQUEST other than BootNotification
+> ([`05-state-machines.md` §1.4](../../05-state-machines.md#14-the-restricted-states)), so accepting
+> any other trigger would promise a message the station is forbidden to send — and sending it anyway
+> would break the restriction. `BootNotification` is the exception and the useful one: it is the
+> message a restricted station is already required to retry, and triggering it lets an operator who
+> has just approved a registration or corrected a topology record end the restriction now instead of
+> waiting out `retryInterval`. A `Rejected` station processes no commands at all, so in practice this
+> governs `Pending`. The rules below apply to an `Operational` station.
+
 1. After responding `Accepted`, the station MUST send the requested message within **5 seconds**.
 2. The triggered message is a normal message instance — it uses the same format, topic, and processing rules as if it were sent on schedule.
 3. If `requestedMessage` is `StatusNotification` and `bayId` is provided, the station MUST send a StatusNotification only for the specified bay.

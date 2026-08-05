@@ -134,8 +134,9 @@ specification. Where a definition involves a requirement, normative language
 
 **FSM (Finite State Machine)**
 : A computational model that defines the valid states and transitions for OSPP
-  entities. OSPP defines FSMs for bays, sessions, reservations, BLE connections,
-  and firmware updates. See [Chapter 05-state-machines](05-state-machines.md).
+  entities. OSPP defines FSMs for the **station**, its bays, sessions, reservations,
+  BLE connections, and firmware updates — six in all, the station machine being the
+  outermost. See [Chapter 05-state-machines](05-state-machines.md).
 
 ## G
 

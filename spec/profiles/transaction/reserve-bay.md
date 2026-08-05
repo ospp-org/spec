@@ -32,20 +32,14 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 
 ## 5. Reservation Lifecycle
 
-A reservation progresses through the following states:
-
-```
-Created --> Active --> Consumed (by StartService)
-                  \--> Expired  (by timer)
-                  \--> Cancelled (by CancelReservation)
-```
+The reservation state machine is [`05-state-machines.md` §4](../../05-state-machines.md#4-reservation-state-machine) — `Pending`, `Confirmed`, `Active`, `Expired`, `Cancelled` — and is not restated here. An earlier revision of this section named its own states (`Created`, `Consumed`) which appear in no state machine in this specification. What is local to this message is what the station does at each step:
 
 ### 5.1 Lifecycle Rules
 
 1. When the station accepts a ReserveBay request, it **MUST** transition the bay from `Available` to `Reserved` state and start an expiry timer based on `expirationTime`.
 2. The station **MUST** associate the `reservationId` with the bay so that subsequent StartService or CancelReservation requests can reference it.
 3. When a StartService request arrives with a matching `reservationId`, the station **MUST** consume the reservation and transition the bay from `Reserved` to `Occupied`. The expiry timer **MUST** be cancelled.
-4. If the `expirationTime` elapses before the reservation is consumed or cancelled, the station **MUST** automatically release the reservation and transition the bay back to `Available`. The station **SHOULD** report this via a StatusNotification event.
+4. If the `expirationTime` elapses before the reservation is consumed or cancelled, the station **MUST** automatically release the reservation and transition the bay back to `Available`. The station **MUST** report this via a StatusNotification event, within 1 second — this is a bay state change like any other and [CORE-005](../core/README.md) admits no exception for it. An earlier revision said **SHOULD**, which left a server holding a bay `Reserved` after the station had released it, with no conforming way to find out.
 5. When a CancelReservation request arrives with a matching `reservationId`, the station **MUST** release the reservation and transition the bay back to `Available`.
 6. Only one reservation **MAY** be active per bay at any time. A bay in `Reserved` state **MUST** reject new reservation requests with `3014 BAY_RESERVED`.
 
