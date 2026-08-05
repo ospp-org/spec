@@ -80,7 +80,7 @@ Verify that the station correctly handles ChangeConfiguration for valid RW keys,
      "keys": ["ProtocolVersion"]
    }
    ```
-9. Verify `ProtocolVersion` is still `"0.2.1"`.
+9. Verify `ProtocolVersion` is still `"0.3.0"`.
 
 ### Part C — Change Unknown Key (NotSupported)
 

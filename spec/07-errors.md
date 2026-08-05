@@ -128,7 +128,7 @@ This is a **known gap, not a permission**. §4 assigns error codes to several of
   "action": "StartService",
   "timestamp": "2026-01-30T12:05:00.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Rejected",
     "errorCode": 3001,
@@ -155,7 +155,7 @@ Stations MAY send unsolicited error reports as EVENT messages (no response expec
   "action": "SecurityEvent",
   "timestamp": "2026-01-30T12:10:00.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "eventId": "sec_a1b2c3d4e5f6",
     "type": "HardwareFault",

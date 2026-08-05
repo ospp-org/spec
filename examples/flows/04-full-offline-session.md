@@ -632,7 +632,7 @@ When the station regains MQTT connectivity, it performs the reconciliation flow 
   "action": "TransactionEvent",
   "timestamp": "2026-02-14T08:15:00.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "offlineTxId": "otx_a3b4c5d6e7f8",
     "offlinePassId": "opass_a8b9c0d1e2f3",
@@ -667,7 +667,7 @@ When the station regains MQTT connectivity, it performs the reconciliation flow 
   "action": "TransactionEvent",
   "timestamp": "2026-02-14T08:15:00.500Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Accepted"
   }

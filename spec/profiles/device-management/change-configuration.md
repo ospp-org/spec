@@ -74,7 +74,7 @@ Single-key requests (array of 1) are the common case. The array format enables a
   "action": "ChangeConfiguration",
   "timestamp": "2026-02-13T10:21:00.000Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "keys": [
       { "key": "HeartbeatIntervalSeconds", "value": "60" }
@@ -92,7 +92,7 @@ Single-key requests (array of 1) are the common case. The array format enables a
   "action": "ChangeConfiguration",
   "timestamp": "2026-02-13T10:21:00.180Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "results": [
       { "key": "HeartbeatIntervalSeconds", "status": "Accepted" }
@@ -110,7 +110,7 @@ Single-key requests (array of 1) are the common case. The array format enables a
   "action": "ChangeConfiguration",
   "timestamp": "2026-02-13T10:22:00.000Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "keys": [
       { "key": "OfflinePassPublicKey", "value": "BPkKbj...base64..." },
@@ -129,7 +129,7 @@ Single-key requests (array of 1) are the common case. The array format enables a
   "action": "ChangeConfiguration",
   "timestamp": "2026-02-13T10:22:00.180Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "results": [
       { "key": "OfflinePassPublicKey", "status": "Accepted" },
@@ -148,7 +148,7 @@ Single-key requests (array of 1) are the common case. The array format enables a
   "action": "ChangeConfiguration",
   "timestamp": "2026-02-13T10:21:00.180Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "results": [
       { "key": "HeartbeatIntervalSeconds", "status": "RebootRequired" }

@@ -72,7 +72,7 @@ SecurityEvent is a one-way event -- there is no response payload and therefore n
   "action": "SecurityEvent",
   "timestamp": "2026-02-13T10:20:05.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "eventId": "sec_a1b2c3d4e5f6",
     "type": "MacVerificationFailure",
@@ -99,7 +99,7 @@ SecurityEvent is a one-way event -- there is no response payload and therefore n
   "action": "SecurityEvent",
   "timestamp": "2026-02-13T11:15:30.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "eventId": "sec_b2c3d4e5f6a7",
     "type": "OfflinePassRejected",
@@ -124,7 +124,7 @@ SecurityEvent is a one-way event -- there is no response payload and therefore n
   "action": "SecurityEvent",
   "timestamp": "2026-02-13T08:00:15.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "eventId": "sec_c3d4e5f6a7b8",
     "type": "FirmwareIntegrityFailure",

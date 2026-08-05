@@ -108,7 +108,7 @@ When the station reports `pendingOfflineTransactions > 0` in BootNotification, t
   "action": "TransactionEvent",
   "timestamp": "2026-02-13T10:15:30.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "offlineTxId": "otx_d4e5f6a7",
     "offlinePassId": "opass_a8b9c0d1e2f3",
@@ -145,7 +145,7 @@ When the station reports `pendingOfflineTransactions > 0` in BootNotification, t
   "action": "TransactionEvent",
   "timestamp": "2026-02-13T10:15:30.200Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Accepted"
   }
@@ -161,7 +161,7 @@ When the station reports `pendingOfflineTransactions > 0` in BootNotification, t
   "action": "TransactionEvent",
   "timestamp": "2026-02-13T10:15:30.200Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Duplicate",
     "reason": "Transaction otx_d4e5f6a7 was already processed."
@@ -178,7 +178,7 @@ When the station reports `pendingOfflineTransactions > 0` in BootNotification, t
   "action": "TransactionEvent",
   "timestamp": "2026-02-13T10:15:30.200Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Rejected",
     "reason": "Receipt signature verification failed (2002 OFFLINE_PASS_INVALID)."

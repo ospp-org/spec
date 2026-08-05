@@ -149,7 +149,7 @@ All checks pass. The server:
   "action": "StartService",
   "timestamp": "2026-02-13T10:00:08.700Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "sessionId": "sess_f7e8d9c0",
     "bayId": "bay_c1d2e3f4a5b6",
@@ -187,7 +187,7 @@ The station's bay controller receives the StartService command. It:
   "action": "StartService",
   "timestamp": "2026-02-13T10:00:09.400Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Accepted"
   }
@@ -209,7 +209,7 @@ Bay 1 transitions from `Available` to `Occupied`.
   "action": "StatusNotification",
   "timestamp": "2026-02-13T10:00:09.500Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_c1d2e3f4a5b6",
     "bayNumber": 1,
@@ -352,7 +352,7 @@ Fifteen seconds into the session, the station sends its first periodic meter rea
   "action": "MeterValues",
   "timestamp": "2026-02-13T10:00:24.100Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_c1d2e3f4a5b6",
     "sessionId": "sess_f7e8d9c0",
@@ -393,7 +393,7 @@ The station sends a MeterValues notification every 15 seconds (`MeterValuesInter
   "action": "MeterValues",
   "timestamp": "2026-02-13T10:04:54.100Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_c1d2e3f4a5b6",
     "sessionId": "sess_f7e8d9c0",
@@ -441,7 +441,7 @@ No StopService command from the server is needed — the station knows the autho
   "action": "StatusNotification",
   "timestamp": "2026-02-13T10:05:09.400Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_c1d2e3f4a5b6",
     "bayNumber": 1,
@@ -470,7 +470,7 @@ After the drain cycle completes (about 1.4 seconds), bay 1 returns to `Available
   "action": "StatusNotification",
   "timestamp": "2026-02-13T10:05:10.800Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_c1d2e3f4a5b6",
     "bayNumber": 1,

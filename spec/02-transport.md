@@ -143,7 +143,7 @@ The `v1` segment in the topic path is a **namespace identifier**, NOT the protoc
 - The protocol version is negotiated inside the message envelope via the `protocolVersion` field (see [Chapter 03 — Messages](03-messages.md)).
 - The topic namespace `v1` MUST remain `v1` for all OSPP 1.x protocol versions.
 - A new topic namespace (e.g., `v2`) would only be introduced for a fundamental transport-level change that cannot be handled by protocol version negotiation.
-- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.9.0*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.2.1`): the two version numbers evolve separately and need not match.
+- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.9.0*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.3.0`): the two version numbers evolve separately and need not match.
 
 ### 2.3 Server Subscription Patterns
 
@@ -299,7 +299,7 @@ The station MUST configure an LWT message at MQTT CONNECT time:
   "action": "ConnectionLost",
   "timestamp": "2026-01-30T12:00:00.000Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "stationId": "stn_a1b2c3d4",
     "reason": "UnexpectedDisconnect"

@@ -96,7 +96,7 @@ Then it publishes the MQTT command:
   "action": "StopService",
   "timestamp": "2026-02-13T10:18:02.450Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "sessionId": "sess_f7e8d9c0",
     "bayId": "bay_c1d2e3f4a5b6"
@@ -128,7 +128,7 @@ The station's bay controller receives the StopService command. It:
   "action": "StopService",
   "timestamp": "2026-02-13T10:18:03.200Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Accepted",
     "actualDurationSeconds": 182,
@@ -157,7 +157,7 @@ The bay transitions from `Occupied` to `Finishing` while the drain cycle complet
   "action": "StatusNotification",
   "timestamp": "2026-02-13T10:18:03.500Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_c1d2e3f4a5b6",
     "bayNumber": 1,
@@ -287,7 +287,7 @@ After the drain cycle completes (about 3 seconds), bay 1 returns to `Available`.
   "action": "StatusNotification",
   "timestamp": "2026-02-13T10:18:06.500Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_c1d2e3f4a5b6",
     "bayNumber": 1,

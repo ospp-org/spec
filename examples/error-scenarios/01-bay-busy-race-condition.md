@@ -51,7 +51,7 @@ reports the bay is already running a cycle. The station responds with error code
   "action": "StartService",
   "timestamp": "2026-02-13T10:15:01.000Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "sessionId": "sess_a4b5c6d7e8f9",
     "bayId": "bay_c1d2e3f4a5b6",
@@ -74,7 +74,7 @@ reports the bay is already running a cycle. The station responds with error code
   "action": "StartService",
   "timestamp": "2026-02-13T10:15:01.300Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "sessionId": "sess_c0d1e2f3a4b5",
     "bayId": "bay_c1d2e3f4a5b6",
@@ -97,7 +97,7 @@ reports the bay is already running a cycle. The station responds with error code
   "action": "StartService",
   "timestamp": "2026-02-13T10:15:02.500Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Accepted"
   },
@@ -116,7 +116,7 @@ reports the bay is already running a cycle. The station responds with error code
   "action": "StartService",
   "timestamp": "2026-02-13T10:15:03.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Rejected",
     "errorCode": 3001,
@@ -163,7 +163,7 @@ reports the bay is already running a cycle. The station responds with error code
   "action": "StatusNotification",
   "timestamp": "2026-02-13T10:15:02.600Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_c1d2e3f4a5b6",
     "bayNumber": 1,

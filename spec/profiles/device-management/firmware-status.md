@@ -82,7 +82,7 @@ Downloaded -> Installing (50%) -> Failed (errorText: "Write error on partition B
   "action": "FirmwareStatusNotification",
   "timestamp": "2026-02-13T10:25:00.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Downloading",
     "firmwareVersion": "1.3.0",
@@ -100,7 +100,7 @@ Downloaded -> Installing (50%) -> Failed (errorText: "Write error on partition B
   "action": "FirmwareStatusNotification",
   "timestamp": "2026-02-13T10:28:00.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Downloaded",
     "firmwareVersion": "1.3.0"
@@ -117,7 +117,7 @@ Downloaded -> Installing (50%) -> Failed (errorText: "Write error on partition B
   "action": "FirmwareStatusNotification",
   "timestamp": "2026-02-13T10:35:00.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Installed",
     "firmwareVersion": "1.3.0"
@@ -134,7 +134,7 @@ Downloaded -> Installing (50%) -> Failed (errorText: "Write error on partition B
   "action": "FirmwareStatusNotification",
   "timestamp": "2026-02-13T10:26:30.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Failed",
     "firmwareVersion": "1.3.0",

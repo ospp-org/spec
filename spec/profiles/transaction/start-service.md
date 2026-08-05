@@ -89,7 +89,7 @@ If the `sessionId` matches a completed or failed session, the station **MUST** r
   "action": "StartService",
   "timestamp": "2026-02-13T10:10:00.000Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "sessionId": "sess_f7e8d9c0",
     "bayId": "bay_a1b2c3d4",
@@ -114,7 +114,7 @@ If the `sessionId` matches a completed or failed session, the station **MUST** r
   "action": "StartService",
   "timestamp": "2026-02-13T10:10:00.350Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Accepted"
   }
@@ -130,7 +130,7 @@ If the `sessionId` matches a completed or failed session, the station **MUST** r
   "action": "StartService",
   "timestamp": "2026-02-13T10:10:00.350Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Rejected",
     "errorCode": 3001,

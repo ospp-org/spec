@@ -80,7 +80,7 @@ Every MQTT message is wrapped in an **envelope**:
   "action": "StartService",
   "timestamp": "2026-01-30T12:00:00.000Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "sessionId": "sess_a1b2c3d4",
     "bayId": "bay_c1d2e3f4a5b6",
@@ -249,7 +249,7 @@ Configure at CONNECT time:
   "action": "ConnectionLost",
   "timestamp": "...",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "stationId": "stn_a1b2c3d4",
     "reason": "UnexpectedDisconnect"

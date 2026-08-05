@@ -75,7 +75,7 @@ The meter value reporting interval is controlled by the `MeterValuesInterval` co
   "action": "MeterValues",
   "timestamp": "2026-02-13T10:12:30.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_a1b2c3d4",
     "sessionId": "sess_f7e8d9c0",
@@ -98,7 +98,7 @@ The meter value reporting interval is controlled by the `MeterValuesInterval` co
   "action": "MeterValues",
   "timestamp": "2026-02-13T10:13:00.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_a1b2c3d4",
     "sessionId": "sess_f7e8d9c0",

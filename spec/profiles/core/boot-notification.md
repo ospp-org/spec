@@ -100,7 +100,7 @@ This section fixes the meaning of an **absent** capability. It does not define c
   "action": "BootNotification",
   "timestamp": "2026-02-13T10:00:00.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "stationId": "stn_a1b2c3d4e5f6",
     "firmwareVersion": "1.2.3",
@@ -139,7 +139,7 @@ This section fixes the meaning of an **absent** capability. It does not define c
   "action": "BootNotification",
   "timestamp": "2026-02-13T10:00:00.250Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Accepted",
     "serverTime": "2026-02-13T10:00:00.250Z",

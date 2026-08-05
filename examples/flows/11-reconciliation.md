@@ -63,7 +63,7 @@ After the ISP restores connectivity, the station reconnects and sends a BootNoti
   "action": "BootNotification",
   "timestamp": "2026-02-13T14:00:02.500Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "stationId": "stn_a1b2c3d4",
     "stationModel": "SSP-3000",
@@ -107,7 +107,7 @@ The server acknowledges the reconnection. Since the station reported `pendingOff
   "action": "BootNotification",
   "timestamp": "2026-02-13T14:00:02.800Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Accepted",
     "serverTime": "2026-02-13T14:00:02.800Z",
@@ -129,7 +129,7 @@ The server acknowledges the reconnection. Since the station reported `pendingOff
   "action": "StatusNotification",
   "timestamp": "2026-02-13T14:00:03.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_c1d2e3f4a5b6",
     "bayNumber": 1,
@@ -151,7 +151,7 @@ The server acknowledges the reconnection. Since the station reported `pendingOff
   "action": "StatusNotification",
   "timestamp": "2026-02-13T14:00:03.100Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_a2b3c4d5e6f7",
     "bayNumber": 2,
@@ -173,7 +173,7 @@ The server acknowledges the reconnection. Since the station reported `pendingOff
   "action": "StatusNotification",
   "timestamp": "2026-02-13T14:00:03.200Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_d5e6f7a8b9c0",
     "bayNumber": 3,
@@ -203,7 +203,7 @@ The first offline transaction. Alice used bay 1 around 10:30, using a BLE Offlin
   "action": "TransactionEvent",
   "timestamp": "2026-02-13T14:00:05.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "offlineTxId": "otx_a1b2c3d4",
     "offlinePassId": "opass_a1c3e500b2d4",
@@ -240,7 +240,7 @@ The first offline transaction. Alice used bay 1 around 10:30, using a BLE Offlin
   "action": "TransactionEvent",
   "timestamp": "2026-02-13T14:00:05.300Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Accepted"
   }
@@ -271,7 +271,7 @@ The second offline transaction. Bob used bay 2 around 12:15, using the Standard 
   "action": "TransactionEvent",
   "timestamp": "2026-02-13T14:00:07.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "offlineTxId": "otx_e5f6a7b8d9c0",
     "offlinePassId": "opass_b0b30030c1d2",
@@ -307,7 +307,7 @@ The second offline transaction. Bob used bay 2 around 12:15, using the Standard 
   "action": "TransactionEvent",
   "timestamp": "2026-02-13T14:00:07.300Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Accepted"
   }
@@ -338,7 +338,7 @@ Alice returned for a second session at bay 3 around 13:10. Same OfflinePass, dif
   "action": "TransactionEvent",
   "timestamp": "2026-02-13T14:00:09.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "offlineTxId": "otx_a9b0c1d2e3f4",
     "offlinePassId": "opass_a1c3e500b2d4",
@@ -375,7 +375,7 @@ Alice returned for a second session at bay 3 around 13:10. Same OfflinePass, dif
   "action": "TransactionEvent",
   "timestamp": "2026-02-13T14:00:09.300Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Accepted"
   }

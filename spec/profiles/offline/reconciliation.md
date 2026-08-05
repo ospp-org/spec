@@ -242,7 +242,7 @@ The following edge cases require special handling:
   "action": "TransactionEvent",
   "timestamp": "2026-02-13T10:15:30.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "offlineTxId": "otx_d4e5f6a7",
     "offlinePassId": "opass_a8b9c0d1e2f3",

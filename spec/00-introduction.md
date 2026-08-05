@@ -150,7 +150,7 @@ Comments appearing in JSON examples (prefixed with `//`) are for illustration on
   "action": "StartService",
   "timestamp": "2026-02-13T10:30:00.000Z",  // ISO 8601 — always UTC, milliseconds required
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": { ... }
 }
 ```

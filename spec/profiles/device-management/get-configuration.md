@@ -63,7 +63,7 @@ This message uses implicit error codes only (1005, 2007, 6001 — see `spec/03-m
   "action": "GetConfiguration",
   "timestamp": "2026-02-13T10:22:00.000Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "keys": [
       "HeartbeatIntervalSeconds",
@@ -83,7 +83,7 @@ This message uses implicit error codes only (1005, 2007, 6001 — see `spec/03-m
   "action": "GetConfiguration",
   "timestamp": "2026-02-13T10:22:00.200Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "configuration": [
       {
@@ -116,7 +116,7 @@ This message uses implicit error codes only (1005, 2007, 6001 — see `spec/03-m
   "action": "GetConfiguration",
   "timestamp": "2026-02-13T10:30:00.000Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {}
 }
 ```

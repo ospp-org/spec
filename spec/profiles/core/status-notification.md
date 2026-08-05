@@ -102,7 +102,7 @@ Unknown    --> Unavailable   (maintenance mode detected after reconnection)
   "action": "StatusNotification",
   "timestamp": "2026-02-13T10:10:01.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_a1b2c3d4",
     "bayNumber": 1,
@@ -131,7 +131,7 @@ Unknown    --> Unavailable   (maintenance mode detected after reconnection)
   "action": "StatusNotification",
   "timestamp": "2026-02-13T10:12:30.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_a1b2c3d4",
     "bayNumber": 1,

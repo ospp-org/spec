@@ -203,7 +203,7 @@ The server validates the request, creates a reservation with 180-second TTL, and
   "action": "ReserveBay",
   "timestamp": "2026-02-13T14:20:15.600Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_a2b3c4d5e6f7",
     "reservationId": "rsv_a7b8c9d0e1f2",
@@ -228,7 +228,7 @@ The station controller checks that bay 2 is Available, transitions it to Reserve
   "action": "ReserveBay",
   "timestamp": "2026-02-13T14:20:15.900Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Accepted"
   }
@@ -248,7 +248,7 @@ The station controller checks that bay 2 is Available, transitions it to Reserve
   "action": "StatusNotification",
   "timestamp": "2026-02-13T14:20:16.100Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_a2b3c4d5e6f7",
     "bayNumber": 2,
@@ -341,7 +341,7 @@ The server:
   "action": "StartService",
   "timestamp": "2026-02-13T14:20:46.000Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "sessionId": "sess_b2c3d4e5",
     "bayId": "bay_a2b3c4d5e6f7",
@@ -373,7 +373,7 @@ The station controller:
   "action": "StartService",
   "timestamp": "2026-02-13T14:20:46.400Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Accepted"
   }
@@ -393,7 +393,7 @@ The station controller:
   "action": "StatusNotification",
   "timestamp": "2026-02-13T14:20:46.600Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_a2b3c4d5e6f7",
     "bayNumber": 2,
@@ -469,7 +469,7 @@ A progress screen showing "Standard Program - Bay 2" with a circular timer count
   "action": "MeterValues",
   "timestamp": "2026-02-13T14:21:46.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_a2b3c4d5e6f7",
     "sessionId": "sess_b2c3d4e5",
@@ -491,7 +491,7 @@ A progress screen showing "Standard Program - Bay 2" with a circular timer count
   "action": "MeterValues",
   "timestamp": "2026-02-13T14:24:46.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_a2b3c4d5e6f7",
     "sessionId": "sess_b2c3d4e5",
@@ -526,7 +526,7 @@ After 300 seconds, the station's session timer fires. The station controller:
   "action": "StatusNotification",
   "timestamp": "2026-02-13T14:25:46.200Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_a2b3c4d5e6f7",
     "bayNumber": 2,
@@ -555,7 +555,7 @@ After the drain cycle completes (~2 seconds), bay 2 returns to Available.
   "action": "StatusNotification",
   "timestamp": "2026-02-13T14:25:48.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_a2b3c4d5e6f7",
     "bayNumber": 2,

@@ -109,7 +109,7 @@ The server validates:
   "action": "UpdateFirmware",
   "timestamp": "2026-02-13T22:00:01.000Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "firmwareVersion": "1.3.0",
     "firmwareUrl": "https://firmware.example.com/acmecorp/ssp-3000/v1.3.0/firmware.bin",
@@ -134,7 +134,7 @@ The station validates the request (checks available flash space, verifies it is 
   "action": "UpdateFirmware",
   "timestamp": "2026-02-13T22:00:01.300Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Accepted"
   }
@@ -156,7 +156,7 @@ The station begins downloading the firmware binary from the CDN.
   "action": "FirmwareStatusNotification",
   "timestamp": "2026-02-13T22:00:02.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Downloading",
     "firmwareVersion": "1.3.0",
@@ -178,7 +178,7 @@ The station begins downloading the firmware binary from the CDN.
   "action": "FirmwareStatusNotification",
   "timestamp": "2026-02-13T22:00:15.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Downloading",
     "firmwareVersion": "1.3.0",
@@ -200,7 +200,7 @@ The station begins downloading the firmware binary from the CDN.
   "action": "FirmwareStatusNotification",
   "timestamp": "2026-02-13T22:00:30.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Downloading",
     "firmwareVersion": "1.3.0",
@@ -222,7 +222,7 @@ The station begins downloading the firmware binary from the CDN.
   "action": "FirmwareStatusNotification",
   "timestamp": "2026-02-13T22:00:45.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Downloading",
     "firmwareVersion": "1.3.0",
@@ -244,7 +244,7 @@ The station begins downloading the firmware binary from the CDN.
   "action": "FirmwareStatusNotification",
   "timestamp": "2026-02-13T22:01:00.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Downloading",
     "firmwareVersion": "1.3.0",
@@ -268,7 +268,7 @@ The station has finished downloading and verifies the SHA-256 checksum against t
   "action": "FirmwareStatusNotification",
   "timestamp": "2026-02-13T22:01:05.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Downloaded",
     "firmwareVersion": "1.3.0"
@@ -301,7 +301,7 @@ The station begins writing the firmware to partition B. During this phase, the s
   "action": "FirmwareStatusNotification",
   "timestamp": "2026-02-13T22:01:10.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Installing",
     "firmwareVersion": "1.3.0"
@@ -324,7 +324,7 @@ The firmware has been written to partition B. The bootloader configuration has b
   "action": "FirmwareStatusNotification",
   "timestamp": "2026-02-13T22:01:30.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Installing",
     "firmwareVersion": "1.3.0",
@@ -376,7 +376,7 @@ The station boots on partition B with firmware v1.3.0 and announces itself.
   "action": "BootNotification",
   "timestamp": "2026-02-13T22:02:33.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "stationId": "stn_a1b2c3d4",
     "stationModel": "SSP-3000",
@@ -420,7 +420,7 @@ The server recognizes the firmware update boot, verifies the new firmware versio
   "action": "BootNotification",
   "timestamp": "2026-02-13T22:02:33.500Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Accepted",
     "serverTime": "2026-02-13T22:02:33.500Z",
@@ -444,7 +444,7 @@ The station confirms the firmware update is complete and the new version is runn
   "action": "FirmwareStatusNotification",
   "timestamp": "2026-02-13T22:02:35.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Installed",
     "firmwareVersion": "1.3.0"
@@ -465,7 +465,7 @@ The station confirms the firmware update is complete and the new version is runn
   "action": "StatusNotification",
   "timestamp": "2026-02-13T22:02:40.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_c1d2e3f4a5b6",
     "bayNumber": 1,
@@ -487,7 +487,7 @@ The station confirms the firmware update is complete and the new version is runn
   "action": "StatusNotification",
   "timestamp": "2026-02-13T22:02:40.100Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_a2b3c4d5e6f7",
     "bayNumber": 2,
@@ -509,7 +509,7 @@ The station confirms the firmware update is complete and the new version is runn
   "action": "StatusNotification",
   "timestamp": "2026-02-13T22:02:40.200Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_d5e6f7a8b9c0",
     "bayNumber": 3,
@@ -539,7 +539,7 @@ The station sends its first heartbeat on the new firmware.
   "action": "Heartbeat",
   "timestamp": "2026-02-13T22:02:45.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {}
 }
 ```

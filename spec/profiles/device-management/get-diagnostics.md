@@ -85,7 +85,7 @@ The station **MUST** upload the archive via HTTP PUT to the provided `uploadUrl`
   "action": "GetDiagnostics",
   "timestamp": "2026-02-13T10:26:00.000Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "uploadUrl": "https://diagnostics.example.com/upload/stn_a1b2c3d4",
     "startTime": "2026-02-12T00:00:00.000Z",
@@ -103,7 +103,7 @@ The station **MUST** upload the archive via HTTP PUT to the provided `uploadUrl`
   "action": "GetDiagnostics",
   "timestamp": "2026-02-13T10:26:00.300Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Accepted",
     "fileName": "diag_stn_a1b2c3d4_20260212_20260213.tar.gz"
@@ -120,7 +120,7 @@ The station **MUST** upload the archive via HTTP PUT to the provided `uploadUrl`
   "action": "GetDiagnostics",
   "timestamp": "2026-02-13T10:26:00.300Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Rejected",
     "errorCode": 5020,

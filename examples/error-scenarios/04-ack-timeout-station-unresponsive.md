@@ -92,7 +92,7 @@ reveals it.
   "messageType": "Request",
   "action": "StartService",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "timestamp": "2026-02-13T10:20:01.500Z",
   "mac": "f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1",
   "payload": {

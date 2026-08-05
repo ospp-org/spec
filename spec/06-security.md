@@ -690,7 +690,7 @@ Input JSON value (key order non-canonical):
 
 ```json
 {
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "messageId": "cmd_550e8400",
   "action": "StartService",
   "payload": {
@@ -704,7 +704,7 @@ Input JSON value (key order non-canonical):
 OSPP Canonical Form (sorted keys, compact, UTF-8):
 
 ```
-{"action":"StartService","messageId":"cmd_550e8400","payload":{"bayId":"bay_c1d2e3f4a5b6","durationSeconds":300,"sessionId":"sess_a1b2c3d4"},"protocolVersion":"0.2.1"}
+{"action":"StartService","messageId":"cmd_550e8400","payload":{"bayId":"bay_c1d2e3f4a5b6","durationSeconds":300,"sessionId":"sess_a1b2c3d4"},"protocolVersion":"0.3.0"}
 ```
 
 The canonical byte sequence is then fed into HMAC-SHA256 (§5), SHA-256-then-ECDSA-P256 (§6.2), or any other signature primitive that requires deterministic input.
@@ -760,7 +760,7 @@ The output is a UTF-8 byte sequence suitable for HMAC-SHA256 input.
 Original message:
 ```json
 {
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "messageId": "cmd_550e8400",
   "action": "StartService",
   "timestamp": "2026-01-30T12:00:00.000Z",
@@ -773,7 +773,7 @@ Original message:
 
 Canonical form (sorted keys, no `mac`, compact):
 ```
-{"action":"StartService","messageId":"cmd_550e8400","messageType":"Request","payload":{"bayId":"bay_c1d2e3f4a5b6","durationSeconds":300,"serviceId":"svc_eco","sessionId":"sess_a1b2c3d4","sessionSource":"MobileApp"},"protocolVersion":"0.2.1","source":"Server","timestamp":"2026-01-30T12:00:00.000Z"}
+{"action":"StartService","messageId":"cmd_550e8400","messageType":"Request","payload":{"bayId":"bay_c1d2e3f4a5b6","durationSeconds":300,"serviceId":"svc_eco","sessionId":"sess_a1b2c3d4","sessionSource":"MobileApp"},"protocolVersion":"0.3.0","source":"Server","timestamp":"2026-01-30T12:00:00.000Z"}
 ```
 
 ### 5.4 MAC Computation

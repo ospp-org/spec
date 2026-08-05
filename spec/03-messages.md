@@ -221,7 +221,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
   "action": "BootNotification",
   "timestamp": "2026-01-30T12:00:00.000Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "stationId": "stn_a1b2c3d4",
     "firmwareVersion": "1.2.3",
@@ -1221,7 +1221,7 @@ This is the **Last Will and Testament (LWT)** message, pre-configured by the sta
   "action": "ConnectionLost",
   "timestamp": "2026-01-30T12:00:00.000Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "stationId": "stn_a1b2c3d4",
     "reason": "UnexpectedDisconnect"

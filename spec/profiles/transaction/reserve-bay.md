@@ -78,7 +78,7 @@ Created --> Active --> Consumed (by StartService)
   "action": "ReserveBay",
   "timestamp": "2026-02-13T10:07:30.000Z",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "bayId": "bay_a1b2c3d4",
     "reservationId": "rsv_e5f6a7b8",
@@ -97,7 +97,7 @@ Created --> Active --> Consumed (by StartService)
   "action": "ReserveBay",
   "timestamp": "2026-02-13T10:07:30.180Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Accepted"
   }
@@ -113,7 +113,7 @@ Created --> Active --> Consumed (by StartService)
   "action": "ReserveBay",
   "timestamp": "2026-02-13T10:07:30.180Z",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "payload": {
     "status": "Rejected",
     "errorCode": 3001,

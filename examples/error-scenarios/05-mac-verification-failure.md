@@ -54,7 +54,7 @@ itself).
   "messageType": "Request",
   "action": "ChangeConfiguration",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "timestamp": "2026-02-13T15:00:00.000Z",
   "mac": "e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4",
   "payload": {
@@ -74,7 +74,7 @@ HMAC-SHA256(
     "messageType": "Request",
     "action": "ChangeConfiguration",
     "source": "Server",
-    "protocolVersion": "0.2.1",
+    "protocolVersion": "0.3.0",
     "timestamp": "2026-02-13T15:00:00.000Z",
     "payload": {
       "keys": [
@@ -97,7 +97,7 @@ contains the original value.
   "messageType": "Request",
   "action": "ChangeConfiguration",
   "source": "Server",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "timestamp": "2026-02-13T15:00:00.000Z",
   "mac": "e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4",
   "payload": {
@@ -124,7 +124,7 @@ MAC Verification for message msg_s2c_pp660001:
         "messageType": "Request",
         "action": "ChangeConfiguration",
         "source": "Server",
-        "protocolVersion": "0.2.1",
+        "protocolVersion": "0.3.0",
         "timestamp": "2026-02-13T15:00:00.000Z",
         "payload": {
           "keys": [
@@ -153,7 +153,7 @@ MAC Verification for message msg_s2c_pp660001:
   "messageType": "Event",
   "action": "SecurityEvent",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "timestamp": "2026-02-13T15:00:01.200Z",
   "mac": "b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3",
   "payload": {
@@ -186,7 +186,7 @@ MAC Verification for message msg_s2c_pp660001:
   "messageType": "Response",
   "action": "ChangeConfiguration",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "timestamp": "2026-02-13T15:00:01.500Z",
   "mac": "c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4",
   "payload": {
@@ -217,7 +217,7 @@ failure counter reaches the threshold of 3 within the 60-second window:
   "messageType": "Event",
   "action": "SecurityEvent",
   "source": "Station",
-  "protocolVersion": "0.2.1",
+  "protocolVersion": "0.3.0",
   "timestamp": "2026-02-13T15:00:45.000Z",
   "mac": "d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5",
   "payload": {
