@@ -217,7 +217,7 @@ Power on
 **Critical rules:**
 - BLE advertising starts BEFORE MQTT connection (users can browse even while MQTT connects)
 - Do NOT process commands while `Booting` or `Rejected`. Queue them (max 10 pending commands); if the queue overflows, reject with `6001 SERVER_INTERNAL_ERROR`. While `Pending` you MUST process and answer them — that is the channel an operator repairs you through — but you MUST still refuse StartService and ReserveBay with `3002 BAY_NOT_READY`, because a restricted station serves no customers. See [Chapter 05 §1.4](../spec/05-state-machines.md#14-the-restricted-states).
-- The `sessionKey` from the server response is your HMAC-SHA256 signing key for this session. Store it in RAM only.
+- The `sessionKey` from the server response is your HMAC-SHA256 signing key for this session. Store it in RAM only, never in NVS. It lives exactly as long as the MQTT session: discard it on disconnect, and expect a new one from the next boot. Do **not** implement a TTL on it — there is none, and one can only ever fire early, on a station that is online and working.
 
 ### 2.4 MQTT Connection Details
 
@@ -664,7 +664,7 @@ QoS: 1 (always)
 1. Look up the station by `stationId`
 2. If unknown → respond `Rejected` with error `2001 STATION_NOT_REGISTERED`
 3. Validate the protocol version by **exact match** against the set your server supports — hold it as a configurable list, not a single value, so the set can be widened before a fleet moves. If the station's `protocolVersion` is not a member, respond `Rejected` with error `1007 PROTOCOL_VERSION_MISMATCH` and include both the `supportedVersions` array (e.g., `["0.3.0", "0.4.0"]`) and a `retryInterval` — the station stays in the `Rejected` restricted state and keeps retrying, so do not treat 1007 as a terminal state server-side. Do **not** compare MAJOR components: a shared MAJOR implies nothing, and every OSPP version to date has MAJOR `0`
-4. Generate a 32-byte random session key (for HMAC signing)
+4. Generate a 32-byte random session key (for HMAC signing) — on **every** acceptance, unconditionally, whatever the signing mode. Bind its lifetime to the MQTT session and drop it on the LWT or any broker-reported disconnect; do not put a TTL on it.
 5. Respond `Accepted` with:
    - `serverTime` (ISO 8601 UTC) — station syncs its clock to this
    - `heartbeatIntervalSec` (default 30s)
