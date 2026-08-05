@@ -69,7 +69,7 @@ Automatic rollback to the previous partition **MUST** occur under any of the fol
 
 1. **Boot failure:** The station fails to boot from the new partition within 60 seconds.
 2. **Health check failure:** The station boots but fails its self-diagnostic health check within 120 seconds of boot.
-3. **Manual trigger:** The server sends a Reset command with `type: "Hard"` to force rollback to the previous known-good firmware.
+3. **Manual trigger:** The server sends a Reset command to reboot the station, which boots the previous known-good partition. Rollback is a property of the A/B partition scheme, not of the reset command: no value of Reset selects a partition, and none clears credentials.
 
 After a rollback, the station **MUST** send a BootNotification with the previous (rolled-back) firmware version and a `bootReason` of `"ErrorRecovery"`.
 

@@ -454,7 +454,7 @@ This scheme ensures the station always has a known-good firmware image to fall b
 Rollback MUST be automatic and safe:
 
 1. **Automatic rollback:** If the station fails to send a BootNotification within 5 minutes of rebooting (hardware watchdog timer), the bootloader MUST revert to the previous active partition and reboot again.
-2. **Manual rollback:** The server MAY send a Reset [MSG-015] command with `type: "hard"` to force a reboot. If the current firmware is unstable, the station will fail the watchdog and roll back automatically.
+2. **Manual rollback:** The server MAY send a Reset [MSG-015] command to force a reboot. If the current firmware is unstable, the station will fail the watchdog and roll back automatically.
 3. **Data preservation:** Rollback MUST NOT erase configuration data, NVS storage, session logs, or pending offline transactions.
 4. **Notification:** After a rollback, the station MUST send a FirmwareStatusNotification [MSG-017] with `status: "Failed"` and an `errorText` describing the rollback reason.
 5. **Scheduling constraint:** The station MUST NOT begin a firmware update (transition from Idle to Downloading) while any bay is in `Occupied` or `Finishing` state. If sessions are active, the station MUST wait until all sessions complete before proceeding. The UpdateFirmware command MAY include a `scheduledAt` field to defer the update.

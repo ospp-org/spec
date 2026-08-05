@@ -122,7 +122,7 @@ Verify that the station correctly handles ChangeConfiguration for valid RW keys,
 15. Send Reset to apply the static change:
     ```json
     {
-      "type": "Soft"
+      "force": false
     }
     ```
 16. Verify Reset response `status: "Accepted"`.

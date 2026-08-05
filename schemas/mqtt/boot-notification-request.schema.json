@@ -103,11 +103,12 @@
         "PowerOn",
         "Watchdog",
         "FirmwareUpdate",
+        "RemoteReset",
         "ManualReset",
         "ScheduledReset",
         "ErrorRecovery"
       ],
-      "description": "Reason the station booted."
+      "description": "Reason the station booted. RemoteReset means the server asked for this return via Reset [MSG-015], distinguishing a commanded reboot from a spontaneous one — without it a server cannot tell whether the station came back because it was told to. ManualReset is a human acting at the station; ScheduledReset is the station's own scheduled restart. No member denotes a credential wipe: OSPP has no remote factory reset (Reset profile §5.1)."
     },
     "capabilities": {
       "type": "object",

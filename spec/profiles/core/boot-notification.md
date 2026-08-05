@@ -26,7 +26,7 @@ The station **MUST NOT** process any incoming commands until it receives an `Acc
 | `uptimeSeconds` | integer | Yes | Seconds elapsed since the station last booted. |
 | `pendingOfflineTransactions` | integer | Yes | Number of offline transactions queued for sync. |
 | `timezone` | string | Yes | IANA timezone identifier (e.g., `Europe/London`). |
-| `bootReason` | string | Yes | Reason the station booted. One of: `PowerOn`, `Watchdog`, `FirmwareUpdate`, `ManualReset`, `ScheduledReset`, `ErrorRecovery`. |
+| `bootReason` | string | Yes | Reason the station booted. One of: `PowerOn`, `Watchdog`, `FirmwareUpdate`, `RemoteReset`, `ManualReset`, `ScheduledReset`, `ErrorRecovery`. |
 | `capabilities` | object | Yes | Feature flags (see below). |
 | `networkInfo` | object | Yes | Current network connection details (see below). |
 

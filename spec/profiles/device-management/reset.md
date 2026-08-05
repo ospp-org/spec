@@ -6,7 +6,9 @@ Perform a soft or hard reset on the station. The station **MUST** handle active 
 
 ## 1. Overview
 
-Reset is a server-initiated command that instructs the station to perform either a soft reset (firmware restart) or a hard reset (factory defaults). A soft reset restarts the station firmware while preserving all configuration and data. A hard reset restores the station to factory defaults, clearing its provisioned identity and all server-supplied configuration and cached data — but **not** the out-of-band bootstrap inputs it needs in order to be provisioned again; §5.1 draws that line, and a station that crosses it cannot be recovered. A hard reset therefore leaves the station **unprovisioned**, and its next OSPP action is provisioning, not BootNotification. Automatic reboot after configuration changes is configurable via `AutoRebootEnabled` (see §8 Configuration).
+Reset is a server-initiated command that instructs the station to **reboot**. There is exactly one reset operation: the firmware restarts and everything persisted — credentials, configuration, catalog, logs, buffered events — survives. The only choice the command offers is whether to reboot while a session is running, carried by `force`.
+
+There is **no remote factory reset and no remote credential wipe** in OSPP; §5.1 says why, and what replaced it. Automatic reboot after configuration changes is configurable via `AutoRebootEnabled` (see §8 Configuration).
 
 ## 2. Direction and Type
 
@@ -17,7 +19,9 @@ Reset is a server-initiated command that instructs the station to perform either
 
 | Field | Type | Required | Description |
 |--------|--------|----------|-----------------------------------------------|
-| `type` | string | Yes | `Soft` (firmware restart) or `Hard` (factory reset). |
+| `force` | boolean | No | Reboot even while a session is running. Default `false`. |
+
+There is exactly **one** reset operation and it is a **reboot**. Everything the station has persisted survives it. No value of this message clears credentials.
 
 ## 4. Response Payload
 
@@ -30,34 +34,30 @@ Reset is a server-initiated command that instructs the station to perform either
 ## 5. Processing Rules
 
 1. On receiving a Reset command, the station **MUST** first check for active sessions.
-2. If active sessions exist, the station **MUST** respond with `Rejected` and error code `3016 ACTIVE_SESSIONS_PRESENT`. The server **MAY** re-issue the command after sessions have completed.
-3. If no active sessions exist, the station **MUST** respond with `Accepted` and then initiate the reset.
-4. For a **Soft** reset: the station **MUST** restart its firmware process. Configuration, logs, and persisted data **MUST** be preserved. After restart, the station **MUST** send a BootNotification with `bootReason: "ManualReset"`.
-5. For a **Hard** reset: the station **MUST** restore factory defaults, clearing its provisioned identity, its cached credentials, its server-supplied configuration and its session history — §5.1 states exactly what is cleared and what is not. It **MUST NOT** send a BootNotification on the restart that follows. A hard-reset station holds no client certificate, and Boot's preconditions are a valid TLS certificate and private key in NVS plus completed provisioning ([Flows §1](../../04-flows.md#1-station-boot--registration)); it therefore restarts into the **not-provisioned** state and re-enters [Station Provisioning (Flows §2)](../../04-flows.md#2-station-provisioning), which is what [re-provisioning](../../04-flows.md#re-provisioning-an-already-provisioned-station) already names a hard reset as the expected path to. The BootNotification follows the reboot that ends a **successful** re-provisioning, and still carries `bootReason: "ManualReset"` — the intervening provisioning is not why the station rebooted.
-6. Because re-provisioning requires a **new** provisioning token, a consumed token **MUST NOT** be reused, and the station has no in-band way to request one ([Flows §2](../../04-flows.md#re-provisioning-an-already-provisioned-station)), a server that issues a Hard reset **MUST** be prepared to mint that token and have it delivered out of band. Issuing a Hard reset without doing so leaves the station reachable by no OSPP channel.
-7. The station **MUST** send the `Accepted` response before performing the reset to ensure the server receives acknowledgement.
-8. The response `messageId` **MUST** match the request `messageId`.
+2. If any bay has an active session and `force` is absent or `false`, the station **MUST** respond `Rejected` with `3016 ACTIVE_SESSIONS_PRESENT` and **MUST NOT** reboot. The server **MAY** re-issue the command once sessions have completed.
+3. If any bay has an active session and `force` is `true`, the station **MUST** first settle every active session under the **operator-disable policy** — the session is stopped, metered and reported exactly as an operator-initiated stop, so the customer is billed for what they actually received — and **MUST** complete that settlement before rebooting. `force` is not a licence to drop a session on the floor; it is a licence to end it without waiting.
+4. If no bay has an active session, the station **MUST** respond `Accepted` and then reboot.
+5. The station **MUST** send the response **before** rebooting, so the server receives acknowledgement.
+6. On reboot the station **MUST** restart its firmware. Configuration, credentials, logs and persisted data **MUST** be preserved. After restarting it **MUST** send a BootNotification with `bootReason: "RemoteReset"` — the value that says the server asked for this return, distinguishing it from a spontaneous one.
+7. The response `messageId` **MUST** match the request `messageId`.
 
-### 5.1 What a Hard Reset Clears, and What It MUST Preserve
+### 5.1 There Is No Remote Factory Reset
 
-A hard reset that erased everything would be unrecoverable by design: re-provisioning requires the station to reach the provisioning endpoint, to validate the server that answers, to date that server's certificate, and to present the **same** `stationId` — which [Flows §2](../../04-flows.md#re-provisioning-an-already-provisioned-station) requires to be unchanged and forbids the server to reallocate. None of those can be recovered in band, because every in-band channel needs the credential the reset just destroyed. The scope is therefore normative rather than left to firmware.
+**A remote credential wipe is not part of OSPP.** Factory reset is **physical** — a button, or an SD card — and is out of scope for this protocol.
 
-**MUST be cleared** — everything provisioning issues, or the server supplies:
+This is a deliberate removal, and the reason is that OSPP has no bootstrap credential.
 
-| Item | Restored by |
-|------|-------------|
-| mTLS client certificate and its private key | the provisioning response |
-| Receipt-signing key pair | regenerated on-device, resubmitted |
-| Static BLE ECDH key pair and the `stationIdentity` certificate | regenerated on-device, resubmitted (BLE stations only) |
-| `stationCaChain`, `brokerRootCa`, `rootCaThumbprint`, `serverVerifyKey` | the provisioning response |
-| `mqttConfig` | the provisioning response |
-| `bays` | the provisioning response — the array whose members pair each `bayId` with its `bayNumber`, which is what carries the bay-number mapping ([Flows §2](../../04-flows.md#2-station-provisioning)) |
-| HMAC session key | the BootNotification response (RAM-only in any case — [Chapter 06 §4.5](../../06-security.md)) |
-| Configuration keys ([Chapter 08](../../08-configuration.md)) | reset to documented defaults; server re-pushes |
-| Service catalog | UpdateServiceCatalog |
-| Session history and buffered events | not restored |
+Re-provisioning requires the station to reach the provisioning endpoint, validate the server that answers, date that server's certificate, and present the **same** `stationId`. None of that is recoverable in band, because every in-band channel needs a credential a wipe would have destroyed. The protocols that *do* permit a remote wipe keep something back to make it survivable: TR-069 and LwM2M both retain a bootstrap credential across a factory reset, precisely so the device can still be re-enrolled afterwards. OSPP retains nothing of the kind. OCPP does not offer a remote factory reset at all.
 
-**MUST survive the reset, or be reintroduced by the same out-of-band means that supplied it originally** — these are the *Required configuration* of [Chapter 01 — Architecture §7.2](../../01-architecture.md#72-physical-configuration):
+So a remote wipe in OSPP is a supported command that makes a station **unreachable by every channel it has** — recoverable only by a site visit. A command whose successful execution can strand the device is not a management feature.
+
+> **Provenance, because it explains the defect.** `Hard`/`Soft` was borrowed from OCPP 1.6, where the pair means **abrupt versus graceful restart** and touches no credential whatsoever. The credential-wipe meaning was attached to `Hard` later, and it was attached in a **conformance case** rather than in a design decision — which is why the wire carried a destructive operation that no requirement had ever argued for.
+
+### 5.2 What a Physical Factory Reset MUST Preserve
+
+Physical factory reset is out of band, but its **scope** is normative here, because a physical reset that erased everything would be exactly as unrecoverable as the remote one just removed.
+
+These are the *Required configuration* of [Chapter 01 — Architecture §7.2](../../01-architecture.md#72-physical-configuration). They **MUST** survive, or be reintroduced by the same out-of-band means that supplied them originally:
 
 | Item | Why it cannot be recovered in band |
 |------|-------------------------------------|
@@ -65,22 +65,20 @@ A hard reset that erased everything would be unrecoverable by design: re-provisi
 | Network configuration | Nothing can be reached without it |
 | Provisioning endpoint origin | The station cannot address the call that restores everything else |
 | HTTPS trust policy | The station cannot validate the server that answers that call |
-| Broker trust policy | The station cannot validate the broker. Recoverable in band **only** under a private CA hierarchy, where the provisioning response's `brokerRootCa` carries it — that field is a row of the *cleared* table above, and this row is not it. Under a publicly-trusted hierarchy `brokerRootCa` is absent by design and nothing in band supplies the anchor |
+| Broker trust policy | The station cannot validate the broker. Recoverable in band **only** under a private CA hierarchy, where the provisioning response's `brokerRootCa` carries it. Under a publicly-trusted hierarchy `brokerRootCa` is absent by design and nothing in band supplies the anchor |
 | Initial time source | The station cannot evaluate that server's certificate validity period |
-| Root CA public certificate | Embedded in firmware ([Chapter 06 §4.2](../../06-security.md)), so unaffected by a configuration reset |
+| Root CA public certificate | Embedded in firmware ([Chapter 06 §4.2](../../06-security.md)), so unaffected by any configuration reset |
 
-The MQTT broker URL of §7.2 **MAY** be cleared: the provisioning response carries `mqttConfig`, so it is restored in band.
-
-A station that clears any row of the second table is **bricked by a supported command** — it holds no credential and can no longer obtain one. Implementations **MUST NOT** treat "restore factory defaults" as authority to do so.
+A station that clears any row of this table is **bricked** — it holds no credential and can no longer obtain one. An implementation **MUST NOT** treat "restore factory defaults" as authority to do so.
 
 ## 6. Active Session Handling
 
 When the station has active sessions at the time of a Reset request:
 
-1. The station **MUST** respond with `Rejected` and error code `3016 ACTIVE_SESSIONS_PRESENT`.
+1. Without `force`, the station **MUST** respond `Rejected` with `3016 ACTIVE_SESSIONS_PRESENT`.
 2. The server **SHOULD** wait for active sessions to complete naturally, then re-issue the Reset command.
-3. Alternatively, the server **MAY** send StopService commands for each active session first, wait for confirmation, and then re-issue the Reset command.
-4. If the server needs an immediate reset regardless of active sessions, it **SHOULD** first stop all active sessions via StopService and then re-issue the Reset command.
+3. Alternatively, the server **MAY** send StopService for each active session, wait for confirmation, and then re-issue.
+4. If the server needs the reboot regardless, it **MAY** set `force: true`, which settles the sessions under the operator-disable policy and then reboots. It **SHOULD** prefer option 3 where it can wait, because an explicit StopService produces a cleaner audit trail than a forced settlement.
 
 ## 7. Error Codes
 
@@ -92,7 +90,7 @@ When the station has active sessions at the time of a Reset request:
 
 ## 8. Examples
 
-### 8.1 Request (Soft Reset)
+### 8.1 Request (reboot when idle)
 
 ```json
 {
@@ -103,7 +101,7 @@ When the station has active sessions at the time of a Reset request:
   "source": "Server",
   "protocolVersion": "0.3.0",
   "payload": {
-    "type": "Soft"
+    "force": false
   }
 }
 ```
@@ -124,7 +122,7 @@ When the station has active sessions at the time of a Reset request:
 }
 ```
 
-### 8.3 Request (Hard Reset)
+### 8.3 Request (forced reboot)
 
 ```json
 {
@@ -135,7 +133,7 @@ When the station has active sessions at the time of a Reset request:
   "source": "Server",
   "protocolVersion": "0.3.0",
   "payload": {
-    "type": "Hard"
+    "force": true
   }
 }
 ```

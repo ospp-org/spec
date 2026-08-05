@@ -438,7 +438,7 @@ This is the provisioning-endpoint instance of the idempotency-retention rule in 
 
 **Re-provisioning** is this same flow performed for a station that already holds credentials. It is a **supported** operation, not an error condition. It is the expected recovery path after:
 
-- a **Hard** reset, which clears cached credentials (see [Reset](profiles/device-management/reset.md));
+- a **physical** factory reset — a button or an SD card — which is out of band and out of scope for this protocol; no OSPP message clears credentials (see [Reset §5.1](profiles/device-management/reset.md));
 - **certificate expiry** where in-band renewal is no longer possible, because an expired certificate cannot establish the mTLS session that renewal requires (see [Chapter 06 — Security §4.7.3](06-security.md));
 - **controller replacement**, where the replacement hardware holds no credentials;
 - **key compromise**, where the station's existing private key must be retired.
@@ -1534,7 +1534,7 @@ sequenceDiagram
         SSP-->>Server: RESPONSE {results: [{key, status: "RebootRequired"}]} [MSG-013]
         Note over SSP: Values stored, applied after reboot
         opt Admin triggers reboot
-            Server->>SSP: Reset REQUEST [MSG-015] {type: "Soft"}
+            Server->>SSP: Reset REQUEST [MSG-015] {force: false}
             SSP-->>Server: Reset RESPONSE (Accepted) [MSG-015]
             Note over SSP: Reboot → Boot Flow §1
         end
