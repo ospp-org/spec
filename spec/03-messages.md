@@ -1536,7 +1536,7 @@ This message uses implicit error codes only (see [§Introduction — Implicit er
 | **Idempotency** | No — each reset triggers a new reboot cycle |
 | **Message Expiry** | 120 seconds |
 
-Commands the station to perform a soft or hard reset. The station **MUST** reject the reset if active sessions exist (see Behavior below).
+Commands the station to **reboot**. There is exactly one reset operation and everything the station has persisted survives it; no value of this message clears credentials ([Reset §5.1](profiles/device-management/reset.md)). The station **MUST** reject the reset if active sessions exist and `force` is absent or false (see Behavior below).
 
 #### REQUEST Payload
 

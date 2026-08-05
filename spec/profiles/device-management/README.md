@@ -16,7 +16,7 @@ Stations that declare support for this profile MUST implement all 9 actions. Par
 |-------------------------------------------|-------------------|---------|-----------------------------------------------|
 | [GetConfiguration](get-configuration.md) | Server to Station | COMMAND | Read one or more configuration keys from the station. |
 | [ChangeConfiguration](change-configuration.md) | Server to Station | COMMAND | Set a single configuration key on the station. |
-| [Reset](reset.md) | Server to Station | COMMAND | Perform a soft (firmware restart) or hard (factory) reset. |
+| [Reset](reset.md) | Server to Station | COMMAND | Reboot the station. One operation, everything persisted survives; `force` decides whether it may reboot while a session is running. There is no remote factory reset. |
 | [UpdateFirmware](update-firmware.md) | Server to Station | COMMAND | Initiate an OTA firmware update with A/B partitioning. |
 | [FirmwareStatusNotification](firmware-status.md) | Station to Server | EVENT | Report firmware update progress (download, install, failure). |
 | [GetDiagnostics](get-diagnostics.md) | Server to Station | COMMAND | Request diagnostics collection and upload. |

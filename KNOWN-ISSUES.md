@@ -442,8 +442,9 @@ direction only.
 `TC-SEC-005` and `TC-SEC-006` both open "Verify that the **server's** provisioning endpoint
 …". They are server-side cases: a harness posts crafted bodies and checks status, `errorCode`,
 `details.phase`, precedence between `4010`/`4019`/`4016`/`4015`, and that a rejection consumes
-no token and mints no certificate. `TC-DM-003` Part C reaches provisioning, but only as the
-recovery leg of a Hard reset, and only where an operator capability is available.
+no token and mints no certificate. `TC-DM-003` no longer reaches provisioning at all: its Part C existed only as the recovery leg
+of a Hard reset, and the remote credential wipe left the wire in the 2026-08 reset arc. So the
+gap this issue describes is now wider than when it was raised, not narrower.
 
 **What no case covers.** The station's own conduct on the path where nothing goes wrong:
 

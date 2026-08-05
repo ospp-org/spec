@@ -14,8 +14,12 @@ as described in [VERSIONING.md](VERSIONING.md).
 > `0.3.0`.** The document version does **not** move here — [`02-transport.md` §2.2](spec/02-transport.md)
 > makes the two independent and this change respects that.
 >
-> **Partial.** Parts 3 (signing), 4 (boot) and 6.2 (the exempt-count reconciliation) of this
-> arc are **not** in this entry. See *Not in this revision* at the end.
+> **Complete.** All three arcs — topology, wire/errors/reset, and boot/signing — are in this
+> entry. The wire version does **not** move a second time: `0.3.0` has never shipped, so the
+> boot and signing breaks fold into the same unreleased value rather than minting another.
+>
+> **Ship order matters and is stated per decision.** The consolidated order is in
+> *Breaking changes, and the order they must ship in* at the end of this entry.
 
 ### Changed (BREAKING — wire)
 
@@ -66,6 +70,88 @@ as described in [VERSIONING.md](VERSIONING.md).
   correcting the message, a dangling reference by correcting server-side state — and one code
   covering both left an operator unable to tell which.
 
+- **StatusNotification reports the bay's `programs[]`, not its `services[]` (BREAKING — station
+  and server).** Each entry is `{programNumber, available}`, one per program the bay declared at
+  provisioning, and the set **MUST** equal that declaration — an unusable program is reported
+  present-but-unavailable, never omitted.
+
+  A program is a physical operation the hardware performs and its ordinal is a firmware constant;
+  a service is a commercial offer the **server** mints and pushes in the catalog. A station cannot
+  originate knowledge of a service, only echo one back, and immediately after its first boot it
+  has been told none — so the old shape required at least one `svc_`-prefixed identifier in the
+  very message [CORE-004](spec/profiles/core/README.md) requires at that exact moment. A
+  conforming first boot was impossible. This is the ownership boundary, not a rename.
+
+  40 payload sites across 22 files moved. 18 sites in 11 files that look identical were **not**
+  touched: they are BLE AvailableServices, where the station is echoing the catalog it was pushed
+  to an app that has no other way to reach it offline. `03-messages.md` §7.2 now states the
+  distinction, because it is the first question a reader has.
+
+- **Version negotiation is exact match (BREAKING — server, and the deployment is the risk).** The
+  station declares one version; the server holds a **set**; membership decides. `1007` and its
+  `supportedVersions` array are unchanged, so nothing new goes on the wire.
+
+  The "same MAJOR is compatible" rule is deleted from **nine** sites. It contradicted the
+  versioning policy directly above it — MAJOR is `0` for every version OSPP has shipped, so it
+  classified `0.1.0` and `0.10.0` as compatible while the pre-1.0 section licences breaking
+  changes between `0.x` minors. The contradiction cost money: a `0.4.0` station accepted by a
+  `0.3.0` server delivers a full session and emits `SessionEnded` with a `reason` the older schema
+  rejects — and `SessionEnded` is the sole billing source when no StopService was issued. Session
+  delivered, never billed, on a pairing the rule told the server to accept.
+
+  **Deployment order, and it is not optional: configuration first, then enforcement.** Widening
+  the server's set is backward compatible; enforcing exact match is not. Measured on the live
+  fleet before this change: **every station that has ever booted emits the old wire value, and
+  both servers are configured for a value no station has ever emitted.** Only MAJOR-gating keeps
+  that pairing alive. Enforcing ahead of configuration rejects the entire connecting fleet. The
+  spec change is safe; shipping it in the wrong order is a total outage.
+
+- **Everything on the wire is signed (BREAKING — both peers).** 44 of 47 message types carry a
+  MAC. Three are exempt and they are structural, not judged: BootNotification REQUEST precedes the
+  key, BootNotification RESPONSE carries it, and the LWT is published by the broker after the
+  station is gone — and on a reconnect the station holds key N-1 while the server has rotated to
+  key N, so a will-MAC is guaranteed stale on arrival.
+
+  The withdrawn criterion was "zero financial impact", and it is rewritten rather than deleted
+  because it failed twice on its own terms and the record is worth keeping. StatusNotification
+  gates whether a paid service may start — a forged `Faulted` denies revenue, a forged `Available`
+  induces a start that fails into `3009`, which the registry answers with "refund 100%". Heartbeat
+  is worse: forged heartbeats keep a dead station looking alive, [CORE-007](spec/profiles/core/README.md)'s
+  timeout never fires, and the server keeps selling sessions on hardware that is not there. A
+  third, GetDiagnostics, was wrong in a direction the criterion could not see at all — it uploads
+  a configuration dump and session history to a URL the command supplies.
+
+  Cost: **53 bytes** per message and nothing else — no `keyId`, no `alg`, no nonce — about
+  **16 KB per hour** per station. On constrained hardware the bytes are not the cost; canonical
+  re-serialization is, and it is heavier **inbound**, the direction verification runs. That path
+  was already mandatory for most message types, so this adds no new firmware code path.
+
+  **Deployment order: stations sign before servers enforce.** A server that starts requiring MACs
+  before the fleet emits them rejects everything, and the rejections are logged as MAC failures
+  naming the stations.
+
+- **`MessageSigningMode` is `Dynamic` → `Static`, default `Critical` → `All` (BREAKING —
+  station).** The mode is bound to the session key, which is issued at boot; a mid-session change
+  leaves one peer signing and the other not, and with both directions failing closed the station
+  goes silent both ways. `Static` makes the change and the new key land on the same event.
+
+- **`sessionKey` is REQUIRED on every `Accepted` boot response (BREAKING — server).** It was
+  conditional on `MessageSigningMode`, which is station configuration and therefore unreachable
+  from this message's schema — so the rule could never be enforced and would have stayed prose
+  indefinitely. A third `allOf` branch now enforces it, mirroring the two that exist for
+  `Rejected` and `Pending`. Under `None` the key is issued and unused; the cost is 44 base64
+  characters once per connection.
+
+  **The station's side of it was undefined and is now defined.** An `Accepted` with no
+  `sessionKey` is **malformed**: log `1005`, do not enter normal operation, retry per
+  [CORE-011](spec/profiles/core/README.md). Explicitly **not** a downgrade to unsigned — a station
+  that proceeds keyless can sign nothing, has everything it sends rejected, and is named as the
+  suspect in the resulting MAC-failure events.
+
+- **`3002 BAY_NOT_READY` gains a cause.** A station in a restricted state refuses StartService and
+  ReserveBay with it. The registry entry now says so, and tells an operator that no
+  StatusNotification at all means the boot needs attention, not the bay.
+
 ### Added
 
 - **`3017 PROGRAM_NOT_DECLARED`** — the `programNumber` was never declared for that bay. The
@@ -96,6 +182,105 @@ as described in [VERSIONING.md](VERSIONING.md).
   spontaneous one. `ManualReset` (a human at the station) and `ScheduledReset` (the station's
   own timer) remain; neither ever denoted a wipe.
 
+- **A station-level state machine** ([`05-state-machines.md` §1](spec/05-state-machines.md)). The
+  chapter defined machines for bays, sessions, reservations, BLE and firmware and none for the
+  station, so `Pending`, `Rejected`, `Accepted` and not-provisioned had no formal home and
+  `3018 TOPOLOGY_MISMATCH` depended on a state that existed nowhere structurally. Six states —
+  `NotProvisioned`, `Booting`, `Pending`, `Rejected`, `Operational`, `Disconnected` — placed at
+  **§1** as the outermost machine, with everything else renumbering under it. §1 is where
+  `boot-notification-request.schema.json` was already pointing. `Disconnected` earns its place
+  because it is a distinct behaviour set (sessions run on the local timer, BLE stays up, events
+  buffer) and is the station-scope twin of a bay's `Unknown`.
+
+- **`Pending` and `Rejected` are defined as RESTRICTED states** ([§1.4](spec/05-state-machines.md)),
+  resolving a three-way contradiction. `boot-notification.md` rule 5 said the station **MAY**
+  operate normally; rule 3, eleven lines above, defines "normal operation" as the post-`Accepted`
+  state; rule 2 and [CORE-002](spec/profiles/core/README.md) forbade it from sending anything at
+  all. Under one reading a `Pending` station activates hardware on a StartService and delivers an
+  unpaid wash.
+
+  Resolved: a restricted station **answers commands** (`Pending` only — `Rejected` refuses them),
+  **sends nothing unsolicited**, and **serves no customer** — StartService and ReserveBay are
+  refused with `3002 BAY_NOT_READY`, on every transport. A session already running continues and
+  settles. `Pending` keeps the command channel open because that channel is how an operator
+  repairs whatever is holding the boot. This is OCPP 2.0.1's *B02 Cold Boot — Pending* exactly.
+
+  The distinction is carried by `messageType`, not by action: `Event` and any `Request` other
+  than BootNotification are forbidden; `Response` is permitted, because a station does not
+  originate one. CORE-002 now says that rather than banning "any other messages", which banned
+  the answer too.
+
+- **First-boot topology is defined** ([`boot-notification.md` §6.1](spec/profiles/core/boot-notification.md)):
+  the same rule as any other boot. Provisioning creates the bay records and boot never does, so
+  the two declarations come from one commissioning act and a first boot **matches**; when they
+  disagree that is `3018` on a `Pending` response, with **no exemption**. An exemption would make
+  the provisioning declaration decorative and would blind the one boot where a commissioning error
+  is cheapest to catch. The server **MUST NOT** create, extend or trim bay records from a
+  BootNotification, on any boot.
+
+- **`details` on the BootNotification RESPONSE**, with `expected` and `declared`. Both
+  `boot-notification.md` §6 and `07-errors.md` **required** the server to send this object and the
+  closed response schema had no such property — a rule no conforming server could obey. Typed
+  against a new [`bay-topology.schema.json`](schemas/common/bay-topology.schema.json), which the
+  request's `bays[]` items now share: one definition instead of two copies.
+
+- **`bootReason: "Reconnect"`** — the eighth value and the only one that does not name a boot. A
+  station that re-dialled after a TCP reset had to pick a value it knew to be false, and the
+  server could not tell whether the firmware's volatile state survived — the question that decides
+  whether a live session is kept or terminated. `uptimeSeconds` is now normatively the
+  cross-check: it spans the outage on a `Reconnect`, and a `PowerOn` carrying a large uptime is
+  detectably lying.
+
+  **A deliberate divergence from OCPP, recorded so it is not mistaken for an oversight.** OCPP-J
+  (2.0.1 Part 4 §5.4) says a station **SHOULD NOT** send a BootNotification on reconnect, because
+  the connection already re-establishes identity. OSPP requires one, and the requirement follows
+  from the session-key rule: the key is scoped to the MQTT session and arrives only in the boot
+  response, so a station that skipped the boot would reconnect keyless. One extra round trip per
+  reconnect, accepted for a stated reason. OCPP has no equivalent value because it has no such
+  message.
+
+- **Program-level fault reporting** — optional `programs[].errorCode` and `programs[].errorText`
+  on an entry reported `available: false`. Without them an operator sees a dead program and cannot
+  tell a blown fuse from a failed sensor: two faults, one truck roll, the wrong tools. OPTIONAL,
+  and it does **not** extend [CORE-012](spec/profiles/core/README.md), which still mandates codes
+  only when the **bay** goes `Faulted`. New **CORE-013** states the present-but-unavailable rule.
+
+- **[§5.8](spec/06-security.md) — the broker is inside the trust boundary**, stated explicitly with
+  the structural reason: the session key is delivered in the boot response, which passes through
+  the broker in plaintext to it, so a broker that reads that message can forge in **both**
+  directions. [RFC 6733 §13.3](https://www.rfc-editor.org/rfc/rfc6733#section-13.3) gives the test
+  for tolerating such an intermediary — compromising it must imply a high probability of
+  compromising the endpoints — and ours passes it.
+
+  What the MAC still buys, honestly: a **partial** defence against an ACL regression (publish-only
+  — a regression that also grants *subscribe* lets the attacker read the victim's key off the
+  victim's own topic and forge perfectly), and a cheap integrity check. What it does **not** buy:
+  **non-repudiation**. HMAC is symmetric and the server holds the key it verifies with. The
+  specification did not previously claim otherwise — every non-repudiation sentence in the corpus
+  is about the asymmetric ECDSA receipt, where it is correct — so this is a fence against the
+  claim being added later, not a deletion.
+
+- **[§5.9](spec/06-security.md) — the session key lives exactly as long as the MQTT session.** No
+  independent TTL, no rotation mechanism; any reconnect produces a boot, which issues a new key.
+  A TTL on a session-scoped key is a fuse that can only fire early, on a station that is online
+  and working.
+
+  The divergence from TLS, SSH and IPsec is recorded with the reason none of their drivers apply:
+  no confidentiality role, so no AEAD usage bounds; no sequence number, so no counter to exhaust,
+  and the birthday bound at OSPP volumes is on the order of 10⁶ years. The remaining driver is the
+  compromise window, which §5.8 answers. The residual is stated as a trade: a station that never
+  disconnects holds one key indefinitely, and a deployment that wants that bounded already has
+  `TriggerMessage(BootNotification)`.
+
+- **[§5.7](spec/06-security.md) — both directions fail closed.** Verification already did; signing
+  did not. A sender holding no key **MUST refuse to send**, **MUST NOT** publish unsigned, and
+  **MUST NOT** silently drop without a record. Written the other way the two are the same
+  condition read from two ends and only one acts on it — the message is generated, published,
+  delivered, rejected, and logged as a security event naming the peer that could not have
+  prevented it. This is also the more important half: a server that publishes an unsigned
+  `StartService` has produced exactly the message the MAC exists to stop, and has taught the fleet
+  to accept it.
+
 ### Removed
 
 - The deprecation convention introduced in the previous session, in full — `"deprecated"`
@@ -108,38 +293,143 @@ as described in [VERSIONING.md](VERSIONING.md).
   vector pins `{"type": "Hard"}` as **rejected**, so the old value is actively refused rather
   than merely absent.
 
-### Verification
+- **`Critical` from the `MessageSigningMode` enum**, and the 47-row per-message classification
+  table with it. With everything signed the middle value selected nothing. Removed rather than
+  deprecated: the protocol is unreleased, and removing it breaks nothing that can be named — the
+  one real consumer of a non-default mode is a test harness, which uses `None`, and `None` stays
+  for exactly that reason. The default moves to `All` in the same change; leaving it on a removed
+  value would have left every station reading a default that no longer exists.
 
-- `tools/verify-schemas.py`: **305/305 PASS, 0 FAIL, 0 SKIP**.
+- **The "same MAJOR is compatible" rule**, from all nine sites, and **"limited mode"** with it —
+  a phrase that appeared only in those sites and named no state. It was always the `Rejected`
+  restricted state.
+
+- **The lowercase spellings of the signing-mode enum.** PascalCase wins: it is already the
+  repo-wide convention for every enumeration, and both SDKs are strict about it — lowercase only
+  ever worked through a normalizer. Five sites, across `07-errors.md` (which also had the *key*
+  name in camelCase), `03-messages.md`, `profiles/core/boot-notification.md` and `TC-SEC-001`.
+
+- **`CONTRIBUTING.md`'s unqualified "deprecate before removing".** It is a post-1.0 process rule —
+  it protects an installed base by trading correctness for continuity — and OSPP has no installed
+  base. Left unqualified it caused real damage: an earlier session read it as unconditional and
+  introduced a deprecation convention that a later one had to remove in full. Now scoped to
+  1.0-onwards, with the pre-1.0 rule stated alongside it: remove the old form entirely, and pin
+  it as **rejected** with a negative vector rather than leaving it merely absent.
+
+### Breaking changes, and the order they must ship in
+
+Merged across all three arcs. The ordering rule is the same everywhere and it has one shape:
+**a receiver must accept a new form before any sender emits it, and enforcement of a narrowed
+rule must never ship ahead of the configuration that satisfies it.** Violating it does not
+degrade the fleet, it disconnects it.
+
+| # | Phase | What ships | Why it is here |
+|--:|-------|-----------|----------------|
+| 1 | **Measure** | Nothing ships. Establish what version the fleet actually emits, and what topology each station declares against what is provisioned | Exact-match negotiation is gated entirely on the first; the topology-mismatch `Pending` is gated on the second. Both are cheap to measure and unrecoverable to guess |
+| 2 | **Server accepts, enforces nothing** | Widen the supported-version set to a genuine list including the value the fleet emits. Accept (do not require) `bays[]`, `programs[]`, the new `bootReason` values, `details`, and a `mac` on any message. Stop creating bay records from a boot | Every item is backward compatible. A station that has not moved is unaffected |
+| 3 | **Server emits** | `sessionKey` on every `Accepted`; `supportedVersions` on every `1007`; `details` on every `3018` | Additive for the station: reading a new field breaks nothing |
+| 4 | **Station emits** | `bays[]`, `programs[]`, `bootReason: "Reconnect"`, a `mac` on every message. Refuse to send when it holds no key | The server accepted all of these at phase 2. **The server still does not enforce** — it logs MAC results, it does not reject on them |
+| 5 | **Server enforces** | Exact-version match; topology mismatch → `Pending` with `3018`; MAC required; refuse to send unsigned | Only now, and only after phase 4 has soaked. Each of these rejects a station that has not moved |
+| 6 | **Narrow** | Reduce the supported-version set to one value; default `MessageSigningMode` to `All` on the station | Cleanup. Safe once the fleet is uniform |
+
+**Never do these early**, each for a named reason:
+
+- **Exact-match enforcement before phase 1.** Measured before this arc: every station that has
+  booted emits the old wire value and both servers are configured for a value no station has ever
+  emitted. Only MAJOR-gating keeps that alive. Enforcing first is a 100% outage.
+- **Topology rejection before phase 1.** A station whose provisioned record drifted goes to
+  `Pending` and stops serving. That is the correct behaviour and it is still an outage if it
+  happens to a fleet nobody has reconciled.
+- **MAC enforcement before phase 4 has soaked.** Rejections are logged as MAC failures and the
+  events name the *stations*, so the alarm points away from the change that caused it.
+- **`MessageSigningMode` default flip before the station can sign.** Static means it takes effect
+  at the next reboot, which is exactly when you want it — but only after the firmware can honour it.
+
+### Document version — not bumped here
+
+Per the brief for this arc the version headers and tags are **untouched**. Recorded for whoever
+takes the release:
+
+- **Document version: `0.10.0` → `0.11.0`.** Pre-1.0, so MINOR carries breaking changes
+  ([VERSIONING.md](VERSIONING.md) §Pre-1.0 Policy). MAJOR stays `0`.
+- **Wire `protocolVersion`: stays `0.3.0`.** It moved once in this same unreleased block and has
+  never shipped, so the boot and signing breaks fold into it rather than minting a second value
+  no station has ever seen. Moving it twice before either value reaches a station would be
+  ceremony, not information.
+- The two are independent by [`02-transport.md` §2.2](spec/02-transport.md), which this respects.
+
+### Firmware cost — the aggregate across all three arcs
+
+For one integrator, on constrained hardware, assuming a station built against the pre-arc spec.
+
+**Fields to emit (new or reshaped):**
+
+| Field | Where | Cost |
+|-------|-------|------|
+| `bays[]` — `{bayNumber, programNumbers[]}` | BootNotification, every boot | Reshape. Replaces `bayCount`/`bayIds`. Under 8 KB at the 64-bay/32-program maxima |
+| `programs[]` — `{programNumber, available}` | StatusNotification, every report | Reshape. Replaces `services[]`. **The two messages a station sends most are both reshaped, and this is the bulk of the work** |
+| `programs[].errorCode` / `errorText` | StatusNotification, optional | Two optional fields on an existing object |
+| `bootReason: "Reconnect"` | BootNotification, on a reconnect | One enum value |
+| `programNumber` | StartService handling | Read a field instead of indexing the catalog by `serviceId` |
+| `mac` | Every message but three | 53 bytes. **No new code path** — canonicalization and HMAC-SHA256 were already mandatory for most message types; this runs the existing one more often |
+
+**Fields to persist:** the bay/program topology, stably across boots (NVS, a compiled-in table,
+or a hardware scan — the contract is stability, not the mechanism). Nothing else new. The session
+key is RAM-only and **MUST NOT** be persisted.
+
+**Checks to perform:** verify a MAC on every inbound message but three; verify the broker
+certificate's chain; refuse to send when no key is held; refuse `Accepted` without a `sessionKey`;
+reject an undeclared `programNumber` (`3017`) without substituting a neighbour.
+
+**Behaviours to change:** answer commands while `Pending` and refuse customer service in it;
+refuse commands while `Rejected`; keep `uptimeSeconds` consistent with `bootReason`; do not alter
+the topology declaration to match what a server expected; treat the signing mode as taking effect
+at reboot, not immediately.
+
+**Code to delete:** the `Hard`/`Soft` reset branch and any credential-wipe path; the `bayCount`
+scalar; the MAJOR-comparison in version handling; any session-key TTL or expiry timer; the
+`Critical`-mode message classification table.
+
+**The single most important cost fact:** the expensive items are the two reshaped messages, and
+the cheapest high-value item is signing — because the primitive is already there. The real
+constraint on constrained hardware is not the MAC but the **canonical re-serialization**, which is
+cheap outbound and heavier inbound, the direction verification runs.
+
+### Verification (all three arcs)
+
+- `tools/verify-schemas.py`: **310/310 PASS, 0 FAIL, 0 SKIP** — up from 305 at the start of the
+  boot/signing arc, +5 vectors: a `Pending`/`3018` response with `details`, a `Reconnect` boot, a
+  program-level fault report, `services[]` pinned as **rejected** on StatusNotification, and
+  `Accepted`-without-`sessionKey` pinned as rejected.
+- All schemas compile: **86/86** (+1: `bay-topology.schema.json`).
 - Example payloads against their schemas (CI's `validate-examples` script): **51/51**.
-- All schemas compile: **85/85**.
-- `tools/verify-protocol.sh`: failure set **byte-identical** to the branch baseline — the same
-  15 pre-existing failures, **+0 regressions**. It caught three real defects during this work
-  that a passing example set did not: two field rows inserted into the wrong response table
-  (`errorCode`/`errorText` is not a unique anchor — it matched ReserveBay and Reset before
-  StartService), and an empty minimal fixture.
+- Every internal cross-reference resolves: 0 broken anchor links and 0 broken file links across
+  the corpus, checked with GitHub's own slug rules. The only two non-resolving targets are
+  `[Chapter NN](link)` and `NN-name.md`, both placeholders inside style-guide prose.
+- `tools/verify-protocol.sh`: **14 failures, down from the 15-failure branch baseline, +0 new.**
+  The one that cleared is `boot-notification-response`'s `errorCode`/`errorText` being absent from
+  `03-messages.md`, fixed as a side effect of adding the `details` row. The remaining 14 are all
+  pre-existing and none is in this arc's scope: three `08-configuration.md` numeric-consistency
+  checks, one config-key-reference check, four on the two BLE schemas that have no message heading
+  and no vectors, and four Schema↔Spec field mismatches (`finalSeqNo`, `passCounter`/`authId`/
+  `sessionId`, and two BLE payloads).
+
+  The gate caught two real defects during this work that a passing example set did not: a forward
+  reference to a section that did not exist yet, and an `additionalProperties` omission on a
+  nested object. Its schema-field matcher earns its keep.
 - Not run: `markdownlint` and `lychee` (CI-only, absent here); `verify-all-signatures.sh`
   (**mutates tracked files** — do not run it).
 
 ### Not in this revision
 
-Parts 3, 4 and 6.2 of this arc are unstarted, and the session stopped at a context limit
-rather than at a gate:
-
-- **Signing** — sign everything, remove the now-meaningless middle mode, reclassify the
-  configuration key as fixed, resolve the enum case drift, make `sessionKey` unconditional,
-  state the broker inside the trust boundary and delete any non-repudiation claim, bind the
-  key to the MQTT session, and make the sign path fail closed.
-- **Boot** — exact-match version negotiation (the "same MAJOR" rule survives in ~8 sites), the
-  `bootReason` reconnect value, StatusNotification reporting **programs** rather than
-  services, program-level fault reporting, the `Pending` restricted-state reconciliation, the
-  missing station-level state machine, and first-boot topology.
-- **6.2** — the security chapter states an exempt-message count and then names a different
-  number.
-
-`3018 TOPOLOGY_MISMATCH` and the `Pending` behaviour it depends on are **defined but not yet
-structurally homed**: `05-state-machines.md` still has no station-level state machine. That is
-Part 4.6 and it is the first thing the next session should land.
+- **Asymmetric evidence on the online money path.** Scoped and left, with the scope recorded in
+  [KNOWN-ISSUES](KNOWN-ISSUES.md). §5.8 establishes that the MAC provides no non-repudiation,
+  while every station is already required to carry an ECDSA receipt-signing key that only the
+  offline path reads. Extending it needs a third discriminated form in `receipt-data.schema.json`
+  (both existing forms require `offlineTxId` and `txCounter`, which an online session has
+  neither of), a first-ever conditional on `stop-service-response`, and a server-side retention
+  obligation for superseded receipt-signing keys. That is a decision with its own blast radius,
+  not a clause.
 
 ---
 
