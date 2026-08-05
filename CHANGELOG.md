@@ -414,9 +414,10 @@ cheap outbound and heavier inbound, the direction verification runs.
   program marked available that carries one anyway.
 - All schemas compile: **86/86** (+1: `bay-topology.schema.json`).
 - Example payloads against their schemas (CI's `validate-examples` script): **51/51**.
-- Every internal cross-reference resolves: 0 broken anchor links and 0 broken file links across
-  the corpus, checked with GitHub's own slug rules. The only two non-resolving targets are
-  `[Chapter NN](link)` and `NN-name.md`, both placeholders inside style-guide prose.
+- Every internal cross-reference resolves, checked with GitHub's own slug rules. The only
+  non-resolving targets are three placeholders inside style-guide prose — the illustrative
+  `link`, `#section` and `NN-name.md` in `CONTRIBUTING.md` §Style and `00-introduction.md` — none
+  of which is a real target.
 - `tools/verify-protocol.sh`: **14 failures, down from the 15-failure branch baseline, +0 new.**
   The one that cleared is `boot-notification-response`'s `errorCode`/`errorText` being absent from
   `03-messages.md`, fixed as a side effect of adding the `details` row. The remaining 14 are all
