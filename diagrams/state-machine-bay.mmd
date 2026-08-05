@@ -28,6 +28,7 @@ stateDiagram-v2
     Faulted --> Unavailable : SetMaintenanceMode ON<br/>(manual intervention)
 
     Unavailable --> Available : SetMaintenanceMode OFF<br/>(maintenance complete)
+    Unavailable --> Faulted : Hardware error detected<br/>during maintenance
 
     %% Connection lost transitions (any → Unknown)
     Available --> Unknown : LWT / connection lost

@@ -159,6 +159,7 @@ stateDiagram-v2
     Faulted --> Unavailable : SetMaintenanceMode ON
 
     Unavailable --> Available : SetMaintenanceMode OFF
+    Unavailable --> Faulted : Hardware error during maintenance
 
     Available --> Unknown : Connection lost
     Reserved --> Unknown : Connection lost

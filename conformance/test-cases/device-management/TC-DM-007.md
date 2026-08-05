@@ -13,6 +13,7 @@ Verify that the station correctly handles SetMaintenanceMode for enabling and di
 - `spec/profiles/device-management/set-maintenance-mode.md` — SetMaintenanceMode behavior
 - `spec/03-messages.md` §6.8 — SetMaintenanceMode payload (timeout 30s)
 - `spec/03-messages.md` §5.2 — StatusNotification bay status enum (`Unavailable`)
+- `spec/05-state-machines.md` §2.3 — the bay transition table: the `SetMaintenanceMode` rows, and the hardware-error row for which `Unavailable` is a legal source
 - `spec/07-errors.md` §3.3 — Error codes 3001 `BAY_BUSY`, 3005 `BAY_NOT_FOUND`
 - `schemas/mqtt/set-maintenance-mode-response.schema.json`
 
@@ -163,6 +164,27 @@ Verify that the station correctly handles SetMaintenanceMode for enabling and di
     ```
 27. Verify no StatusNotification is generated (no bay state change).
 
+### Part E — Fault Detected During Maintenance (`Unavailable` → `Faulted`)
+
+> Isolates one rule and one only: that `Unavailable` is a legal **source** for a hardware
+> fault ([`05-state-machines.md` §2.3](../../../spec/05-state-machines.md), the hardware-error
+> row). It asserts nothing about `previousStatus` presence (Part A covers that), nothing about
+> the maintenance command itself (Parts A--D), and nothing about server-side handling of an
+> invalid transition — a fault reported from `Unavailable` **is** valid, which is the point.
+
+28. Return `bay_c1d2e3f4a5b6` to maintenance: send SetMaintenanceMode with `enabled: true`, and
+    confirm the bay reports `status: "Unavailable"`.
+29. With the bay still in maintenance, induce a bay-level hardware fault by the vendor's
+    documented means (for example, disconnect the pump sensor loop, or trip the bay's
+    emergency stop).
+30. Observe a StatusNotification for `bay_c1d2e3f4a5b6` within 1 second:
+    - `status: "Faulted"`
+    - `previousStatus: "Unavailable"`
+    - `errorCode` present, from the 5xxx range
+    - `errorText` present, `UPPER_SNAKE_CASE`, matching the code's registry name
+31. Verify the station does **not** suppress the report, and does not first return the bay to
+    `Available` in order to report the fault from there.
+
 ## Expected Results
 
 1. Enabling maintenance on an idle bay returns `Accepted` and bay transitions to `Unavailable`.
@@ -172,6 +194,8 @@ Verify that the station correctly handles SetMaintenanceMode for enabling and di
 5. SetMaintenanceMode with a nonexistent bay ID returns `Rejected` with `3005 BAY_NOT_FOUND`.
 6. All responses arrive within the 30-second timeout.
 7. StatusNotification correctly reflects `Unavailable`/`Available` transitions.
+8. A hardware fault detected while the bay is `Unavailable` is reported as
+   `Unavailable` → `Faulted`, with `errorCode` and `errorText`.
 
 ## Failure Criteria
 
@@ -181,3 +205,7 @@ Verify that the station correctly handles SetMaintenanceMode for enabling and di
 4. Wrong error code returned for busy bay, maintenance-mode bay, or nonexistent bay.
 5. SetMaintenanceMode response exceeds the 30-second timeout.
 6. Nonexistent bay ID is accepted without `3005` error.
+7. A fault detected while the bay is `Unavailable` is not reported, or is reported only after
+   routing the bay through another state first. `Unavailable` is a legal source for the
+   hardware-error transition; a bay under maintenance is where a fault is most likely to be
+   found, and suppressing the report would suppress a true state.

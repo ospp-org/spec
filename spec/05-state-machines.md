@@ -143,6 +143,7 @@ stateDiagram-v2
     Faulted --> Unavailable : SetMaintenanceMode ON (manual intervention)
 
     Unavailable --> Available : SetMaintenanceMode OFF (maintenance complete)
+    Unavailable --> Faulted : Hardware error detected during maintenance
 
     Available --> Unknown : LWT / connection lost
     Reserved --> Unknown : LWT / connection lost
@@ -207,7 +208,7 @@ stateDiagram-v2
 | StopService [MSG-006] accepted | Occupied | Finishing | Session is active on this bay | Station begins hardware wind-down, sends StatusNotification |
 | Service duration elapsed | Occupied | Finishing | `durationSeconds` timer expires | Station auto-stops service, sends StatusNotification |
 | Post-session cleanup complete | Finishing | Available | Hardware wind-down finished (hardware off, actuator retracted) | Station sends StatusNotification; bay is ready for next session |
-| Hardware error detected | Available, Reserved, Occupied, Finishing | Faulted | Station detects hardware fault (actuator, fluid, consumable, electrical, or emergency stop) | Station sends StatusNotification with `errorCode` (5001-5009) |
+| Hardware error detected | Available, Reserved, Occupied, Finishing, Unavailable | Faulted | Station detects hardware fault (actuator, fluid, consumable, electrical, or emergency stop). `Unavailable` is a source like any other: a bay taken out of service can still develop a fault, and a technician working on it is the most likely person to find one. Forbidding the transition would not prevent the fault, only the report of it | Station sends StatusNotification with `errorCode` (5001-5009) |
 | Fault cleared | Faulted | Available | The fault condition has ended **and** the reported error is `recoverable: true` in the [Chapter 07 registry](07-errors.md#3-error-code-registry) — automatic reset, or the operator clears it. A `recoverable: false` fault **MUST NOT** clear automatically, however the underlying reading may recover; it clears only by operator action. Where the code is a Level 3 entry trigger (`5001`, `5004`, `5009`, `5101` — [§7.2](07-errors.md#72-station-degradation-levels)) that action is specifically the Level 3 exit: physical intervention, operator verification, and station reboot. `5004 ELECTRICAL_SYSTEM` is the worked case: a welded relay or a lost phase persists while measured voltage reads nominal. | Station sends StatusNotification |
 | SetMaintenanceMode ON [MSG-020] | Available, Faulted | Unavailable | Operator initiates maintenance | Station sends StatusNotification |
 | SetMaintenanceMode OFF [MSG-020] | Unavailable | Available | Operator completes maintenance | Station sends StatusNotification |
