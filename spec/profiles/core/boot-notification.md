@@ -4,7 +4,7 @@
 
 ## 1. Overview
 
-BootNotification is the first message a station sends after establishing an MQTT connection. It announces the station identity, firmware version, hardware capabilities, and network information. The server responds with an acceptance status, a heartbeat interval, the current server time for clock synchronization, and optionally a session key and configuration parameters.
+BootNotification is the first message a station sends after establishing an MQTT connection. It announces the station identity, firmware version, hardware capabilities, and network information. The server responds with an acceptance status, a heartbeat interval, the current server time for clock synchronization, the HMAC session key (on every acceptance), and optionally configuration parameters.
 
 If the response is `Rejected` or `Pending`, the station **MUST** retry according to the retry policy defined in section 5. Both are **restricted** states of the station state machine, and they differ in one respect: a `Pending` station receives and answers server commands, a `Rejected` station does not. Neither serves customers and neither sends anything unsolicited. [Chapter 05 — State Machines §1.4](../../05-state-machines.md#14-the-restricted-states) is normative for both and is not restated here.
 
@@ -55,7 +55,7 @@ If the response is `Rejected` or `Pending`, the station **MUST** retry according
 | `heartbeatIntervalSec` | integer | Yes | Heartbeat interval in seconds (10--3600). |
 | `retryInterval` | integer | Cond. | Seconds to wait before retrying. Required when `status` is `Rejected` or `Pending`. |
 | `configuration` | object | No | Key-value configuration pairs pushed to the station. |
-| `sessionKey` | string | Cond. | Base64-encoded 32-byte HMAC session key for message authentication. Required when `MessageSigningMode` is `"Critical"` or `"All"`. |
+| `sessionKey` | string | Cond. | Base64-encoded 32-byte HMAC session key for message authentication. **Required on every `Accepted` response**, unconditionally — see §5.3. Absent on `Rejected` and `Pending`, which establish no session. |
 
 ## 5. Processing Rules
 
@@ -100,6 +100,20 @@ Rule 1 requires a BootNotification after **every** MQTT connection, reconnection
 > OSPP requires one, and the requirement follows from [Chapter 06 — Security §5.2](../../06-security.md): the HMAC session key is scoped to the MQTT session and is issued **in** the BootNotification response. A new MQTT session therefore needs a new key, and the boot is the only message that carries one. Drop the boot on reconnect and the station reconnects keyless, unable to sign or verify anything.
 >
 > That is a real cost — one extra round trip per reconnect — accepted for a real reason. `Reconnect` is what makes the cost honest: the message is sent because the *key* must be re-issued, not because the station rebooted, and the field now says so. OCPP has no equivalent value because it has no such message.
+
+### 5.3 An `Accepted` Without a `sessionKey` Is Malformed
+
+Every `Accepted` response **MUST** carry `sessionKey`. The requirement is unconditional and is enforced by the schema.
+
+It used to be conditional — required only when `MessageSigningMode` was not `None` — and that form could never be enforced, because the mode is **station configuration, not a field of this message**. No JSON Schema `if`/`then` can reach it, so the rule would have stayed prose indefinitely while the schema accepted a keyless acceptance. Making it unconditional costs 44 base64 characters on a message sent once per connection; under `None` the key is simply unused.
+
+**What the station does when it arrives anyway** — this is the half that makes the requirement enforceable, and it was undefined:
+
+1. A station that receives `status: "Accepted"` with no `sessionKey` **MUST** treat the response as **malformed**. It **MUST NOT** transition to `Operational`.
+2. It **MUST** log `1005 INVALID_MESSAGE_FORMAT`, remain in `Booting`, and retry the BootNotification per [CORE-011](README.md) — where retry is already defined, already unlimited, and already the recovery for every other bad boot response.
+3. It **MUST NOT** fall back to unsigned operation. That is the failure mode this rule exists to prevent: a station that proceeds keyless cannot sign, the server rejects every unsigned message it sends and raises MAC-failure security events naming *the station* — so a silent downgrade transacts into a black hole and gets blamed for it.
+
+Three readings were available to a firmware author before this: retry the boot (correct), block forever (a silent brick), or downgrade to unsigned (a silent security failure). The specification chose none of them, which meant it had chosen all three. It now chooses the first, and fails at boot, where retry is defined.
 
 ## 6. Error Handling
 

@@ -40,7 +40,7 @@ Verify that a station sends BootNotification as the first message after establis
 4. Observe the first MQTT PUBLISH from the station.
 5. Validate that the message `action` is `BootNotification`.
 6. Validate the request payload against `boot-notification-request.schema.json` — fields: `stationId`, `firmwareVersion`, `stationModel`, `stationVendor`, `bays`, `serialNumber`, `uptimeSeconds`, `pendingOfflineTransactions`, `timezone`, `bootReason`, `capabilities`, `networkInfo`.
-7. Send a server response: `{ "status": "Accepted", "heartbeatIntervalSec": 30, "serverTime": "<current UTC>" }`.
+7. Send a server response: `{ "status": "Accepted", "heartbeatIntervalSec": 30, "serverTime": "<current UTC>", "sessionKey": "<base64 32 bytes>" }`. `sessionKey` is REQUIRED on every acceptance; a harness that omits it is emitting a malformed response, and a conforming station will refuse it (see Part F).
 8. Verify that the station publishes a StatusNotification for each bay, and inspect each payload:
    - `status` is one of the six reportable states — `Available`, `Reserved`, `Occupied`, `Finishing`, `Faulted`, `Unavailable`. A payload carrying `Unknown` fails this case; `Unknown` is not a wire value ([`05-state-machines.md` §2.2](../../../spec/05-state-machines.md)).
    - `previousStatus` is **absent**. This is the post-boot report, and the state it left was `Unknown`, which the field cannot carry ([`status-notification.md` §5 rule 2](../../../spec/profiles/core/status-notification.md)).
@@ -109,6 +109,23 @@ Verify that a station sends BootNotification as the first message after establis
 45. Verify that the station **does** retry BootNotification at the `retryInterval` from the response (300 s above), per CORE-011. `1007` is `recoverable: false` because someone must act — it does not mean the station stops retrying, and a rejected station cannot be sent a firmware update, so stopping would leave on-site service as its only recovery.
 46. Verify that the station logs or stores the `supportedVersions` array for diagnostic purposes.
 
+### Part F — Accepted With No `sessionKey`
+
+47. Reboot the station.
+48. Observe BootNotification is sent.
+49. Send a server response with **no** `sessionKey`:
+    ```json
+    {
+      "status": "Accepted",
+      "serverTime": "2026-01-15T10:03:00.000Z",
+      "heartbeatIntervalSec": 30
+    }
+    ```
+50. Verify that the station does **NOT** enter normal operation: no StatusNotification, no Heartbeat, no command processing.
+51. Verify that the station logs `1005 INVALID_MESSAGE_FORMAT`.
+52. Verify that the station retries BootNotification per CORE-011.
+53. Send a well-formed `Accepted` carrying a `sessionKey`, and verify the station now proceeds normally.
+
 ## Expected Results
 
 1. The very first message after MQTT connect is BootNotification — no other action precedes it.
@@ -122,12 +139,14 @@ Verify that a station sends BootNotification as the first message after establis
 9. After Pending, the station enters the `Pending` restricted state: it sends nothing it originates, **answers** server commands, refuses StartService and ReserveBay with `3002 BAY_NOT_READY`, and retries BootNotification at `retryInterval`.
 10. On timeout, the station retries after 60 seconds.
 11. After Rejected with `supportedVersions` (1007), the station enters the `Rejected` restricted state and continues retrying BootNotification at `retryInterval`, exactly as for any other Rejected — consistent with results 7 and 8 above, and with CORE-011.
+12. An `Accepted` carrying no `sessionKey` is treated as malformed: the station logs `1005`, stays out of normal operation, and retries. It does not proceed keyless.
 
 ## Failure Criteria
 
 1. Station sends any MQTT message before BootNotification.
 2. BootNotification payload fails JSON schema validation.
 3. Station processes server commands while `Rejected`; or fails to answer one while `Pending`; or activates hardware for a StartService in either state.
+3a. Station enters normal operation after an `Accepted` that carried no `sessionKey`. Proceeding keyless is the worst available failure: it can sign nothing, the server rejects everything it sends, and the resulting MAC-failure events name the station as the suspect.
 4. Station does not retry BootNotification after Rejected or Pending within the expected interval (+/- 15% tolerance).
 5. Station does not adopt the server-provided `heartbeatIntervalSec` (Heartbeat sent at a different cadence).
 6. LWT is absent from the MQTT CONNECT packet.

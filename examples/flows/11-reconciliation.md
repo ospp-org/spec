@@ -111,7 +111,8 @@ The server acknowledges the reconnection. Since the station reported `pendingOff
   "payload": {
     "status": "Accepted",
     "serverTime": "2026-02-13T14:00:02.800Z",
-    "heartbeatIntervalSec": 30
+    "heartbeatIntervalSec": 30,
+    "sessionKey": "cmVjb25jaWxlLXNlc3Npb24ta2V5LTIwMjYtMDItMTNUMTQ6MDA="
   }
 }
 ```

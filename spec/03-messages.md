@@ -201,7 +201,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
 | `errorCode` | integer | Cond. | OSPP error code explaining the outcome (1000–9999). REQUIRED when `Rejected`. Carried on a `Pending` response when the reason is `3018 TOPOLOGY_MISMATCH`. |
 | `errorText` | string | Cond. | Machine-readable error name in `UPPER_SNAKE_CASE`. REQUIRED when `Rejected`; accompanies `errorCode` whenever that is present. |
 | `configuration` | object | No | Key-value pairs to apply immediately (see [Chapter 08](08-configuration.md)) |
-| `sessionKey` | string | Cond. | Base64-encoded 32-byte HMAC session key (REQUIRED when `MessageSigningMode` is `"critical"` or `"all"`) |
+| `sessionKey` | string | Cond. | Base64-encoded 32-byte HMAC session key. **REQUIRED on every `Accepted` response**, unconditionally — see [Core profile §5.3](profiles/core/boot-notification.md) |
 | `supportedVersions` | array | Cond. | Protocol versions supported by server. Array of semver strings (e.g., `["0.1.0", "0.2.0"]`). REQUIRED when `Rejected` with error `1007 PROTOCOL_VERSION_MISMATCH`. |
 | `details` | object | Cond. | Diagnostic detail for `errorCode`. REQUIRED on a `Pending` response carrying `3018 TOPOLOGY_MISMATCH`, where it carries `expected` and `declared` — the provisioned topology and the one this boot declared, each shaped like the request's `bays[]`. Optional otherwise, and deliberately open so a future code can carry its own detail without a schema change. |
 

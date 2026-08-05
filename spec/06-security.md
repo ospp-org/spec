@@ -758,9 +758,11 @@ The middle mode, `Critical`, is **removed** rather than deprecated. With everyth
 
 1. Station sends BootNotification REQUEST [MSG-001] (exempt from signing — no key yet)
 2. Server generates a cryptographically random 32-byte key
-3. Server includes `sessionKey` (Base64-encoded) in the BootNotification RESPONSE [MSG-001]
+3. Server includes `sessionKey` (Base64-encoded) in the BootNotification RESPONSE [MSG-001]. This is **unconditional on every `Accepted` response** — not conditional on `MessageSigningMode`, which is station configuration and therefore unreachable from this message's schema. Under `None` the key is issued and unused.
 4. The session key is protected in transit by TLS 1.2+ encryption
-5. Both sides store the key in volatile memory for the duration of the MQTT session
+5. Both sides store the key in volatile memory for the duration of the MQTT session, and discard it when that session ends
+
+A station that receives `Accepted` **without** a `sessionKey` treats the response as malformed and re-boots rather than proceeding keyless — [`boot-notification.md` §5.3](profiles/core/boot-notification.md) is normative. Proceeding keyless is the worst of the available failures: the station cannot sign, every message it sends is rejected, and the MAC-failure events raised against it name it as the suspect.
 
 ### 5.3 Canonical Form
 

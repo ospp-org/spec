@@ -290,6 +290,7 @@ The server recognizes this as a reconnection rather than a cold boot from `bootR
     "status": "Accepted",
     "serverTime": "2026-02-13T10:03:15.600Z",
     "heartbeatIntervalSec": 30,
+    "sessionKey": "cmVjb25uZWN0LXNlc3Npb24ta2V5LTIwMjYtMDItMTNUMTA6MDM=",
     "configuration": {
       "sessionReconciliation": "{\"sess_f7e8d9c0\":{\"serverStatus\":\"Active\",\"action\":\"continue\",\"message\":\"Session still active on server. Continue normally.\"}}",
       "replayBufferedMessages": "true"
