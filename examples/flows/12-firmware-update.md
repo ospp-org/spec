@@ -383,7 +383,11 @@ The station boots on partition B with firmware v1.3.0 and announces itself.
     "stationVendor": "AcmeCorp",
     "firmwareVersion": "1.3.0",
     "serialNumber": "ACME-SSP-2024-0042",
-    "bayCount": 3,
+    "bays": [
+      { "bayNumber": 1, "programNumbers": [1, 2, 3] },
+      { "bayNumber": 2, "programNumbers": [1, 2, 3] },
+      { "bayNumber": 3, "programNumbers": [1, 2, 3] }
+    ],
     "uptimeSeconds": 3,
     "pendingOfflineTransactions": 0,
     "timezone": "Europe/London",

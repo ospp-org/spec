@@ -70,7 +70,11 @@ After the ISP restores connectivity, the station reconnects and sends a BootNoti
     "stationVendor": "AcmeCorp",
     "firmwareVersion": "1.2.5",
     "serialNumber": "ACME-SSP-2024-0042",
-    "bayCount": 3,
+    "bays": [
+      { "bayNumber": 1, "programNumbers": [1, 2, 3] },
+      { "bayNumber": 2, "programNumbers": [1, 2, 3] },
+      { "bayNumber": 3, "programNumbers": [1, 2, 3] }
+    ],
     "uptimeSeconds": 100802,
     "pendingOfflineTransactions": 3,
     "timezone": "Europe/London",

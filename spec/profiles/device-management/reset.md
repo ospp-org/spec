@@ -51,7 +51,7 @@ A hard reset that erased everything would be unrecoverable by design: re-provisi
 | Static BLE ECDH key pair and the `stationIdentity` certificate | regenerated on-device, resubmitted (BLE stations only) |
 | `stationCaChain`, `brokerRootCa`, `rootCaThumbprint`, `serverVerifyKey` | the provisioning response |
 | `mqttConfig` | the provisioning response |
-| `bays` | the provisioning response — the array whose members pair each `bayId` with its `bayNumber`, which is what carries the bay-number mapping ([Flows §2](../../04-flows.md#2-station-provisioning)). The deprecated `bayIds` array is restored alongside it until 0.12.0 |
+| `bays` | the provisioning response — the array whose members pair each `bayId` with its `bayNumber`, which is what carries the bay-number mapping ([Flows §2](../../04-flows.md#2-station-provisioning)) |
 | HMAC session key | the BootNotification response (RAM-only in any case — [Chapter 06 §4.5](../../06-security.md)) |
 | Configuration keys ([Chapter 08](../../08-configuration.md)) | reset to documented defaults; server re-pushes |
 | Service catalog | UpdateServiceCatalog |

@@ -23,7 +23,6 @@ The station **MUST NOT** process any incoming commands until it receives an `Acc
 | `stationVendor` | string | Yes | Name of the station manufacturer. |
 | `serialNumber` | string | Yes | Unique serial number of the station unit. |
 | `bays` | array | Yes | The station's re-declared physical topology: one entry per bay, each carrying `bayNumber` and the `programNumbers` that bay can run. Labels are **not** re-declared and are **not** compared. Maximum 64 bays, 32 programs per bay. See [Architecture §4.2](../../01-architecture.md). |
-| `bayCount` | integer | No | **Deprecated (0.11.0), removed in 0.12.0** — superseded by `bays`. When present it MUST equal `bays.length`. |
 | `uptimeSeconds` | integer | Yes | Seconds elapsed since the station last booted. |
 | `pendingOfflineTransactions` | integer | Yes | Number of offline transactions queued for sync. |
 | `timezone` | string | Yes | IANA timezone identifier (e.g., `Europe/London`). |
@@ -108,7 +107,11 @@ This section fixes the meaning of an **absent** capability. It does not define c
     "stationModel": "SSP-3000",
     "stationVendor": "AcmeCorp",
     "serialNumber": "ACME-SSP-20250187",
-    "bayCount": 3,
+    "bays": [
+      { "bayNumber": 1, "programNumbers": [1, 2, 3] },
+      { "bayNumber": 2, "programNumbers": [1, 2, 3] },
+      { "bayNumber": 3, "programNumbers": [1, 2, 3] }
+    ],
     "uptimeSeconds": 42,
     "pendingOfflineTransactions": 2,
     "timezone": "Europe/London",

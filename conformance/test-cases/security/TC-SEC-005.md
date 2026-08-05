@@ -36,7 +36,7 @@ Verify that the **server's** provisioning endpoint (`POST /api/v1/stations/provi
 
 1. Generate key pair `K_tls_1` and produce CSR `CSR_1` (CN = `stn_a1b2c3d4`).
 2. Generate receipt-signing key pair `K_rcpt_1`.
-3. `POST /api/v1/stations/provision` with token `T1`, `serialNumber: "SN-0001"`, `bayCount: 2`, `tlsCsr: CSR_1`, `receiptSigningPublicKey: K_rcpt_1.pub`.
+3. `POST /api/v1/stations/provision` with token `T1`, `serialNumber: "SN-0001"`, a `bays` array declaring bay numbers **1, 2**, `tlsCsr: CSR_1`, `receiptSigningPublicKey: K_rcpt_1.pub`.
 4. Verify the response is `200 OK` and validates against `provisioning-response.schema.json`.
 5. Store the returned `clientCert` verbatim as `CERT_1`.
 6. Verify `CERT_1`'s public key equals `K_tls_1.pub`.
@@ -47,7 +47,7 @@ Verify that the **server's** provisioning endpoint (`POST /api/v1/stations/provi
 
 ### Part B — Descriptive drift MUST still be ignored
 
-11. Re-send the request from step 3 with the **same** keys but altered descriptive fields: `serialNumber: "SN-9999"`, `bayCount: 4`.
+11. Re-send the request from step 3 with the **same** keys but altered descriptive fields: `serialNumber: "SN-9999"` and altered program `label` values.
 12. Verify the response is `200 OK`.
 13. Verify the returned `clientCert` is **byte-identical** to `CERT_1`.
 14. Verify the server has still issued exactly **one** certificate against `T1`.
@@ -113,7 +113,7 @@ Verify that the **server's** provisioning endpoint (`POST /api/v1/stations/provi
 
 1. The first provision returns `200 OK` with a certificate whose public key is the submitted CSR key.
 2. An identical retry returns `200 OK` with a byte-identical certificate.
-3. Descriptive-field drift (`serialNumber`, `bayCount`) is ignored — still `200 OK`, still byte-identical.
+3. Descriptive-field drift (`serialNumber`, program `label`) is ignored — still `200 OK`, still byte-identical.
 4. A fresh CSR over the **same** key is treated as a replay, not as drift — the server compares the DER `SubjectPublicKeyInfo`, not raw CSR bytes.
 5. CSR public-key drift returns `409 Conflict` with `4015 PROVISIONING_KEY_MISMATCH`.
 6. Receipt-signing-key drift returns the same `409` / `4015`.

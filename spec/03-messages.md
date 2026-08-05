@@ -162,7 +162,6 @@ The station MAY include a human-readable name configurable via `StationName` (se
 | `stationVendor` | string | Yes | Manufacturer name (e.g., `"AcmeCorp"`) |
 | `serialNumber` | string | Yes | Hardware serial number |
 | `bays` | array | Yes | Re-declared physical topology; one entry per bay, each `{bayNumber, programNumbers[]}`. Max 64 bays, 32 programs/bay |
-| `bayCount` | integer | No | **Deprecated (0.11.0)**, superseded by `bays`; MUST equal `bays.length` when present |
 | `uptimeSeconds` | integer | Yes | Seconds since last boot (>= 0) |
 | `pendingOfflineTransactions` | integer | Yes | Count of unsynced offline transactions (>= 0) |
 | `timezone` | string | Yes | IANA timezone identifier (e.g., `"Europe/London"`), configurable via `TimeZone` (see §8 Configuration) |
@@ -229,7 +228,11 @@ The station MAY include a human-readable name configurable via `StationName` (se
     "stationModel": "SSP-3000",
     "stationVendor": "AcmeCorp",
     "serialNumber": "WT-2026-001",
-    "bayCount": 3,
+    "bays": [
+      { "bayNumber": 1, "programNumbers": [1, 2, 3] },
+      { "bayNumber": 2, "programNumbers": [1, 2, 3] },
+      { "bayNumber": 3, "programNumbers": [1, 2, 3] }
+    ],
     "uptimeSeconds": 0,
     "pendingOfflineTransactions": 2,
     "timezone": "Europe/London",
@@ -2330,7 +2333,11 @@ The app SHOULD read StationInfo immediately after connecting to verify the stati
   "stationId": "stn_a1b2c3d4",
   "stationModel": "SSP-3000",
   "firmwareVersion": "1.2.3",
-  "bayCount": 3,
+  "bays": [
+    { "bayNumber": 1, "programNumbers": [1, 2, 3] },
+    { "bayNumber": 2, "programNumbers": [1, 2, 3] },
+    { "bayNumber": 3, "programNumbers": [1, 2, 3] }
+  ],
   "bleProtocolVersion": "0.2.1",
   "connectivity": "Offline"
 }

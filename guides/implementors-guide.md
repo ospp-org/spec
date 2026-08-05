@@ -159,7 +159,7 @@ Before a station can connect, it needs to be provisioned:
    - **TLS key pair** (ECDSA P-256) + Certificate Signing Request (CSR)
    - **ECDSA P-256 key pair** for receipt signing (private key NEVER leaves the device)
 4. Station calls `POST /api/v1/stations/provision` with the token, serial number, CSR, and receipt public key
-5. Server returns: `stationId`, `bayIds[]`, signed TLS certificate, CA certificate, ECDSA P-256 server verify key, MQTT config
+5. Server returns: `stationId`, `bays[]` (each member pairing a `bayId` with the `bayNumber` the station declared), signed TLS certificate, CA certificate, ECDSA P-256 server verify key, MQTT config
 6. Station stores everything in NVS, reboots, proceeds to boot flow
 
 **Key rule:** The TLS private key and ECDSA receipt-signing private key are generated ON the station and never transmitted. The server only receives the public keys (CSR and receipt verify key).

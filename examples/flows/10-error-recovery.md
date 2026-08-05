@@ -248,7 +248,11 @@ After any reconnection, the station sends a BootNotification to re-announce itse
     "stationVendor": "AcmeCorp",
     "firmwareVersion": "1.2.5",
     "serialNumber": "ACME-SSP-2024-0042",
-    "bayCount": 3,
+    "bays": [
+      { "bayNumber": 1, "programNumbers": [1, 2, 3] },
+      { "bayNumber": 2, "programNumbers": [1, 2, 3] },
+      { "bayNumber": 3, "programNumbers": [1, 2, 3] }
+    ],
     "uptimeSeconds": 86595,
     "pendingOfflineTransactions": 0,
     "timezone": "Europe/London",

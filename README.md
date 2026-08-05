@@ -300,7 +300,11 @@ Example files in `examples/payloads/mqtt/` contain **payload-only** JSON — the
     "stationModel": "SSP-3000",
     "stationVendor": "AcmeCorp",
     "serialNumber": "ACME-SSP-20250187",
-    "bayCount": 3,
+    "bays": [
+      { "bayNumber": 1, "programNumbers": [1, 2, 3] },
+      { "bayNumber": 2, "programNumbers": [1, 2, 3] },
+      { "bayNumber": 3, "programNumbers": [1, 2, 3] }
+    ],
     "uptimeSeconds": 42,
     "pendingOfflineTransactions": 2,
     "timezone": "Europe/London",

@@ -4,7 +4,6 @@
   "stationModel": "SSP-5000 Pro",
   "stationVendor": "AcmeCorp",
   "serialNumber": "SN-2025-007890",
-  "bayCount": 4,
   "bays": [
     {
       "bayNumber": 1,

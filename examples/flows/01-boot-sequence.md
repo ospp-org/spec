@@ -164,7 +164,11 @@ The station publishes its registration message to the server.
     "stationVendor": "AcmeCorp",
     "serialNumber": "ACME-SSP-2025-0042",
     "firmwareVersion": "2.4.1",
-    "bayCount": 3,
+    "bays": [
+      { "bayNumber": 1, "programNumbers": [1, 2, 3] },
+      { "bayNumber": 2, "programNumbers": [1, 2, 3] },
+      { "bayNumber": 3, "programNumbers": [1, 2, 3] }
+    ],
     "uptimeSeconds": 0,
     "pendingOfflineTransactions": 0,
     "timezone": "Europe/London",

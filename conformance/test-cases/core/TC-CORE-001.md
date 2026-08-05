@@ -38,7 +38,7 @@ Verify that a station sends BootNotification as the first message after establis
 3. Verify that the MQTT CONNECT packet includes a Last Will and Testament (LWT) message on the station's ConnectionLost topic.
 4. Observe the first MQTT PUBLISH from the station.
 5. Validate that the message `action` is `BootNotification`.
-6. Validate the request payload against `boot-notification-request.schema.json` — fields: `stationId`, `firmwareVersion`, `stationModel`, `stationVendor`, `bayCount`, `serialNumber`, `uptimeSeconds`, `pendingOfflineTransactions`, `timezone`, `bootReason`, `capabilities`, `networkInfo`.
+6. Validate the request payload against `boot-notification-request.schema.json` — fields: `stationId`, `firmwareVersion`, `stationModel`, `stationVendor`, `bays`, `serialNumber`, `uptimeSeconds`, `pendingOfflineTransactions`, `timezone`, `bootReason`, `capabilities`, `networkInfo`.
 7. Send a server response: `{ "status": "Accepted", "heartbeatIntervalSec": 30, "serverTime": "<current UTC>" }`.
 8. Verify that the station publishes a StatusNotification for each bay, and inspect each payload:
    - `status` is one of the six reportable states — `Available`, `Reserved`, `Occupied`, `Finishing`, `Faulted`, `Unavailable`. A payload carrying `Unknown` fails this case; `Unknown` is not a wire value ([`05-state-machines.md` §1.2](../../../spec/05-state-machines.md)).
@@ -107,7 +107,7 @@ Verify that a station sends BootNotification as the first message after establis
 1. The very first message after MQTT connect is BootNotification — no other action precedes it.
 2. The MQTT CONNECT packet includes a properly configured LWT on the station's ConnectionLost topic.
 3. The BootNotification request payload validates against the JSON schema.
-4. All required fields (`stationId`, `firmwareVersion`, `stationModel`, `stationVendor`, `bayCount`, `serialNumber`, `uptimeSeconds`, `pendingOfflineTransactions`, `timezone`, `bootReason`, `capabilities`, `networkInfo`) are present and correctly typed.
+4. All required fields (`stationId`, `firmwareVersion`, `stationModel`, `stationVendor`, `bays`, `serialNumber`, `uptimeSeconds`, `pendingOfflineTransactions`, `timezone`, `bootReason`, `capabilities`, `networkInfo`) are present and correctly typed.
 5. After Accepted, the station adopts the `heartbeatIntervalSec` and sends Heartbeat messages at the correct cadence.
 6. After Accepted, the station publishes StatusNotification for every bay, each reporting a determinate state — one of the six reportable values, never `Unknown` — and each omitting `previousStatus`.
 7. After Rejected, the station enters limited mode and does not process server commands.

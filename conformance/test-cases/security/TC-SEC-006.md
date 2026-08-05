@@ -38,7 +38,7 @@ Position is the point of the case, not merely the code. A bare key that parses a
 
 1. Generate key pair `K_tls_1` and produce a valid CSR `CSR_1` (CN = `stn_a1b2c3d4`).
 2. Export the **P-384** public key as SPKI PEM: `K_bad_curve`.
-3. `POST /api/v1/stations/provision` with token `T1`, `serialNumber: "SN-0001"`, `bayCount: 2`, `tlsCsr: CSR_1`, `receiptSigningPublicKey: K_bad_curve`.
+3. `POST /api/v1/stations/provision` with token `T1`, `serialNumber: "SN-0001"`, a `bays` array declaring bay numbers **1, 2**, `tlsCsr: CSR_1`, `receiptSigningPublicKey: K_bad_curve`.
 4. Verify the response status is **`400 Bad Request`**.
 5. Verify `errorCode` is `4019` and `errorText` is `"PUBLIC_KEY_INVALID"`.
 6. Verify `details.phase` is present and equals `"first-provision"`.

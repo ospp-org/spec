@@ -4,7 +4,6 @@
   "stationModel": "SSP-3000",
   "stationVendor": "AcmeCorp",
   "serialNumber": "SN-2024-001234",
-  "bayCount": 2,
   "bays": [
     {
       "bayNumber": 1,

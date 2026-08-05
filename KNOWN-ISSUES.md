@@ -457,9 +457,7 @@ recovery leg of a Hard reset, and only where an operator capability is available
   replacing what was held, **including on a replay** (`04-flows.md` §2, *Persisting the
   response*) — the obligation that section calls "the one firmware is most likely to skip";
 - that the `bays` array's explicit `(bayId, bayNumber)` pairing is consumed as the bay-number
-  mapping, observable at the first StatusNotification after boot. (Through 0.10.0 this was
-  carried by `bayIds` order — `bayIds[i]` ↔ `bayNumber` *i+1* — which is deprecated in 0.11.0
-  and removed in 0.12.0.);
+  mapping, observable at the first StatusNotification after boot;
 - that `mqttConfig` is honoured on connect, with `keepAliveSeconds` taken from the response and
   the Client ID fixed to `{stationId}` regardless of what was advertised (`02-transport.md`
   §1.2).

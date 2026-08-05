@@ -16,8 +16,7 @@ response can satisfy field-by-field and still violate:
 
 1. **`bays` carries the bay-number mapping EXPLICITLY.** The array is the only place the station is
    ever told which `bayId` is which `bayNumber`. A response whose every element is a valid bay-id, and
-   whose length is right, can still pair them wrongly. The deprecated `bayIds` carries the same mapping
-   by order until 0.12.0, and the two MUST agree.
+   whose length is right, can still pair them wrongly.
 2. **`stationCaChain` and `rootCaThumbprint` are bound to the `clientCert` in the SAME response**, not
    to the server's current CA. On a replay after a Station CA rotation these two requirements diverge,
    and only one of them is correct.
@@ -36,7 +35,7 @@ This case does that.
 
 - `spec/04-flows.md` §2 — the flow, its *Postconditions*, and *Persisting the response*
 - `spec/04-flows.md` §2 — "**`bays` pairs each `bayId` with its `bayNumber` explicitly**", and the
-  *Deprecated (0.11.0)* note governing `bayIds` for the deprecation window
+  the *non-dense bay set is legal* rule
 - `spec/04-flows.md` §2 — *Single-use and idempotent retry* → "**What a replay returns**" (the three groups)
 - `spec/02-transport.md` §1.1 §1.2 §1.3 §1.4 — MQTT 5.0, the pinned CONNECT parameters, the TLS floor,
   port 8883 and the prohibition on 1883
@@ -61,7 +60,7 @@ This case does that.
    satisfies every ordering requirement trivially.
 2. The harness knows, out of band, the portal's own `bayNumber` → `bayId` registration for that station
    — the mapping the server assigned at registration. The sequence diagram in §2 shows the portal
-   receiving `stationId, bayIds[]` at registration, so this is available to an operator; a direct read of
+   receiving `stationId, bays[]` at registration, so this is available to an operator; a direct read of
    the server's bay table is equally acceptable.
 3. Provisioning tokens `T1` and `T2` have been generated (single-use, unconsumed, within TTL), `T2`
    against a second unprovisioned station entry.
@@ -84,14 +83,14 @@ This case does that.
 
 1. Generate key pair `K_tls_1`, produce CSR `CSR_1` (CN = `stn_a1b2c3d4`), and generate receipt-signing
    key pair `K_rcpt_1`.
-2. `POST /api/v1/stations/provision` with token `T1`, `serialNumber: "SN-0001"`, `bayCount: 3`,
+2. `POST /api/v1/stations/provision` with token `T1`, `serialNumber: "SN-0001"`, a `bays` array declaring bay numbers **1, 2, 3**,
    `tlsCsr: CSR_1`, `receiptSigningPublicKey: K_rcpt_1.pub`.
 3. Verify the response status is **`200 OK`** and the `Content-Type` is `application/json`.
 4. Verify the body validates against `provisioning-response.schema.json`. Retain the raw bytes as
    `RESP_1`.
-5. Verify the seven **required** members are present at the **top level**: `stationId`, `bays`,
-   `bayIds` (deprecated, required until 0.12.0), `clientCert`, `stationCaChain`, `serverVerifyKey`,
-   `mqttConfig`.
+5. Verify the six **required** members are present at the **top level**: `stationId`, `bays`,
+   `clientCert`, `stationCaChain`, `serverVerifyKey`, `mqttConfig`. Verify specifically that
+   **`bayIds` is absent** — it is not a member of this schema and the schema is closed.
 6. Verify the body carries **no member outside** the schema's declared set — the schema is
    `additionalProperties: false`, so any extra top-level member is a conformance failure. In particular
    verify the body is **not wrapped**: a body of the form `{"data": { … }}`, or one carrying the response
@@ -145,11 +144,10 @@ This case does that.
     step 17. Verify the server accepts all three and that the status it records for each bay is the one
     the harness sent for that bay number. A server that paired them differently records the statuses
     against the wrong bays, which is observable and is a failure.
-22. **Deprecation window.** Verify `bayIds` is also present and **agrees** with `bays`: it lists exactly
-    the same `bayId` values, ordered so that index *i* is the bay whose `bayNumber` is *i + 1*. A
-    disagreement between the two is a failure. This step is removed when `bayIds` is removed in 0.12.0.
+22. Verify the response carries **no `bayIds` member**. The schema is `additionalProperties: false`, so
+    a response carrying one is non-conforming — there is exactly one way to express the mapping.
 
-> Steps 17 and 20 are what this Part exists for. `bayIds` is the **only** mapping the station is ever
+> Steps 17 and 20 are what this Part exists for. `bays` is the **only** mapping the station is ever
 > given: bay identifiers are server-assigned, they arrive nowhere else in any profile, and the first
 > message the station sends after a successful boot is required to carry `bayId` and `bayNumber`
 > together. A server that returns the right identifiers in the wrong order returns a schema-valid
@@ -235,13 +233,13 @@ This case does that.
     against the schema **in full** — a replay is not a reduced response.
 42. Verify each of the following is **byte-identical** to `RESP_1`:
     - `stationId`
-    - `bayIds` — **including its order**; servers MUST NOT reorder the array between the original
+    - `bays` — each `bayId` still paired with the same `bayNumber` between the original
       response and a replay
     - `clientCert`
     - `stationIdentity`, where present
-43. Re-send once more with **drifted descriptive fields** — `serialNumber: "SN-9999"`, `bayCount: 7` —
+43. Re-send once more with **drifted descriptive fields** — `serialNumber: "SN-9999"` and every program `label` altered —
     keys unchanged. Verify `200 OK` and that the four members above are **still** byte-identical, and in
-    particular that `bayIds` still has **3** elements. The request's `bayCount` is descriptive and is
+    particular that `bays` still has **3** elements. The request's program `label` values are descriptive and is
     ignored on a replay; it does not resize the bay set.
 
 ### Part J — Replay: the current group tracks the server, and MUST NOT be frozen
@@ -291,7 +289,7 @@ This case does that.
    and `clientAuth`, and carries a CRL Distribution Points extension.
 4. `bays` is an array of **objects**, each pairing a `bayId` with its `bayNumber`, unique in both, of
    length equal to the station's registered bay count, and carrying exactly the registered set of bay
-   numbers — dense or not. `bayIds` is present alongside it, agreeing, until 0.12.0.
+   numbers — dense or not. No `bayIds` member is present.
 5. The pairing in `bays` is the mapping the station actually uses: StatusNotifications paired by the
    `bayNumber` read from each member are recorded against the right bays.
 6. `stationCaChain` verifies the `clientCert` returned **in the same response**, and `rootCaThumbprint`
@@ -302,7 +300,7 @@ This case does that.
    "5.0", `clientIdTemplate` "{stationId}", a TLS floor of 1.2 or 1.3, and no plaintext MQTT.
 9. `stationIdentity` is present exactly where a BLE key was submitted, binds that key and that
    `stationId`, and its signature verifies against the `serverVerifyKey` beside it.
-10. On a replay, `stationId`, `bayIds` (order included), `clientCert` and `stationIdentity` are
+10. On a replay, `stationId`, `bays` (each pairing preserved), `clientCert` and `stationIdentity` are
     byte-identical to the original response, and remain so under descriptive drift.
 11. On a replay, `brokerRootCa`, `serverVerifyKey` and `mqttConfig` reflect the server's **current**
     state.
@@ -325,7 +323,7 @@ The implementation **fails** this test case if any of the following occur:
 4. `bays` contains a duplicate `bayId` or a duplicate `bayNumber`, or its set of `bayNumber` values is
    not exactly the station's registered set.
 5. **A member of `bays` pairs a `bayId` with the wrong `bayNumber`**, or the pairing differs between the
-   original response and a replay, or `bayIds` disagrees with `bays`. This is the silent one: every
+   original response and a replay, or a `bayIds` member is present at all. This is the silent one: every
    element is valid, the length is right, and every bay in the station is mis-identified.
 6. `stationCaChain` does not verify the `clientCert` returned in the same response, or
    `rootCaThumbprint` pins an apex other than that of the chain returned in the same response.
