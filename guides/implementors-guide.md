@@ -85,6 +85,7 @@ Every MQTT message is wrapped in an **envelope**:
     "sessionId": "sess_a1b2c3d4",
     "bayId": "bay_c1d2e3f4a5b6",
     "serviceId": "svc_eco",
+      "programNumber": 1,
     "durationSeconds": 300,
     "sessionSource": "MobileApp"
   },

@@ -356,6 +356,7 @@ The server:
     "sessionId": "sess_b2c3d4e5",
     "bayId": "bay_a2b3c4d5e6f7",
     "serviceId": "svc_standard",
+      "programNumber": 1,
     "durationSeconds": 300,
     "sessionSource": "WebPayment",
     "reservationId": "rsv_a7b8c9d0e1f2",

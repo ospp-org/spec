@@ -331,7 +331,6 @@ The station replays all buffered messages in chronological order. The server ide
     "bayId": "bay_c1d2e3f4a5b6",
     "bayNumber": 1,
     "status": "Occupied",
-    "previousStatus": "Occupied",
     "programs": [
       {
         "programNumber": 1,
@@ -416,7 +415,6 @@ The station replays all buffered messages in chronological order. The server ide
     "bayId": "bay_c1d2e3f4a5b6",
     "bayNumber": 1,
     "status": "Occupied",
-    "previousStatus": "Occupied",
     "programs": [
       {
         "programNumber": 1,

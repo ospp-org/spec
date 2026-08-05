@@ -56,6 +56,7 @@ reports the bay is already running a cycle. The station responds with error code
     "sessionId": "sess_a4b5c6d7e8f9",
     "bayId": "bay_c1d2e3f4a5b6",
     "serviceId": "svc_eco",
+      "programNumber": 1,
     "durationSeconds": 300,
     "sessionSource": "MobileApp"
   },
@@ -79,6 +80,7 @@ reports the bay is already running a cycle. The station responds with error code
     "sessionId": "sess_c0d1e2f3a4b5",
     "bayId": "bay_c1d2e3f4a5b6",
     "serviceId": "svc_eco",
+      "programNumber": 1,
     "durationSeconds": 300,
     "sessionSource": "WebPayment"
   },

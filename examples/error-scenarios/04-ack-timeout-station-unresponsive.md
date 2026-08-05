@@ -99,6 +99,7 @@ reveals it.
     "sessionId": "sess_e1f2a3b4c5d6",
     "bayId": "bay_c1d2e3f4a5b6",
     "serviceId": "svc_eco",
+      "programNumber": 1,
     "durationSeconds": 300,
     "sessionSource": "MobileApp"
   }

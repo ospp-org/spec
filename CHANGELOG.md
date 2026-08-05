@@ -486,6 +486,28 @@ shipped different sets.
   statements of the repo's own size were wrong — the schema count appeared as 85 in one place and
   67 in two others. Both swept mechanically and reconciled; the detail is in the two commits.
 
+- **Four example-corpus defects where the example contradicted the rule it illustrates.** Schema
+  validation passes on all 52 payload files, so these are all schema-legal and rule-violating,
+  which is the only kind a validator cannot find:
+
+  - **Eight StatusNotification examples asserted an `X → X` transition** — `previousStatus` equal
+    to `status`, in three flow narratives. Six are post-boot reports and one is a program-only
+    report, both of which §5 rule 2 requires to **omit** the field; writing `status` into it
+    asserts a transition §2.3 does not contain and [§2.5](spec/05-state-machines.md#25-invalid-transitions)
+    therefore makes invalid. Removed, not corrected — absence is the rule.
+  - **Seven StartService REQUEST examples omitted `programNumber`**, which this release makes
+    Required. One of them is `06-security.md` §5.3's canonical-form worked example, whose sorted
+    output moved with it.
+  - **`TC-CORE-001` Part C could not pass.** Its step 24 sends a `Pending` boot response with no
+    `sessionKey` — malformed under the rule this release introduces — and steps 26–31 then require
+    the station to verify and answer three signed commands. The conformance case for the rule
+    contradicted the rule.
+  - **`03-messages.md` §7.13 still taught the base64-digest bug that `06-security.md` §6.2 Note 1
+    exists to forbid**: `digest = SHA-256(receipt.data)` over the base64 form. Note 1 has said
+    since v0.4.2 that the digest is over the **canonical bytes** and that implementations
+    **MUST NOT** hash the base64; the repair never reached the message catalogue. Firmware built
+    from chapter 03 signs a digest no server will verify.
+
 - **This entry had lost an arc.** The commit that deleted the deprecation machinery rewrote
   `[Unreleased]` and took the topology arc's own entries with it — including a **normative
   BREAKING** requirement, the station's server-certificate identity check, and the conformance

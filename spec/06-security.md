@@ -785,14 +785,14 @@ Original message:
   "timestamp": "2026-01-30T12:00:00.000Z",
   "source": "Server",
   "messageType": "Request",
-  "payload": { "sessionId": "sess_a1b2c3d4", "bayId": "bay_c1d2e3f4a5b6", "serviceId": "svc_eco", "durationSeconds": 300, "sessionSource": "MobileApp" },
+  "payload": { "sessionId": "sess_a1b2c3d4", "bayId": "bay_c1d2e3f4a5b6", "serviceId": "svc_eco", "programNumber": 1, "durationSeconds": 300, "sessionSource": "MobileApp" },
   "mac": "will-be-removed"
 }
 ```
 
 Canonical form (sorted keys, no `mac`, compact):
 ```
-{"action":"StartService","messageId":"cmd_550e8400","messageType":"Request","payload":{"bayId":"bay_c1d2e3f4a5b6","durationSeconds":300,"serviceId":"svc_eco","sessionId":"sess_a1b2c3d4","sessionSource":"MobileApp"},"protocolVersion":"0.3.0","source":"Server","timestamp":"2026-01-30T12:00:00.000Z"}
+{"action":"StartService","messageId":"cmd_550e8400","messageType":"Request","payload":{"bayId":"bay_c1d2e3f4a5b6","durationSeconds":300,"programNumber":1,"serviceId":"svc_eco","sessionId":"sess_a1b2c3d4","sessionSource":"MobileApp"},"protocolVersion":"0.3.0","source":"Server","timestamp":"2026-01-30T12:00:00.000Z"}
 ```
 
 ### 5.4 MAC Computation

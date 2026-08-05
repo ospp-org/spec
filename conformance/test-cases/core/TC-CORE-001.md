@@ -68,7 +68,7 @@ Verify that a station sends BootNotification as the first message after establis
 
 22. Reboot the station.
 23. Observe BootNotification is sent.
-24. Send a server response: `{ "status": "Pending", "retryInterval": 30, "serverTime": "2026-01-15T10:01:00.000Z", "heartbeatIntervalSec": 30 }`.
+24. Send a server response: `{ "status": "Pending", "retryInterval": 30, "serverTime": "2026-01-15T10:01:00.000Z", "heartbeatIntervalSec": 30, "sessionKey": "c2Vzc2lvbktleUZvclBlbmRpbmdTdGF0aW9uMzJC" }`. The `sessionKey` is **required** on a `Pending` response exactly as on an `Accepted` one ([`boot-notification.md` §5.3](../../../spec/profiles/core/boot-notification.md)); without it the station must treat the response as malformed and never reaches `Pending`, so steps 26–31 below — which require it to verify and answer signed commands — could not run.
 25. Verify the station enters the `Pending` restricted state — it MUST NOT send Heartbeat, StatusNotification, or any other message it originates. Only BootNotification retries, after `retryInterval`.
 26. Send a GetConfiguration command to the station.
 27. Verify that the station **does** answer the GetConfiguration command with a RESPONSE. `Pending` is the state in which an operator repairs the station, and the command channel is how they do it. A station that stays silent here fails this case.

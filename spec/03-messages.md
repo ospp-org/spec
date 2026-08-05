@@ -3012,11 +3012,19 @@ The app MUST store the receipt in its offline transaction log and sync it to the
 | `meterValues.energyWh` | integer | No | Energy consumed in watt-hours |
 | `receipt` | object | Yes | Cryptographic receipt |
 | `receipt.data` | string | Yes | Base64-encoded canonical JSON of the receipt fields above |
-| `receipt.signature` | string | Yes | Base64-encoded ECDSA P-256 signature over SHA-256 digest of `data` |
+| `receipt.signature` | string | Yes | Base64-encoded ECDSA P-256 signature over the SHA-256 digest of the **canonical bytes** that `data` encodes — not of the base64 string itself |
 | `receipt.signatureAlgorithm` | string | Yes | `"ECDSA-P256-SHA256"` |
 | `txCounter` | integer | Yes | Monotonically increasing transaction counter (included in signed receipt data) |
 
-> **Receipt signing:** `receipt.data = base64(canonical_json(fields))` where fields include `txCounter`. `digest = SHA-256(receipt.data)`, `signature = ECDSA-P256-Sign(station_private_key, digest)` using RFC 6979 deterministic nonce. See [Chapter 06 — Security](06-security.md).
+> **Receipt signing:** `receipt_data = canonical_json(fields)` where fields include `txCounter`;
+> `digest = SHA-256(receipt_data)`, `signature = ECDSA-P256-Sign(station_private_key, digest)` using
+> an RFC 6979 deterministic nonce, and `receipt.data = base64(receipt_data)`.
+>
+> **The digest is over the canonical bytes, never over the base64.** Base64 is the wire encoding of
+> the `receipt.data` field and is not part of the cryptographic input — see
+> [Chapter 06 §6.2 Note 1](06-security.md#62-transaction-receipt-signing--ecdsa-p-256), which is
+> normative and which this note previously contradicted. A station built to the older form signs
+> `SHA-256(base64(canonical))`, which no server will verify.
 
 > **Counter discontinuity:** The server records `txCounter` during reconciliation and does not gate on it. A discontinuity is worth an operator alert on the **station** — the usual causes are reboot, NVS corruption or a board swap — and the transaction is processed normally either way. It is not a fraud signal against the user and cannot prove completeness (`06-security.md` §6.3.1).
 

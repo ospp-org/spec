@@ -135,7 +135,6 @@ The server acknowledges the reconnection. Since the station reported `pendingOff
     "bayId": "bay_c1d2e3f4a5b6",
     "bayNumber": 1,
     "status": "Available",
-    "previousStatus": "Available",
     "programs": [
       {
         "programNumber": 1,
@@ -166,7 +165,6 @@ The server acknowledges the reconnection. Since the station reported `pendingOff
     "bayId": "bay_a2b3c4d5e6f7",
     "bayNumber": 2,
     "status": "Available",
-    "previousStatus": "Available",
     "programs": [
       {
         "programNumber": 1,
@@ -197,7 +195,6 @@ The server acknowledges the reconnection. Since the station reported `pendingOff
     "bayId": "bay_d5e6f7a8b9c0",
     "bayNumber": 3,
     "status": "Available",
-    "previousStatus": "Available",
     "programs": [
       {
         "programNumber": 1,
