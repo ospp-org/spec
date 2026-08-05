@@ -22,7 +22,7 @@ Alice opens the app on her phone while parked at "Station Alpha -- Example City"
 - Alice is authenticated (valid JWT access token)
 - Alice's wallet balance: 120 credits
 - Alice has no other active session
-- Protocol version: 1.0.0
+- Protocol version: 0.3.0
 
 ## Timeline
 

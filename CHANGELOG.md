@@ -8,7 +8,7 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
-## [Unreleased]
+## [0.11.0] — 2026-08-05
 
 > **Breaking on the wire, and the wire version moves with it: `protocolVersion` goes to
 > `0.3.0`.** The document version does **not** move here — [`02-transport.md` §2.2](spec/02-transport.md)
@@ -581,18 +581,25 @@ depends on the current answer.
 - **`MessageSigningMode` default flip before the station can sign.** Static means it takes effect
   at the next reboot, which is exactly when you want it — but only after the firmware can honour it.
 
-### Document version — not bumped here
+### Document version
 
-Per the brief for each arc the version headers and tags are **untouched** — the bay-FSM arc included.
-Recorded for whoever takes the release:
-
-- **Document version: `0.10.0` → `0.11.0`.** Pre-1.0, so MINOR carries breaking changes
-  ([VERSIONING.md](VERSIONING.md) §Pre-1.0 Policy). MAJOR stays `0`.
-- **Wire `protocolVersion`: stays `0.3.0`.** It moved once in this same unreleased block and has
-  never shipped, so the boot and signing breaks fold into it rather than minting a second value
+- **Document version: `0.10.0` → `0.11.0`.** MINOR, not MAJOR. [VERSIONING.md](VERSIONING.md)'s
+  *Pre-1.0 Policy* states that during `0.x` development breaking changes **MAY** occur between
+  minor versions, provided each release documents them under `### Changed` or `### Removed` — which
+  this entry does. The repo's own precedent agrees: `0.8.1 → 0.9.0` carried three independent
+  breaking bodies and `0.9.0 → 0.10.0` narrowed a wire enum, and both took a MINOR. MAJOR stays
+  `0` and will move when 1.0 makes a compatibility promise worth breaking.
+- **Wire `protocolVersion`: stays `0.3.0`.** It moved once inside this release and has never
+  shipped, so the boot, signing and bay-FSM breaks fold into it rather than minting a second value
   no station has ever seen. Moving it twice before either value reaches a station would be
-  ceremony, not information.
+  ceremony, not information. Verified: 176 value sites, all `0.3.0`, and the `ProtocolVersion`
+  configuration default agrees in both places `08-configuration.md` states it.
 - The two are independent by [`02-transport.md` §2.2](spec/02-transport.md), which this respects.
+- **26 document-version sites** were swept and moved: 22 chapter and profile headers, the
+  `02-transport.md` §2.2 prose example, the README badge, `spec/README.md`'s front-matter **and**
+  its table row (which disagreed with each other at `0.8.0` and `0.9.0`), and the implementor's
+  guide (`0.7.0`). Four headers had never been cascaded past `0.5.0` or `0.9.0`. The Document
+  History table gained a row for `0.11.0` **and** for `0.10.0`, which was tagged without one.
 
 ### Firmware cost — the aggregate across the arcs that change firmware
 
@@ -812,7 +819,7 @@ not the model. (The bay table was §1.3 when this was written; the station machi
 of it afterwards and it is now [§2.3](spec/05-state-machines.md#23-transition-table).)
 
 Found and **recorded rather than fixed** — see [KNOWN-ISSUES.md](KNOWN-ISSUES.md). *(Fixed later, in
-the bay-FSM arc; see the Unreleased entry above. The count below is low — the machine was stated in
+the bay-FSM arc; see the [0.11.0](#0110--2026-08-05) entry above. The count below is low — the machine was stated in
 full in five places, not two.)* The bay FSM is
 specified twice and the two copies disagree, on `Unavailable → Faulted`, on whether anything
 transitions *into* `Unknown`, and — in four separate statements, two of them 23 lines apart in one
