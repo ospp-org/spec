@@ -81,9 +81,10 @@
         "RemoteReset",
         "ManualReset",
         "ScheduledReset",
-        "ErrorRecovery"
+        "ErrorRecovery",
+        "Reconnect"
       ],
-      "description": "Reason the station booted. RemoteReset means the server asked for this return via Reset [MSG-015], distinguishing a commanded reboot from a spontaneous one — without it a server cannot tell whether the station came back because it was told to. ManualReset is a human acting at the station; ScheduledReset is the station's own scheduled restart. No member denotes a credential wipe: OSPP has no remote factory reset (Reset profile §5.1)."
+      "description": "Reason the station sent this BootNotification. SEVEN of the eight name an actual boot; `Reconnect` names the case where NONE occurred — the firmware never restarted, only the MQTT session is new. OSPP requires a BootNotification after every connection including reconnections, so without `Reconnect` a station that merely re-dialled had to pick a value it knew to be false, and a server reading it could not tell whether the station's volatile state survived. It matters because the answer decides whether a live session is kept or terminated. `RemoteReset` means the server asked for this return via Reset [MSG-015], distinguishing a commanded reboot from a spontaneous one. `ManualReset` is a human acting at the station; `ScheduledReset` is the station's own scheduled restart. No member denotes a credential wipe: OSPP has no remote factory reset (Reset profile §5.1). `uptimeSeconds` is the cross-check, and the two MUST agree: a `Reconnect` carries the uptime the station already had, and a station claiming `PowerOn` with a large uptime is detectably lying."
     },
     "capabilities": {
       "type": "object",

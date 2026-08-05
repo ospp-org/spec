@@ -41,7 +41,7 @@ sequenceDiagram
 
         %% Boot notification
         Station->>Broker: BootNotification REQUEST [MSG-001]
-        Note right of Station: bootReason: "ErrorRecovery"<br/>pendingOfflineTransactions: 3
+        Note right of Station: bootReason: "Reconnect"<br/>(the firmware never restarted)<br/>pendingOfflineTransactions: 3
         Broker->>Server: BootNotification REQUEST
         Server-->>Broker: BootNotification RESPONSE (Accepted)
         Broker-->>Station: BootNotification RESPONSE

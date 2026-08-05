@@ -256,7 +256,7 @@ After any reconnection, the station sends a BootNotification to re-announce itse
     "uptimeSeconds": 86595,
     "pendingOfflineTransactions": 0,
     "timezone": "Europe/London",
-    "bootReason": "ErrorRecovery",
+    "bootReason": "Reconnect",
     "capabilities": {
       "bleSupported": true,
       "offlineModeSupported": true,
@@ -274,7 +274,7 @@ After any reconnection, the station sends a BootNotification to re-announce itse
 
 ### Step 11: Server Responds Accepted (10:03:15.600)
 
-The server recognizes this as a reconnection (not a cold boot) based on `bootReason: "ErrorRecovery"` and the presence of active sessions. It does **not** reset session state.
+The server recognizes this as a reconnection rather than a cold boot from `bootReason: "Reconnect"` — the station is telling it directly that the firmware never restarted — corroborated by `uptimeSeconds: 86595`, which spans the outage. It does **not** reset session state. Before `Reconnect` existed the station had to pick a value that named a boot that never happened, and the server had to infer the truth from the uptime alone.
 
 **MQTT Topic:** `ospp/v1/stations/stn_a1b2c3d4/to-station`
 
@@ -568,6 +568,6 @@ Backoff formula: `min(initialDelay * 2^(attempt-1), maxDelay)` with `initialDela
 
 3. **Replay with timestamp comparison.** The server distinguishes between real-time and historical messages by comparing message timestamps against the known disconnection period. This prevents the server from acting on stale data as if it were current (e.g., triggering alerts for a status that has already changed).
 
-4. **BootNotification on reconnect.** Even for a brief disconnection, the station sends a BootNotification to re-announce its state and synchronize clocks. The `bootReason: "ErrorRecovery"` tells the server not to reset session state.
+4. **BootNotification on reconnect.** Even for a brief disconnection, the station sends a BootNotification — the HMAC session key is scoped to the MQTT session and arrives only in that response, so a new session needs a new key. `bootReason: "Reconnect"` tells the server the firmware never restarted, so it must not reset session state; `uptimeSeconds` corroborates by spanning the outage.
 
 5. **Server reconciliation.** After receiving all buffered messages, the server checks meter value continuity (values should be monotonically increasing) and duration continuity. Any gaps or anomalies would trigger a reconciliation alert.

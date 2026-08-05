@@ -305,7 +305,7 @@ sequenceDiagram
     rect rgb(232, 245, 233)
         Note over Station,Server: Reconnection
         Station->>Broker: MQTT CONNECT (mTLS)
-        Station->>Broker: BootNotification (bootReason: ErrorRecovery)
+        Station->>Broker: BootNotification (bootReason: Reconnect)
         Broker->>Server: BootNotification [MSG-001]
         Server-->>Broker: BootNotification RESPONSE (Accepted)
         Broker-->>Station: Accepted

@@ -41,7 +41,7 @@
   "uptimeSeconds": 0,
   "pendingOfflineTransactions": 0,
   "timezone": "America/Chicago",
-  "bootReason": "ManualReset",
+  "bootReason": "RemoteReset",
   "capabilities": {
     "bleSupported": true,
     "offlineModeSupported": true,

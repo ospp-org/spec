@@ -78,7 +78,7 @@ After the ISP restores connectivity, the station reconnects and sends a BootNoti
     "uptimeSeconds": 100802,
     "pendingOfflineTransactions": 3,
     "timezone": "Europe/London",
-    "bootReason": "ErrorRecovery",
+    "bootReason": "Reconnect",
     "capabilities": {
       "bleSupported": true,
       "offlineModeSupported": true,

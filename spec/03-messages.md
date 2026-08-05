@@ -165,7 +165,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
 | `uptimeSeconds` | integer | Yes | Seconds since last boot (>= 0) |
 | `pendingOfflineTransactions` | integer | Yes | Count of unsynced offline transactions (>= 0) |
 | `timezone` | string | Yes | IANA timezone identifier (e.g., `"Europe/London"`), configurable via `TimeZone` (see §8 Configuration) |
-| `bootReason` | string | Yes | Reason for boot — see enum below |
+| `bootReason` | string | Yes | Reason this BootNotification was sent — see enum below. Seven values name a boot; `Reconnect` names the case where none occurred |
 | `capabilities` | object | Yes | Station capabilities |
 | `capabilities.bleSupported` | boolean | Yes | BLE hardware available and enabled |
 | `capabilities.offlineModeSupported` | boolean | Yes | Station can handle offline sessions |
@@ -184,9 +184,11 @@ The station MAY include a human-readable name configurable via `StationName` (se
 | `PowerOn` | Initial power-on |
 | `Watchdog` | Watchdog timer triggered reboot |
 | `FirmwareUpdate` | Reboot after firmware update |
-| `ManualReset` | Operator-initiated reset |
-| `ScheduledReset` | Scheduled maintenance reboot |
-| `ErrorRecovery` | Automatic recovery from error state |
+| `RemoteReset` | Reboot the server commanded via Reset [MSG-015] — a return it asked for, not a spontaneous one |
+| `ManualReset` | A human acting at the station |
+| `ScheduledReset` | The station's own scheduled restart |
+| `ErrorRecovery` | Automatic recovery from an error state — the firmware **did** restart |
+| `Reconnect` | **No boot occurred.** The firmware never restarted; only the MQTT session is new. See below |
 
 #### RESPONSE Payload
 

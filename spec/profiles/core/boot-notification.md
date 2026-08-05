@@ -23,10 +23,10 @@ If the response is `Rejected` or `Pending`, the station **MUST** retry according
 | `stationVendor` | string | Yes | Name of the station manufacturer. |
 | `serialNumber` | string | Yes | Unique serial number of the station unit. |
 | `bays` | array | Yes | The station's re-declared physical topology: one entry per bay, each carrying `bayNumber` and the `programNumbers` that bay can run. Labels are **not** re-declared and are **not** compared. Maximum 64 bays, 32 programs per bay. See [Architecture §4.2](../../01-architecture.md). |
-| `uptimeSeconds` | integer | Yes | Seconds elapsed since the station last booted. |
+| `uptimeSeconds` | integer | Yes | Seconds elapsed since the station last booted — **not** since it last connected. It is the cross-check on `bootReason` (§5.2), and the two **MUST** agree. |
 | `pendingOfflineTransactions` | integer | Yes | Number of offline transactions queued for sync. |
 | `timezone` | string | Yes | IANA timezone identifier (e.g., `Europe/London`). |
-| `bootReason` | string | Yes | Reason the station booted. One of: `PowerOn`, `Watchdog`, `FirmwareUpdate`, `RemoteReset`, `ManualReset`, `ScheduledReset`, `ErrorRecovery`. |
+| `bootReason` | string | Yes | Reason this BootNotification was sent. One of: `PowerOn`, `Watchdog`, `FirmwareUpdate`, `RemoteReset`, `ManualReset`, `ScheduledReset`, `ErrorRecovery`, `Reconnect`. The first seven name an actual boot; `Reconnect` says none occurred — see §5.2. |
 | `capabilities` | object | Yes | Feature flags (see below). |
 | `networkInfo` | object | Yes | Current network connection details (see below). |
 
@@ -81,6 +81,25 @@ A BootNotification **reports** the station's state; it does not rewrite the serv
 > **Why this is normative rather than obvious.** Under the opposite reading — absence coerced to `false` on every boot — a station that declared a capability once is silently downgraded by any later boot that happens to omit it, with no error, no event, and nothing on the wire to show what changed. Where the downgraded capability is the one gating remote management, the downgrade also removes the channel by which it could be repaired: the only fix would be new firmware, delivered over the channel the flag just disabled. Rule 2 exists so that a reporting message can never destroy state it did not mention.
 
 This section fixes the meaning of an **absent** capability. It does not define capability *negotiation* — how a server advertises what it supports, or how the two reconcile — which remains open.
+
+### 5.2 `bootReason` — Seven Boots and One Non-Boot
+
+Rule 1 requires a BootNotification after **every** MQTT connection, reconnections included. A reconnection after a TCP reset or a brief network loss involves no boot at all: the firmware is the same process it was a second earlier, holding the same session state, the same active sessions and the same counters. Only the MQTT session is new.
+
+`Reconnect` is the value for that case, and it is the only member that does not name a boot.
+
+1. The station **MUST** send `Reconnect` when it re-establishes the MQTT connection without having restarted, and **MUST NOT** send it when the firmware did restart.
+2. `uptimeSeconds` **MUST** be consistent with `bootReason`. A `Reconnect` carries the uptime the station already had — it spans the outage. `PowerOn`, `Watchdog`, `FirmwareUpdate`, `RemoteReset`, `ManualReset`, `ScheduledReset` and `ErrorRecovery` all carry an uptime measured from the restart they name.
+3. A server **MAY** use the pair to detect an inconsistent report — a `PowerOn` with a large uptime, or a `Reconnect` whose uptime went backwards — and **SHOULD** log it. `bootReason` is the primary signal; `uptimeSeconds` corroborates it.
+4. The distinction is load-bearing, not cosmetic. [Chapter 02 — Transport §4.4](../../02-transport.md) guarantees that an active session survives an MQTT outage, so on receiving a boot the server must decide whether to keep that session or terminate it. Without a value expressing "I did not restart", two conforming servers reading the same message draw that line differently, and one of them terminates a live session on running hardware.
+
+> **A deliberate divergence from OCPP, recorded so it is not mistaken for an oversight.**
+>
+> OCPP-J (OCPP 2.0.1 Part 4 §5.4, *Reconnecting*) advises the opposite: a charging station **SHOULD NOT** send a BootNotification when reconnecting unless something in it has changed, on the grounds that the WebSocket connection already re-establishes the identity binding, so an extra message buys nothing. The OCA certification cases contain no BootNotification step on reconnect.
+>
+> OSPP requires one, and the requirement follows from [Chapter 06 — Security §5.2](../../06-security.md): the HMAC session key is scoped to the MQTT session and is issued **in** the BootNotification response. A new MQTT session therefore needs a new key, and the boot is the only message that carries one. Drop the boot on reconnect and the station reconnects keyless, unable to sign or verify anything.
+>
+> That is a real cost — one extra round trip per reconnect — accepted for a real reason. `Reconnect` is what makes the cost honest: the message is sent because the *key* must be re-issued, not because the station rebooted, and the field now says so. OCPP has no equivalent value because it has no such message.
 
 ## 6. Error Handling
 
