@@ -3,13 +3,13 @@
   "bayNumber": 1,
   "previousStatus": "Available",
   "status": "Occupied",
-  "services": [
+  "programs": [
     {
-      "serviceId": "svc_eco",
+      "programNumber": 1,
       "available": false
     },
     {
-      "serviceId": "svc_standard",
+      "programNumber": 2,
       "available": true
     }
   ]

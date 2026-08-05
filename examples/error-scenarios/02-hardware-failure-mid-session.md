@@ -135,9 +135,15 @@ SessionEnded is an EVENT (fire-and-forget) — no response is sent by the server
     "previousStatus": "Occupied",
     "errorCode": 5001,
     "errorText": "PUMP_SYSTEM",
-    "services": [
-      { "serviceId": "svc_eco", "available": false },
-      { "serviceId": "svc_standard", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": false
+      },
+      {
+        "programNumber": 2,
+        "available": true
+      }
     ]
   }
 }

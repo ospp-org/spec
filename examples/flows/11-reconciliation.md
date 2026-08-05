@@ -135,10 +135,19 @@ The server acknowledges the reconnection. Since the station reported `pendingOff
     "bayNumber": 1,
     "status": "Available",
     "previousStatus": "Available",
-    "services": [
-      { "serviceId": "svc_eco", "available": true },
-      { "serviceId": "svc_standard", "available": true },
-      { "serviceId": "svc_deluxe", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": true
+      },
+      {
+        "programNumber": 2,
+        "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
+      }
     ]
   }
 }
@@ -157,10 +166,19 @@ The server acknowledges the reconnection. Since the station reported `pendingOff
     "bayNumber": 2,
     "status": "Available",
     "previousStatus": "Available",
-    "services": [
-      { "serviceId": "svc_eco", "available": true },
-      { "serviceId": "svc_standard", "available": true },
-      { "serviceId": "svc_deluxe", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": true
+      },
+      {
+        "programNumber": 2,
+        "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
+      }
     ]
   }
 }
@@ -179,10 +197,19 @@ The server acknowledges the reconnection. Since the station reported `pendingOff
     "bayNumber": 3,
     "status": "Available",
     "previousStatus": "Available",
-    "services": [
-      { "serviceId": "svc_eco", "available": true },
-      { "serviceId": "svc_standard", "available": true },
-      { "serviceId": "svc_deluxe", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": true
+      },
+      {
+        "programNumber": 2,
+        "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
+      }
     ]
   }
 }

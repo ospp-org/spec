@@ -148,7 +148,7 @@ Each message below includes:
 
 The station MUST send a BootNotification REQUEST immediately after subscribing to its `to-station` topic on every MQTT connection. Until it receives an `Accepted` response the station MUST NOT send any message it originates — any EVENT, or any REQUEST other than BootNotification. A RESPONSE to a server command is permitted while `Pending`, which is the restricted state in which the station answers commands ([Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states)).
 
-> **Note:** BootNotification does NOT include bay status or services. Bay layout is reported via [StatusNotification](#52-statusnotification) events sent immediately after a successful boot.
+> **Note:** BootNotification declares the station's bay **topology** — which bays exist and which program ordinals each has — but not bay *status* or program *availability*. Those are reported via [StatusNotification](#52-statusnotification) events sent immediately after a successful boot.
 
 The station MAY include a human-readable name configurable via `StationName` (see §8 Configuration).
 
@@ -971,7 +971,7 @@ The Heartbeat REQUEST payload is **empty**:
 
 Reports the current status of a single bay. Sent in two contexts:
 
-1. **Post-boot:** One StatusNotification per bay immediately after BootNotification `Accepted`. This reports the bay layout including `bayNumber` and available `services`.
+1. **Post-boot:** One StatusNotification per bay immediately after BootNotification `Accepted`. This reports the bay layout — `bayNumber`, `status`, and every `programs[]` entry with its availability.
 2. **State change:** Whenever a bay transitions between states (e.g., `Available` → `Occupied`).
 
 #### Payload
@@ -982,11 +982,15 @@ Reports the current status of a single bay. Sent in two contexts:
 | `bayNumber` | integer | Yes | Physical bay number (1-indexed, human-readable) |
 | `status` | string | Yes | Current bay status — see enum below |
 | `previousStatus` | string | No | Previous bay status (absent on post-boot report) |
-| `services` | array | Yes | List of services on this bay — see fields below |
-| `services[].serviceId` | string | Yes | Service identifier (`svc_{id}`) |
-| `services[].available` | boolean | Yes | Whether the service is currently operational |
-| `errorCode` | integer | No | Error code when `status` is `"Faulted"` |
-| `errorText` | string | No | Error description when `status` is `"Faulted"` |
+| `programs` | array | Yes | Every program this bay declared at provisioning, with its availability (1–32 items) — see fields below |
+| `programs[].programNumber` | integer | Yes | Program ordinal (1–32), as declared for this bay in the BootNotification topology |
+| `programs[].available` | boolean | Yes | Whether this program can run on this bay right now |
+| `programs[].errorCode` | integer | No | Why this program is unavailable (5xxx, or 9000–9999 vendor). Only when `available` is `false` |
+| `programs[].errorText` | string | No | Machine-readable name for the program-level `errorCode` |
+| `errorCode` | integer | No | Bay-level error code when `status` is `"Faulted"` |
+| `errorText` | string | No | Bay-level error name when `status` is `"Faulted"` |
+
+> **Programs, not services.** A program is a physical operation the hardware performs — a firmware constant the station always knows. A service is a commercial offer the **server** mints and pushes in the catalog ([UpdateServiceCatalog](#69-updateservicecatalog)), so a station can only echo one back, and immediately after its first boot it has been told none. Requiring at least one `svc_` identifier here made [CORE-004](profiles/core/README.md)'s mandatory post-boot report unsendable on a station's first boot. The server maps programs to services through its own bindings; `service-item.bindings[]` is where that mapping lives.
 
 **`status` enum values** — the six reportable states (see [Chapter 05 — State Machines](05-state-machines.md)):
 
@@ -1010,10 +1014,19 @@ The FSM's seventh state, `Unknown`, is **not** a value of this field. A station 
   "bayId": "bay_c1d2e3f4a5b6",
   "bayNumber": 1,
   "status": "Available",
-  "services": [
-    { "serviceId": "svc_eco", "available": true },
-    { "serviceId": "svc_standard", "available": true },
-    { "serviceId": "svc_deluxe", "available": false }
+  "programs": [
+    {
+      "programNumber": 1,
+      "available": true
+    },
+    {
+      "programNumber": 2,
+      "available": true
+    },
+    {
+      "programNumber": 3,
+      "available": false
+    }
   ]
 }
 ```
@@ -1026,9 +1039,15 @@ The FSM's seventh state, `Unknown`, is **not** a value of this field. A station 
   "bayNumber": 1,
   "status": "Occupied",
   "previousStatus": "Reserved",
-  "services": [
-    { "serviceId": "svc_eco", "available": true },
-    { "serviceId": "svc_standard", "available": true }
+  "programs": [
+    {
+      "programNumber": 1,
+      "available": true
+    },
+    {
+      "programNumber": 2,
+      "available": true
+    }
   ]
 }
 ```
@@ -1041,9 +1060,15 @@ The FSM's seventh state, `Unknown`, is **not** a value of this field. A station 
   "bayNumber": 1,
   "status": "Faulted",
   "previousStatus": "Available",
-  "services": [
-    { "serviceId": "svc_eco", "available": false },
-    { "serviceId": "svc_standard", "available": false }
+  "programs": [
+    {
+      "programNumber": 1,
+      "available": false
+    },
+    {
+      "programNumber": 2,
+      "available": false
+    }
   ],
   "errorCode": 5001,
   "errorText": "PUMP_SYSTEM"
@@ -2366,6 +2391,8 @@ The app SHOULD read StationInfo immediately after connecting to verify the stati
 | **Timeout** | BLE read timeout (implementation-defined, RECOMMENDED 5s) |
 
 Returns the full service catalog with pricing for all bays. The app uses this to display available services and let the user select a bay and service before authentication.
+
+> **Why this message carries services while [StatusNotification](#52-statusnotification) carries programs.** The two look alike and are not. AvailableServices is the station **echoing the catalog the server pushed it** ([UpdateServiceCatalog](#69-updateservicecatalog)) to an app that has no other way to reach it while offline — the station originates none of it, and if it holds no catalog it has nothing to serve here. StatusNotification is the station reporting **its own hardware**, which it always knows, in a message it is required to send before any catalog can have arrived. Same station, two different kinds of fact.
 
 #### Payload
 

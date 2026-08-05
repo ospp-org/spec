@@ -423,9 +423,15 @@ Since the station is online, it also reports the session start to the server via
     "bayNumber": 2,
     "status": "Occupied",
     "previousStatus": "Available",
-    "services": [
-      { "serviceId": "svc_eco", "available": true },
-      { "serviceId": "svc_deluxe", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
+      }
     ]
   }
 }
@@ -583,9 +589,15 @@ Since the station is online, it reports the bay status change in real-time:
     "bayNumber": 2,
     "status": "Finishing",
     "previousStatus": "Occupied",
-    "services": [
-      { "serviceId": "svc_eco", "available": true },
-      { "serviceId": "svc_deluxe", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
+      }
     ]
   }
 }
@@ -676,9 +688,15 @@ After the hardware wind-down, Bay 2 returns to `Available`:
     "bayNumber": 2,
     "status": "Available",
     "previousStatus": "Finishing",
-    "services": [
-      { "serviceId": "svc_eco", "available": true },
-      { "serviceId": "svc_deluxe", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
+      }
     ]
   }
 }

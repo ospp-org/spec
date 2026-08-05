@@ -6,7 +6,9 @@
 
 StatusNotification is sent by the station whenever a bay's operational state changes. It enables the server to maintain an accurate, real-time view of all bays across the fleet. This is a fire-and-forget EVENT -- the server does not send a response.
 
-Each notification reports the bay identifier, the new status, the previous status, the availability of services on the bay, and optionally error details when the bay enters the `Faulted` state.
+Each notification reports the bay identifier, the new status, the previous status, the availability of every **program** on the bay, and optionally error details when the bay enters the `Faulted` state.
+
+> **Programs, not services — and the message could not be sent otherwise.** A **program** is a physical operation the hardware performs; its ordinal is a firmware constant the station always knows. A **service** is a commercial offer the *server* mints and pushes in the catalog ([UpdateServiceCatalog](../device-management/update-service-catalog.md)). A station cannot originate knowledge of a service — it can only echo what it was told — and immediately after its first boot it has been told nothing. The old shape required at least one `svc_`-prefixed identifier in a message [CORE-004](README.md) requires the station to send at that exact moment, so a conforming first boot was impossible. Reporting programs closes that, and puts the ownership boundary where it belongs: the station reports what it physically has, the server maps those programs to the services it sells.
 
 ## 2. Direction and Type
 
@@ -21,16 +23,20 @@ Each notification reports the bay identifier, the new status, the previous statu
 | `bayNumber` | integer | Yes | Ordinal bay number (minimum 1), as the station declared it. Its correspondence to `bayId` is supplied **explicitly** by the `bays` array in the provisioning response, whose members pair the two ([Flows §2](../../04-flows.md#2-station-provisioning)). That is the only place the mapping is supplied. Bay numbers need **not** be dense. |
 | `status` | string | Yes | New bay status (see Bay States below). |
 | `previousStatus` | string | No | Previous bay status before this transition. Required on a transition report, omitted on the post-boot report (§5 rule 2). |
-| `services` | array\<object\> | Yes | Service availability list (minimum 1 item). |
+| `programs` | array\<object\> | Yes | Program availability list, one entry per program this bay declared at provisioning (1--32 items). |
 | `errorCode` | integer | No | OSPP numeric error code (when `status` is `Faulted`). |
 | `errorText` | string | No | Machine-readable error name in `UPPER_SNAKE_CASE`. |
 
-### 3.1 Service Object
+### 3.1 Program Object
 
 | Field | Type | Required | Description |
 |-------------|---------|----------|-----------------------------------------------|
-| `serviceId` | string | Yes | Service identifier (`svc_` prefix). |
-| `available` | boolean | Yes | Whether this service is currently available on the bay. |
+| `programNumber` | integer | Yes | Program ordinal (1--32), as declared for this bay at provisioning and re-declared at every boot. |
+| `available` | boolean | Yes | Whether this program can run on this bay right now. |
+| `errorCode` | integer | No | Why this program is unavailable, from the 5xxx range (or 9000--9999 vendor). Present only when `available` is `false`. See §6.1. |
+| `errorText` | string | No | Machine-readable name for the program-level `errorCode`, in `UPPER_SNAKE_CASE`. Accompanies `errorCode` whenever that is present. |
+
+The **set** of `programNumber` values MUST equal the set this bay declared for the same `bayNumber` in its BootNotification topology ([`boot-notification.md` §3](boot-notification.md)). A program that cannot run is reported present with `available: false`, **never omitted** — omission means the hardware changed, and that requires re-provisioning, not a status report.
 
 ## 4. Reportable Bay States
 
@@ -72,15 +78,27 @@ Unknown    --> Unavailable   (maintenance mode detected after reconnection)
 
 1. The server **MUST** validate incoming transitions against this table. Invalid transitions **MUST** be logged but **SHOULD NOT** cause the server to drop the message -- the server **SHOULD** accept the reported state as authoritative and log a warning.
 2. The station **MUST** include `previousStatus` whenever the state changes, and **MUST** omit it on the post-boot report. The post-boot report is the station leaving `Unknown`, and `Unknown` is not a value this field can carry (rule 2 of section 7) — so there is nothing truthful to put there. Its absence is therefore load-bearing: on a StatusNotification, no `previousStatus` means *this is the boot report*, and a server MAY read it that way.
-3. When a bay transitions to `Faulted`, the station **MUST** include `errorCode` and `errorText` from the 5xxx error range.
+3. When a bay transitions to `Faulted`, the station **MUST** include the bay-level `errorCode` and `errorText` from the 5xxx error range.
+4. Program availability is reported on **every** StatusNotification, not only on a transition. A program that becomes unavailable while the bay stays `Available` — one consumable exhausted, one nozzle blocked — is itself a bay state change for the purposes of §7 rule 3, and the station **MUST** report it within 1 second.
 
-## 6. Error Reporting (Faulted State)
+## 6. Error Reporting
 
-1. When a bay enters the `Faulted` state, the station **MUST** populate `errorCode` with a numeric code from the 5xxx range (Station Hardware & Software Errors) and `errorText` with the corresponding `UPPER_SNAKE_CASE` identifier.
+### 6.0 Bay-Level (Faulted State)
+
+1. When a bay enters the `Faulted` state, the station **MUST** populate the bay-level `errorCode` with a numeric code from the 5xxx range (Station Hardware & Software Errors) and `errorText` with the corresponding `UPPER_SNAKE_CASE` identifier.
 2. The server **MUST** log the fault, update the bay state in its registry, and notify operators via the fleet dashboard.
 3. If the error severity is `Critical` (e.g., `5001 PUMP_SYSTEM`, `5009 EMERGENCY_STOP`), the server **MUST** generate an operator alert immediately.
 4. A `Faulted` bay **MUST NOT** accept new sessions or reservations until it transitions back to `Available` or `Unavailable`.
 5. Vendor-specific error details **MAY** be included using error codes in the 9000--9999 range. Receivers that do not recognize a vendor code **MUST** treat it as `5000 HARDWARE_GENERIC`.
+
+### 6.1 Program-Level
+
+A bay can be perfectly healthy and still have one program it cannot run — a consumable exhausted, a valve stuck, a sensor on one circuit failed. That is what `programs[].available: false` says. On its own it says only *that*, and an operator reading it sees a dead program with no way to tell a blown fuse from a failed sensor: two faults, one truck roll, the wrong tools.
+
+1. When a program is reported `available: false`, the station **SHOULD** include `programs[].errorCode` and `programs[].errorText` naming why. It **MUST NOT** include either when `available` is `true`.
+2. Program-level codes come from the same 5xxx registry as bay-level codes, with the same 9000--9999 vendor range and the same unknown-code fallback (rule 5 above).
+3. Program-level reporting is **OPTIONAL** and does not extend [CORE-012](README.md), which mandates `errorCode`/`errorText` only when the **bay** transitions to `Faulted`. A station that cannot attribute a fault to a cause reports the unavailability without a code rather than guessing one.
+4. The two levels are independent and both may be present. A bay-level code describes the bay; a program-level code describes one program on it. A fault that takes out every program is a **bay** fault and belongs at bay level with `status: "Faulted"` — reporting it as 32 identical program-level codes is conforming but useless.
 
 ## 7. Processing Rules
 
@@ -108,13 +126,13 @@ Unknown    --> Unavailable   (maintenance mode detected after reconnection)
     "bayNumber": 1,
     "previousStatus": "Available",
     "status": "Occupied",
-    "services": [
+    "programs": [
       {
-        "serviceId": "svc_eco",
+        "programNumber": 1,
         "available": false
       },
       {
-        "serviceId": "svc_standard",
+        "programNumber": 2,
         "available": true
       }
     ]
@@ -137,13 +155,13 @@ Unknown    --> Unavailable   (maintenance mode detected after reconnection)
     "bayNumber": 1,
     "previousStatus": "Available",
     "status": "Faulted",
-    "services": [
+    "programs": [
       {
-        "serviceId": "svc_eco",
+        "programNumber": 1,
         "available": false
       },
       {
-        "serviceId": "svc_standard",
+        "programNumber": 2,
         "available": false
       }
     ],
@@ -158,5 +176,5 @@ Unknown    --> Unavailable   (maintenance mode detected after reconnection)
 - Payload: [`status-notification.schema.json`](../../../schemas/mqtt/status-notification.schema.json)
 - Bay Status enum: [`bay-status.schema.json`](../../../schemas/common/bay-status.schema.json)
 - Bay ID: [`bay-id.schema.json`](../../../schemas/common/bay-id.schema.json)
-- Service ID: [`service-id.schema.json`](../../../schemas/common/service-id.schema.json)
+- Bay topology (the program ordinals this message reports on): [`bay-topology.schema.json`](../../../schemas/common/bay-topology.schema.json)
 - Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 5000--5009, 5100--5107)

@@ -245,10 +245,19 @@ The station reports each bay's current status. Bay 1 is clean and operational af
     "bayId": "bay_c1d2e3f4a5b6",
     "bayNumber": 1,
     "status": "Available",
-    "services": [
-      { "serviceId": "svc_eco", "available": true },
-      { "serviceId": "svc_standard", "available": true },
-      { "serviceId": "svc_deluxe", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": true
+      },
+      {
+        "programNumber": 2,
+        "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
+      }
     ]
   }
 }
@@ -272,10 +281,19 @@ The station reports each bay's current status. Bay 1 is clean and operational af
     "bayId": "bay_a2b3c4d5e6f7",
     "bayNumber": 2,
     "status": "Available",
-    "services": [
-      { "serviceId": "svc_eco", "available": true },
-      { "serviceId": "svc_standard", "available": true },
-      { "serviceId": "svc_deluxe", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": true
+      },
+      {
+        "programNumber": 2,
+        "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
+      }
     ]
   }
 }
@@ -299,10 +317,19 @@ The station reports each bay's current status. Bay 1 is clean and operational af
     "bayId": "bay_d5e6f7a8b9c0",
     "bayNumber": 3,
     "status": "Available",
-    "services": [
-      { "serviceId": "svc_eco", "available": true },
-      { "serviceId": "svc_standard", "available": true },
-      { "serviceId": "svc_deluxe", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": true
+      },
+      {
+        "programNumber": 2,
+        "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
+      }
     ]
   }
 }

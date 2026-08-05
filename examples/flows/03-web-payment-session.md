@@ -254,9 +254,15 @@ The station controller checks that bay 2 is Available, transitions it to Reserve
     "bayNumber": 2,
     "status": "Reserved",
     "previousStatus": "Available",
-    "services": [
-      { "serviceId": "svc_eco", "available": true },
-      { "serviceId": "svc_standard", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": true
+      },
+      {
+        "programNumber": 2,
+        "available": true
+      }
     ]
   }
 }
@@ -399,9 +405,15 @@ The station controller:
     "bayNumber": 2,
     "status": "Occupied",
     "previousStatus": "Reserved",
-    "services": [
-      { "serviceId": "svc_eco", "available": true },
-      { "serviceId": "svc_standard", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": true
+      },
+      {
+        "programNumber": 2,
+        "available": true
+      }
     ]
   }
 }
@@ -532,9 +544,15 @@ After 300 seconds, the station's session timer fires. The station controller:
     "bayNumber": 2,
     "status": "Finishing",
     "previousStatus": "Occupied",
-    "services": [
-      { "serviceId": "svc_eco", "available": true },
-      { "serviceId": "svc_standard", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": true
+      },
+      {
+        "programNumber": 2,
+        "available": true
+      }
     ]
   }
 }
@@ -561,9 +579,15 @@ After the drain cycle completes (~2 seconds), bay 2 returns to Available.
     "bayNumber": 2,
     "status": "Available",
     "previousStatus": "Finishing",
-    "services": [
-      { "serviceId": "svc_eco", "available": true },
-      { "serviceId": "svc_standard", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": true
+      },
+      {
+        "programNumber": 2,
+        "available": true
+      }
     ]
   }
 }

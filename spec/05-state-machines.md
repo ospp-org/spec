@@ -157,7 +157,7 @@ stateDiagram-v2
 | **Reserved** | Bay is reserved for a specific user via ReserveBay [MSG-003]. A countdown timer is active; the bay MUST reject StartService from any session other than the reservation holder. |
 | **Occupied** | A session is active on the bay. The station is delivering the requested service and sending periodic MeterValues [MSG-010]. |
 | **Finishing** | The session has ended (via StopService or duration elapsed). The station is performing post-session hardware wind-down (depressurization, actuator retraction, etc.). |
-| **Faulted** | The bay has encountered a hardware or software fault. The station MUST include `errorCode` and `errorText` in the StatusNotification. The bay MUST NOT accept StartService or ReserveBay while faulted. |
+| **Faulted** | The bay has encountered a hardware or software fault. The station MUST include the bay-level `errorCode` and `errorText` in the StatusNotification. The bay MUST NOT accept StartService or ReserveBay while faulted. A fault confined to a single program does **not** put the bay here — that is `programs[].available: false` with its own code ([status-notification.md §6.1](profiles/core/status-notification.md)). |
 | **Unavailable** | The bay is administratively disabled or under maintenance. Entered via SetMaintenanceMode [MSG-020] or as a consequence of a fault requiring manual intervention. |
 | **Unknown** | The bay state is indeterminate. This is the initial state after station power-on or reboot, and the state the server transitions to when it receives a ConnectionLost [MSG-011] (LWT). The station MUST resolve this state by sending a StatusNotification on boot. **Never transmitted** — see below. |
 
@@ -193,7 +193,7 @@ stateDiagram-v2
 
 | Trigger | From | To | Condition | Action |
 |---------|------|----|-----------|--------|
-| StatusNotification (healthy) | Unknown | Available | Bay hardware passes self-test | Station sends StatusNotification [MSG-009] with bay layout and services |
+| StatusNotification (healthy) | Unknown | Available | Bay hardware passes self-test | Station sends StatusNotification [MSG-009] with the bay's status and its `programs[]` availability |
 | StatusNotification (fault) | Unknown | Faulted | Bay hardware fails self-test | Station sends StatusNotification with `errorCode` |
 | StatusNotification (maintenance) | Unknown | Unavailable | Bay was in maintenance before reboot | Station sends StatusNotification with `status: "Unavailable"` |
 | ReserveBay [MSG-003] accepted | Available | Reserved | Bay has no active session or existing reservation | Station starts reservation expiry timer, sends StatusNotification |
@@ -214,7 +214,7 @@ stateDiagram-v2
 
 A station MUST send a StatusNotification EVENT [MSG-009] in the following circumstances:
 
-1. **Post-boot report:** One StatusNotification per bay immediately after a successful BootNotification [MSG-001], reporting `bayNumber`, `status`, and available `services[]`.
+1. **Post-boot report:** One StatusNotification per bay immediately after a successful BootNotification [MSG-001], reporting `bayNumber`, `status`, and every `programs[]` entry with its availability.
 2. **State transition:** On every bay state transition listed in section 2.3.
 
 In both cases the reported `status` MUST be one of the six reportable states. A station that has not yet determined a bay's state has not yet met trigger 1: it completes its self-test first and reports the result. It **MUST NOT** report `Unknown` as a placeholder for a bay it has not finished evaluating, and **MUST NOT** report `Unknown` to acknowledge a state the server assigned — the server leaves `Unknown` on the report's arrival, not on being told about it.

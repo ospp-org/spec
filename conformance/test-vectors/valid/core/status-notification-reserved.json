@@ -3,9 +3,9 @@
   "bayNumber": 1,
   "status": "Reserved",
   "previousStatus": "Available",
-  "services": [
+  "programs": [
     {
-      "serviceId": "svc_basic",
+      "programNumber": 1,
       "available": true
     }
   ]

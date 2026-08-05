@@ -471,10 +471,19 @@ The station confirms the firmware update is complete and the new version is runn
     "bayNumber": 1,
     "status": "Available",
     "previousStatus": "Available",
-    "services": [
-      { "serviceId": "svc_eco", "available": true },
-      { "serviceId": "svc_standard", "available": true },
-      { "serviceId": "svc_deluxe", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": true
+      },
+      {
+        "programNumber": 2,
+        "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
+      }
     ]
   }
 }
@@ -493,10 +502,19 @@ The station confirms the firmware update is complete and the new version is runn
     "bayNumber": 2,
     "status": "Available",
     "previousStatus": "Available",
-    "services": [
-      { "serviceId": "svc_eco", "available": true },
-      { "serviceId": "svc_standard", "available": true },
-      { "serviceId": "svc_deluxe", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": true
+      },
+      {
+        "programNumber": 2,
+        "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
+      }
     ]
   }
 }
@@ -515,10 +533,19 @@ The station confirms the firmware update is complete and the new version is runn
     "bayNumber": 3,
     "status": "Available",
     "previousStatus": "Available",
-    "services": [
-      { "serviceId": "svc_eco", "available": true },
-      { "serviceId": "svc_standard", "available": true },
-      { "serviceId": "svc_deluxe", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": true
+      },
+      {
+        "programNumber": 2,
+        "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
+      }
     ]
   }
 }

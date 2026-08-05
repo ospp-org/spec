@@ -215,9 +215,15 @@ Bay 1 transitions from `Available` to `Occupied`.
     "bayNumber": 1,
     "status": "Occupied",
     "previousStatus": "Available",
-    "services": [
-      { "serviceId": "svc_eco", "available": true },
-      { "serviceId": "svc_standard", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": true
+      },
+      {
+        "programNumber": 2,
+        "available": true
+      }
     ]
   }
 }
@@ -447,9 +453,15 @@ No StopService command from the server is needed — the station knows the autho
     "bayNumber": 1,
     "status": "Finishing",
     "previousStatus": "Occupied",
-    "services": [
-      { "serviceId": "svc_eco", "available": true },
-      { "serviceId": "svc_standard", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": true
+      },
+      {
+        "programNumber": 2,
+        "available": true
+      }
     ]
   }
 }
@@ -476,9 +488,15 @@ After the drain cycle completes (about 1.4 seconds), bay 1 returns to `Available
     "bayNumber": 1,
     "status": "Available",
     "previousStatus": "Finishing",
-    "services": [
-      { "serviceId": "svc_eco", "available": true },
-      { "serviceId": "svc_standard", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": true
+      },
+      {
+        "programNumber": 2,
+        "available": true
+      }
     ]
   }
 }

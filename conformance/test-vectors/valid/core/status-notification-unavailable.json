@@ -2,9 +2,9 @@
   "bayId": "bay_d4e5f6a7b8c9",
   "bayNumber": 4,
   "status": "Unavailable",
-  "services": [
+  "programs": [
     {
-      "serviceId": "svc_basic",
+      "programNumber": 1,
       "available": false
     }
   ]

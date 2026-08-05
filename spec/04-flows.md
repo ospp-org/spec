@@ -151,7 +151,7 @@ sequenceDiagram
 6. SSP sends **BootNotification REQUEST** [MSG-001] with station identity, firmware version, capabilities, and `pendingOfflineTransactions` count
 7. Server validates the station, returns **BootNotification RESPONSE** [MSG-001] with `status: "Accepted"`, `serverTime`, `heartbeatIntervalSec`, optional `configuration` overrides, and `sessionKey` (if message signing is enabled)
 8. SSP synchronizes its clock to `serverTime`, applies any configuration overrides, stores the HMAC session key
-9. SSP sends one **StatusNotification EVENT** [MSG-009] per bay, reporting `bayNumber`, `status`, and available `services[]`
+9. SSP sends one **StatusNotification EVENT** [MSG-009] per bay, reporting `bayNumber`, `status`, and every `programs[]` entry with its availability — programs, because a service is server-minted and at first boot the station has been told none
 10. SSP starts the heartbeat timer at `heartbeatIntervalSec` seconds
 11. SSP enters normal operation — ready to accept commands
 

@@ -331,10 +331,19 @@ The station replays all buffered messages in chronological order. The server ide
     "bayNumber": 1,
     "status": "Occupied",
     "previousStatus": "Occupied",
-    "services": [
-      { "serviceId": "svc_eco", "available": false },
-      { "serviceId": "svc_standard", "available": true },
-      { "serviceId": "svc_deluxe", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": false
+      },
+      {
+        "programNumber": 2,
+        "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
+      }
     ]
   }
 }
@@ -407,10 +416,19 @@ The station replays all buffered messages in chronological order. The server ide
     "bayNumber": 1,
     "status": "Occupied",
     "previousStatus": "Occupied",
-    "services": [
-      { "serviceId": "svc_eco", "available": false },
-      { "serviceId": "svc_standard", "available": true },
-      { "serviceId": "svc_deluxe", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": false
+      },
+      {
+        "programNumber": 2,
+        "available": true
+      },
+      {
+        "programNumber": 3,
+        "available": true
+      }
     ]
   }
 }

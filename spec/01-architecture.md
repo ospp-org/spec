@@ -365,7 +365,7 @@ A station participating in the OSPP protocol MUST fulfill the following core res
 ### 6.3 Status Reporting
 
 - The station MUST send a **StatusNotification** event whenever any bay transitions between states (e.g., `Available` to `Occupied`, `Occupied` to `Finishing`).
-- Each StatusNotification MUST include the `bayId` of the bay whose state changed and the new state value.
+- Each StatusNotification MUST include the `bayId` of the bay whose state changed, the new state value, and the availability of every program on that bay. It reports **programs**, not services: a program is a physical operation the station owns, a service is a commercial offer the server mints.
 - On boot (after BootNotification acceptance), the station MUST send a StatusNotification for every bay to establish initial state at the server.
 
 ### 6.4 Command Execution

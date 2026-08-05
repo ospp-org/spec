@@ -2,14 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/mqtt/status-notification.schema.json",
   "title": "StatusNotification",
-  "description": "Station notification reporting the current status of a bay and the availability of its services.",
+  "description": "Station notification reporting the current status of a bay and the availability of that bay's PROGRAMS. Programs, not services: a program is a physical operation the hardware performs and is a firmware constant the station always knows, whereas a service is a commercial offer the SERVER mints and pushes in the catalog. A station cannot originate knowledge of a service, only echo what it was told -- and at first boot it has been told nothing, which is why requiring at least one serviceId here made the protocol's own mandatory first message impossible to send. The server maps programs to services through its own bindings.",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "bayId",
     "bayNumber",
     "status",
-    "services"
+    "programs"
   ],
   "properties": {
     "bayId": {
@@ -25,33 +25,53 @@
     "previousStatus": {
       "$ref": "../common/bay-status.schema.json"
     },
-    "services": {
+    "programs": {
       "type": "array",
       "minItems": 1,
+      "maxItems": 32,
+      "description": "Every program this bay declared at provisioning, each with whether it can run right now. The SET of programNumbers MUST match the set this bay declared in the BootNotification topology for the same bayNumber: a program that cannot run is reported present-but-unavailable, never omitted, because omission means the hardware changed and that requires re-provisioning.",
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "serviceId",
+          "programNumber",
           "available"
         ],
         "properties": {
-          "serviceId": {
-            "$ref": "../common/service-id.schema.json"
+          "programNumber": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 32,
+            "description": "The program ordinal, as declared for this bay at provisioning and re-declared at every boot."
           },
           "available": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether this program can run on this bay right now."
+          },
+          "errorCode": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 9999,
+            "description": "OPTIONAL. Why this program is unavailable, from the 5xxx range (or 9000-9999 vendor). Present only when `available` is false. Without it an operator sees a dead program and cannot tell a blown fuse from a failed sensor, so the two faults get the same truck roll. Distinct from the bay-level errorCode: a bay may be Available overall while one of its programs is not."
+          },
+          "errorText": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]+$",
+            "maxLength": 128,
+            "description": "OPTIONAL. Machine-readable name for the program-level errorCode, in UPPER_SNAKE_CASE. Accompanies errorCode whenever that is present."
           }
         }
       }
     },
     "errorCode": {
-      "type": "integer"
+      "type": "integer",
+      "description": "Bay-level error code. REQUIRED when `status` is Faulted, from the 5xxx range. Describes the BAY; a fault confined to one program belongs on that program's entry instead."
     },
     "errorText": {
       "type": "string",
       "pattern": "^[A-Z][A-Z0-9_]+$",
-      "maxLength": 128
+      "maxLength": 128,
+      "description": "Bay-level machine-readable error name in UPPER_SNAKE_CASE. REQUIRED when `status` is Faulted."
     }
   }
 }

@@ -163,9 +163,15 @@ The bay transitions from `Occupied` to `Finishing` while the drain cycle complet
     "bayNumber": 1,
     "status": "Finishing",
     "previousStatus": "Occupied",
-    "services": [
-      { "serviceId": "svc_eco", "available": true },
-      { "serviceId": "svc_standard", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": true
+      },
+      {
+        "programNumber": 2,
+        "available": true
+      }
     ]
   }
 }
@@ -293,9 +299,15 @@ After the drain cycle completes (about 3 seconds), bay 1 returns to `Available`.
     "bayNumber": 1,
     "status": "Available",
     "previousStatus": "Finishing",
-    "services": [
-      { "serviceId": "svc_eco", "available": true },
-      { "serviceId": "svc_standard", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": true
+      },
+      {
+        "programNumber": 2,
+        "available": true
+      }
     ]
   }
 }

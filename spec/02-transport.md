@@ -252,7 +252,7 @@ The station MUST follow this sequence on power-on or reconnect:
 │     ├── Pending  → restricted: ANSWER commands, serve   │
 │     │              no customers; wait, goto step 8      │
 │     └── Timeout  → wait 60s, goto step 8                │
-│  10. PUBLISH StatusNotification per bay (with services)  │
+│  10. PUBLISH StatusNotification per bay (with programs)  │
 │  11. Start heartbeat timer                              │
 │  12. Enter normal operation (accept commands)            │
 │                                                         │

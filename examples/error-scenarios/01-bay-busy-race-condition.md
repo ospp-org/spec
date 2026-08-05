@@ -169,8 +169,11 @@ reports the bay is already running a cycle. The station responds with error code
     "bayNumber": 1,
     "status": "Occupied",
     "previousStatus": "Available",
-    "services": [
-      { "serviceId": "svc_eco", "available": true }
+    "programs": [
+      {
+        "programNumber": 1,
+        "available": true
+      }
     ]
   },
   "mac": "e7c1a3b5f6d8e0a2c4f6b8d0e2a4c6f8b0d2e4a6c8f0b2d4e6a8c0f2b4d6e8"

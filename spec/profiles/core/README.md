@@ -16,7 +16,7 @@ The Core profile establishes the foundation upon which all other profiles (Sessi
 |---------------------------------------------|---------------------------|------------------|-----------------------------------------------|
 | [BootNotification](boot-notification.md) | Station to Server | REQUEST/RESPONSE | Station registers identity and capabilities; server responds with acceptance, heartbeat interval, and clock sync. |
 | [Heartbeat](heartbeat.md) | Station to Server | REQUEST/RESPONSE | Periodic keep-alive with empty payload; server responds with current time for clock synchronization. |
-| [StatusNotification](status-notification.md) | Station to Server | EVENT | Bay state change notification with service availability. No response expected. |
+| [StatusNotification](status-notification.md) | Station to Server | EVENT | Bay state change notification with per-program availability. No response expected. |
 | [ConnectionLost](connection-lost.md) | Broker to Server | EVENT | Server detects station disconnect via MQTT LWT or heartbeat timeout. |
 | [DataTransfer](data-transfer.md) | Bidirectional | REQUEST/RESPONSE | Vendor-extensible data exchange between station and server. |
 | [TriggerMessage](trigger-message.md) | Server to Station | REQUEST/RESPONSE | Server requests station to send a specific message immediately. |
@@ -36,7 +36,8 @@ The Core profile establishes the foundation upon which all other profiles (Sessi
 | CORE-009 | The station MUST buffer StatusNotification events during MQTT disconnection (up to 1000 events or 24 hours (StatusNotification-specific recommendation)) and replay them on reconnection. | MUST |
 | CORE-010 | The station MUST synchronize its internal clock from the Heartbeat response `serverTime` when drift exceeds 2 seconds. | MUST |
 | CORE-011 | The station MUST retry BootNotification indefinitely if rejected or timed out, using the `retryInterval` from the response (or 30 seconds default). | MUST |
-| CORE-012 | The station MUST include `errorCode` and `errorText` in StatusNotification when a bay transitions to `Faulted`. | MUST |
+| CORE-012 | The station MUST include the bay-level `errorCode` and `errorText` in StatusNotification when a bay transitions to `Faulted`. | MUST |
+| CORE-013 | The station MUST report every program the bay declared at provisioning in `programs[]`, marking an unusable one `available: false` rather than omitting it. It SHOULD accompany an unavailable program with `programs[].errorCode` and `programs[].errorText`. | MUST / SHOULD |
 
 ## 4. Message Flow
 

@@ -44,6 +44,8 @@ Verify that a station sends BootNotification as the first message after establis
 8. Verify that the station publishes a StatusNotification for each bay, and inspect each payload:
    - `status` is one of the six reportable states — `Available`, `Reserved`, `Occupied`, `Finishing`, `Faulted`, `Unavailable`. A payload carrying `Unknown` fails this case; `Unknown` is not a wire value ([`05-state-machines.md` §2.2](../../../spec/05-state-machines.md)).
    - `previousStatus` is **absent**. This is the post-boot report, and the state it left was `Unknown`, which the field cannot carry ([`status-notification.md` §5 rule 2](../../../spec/profiles/core/status-notification.md)).
+   - `programs[]` is present and non-empty, and the SET of `programNumber` values equals the set this station declared for the same `bayNumber` in step 6's `bays[]`. A payload carrying `services[]` fails this case — the schema is closed and services are server-minted, which the station has not yet been told any of.
+   - every `programs[]` entry carries `available`; an entry with `available: false` SHOULD carry `errorCode` and `errorText`, and an entry with `available: true` MUST carry neither.
    - the payload validates against `status-notification.schema.json`.
 9. Send a GetConfiguration command to the station.
 10. Verify that the station responds to the GetConfiguration command (confirming it accepts commands post-Accepted).
