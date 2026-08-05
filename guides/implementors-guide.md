@@ -129,10 +129,10 @@ Make sure you understand:
 | Chapter | What It Covers | Read When |
 |---------|---------------|-----------|
 | [02 — Transport](../spec/02-transport.md) | MQTT topics, QoS, TLS, BLE, envelope | First |
-| [03 — Messages](../spec/03-messages.md) | All 39 messages with field definitions | When implementing each message |
-| [04 — Flows](../spec/04-flows.md) | 12 end-to-end protocol flows | When implementing each flow |
+| [03 — Messages](../spec/03-messages.md) | All 40 messages with field definitions | When implementing each message |
+| [04 — Flows](../spec/04-flows.md) | 15 end-to-end protocol flows | When implementing each flow |
 | [06 — Security](../spec/06-security.md) | Crypto, HMAC, OfflinePass, receipts | Before writing any crypto code |
-| [07 — Errors](../spec/07-errors.md) | 102 error codes, retry policies, circuit breaker | When implementing error handling |
+| [07 — Errors](../spec/07-errors.md) | 116 error codes, retry policies, circuit breaker | When implementing error handling |
 
 ---
 
@@ -921,7 +921,7 @@ Test cases are named `TC-{PROFILE}-{NNN}`:
 
 ### 5.2 Schema Validation
 
-All 67 JSON Schemas are in `/schemas/`. Use them to validate every message you send and receive:
+All 86 JSON Schemas are in `/schemas/`. Use them to validate every message you send and receive:
 
 ```bash
 # Install ajv-cli

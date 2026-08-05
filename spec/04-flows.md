@@ -77,6 +77,7 @@ Messages are referenced as **[MSG-XXX]** corresponding to the numbering in [Chap
 | 10 | [Offline → Online Reconciliation](#10-offline--online-reconciliation) | MQTT | [§10](#10-offline--online-reconciliation) |
 | 11 | [Firmware Update](#11-firmware-update) | MQTT + HTTPS | [§11](#11-firmware-update) |
 | 12 | [Configuration Change & Maintenance](#12-configuration-change--maintenance) | MQTT | [§12](#12-configuration-change--maintenance) |
+| 13 | [Certificate Renewal](#13-certificate-renewal) | MQTT + HTTPS | [§13](#13-certificate-renewal) |
 
 ---
 
