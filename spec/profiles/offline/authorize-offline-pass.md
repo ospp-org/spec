@@ -80,7 +80,7 @@ The server **MUST** perform all of the following checks in order. Processing **M
        - Check #10 (counter replay):
          `eventId = "sec_" || lowerhex(SHA-256("ospp:authorize_offline_pass:check_10:" || messageId))[0:16]`
 
-       Implementations **MAY** use a different derivation scheme provided that (i) the resulting `eventId` matches the `sec_` + hexadecimal format from `security-event.md` §6.2, (ii) the derivation is deterministic for the same originating `messageId` and check number, (iii) distinct `messageId`s produce distinct `eventId`s (i.e. the derivation is collision-resistant in the relevant domain), and (iv) the derivation is documented in the implementation's deployment manifest.
+       Implementations **MAY** use a different derivation scheme provided that (i) the resulting `eventId` matches the `sec_` + hexadecimal format from `security-event.md` §6 (rule 2), (ii) the derivation is deterministic for the same originating `messageId` and check number, (iii) distinct `messageId`s produce distinct `eventId`s (i.e. the derivation is collision-resistant in the relevant domain), and (iv) the derivation is documented in the implementation's deployment manifest.
 
     c. The `details` object **SHOULD** include `offlinePassId`, the failed check number, the rejection `errorCode` (`2002` for signature; `2005` for counter replay), the originating `messageId`, and — for check #10 — the rejected `counter` value and the server's known `lastSeenCounter`, for forensic reconstruction. The `messageId` in `details` allows operators to correlate the audit row back to the originating REQUEST, since the `eventId` is a hash and not a human-readable reference.
 

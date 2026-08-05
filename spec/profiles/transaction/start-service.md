@@ -37,7 +37,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 | Field | Type | Description |
 |--------------|---------|-----------------------------------------------|
 | `status` | string | `Rejected` |
-| `errorCode` | integer | OSPP error code (see section 6). |
+| `errorCode` | integer | OSPP error code (see section 7). |
 | `errorText` | string | Machine-readable error name in `UPPER_SNAKE_CASE`. |
 | `programNumber` | integer | **Echo** of the requested ordinal. The rejection names the ordinal it refused, so an operator need not correlate against the request to find out which one was wrong. |
 

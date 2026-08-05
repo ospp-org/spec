@@ -89,7 +89,9 @@ specification. Where a definition involves a requirement, normative language
 : A security strategy employing multiple independent layers of protection so that
   no single failure compromises the entire system. OSPP applies defense in depth
   across transport (TLS), message (HMAC), application (authorization), and physical
-  (secure element) layers. See [Chapter 06, Section 1.2](06-security.md).
+  (secure element) layers. See [Chapter 06 §2](06-security.md#2-authentication-mechanisms),
+  [§3](06-security.md#3-authorization-model), [§5](06-security.md#5-message-integrity--hmac-sha256)
+  and [§4.5](06-security.md#45-key-storage-requirements) respectively.
 
 ## E
 
@@ -162,7 +164,8 @@ specification. Where a definition involves a requirement, normative language
 **HKDF (HMAC-based Key Derivation Function)**
 : A key derivation function defined in RFC 5869. OSPP uses HKDF-SHA256 to derive
   HMAC session keys and BLE encryption keys from shared secrets established via
-  **ECDH**. See [Chapter 06, Section 5.3](06-security.md).
+  **ECDH**. See [Chapter 06 §5.2](06-security.md#52-session-key-establishment) for the HMAC
+  session key and [§6.5](06-security.md#65-ble-session-key-derivation--hkdf-sha256) for the BLE keys.
 
 **HMAC (Hash-based Message Authentication Code)**
 : A mechanism for verifying message integrity and authenticity using a shared secret
@@ -220,7 +223,7 @@ specification. Where a definition involves a requirement, normative language
 : A TLS configuration where both the client (station) and the server (broker)
   present and verify **X.509** certificates. mTLS is **REQUIRED** for all MQTT
   connections. The station's Client ID **MUST** match the Common Name (CN) in its
-  client certificate. See [Chapter 06, Section 3](06-security.md).
+  client certificate. See [Chapter 06 §2.1](06-security.md#21-station--server--mutual-tls-mtls).
 
 ## O
 
@@ -230,7 +233,7 @@ specification. Where a definition involves a requirement, normative language
   **ECDSA P-256** (RFC 6979 deterministic nonces); the station verifies the signature
   offline using a pre-distributed public key. An OfflinePass includes a credit limit,
   expiry time, subscriber identifier, and revocation epoch.
-  See the [Offline profile](profiles/offline/README.md) and [Chapter 06, Section 5.1](06-security.md).
+  See the [Offline profile](profiles/offline/README.md) and [Chapter 06 §6.1](06-security.md#61-offlinepass-structure).
 
 **Offline Transaction**
 : A session initiated and completed without server connectivity, authorized by an
@@ -271,7 +274,7 @@ specification. Where a definition involves a requirement, normative language
 : The process of initializing a station with its identity, certificates,
   cryptographic keys, and initial configuration before first deployment. Provisioning
   **MUST** occur over a secure channel and **SHOULD** use a hardware secure element
-  for key storage. See [Chapter 06, Section 8](06-security.md).
+  for key storage. See [Chapter 06 §4.5](06-security.md#45-key-storage-requirements).
 
 ## Q
 
@@ -410,4 +413,4 @@ specification. Where a definition involves a requirement, normative language
 : The ITU-T standard for public key certificates used in OSPP **mTLS**
   authentication. Station certificates **MUST** include the station identifier as
   the Common Name (CN) and be issued by a trusted Certificate Authority in the
-  OSPP PKI trust chain. See [Chapter 06, Section 3.2](06-security.md).
+  OSPP PKI trust chain. See [Chapter 06 §4.2](06-security.md#42-pki-architecture).

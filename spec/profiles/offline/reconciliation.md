@@ -119,7 +119,7 @@ b. The `eventId` **MUST** be deterministically derived from the originating Tran
    eventId = "sec_" || lowerhex(SHA-256("ospp:reconcile_tx:check_" || N || ":" || messageId))[0:16]
    ```
 
-   Implementations **MAY** use a different derivation scheme provided the four conformance properties from `authorize-offline-pass.md` §6 (rule 7) are satisfied: (i) `sec_` + 16-hex-character format per `security-event.md` §6.2; (ii) determinism for the same `(messageId, N)` pair; (iii) collision-resistance across distinct `messageId`s; (iv) documented derivation in the implementation's deployment manifest.
+   Implementations **MAY** use a different derivation scheme provided the four conformance properties from `authorize-offline-pass.md` §6 (rule 7) are satisfied: (i) the `sec_` + hexadecimal format of `security-event.md` §6 (rule 2), at the 16 characters rule 7 derives; (ii) determinism for the same `(messageId, N)` pair; (iii) collision-resistance across distinct `messageId`s; (iv) documented derivation in the implementation's deployment manifest.
 
 c. The `details` object **SHOULD** include `offlinePassId`, the failed check number, the rejection `errorCode`, the originating `messageId`, and check-specific forensic context:
    - Checks #1/#2/#3/#6 (`OFFLINE_RECEIPT_MISMATCH`): `details.field` (which signed field mismatched), `details.signedValue`, `details.expectedValue`.

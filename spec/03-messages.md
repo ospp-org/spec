@@ -14,7 +14,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHALL NOT**, **S
 
 ### MQTT Messages
 
-All MQTT messages are wrapped in the standard OSPP envelope (see the Conventions section below, Section 1). The payload tables below document only the **`payload` field** of the envelope. The envelope fields (`messageId`, `messageType`, `action`, `timestamp`, `source`, `protocolVersion`) are always present. The `mac` field is present on **every** message except the three that structurally cannot carry one — BootNotification REQUEST, BootNotification RESPONSE, ConnectionLost (LWT) — and is absent everywhere under the development-only `None` signing mode. See [Chapter 06 §5.6](06-security.md#56-message-signing-classification).
+All MQTT messages are wrapped in the standard OSPP envelope (see the [Conventions](#conventions) section below). The payload tables below document only the **`payload` field** of the envelope. The envelope fields (`messageId`, `messageType`, `action`, `timestamp`, `source`, `protocolVersion`) are always present. The `mac` field is present on **every** message except the three that structurally cannot carry one — BootNotification REQUEST, BootNotification RESPONSE, ConnectionLost (LWT) — and is absent everywhere under the development-only `None` signing mode. See [Chapter 06 §5.6](06-security.md#56-message-signing-classification).
 
 MQTT topics follow the patterns defined in [Chapter 02 — Transport](02-transport.md), Section 2:
 

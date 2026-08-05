@@ -93,7 +93,7 @@ Any transition not listed here is invalid. In particular there is **no** edge fr
 
 **The key row is what makes the rest of the table possible, and it is easy to get wrong.** Every command is signed, and both the sending and the receiving path fail closed on a missing key ([Chapter 06 §5.7](06-security.md#57-failure-handling--both-directions-fail-closed)). If a `Pending` station held no key, the server could not send a command, the station could not accept one, and it could not answer — the repair channel would exist only on paper. So the `Pending` response carries a `sessionKey`, exactly as an `Accepted` one does ([`boot-notification.md` §5.3](profiles/core/boot-notification.md)). `Rejected` needs none: it answers nothing.
 
-**The distinction is carried by the envelope, not by the action.** `messageType` is `Request`, `Response` or `Event` ([Chapter 03 §1](03-messages.md)). A restricted station is forbidden `Event` and forbidden any `Request` other than BootNotification; `Response` is permitted in `Pending` because a RESPONSE is not something the station initiates.
+**The distinction is carried by the envelope, not by the action.** `messageType` is `Request`, `Response` or `Event` ([Chapter 03 — Conventions](03-messages.md#conventions)). A restricted station is forbidden `Event` and forbidden any `Request` other than BootNotification; `Response` is permitted in `Pending` because a RESPONSE is not something the station initiates.
 
 **Serving no customers is not the same as stopping.** A station that enters a restricted state with a session already running **MUST** continue it, meter it, and settle it, exactly as it does while `Disconnected` ([Chapter 02 §4.4](02-transport.md)) — a customer who has paid is served. What it **MUST NOT** do is begin a new one. While `Pending` or `Rejected` the station **MUST** reject StartService [MSG-005] and ReserveBay [MSG-003] with `3002 BAY_NOT_READY`, on every transport, and **MUST NOT** authorize a BLE offline session. In `Pending` that rejection is sent as a RESPONSE; in `Rejected` the command is not processed at all.
 
@@ -215,8 +215,8 @@ stateDiagram-v2
 > Note that the two entries are asymmetric in who observes them. Power-on is the
 > **station's** own state, and the station acts on it: it rejects StartService and
 > ReserveBay with `3002 BAY_NOT_READY` while a bay is `Unknown`
-> ([start-service.md §4](profiles/transaction/start-service.md),
-> [reserve-bay.md §4](profiles/transaction/reserve-bay.md)). Connection loss is the
+> ([start-service.md §6 rule 2](profiles/transaction/start-service.md),
+> [reserve-bay.md §6 rule 3](profiles/transaction/reserve-bay.md)). Connection loss is the
 > **server's** inference about a station it can no longer hear. Neither observation
 > is something the other party could report.
 >
