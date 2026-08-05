@@ -595,7 +595,7 @@ cheap outbound and heavier inbound, the direction verification runs.
   ([CORE-008](spec/profiles/core/README.md)) and leaves it on the next accepted report. Both
   parties hold it, neither transmits it. The three transitions *out* of it are all
   StatusNotification-triggered and all target a determinate state, and `Unknown → Unknown` was
-  never in the transition table, which [§1.5](spec/05-state-machines.md) makes invalid.
+  never in the transition table, which [§2.5](spec/05-state-machines.md#25-invalid-transitions) makes invalid.
 
   So a station reporting `Unknown` was already non-conforming — but the schema accepted it, no
   prose forbade it, `TC-CORE-001` asserted only that a message arrived and never its value, and
@@ -616,7 +616,7 @@ cheap outbound and heavier inbound, the direction verification runs.
   or 2.0.1. The process-control protocols carry such a fact as a companion quality flag beside
   the value rather than as a member of the value's own vocabulary — and OSPP already has that
   channel, since the LWT is itself the freshness signal. Recorded in
-  [§1.2](spec/05-state-machines.md) so it is not re-litigated.
+  [§2.2](spec/05-state-machines.md#22-states-7) so it is not re-litigated.
 
 ### Changed
 
