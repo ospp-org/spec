@@ -613,9 +613,10 @@ stateDiagram-v2
     Downloading --> Downloaded : Download complete
     Downloading --> Failed : Download error / network failure
 
-    Downloaded --> Verifying : Checksum validation starts
-    Verifying --> Verified : Checksum matches (sha256)
+    Downloaded --> Verifying : Integrity and authenticity checks start
+    Verifying --> Verified : Checksum matches (sha256) AND signature verifies
     Verifying --> Failed : Checksum mismatch
+    Verifying --> Failed : Signature invalid (5112)
 
     Verified --> Installing : Write to inactive partition begins
     Installing --> Installed : Write complete, partition verified
@@ -637,8 +638,8 @@ stateDiagram-v2
 | **Idle** | No firmware update is in progress. The station is running its current firmware normally. |
 | **Downloading** | The station is downloading the firmware binary from the URL specified in UpdateFirmware [MSG-016]. Progress is reported via FirmwareStatusNotification [MSG-017] with percentage. |
 | **Downloaded** | The firmware binary has been fully downloaded to a staging area. The station is ready to verify integrity. |
-| **Verifying** | The station is computing the SHA-256 checksum of the downloaded binary and comparing it against the `checksum` field from the UpdateFirmware command. |
-| **Verified** | The checksum matches. The firmware binary is authenticated and ready for installation. |
+| **Verifying** | The station is checking the downloaded binary two ways: computing its SHA-256 checksum and comparing it against the `checksum` field from the UpdateFirmware command, and verifying the `signature` field over the binary with ECDSA P-256 against the pre-provisioned Firmware Signing Certificate ([Chapter 06 §4.6](06-security.md); [Update Firmware §5](profiles/device-management/update-firmware.md) rule 4). Both checks are required to leave this state successfully. |
+| **Verified** | The checksum matches **and** the signature verifies: the binary is intact and its origin is established. Ready for installation. A binary that has only matched its checksum is **not** in this state — a checksum proves integrity, never authenticity, because whoever controls `firmwareUrl` controls the bytes it is computed over. |
 | **Installing** | The firmware binary is being written to the inactive partition (A or B, whichever is not currently running). Progress MAY be reported via FirmwareStatusNotification. |
 | **Installed** | The firmware has been written to the inactive partition and the partition metadata has been updated to mark it as the next boot target. |
 | **Rebooting** | The station is rebooting. During this state, the station is offline (MQTT disconnected, BLE advertising stopped). The bootloader loads the newly written partition. |
@@ -652,9 +653,10 @@ stateDiagram-v2
 | UpdateFirmware [MSG-016] accepted | Idle | Downloading | No other firmware update or diagnostics upload in progress | Station responds `Accepted`, sends FirmwareStatusNotification `Downloading` |
 | Download complete | Downloading | Downloaded | Entire binary received, staged successfully | Station logs download completion |
 | Download error | Downloading | Failed | Network failure, URL unreachable (`1011`), or storage error (`5103`) | Station sends FirmwareStatusNotification `Failed` with `errorText` |
-| Checksum validation starts | Downloaded | Verifying | Download staging area is intact | Station computes SHA-256 hash |
-| Checksum matches | Verifying | Verified | Computed hash equals `checksum` from UpdateFirmware | Station logs verification success |
+| Integrity and authenticity checks start | Downloaded | Verifying | Download staging area is intact | Station computes the SHA-256 hash and verifies the `signature` |
+| Checksum matches and signature verifies | Verifying | Verified | Computed hash equals `checksum` from UpdateFirmware **and** the ECDSA P-256 `signature` verifies against the Firmware Signing Certificate | Station logs verification success |
 | Checksum mismatch | Verifying | Failed | Computed hash does not match expected `checksum` | Station sends FirmwareStatusNotification `Failed` with `errorText: "Checksum mismatch"` |
+| Signature invalid | Verifying | Failed | The `signature` does not verify against the Firmware Signing Certificate, or the station holds no such certificate to verify it against | Station sends FirmwareStatusNotification `Failed` with a descriptive `errorText`, reports `5112 FIRMWARE_SIGNATURE_INVALID` via a `FirmwareIntegrityFailure` SecurityEvent [MSG-012], and does **NOT** write to the inactive partition |
 | Write to inactive partition | Verified | Installing | Inactive partition is writable and has sufficient space | Station begins flash write, sends FirmwareStatusNotification `Installing` |
 | Write complete | Installing | Installed | Partition write verified (read-back check) | Station marks inactive partition as next boot target |
 | Write error | Installing | Failed | Flash write error or read-back mismatch (`5103 STORAGE_ERROR`) | Station sends FirmwareStatusNotification `Failed`, does NOT modify boot target |

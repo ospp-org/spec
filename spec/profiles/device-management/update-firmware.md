@@ -37,10 +37,15 @@ UpdateFirmware is a server-initiated command that instructs the station to downl
 1. The station **MUST** validate the request fields before responding. If the request is valid, the station **MUST** respond with `Accepted` and begin the download at the scheduled time (or immediately).
 2. The station **MUST** send a FirmwareStatusNotification at each stage transition (see section 6).
 3. The station **MUST** verify the downloaded binary against the provided `checksum` before proceeding to installation. If verification fails, the station **MUST** send a FirmwareStatusNotification with `Failed` status.
-4. If `scheduledAt` is in the past, the station **MUST** begin the update immediately.
-5. If the station is already running the requested `firmwareVersion`, it **MUST** respond with `Rejected` and error code `5016 VERSION_ALREADY_INSTALLED`.
-6. The station **MUST NOT** begin installation while active sessions are in progress. It **MUST** wait for sessions to complete or time out before installing.
-7. The response `messageId` **MUST** match the request `messageId`.
+4. The station **MUST** verify the `signature` over the downloaded binary before proceeding to installation, and **MUST NOT** install a binary whose signature it has not verified. Verification is ECDSA P-256 against the pre-provisioned Firmware Signing Certificate, or its CA, held in the station's secure element or encrypted NVS ([Chapter 06 — Security §4.6](../../06-security.md)). If the signature does not verify — or if the station holds no Firmware Signing Certificate to verify it against — the station **MUST** treat the binary as untrusted, **MUST NOT** write it to the inactive partition, **MUST** send a FirmwareStatusNotification with `Failed` status and a descriptive `errorText`, and **MUST** report `5112 FIRMWARE_SIGNATURE_INVALID` by sending a `FirmwareIntegrityFailure` SecurityEvent [MSG-012] ([Chapter 07 §3](../../07-errors.md)).
+
+   `5112` travels on the SecurityEvent, not on the FirmwareStatusNotification: that message carries no `errorCode` field and is closed to additional properties, so the SecurityEvent is the only channel on which the code can be reported. Its `errorText` stays free prose, as §6 requires.
+
+   The checksum of rule 3 does **not** discharge this. A checksum establishes that the bytes arrived intact; it is computed over content that whoever controls `firmwareUrl` also controls, and it travels in the same message as the URL, so an attacker able to substitute the binary can substitute the checksum with it. Only the signature establishes **origin**. Both checks are required, and passing one is never grounds for skipping the other.
+5. If `scheduledAt` is in the past, the station **MUST** begin the update immediately.
+6. If the station is already running the requested `firmwareVersion`, it **MUST** respond with `Rejected` and error code `5016 VERSION_ALREADY_INSTALLED`.
+7. The station **MUST NOT** begin installation while active sessions are in progress. It **MUST** wait for sessions to complete or time out before installing.
+8. The response `messageId` **MUST** match the request `messageId`.
 
 ## 6. Download and Install Flow
 
@@ -48,7 +53,7 @@ The firmware update proceeds through the following stages. The station **MUST** 
 
 1. **Accepted** -- The station acknowledges the request and schedules the download.
 2. **Downloading** -- The station begins downloading the firmware binary from `firmwareUrl`. Progress updates **SHOULD** be sent at every 10% increment.
-3. **Downloaded** -- Download is complete and the SHA-256 checksum has been verified successfully.
+3. **Downloaded** -- Download is complete, the SHA-256 checksum has been verified successfully, and the ECDSA P-256 `signature` has been verified against the Firmware Signing Certificate (§5 rule 4). A station **MUST NOT** report `Downloaded` on the strength of the checksum alone.
 4. **Installing** -- The firmware is being written to the inactive partition. The station **SHOULD** report progress at key milestones (25%, 50%, 75%, 100%).
 5. **Installed** -- Installation is complete. The station reboots into the new partition and sends a BootNotification with the new `firmwareVersion`.
 

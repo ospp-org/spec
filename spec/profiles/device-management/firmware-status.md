@@ -27,7 +27,7 @@ FirmwareStatusNotification is a station-initiated event that reports the progres
 | Status | Description |
 |----------------|---------------------------------------------------------------|
 | `Downloading` | The firmware binary is being downloaded from the remote URL. |
-| `Downloaded` | Download is complete and the SHA-256 checksum has been verified. |
+| `Downloaded` | Download is complete, the SHA-256 checksum has been verified, and the ECDSA P-256 `signature` has been verified against the Firmware Signing Certificate ([Update Firmware §5](update-firmware.md) rule 4). |
 | `Installing` | The firmware is being written to the inactive partition. |
 | `Installed` | Installation is complete. The station will reboot into the new firmware. |
 | `Failed` | The update failed at any stage. The `errorText` field provides details. |
@@ -91,7 +91,7 @@ Downloaded -> Installing (50%) -> Failed (errorText: "Write error on partition B
 }
 ```
 
-### 7.2 Downloaded (Checksum Verified)
+### 7.2 Downloaded (Checksum and Signature Verified)
 
 ```json
 {
