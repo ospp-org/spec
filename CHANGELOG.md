@@ -31,6 +31,14 @@ as described in [VERSIONING.md](VERSIONING.md).
   cannot form a conforming StartService. The mirror of `3017`, which is the *station*
   refusing an ordinal it was sent. Server-originated toward the requesting client and
   **MUST NOT** be transmitted to a station. `409 Conflict`.
+- **spec:** `6008 COMMAND_PRE_EMPTED` — the server stopped a command locally that it could
+  see the station would refuse. Carries `details.wouldBe` (the code the station would have
+  answered), so an operator can tell a refusal that reached the station from one that never
+  left the server: the second can be a **stale** server view, repaired by reconciling the
+  server rather than by touching the station. A server MUST NOT pre-empt a Reset carrying
+  `force: true`. **Not `6005`**, which the registry already spends on "the user already has
+  an active session" — a per-user constraint on starting, nothing to do with a station's
+  reset. Reusing it would have collapsed the very distinction this code exists to draw.
 - **spec:** `VERSIONING.md` — *Adding a REQUIRED field, and which side moves first*. The
   receiver must accept the new form before any sender emits it, and which side is the
   receiver depends on which side **originates** the message. `programs` and `programNumber`
@@ -69,9 +77,11 @@ as described in [VERSIONING.md](VERSIONING.md).
 - **Defect 8** (the reconnection rule living only in an informative example) was already
   resolved, and better than reported — `boot-notification.md §5.2` adds a purpose-built
   `Reconnect` value with a MUST, and both SDKs carry it.
-- **Defect 11** (`3016` assigned to the station, with nothing said about a server
-  pre-empting it) is left open deliberately. Which code an operator sees is a contract
-  decision, and the option space is in the arc report.
+- **Defect 11** is now decided and written: a server **MAY** pre-empt a command the
+  station would refuse, and answers **`6008 COMMAND_PRE_EMPTED`** with
+  `details.wouldBe: 3016` when it does. `3016` stays the station's answer and means the
+  command reached it. Not `6005`, which the registry already spends on an unrelated
+  per-user constraint — see Added.
 
 ## [0.11.0] — 2026-08-05
 
