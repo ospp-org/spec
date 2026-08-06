@@ -1071,6 +1071,7 @@ This separation ensures that a misconfigured or compromised station cannot overc
 | User manual stop at station (SessionEnded `reason=Local`) | Partial (pro-rated) | Based on time used (charge `creditsCharged` from event) |
 | Offline credit exhausted mid-session (SessionEnded `reason=LocalOutOfCredit`) | Full | 100% (no charge — `creditsCharged` MUST be 0) |
 | Offline pass revoked mid-session (SessionEnded `reason=Deauthorized`) | Full | 100% (no charge — session not billable; `creditsCharged` MUST be 0) |
+| Operator ended it (SessionEnded `reason=OperatorStopped`) | Partial (pro-rated) | Based on time used (charge `creditsCharged` from event). The customer received a real wash and is billed for it; the operator's reason for ending it is not the customer's concern. |
 | Timer ran to completion (SessionEnded `reason=TimerExpired`) | None | Charge full pre-authorized amount (user received the booked duration regardless of meter values) |
 | If less than `faultFullRefundThreshold` of duration delivered AND reason=`Fault` | Full | 100% (override pro-rate) |
 
@@ -1098,8 +1099,9 @@ For `UserDuration`, settlement is exactly the reason-keyed matrix above. `FixedD
 | `Local` — voluntary stop mid-service | Pro-rata on delivered time | **Full charge** — a preset the user started is consumed |
 | `Fault` — hardware fault mid-service | Pro-rata (full refund if less than `faultFullRefundThreshold` delivered) | **Full refund** — a service the station broke delivered nothing of value |
 | `LocalOutOfCredit` / `Deauthorized` | Full refund (`creditsCharged` MUST be `0`) | **Full refund** (same) |
+| `OperatorStopped` — operator ended it mid-service | Pro-rata on delivered time | **Full charge** — a preset the user started is consumed |
 
-Only the `Local` and `Fault` rows diverge; `TimerExpired` (full charge) and `LocalOutOfCredit` / `Deauthorized` (full refund) are already kind-invariant. An all-or-nothing override is always the pre-authorized amount **in full** or **`0`** — never a partial amount.
+Only the `Local`, `Fault` and `OperatorStopped` rows diverge; `TimerExpired` (full charge) and `LocalOutOfCredit` / `Deauthorized` (full refund) are already kind-invariant. An all-or-nothing override is always the pre-authorized amount **in full** or **`0`** — never a partial amount.
 
 **Delivery outcome (`MultiUnit`).** A `MultiUnit` session additionally records what physically happened — `Dispensed` on a clean `TimerExpired`, `Missed` on a `Fault`. When the physical outcome is genuinely ambiguous from control-plane signals alone (e.g. a mid-pulse voluntary stop) it is left unrecorded rather than guessed; settlement never depends on it (it stays derived from the kind). A jam the firmware does not itself detect runs the timer to expiry and is therefore billed as delivered; the corrective path is an operator-issued refund, not an automatic one.
 

@@ -728,6 +728,8 @@ When you receive SessionEnded EVENT [MSG-040], switch on `reason`:
 4. **`LocalOutOfCredit`** (v0.4.0+) — Offline credit pool exhausted mid-session. Station MUST emit `creditsCharged: 0`; if a non-zero value arrives, log a CRITICAL anomaly and override to 0 server-side. Refund 100% of the pre-authorized amount. Session → `completed`. Bay → `Available`.
 5. **`Deauthorized`** (v0.4.0+) — Offline pass revoked mid-session. Station MUST emit `creditsCharged: 0`. Refund 100% of pre-auth. Flag the session record for security review (mid-session revocation usually indicates fraud or compromise). Session → `failed`. Bay → `Available`.
 
+6. **`OperatorStopped`** — An operator ended the session deliberately (a Reset carrying `force: true`, or a station disable). Charge the pro-rated `creditsCharged` from the event and refund the unused portion, exactly as for `Local`: the customer received a real wash and the operator's reason for ending it is not theirs to absorb. This is the ONLY reason in this list that bills non-zero for a session the station did not run to completion — do not group it with `LocalOutOfCredit` or `Deauthorized`, which both mandate zero. Session -> `completed`. Bay -> `Available`.
+
 Note: `creditsCharged` from the station is **advisory** — the server is the authoritative billing engine and applies the active tariff (see [Billing Authority in `04-flows.md`](../spec/04-flows.md)).
 
 **Per-session `seqNo` handling (when station emits the optional field):**

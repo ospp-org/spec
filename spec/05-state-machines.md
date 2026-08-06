@@ -381,7 +381,7 @@ stateDiagram-v2
 
     Active --> Stopping : StopService requested (user or server)
     Active --> Stopping : Service duration elapsed
-    Active --> Completed : SessionEnded (Local, LocalOutOfCredit)
+    Active --> Completed : SessionEnded (Local, LocalOutOfCredit, OperatorStopped)
     Active --> Failed : Hardware fault / connection lost / Deauthorized
 
     Stopping --> Completed : Station confirms stop, final MeterValues received
@@ -418,6 +418,7 @@ stateDiagram-v2
 | Hardware fault | Active | Failed | Station sends SessionEnded EVENT [MSG-040] with `reason: Fault`, followed by StatusNotification `Faulted` [MSG-009] | Server computes billing from the reported duration (station values are advisory input) and applies the refund policy (if < 50% duration delivered → full refund) |
 | User manual stop at station | Active | Completed | Station sends SessionEnded EVENT [MSG-040] with `reason: Local` (e.g., user pressed physical Stop button on the bay) | Server treats as user-initiated stop: charges pro-rated `creditsCharged` from event, refunds unused pre-auth, generates receipt |
 | Offline credit exhausted | Active | Completed | Station running offline detects that the user's offline credit pool is exhausted; sends SessionEnded EVENT [MSG-040] with `reason: LocalOutOfCredit` and `creditsCharged: 0` | Server records terminal state; full refund of pre-authorized amount; no charge issued (offline limits enforced) |
+| Operator ended it | Active | Completed | An operator ended the session deliberately — a Reset carrying `force: true`, or a station disable. The station settles the session first, then acts: it sends SessionEnded EVENT [MSG-040] with `reason: OperatorStopped`, the real `actualDurationSeconds`, and the `creditsCharged` those seconds earned | Server treats it as a user-initiated stop for billing: charges the pro-rated `creditsCharged`, refunds the unused pre-auth, generates a receipt. **Completed, not Failed** — the customer received a wash, and the operator's reason for ending it is not theirs to absorb |
 | Mid-session deauthorization | Active | Failed | Station detects offline pass revocation via `RevocationEpoch` bump (e.g., received through ChangeConfiguration) and stops the active session; sends SessionEnded EVENT [MSG-040] with `reason: Deauthorized` and `creditsCharged: 0` | Server records terminal state; full refund of pre-authorized amount; flag for security audit (mid-session revocation usually indicates fraud or compromise) |
 | Connection lost | Active | Failed | ConnectionLost [MSG-011] received and station does not reconnect within `ConnectionLostGracePeriod` (default: 300s) | Server marks session as failed after grace period; on reconnect, reconciles via TransactionEvent |
 
