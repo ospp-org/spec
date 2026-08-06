@@ -8,6 +8,71 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [Unreleased]
+
+> **Arc 6 — the eleven defects the reference implementation hit while building against
+> v0.11.0.** Every one was found by an implementation doing the thing the spec describes,
+> most of them on a live wire rather than by reading.
+>
+> **No version moves here.** The document version is unchanged, and the wire
+> `protocolVersion` stays at **`0.3.0`** — not because nothing touched the wire (one thing
+> did, below) but because `0.3.0` has never shipped, and the 0.11.0 entry already commits
+> to folding every later break into that same unreleased value rather than minting another.
+
+### Added
+
+- **schema + spec:** `SessionEndReason` gains `OperatorStopped`, and `04-flows.md` gains
+  **The operator-disable policy** it belongs to — named in four places and defined in none.
+  A forced Reset had no reason to report a settled session with, and the nearest member,
+  `Deauthorized`, mandates billing at **zero** — so an implementation reading both clauses
+  correctly delivers a wash and charges nothing for it. This is the one change that
+  **touches the wire**.
+- **spec:** `3019 SERVICE_NOT_BOUND` — the server holds no service→program binding and
+  cannot form a conforming StartService. The mirror of `3017`, which is the *station*
+  refusing an ordinal it was sent. Server-originated toward the requesting client and
+  **MUST NOT** be transmitted to a station. `409 Conflict`.
+- **spec:** `VERSIONING.md` — *Adding a REQUIRED field, and which side moves first*. The
+  receiver must accept the new form before any sender emits it, and which side is the
+  receiver depends on which side **originates** the message. `programs` and `programNumber`
+  are the two instances that had no rollout story.
+
+### Changed
+
+- **spec:** `4020 BAY_COUNT_MISMATCH`'s recommendedAction no longer directs an integrator
+  to compare two counts. It performs a **set** comparison, and a swapped bay leaves both
+  counts equal — the exact case the set comparison exists to catch. It now names the two
+  sets, what their difference means in each direction, and which side being wrong decides
+  who repairs it.
+- **spec:** `05-state-machines.md` — a **generated type** must not gain `Unknown` back. The
+  chapter and the schema both already forbade transmitting it; neither was addressed to a
+  code generator, and both reference SDKs kept it on their wire enum.
+- **spec:** `start-service.md` gains rule 5a — the server MUST NOT dispatch StartService
+  without a binding, and MUST NOT substitute a default ordinal, guess from the catalog, or
+  omit the field.
+
+### Fixed
+
+- **spec:** the operator-disable policy moved a bay `Occupied` → `Available`, an edge the
+  bay machine does not have. It passes through `Finishing`, as every ending wash does.
+- **conformance:** `TC-SEC-007` carried a spliced sentence from the v0.11.0 partial edit —
+  "validates the request's `bays` against with `4020`".
+
+### Not changed, and why
+
+- **Defect 2** (bay FSM stated twice, 18 vs 23 transitions) does not reproduce: the machine
+  is stated once, in `05-state-machines.md`, with 26 transitions and no competing table.
+- **Defect 6** (reset `Hard`/`Soft`) was already resolved — `reset-request.schema.json` has
+  `force` as its only property, and the prose that mentions the pair is the note explaining
+  its removal.
+- **Defect 7** (signing exemptions stated three times, inconsistently) does not reproduce:
+  `06-security.md §5.6` is the single source and the other two sites cite it.
+- **Defect 8** (the reconnection rule living only in an informative example) was already
+  resolved, and better than reported — `boot-notification.md §5.2` adds a purpose-built
+  `Reconnect` value with a MUST, and both SDKs carry it.
+- **Defect 11** (`3016` assigned to the station, with nothing said about a server
+  pre-empting it) is left open deliberately. Which code an operator sees is a contract
+  decision, and the option space is in the arc report.
+
 ## [0.11.0] — 2026-08-05
 
 > **Breaking on the wire, and the wire version moves with it: `protocolVersion` goes to
