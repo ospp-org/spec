@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/mqtt/reset-request.schema.json",
   "title": "ResetRequest",
-  "description": "Request to reboot the station. There is exactly ONE reset operation and it is a reboot: the station restarts its firmware and everything persisted survives. No value of this message clears credentials, and no remote factory reset exists in OSPP — factory reset is PHYSICAL (a button, or an SD card), for the reason given in the Reset profile: OSPP keeps no bootstrap credential that would survive a wipe, so a remote wipe would make the station unreachable by every channel it has.",
+  "description": "Request to reboot the station. There is exactly ONE reset operation and it is a reboot: the station restarts its firmware and everything persisted survives. No value of this message clears credentials, and no remote factory reset exists in OSPP \u2014 factory reset is PHYSICAL (a button, or an SD card), for the reason given in the Reset profile: OSPP keeps no bootstrap credential that would survive a wipe, so a remote wipe would make the station unreachable by every channel it has.",
   "type": "object",
   "required": [],
   "additionalProperties": false,
@@ -10,7 +10,7 @@
     "force": {
       "type": "boolean",
       "default": false,
-      "description": "Whether to reboot even while a session is running. Omitted or false: the station REFUSES if any bay has an active session, answering 3016 ACTIVE_SESSIONS_PRESENT, and the operator stops the sessions or waits. True: the station settles every active session under the operator-disable policy FIRST — the session is stopped, metered and reported exactly as an operator-initiated stop, so the customer is billed for what they received — and only then reboots. Force is not a licence to drop a session on the floor; it is a licence to end it without waiting."
+      "description": "Whether to reboot even while a session is running. Omitted or false: the station REFUSES if any bay has an active session, answering 3016 ACTIVE_SESSIONS_PRESENT, and the operator stops the sessions or waits. True: the station settles every active session under the operator-disable policy FIRST (04-flows.md, 'The operator-disable policy') \u2014 the session is stopped, metered from the time ACTUALLY DELIVERED, and reported as SessionEnded with reason OperatorStopped, so the customer is billed for what they received \u2014 and only then reboots. Force is not a licence to drop a session on the floor; it is a licence to end it without waiting."
     }
   }
 }

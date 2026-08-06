@@ -35,7 +35,7 @@ There is exactly **one** reset operation and it is a **reboot**. Everything the 
 
 1. On receiving a Reset command, the station **MUST** first check for active sessions.
 2. If any bay has an active session and `force` is absent or `false`, the station **MUST** respond `Rejected` with `3016 ACTIVE_SESSIONS_PRESENT` and **MUST NOT** reboot. The server **MAY** re-issue the command once sessions have completed.
-3. If any bay has an active session and `force` is `true`, the station **MUST** first settle every active session under the **operator-disable policy** — the session is stopped, metered and reported exactly as an operator-initiated stop, so the customer is billed for what they actually received — and **MUST** complete that settlement before rebooting. `force` is not a licence to drop a session on the floor; it is a licence to end it without waiting.
+3. If any bay has an active session and `force` is `true`, the station **MUST** first settle every active session under the **operator-disable policy** ([04-flows.md](../../04-flows.md#the-operator-disable-policy)) — the session is stopped, metered from the time actually delivered, and reported as SessionEnded [MSG-040] with `reason: OperatorStopped`, so the customer is billed for what they actually received — and **MUST** complete that settlement before rebooting. `force` is not a licence to drop a session on the floor; it is a licence to end it without waiting.
 4. If no bay has an active session, the station **MUST** respond `Accepted` and then reboot.
 5. The station **MUST** send the response **before** rebooting, so the server receives acknowledgement.
 6. On reboot the station **MUST** restart its firmware. Configuration, credentials, logs and persisted data **MUST** be preserved. After restarting it **MUST** send a BootNotification with `bootReason: "RemoteReset"` — the value that says the server asked for this return, distinguishing it from a spontaneous one.
@@ -78,7 +78,7 @@ When the station has active sessions at the time of a Reset request:
 1. Without `force`, the station **MUST** respond `Rejected` with `3016 ACTIVE_SESSIONS_PRESENT`.
 2. The server **SHOULD** wait for active sessions to complete naturally, then re-issue the Reset command.
 3. Alternatively, the server **MAY** send StopService for each active session, wait for confirmation, and then re-issue.
-4. If the server needs the reboot regardless, it **MAY** set `force: true`, which settles the sessions under the operator-disable policy and then reboots. It **SHOULD** prefer option 3 where it can wait, because an explicit StopService produces a cleaner audit trail than a forced settlement.
+4. If the server needs the reboot regardless, it **MAY** set `force: true`, which settles the sessions under the [operator-disable policy](../../04-flows.md#the-operator-disable-policy) — each reported with `reason: OperatorStopped` — and then reboots. It **SHOULD** prefer option 3 where it can wait, because an explicit StopService produces a cleaner audit trail than a forced settlement.
 
 ## 7. Error Codes
 

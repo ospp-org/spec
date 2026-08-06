@@ -1553,7 +1553,7 @@ Commands the station to **reboot**. There is exactly one reset operation and eve
 
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
-| `force` | boolean | No | Reboot even while a session is running (default `false`). Without it, an active session is refused with `3016`; with it, sessions settle under the operator-disable policy first. There is one reset operation and it is a reboot — nothing on this message clears credentials |
+| `force` | boolean | No | Reboot even while a session is running (default `false`). Without it, an active session is refused with `3016`; with it, sessions settle under the [operator-disable policy](04-flows.md#the-operator-disable-policy) first, each reported as SessionEnded with `reason: OperatorStopped`. There is one reset operation and it is a reboot — nothing on this message clears credentials |
 
 #### RESPONSE Payload
 

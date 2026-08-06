@@ -1059,6 +1059,38 @@ This separation ensures that a misconfigured or compromised station cannot overc
 
 **A3 — StopService timeout:** If Server sends StopService and SSP does not respond within 10 seconds, Server marks the session as `failed`. SSP will report the actual outcome on next reconnection.
 
+### The operator-disable policy
+
+Four places tell a station to settle a session "under the operator-disable
+policy" — [reset.md](profiles/device-management/reset.md) rules 3 and 4,
+[`reset-request.schema.json`](../schemas/mqtt/reset-request.schema.json) `force`,
+and [03-messages.md §MSG-015](03-messages.md). This is what it means. It had been
+named four times and defined nowhere, which left every implementer to invent it.
+
+An operator ends a session that is still running — a Reset carrying `force: true`,
+or a station disable. The station **MUST**, before it acts on the operator's
+request:
+
+1. Stop the service on that bay.
+2. Meter it, from the time **actually delivered** — not from `durationSeconds`.
+   The operator cut the session short; billing the full booking charges for time
+   the customer never received.
+3. Report it, as a SessionEnded EVENT [MSG-040] with
+   `reason: OperatorStopped`, the real `actualDurationSeconds`, and the
+   `creditsCharged` those seconds earned.
+4. Only then reboot, disable, or otherwise act.
+
+The customer **IS** billed, pro-rata. `OperatorStopped` is the only
+`SessionEndReason` that bills non-zero for a session the station did not run to
+completion, and that is the whole reason it exists: the nearest alternatives,
+`LocalOutOfCredit` and `Deauthorized`, both mandate billing at **zero**, so
+reusing either delivers a wash and charges nothing for it.
+
+Settling is not optional and not best-effort. A station that reboots first and
+reports afterwards has dropped the session on the floor: the server sees a
+connection loss and a live session, and the money is decided by a timeout instead
+of by what was delivered.
+
 ### Refund Policy
 
 | Scenario | Refund | Amount |
