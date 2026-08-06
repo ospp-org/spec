@@ -48,6 +48,14 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 3. If the bay has an active reservation held by a different `reservationId`, the station **MUST** respond with `3014 BAY_RESERVED`.
 4. If the bay is in `Unavailable` state due to maintenance, the station **MUST** respond with `3011 BAY_MAINTENANCE`.
 5. The station **MUST** validate that the `serviceId` exists in its service catalog. If not, it **MUST** respond with `3004 INVALID_SERVICE`.
+5a. The **server MUST NOT dispatch this message at all** unless it holds a service->program binding
+   for the (bay, service) pair. It **MUST NOT** substitute a default ordinal, guess one from the
+   catalog, or omit the field — `programNumber` is REQUIRED, and each of those three either starts
+   the wrong hardware or produces a message no conforming station accepts. With no binding the
+   server answers its own caller `3019 SERVICE_NOT_BOUND` and sends nothing to the station, which
+   has no part in the fault. This is the mirror of rule 6: rule 6 is the station refusing an ordinal
+   it was sent, and this is the server unable to send one.
+
 6. The station **MUST** validate that `programNumber` was **declared for that bay** at provisioning. If it was not, the station **MUST** respond with `3017 PROGRAM_NOT_DECLARED`, echoing the refused ordinal, and **MUST NOT** activate any hardware. It **MUST NOT** substitute a neighbouring ordinal or clamp to the highest declared one — that charges for one thing and delivers another.
 7. The station **MUST** validate that the requested service is physically available on the specified bay. If not, it **MUST** respond with `3003 SERVICE_UNAVAILABLE`. This is availability, not existence: the program **is** declared, it is merely not deliverable right now.
 8. The station **MUST** validate that `durationSeconds` is positive and does not exceed `MaxSessionDurationSeconds`. If zero or negative, respond with `3008 DURATION_INVALID`. If exceeding the maximum, respond with `3010 MAX_DURATION_EXCEEDED`.

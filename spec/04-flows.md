@@ -1071,7 +1071,12 @@ An operator ends a session that is still running — a Reset carrying `force: tr
 or a station disable. The station **MUST**, before it acts on the operator's
 request:
 
-1. Stop the service on that bay.
+1. Stop the service on that bay, moving it `Occupied` -> `Finishing` -> `Available`.
+   There is **no** `Occupied` -> `Available` edge in the bay machine
+   ([05-state-machines.md §2.3](05-state-machines.md)); a wash that is ending passes
+   through `Finishing` whether an operator ended it or a timer did, and an
+   implementation that jumps straight to `Available` is performing a transition the
+   chapter says is invalid.
 2. Meter it, from the time **actually delivered** — not from `durationSeconds`.
    The operator cut the session short; billing the full booking charges for time
    the customer never received.
