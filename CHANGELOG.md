@@ -65,6 +65,40 @@ as described in [VERSIONING.md](VERSIONING.md).
 - **conformance:** `TC-SEC-007` carried a spliced sentence from the v0.11.0 partial edit —
   "validates the request's `bays` against with `4020`".
 
+### What an SDK release must carry
+
+Both SDKs are at **0.12.0**, both pin `.spec-ref: v0.11.0`, and both **vendor the
+schemas** rather than fetching them — so nothing here reaches an implementation
+until they are regenerated and published. Held deliberately; the sequencing is
+Gabi's call. What it needs, measured:
+
+| Change | `ospp-sdk-php` | `sdk-ts` |
+|---|---|---|
+| `SessionEndReason::OPERATOR_STOPPED` | enum + vendored `session-ended-event.schema.json` | same |
+| `OsppErrorCode` `SERVICE_NOT_BOUND = 3019` | enum + severity/recoverable/action metadata | same |
+| `OsppErrorCode` `COMMAND_PRE_EMPTED = 6008` | enum + metadata | same |
+| `4020` recommendedAction text | `src/Enums/OsppErrorCode.php:387` | `src/enums/OsppErrorCode.ts:332` |
+| vendored schema refresh | `schemas/` | `src/schemas/` |
+
+**The `4020` text is the twelfth defect and it is not new work — it is drift.** The
+spec said `bays` from v0.11.0; both SDKs still say `correct the declared bayCount`,
+naming a field the request no longer has. The text is **hand-written in both SDKs**,
+not generated from the spec, which is why it drifted silently and will again.
+
+Two consequences worth stating before sequencing:
+
+- **`OperatorStopped` cannot be emitted until BOTH sides have it.** A station
+  emitting it against a server on 0.12.0 has its SessionEnded rejected on schema
+  validation — measured against the reference server: `/reason: The data should
+  match one item from enum`. SessionEnded is the sole billing source when no
+  StopService was issued, so the session goes **unbilled entirely**, which is worse
+  than the mis-billing this fixes. Server before station, or both together.
+- `3019` and `6008` are additive and server-originated: a station never receives
+  either, so they carry no station-side ordering constraint.
+
+`TC-TX-007` references `Deauthorized` and should be reviewed for whether it needs
+an `OperatorStopped` counterpart case.
+
 ### Not changed, and why
 
 - **Defect 2** (bay FSM stated twice, 18 vs 23 transitions) does not reproduce: the machine
