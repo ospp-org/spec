@@ -131,7 +131,7 @@ This case does that.
 18. Verify no `bayId` appears twice and no `bayNumber` appears twice.
 19. Verify `bays.length` equals **3**, the station's **registered** bay count, and that the **set** of
     `bayNumber` values equals the registered set exactly. This is the same set that step 5 of *Error
-    precedence* validates the request's `bays` against with `4020 BAY_COUNT_MISMATCH`, so a response
+    precedence* validates the request's `bays` against, answering `4020 BAY_COUNT_MISMATCH`, so a response
     whose set disagrees with it contradicts the check the same request already passed.
 20. Verify the pairing is carried by the **fields, not the position**: re-request a replay (Part G) and
     verify each `bayNumber` is still paired with the same `bayId` even if the members arrive in a
