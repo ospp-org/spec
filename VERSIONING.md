@@ -34,6 +34,40 @@ The station MUST continue retrying BootNotification at the `retryInterval` carri
 
 > **Deployment order, and it is not optional.** Widening the server's supported set is backward compatible; enforcing exact match is not. A server MUST be configured to accept a version **before** any station is expected to emit it, and the enforcement change MUST NOT ship ahead of the configuration change. Enforcing first rejects every station whose version is not already in the set — which, on a fleet that has never been audited for what it actually emits, is potentially all of them.
 
+### Adding a REQUIRED field, and which side moves first
+
+The note above is one instance of a rule this document had left implicit, and
+leaving it implicit cost two releases their rollout story.
+
+**A receiver MUST accept the new form before any sender emits it.** That is the
+whole rule, and it is directional — which side is "the receiver" depends on which
+side ORIGINATES the message, not on which side the change was designed for.
+
+For a field added to a message the **station** originates, the SERVER is the
+receiver. If the field is REQUIRED and the server validates inbound payloads, the
+server rejects every message from every station still emitting the old form, from
+the instant it ships. `programs` on StatusNotification is exactly this shape: an
+entire fleet's bay-status reporting stops on the day the server deploys, and the
+symptom — `INVALID_MESSAGE_FORMAT` on a message the station has always sent — does
+not point at the schema change that caused it. **Firmware ships the field first.**
+
+For a field added to a message the **server** originates, the STATION is the
+receiver, and the ordering reverses. `programNumber` on StartService is this
+shape. Note that a server usually cannot supply such a field on day one either —
+`programNumber` is resolved from a service→program binding an operator has to
+create, per station — so the rollout has a third step that is neither a deploy nor
+a firmware flash but human work, and it belongs in the plan explicitly.
+
+A field that is OPTIONAL on arrival does not have this problem in either
+direction, which is why making a field REQUIRED is the change that needs the
+plan, not adding the field.
+
+Exact-match negotiation does not remove the need for this. It refuses a mismatched
+PAIRING at boot, cheaply and visibly. It says nothing about the order in which the
+two sides are moved to the matching version, and a fleet is never moved
+atomically.
+
+
 ## SDK Versions Are Not This Version
 
 This document versions the **specification**. The two SDKs — `ospp-sdk-php`

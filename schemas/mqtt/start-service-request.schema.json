@@ -24,13 +24,13 @@
     },
     "serviceId": {
       "$ref": "../common/service-id.schema.json",
-      "description": "Identifier of the CATALOG SERVICE to start — the commercial offering the customer paid for, minted by the server. Not the station's physical program: that is programNumber, which names the operation the bay physically runs. One program MAY carry several services (the same hardware sold at a promotional rate and a standard rate), so the two are not interchangeable, and the receipt names the serviceId — never the program — so the price actually paid stays identifiable."
+      "description": "Identifier of the CATALOG SERVICE to start \u2014 the commercial offering the customer paid for, minted by the server. Not the station's physical program: that is programNumber, which names the operation the bay physically runs. One program MAY carry several services (the same hardware sold at a promotional rate and a standard rate), so the two are not interchangeable, and the receipt names the serviceId \u2014 never the program \u2014 so the price actually paid stays identifiable."
     },
     "programNumber": {
       "type": "integer",
       "minimum": 1,
       "maximum": 32,
-      "description": "The ordinal of the PHYSICAL PROGRAM to run on the target bay, as the station declared it at provisioning. Carried explicitly so the station acts on a field rather than indexing its own catalog by serviceId, and so a service minted since the last catalog push still starts. The station MUST verify the ordinal was declared for that bay and, if it was not, MUST reject with 3017 PROGRAM_NOT_DECLARED — never accept and do nothing, which is a customer who paid and got no wash."
+      "description": "The ordinal of the PHYSICAL PROGRAM to run on the target bay, as the station declared it at provisioning. Carried explicitly so the station acts on a field rather than indexing its own catalog by serviceId, and so a service minted since the last catalog push still starts. The station MUST verify the ordinal was declared for that bay and, if it was not, MUST reject with 3017 PROGRAM_NOT_DECLARED \u2014 never accept and do nothing, which is a customer who paid and got no wash. ROLLOUT: the SERVER originates this message, so the station is the receiver and must accept the field before a server emits it. A server also cannot supply the value until an operator has created the service->program binding for each station, which is human work between the deploy and the enforcement and belongs in the plan explicitly. See VERSIONING.md, 'Adding a REQUIRED field, and which side moves first'."
     },
     "durationSeconds": {
       "type": "integer",
