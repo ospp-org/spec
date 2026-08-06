@@ -211,7 +211,18 @@ stateDiagram-v2
 > `previousStatus` field of any message, on any transport; it resolves the state
 > by reporting what it resolved **to** — `Available`, `Faulted`, `Unavailable`,
 > or, where a session survived the reboot, `Occupied` or `Finishing`, per the five
-> `Unknown` rows of section 2.3. A server holds a bay at `Unknown`
+> `Unknown` rows of section 2.3.
+>
+> A generated type MUST reflect this. An implementation MAY hold `Unknown`
+> internally — both parties do, and the state machine needs it — but the type it
+> uses for the wire `status` and `previousStatus` fields **MUST NOT** be able to
+> express it. A single enum serving both purposes lets an implementation construct,
+> in typed code that compiles, a message its own schema rejects, and the fault then
+> surfaces at the receiver as a validation error on a field the sender believed was
+> valid. Both reference SDKs carry the member on their wire enum today, which is how
+> this was found.
+>
+> A server holds a bay at `Unknown`
 > whenever it has no current report — from the station's boot until the post-boot
 > report arrives, and from connection loss ([CORE-008](profiles/core/README.md))
 > until the next accepted StatusNotification.
