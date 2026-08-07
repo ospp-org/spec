@@ -96,8 +96,23 @@ Two consequences worth stating before sequencing:
 - `3019` and `6008` are additive and server-originated: a station never receives
   either, so they carry no station-side ordering constraint.
 
-`TC-TX-007` references `Deauthorized` and should be reviewed for whether it needs
-an `OperatorStopped` counterpart case.
+**Generating the `4020` text from the spec: assessed, NOT contained, left.**
+
+- It is a **PHP-only** problem. `sdk-ts` carries no `recommendedAction` at all, so
+  there is nothing there to drift.
+- The source is the last column of a hand-formatted markdown table whose cells
+  contain `|` inside code spans. That needs a real parser, not a regex.
+- `ospp-sdk-php` carries a deliberate **11 of ~117** codes. A generator has to encode
+  which subset, and that list is itself hand-maintained — the drift relocates rather
+  than disappears.
+- The SDK vendors `schemas/` only, with no mechanism to read spec prose at build or
+  test time. Either a generator or a cheaper drift-CHECK needs a new build-time
+  dependency on the spec repo.
+
+The cheaper option, if it is ever wanted, is the check rather than the generator: a
+CI test asserting each `recommendedAction()` equals the spec cell at the pinned
+`.spec-ref`. That still needs the spec-fetch mechanism, which is the actual missing
+piece. Scoped here; not built.
 
 ### Not changed, and why
 
