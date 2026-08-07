@@ -10,6 +10,8 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ## [Unreleased]
 
+## [0.11.2] — 2026-08-07
+
 > **Arc 7 — the twelve defects, taken back to the spec and verified before being acted on.**
 > **Eleven of the twelve had already been closed, and the twelfth had been closed on the SDK
 > side.** The list was written against v0.11.0 by an implementation building on it; arc 6 and
@@ -17,10 +19,15 @@ as described in [VERSIONING.md](VERSIONING.md).
 > **repair for the headline defect was itself defective**, and it had taken two other cells with
 > it.
 >
-> **No version moves.** The specification-document version stays at **0.11.0** and the wire
-> `protocolVersion` stays at **`0.3.0`** — nothing here changes a message shape, an enum, a
-> field, or a schema under `schemas/`. Every change is to registry prose, a count, a citation,
-> or repo tooling.
+> **The document version moves — to `0.11.2` — and this entry corrects its own draft, which
+> said it would not.** The wire `protocolVersion` stays at **`0.3.0`**: nothing here changes a
+> message shape, an enum, a field, or a schema under `schemas/`, and every change is to
+> registry prose, a count, a citation, the document version itself, or repo tooling. That is
+> precisely what [VERSIONING.md](VERSIONING.md) calls a **PATCH**, and a PATCH moves the
+> document version like any other release. The draft of this entry said *"No version moves"*
+> and the v0.11.1 entry said the same — which is how two consecutive releases shipped with
+> `0.11.0` in every chapter header, and how a reader holding `v0.11.1` had no way to tell it
+> from `v0.11.0`. See *The document version had not moved in two releases* below.
 
 ### Fixed
 
@@ -90,6 +97,61 @@ as described in [VERSIONING.md](VERSIONING.md).
   checks the **cell**, which is what §1.4 binds. It does not and cannot check what an emitter
   actually puts on the wire: a server free to translate and shorten (§1.4) can still emit an
   over-length value, and no repo-side check reaches that.
+
+### The document version had not moved in two releases
+
+- **Document version: `0.11.0` → `0.11.2`,** cascaded to **28 sites across 26 files** (29
+  literal occurrences — the README badge carries the number twice, in its alt text and in the
+  shields.io URL). `v0.11.1` was tagged without moving it and this arc's own draft proposed to
+  do the same, so a reader holding either release saw **`0.11.0`** in all 22 chapter and profile
+  headers and could not tell which of the three they had. `0.11.1` is skipped rather than
+  reused: that tag is cut and its contents are what they are.
+
+  **The number identifies the release, and the repo had already decided this — nowhere in
+  writing.** [VERSIONING.md](VERSIONING.md) defines **PATCH** as *clarification of spec text*,
+  which is what both this release and `v0.11.1` are; [`02-transport.md` §2.2](spec/02-transport.md)
+  defines the header as the *specification-document version*, which versions "this
+  specification's prose"; and the decisive precedent is **`v0.6.2`**, a release with *no spec
+  content change at all* — schemas byte-identical to `v0.6.1` — whose Document History row
+  records its entire deliverable as a "version-header cascade". A number that a release with no
+  content still moves is a release identifier, not a contract generation. It cannot be defended
+  as deliberately stable.
+
+  The omission has a history, and it is the history of an unwritten rule: skipped at `v0.3.0`,
+  `v0.5.1`, `v0.5.2`, `v0.8.1` and `v0.11.1`, and twice repaired afterwards as a defect, in
+  those words. The `0.4.0` entry: *"The v0.3.0 bump did not cascade these; this release catches
+  up."* The `0.11.0` entry: *"Four headers had never been cascaded past `0.5.0` or `0.9.0`."*
+  Each repair fixed the instance and left the rule unwritten, so the next release skipped it
+  again.
+
+  The `v0.11.1` skip is the one that did damage. `KNOWN-ISSUES.md` had to print
+  *"Specification-document version: 0.11.0 (release tag `v0.11.1`)"* — naming both numbers to
+  stay truthful about a document that was not. That parenthetical was the defect's receipt; the
+  two numbers now agree.
+
+- **[VERSIONING.md](VERSIONING.md) gains *The document version, and the sites that carry it*.**
+  The rule was practice with nothing behind it, which is why dissent was never needed to skip
+  it. It now states that the document version **equals the release tag and moves on every
+  release including PATCH**, gives `v0.6.2` as the reason it cannot be read as a stable
+  generation, enumerates all 28 sites in a table — including the two a naive sweep misses, the
+  italicised §2.2 example and the doubled README badge — and names the documents that
+  deliberately carry **no** version header, so their absence is not read as a gap.
+
+- **`tools/verify-protocol.sh` gains Category 18, *Document Version Consistency*.** Same reason
+  the cell bound became a check in this release: a rule broken five times is not enforced by
+  being written more firmly. It takes `spec/README.md`'s front-matter as the authority, requires
+  every site to agree, requires the newest `## [X.Y.Z]` changelog heading to agree with both,
+  and requires a Document History row to exist for it — the row `v0.10.0` and `v0.11.1` were
+  each tagged without. Occurrence **counts** are asserted too, so the doubled README badge
+  cannot half-cascade and pass.
+
+  **What it does not cover.** It cannot check the git tag, which does not exist until the
+  release is cut. The releaser still has to make the tag match — but that is now one step
+  against twenty-eight, and the twenty-eight are checked.
+
+- **`spec/00-introduction.md` §6 Document History gains rows for `0.11.1` and `0.11.2`.**
+  `v0.11.1` was tagged without one, exactly as `v0.10.0` had been before `0.11.0` added it
+  retrospectively.
 
 ### Not changed, and why
 
