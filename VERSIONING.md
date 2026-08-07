@@ -18,6 +18,67 @@ OSPP uses [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html) (SemV
 
 During `0.x` development, breaking changes MAY occur between minor versions. Each release MUST document breaking changes in [CHANGELOG.md](CHANGELOG.md) under `### Changed` or `### Removed`.
 
+## The document version, and the sites that carry it
+
+The number in each chapter header — *OSPP Version: 0.11.2* — is the
+**specification-document version**. It identifies **the release**, and it is the
+only thing in a checkout that tells a reader which release they are holding.
+
+**It equals the release tag, and it moves on every release, including PATCH.**
+Tag `vX.Y.Z` and document version `X.Y.Z` are the same number by construction. A
+PATCH release moves it exactly as a MINOR does: `PATCH` in the table above is
+defined as *clarification of spec text* — which is a change to the document, and
+therefore a change the document's own version must show.
+
+This is not a "contract generation" that deliberately holds still while the tag
+advances. It has never been one. `v0.6.2` was a release with **no spec content
+change at all** — its schemas were byte-identical to `v0.6.1` — and it moved this
+number anyway; moving it was the release's entire deliverable. A number that
+holds still across releases cannot identify one.
+
+> **Why this is written down.** It was practice and nothing more, so it was
+> skipped without anyone dissenting — at `v0.3.0`, `v0.5.1`, `v0.5.2`, `v0.8.1`
+> and `v0.11.1`. Twice the omission was later caught and repaired as a defect
+> (the `0.4.0` and `0.11.0` entries in [CHANGELOG.md](CHANGELOG.md) say so in
+> those words), which is the tell that it was always meant to be a rule. The
+> `v0.11.1` skip was the one that did damage: two releases ran with the headers
+> reading `0.11.0`, so `KNOWN-ISSUES.md` had to print the document version and
+> the release tag side by side to stay truthful, and a reader with a checkout had
+> no way to tell `v0.11.1` from `v0.11.0`. An unmoving version is not a
+> conservative choice; it is a document asserting something untrue about itself.
+
+**Every site MUST carry the same value.** As of `0.11.2` there are **28**, across
+26 files — the count is stated so that a sweep can be checked rather than
+trusted:
+
+| Sites | Where | Form |
+|------:|-------|------|
+| 22 | the 8 numbered chapters, `spec/glossary.md`, the 7 profile documents under `spec/profiles/`, and the `README`/`SECURITY` of `conformance/`, `conformance/test-vectors/`, `schemas/`, `examples/` | `**OSPP Version:** X.Y.Z` on line 3 |
+| 1 | `README.md` | the version badge — the number appears **twice** on that line, in the alt text and in the shields.io URL |
+| 2 | `spec/README.md` | the `ospp-version:` front-matter key **and** the *OSPP Version* table row; these have disagreed with each other before, at `0.8.0` and `0.9.0` |
+| 1 | `guides/implementors-guide.md` | `**Spec Version:** X.Y.Z` |
+| 1 | `spec/02-transport.md` §2.2 | a worked *example* of the header, in italics — a bold-only grep misses it |
+| 1 | `KNOWN-ISSUES.md` | `**Specification-document version:**` |
+
+Documents that carry **no** version header — the conformance test cases, the
+worked examples under `examples/flows/` and `examples/error-scenarios/`, and the
+per-message profile documents — are outside this set by design and MUST NOT gain
+one; they are versioned by the release they ship in.
+
+`tools/verify-protocol.sh` checks that every site agrees with `spec/README.md`'s
+front-matter and that the newest `## [X.Y.Z]` heading in `CHANGELOG.md` agrees
+with both. It cannot check the git tag, which does not exist until the release is
+cut — **that last step is the releaser's**, and it is the one this rule exists to
+stop anyone skipping.
+
+Two things this version is **not**:
+
+- It is **not** the wire `protocolVersion`. See
+  [`02-transport.md` §2.2](spec/02-transport.md) — the two evolve separately and
+  need not match, and at `0.11.2` they do not (`0.11.2` against `0.3.0`).
+- It is **not** either SDK's version. See *SDK Versions Are Not This Version*
+  below.
+
 ## Protocol Version Negotiation
 
 The message envelope contains a `protocolVersion` field (e.g., `"0.3.0"`).

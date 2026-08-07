@@ -1,6 +1,6 @@
 # BLE Transport
 
-> **Status: EXPERIMENTAL** | **OSPP Version:** 0.11.0
+> **Status: EXPERIMENTAL** | **OSPP Version:** 0.11.2
 >
 > Published for review, **not** for implementation. May change incompatibly without a MAJOR
 > bump. See [Release status](../../../README.md#ble-is-experimental-in-08).
