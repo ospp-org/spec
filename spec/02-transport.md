@@ -311,7 +311,7 @@ The station MUST configure an LWT message at MQTT CONNECT time:
 
 **LWT rules:**
 
-- The LWT is **exempt from message signing** (the `mac` field is absent) because it is configured at CONNECT time before any session key is established.
+- The LWT is **exempt from message signing** (the `mac` field is absent). It is one of the three structural exemptions enumerated in [Chapter 06 §5.6](06-security.md#56-message-signing-classification), which is the single source for what is exempt and why; the reason is not only that it is registered at CONNECT time, but that the broker publishes it after the station is gone — on a first connection there is no session key yet, and on a reconnect the station holds the *previous* key while the server has rotated to the new one, so a will-MAC would arrive stale rather than merely absent.
 - The LWT timestamp is set at CONNECT time and MAY be stale when delivered. The server SHOULD use the broker's delivery time for disconnect tracking.
 - The **Will Delay Interval** of 10 seconds prevents LWT from firing during brief network glitches. If the station reconnects within 10 seconds, the LWT is cancelled.
 - The LWT has **no Message Expiry Interval** — it MUST always be delivered regardless of delay.
