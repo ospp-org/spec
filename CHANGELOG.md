@@ -8,6 +8,140 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [Unreleased]
+
+> **Arc 7 — the twelve defects, taken back to the spec and verified before being acted on.**
+> **Eleven of the twelve had already been closed, and the twelfth had been closed on the SDK
+> side.** The list was written against v0.11.0 by an implementation building on it; arc 6 and
+> the v0.11.1 release answered nearly all of it. What this arc found was not in the list: the
+> **repair for the headline defect was itself defective**, and it had taken two other cells with
+> it.
+>
+> **No version moves.** The specification-document version stays at **0.11.0** and the wire
+> `protocolVersion` stays at **`0.3.0`** — nothing here changes a message shape, an enum, a
+> field, or a schema under `schemas/`. Every change is to registry prose, a count, a citation,
+> or repo tooling.
+
+### Fixed
+
+- **spec:** **three *Recommended Action* cells exceeded the wire bound that [§1.4](spec/07-errors.md#14-provenance-of-errordescription-and-recommendedaction)
+  says every cell **MUST** fit** — `4020` at **1245**, `3017` at **551**, `3018` at **534**
+  characters against Appendix C's `recommendedAction` `maxLength` of **500**. §1.4's rule is not
+  advisory: the value is per-**code**, so a cell that cannot be emitted as written has no
+  canonical form at all — each emitter shortens it independently and two conforming servers then
+  carry different values for one `errorCode`, which the per-code equality rule forbids.
+
+  `4020` is the one that matters, and it is worth naming how it got there. Arc 6 rewrote that
+  cell **correctly** — the old text told an integrator to correct `bayCount`, a field v0.11.0
+  deleted, and to compare two counts that are equal in exactly the swapped-bay case the set
+  comparison exists to catch. The rewrite fixed the advice and, at 1245 characters, made it
+  unemittable. A right answer in a form no conforming server can put on the wire.
+
+  All three shortened in **full** form, cutting only rationale and restatement and preserving
+  every distinct corrective action: `4020` **1245 → 494**, `3018` **534 → 474**, `3017`
+  **551 → 460**. The rationale was not deleted — it moved to the *Description* column, which
+  §1.4 states has no wire bound and is where rationale belongs. The RFC 2119 keywords moved
+  with it and were **strengthened** rather than lost: `4020`'s "counts alone … MUST NOT be the
+  only thing carried" is now `Servers **MUST** carry details.declaredBayNumbers and
+  details.registeredBayNumbers, and **MUST NOT** carry counts as the only content of details`,
+  and `3017`/`3018` gain an explicit **MUST NOT** on the two actions their cells only ever
+  discouraged in bold. All **118** cells were then measured: none exceeds the bound; the longest
+  is `4020` at 494.
+
+- **spec:** **`4020`'s Description still described the deleted field's comparison.** It read
+  "it depends only on the token and **one declared integer**" — true of `bayCount`, false of the
+  `bayNumber` **set** the code has compared since v0.11.0. The same sentence arc 6 rewrote the
+  action for. Now "the declared bay set".
+
+- **spec:** **the registry counts went stale again, in the same way and for the same reason.**
+  Arc 6 registered `3019` and `6008` without re-deriving the totals — the failure `d1a72f3` made
+  when it registered `4020`, recorded in this file and repeated anyway. §1.1's `3000–3999` cell
+  read **19** against an actual **20**, and the stated total read **116** against an actual
+  **118**; the table did not even sum to its own total (117). `README.md` carried **116** in
+  three places and `guides/implementors-guide.md` in a fourth. Re-derived by parsing the
+  registry: per-range **15/20/20/20/34/9**, total **118**, matching Appendix A's independent 118
+  rows, set-identical to §3, no duplicates. `ROADMAP.md`'s "102 error codes" is **not** touched —
+  it sits under *v0.1.0 (Delivered)* and is history, as are the revision-history rows.
+
+- **spec:** **the LWT signing exemption was restated a fifth time, uncited and with an incomplete
+  reason.** [`02-transport.md`](spec/02-transport.md) gave it as "configured at CONNECT time
+  before any session key is established" — which is the *first-connection* half of the reason.
+  [§5.6](spec/06-security.md#56-message-signing-classification) is the single source and gives
+  the whole of it: on a **reconnect** the station holds the previous key while the server has
+  rotated to the new one, so a will-MAC is not merely absent, it is guaranteed **stale on
+  arrival**. Now cites §5.6 and states both halves. The three-way disagreement reported as
+  defect 7 is gone; this was the one site still speaking for itself.
+
+### Changed
+
+- **tools:** `verify-protocol.sh` now **measures** every §3 *Recommended Action* cell against
+  Appendix C's `recommendedAction` `maxLength` and fails on any that exceeds it. Three separate
+  passes have now shipped an over-length cell — `1007`/`5004`/`5017` in one, `3017`/`3018` in
+  another, `4020` in a third — while §1.4 asserted the rule and nothing checked it. The bound is
+  **read from Appendix C**, not hardcoded, so raising it there raises it here; the row splitter
+  is backtick-aware, so a cell may hold a pipe inside a code span. Proved non-vacuous by pushing
+  `4020` to 574 characters and confirming the run goes to 15 failures, then back to 14 on
+  restore. Checks go **3351 → 3470** (+118, one per registry cell, +1 for the new §5.6 citation);
+  the failure set is unchanged at **14**, entry for entry.
+
+  **What it measures, stated so the number is readable.** Lengths are of the **raw Markdown**
+  cell — backticks and `**` included — which is the conservative reading and the same one the
+  0.11.0 passes used; the Markdown-stripped text runs 12–14 characters shorter per cell. It
+  checks the **cell**, which is what §1.4 binds. It does not and cannot check what an emitter
+  actually puts on the wire: a server free to translate and shorten (§1.4) can still emit an
+  over-length value, and no repo-side check reaches that.
+
+### Not changed, and why
+
+- **Nine of the eleven were already closed**, most of them by arc 6, and are re-verified here
+  against HEAD rather than taken on the changelog's word: `Unknown` off the wire (defect 1 — the
+  schema carries the generator directive, and it is addressed to a code generator, which is what
+  the SDKs needed); the bay FSM stated twice (2 — one canonical table, and its "20 Station + 6
+  Server = 26" was re-derived by expanding the multi-source rows rather than trusted);
+  `SessionEndReason` (4 — `OperatorStopped`); the missing server-side binding code (5 — `3019`);
+  reset `Hard`/`Soft` (6 — the schema has `force` only, and the surviving prose is the note
+  explaining the removal); signing exemptions (7 — see *Fixed* for the residue); the reconnection
+  rule living in an example (8 — `bootReason: Reconnect` with MUSTs in `boot-notification.md`
+  §5.2); and both required-field rollouts (9 and 10 — `VERSIONING.md`, *Adding a REQUIRED field,
+  and which side moves first*). Defect 11 was decided in arc 6 as `6008 COMMAND_PRE_EMPTED`.
+
+- **Defect 12 does not reproduce.** `ospp-sdk-php` carries the set-based `4020` text at **497**
+  characters, with a comment recording it as a deliberate §1.4-permitted shortening rather than
+  drift; `sdk-ts` carries no `recommendedAction` at all. Neither says `bayCount`. Nothing is owed
+  to them for this defect — but see *SDK follow-up* below, because the shortening's own
+  justification has now expired.
+
+- **`4020`'s name is still `BAY_COUNT_MISMATCH`**, which names a count for a comparison that has
+  been a set comparison since v0.11.0. Not renamed: `errorText` is on the wire, so this is a wire
+  change and not one of the twelve, and the obvious replacement collides with `3018
+  TOPOLOGY_MISMATCH`. Recorded here rather than done quietly.
+
+- **`4020` mandates two `details` members with no Appendix C `if`/`then` block.** Deliberate and
+  unchanged: those blocks exist to make a **discriminator** a validation error ([Appendix C, *On
+  the conditional blocks*](spec/07-errors.md)), and `4020` is explicitly non-branching — "no
+  consumed-token branch and no discriminator". The note's claim that exactly five entries branch
+  today remains true.
+
+### SDK follow-up (report only — nothing done here)
+
+`ospp-sdk-php`'s `4020` cell is now **longer than the spec's** (497 against 494) and its comment
+gives as its reason that "the registry's full text is longer" and that syncing byte-for-byte
+"would make every naive emitter produce a non-conforming payload". Both were true against arc 6's
+1245-character cell. Neither is true now. The canonical cell fits, so the SDK can carry it
+verbatim; at minimum the comment must stop asserting a condition that no longer holds. The two
+texts agree on every corrective action, so §1.4 is satisfied either way and this is tidying, not
+a defect.
+
+### New — recorded, not built
+
+- **BLE StationInfo still carries `bayCount`**, a scalar that cannot name a bay now that
+  non-dense bay sets are legal, and that no clause reconciles with the `bays[]` the app actually
+  selects from on FFF2. The same defect the MQTT side deleted in v0.11.0; BLE was not swept then.
+  Filed in [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md) — it is a **BLE wire change** with its own ship
+  order, and none of the twelve touches the BLE surface.
+
+---
+
 ## [0.11.1] — 2026-08-07
 
 > **Arc 6 — the eleven defects the reference implementation hit while building against
@@ -66,6 +200,14 @@ as described in [VERSIONING.md](VERSIONING.md).
   "validates the request's `bays` against with `4020`".
 
 ### What an SDK release must carry
+
+> **Superseded 2026-08-07 — measured, not assumed.** Both SDKs are now at **0.13.0** and
+> both pin `.spec-ref: v0.11.1`, so the version figures below are stale. `4020` in
+> particular is **done**: `ospp-sdk-php` carries the set-based text with a comment
+> recording it as a §1.4-permitted shortening, and `sdk-ts` carries no
+> `recommendedAction` at all. The claim below that "both SDKs still say `correct the
+> declared bayCount`" was never true of `sdk-ts` and is no longer true of either — see
+> *Arc 7* in `[Unreleased]`. The rest of the table stands and is unverified here.
 
 Both SDKs are at **0.12.0**, both pin `.spec-ref: v0.11.0`, and both **vendor the
 schemas** rather than fetching them — so nothing here reaches an implementation
