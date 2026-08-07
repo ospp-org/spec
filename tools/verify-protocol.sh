@@ -1845,6 +1845,115 @@ function category17() {
   logCat(C);
 }
 
+// ==================== CATEGORY 18: Document Version Consistency ====================
+// The specification-document version identifies THE RELEASE and equals the release tag
+// (VERSIONING.md, "The document version, and the sites that carry it"). It was practice
+// and nothing more, so it was skipped at v0.3.0, v0.5.1, v0.5.2, v0.8.1 and v0.11.1 —
+// twice repaired afterwards as a defect. It is checked here rather than asserted.
+//
+// The authority is spec/README.md's front-matter. Every other site must agree with it,
+// and the newest release heading in CHANGELOG.md must agree with both. The git tag is
+// NOT checkable here — it does not exist until the release is cut — so this narrows the
+// releaser's remaining job to one step instead of twenty-eight.
+function category18() {
+  const C = 'c18'; initCat(C, 'Document Version Consistency');
+  log('## Category 18: Document Version Consistency');
+  log('');
+
+  const SEMVER = '(\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)';
+
+  const specReadme = readSafe(path.join(ROOT, 'spec', 'README.md')) || '';
+  const authM = specReadme.match(new RegExp('^ospp-version:\\s*' + SEMVER, 'm'));
+  if (!authM) {
+    FAIL(C, 'spec/README.md', 0,
+      'no ospp-version front-matter key',
+      'ospp-version: X.Y.Z — the authority every other document-version site is checked against');
+    logCat(C);
+    return;
+  }
+  const expected = authM[1];
+  log('Document version (authority — `spec/README.md` front-matter): **' + expected + '**');
+  log('');
+
+  // Each entry: file, a matcher capturing the version, and how many times it must occur.
+  // `count` is asserted so a site that carries the number twice (the README badge: alt
+  // text and shields.io URL) cannot half-cascade and still pass.
+  const sites = [
+    ['README.md', new RegExp('Version:\\s*' + SEMVER, 'g'), 1],
+    ['README.md', new RegExp('version-' + SEMVER + '-blue', 'g'), 1],
+    ['spec/README.md', new RegExp('^\\|\\s*OSPP Version\\s*\\|\\s*' + SEMVER + '\\s*\\|', 'gm'), 1],
+    ['guides/implementors-guide.md', new RegExp('\\*\\*Spec Version:\\*\\*\\s*' + SEMVER, 'g'), 1],
+    ['KNOWN-ISSUES.md', new RegExp('\\*\\*Specification-document version:\\*\\*\\s*' + SEMVER, 'g'), 1],
+    // §2.2 renders the header as a worked example, in italics. A bold-only sweep misses
+    // it, which is exactly how it went stale before.
+    ['spec/02-transport.md', new RegExp('\\*OSPP Version:\\s*' + SEMVER + '\\*', 'g'), 1],
+  ];
+
+  // The 22 headers, in the four trees that carry them.
+  const headerFiles = [];
+  for (const dir of ['spec', 'conformance', 'schemas', 'examples']) {
+    for (const f of findFiles(dir, '.md')) {
+      const rel = path.relative(ROOT, f);
+      if ((readSafe(f) || '').includes('**OSPP Version:**')) headerFiles.push(rel);
+    }
+  }
+  for (const rel of headerFiles) {
+    sites.push([rel, new RegExp('\\*\\*OSPP Version:\\*\\*\\s*' + SEMVER, 'g'), 1]);
+  }
+
+  for (const [rel, re, want] of sites) {
+    const content = readSafe(path.join(ROOT, rel));
+    if (content === null) {
+      FAIL(C, rel, 0, 'file not readable', 'a document-version site listed in VERSIONING.md');
+      continue;
+    }
+    const found = [...content.matchAll(re)].map(m => m[1]);
+    if (found.length !== want) {
+      FAIL(C, rel, 0,
+        found.length + ' occurrence(s) of this document-version form',
+        want + ' — see the site table in VERSIONING.md');
+      continue;
+    }
+    const bad = found.filter(v => v !== expected);
+    if (bad.length) {
+      FAIL(C, rel, 0,
+        'document version ' + bad.join(', '),
+        expected + ' (from spec/README.md front-matter)');
+    } else {
+      PASS(C);
+    }
+  }
+
+  // The newest release heading in the changelog must be the same number. This is what
+  // catches the real failure: content written, version left behind.
+  const changelog = readSafe(path.join(ROOT, 'CHANGELOG.md')) || '';
+  const relM = changelog.match(new RegExp('^## \\[' + SEMVER + '\\]', 'm'));
+  if (!relM) {
+    FAIL(C, 'CHANGELOG.md', 0, 'no released `## [X.Y.Z]` heading', 'a released version heading');
+  } else if (relM[1] !== expected) {
+    FAIL(C, 'CHANGELOG.md', 0,
+      'newest released entry is ' + relM[1],
+      expected + ' — the document version and the release it ships in are the same number');
+  } else {
+    PASS(C);
+  }
+
+  // A release must also appear in the Document History table, which v0.10.0 and v0.11.1
+  // were both tagged without.
+  const intro = readSafe(path.join(ROOT, 'spec', '00-introduction.md')) || '';
+  if (new RegExp('^\\|\\s*' + expected.replace(/\./g, '\\.') + '\\s*\\|', 'm').test(intro)) {
+    PASS(C);
+  } else {
+    FAIL(C, 'spec/00-introduction.md', 0,
+      'no Document History row for ' + expected,
+      'a row in §6 Document History — two releases have been tagged without one');
+  }
+
+  log('');
+  log('Document-version sites checked: ' + sites.length + ' (' + headerFiles.length + ' chapter/profile headers)');
+  logCat(C);
+}
+
 // ==================== MAIN ====================
 log('# OSPP Protocol Verification Report');
 log('');
@@ -1869,6 +1978,7 @@ category14();
 category15();
 category16();
 category17();
+category18();
 
 // ==================== SUMMARY ====================
 log('');
@@ -1880,7 +1990,7 @@ log('| Category | Checks | PASS | FAIL | SKIP |');
 log('|----------|-------:|-----:|-----:|-----:|');
 
 let totalChecks = 0, totalPass = 0, totalFail = 0, totalSkip = 0;
-const catOrder = ['c1','c2','c3','c4','c5','c6','c7','c8','c9','c10','c11','c12','c13','c14','c15','c16','c17'];
+const catOrder = ['c1','c2','c3','c4','c5','c6','c7','c8','c9','c10','c11','c12','c13','c14','c15','c16','c17','c18'];
 for (const id of catOrder) {
   const c = cats[id];
   if (!c) continue;
