@@ -53,25 +53,34 @@ The last of those is the point of Part D. OSPP has no remote factory reset and n
 
 16. With the session from Part B still running, send Reset with `{"force": true}`.
 17. Verify the response is `Accepted`.
-18. Verify the station **settles the session before rebooting**: it reports the session end as an operator-initiated stop, carrying the metered quantity actually delivered, so the customer is billed for what they received.
+18. Verify the station **settles the session before rebooting**: it sends SessionEnded EVENT [MSG-040]
+    with `reason: "OperatorStopped"`, the `actualDurationSeconds` actually delivered, and the
+    `creditsCharged` those seconds earned — so the customer is billed for what they received. The
+    reason value is asserted explicitly because it is the one member of the enum that bills
+    non-zero for a session the station did not run to completion; `Deauthorized`, which reads as
+    the nearest alternative, mandates billing at **zero** and would deliver a wash for free.
 19. Verify that settlement completes before the MQTT connection drops. A station that reboots first and reports afterwards — or not at all — fails: `force` is a licence to end a session without waiting, not to drop it.
 20. Verify the station reboots and sends BootNotification with `bootReason: "RemoteReset"`.
-21. Verify the bay is no longer `Occupied` after the reboot.
+21. Verify the bay left `Occupied` **via `Finishing`**, not straight to `Available`: there is no
+    `Occupied` -> `Available` edge in [05-state-machines.md §2.3](../../../spec/05-state-machines.md#23-transition-table),
+    and the wind-down is physical regardless of what ended the session.
+22. Verify the bay is no longer `Occupied` after the reboot.
 
 ### Part D — No Reset clears credentials
 
-22. Verify that after **every** reset in Parts A and C the station reconnects over **mTLS using the same client certificate** it held before. It **MUST NOT** re-enter provisioning and **MUST NOT** call `POST /api/v1/stations/provision`.
-23. Verify the station's configuration keys, service catalog and `bays` mapping survive the reboot — read them back and compare against their pre-reset values.
-24. Verify the station rejects a Reset request carrying a `type` member — `{"type": "Hard"}` and `{"type": "Soft"}`. The schema is `additionalProperties: false` and `type` is not a member of it. A station that accepts one, and worse acts on it, is implementing a command this protocol does not define.
-25. Verify the station rejects `{"force": "yes"}` — `force` is a boolean.
+23. Verify that after **every** reset in Parts A and C the station reconnects over **mTLS using the same client certificate** it held before. It **MUST NOT** re-enter provisioning and **MUST NOT** call `POST /api/v1/stations/provision`.
+24. Verify the station's configuration keys, service catalog and `bays` mapping survive the reboot — read them back and compare against their pre-reset values.
+25. Verify the station rejects a Reset request carrying a `type` member — `{"type": "Hard"}` and `{"type": "Soft"}`. The schema is `additionalProperties: false` and `type` is not a member of it. A station that accepts one, and worse acts on it, is implementing a command this protocol does not define.
+26. Verify the station rejects `{"force": "yes"}` — `force` is a boolean.
 
-> Steps 22 and 24 are what this Part exists for. `Hard`/`Soft` was borrowed from OCPP 1.6, where the pair means abrupt versus graceful **restart** and touches no credential; the wipe meaning was attached later, in a conformance case rather than in a design decision. This case is where that is unwound, so it asserts the absence explicitly rather than merely omitting the old steps.
+> Steps 23 and 25 are what this Part exists for. `Hard`/`Soft` was borrowed from OCPP 1.6, where the pair means abrupt versus graceful **restart** and touches no credential; the wipe meaning was attached later, in a conformance case rather than in a design decision. This case is where that is unwound, so it asserts the absence explicitly rather than merely omitting the old steps.
 
 ## Expected Results
 
 1. Reset with no active session returns `Accepted`, the response precedes the reboot, and the station returns with `bootReason: "RemoteReset"` and unchanged firmware.
 2. An active session causes `Rejected` / `3016` without `force`, with no reboot and no effect on the session. An omitted `force` behaves exactly as `false`.
-3. `force: true` settles the session under the operator-disable policy — reported and metered — and only then reboots.
+3. `force: true` settles the session under the operator-disable policy — reported as
+   `reason: "OperatorStopped"` and metered on delivered time — and only then reboots.
 4. Credentials, configuration, catalog and the `bays` mapping survive every reset.
 5. A request carrying `type` is rejected, under either of its former values.
 6. All Reset responses arrive within the 30-second timeout.

@@ -132,9 +132,17 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
 ## Expected Results
 
 1. Station sends SessionEnded EVENT autonomously when timer elapses, hardware faults, the user stops at the station, offline credits are exhausted, or the offline pass is revoked mid-session — without waiting for StopService.
-2. SessionEnded `reason` is one of `"TimerExpired"`, `"Fault"`, `"Local"`, `"LocalOutOfCredit"`, `"Deauthorized"` (v0.4.0).
+2. SessionEnded `reason` is one of `"TimerExpired"`, `"Fault"`, `"Local"`, `"LocalOutOfCredit"`, `"Deauthorized"`.
+   `"OperatorStopped"` is the sixth member of the enum and is deliberately **out of scope here**:
+   this case verifies AUTONOMOUS termination — the station deciding on its own — and an operator
+   ending a session is by definition not that. It is covered where it happens, in
+   [TC-DM-003 Part C](../device-management/TC-DM-003.md). A station under test here that emits
+   `OperatorStopped` has had something end its session externally, which invalidates the run
+   rather than failing the station.
 3. `actualDurationSeconds` accurately reflects real elapsed time (+/- 3 seconds).
 4. `creditsCharged` is present and non-negative; for `LocalOutOfCredit` and `Deauthorized` the value MUST be `0`.
+   Those two, and no others: `OperatorStopped` bills the delivered quantity, which is why it needed
+   its own member rather than reusing `Deauthorized`.
 5. SessionEnded EVENT is always sent BEFORE the subsequent StatusNotification.
 6. No StopService RESPONSE is sent for autonomous terminations (Parts A–E).
 7. Bay reaches `Available` **via `Finishing`** after timer expiry / Local / LocalOutOfCredit / Deauthorized (Deauthorized additionally carrying a security flag on the server side), and `Faulted` after Fault. There is no `Occupied` → `Available` edge in [`05-state-machines.md` §2.3](../../../spec/05-state-machines.md#23-transition-table): the wind-down is physical and happens whatever ended the session, so a station that reports `Available` without a preceding `Finishing` fails this result.
