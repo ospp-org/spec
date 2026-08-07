@@ -133,7 +133,7 @@ Make sure you understand:
 | [03 — Messages](../spec/03-messages.md) | All 40 messages with field definitions | When implementing each message |
 | [04 — Flows](../spec/04-flows.md) | 15 end-to-end protocol flows | When implementing each flow |
 | [06 — Security](../spec/06-security.md) | Crypto, HMAC, OfflinePass, receipts | Before writing any crypto code |
-| [07 — Errors](../spec/07-errors.md) | 116 error codes, retry policies, circuit breaker | When implementing error handling |
+| [07 — Errors](../spec/07-errors.md) | 118 error codes, retry policies, circuit breaker | When implementing error handling |
 
 ---
 
