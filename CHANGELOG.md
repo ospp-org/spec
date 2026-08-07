@@ -8,7 +8,7 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
-## [Unreleased]
+## [0.11.1] — 2026-08-07
 
 > **Arc 6 — the eleven defects the reference implementation hit while building against
 > v0.11.0.** Every one was found by an implementation doing the thing the spec describes,
