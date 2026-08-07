@@ -429,6 +429,55 @@ function category5() {
   const registrySize = Object.keys(registry).length;
   log('Error codes in registry: ' + registrySize);
 
+  // Every §3 *Recommended Action* cell MUST fit the `recommendedAction` maxLength of
+  // Appendix C (07-errors.md §1.4, "A registry cell MUST fit the wire bound"). The value
+  // is per-code, so a cell that does not fit has no canonical form: each emitter would
+  // shorten it independently and two conforming servers would carry different values for
+  // one errorCode. Three separate passes have now shipped an over-length cell, so the
+  // rule is checked rather than asserted. The bound is READ FROM Appendix C, not
+  // hardcoded, so raising it there raises it here.
+  const boundM = errorsMd.match(/"recommendedAction":\s*\{[^}]*?"maxLength":\s*(\d+)/);
+  const actionBound = boundM ? parseInt(boundM[1], 10) : null;
+  if (actionBound === null) {
+    FAIL(C, 'spec/07-errors.md', 0,
+      'no recommendedAction maxLength found in Appendix C',
+      'Appendix C should bound recommendedAction');
+  } else {
+    // Split on | that is not inside a backtick code span — registry cells contain code
+    // spans, and a future cell may legitimately hold a pipe inside one.
+    const splitRow = (line) => {
+      const cells = []; let cur = '', inCode = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '`') { let j = i; while (j < line.length && line[j] === '`') j++; cur += line.slice(i, j); inCode = !inCode; i = j - 1; continue; }
+        if (ch === '|' && !inCode) { cells.push(cur); cur = ''; continue; }
+        cur += ch;
+      }
+      cells.push(cur);
+      if (cells.length && cells[0].trim() === '') cells.shift();
+      if (cells.length && cells[cells.length - 1].trim() === '') cells.pop();
+      return cells.map(c => c.trim());
+    };
+    let measured = 0;
+    for (let i = 0; i < errorLines.length; i++) {
+      if (!errorLines[i].startsWith('|')) continue;
+      const cells = splitRow(errorLines[i]);
+      // Six columns = a full §3 registry row. Appendix A's four-column rows carry no
+      // action cell and are correctly skipped.
+      if (cells.length < 6 || !/^\d{4}$/.test(cells[0])) continue;
+      measured++;
+      const action = cells[5];
+      if (action.length <= actionBound) {
+        PASS(C);
+      } else {
+        FAIL(C, 'spec/07-errors.md', i + 1,
+          'code ' + cells[0] + ' Recommended Action is ' + action.length + ' characters',
+          'at most ' + actionBound + ' (Appendix C recommendedAction maxLength)');
+      }
+    }
+    log('Recommended Action cells measured against the ' + actionBound + '-character bound: ' + measured);
+  }
+
   // Check error codes in 03-messages.md per-message error tables
   const msgMd = readSafe(path.join(ROOT, 'spec/03-messages.md')) || '';
   const msgLines = msgMd.split(/\r?\n/);
