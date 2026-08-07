@@ -1,9 +1,10 @@
 # OSPP Known Issues
 
-**Date:** 2026-07-30
-**Protocol Version:** 0.8.0
-**Status:** 3 blockers open (all BLE), 6 non-blocking issues open
-**Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle
+**Date:** 2026-08-07
+**Specification-document version:** 0.11.0 (release tag `v0.11.1`)
+**Status:** 3 blockers open (all BLE), 7 non-blocking issues open
+**Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle and
+the arcs since
 
 ---
 
@@ -12,9 +13,9 @@
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 6 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) |
+| OPEN | 7 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) |
 | CLOSED | 1 | [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc; the entry is retained with its resolution |
-| **Total open** | **9** | |
+| **Total open** | **10** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
@@ -564,6 +565,47 @@ writing it inside a signing arc would bury it.
 **What is settled and should not be re-litigated when it is taken up:** the MAC does not provide
 non-repudiation, the key to fix that already exists on every station, and the online money path is
 where it is missing.
+
+---
+
+## OPEN — BLE StationInfo still carries `bayCount`, which cannot name a bay and agrees with nothing
+
+**Raised 2026-08-07, by the twelve-defects sweep, while checking that `bayCount` was gone
+everywhere the 4020 rewrite touched.** It is gone from the MQTT and provisioning surfaces. It
+survives on BLE.
+
+[`station-info.schema.json`](schemas/ble/station-info.schema.json) makes `bayCount` REQUIRED on
+the FFF1 Station Info characteristic — "Number of service bays available at this station" — and
+[`ble-transport.md` §3](spec/profiles/offline/ble-transport.md) states it identically. Two things
+are wrong with it, and neither is cosmetic:
+
+1. **It cannot name a bay, and bay numbering is legally non-dense.** v0.11.0 settled that a bay
+   set of `{1, 3}` is legal everywhere and that a server **MUST NOT** reject a declaration for
+   being non-dense. An app that reads `bayCount: 2` and offers the user bays 1 and 2 is wrong
+   about a station whose bays are 1 and 3. The scalar has no form in which it could be right.
+
+2. **It is a second source of truth with no reconciliation rule.** The app does not need it: it
+   selects a bay by `bayId`, read from AvailableServices (FFF2), whose `bays[]` carries one entry
+   per bay — and `StartServiceRequest` takes `bayId`, never an index. So `bayCount` is consulted
+   by nothing and can disagree with `bays[]` freely. A sweep for a clause tying the two together
+   returns nothing: no MUST, no equality, no precedence. Two ways to express one thing, which is
+   the defect class the topology arc exists to remove.
+
+This is the same defect the MQTT side already fixed. `bayIds` and `bayCount` were deleted from the
+wire in v0.11.0 for exactly this reason, and `bays[]` replaced them. BLE was not swept then, and
+the 18 AvailableServices sites deliberately left alone in that arc are a *different* case — there
+the station is echoing a catalog it was pushed, which is a real thing it has to carry.
+
+**Not fixed here, and the boundary is deliberate.** Deleting a REQUIRED member of a BLE
+characteristic is a **BLE wire change**: it moves `bleProtocolVersion`, not `protocolVersion`,
+and it invalidates a published example payload, five example flows, four conformance test
+vectors and `TC-OFF-001` step 8, which reads `bayCount` by name. That is a self-contained arc
+with its own ship order, and none of the twelve defects this sweep was scoped to touches the BLE
+surface. Recording it rather than half-doing it.
+
+**When it is taken up, the decision is not "delete or keep".** It is whether FFF1 should carry
+the bay set at all, given FFF2 already does — the mature answer is that the count scalar goes and
+nothing replaces it, because the reader that needs bay identity is already reading FFF2.
 
 ---
 
