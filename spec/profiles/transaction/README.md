@@ -82,9 +82,14 @@ All six actions in this profile are REQUIRED for OSPP compliance at Standard lev
 | StopService response timeout | 10s | Server MUST receive a response within 10 seconds. |
 | ReserveBay response timeout | 5s | Server MUST receive a response within 5 seconds. |
 | CancelReservation response timeout | 5s | Server MUST receive a response within 5 seconds. |
-| MeterValues interval | 5--300s | Configurable via `MeterValuesInterval` (default 15s). |
-| Reservation default TTL | 180s | Default reservation expiry if not overridden by `expirationTime`. |
-| Max session duration | 600s | Default `MaxSessionDurationSeconds` (configurable per station). |
+
+The response timeouts above are local to this profile. The three configurable interval and duration
+limits — `MeterValuesInterval`, `ReservationDefaultTTL` and `MaxSessionDurationSeconds` — are defined
+once, with their defaults and ranges, in
+[Chapter 08 — Configuration §3](../../08-configuration.md#3-transaction-configuration-keys). They are
+deliberately not restated here: the three values this table used to carry (a `5--300s` range with a
+`15s` default, a `180s` TTL and a `600s` maximum) had each drifted from the registry, which specifies
+`10--3600` / `60`, `300` and `900` respectively.
 
 ### 4.3 Idempotency
 

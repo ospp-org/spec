@@ -1595,7 +1595,7 @@ sequenceDiagram
 
 1. **Server** sends **ChangeConfiguration REQUEST** [MSG-013] with `keys` array (1–20 key-value pairs)
 2. **SSP** validates ALL key names, parses values, checks constraints for the entire batch
-3. If ANY key would be `Rejected` or `NotSupported`, the station applies NONE (atomic all-or-nothing)
+3. If ANY key would be `Rejected` or `NotSupported`, the station applies NONE (atomic all-or-nothing) — [`change-configuration.md` §6](profiles/device-management/change-configuration.md) rule 2
 4. **SSP** responds with `results` array containing per-key status in the same order as the request
 5. If any key returns `RebootRequired`, the admin MAY follow up with a **Reset** [MSG-015] to apply the change
 

@@ -58,7 +58,7 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 **Description:** A malicious user or device attempts to obtain service without payment, or to spend the same credits multiple times (especially in offline mode where real-time balance checks are not possible).
 
 **Countermeasures:**
-- **OfflinePass** (see §6.1) enforces hard limits: `maxTotalCredits`, `maxUses`, `maxCreditsPerTx`, `allowedServiceTypes` (see §6.1).
+- **OfflinePass** (see §6.1) enforces hard limits: `maxUses`, `maxTotalCredits`, `maxCreditsPerTx` — [§6.1.1](#611-offlinepass-validation--10-checks) checks #6, #7 and #8 respectively. (`offlineAllowance.allowedServiceTypes` is carried and signed but read by no check in any of the three gates; it is not a limit this countermeasure can claim — see §6.1.1.)
 - **Epoch-based revocation** (§6.6) — incrementing the global `RevocationEpoch` invalidates ALL passes issued before that epoch. Constant-time check on station; no CRL distribution required.
 - **ECDSA P-256 signed receipts with txCounter** (§6.2) — stations cryptographically sign every transaction including a monotonic counter. Unsigned or incorrectly signed transactions are flagged as CRITICAL. The counter itself is forensic (§6.3): a discontinuity raises an operator alert on the station and never withholds settlement.
 - **Fraud scoring** (§7.4) — post-reconciliation scoring with automatic response (disable offline, revoke pass, block user).
@@ -98,7 +98,7 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 
 **Countermeasures:**
 - **HMAC-SHA512 webhook verification** (§2.5) with timing-safe comparison.
-- **IP whitelist** — only payment processor IPs are accepted for webhook endpoints.
+- **IP whitelist** — the server SHOULD accept webhook traffic only from known processor IP ranges ([§2.5](#25-payment-processor--server--hmac-sha512-webhook)). This is a SHOULD, not a filter this specification guarantees.
 - **5-layer anti-abuse** (§7.3): IP rate limiting, device fingerprinting, progressive CAPTCHA, abandon scoring, and bay-lock-at-payment-only.
 
 ### T08 - Firmware Tampering
@@ -108,7 +108,7 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 **Countermeasures:**
 - **ECDSA P-256 firmware code-signing** — see §4.6.
 - **SHA-256 checksum verification** before installation.
-- **A/B partition scheme** with automatic rollback on failed self-test.
+- **A/B partition scheme** with automatic rollback when the new image fails to send a BootNotification within the watchdog window ([Chapter 05 §6.4–§6.5](05-state-machines.md#64-ab-partition-scheme)). The trigger is that timeout, not a self-test.
 - **FirmwareIntegrityFailure** SecurityEvent [MSG-012] on checksum mismatch or signature failure.
 - Firmware URL uses HTTPS — binary is integrity-protected in transit.
 
@@ -117,7 +117,7 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 **Description:** Attacker opens the station enclosure to access the hardware, extract keys from storage, or modify the hardware.
 
 **Countermeasures:**
-- **Secure element / TPM** for private key storage (§4.5) — keys are non-extractable.
+- **Secure element / TPM** for private key storage (§4.5) — keys are non-extractable **where the hardware supports it**. §4.5 requires an SE/TPM/TEE only "if available"; a station without one stores keys in encrypted NVS, and those keys are not non-extractable.
 - **Tamper detection switch** — enclosure opening triggers `TamperDetected` SecurityEvent [MSG-012] (severity: Critical).
 - **Encrypted NVS** — even if storage is accessed, data is encrypted at rest.
 
@@ -137,7 +137,7 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 **Countermeasures:**
 - **HMAC-SHA512** signature verification (`X-PG-Signature` header).
 - **Timing-safe comparison** prevents timing attacks on HMAC verification.
-- **IP whitelist** — only traffic from payment processor IP ranges is accepted.
+- **IP whitelist** — the server SHOULD accept only traffic from payment processor IP ranges ([§2.5](#25-payment-processor--server--hmac-sha512-webhook)). Unlike the two rows above, this is a SHOULD.
 - **Idempotency** — duplicate webhooks for the same payment are safely ignored.
 
 ### T12 - BLE Eavesdropping
@@ -147,7 +147,7 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 **Countermeasures:**
 - **Application-layer AEAD** (ChaCha20-Poly1305 IETF, §6.5.3) encrypts and authenticates all post-Challenge traffic end-to-end, independent of any BLE link-layer pairing. The OfflinePass and receipt are never exposed in plaintext over the air.
 - **Authenticated, forward-secret key agreement** (§6.5): the per-handshake ECDH (ephemeral-static + ephemeral-ephemeral) means a passive capture cannot be decrypted even if a station's static key is later compromised, and an active attacker cannot impersonate the station without a valid StationIdentity certificate (§6.5.2).
-- **Station limits concurrent BLE connections** to 1 (configurable up to 3) with per-connection isolation ([ble-transport.md §13](profiles/offline/ble-transport.md)), reducing the attack surface.
+- **Per-connection isolation** — handshake and session state are scoped to the single GATT connection that established them and discarded on disconnect, and a command **MUST NOT** be honoured on a connection that did not establish its session ([ble-transport.md §12](profiles/offline/ble-transport.md#12-connection-lifecycle-and-isolation)). A station **MAY** additionally bound how many concurrent central connections it accepts; that bound is optional and this specification sets no default or ceiling for it.
 
 ### T13 - Denial of Service
 
@@ -956,7 +956,7 @@ The OfflinePass is a server-signed credential that authorizes offline service us
 | `sub` | string | User subject identifier (`sub_{uuid}`) |
 | `deviceId` | string | Bound mobile device identifier |
 | `issuedAt` | string | ISO 8601 UTC — when the pass was issued |
-| `expiresAt` | string | ISO 8601 UTC — when the pass expires (max 24 hours from issuance) |
+| `expiresAt` | string | ISO 8601 UTC — when the pass expires (max 24 hours from issuance — [`offline-pass.md` §6](profiles/offline/offline-pass.md#6-lifecycle), issuance rule 1) |
 | `policyVersion` | integer | Policy version for backward compatibility |
 | `revocationEpoch` | integer | Epoch at time of issuance (pass is invalid if station epoch is higher) |
 | `offlineAllowance` | object | Spending limits — see below |
@@ -1013,7 +1013,7 @@ The station MUST perform all 10 checks when validating an OfflinePass locally (F
 | 2 | **Expiry** | `2003` | `expiresAt` MUST be in the future |
 | 3 | **Revocation epoch** | `2004` | `revocationEpoch` >= station's `RevocationEpoch` configuration value |
 | 4 | **Device binding** | `2002` | `deviceId` MUST match the `deviceId` from the Hello [MSG-029] message |
-| 5 | **Station restriction** | `2006` | If pass contains a station allowlist, this station MUST be in it |
+| 5 | **Station restriction** | `2006` | **Not locally evaluable — see below.** Station scoping lives in `allowed_station_ids` on the *server's stored pass record*, not in the pass; a station validating offline cannot read it |
 | 6 | **Max uses** | `4002` | Number of transactions using this pass MUST be < `maxUses` |
 | 7 | **Max total credits** | `4002` | Cumulative credits charged MUST be < `maxTotalCredits` |
 | 8 | **Max per-tx credits** | `4004` | Requested service cost MUST be <= `maxCreditsPerTx` |
@@ -1021,6 +1021,10 @@ The station MUST perform all 10 checks when validating an OfflinePass locally (F
 | 10 | **Counter anti-replay (station-local horizon)** | `2005` | `counter` MUST be strictly greater than `lastSeenCounter` for this pass on this station. See the counter-model note below. |
 
 **Implementation note:** Implementations SHOULD perform structural and temporal checks before cryptographic verification to mitigate denial-of-service. The error code returned SHOULD correspond to the first failed check in the canonical order (1–10).
+
+**Check #5 is not evaluable on this path (KNOWN-ISSUES [B-2](../KNOWN-ISSUES.md#b-2--a-station-scoped-offlinepass-is-unrepresentable-in-the-authoritative-schema)).** Station scoping is held as `allowed_station_ids` on the server's stored pass record, which [`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks-11-checks) check #5 calls out as "not a wire field". [`offline-pass.schema.json`](../schemas/common/offline-pass.schema.json) has no member that can carry it and is `additionalProperties: false` at both levels, so a station validating locally over BLE has nothing to check and no server to ask. The list above is therefore **ten checks, nine of which a station can perform**; the scoping constraint is enforced server-side at authorize-time and at reconcile ([`reconciliation.md` §6.1](profiles/offline/reconciliation.md#61-check-list) check #8).
+
+**Nothing here reads `offlineAllowance.allowedServiceTypes`.** The pass carries the list, the schema requires it and `minItems: 1` keeps it non-empty, and it is covered by the signature — but no check in this list, in the authorize-time eleven, or in the reconcile-time thirteen compares a requested `serviceId` against it. Whether it should be checked is an open decision, not a property this section may be read as providing.
 
 **Counter model — app-global value, station-local horizon (finding N7).** The `counter` carried in `OfflineAuthRequest` is a **single app-global monotonic value per pass**: the app — the sole holder of the pass — increments it on **every** use, regardless of which station the pass is presented to. The phrase "for this pass on this station" in check #10 describes the **offline station's verification horizon, not a per-station scoping of the value**. An offline station can only compare `counter` against what its own NVS has seen (it has no cross-station knowledge), so its anti-replay is necessarily local; because the value is app-global and strictly increasing, it trivially passes each station's local `>` check, and a station seeing this pass for the first time uses `lastSeenCounter = -1` so any value passes. The **cross-station** guarantee — that a cloned pass replayed across multiple stations is caught — is **not** provided by this local check; it is enforced **server-side at reconcile** via global `(offlinePassId, passCounter)` uniqueness ([`profiles/offline/reconciliation.md` §6.1](profiles/offline/reconciliation.md#61-check-list) checks #12/#13). The station **MUST** echo the `counter` it verified into the signed receipt as `passCounter` (§6.2 `receipt_fields`), so the server performs that global check on a value it can cryptographically trust.
 
@@ -1269,7 +1273,7 @@ The wrapper adds `signatureAlgorithm` (`"ECDSA-P256-SHA256"`) and `signature`. T
 
 **Pin 2 — public-key wire encoding (byte-exact).** Every P-256 public key transmitted on the BLE wire — `stationPubKey` in this certificate, `appEphemeralPubKey` in Hello, and `stationEphemeralPubKey` in Challenge — MUST be **compressed SEC1** (33 bytes: a `0x02`/`0x03` prefix byte followed by the 32-byte big-endian X coordinate), Base64-encoded to exactly 44 characters with no padding. NOTE: `@noble/curves` emits compressed points by default; the 65-byte uncompressed (`0x04`-prefixed) form MUST NOT be used on the BLE wire. The 65-byte uncompressed form remains reserved for the PEM-delivered server signing key (`serverVerifyKey`, unchanged), which is an ECDSA verify key, not an ECDH key.
 
-**Public-key validation (Normative).** Before using any received P-256 public key in an ECDH operation — `appEphemeralPubKey` (Hello), `stationEphemeralPubKey` (Challenge), and the certificate's `stationPubKey` — the receiver **MUST** validate it: the compressed-SEC1 point **MUST** decompress to a valid point on the P-256 curve (a non-decompressable X is rejected), and the point **MUST NOT** be the identity / point at infinity. On failure the receiver **MUST** abort the handshake with `2013 BLE_AUTH_FAILED`. On P-256 (prime order, cofactor 1 — no small-order subgroups) with single-use ephemeral keys, invalid-curve and small-subgroup attacks are already inapplicable by construction, and a compliant library (`@noble/curves`, mbedTLS) rejects bad points on decode; this explicit MUST is **defense-in-depth** and a mandated B5 conformance test, stated so that no implementation silently skips the check. It adds a validation obligation only — the wire encoding (Pin 2) is unchanged.
+**Public-key validation (Normative).** Before using any received P-256 public key in an ECDH operation — `appEphemeralPubKey` (Hello), `stationEphemeralPubKey` (Challenge), and the certificate's `stationPubKey` — the receiver **MUST** validate it: the compressed-SEC1 point **MUST** decompress to a valid point on the P-256 curve (a non-decompressable X is rejected), and the point **MUST NOT** be the identity / point at infinity. On failure the receiver **MUST** abort the handshake with `2013 BLE_AUTH_FAILED`. On P-256 (prime order, cofactor 1 — no small-order subgroups) with single-use ephemeral keys, invalid-curve and small-subgroup attacks are already inapplicable by construction, and a compliant library (`@noble/curves`, mbedTLS) rejects bad points on decode; this explicit MUST is **defense-in-depth**, stated so that no implementation silently skips the check. No conformance case currently exercises it. It adds a validation obligation only — the wire encoding (Pin 2) is unchanged.
 
 **Dedicated BLE key pair (key separation).** `stationPubKey` is a key pair **distinct from both** of the station's ECDSA P-256 keys — the mTLS client key and the receipt-signing key (§4.3): one P-256 key MUST NOT be used for both ECDSA signing and ECDH key agreement (NIST SP 800-56A key-separation). The station generates this ECDH key pair **on-device** at provisioning (the private key never leaves the station, exactly as for the TLS key) and submits the public key in the provisioning request alongside its TLS CSR. A request submitting this key as one of the other two is rejected with `422` / `4016 PROVISIONING_KEY_REUSE` — the server checks all three pairs (§4.3).
 

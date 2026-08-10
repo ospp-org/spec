@@ -346,8 +346,11 @@ StatusNotification [MSG-009] whose transition §2.3 does not contain:
 **detector**, and it was only ever the second thing to a server:
 
 - **Normative on the station.** The twenty `Station` rows are the complete set of transitions a
-  station may effect and report. A station that reports `Available → Finishing` is non-conforming
-  and a conformance case fails it. This is where the table has teeth, and it is the same place
+  station may effect and report. A station that reports `Available → Finishing` is non-conforming.
+  No conformance case currently fails it: [`TC-CORE-003`](../conformance/test-cases/core/TC-CORE-003.md)
+  names that transition but puts the **server** under test and requires it to *accept* the report, and
+  no other case checks a station's `(previousStatus, status)` pair against this table. Until such a
+  case exists the station-side rule is asserted and unexercised. This is where the table has teeth, and it is the same place
   OCPP puts its own: the 1.6 connector transition table lives in *Operations Initiated by Charge
   Point* and states which transitions a Charge Point **MAY** send a notification for — the
   Central System's entire stated duty on receipt is to acknowledge, and `StatusNotification.conf`
@@ -439,11 +442,15 @@ stateDiagram-v2
 |---------|----------|:------------:|-------------------|
 | Pending acknowledgment | 10 seconds | No | Transition to `Failed`; refund if payment was captured |
 | StartService response | 10 seconds (per attempt) | No | Retry per policy (web: up to 4 retries; mobile: single attempt), then transition to `Failed` |
-| Maximum session duration | `MaxSessionDurationSeconds` config key (default: 600s) | Yes | Station auto-stops service; session transitions to `Stopping` |
+| Maximum session duration | `MaxSessionDurationSeconds` config key (default: 900s) | Yes | Station auto-stops service; session transitions to `Stopping` |
 | StopService confirmation | 10 seconds | No | Transition to `Failed`; partial refund based on last MeterValues |
-| MeterValues interval | `MeterValuesInterval` config key (default: 15s) | Yes | Station sends MeterValues at this interval; server uses last-known values if a report is missed |
+| MeterValues interval | `MeterValuesInterval` config key (default: 60s) | Yes | Station sends MeterValues at this interval; server uses last-known values if a report is missed |
 | Session inactivity | `SessionTimeout` config key (see §8 Configuration) | Yes | If no MeterValues or user interaction within the timeout period, session transitions to `Stopping` |
 | Connection lost grace | `ConnectionLostGracePeriod` config key (default: 300s) | Yes | If station reconnects within grace period, session continues; otherwise transitions to `Failed` |
+
+Every value in the *Configurable = Yes* rows is a restatement. The defining registry — defaults, ranges
+and access modes — is [Chapter 08 — Configuration §2–3](08-configuration.md#3-transaction-configuration-keys),
+and it governs where this table disagrees with it.
 
 ### 3.5 Per-Session Sequence Number (seqNo) and Crash Resilience
 

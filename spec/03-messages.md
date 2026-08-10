@@ -202,7 +202,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
 | `errorText` | string | Cond. | Machine-readable error name in `UPPER_SNAKE_CASE`. REQUIRED when `Rejected`; accompanies `errorCode` whenever that is present. |
 | `configuration` | object | No | Key-value pairs to apply immediately (see [Chapter 08](08-configuration.md)) |
 | `sessionKey` | string | Cond. | Base64-encoded 32-byte HMAC session key. **REQUIRED on every `Accepted` and every `Pending` response**, unconditionally — a `Pending` station answers signed commands. Absent on `Rejected`. See [Core profile §5.3](profiles/core/boot-notification.md) |
-| `supportedVersions` | array | Cond. | Protocol versions supported by server. Array of semver strings (e.g., `["0.1.0", "0.2.0"]`). REQUIRED when `Rejected` with error `1007 PROTOCOL_VERSION_MISMATCH`. |
+| `supportedVersions` | array | Cond. | Protocol versions supported by server. Array of semver strings (e.g., `["0.1.0", "0.2.0"]`). REQUIRED when `Rejected` with error `1007 PROTOCOL_VERSION_MISMATCH` — [`boot-notification.md` §6](profiles/core/boot-notification.md). Unlike the sibling rows in this table, this condition is stated only in prose: the response schema carries no `if`/`then` for it. |
 | `details` | object | Cond. | Diagnostic detail for `errorCode`. REQUIRED on a `Pending` response carrying `3018 TOPOLOGY_MISMATCH`, where it carries `expected` and `declared` — the provisioned topology and the one this boot declared, each shaped like the request's `bays[]`. Absent otherwise. The object is **closed**, like every other object in this schema set: a future error code that needs its own detail adds its member to the schema. |
 
 **`status` behavior:**
@@ -565,7 +565,7 @@ The default reservation TTL is configured by the `ReservationDefaultTTL` key (de
 | Error Code | Condition |
 |------------|-----------|
 | `3005` | `BAY_NOT_FOUND` — unknown bay identifier |
-| `3012` | `RESERVATION_NOT_FOUND` — reservation does not exist or already cancelled |
+| `3012` | `RESERVATION_NOT_FOUND` — no reservation with that ID has ever existed on the bay, or it was already consumed by a StartService. An **already-cancelled** reservation returns `Accepted` (idempotent) and an **expired** one returns `3013` — see [cancel-reservation.md §5](profiles/transaction/cancel-reservation.md) rules 2, 3 and 6 |
 | `3013` | `RESERVATION_EXPIRED` — reservation has already expired |
 
 ---
@@ -908,7 +908,7 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
 
 The heartbeat serves two purposes: (1) keep-alive signal proving the station is connected and responsive, and (2) clock synchronization via the server's `serverTime` response.
 
-The server MUST track the last heartbeat time per station. If no message is received for **3.5 × `heartbeatIntervalSec`** seconds, the server SHOULD mark the station as `Offline`.
+The server **MUST** track the last heartbeat time per station. If no message is received for **3.5 × `heartbeatIntervalSec`** seconds, the server **MUST** treat the station as disconnected — [`heartbeat.md` §5](profiles/core/heartbeat.md) rule 4 and [CORE-007](profiles/core/README.md). (This summary previously said `SHOULD`, weakening the rule it summarises.)
 
 #### REQUEST Payload
 
@@ -1095,7 +1095,7 @@ Which transitions between these values are legal is [Chapter 05 §2.3](05-state-
 | **Transport** | MQTT |
 | **Message Type** | EVENT |
 | **Topic** | `ospp/v1/stations/{station_id}/to-server` |
-| **Trigger** | Periodic timer during active sessions (`MeterValuesInterval` config, default 15s) |
+| **Trigger** | Periodic timer during active sessions (`MeterValuesInterval` config, default 60s) |
 | **Expected Response** | None (EVENT) |
 | **Timeout** | N/A |
 | **Idempotency** | Yes — duplicate meter readings are deduplicated by timestamp |
@@ -2382,11 +2382,7 @@ The app SHOULD read StationInfo immediately after connecting to verify the stati
   "stationId": "stn_a1b2c3d4",
   "stationModel": "SSP-3000",
   "firmwareVersion": "1.2.3",
-  "bays": [
-    { "bayNumber": 1, "programNumbers": [1, 2, 3] },
-    { "bayNumber": 2, "programNumbers": [1, 2, 3] },
-    { "bayNumber": 3, "programNumbers": [1, 2, 3] }
-  ],
+  "bayCount": 3,
   "bleProtocolVersion": "0.2.1",
   "connectivity": "Offline"
 }

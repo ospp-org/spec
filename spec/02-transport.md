@@ -460,7 +460,7 @@ The broker MUST derive the station identity from the **mTLS client certificate C
 
 The broker MUST NOT rely on the MQTT Client ID alone for authorization, as it can be spoofed without mTLS.
 
-**Implementation:** Most MQTT 5.0 brokers support ACL via built-in plugins or extensions. The ACL rules **SHOULD** be configured to match the `%c` (client ID) or `%C` (CN from certificate) against the topic pattern.
+**Implementation:** Most MQTT 5.0 brokers support ACL via built-in plugins or extensions. The ACL rules **SHOULD** be configured to match the `%C` (CN from certificate) against the topic pattern. `%c` (client ID) **MUST NOT** be used as the ACL principal: it is client-asserted and, as stated above, spoofable — a broker configured that way satisfies the letter of this section's placeholder while defeating the isolation the section exists to provide.
 
 > **Informative:** Known broker implementations include EMQX (`emqx_auth_mnesia`), HiveMQ (Enterprise Security Extension), and Mosquitto (`mosquitto_auth_plugin`).
 

@@ -308,20 +308,28 @@ Because the station is online (`stationConnectivity: "Online"`), it does NOT per
 
 ### Step 9: Server Validates OfflinePass in Real-Time (15:10:06.600)
 
-The server performs full validation of the OfflinePass:
+The server runs the eleven authorize-time checks of
+[`authorize-offline-pass.md` §5](../../spec/profiles/offline/authorize-offline-pass.md#5-validation-checks-11-checks),
+in that order, stopping at the first failure:
 
-1. **ECDSA P-256 signature** — verifies the pass was signed by the server's own key
-2. **Expiry check** — `expiresAt` (2026-02-14T06:00:00Z) is in the future
-3. **Revocation epoch** — pass epoch (42) matches current server epoch (42)
-4. **Device ID** — `device_b7c4de89f0123456` matches the BLE Hello device ID
-5. **Usage limits** — pass has been used 2 times (maxUses: 5), so 3 remaining
-6. **Credit limits** — 48 credits for this tx (maxCreditsPerTx: 60), total used so far: 80 (maxTotalCredits: 200)
-7. **Rate limiting** — last use was 45 minutes ago (minIntervalSec: 60), passes
-8. **Counter** — counter 3 > last seen counter 2, no replay
-9. **User balance** — Bob has 95 credits, sufficient for 48 credits (4 min x 12 credits/min)
-10. **Service allowed** — `svc_deluxe` is in `allowedServiceTypes`
+1. **Signature verification** — the ECDSA P-256 `signature` verifies against the server's own signing key
+2. **Not expired** — `expiresAt` (2026-02-14T06:00:00Z) is in the future
+3. **Revocation epoch** — pass `revocationEpoch` (42) >= the server's current `RevocationEpoch` (42)
+4. **Device binding** — `offlinePass.deviceId` (`device_b7c4de89f0123456`) matches the request's `deviceId`
+5. **Station allowance** — the stored pass record's `allowed_station_ids` is empty, so the pass is unscoped and this station is permitted
+6. **Usage limit** — used 2 times, `maxUses` is 5
+7. **Total credits limit** — 80 credits charged so far, `maxTotalCredits` is 200
+8. **Per-transaction credits** — 48 credits estimated for this session, `maxCreditsPerTx` is 60
+9. **Rate limit** — last use was 45 minutes ago, `minIntervalSec` is 60
+10. **Counter replay** — `counter` 3 > last seen counter 2
+11. **Org binding** — the stored pass record's `organization_id` equals the reporting station's
 
-All checks pass. The server:
+All eleven pass. Note what is *not* among them: nothing checks the requested `svc_deluxe` against the
+pass's `allowedServiceTypes`. The list is carried and signed but no gate reads it — see
+[`06-security.md` §6.1.1](../../spec/06-security.md#611-offlinepass-validation--10-checks).
+
+Separately from pass validation, the server confirms Bob's wallet holds 95 credits, enough for the
+48-credit session (4 min × 12 credits/min). The server then:
 - Debits 48 credits from Bob's wallet (balance: 95 - 48 = 47)
 - Creates session record `sess_d5e6f7a8b9c0` with `status: active`
 - Records the OfflinePass usage (counter: 3, uses: 3/5, total credits: 128/200)

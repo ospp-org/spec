@@ -12,7 +12,6 @@ An **OfflinePass** is a server-signed credential that authorizes a user to start
 |----------------------|----------|----------|-----------------------------------------------|
 | `passId` | string | Yes | Unique pass identifier (`opass_` prefix). |
 | `sub` | string | Yes | User subject identifier the pass is issued to (`sub_` prefix). |
-| `organization_id` | string | Yes | Issuing organization identifier (`org_<uuid>`). Bounds the pass to a specific operator/tenant; enforced at reconcile-time (`reconciliation.md` §6 check #7). The server writes this from the authorizing REST request's organization context at issuance time. |
 | `deviceId` | string | Yes | Bound device identifier (prevents sharing across devices). |
 | `issuedAt` | string | Yes | ISO 8601 timestamp of when the pass was issued. |
 | `expiresAt` | string | Yes | ISO 8601 timestamp of when the pass expires. Maximum validity is 24 hours from `issuedAt`. |
@@ -39,6 +38,26 @@ An **OfflinePass** is a server-signed credential that authorizes a user to start
 | `minIntervalSec` | integer | Yes | Minimum seconds between consecutive uses (minimum 0). |
 | `stationOfflineWindowHours` | integer | Yes | Maximum hours a station can operate offline (minimum 1). |
 | `stationMaxOfflineTx` | integer | Yes | Maximum offline transactions a station accepts before requiring sync (minimum 1). |
+
+### 2.3 Server-Side Record Fields (not on the wire)
+
+The tables above are the **complete** OfflinePass wire structure: they match
+[`offline-pass.schema.json`](../../../schemas/common/offline-pass.schema.json) member for member, and that
+schema sets `additionalProperties: false` at both levels, so a pass carrying anything else is
+schema-invalid and its signature (§3) covers nothing else.
+
+Two constraints bind a pass without appearing in it. Both live on the **server's stored pass record**
+and are read from there by the gates that enforce them — never from the presented pass:
+
+| Record field | Bounds the pass to | Enforced by |
+|---|---|---|
+| `organization_id` | its issuing organization (`org_<uuid>`), for scoped and unscoped passes alike | [`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks-11-checks) check #11 and [`reconciliation.md` §6.1](reconciliation.md#61-check-list) check #7, both `2015 OFFLINE_ORG_MISMATCH` |
+| `allowed_station_ids` | the listed stations, when non-empty | [`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks-11-checks) check #5 and [`reconciliation.md` §6.1](reconciliation.md#61-check-list) check #8, both `2006 OFFLINE_STATION_MISMATCH` |
+
+A station validating a pass locally over BLE has no server to ask and can read only the pass itself,
+so it can perform neither check. For `organization_id` that is the deferred **D5** decision recorded in
+§4; for `allowed_station_ids` it is [`KNOWN-ISSUES.md` B-2](../../../KNOWN-ISSUES.md#b-2--a-station-scoped-offlinepass-is-unrepresentable-in-the-authoritative-schema),
+which §4 check #5 states as a station obligation the wire format cannot support.
 
 ## 3. Signing (ECDSA P-256)
 
@@ -86,7 +105,7 @@ The epoch-based revocation mechanism provides a lightweight way to invalidate al
 
 The full lifecycle of an OfflinePass is as follows:
 
-1. **Issuance:** The server creates the pass, populates all fields based on the user's wallet balance and the operator's offline policy, signs it with ECDSA P-256, and delivers it to the app via HTTPS.
+1. **Issuance:** The server creates the pass, populates all fields based on the user's wallet balance and the operator's offline policy, signs it with ECDSA P-256, and delivers it to the app via HTTPS. The server **MUST NOT** issue a pass whose `expiresAt` is more than 24 hours after its `issuedAt`. (§2 and [`06-security.md` §6.1](../../06-security.md) both state this cap; it is stated normatively here because JSON Schema cannot express a relation between two members, so no schema can enforce it.)
 2. **Storage:** The app stores the pass in encrypted secure storage (e.g., Android Keystore / iOS Keychain). The pass **MUST NOT** be stored in plaintext or in application-accessible storage.
 3. **Pre-arming:** The app **MAY** request a new OfflinePass proactively (background pre-arming) before going offline, ensuring the user always has a valid pass available.
 4. **Presentation:** During the BLE handshake, the app presents the OfflinePass to the station via the OfflineAuthRequest message.
@@ -106,8 +125,8 @@ The OfflinePass provides the following security guarantees:
 | **Revocable** | `revocationEpoch` | All passes can be batch-revoked by incrementing the global epoch (check #3). |
 | **Usage-limited** | `maxUses`, `maxTotalCredits` | The pass limits the total number of sessions and credits that can be consumed (checks #6, #7). |
 | **Rate-limited** | `minIntervalSec` | Prevents rapid consecutive use that could indicate abuse (check #9). |
-| **Station-scoped** | Station ID validation | When the pass's `allowed_station_ids` is non-empty, the pass is only valid at the listed stations. Enforced at authorize-time per `authorize-offline-pass.md` §5 check #5 AND at reconcile-time per `reconciliation.md` §6 check #8. |
-| **Org-scoped** | Organization binding via `organization_id` | The pass is bound to its issuing organization (`organization_id`). At reconcile-time the server enforces that the reporting station belongs to the same organization (`reconciliation.md` §6 check #7). This applies to ALL passes — scoped and unscoped. An "unscoped" pass (`allowed_station_ids` `null` or `[]`) means "any station of the issuing organization," not "any station globally." |
+| **Station-scoped** | Station ID validation | When the **pass record's** `allowed_station_ids` (§2.3 — server-side, not a wire field) is non-empty, the pass is only valid at the listed stations. Enforced at authorize-time per `authorize-offline-pass.md` §5 check #5 AND at reconcile-time per `reconciliation.md` §6 check #8. Both read the server record; a station validating offline cannot (§2.3). |
+| **Org-scoped** | Organization binding via `organization_id` | The pass is bound to its issuing organization by the **pass record's** `organization_id` (§2.3 — server-side, not a wire field). Enforced at authorize-time per `authorize-offline-pass.md` §5 check #11 AND at reconcile-time per `reconciliation.md` §6 check #7. This applies to ALL passes — scoped and unscoped. An "unscoped" pass (`allowed_station_ids` `null` or `[]`) means "any station of the issuing organization," not "any station globally." |
 | **Replay-protected** | Monotonic counter | The `counter` field in OfflineAuthRequest prevents replaying the same pass presentation (check #10). |
 
 ## 8. Related Schemas

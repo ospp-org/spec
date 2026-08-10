@@ -445,20 +445,26 @@ You need to persist (in flash/NVS):
 
 After an offline session completes, sign a receipt:
 
+The signed field set is **discriminated** — pass-form (`offlinePassId` + `passCounter`) or auth-form
+(`authId` + `sessionId`) — and is defined once, normatively, in
+[`06-security.md` §6.2](../spec/06-security.md) and
+[`schemas/common/receipt-data.schema.json`](../schemas/common/receipt-data.schema.json). Read it there;
+this guide does not reproduce it, for the same reason §2.6 does not reproduce the bay transition table.
+
 ```
-1. Build receipt fields:
-   {offlineTxId, bayId, serviceId, startedAt, endedAt,
-    durationSeconds, creditsCharged, meterValues}
+1. Build receipt_fields for the applicable form (06-security.md §6.2 Note 2).
+   The envelope's data/signature/signatureAlgorithm are NOT part of the signed input.
 
-2. Canonical JSON (sorted keys, compact, no whitespace)
+2. receipt_data = OSPP Canonical Form(receipt_fields)   // sorted keys, compact, UTF-8 bytes
 
-3. Base64-encode the canonical JSON → this is receipt.data
+3. digest = SHA-256(receipt_data)      // hash the CANONICAL BYTES, never base64(receipt_data)
 
-4. SHA-256 hash the Base64 string
+4. (r, s) = ECDSA-P256-Sign(station_private_key, digest)   // RFC 6979 deterministic nonces
 
-5. ECDSA P-256 Sign(station_private_key, sha256_digest)
+5. if s > n/2 then s := n - s          // low-s normalisation (06-security.md §6.2 Note 6)
 
-6. Base64-encode the signature → this is receipt.signature
+6. receipt.data      = Base64(receipt_data)   // base64 is the WIRE ENCODING only
+   receipt.signature = Base64(DER_Encode(r, s))
 
 7. Return:
    {

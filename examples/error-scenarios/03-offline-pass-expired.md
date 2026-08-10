@@ -139,9 +139,9 @@ OfflinePass Validation:
     expiresAt:  2026-02-12T10:00:00.000Z
     now (RTC):  2026-02-13T10:30:08.000Z
     Delta:      +24h 30m 08s (expired)
-  Check #3 - Station ID match:          SKIPPED (prior check failed)
-  Check #4 - Remaining credits:         SKIPPED (prior check failed)
-  Check #5 - Service authorization:     SKIPPED (prior check failed)
+  Check #3 - Revocation epoch:          SKIPPED (prior check failed)
+  Check #4 - Device binding:            SKIPPED (prior check failed)
+  Checks #5-#10:                        SKIPPED (prior check failed)
 
 Result: REJECTED (check #2 failed — offline pass expired)
 ```
