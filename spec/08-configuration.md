@@ -166,7 +166,7 @@ Vendor key names MUST NOT conflict with any standard OSPP key name defined in Se
 
 - Vendor keys are **ReadWrite** by default unless the vendor documents otherwise.
 - Vendor keys are **Dynamic** by default unless the vendor documents otherwise.
-- The station MUST include vendor keys in GetConfiguration responses when all keys are requested (empty `keys` array).
+- The station MUST include vendor keys in GetConfiguration responses when all keys are requested (empty `keys` array) — unless the vendor documents the key as WriteOnly, in which case §1.3 applies and it is never returned.
 - The server MUST NOT reject unknown vendor keys during GetConfiguration. Unknown keys requested by name MUST be returned in the `unknownKeys` array per the standard GetConfiguration RESPONSE schema.
 - Vendors SHOULD document all custom keys in their station implementation guide, including type, default value, valid range, and description.
 

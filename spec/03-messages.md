@@ -1486,7 +1486,7 @@ Retrieves one or more configuration values from the station.
 
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
-| `keys` | array of string | No | Specific keys to retrieve. If empty or absent, return ALL keys. |
+| `keys` | array of string | No | Specific keys to retrieve. If empty or absent, return ALL keys except WriteOnly keys. |
 
 #### RESPONSE Payload
 
@@ -1497,6 +1497,10 @@ Retrieves one or more configuration values from the station.
 | `configuration[].value` | string | Yes | Current value as string |
 | `configuration[].readonly` | boolean | Yes | `true` if the key cannot be changed |
 | `unknownKeys` | array of string | No | Keys from the request that the station does not recognize |
+
+> **WriteOnly keys are never returned.** A key whose access mode is WriteOnly — see [Chapter 08 — Configuration](08-configuration.md), §1.3 — **MUST NOT** appear in `configuration[]`, whether the request named it explicitly or asked for everything with an empty or absent `keys` array. WriteOnly keys are security credentials, and a configuration dump that carries them is a credential dump. `OfflinePassPublicKey` is currently the only WriteOnly key in the registry.
+>
+> `configuration[].readonly` is a boolean and cannot express a third access mode. It does not need to: a WriteOnly key is absent from the response entirely, so there is no entry for which a third value would ever be required. What a station should report when a request *names* a WriteOnly key is not yet specified — see [`get-configuration.md`](profiles/device-management/get-configuration.md) §5.1.
 
 #### Example
 

@@ -22,10 +22,19 @@ jobs:
         with:
           node-version: '20'
 
+      # Installed OUTSIDE the checkout, deliberately. Installing into the repo made
+      # this job read package.json, whose only dependency is @ospp/protocol — a
+      # package this script never loads. A version cascade set that dependency to
+      # ^0.8.0, a version npm has never carried (0.7.0 is followed by 0.9.0), and
+      # from then on `npm install ajv` failed ETARGET before a single payload was
+      # checked. The job needs ajv and ajv-formats; --prefix gives it exactly those
+      # and nothing in the manifest can break it again.
       - name: Install dependencies
-        run: npm install ajv ajv-formats
+        run: npm install --no-save --prefix "$RUNNER_TEMP/gate" ajv ajv-formats
 
       - name: Validate all example payloads
+        env:
+          NODE_PATH: ${{ runner.temp }}/gate/node_modules
         run: |
           node << 'SCRIPT'
           const Ajv = require('ajv/dist/2020');

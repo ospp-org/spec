@@ -499,7 +499,7 @@ Supported keys:
 | `MessageSigningMode` | string | `"All"` | HMAC signing: `"All"` or `"None"`. Static — takes effect at the next reboot |
 | `LogLevel` | string | `"Info"` | Log verbosity: `"Debug"`, `"Info"`, `"Warn"`, `"Error"` |
 
-Respond to GetConfiguration with the current values of all known keys. Unknown keys go in the `unknownKeys` array.
+Respond to GetConfiguration with the current values of all known keys, **except WriteOnly keys** — `OfflinePassPublicKey` is one, and it must never appear in a GetConfiguration response, however the request reached it. Unknown keys go in the `unknownKeys` array.
 
 ### 2.14 Firmware Updates
 
