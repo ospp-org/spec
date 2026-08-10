@@ -34,13 +34,13 @@
           },
           "errorCode": {
             "type": "integer",
-            "description": "OSPP error code (present when status is Rejected or NotSupported)"
+            "description": "OSPP error code. SHOULD accompany a Rejected or NotSupported result (08-configuration.md section 8.2) — a SHOULD, which is why no if/then requires it here."
           },
           "errorText": {
             "type": "string",
             "pattern": "^[A-Z][A-Z0-9_]+$",
             "maxLength": 128,
-            "description": "Machine-readable error name (present when status is Rejected or NotSupported)"
+            "description": "Machine-readable error name. SHOULD accompany a Rejected or NotSupported result (08-configuration.md section 8.2) — a SHOULD, which is why no if/then requires it here."
           }
         }
       }

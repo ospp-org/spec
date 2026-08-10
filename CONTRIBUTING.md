@@ -212,6 +212,8 @@ A PR that changes only the schema but not the spec (or vice versa) will be rejec
 
 Bold and uppercase when normative: "The station **MUST** send a BootNotification REQUEST."
 
+What binds is the **capitalisation**, per RFC 8174 and [`spec/00-introduction.md` §3.1](spec/00-introduction.md#31-normative-keywords) — an unbolded `MUST` is still a `MUST`. Bold it anyway: it is how a reader finds the obligations, and `tools/check-normative-bold.py` reports the ones that are not.
+
 **Formatting conventions:**
 - Message names in **bold**: **BootNotification**, **StartService**
 - Field names in `code`: `messageId`, `bayId`, `status`

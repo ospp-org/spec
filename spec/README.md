@@ -67,7 +67,8 @@ The key words **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHALL NOT**,
 [BCP 14](https://www.rfc-editor.org/info/bcp14)
 [[RFC 2119](https://www.rfc-editor.org/rfc/rfc2119)]
 [[RFC 8174](https://www.rfc-editor.org/rfc/rfc8174)]
-when, and only when, they appear in **BOLD UPPERCASE**.
+when, and only when, they appear in **ALL CAPITALS**. Bold is house style for a normative keyword
+and is not a condition of binding — see [00-introduction.md §3.1](00-introduction.md#31-normative-keywords).
 
 ## Companion Resources
 

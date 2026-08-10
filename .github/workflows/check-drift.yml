@@ -1,0 +1,49 @@
+name: Check Drift
+
+# Three checks for the class "prose asserts a property and nothing establishes it".
+#
+# A gate in tools/ that no job runs is the same defect one level up, so this workflow
+# exists to be that caller. Each script is a ratchet: it prints every finding on every
+# run and fails only when the count rises above the baseline recorded in the script.
+#
+# Paths are deliberately broad. check-config-defaults reads restatements out of
+# conformance/ and examples/ as well as spec/ — one of the three real findings it caught
+# on its first run was a conformance case citing Chapter 08 while contradicting it — so
+# narrowing this trigger to spec/ would reintroduce exactly the gap it was written for.
+
+on:
+  push:
+    paths:
+      - '**/*.md'
+      - 'schemas/**'
+      - 'tools/check-*.py'
+      - '.github/workflows/check-drift.yml'
+  pull_request:
+    paths:
+      - '**/*.md'
+      - 'schemas/**'
+      - 'tools/check-*.py'
+  workflow_dispatch:
+
+jobs:
+  drift:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # stdlib only, by design — nothing to install, nothing that can ETARGET the way
+      # validate-examples did when a version cascade pointed package.json at a version
+      # npm had never carried.
+
+      - name: Restated configuration defaults vs the Chapter 08 registry
+        run: python3 tools/check-config-defaults.py
+
+      - name: Schema descriptions asserting conditionals the schema does not enforce
+        run: python3 tools/check-schema-conditionals.py
+
+      - name: Normative keywords not bolded
+        run: python3 tools/check-normative-bold.py

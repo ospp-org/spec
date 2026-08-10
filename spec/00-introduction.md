@@ -105,9 +105,23 @@ Readers are assumed to have working knowledge of JSON, MQTT, TLS, and REST APIs.
 
 ### 3.1 Normative Keywords
 
-The key words **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHALL NOT**, **SHOULD**, **SHOULD NOT**, **RECOMMENDED**, **NOT RECOMMENDED**, **MAY**, and **OPTIONAL** in this specification are to be interpreted as described in BCP 14 [[RFC 2119](https://www.rfc-editor.org/rfc/rfc2119)] [[RFC 8174](https://www.rfc-editor.org/rfc/rfc8174)] when, and only when, they appear in **BOLD UPPERCASE**.
+The key words **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHALL NOT**, **SHOULD**, **SHOULD NOT**, **RECOMMENDED**, **NOT RECOMMENDED**, **MAY**, and **OPTIONAL** in this specification are to be interpreted as described in BCP 14 [[RFC 2119](https://www.rfc-editor.org/rfc/rfc2119)] [[RFC 8174](https://www.rfc-editor.org/rfc/rfc8174)] when, and only when, they appear in **ALL CAPITALS**.
 
 When these words appear in lowercase or mixed case (e.g., "the station must be powered on" or "implementations should consider"), they carry their ordinary English meaning and are not normative requirements.
+
+> **Bold is house style, not a condition of binding.** This paragraph previously read "when, and
+> only when, they appear in **BOLD UPPERCASE**", which is stricter than RFC 8174 — the RFC's own
+> condition is "all capitals" and it says nothing about weight. The stricter reading was never
+> what the specification practised: **496 of the 1391 capitalised MUST/SHALL keywords in `spec/`
+> were unbolded**, and 457 of those are plainly obligations — the entire MQTT topic-ACL apparatus
+> ([Chapter 02 §6](02-transport.md#6-access-control-acl)), all ten OfflinePass checks
+> ([Chapter 06 §6.1.1](06-security.md)), and most of [Chapter 08](08-configuration.md). Nor did
+> any other document adopt it: all eighteen chapters and profiles that restate this paragraph
+> state the plain BCP 14 form, and the paragraph contradicted itself — the sentence below
+> identifies the non-binding case as *lowercase or mixed case*, never as unbolded capitals.
+> Authors **SHOULD** still bold normative keywords, per
+> [CONTRIBUTING.md](../CONTRIBUTING.md); a keyword that is not bolded is a style defect, not a
+> keyword that fails to bind.
 
 ### 3.2 Notation and Formatting
 
