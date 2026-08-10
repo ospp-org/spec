@@ -21,31 +21,35 @@ jobs:
       - name: Install ajv-cli
         run: npm install -g ajv-cli@5 ajv-formats@3
 
-      - name: Validate common schemas
+      - name: Validate all schemas
         run: |
-          # Common schemas cross-reference each other (e.g., error-response → timestamp).
-          # Compile each with all OTHER common schemas as -r to resolve $ref without
-          # triggering "already exists" errors from including self in the -r glob.
-          for schema in schemas/common/*.schema.json; do
+          # Every *.schema.json under schemas/, at any depth.
+          #
+          # This replaces three steps that globbed schemas/common, schemas/mqtt and
+          # schemas/ble by name. That reached 84 of the 86 files: provisioning-request
+          # and provisioning-response sit at the root of schemas/ and were compiled by
+          # no step at all. A directory named in a glob is a directory someone has to
+          # remember to add; find cannot forget one.
+          #
+          # Each schema is compiled with every OTHER schema passed as -r, so a $ref
+          # resolves whichever directory it points into. The old MQTT and BLE steps
+          # passed only schemas/common, which left BLE -> BLE references unresolvable
+          # (ble/challenge.schema.json refs ble/station-identity.schema.json). Self is
+          # excluded from -r, which ajv rejects as an "already exists" error.
+          schemas=$(find schemas -name '*.schema.json' | sort)
+          count=$(printf '%s\n' "$schemas" | grep -c . || true)
+          echo "Found $count schemas under schemas/"
+          if [ "$count" -eq 0 ]; then
+            echo "No schemas found. The layout moved and this job would otherwise pass"
+            echo "vacuously, reporting success for zero work."
+            exit 1
+          fi
+          for schema in $schemas; do
             echo "Validating $schema..."
             refs=""
-            for ref in schemas/common/*.schema.json; do
+            for ref in $schemas; do
               [ "$ref" = "$schema" ] && continue
               refs="$refs -r $ref"
             done
             ajv compile -s "$schema" $refs --spec=draft2020 -c ajv-formats
-          done
-
-      - name: Validate MQTT schemas
-        run: |
-          for schema in schemas/mqtt/*.schema.json; do
-            echo "Validating $schema..."
-            ajv compile -s "$schema" -r "schemas/common/*.schema.json" --spec=draft2020 -c ajv-formats
-          done
-
-      - name: Validate BLE schemas
-        run: |
-          for schema in schemas/ble/*.schema.json; do
-            echo "Validating $schema..."
-            ajv compile -s "$schema" -r "schemas/common/*.schema.json" --spec=draft2020 -c ajv-formats
           done

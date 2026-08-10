@@ -36,25 +36,44 @@ jobs:
           const ajv = new Ajv({ strict: false, allErrors: true });
           addFormats(ajv);
 
-          // Load all common schemas as refs
-          for (const f of fs.readdirSync('schemas/common').filter(f => f.endsWith('.schema.json'))) {
-            ajv.addSchema(JSON.parse(fs.readFileSync(path.join('schemas/common', f), 'utf8')));
+          // Load every schema under schemas/ as a ref, at any depth. Loading only
+          // schemas/common left BLE -> BLE references unresolvable: ajv.compile threw
+          // "can't resolve reference station-identity.schema.json" on
+          // ble/challenge.schema.json and the exception was never caught, so this job
+          // died mid-run instead of reporting a result.
+          function findSchemas(dir) {
+            return fs.readdirSync(dir, { withFileTypes: true }).flatMap(e => {
+              const p = path.join(dir, e.name);
+              if (e.isDirectory()) return findSchemas(p);
+              return e.name.endsWith('.schema.json') ? [p] : [];
+            });
+          }
+          const allSchemas = findSchemas('schemas').sort();
+          console.log('Loaded ' + allSchemas.length + ' schemas as refs');
+          for (const p of allSchemas) {
+            const s = JSON.parse(fs.readFileSync(p, 'utf8'));
+            ajv.addSchema(s, s.$id || p);
           }
 
-          // Cache compiled validators by schema path to avoid duplicate $id errors
+          // Every schema is registered above, so resolve by $id instead of compiling
+          // again — compiling an already-registered $id is a duplicate-$id error.
           const cache = new Map();
           function getValidator(schemaPath) {
             if (cache.has(schemaPath)) return cache.get(schemaPath);
             const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
-            const v = ajv.compile(schema);
+            let v = schema.$id ? ajv.getSchema(schema.$id) : null;
+            if (!v) v = ajv.compile(schema);
             cache.set(schemaPath, v);
             return v;
           }
 
-          let pass = 0, fail = 0;
+          let pass = 0, fail = 0, absent = 0;
 
           function validate(schemaPath, dataPath) {
-            if (!fs.existsSync(schemaPath) || !fs.existsSync(dataPath)) return;
+            // A missing pair is skipped rather than failed, as before — but it is
+            // counted, so a renamed example cannot quietly shrink the run and still
+            // report success.
+            if (!fs.existsSync(schemaPath) || !fs.existsSync(dataPath)) { absent++; return; }
             const v = getValidator(schemaPath);
             const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
             if (v(data)) {
@@ -105,6 +124,6 @@ jobs:
           validate('schemas/ble/service-status.schema.json', 'examples/payloads/ble/service-status.running.json');
           validate('schemas/ble/service-status.schema.json', 'examples/payloads/ble/service-status.receipt-ready.json');
 
-          console.log('\nTotal: ' + (pass + fail) + ' checked, ' + pass + ' PASS, ' + fail + ' FAIL');
+          console.log('\nTotal: ' + (pass + fail) + ' checked, ' + pass + ' PASS, ' + fail + ' FAIL, ' + absent + ' pair(s) absent');
           if (fail > 0) process.exit(1);
           SCRIPT
