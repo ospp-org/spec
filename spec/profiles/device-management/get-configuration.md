@@ -48,7 +48,21 @@ A WriteOnly key's entry **MUST NOT** appear in the `configuration` array of any 
 
 Rules 1 and 2 are subordinate to this one. Neither "all requested keys that it recognizes" nor "every configuration entry it supports" reaches a WriteOnly key.
 
-> **What a request that explicitly names a WriteOnly key should report is not yet specified.** The value must not be returned, but this specification does not say whether the station omits the key silently, lists it in `unknownKeys` — which would be untrue, since the key *is* recognized — or answers an error. [Chapter 08](../../08-configuration.md) §8.1 rule 2 is silent on the same point. Until it is settled, a server **MUST NOT** depend on any particular reporting behaviour for a by-name request.
+**A request that names a WriteOnly key explicitly.** The station **MUST NOT** return the key in `configuration`, and **MUST NOT** list it in `unknownKeys` — the key *is* recognized, and reporting it as unknown would be false. It appears in **neither array**. That is the defined answer, not an oversight, and the station **MUST NOT** answer such a request with an error.
+
+A server reads the outcome unambiguously with no additional field, because the two arrays already partition the requested keys:
+
+| Where a requested key appears | Meaning |
+|-------------------------------|---------------------------------------------------------------|
+| `configuration` | Recognized and readable — the current value is returned. |
+| `unknownKeys` | Not recognized by this station. |
+| Neither array | **Recognized and withheld** — the key is WriteOnly. |
+
+The third row is sound because rule 3 obliges the station to place *every* unrecognized requested key into `unknownKeys`. An absent or empty `unknownKeys` therefore means no requested key was unrecognized, so a requested key missing from both arrays was recognized — and WriteOnly access is the only reason this specification permits for withholding a recognized key. The inference does not depend on `unknownKeys` being present, and the field remains OPTIONAL.
+
+Naming a WriteOnly key **MUST NOT** fail the request. The remaining requested keys **MUST** be returned normally: a server reading twenty-nine keys does not lose the other twenty-eight because one of them was WriteOnly.
+
+> **Why silence rather than an error.** This follows [NETCONF's access-control model](https://www.rfc-editor.org/rfc/rfc8341#section-3.2.4), where nodes the client may not read "are silently omitted… instead of causing an 'access-denied' error", and LwM2M, where a Read of an Object Instance returns every readable Resource "except the Resource(s) which does not support the 'Read' operation". Both keep a batch read useful when part of it is not readable. The alternative — failing the whole request — is the SNMPv1 behaviour that SNMPv2 was revised to remove.
 
 ## 6. Unknown Keys Handling
 

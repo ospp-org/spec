@@ -24,6 +24,7 @@ Verify that the station correctly handles GetConfiguration requests for all keys
 2. MQTT connection is stable; Heartbeat exchange is functioning.
 3. Station has default configuration values loaded.
 4. `HeartbeatIntervalSeconds` is at default (30).
+5. The station supports `OfflinePassPublicKey` — a Security-profile key, and the only WriteOnly key in the registry (`spec/08-configuration.md` §9, row 19). Part D requires a key the station recognizes but must not return.
 
 ## Steps
 
@@ -92,15 +93,30 @@ Verify that the station correctly handles GetConfiguration requests for all keys
 19. Verify `unknownKeys` array contains both unknown key names.
 20. Verify unknown keys are NOT present in the `configuration` array.
 
+### Part D — Get a WriteOnly Key By Name
+
+21. Send GetConfiguration naming a WriteOnly key alongside a readable one:
+    ```json
+    {
+      "keys": ["HeartbeatIntervalSeconds", "OfflinePassPublicKey"]
+    }
+    ```
+22. Verify a normal GetConfiguration response arrives within 30 seconds. Naming a WriteOnly key **MUST NOT** produce an error response.
+23. Verify `configuration` contains `HeartbeatIntervalSeconds` with its current value — the readable key is returned normally, so the batch was not failed by the WriteOnly key.
+24. Verify `configuration` does **NOT** contain `OfflinePassPublicKey`.
+25. Verify `unknownKeys` does **NOT** contain `OfflinePassPublicKey`. The station recognizes the key, so reporting it as unknown would be false. An absent or empty `unknownKeys` satisfies this check.
+26. Verify `OfflinePassPublicKey` appears in **neither** array. That is the defined answer (`spec/profiles/device-management/get-configuration.md` §5.1, `spec/08-configuration.md` §8.1 rule 2), and it is what lets a server tell a withheld key from an unrecognized one.
+
 ## Expected Results
 
 1. Empty keys request returns all configuration keys with correct values and readonly flags, **except WriteOnly keys, which are absent**.
 2. Specific keys request returns only the requested keys.
 3. Unknown keys are returned in the `unknownKeys` array, not in `configuration`.
-4. All values are strings (wire format per `spec/08-configuration.md` §1.2).
-5. Read-only keys (`ProtocolVersion`, `FirmwareVersion`) have `readonly: true`.
-6. Read-write keys have `readonly: false`.
-7. All responses arrive within the 30-second timeout.
+4. A WriteOnly key requested **by name** is returned in neither `configuration` nor `unknownKeys`, the request does not error, and the other requested keys are returned normally.
+5. All values are strings (wire format per `spec/08-configuration.md` §1.2).
+6. Read-only keys (`ProtocolVersion`, `FirmwareVersion`) have `readonly: true`.
+7. Read-write keys have `readonly: false`.
+8. All responses arrive within the 30-second timeout.
 
 ## Failure Criteria
 
@@ -110,4 +126,6 @@ Verify that the station correctly handles GetConfiguration requests for all keys
 4. Values are not strings (e.g., integers or booleans in JSON).
 5. Unknown keys appear in the `configuration` array instead of `unknownKeys`.
 6. **A WriteOnly key — `OfflinePassPublicKey` — appears in the `configuration` array.** This is a credential disclosure, not a formatting defect.
-7. GetConfiguration response exceeds the 30-second timeout.
+7. A WriteOnly key requested by name is listed in `unknownKeys`. The station recognizes the key; reporting it as unknown is false, and it destroys the distinction a server relies on.
+8. A request that names a WriteOnly key returns an error, or drops the other requested keys from the response.
+9. GetConfiguration response exceeds the 30-second timeout.

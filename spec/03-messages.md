@@ -1500,7 +1500,7 @@ Retrieves one or more configuration values from the station.
 
 > **WriteOnly keys are never returned.** A key whose access mode is WriteOnly — see [Chapter 08 — Configuration](08-configuration.md), §1.3 — **MUST NOT** appear in `configuration[]`, whether the request named it explicitly or asked for everything with an empty or absent `keys` array. WriteOnly keys are security credentials, and a configuration dump that carries them is a credential dump. `OfflinePassPublicKey` is currently the only WriteOnly key in the registry.
 >
-> `configuration[].readonly` is a boolean and cannot express a third access mode. It does not need to: a WriteOnly key is absent from the response entirely, so there is no entry for which a third value would ever be required. What a station should report when a request *names* a WriteOnly key is not yet specified — see [`get-configuration.md`](profiles/device-management/get-configuration.md) §5.1.
+> `configuration[].readonly` is a boolean and cannot express a third access mode. It does not need to: a WriteOnly key is absent from the response entirely, so there is no entry for which a third value would ever be required. A request that *names* a WriteOnly key gets it back in **neither** array — not in `configuration`, and not in `unknownKeys`, because the station recognizes it — which is how a server distinguishes a withheld key from an unrecognized one. Such a request MUST NOT error and MUST NOT fail the batch. See [`get-configuration.md`](profiles/device-management/get-configuration.md) §5.1.
 
 #### Example
 

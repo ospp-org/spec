@@ -1,10 +1,10 @@
 # OSPP — Open Self-Service Point Protocol
 
-[![Version: 0.11.2](https://img.shields.io/badge/version-0.11.2-blue)]()
-[![Status: Draft](https://img.shields.io/badge/status-draft-orange)]()
+![Version: 0.11.2](https://img.shields.io/badge/version-0.11.2-blue)
+![Status: Draft](https://img.shields.io/badge/status-draft-orange)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
-[![Messages: 40](https://img.shields.io/badge/messages-40-green)]()
-[![Schemas: 86](https://img.shields.io/badge/schemas-86-green)]()
+![Messages: 40](https://img.shields.io/badge/messages-40-green)
+![Schemas: 86](https://img.shields.io/badge/schemas-86-green)
 
 ---
 
@@ -226,9 +226,10 @@ Each profile defines a subset of protocol actions. Implementations declare which
 | 24 | TriggerCertificateRenewal | Server → Station | REQ/RES | 10s |
 | 25 | DataTransfer | Bidirectional | REQ/RES | 30s |
 | 26 | TriggerMessage | Server → Station | REQ/RES | 10s |
-| 40 | SessionEnded | Station → Server | EVENT | — | *(autonomous session termination — timer expiry or fault)*
+| 40 | SessionEnded | Station → Server | EVENT | — |
 
 > **Note:** MSG-027–039 are the 13 BLE messages, listed separately below.
+> SessionEnded [MSG-040] is emitted autonomously by the station on session termination — timer expiry or fault — rather than in reply to a command.
 
 **13 BLE Messages:** StationInfo (FFF1), AvailableServices (FFF2), HELLO, CHALLENGE, OfflineAuthRequest, ServerSignedAuth, AuthResponse, START/StopServiceRequest/RESPONSE, ServiceStatus (FFF5), Receipt (FFF6)
 

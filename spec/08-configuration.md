@@ -181,7 +181,8 @@ The server retrieves configuration values by sending a **GetConfiguration** REQU
 **Behavior:**
 
 1. If the `keys` array is **empty or absent**, the station MUST return all known configuration keys (standard and vendor), excluding WriteOnly keys.
-2. If the `keys` array contains **specific key names**, the station MUST return only the requested keys that it recognizes. Keys not recognized by the station MUST be listed in the `unknownKeys` array.
+2. If the `keys` array contains **specific key names**, the station MUST return only the requested keys that it recognizes, excluding WriteOnly keys. Keys not recognized by the station MUST be listed in the `unknownKeys` array.
+   - A requested **WriteOnly** key MUST NOT appear in `configuration`, and MUST NOT be listed in `unknownKeys` — the station recognizes it, so reporting it as unknown would be false. It appears in **neither array**, which is precisely how a server tells a withheld key from an unrecognized one. Naming a WriteOnly key MUST NOT cause an error and MUST NOT fail the request: every other requested key is returned normally. See [`get-configuration.md`](profiles/device-management/get-configuration.md), §5.1.
 3. Each returned entry MUST include the `key` name, current `value` (as a string), and a `readonly` flag indicating whether the key can be changed.
 
 **Wire format:** See the [GetConfiguration schemas](../schemas/mqtt/get-configuration-request.schema.json) and [response schema](../schemas/mqtt/get-configuration-response.schema.json).

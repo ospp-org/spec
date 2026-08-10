@@ -21,10 +21,32 @@ jobs:
       - name: Install markdownlint-cli
         run: npm install -g markdownlint-cli@0.43.0
 
+      # The `--` is load-bearing. `--disable <rules...>` is variadic, so without a
+      # terminator it swallowed every filename that followed it: markdownlint was
+      # invoked with five rules and ZERO files, printed its usage text, and exited 0.
+      # This job was green from the day it was written while linting nothing at all.
+      # What it was hiding: CONTRIBUTING.md's PCR template opened a ```markdown fence
+      # containing a ```json one, and the inner block's bare ``` closed the outer
+      # fence early — so ~100 lines, the whole Workflow and Coding Style sections,
+      # rendered as code blocks. MD051 reported it as four dead ToC anchors.
+      #
+      # The disabled list is deliberately explicit rather than a config file, so the
+      # cost of each suppression is visible in the diff that adds it. The first five
+      # predate this change. The eight after them are pure formatting and were the
+      # 197 findings outstanding when the invocation was repaired; `markdownlint --fix`
+      # clears 126 of those mechanically, and the residue is 54 MD040 (a fence with no
+      # language tag), 14 MD028 and 3 MD055. MD040 is worth doing on its own merits:
+      # untagged fences are also what blocks a schema-validating gate over the fenced
+      # payloads in these documents.
+      #
+      # NOT disabled, and now genuinely enforced: MD051 (dead link fragments),
+      # MD042 (empty links), MD056 (malformed tables), and every other default rule.
       - name: Lint specification
         run: |
           markdownlint \
             --disable MD013 MD033 MD041 MD024 MD036 \
+                      MD032 MD040 MD034 MD028 MD022 MD007 MD031 MD055 \
+            -- \
             spec/*.md \
             guides/*.md \
             CONTRIBUTING.md \

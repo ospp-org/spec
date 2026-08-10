@@ -87,7 +87,7 @@ You do NOT need a PCR for:
 
 When opening a PCR Issue, use this template:
 
-```markdown
+````markdown
 ## Protocol Change Request: [Short Title]
 
 ### Category
@@ -150,7 +150,7 @@ When opening a PCR Issue, use this template:
 
 ### References
 <!-- Links to related issues, external specs, or discussions -->
-```
+````
 
 ---
 
