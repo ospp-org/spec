@@ -525,7 +525,7 @@ The station sends periodic BLE status updates and MQTT meter values simultaneous
 }
 ```
 
-Meanwhile, the station also sends periodic MQTT MeterValues [MSG-010] to the server every 60 seconds (MeterValuesInterval configured to 60s for this example; default is 15s):
+Meanwhile, the station also sends periodic MQTT MeterValues [MSG-010] to the server every 60 seconds (MeterValuesInterval configured to 60s for this example, which is also the default):
 
 **MQTT Topic:** `ospp/v1/stations/stn_a1b2c3d4/to-server` (at 60s)
 

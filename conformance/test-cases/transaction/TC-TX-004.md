@@ -15,7 +15,7 @@ Verify that the station correctly handles CancelReservation for valid reservatio
 - `spec/03-messages.md` §3.2 — CancelReservation payload (timeout 5s)
 - `spec/03-messages.md` §3.1 — ReserveBay payload (timeout 5s)
 - `spec/07-errors.md` §3.3 — Error codes 3012, 3013, 3014
-- `spec/08-configuration.md` §3 — `ReservationDefaultTTL` (default 180s)
+- `spec/08-configuration.md` §3 — `ReservationDefaultTTL` (default 300s, range 60–1800)
 - `schemas/mqtt/cancel-reservation-response.schema.json`
 
 ## Preconditions

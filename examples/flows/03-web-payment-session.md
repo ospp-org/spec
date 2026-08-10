@@ -43,7 +43,7 @@ A man pulls into bay 2 of "Station Alpha -- Example City". He does not have the 
 14:20:46.400  Station activates service hardware, sends StartService RESPONSE Accepted
 14:20:46.600  Station sends StatusNotification: Reserved -> Occupied
 14:20:46.800  Server updates session -> active, returns status to browser
-14:21:46.000  Station sends MeterValues (1 min mark, MeterValuesInterval configured to 60s for this example; default is 15s)
+14:21:46.000  Station sends MeterValues (1 min mark, MeterValuesInterval configured to 60s for this example, which is also the default)
 14:22:46.000  Station sends MeterValues (2 min mark)
 14:23:46.000  Station sends MeterValues (3 min mark)
 14:24:46.000  Station sends MeterValues (4 min mark)
