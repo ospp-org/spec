@@ -19,7 +19,7 @@ Verify that the station correctly handles SetMaintenanceMode for enabling and di
 
 ## Preconditions
 
-1. Station `stn_a1b2c3d4` is booted and has received BootNotification `Accepted`.
+1. Station `stn_a1b2c3d4` is booted and has received BootNotification `Accepted`, **declaring `capabilities.deviceManagementSupported: true`** in that BootNotification. The capability is OPTIONAL in the schema and the profile's rules apply only to a station that declares it (`spec/profiles/device-management/README.md` §3); where it is not stated, a server MAY withhold these commands altogether (`spec/profiles/core/boot-notification.md` §5.1 rule 3), and the refusal that follows is conforming behaviour rather than a test failure.
 2. Bay `bay_c1d2e3f4a5b6` is in `Available` state.
 3. MQTT connection is stable; Heartbeat exchange is functioning.
 4. Test harness can send SetMaintenanceMode, StartService, and StopService commands.

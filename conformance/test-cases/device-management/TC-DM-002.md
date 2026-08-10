@@ -18,7 +18,7 @@ Verify the complete firmware update flow: UpdateFirmware command is accepted, th
 
 ## Preconditions
 
-1. Station is booted and has received BootNotification Accepted.
+1. Station is booted and has received BootNotification Accepted, **declaring `capabilities.deviceManagementSupported: true`** in that BootNotification. The capability is OPTIONAL in the schema and the profile's rules apply only to a station that declares it (`spec/profiles/device-management/README.md` §3); where it is not stated, a server MAY withhold these commands altogether (`spec/profiles/core/boot-notification.md` §5.1 rule 3), and the refusal that follows is conforming behaviour rather than a test failure.
 2. Current firmware version is known (e.g., `"1.0.0"` from BootNotification or GetConfiguration).
 3. No active sessions on any bay (firmware update should not be initiated during active sessions).
 4. Test harness hosts a firmware binary at an HTTPS endpoint:

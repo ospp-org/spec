@@ -7,8 +7,8 @@
     {
       "key": "RevocationEpoch",
       "status": "Rejected",
-      "errorCode": 5108,
-      "errorText": "CONFIGURATION_KEY_READONLY"
+      "errorCode": 5109,
+      "errorText": "INVALID_CONFIGURATION_VALUE"
     }
   ]
 }
