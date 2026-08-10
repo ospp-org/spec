@@ -261,6 +261,58 @@ a defect.
 - **conformance:** `TC-SEC-007` carried a spliced sentence from the v0.11.0 partial edit —
   "validates the request's `bays` against with `4020`".
 
+### Firmware signature verification — landed between the releases, recorded late
+
+> **Recorded 2026-08-10, and not backdated.** This is not Arc 6 work. It was written on its
+> own branch on **2026-08-06 06:48** — eight hours after `v0.11.0` was tagged (2026-08-05
+> 22:33) and a day before `v0.11.1` (2026-08-07 07:56) — and reached `main` inside the Arc 6
+> merge only because the Arc 6 branch was cut from this one. `v0.11.1` is the release that
+> shipped it, so it belongs here. It is deliberately **not** filed under `[0.11.0]`: that
+> entry was already dated and tagged before this was written, and moving it there would
+> credit the work to a release that could not have carried it. No version moves for this
+> entry — no schema and no wire value changes.
+
+- **spec:** `update-firmware.md` §5 gains **rule 4** — the station **MUST** verify the
+  `signature` before installation, and **MUST NOT** install a binary whose signature it has
+  not verified. Verification is ECDSA P-256 against the pre-provisioned Firmware Signing
+  Certificate, or its CA (`06-security.md` §4.6). On failure — or when the station holds no
+  such certificate to verify against — it **MUST NOT** write the inactive partition, **MUST**
+  send a FirmwareStatusNotification with `Failed` status, and **MUST** report
+  `5112 FIRMWARE_SIGNATURE_INVALID` via a `FirmwareIntegrityFailure` SecurityEvent [MSG-012].
+  The former rules 4–7 renumber to 5–8.
+
+  **What was missing is narrower than it sounds, and worse.** `signature` was already
+  **required** — in the §4 field table and in `update-firmware-request.schema.json`'s
+  `required` array — `5112` had been in the registry since `v0.1.0-draft.1`, and
+  `07-errors.md` already listed it among the codes UpdateFirmware [MSG-016] may answer with.
+  Every piece was in place except the sentence that produces it: §5's processing rules
+  covered the checksum and stopped there. A conforming station could receive a signature on
+  every update, never check it, and never emit the code the registry says it emits.
+
+- **spec:** `05-state-machines.md` — the firmware FSM gains the transition needed to express
+  that. **Signature invalid** is a `Verifying → Failed` row distinct from checksum mismatch;
+  `Downloaded → Verifying` and `Verifying → Verified` now name both checks; and `Verified`
+  means the checksum matched **and** the signature verified. A binary that has only matched
+  its checksum is explicitly not in that state — a checksum proves integrity, never
+  authenticity, because whoever controls `firmwareUrl` controls the bytes it is computed over
+  and ships the expected value in the same message.
+
+- **spec:** `firmware-status.md` — `Downloaded` now means the checksum **and** the signature
+  verified. A station **MUST NOT** report `Downloaded` on the strength of the checksum alone.
+
+- **`5112` travels on the SecurityEvent, not on the FirmwareStatusNotification.** That
+  message carries no `errorCode` field and is `additionalProperties: false`, so there is no
+  conforming way to put the code on it, and its `errorText` stays free prose as §6 requires.
+  The SecurityEvent is the only channel on which the code can be reported.
+
+- **docs:** [ADR-002](adr/ADR-002-ble-handshake-security-architecture.md) gains an editorial
+  note. Its Noise-rejection paragraph named three implementations the handshake had to be
+  byte-identical across — the app (TS), the PHP station simulator, and the firmware (MCU).
+  The PHP simulator has been retired, so the sentence named a normative third implementation
+  that no longer exists; it is corrected to the two that do. The PHP entry stays in the
+  library survey above it, because that records what was evaluated **at the time of the
+  decision** and the rejection rested partly on it. The decision itself is unchanged.
+
 ### What an SDK release must carry
 
 > **Superseded 2026-08-07 — measured, not assumed.** Both SDKs are now at **0.13.0** and
