@@ -283,16 +283,24 @@ There is no "sign the important ones" mode. There used to be, and it exempted St
 
 Both directions fail closed. If you hold no session key you **refuse to send** — you do not publish unsigned, and you do not silently drop without a record. If a message arrives with no `mac`, or you hold no key to check one with, you **reject** it. The recovery for both is the same: boot, which is what issues a key.
 
+Steps 2–4 below are the **OSPP Canonical Form**, defined once in
+[`06-security.md` §4.8](../spec/06-security.md) and used by every OSPP signature and MAC — the
+MQTT HMAC, the receipt ECDSA (§2.11), and the OfflinePass signature. The summary here is for
+orientation; §4.8 governs, and the removal of `mac` before canonicalizing is
+[§5.3](../spec/06-security.md) step 1.
+
 When you send a message, include a `mac` field:
 
 ```
-1. Build your message JSON (without the `mac` field)
-2. Sort all keys alphabetically, recursively (nested objects too)
-3. Serialize as compact JSON (no whitespace)
+1. Build your message JSON (without the `mac` field)  // 06-security.md §5.3 step 1
+2. Sort all keys alphabetically, recursively (nested objects too)   // §4.8 step 1
+3. Serialize as compact JSON (no whitespace; separators are `,` and `:` only)  // §4.8 step 2
 4. Encode as UTF-8 bytes
 5. mac = Base64(HMAC-SHA256(sessionKey, utf8_bytes))
 6. Add the `mac` field to your message
 ```
+
+The input is the **whole envelope** with `mac` removed — not the `payload` member.
 
 **On receiving a message:**
 
