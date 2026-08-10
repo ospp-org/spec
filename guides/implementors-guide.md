@@ -481,12 +481,13 @@ Each offline transaction has a monotonically increasing `txCounter`:
 ```
 txCounter: monotonically increasing integer (1, 2, 3, ...)
 
-Each transaction increments txCounter by exactly 1.
+It starts at 1 for the first offline transaction after a station BOOT or sync
+— not once per lifetime — and increments by exactly 1 thereafter.
 The counter is signed into the receipt and recorded by the server as
 forensic evidence. It does NOT gate settlement.
 ```
 
-This is append-only. A discontinuity (e.g. 3 -> 5) raises an operator alert on the **station** and the transaction settles normally — it is not scored against the user, and it never withholds money. Be clear about what it does *not* buy you: a counter you generate and sign yourself cannot prove to anyone else that you reported everything. Replay protection comes from `(offlinePassId, passCounter)` uniqueness, on a counter the **app** generates ([`06-security.md` §6.3.1](../spec/06-security.md)).
+The counter is monotonic *within a boot epoch*, and restarting it at 1 after a reboot is conforming, not a fault ([`reconciliation.md` §4.1](../spec/profiles/offline/reconciliation.md) step 1). Do not persist it across reboots in the belief that it must never repeat: §4.2 of the same document states that a lower or repeated `txCounter` **MUST NOT** be answered `Duplicate`, precisely because a rebooted station legitimately restarts at 1. A discontinuity (e.g. 3 -> 5) raises an operator alert on the **station** and the transaction settles normally — it is not scored against the user, and it never withholds money. Be clear about what it does *not* buy you: a counter you generate and sign yourself cannot prove to anyone else that you reported everything. Replay protection comes from `(offlinePassId, passCounter)` uniqueness, on a counter the **app** generates ([`06-security.md` §6.3.1](../spec/06-security.md)).
 
 ### 2.13 Configuration Keys
 
@@ -1070,7 +1071,7 @@ Test the error scenarios in `/examples/error-scenarios/`:
 
 **Not persisting offline state.** If the station loses power during an offline session, it needs crash recovery. Persist the current session state, offline pass usage counters, and transaction log to flash/NVS. On power-up, check for unfinished sessions.
 
-**Not initializing txCounter correctly.** The first offline transaction after provisioning must use `txCounter: 1`. Starting at 0 or skipping values will not cost you a settlement — the server records the counter and does not gate on it — but it produces operator alerts on your station and makes your own offline log harder to audit.
+**Not initializing txCounter correctly.** The first offline transaction after each **boot or sync** must use `txCounter: 1` — not the first after provisioning ([`reconciliation.md` §4.1](../spec/profiles/offline/reconciliation.md) step 1). Starting at 0 or skipping values will not cost you a settlement — the server records the counter and does not gate on it — but it produces operator alerts on your station and makes your own offline log harder to audit.
 
 **Not capping duration by `maxCreditsPerTx`.** If the OfflinePass allows 30 credits max per transaction and the user requests a 5-minute service at 10 credits/min (= 50 credits), you must cap the session to 3 minutes (30 credits). Don't reject — cap.
 
