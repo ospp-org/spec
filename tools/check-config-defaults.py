@@ -16,14 +16,24 @@ This is the one part of the "prose claims something nothing establishes" class t
 cheaply machine-checkable, because both sides are structured: the registry is a table,
 and a restatement is a key name with a number near it.
 
+Two shapes, because a restatement takes two
+-------------------------------------------
+Prose puts the word "default" beside the key. A table puts it in a column header, possibly
+forty lines above the row -- the implementors guide restates eight keys that way, and the
+first version of this check could not see any of them. Both forms are handled.
+
 Precision
 ---------
-Measured on the corpus at the time of writing: 25 candidate sites, 3 flagged, 3 real.
+Measured on the corpus at the time of writing: 37 candidate sites, 3 flagged, 3 real
+(25 sites before the table form was added).
 
-The proximity window is what makes that true. Matching any key on a line to any number on
-the same line cross-pairs the rows that legitimately name two keys at once -- the
+The proximity window is what makes the prose form work. Matching any key on a line to any
+number on the same line cross-pairs the rows that legitimately name two keys at once -- the
 `MeterValuesInterval` / `MeterValuesSampleInterval` pairs -- and drops precision to about
 one in three. The default must follow the key within PROXIMITY characters.
+
+Both forms are RED-tested: injecting one drifted table cell and one drifted prose default
+produces exactly two findings and exit 1.
 
 Exit status
 -----------
@@ -59,6 +69,25 @@ def load_registry(root):
     return reg
 
 
+def table_default_column(lines, idx):
+    """If line `idx` sits under a table header carrying a Default column, return its index.
+
+    Prose restatements say the word "default" next to the key. Tables do not -- they put
+    it in a column header, sometimes forty lines above the row. The proximity rule cannot
+    see that, and the implementors guide restates eight keys in exactly that shape.
+    """
+    for back in range(idx, max(-1, idx - 60), -1):
+        cells = [c.strip().lower() for c in lines[back].split('|')]
+        if not any(re.fullmatch(r':?-{3,}:?', c) for c in cells if c):
+            continue
+        header = [c.strip().lower() for c in lines[back - 1].split('|')]
+        for i, c in enumerate(header):
+            if c == 'default':
+                return i
+        return None
+    return None
+
+
 def main():
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     os.chdir(root)
@@ -69,10 +98,13 @@ def main():
     findings, checked = [], 0
 
     for path in files:
-        for lineno, line in enumerate(open(path, encoding='utf-8'), 1):
+        lines = open(path, encoding='utf-8').read().split('\n')
+        for lineno, line in enumerate(lines, 1):
             for key, want in reg.items():
                 if key not in line:
                     continue
+
+                # form 1: prose -- "<Key> ... default N", scoped to PROXIMITY characters
                 near = re.compile(
                     r'`?' + re.escape(key) + r'`?.{0,%d}?\bdefault\b[^0-9\n]{0,12}(\d+)' % PROXIMITY,
                     re.IGNORECASE)
@@ -80,6 +112,22 @@ def main():
                     checked += 1
                     if m.group(1) != want:
                         findings.append((path, lineno, key, want, m.group(1), line.strip()))
+
+                # form 2: a table row under a header carrying a Default column
+                if not re.match(r'\s*\|\s*`?' + re.escape(key) + r'`?\s*\|', line):
+                    continue
+                col = table_default_column(lines, lineno - 1)
+                if col is None:
+                    continue
+                cells = line.split('|')
+                if col >= len(cells):
+                    continue
+                got = cells[col].strip().strip('`').strip('"')
+                if not got:
+                    continue
+                checked += 1
+                if got != want.strip('"'):
+                    findings.append((path, lineno, key, want, got, line.strip()))
 
     print(f'registry keys with a default : {len(reg)}')
     print(f'restated-default sites       : {checked}')

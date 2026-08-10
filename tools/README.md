@@ -38,13 +38,17 @@ machine-comparable to anything. These three are the exceptions, and each is narr
 
 | Check | Why it works | Measured precision |
 |---|---|---|
-| `check-config-defaults` | Both sides are structured — Chapter 08 is a `(key, default, range)` table, a restatement is a key name with a number near it | 25 sites, 3 flagged, **3 real** |
+| `check-config-defaults` | Both sides are structured — Chapter 08 is a `(key, default, range)` table, a restatement is a key name with a number near it | 37 sites, 3 flagged, **3 real** |
 | `check-schema-conditionals` | Both sides are in one JSON file — the `description` and the `if`/`then` that should back it | 33 claims, 5 flagged, **5 real** |
 | `check-normative-bold` | Pure typography — a capitalised keyword outside a `**…**` span | exact, no inference |
 
 Each carries a `BASELINE` or exits non-zero on any finding. **They are ratchets, not allowlists:**
 every finding is printed on every run, and the count may fall but must not rise. When it falls,
 lower the constant in the script so the improvement cannot silently regress.
+
+All three are RED-tested: injecting one drifted default, one unenforced conditional and one
+unbolded keyword makes each exit 1, and removing the injection returns it to 0. A gate nobody has
+watched fail is a gate nobody knows works.
 
 What defeated the more ambitious versions is recorded in each script's docstring. In short:
 `check-schema-conditionals` must not flag cross-artefact claims (JSON Schema cannot compare against
