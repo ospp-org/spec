@@ -35,6 +35,22 @@ one in three. The default must follow the key within PROXIMITY characters.
 Both forms are RED-tested: injecting one drifted table cell and one drifted prose default
 produces exactly two findings and exit 1.
 
+A third form was proposed, built, measured and rejected
+-------------------------------------------------------
+"A key name with a bare number near it, without requiring the word default" -- to catch
+`` `MeterValuesInterval` (15s) ``, which is how `06-security.md` §5 carried the corpus's
+last wrong interval and which neither form above can see.
+
+Measured: 21 candidate sites, 12 flagged, **0 real**. Nine were conformance cases setting a
+deliberately non-default value ("`MeterValuesInterval` is set to 10 seconds (for faster test
+execution)") -- correct as written, and a gate that fails them is a gate that gets disabled.
+The rest were a different quantity in the same sentence ("below 10 seconds") or a legitimately
+different value ("the web-payment flow uses 180s").
+
+The word "default", or a Default column header, is the entire signal. A bare number beside a
+key name is as often a configured value, a multiple, or an unrelated quantity. Do not re-add
+this form; the `06-security.md` case was fixed by hand instead.
+
 Exit status
 -----------
 0 if every restated default agrees with the registry, 1 otherwise.

@@ -105,13 +105,20 @@ Three message types:
 
 You don't have to implement everything. OSPP uses a **profile** system:
 
-| Level | Profiles | What You Get |
-|-------|----------|-------------|
-| **Core** | Core + Transaction + Security | Online sessions, payments, basic security |
-| **Full** | Core + Device Management | + remote config, firmware updates, diagnostics |
-| **Offline** | Full + Offline/BLE | + BLE offline sessions, OfflinePass, receipts |
+| Level | Required Profiles | What You Get |
+|-------|-------------------|-------------|
+| **Development** | Core | Testing and prototyping only. Security optional. **NOT for production.** |
+| **Standard** | Core + Transaction + Security | Online sessions, metering, TLS + mTLS + HMAC |
+| **Extended** | Standard + Device Management + Offline/BLE | + remote config, firmware OTA, diagnostics, BLE, OfflinePass (Online + Partial A + Full Offline) |
+| **Complete** | Extended + Partial B scenario | + phone offline / station online, relayed to the server over MQTT |
 
-Most implementations should target **Full**. Add **Offline** if your stations operate in areas with unreliable internet.
+**Standard is the normative floor for production** — a station MUST implement at least Standard
+([`profiles/README.md` §2](../spec/profiles/README.md#2-compliance-levels)). Most production
+implementations should target **Extended**; add **Complete** if your users need Partial B.
+
+These four names are the ones a conformance report records
+([`conformance/README.md`](../conformance/README.md)) and the ones that determine which `TC-*`
+suites you must pass. Levels are additive.
 
 ### Before You Start
 
@@ -159,8 +166,11 @@ Before a station can connect, it needs to be provisioned:
 3. Station generates:
    - **TLS key pair** (ECDSA P-256) + Certificate Signing Request (CSR)
    - **ECDSA P-256 key pair** for receipt signing (private key NEVER leaves the device)
-4. Station calls `POST /api/v1/stations/provision` with the token, serial number, CSR, and receipt public key
-5. Server returns: `stationId`, `bays[]` (each member pairing a `bayId` with the `bayNumber` the station declared), signed TLS certificate, CA certificate, ECDSA P-256 server verify key, MQTT config
+   - **ECDSA P-256 key pair for the static BLE ECDH identity** — Offline/BLE profile only. Also generated on-device; its public half goes up as `stationPubKey` ([`06-security.md` §6.5.2](../spec/06-security.md))
+4. Station calls `POST /api/v1/stations/provision` with the token, serial number, the **declared `bays`** (the `bayNumber` list — it is `required`), CSR, receipt public key, and — for Offline/BLE — `stationPubKey`
+5. Server returns: `stationId`, `bays[]` (each member pairing a `bayId` with the `bayNumber` the station declared), signed TLS certificate, CA certificate, ECDSA P-256 server verify key, MQTT config — and, for Offline/BLE stations, the server-signed **`stationIdentity`** certificate you present in every BLE Challenge
+
+   Without `stationIdentity` you cannot answer a single BLE Challenge: `challenge.schema.json` has `stationCert` in `required`, and it is the app's only trust anchor for the station ([`06-security.md` §6.5.2](../spec/06-security.md)). The failure shows up at first BLE integration, after provisioning, and re-provisioning is not something the station may initiate on its own.
 6. Station stores everything in NVS, reboots, proceeds to boot flow
 
 **Key rule:** The TLS private key and ECDSA receipt-signing private key are generated ON the station and never transmitted. The server only receives the public keys (CSR and receipt verify key).
@@ -235,7 +245,7 @@ The `v1` is a namespace identifier, not the protocol version. It stays `v1` for 
 
 **Retain flag:** Always `false`. No retained messages.
 
-**Rate limiting:** Broker SHOULD enforce per-client rate limits: max **100 PUBLISH per minute** per station. This default assumes ≤4 bays with standard `MeterValuesInterval` (15s). Operators deploying stations with more bays or `MeterValuesInterval` below 10s SHOULD increase this limit proportionally (recommended formula: `bays × 60/MeterValuesInterval + 20` overhead). Station implements exponential backoff on repeated failures (initial 1s, max 60s, ±20% jitter).
+**Rate limiting:** Broker SHOULD enforce per-client rate limits: max **100 PUBLISH per minute** per station. This default assumes ≤4 bays at the registry default `MeterValuesInterval` of 60s. Operators deploying stations with more bays or `MeterValuesInterval` below 10s SHOULD increase this limit proportionally (recommended formula: `bays × 60/MeterValuesInterval + 20` overhead). Station implements exponential backoff with jitter per [`02-transport.md` §4.5](../spec/02-transport.md#45-exponential-backoff-with-jitter): 1s initial, capped at `ReconnectBackoffMax` (default 30s, range 30–3600), jitter factor 0.3 applied one-sided.
 
 **Message deduplication:** You MUST maintain a set of recently seen `messageId` values (at least 1000 IDs or 1 hour). If you see a duplicate REQUEST, re-send your cached RESPONSE. Don't re-process it.
 
@@ -347,7 +357,7 @@ When you receive a **StartService REQUEST**:
 3. Start the session timer for `durationSeconds`
 4. Send StartService RESPONSE with `status: "Accepted"`
 5. Send StatusNotification EVENT (`status: "Occupied"`)
-6. Send periodic MeterValues EVENTs (default every 15s)
+6. Send periodic MeterValues EVENTs (every `MeterValuesInterval`, default 60s)
 7. When StopService arrives (server-initiated stop):
    - Deactivate hardware
    - Send StopService RESPONSE with `actualDurationSeconds`, `creditsCharged`, `meterValues`
@@ -368,7 +378,7 @@ If MQTT drops during an active session:
 
 1. **Do NOT stop the hardware.** The service continues.
 2. Switch to BLE-available mode (accept offline sessions)
-3. Buffer outbound messages (StatusNotification, MeterValues) — minimum 100 messages or 64 KB (absolute hardware minimum)
+3. Buffer the **MUST-buffer** categories — TransactionEvent (min 1000, **never** discard), SessionEnded (one per session that ended while you could not send, **never** discard — it is the sole billing source for a session that ended with no StopService to answer), SecurityEvent (200, FIFO). StatusNotification and MeterValues are **regenerable and MAY be discarded**; do not spend the buffer on them. Minimum dedicated storage is **512 KB**, not 64 KB. At 90% of the TransactionEvent buffer, reject new StartService with `5111 BUFFER_FULL` ([`01-architecture.md` §6.5](../spec/01-architecture.md))
 4. Attempt reconnection with exponential backoff: 1s → 2s → 4s → 8s → 16s → 30s max, with 30% jitter
 5. On reconnect: Full boot sequence (BootNotification, StatusNotification per bay)
 6. Flush buffered messages after boot completes
@@ -400,15 +410,23 @@ Station notifies FFF4: Challenge {stationNonce, stationCert, stationEphemeralPub
 App writes FFF3: OfflineAuthRequest {offlinePass, counter, sessionProof}   [AEAD-encrypted]
   → Station validates OfflinePass (10 checks)
 Station notifies FFF4: AuthResponse {result: "Accepted"}   [AEAD-encrypted]
-App writes FFF3: StartServiceRequest {bayId, serviceId, duration}
-Station notifies FFF4: StartServiceResponse {sessionId, offlineTxId}
-  → Station notifies FFF5 periodically: ServiceStatus {elapsed, remaining, meters}
-App writes FFF3: StopServiceRequest (or timer expires)
-Station notifies FFF4: StopServiceResponse {duration, credits}
+App writes FFF3: StartServiceRequest {bayId, serviceId, programNumber,
+                                      requestedDurationSeconds}          [AEAD-encrypted]
+Station notifies FFF4: StartServiceResponse {sessionId, offlineTxId}     [AEAD-encrypted]
+  → Station notifies FFF5 periodically: ServiceStatus {elapsed, remaining, meters}  [AEAD-encrypted]
+App writes FFF3: StopServiceRequest (or timer expires)                   [AEAD-encrypted]
+Station notifies FFF4: StopServiceResponse {duration, credits}           [AEAD-encrypted]
   → Station signs receipt (ECDSA P-256), increments txCounter
-Station notifies FFF5: ServiceStatus {status: "ReceiptReady"}
-App reads FFF6: Receipt {receipt, txCounter}
+Station notifies FFF5: ServiceStatus {status: "ReceiptReady"}            [AEAD-encrypted]
+App reads FFF6: Receipt {receipt, txCounter}                             [AEAD-encrypted]
 ```
+
+**Everything after the Challenge travels inside the AEAD channel** — `OfflineAuthRequest`,
+`ServerSignedAuth`, `AuthResponse`, Start/Stop request and response, the FFF5 notifications and the
+FFF6 receipt value. No post-Challenge message may be plaintext
+([`06-security.md` §6.5.3](../spec/06-security.md)). Leaving Start/Stop in the clear lets a
+co-located central forge a `StopServiceRequest` against another user's session, and leaves the FFF6
+receipt — which carries `userId`, `deviceId` and amounts — readable by anyone in range.
 
 ### 2.9 sessionProof Computation
 
@@ -425,7 +443,7 @@ sessionProof = Base64( HMAC-SHA256( SessionKey,
 
 If the proof doesn't match, reject immediately — it means the sender didn't participate in the BLE handshake. The canonical formula lives in `spec/profiles/offline/ble-handshake.md` §4.1 (`spec/06-security.md` §6.5.1 points to it). The prior 4-input hex form (binding `bayId`/`serviceId`) is **withdrawn** in v0.6.0 — bay/service selection moved to the authenticated `StartService` step inside the AEAD channel.
 
-### 2.10 OfflinePass Validation (10 Checks)
+### 2.10 OfflinePass Validation (10 checks, 9 of which a station can perform)
 
 When you receive an OfflineAuthRequest, validate the OfflinePass in this order:
 
@@ -435,7 +453,7 @@ When you receive an OfflineAuthRequest, validate the OfflinePass in this order:
 | 2 | Expiry | `2003` | `expiresAt` is in the future |
 | 3 | Epoch | `2004` | `revocationEpoch` >= your station's configured `RevocationEpoch` |
 | 4 | Device | `2002` | `deviceId` matches the `deviceId` from the Hello message |
-| 5 | Station | `2006` | If pass has a station allowlist, your station is in it (OFFLINE_STATION_MISMATCH) |
+| 5 | Station | `2006` | **Not evaluable offline — skip it.** The allowlist is `allowed_station_ids` on the *server's* pass record, not a wire field; `offline-pass.schema.json` has no member for it and is `additionalProperties: false` at both levels ([`06-security.md` §6.1.1](../spec/06-security.md), KNOWN-ISSUES B-2). The server enforces it at reconcile (`reconciliation.md` §6.1 check #8) |
 | 6 | Uses | `4002` | This pass hasn't exceeded `maxUses` on your station |
 | 7 | Total credits | `4002` | Cumulative credits from this pass haven't exceeded `maxTotalCredits` |
 | 8 | Per-TX credits | `4004` | Requested service cost <= `maxCreditsPerTx` |
@@ -670,7 +688,14 @@ The `$share/ospp-servers/` prefix enables horizontal scaling — multiple server
 ospp/v1/stations/{station_id}/to-station
 ```
 
-**Connect with server credentials** (not mTLS like stations — the server uses username/password or a server certificate):
+**Connect with server credentials.** OSPP does not specify the server's broker credentials, Client ID
+or Clean Start value — the three lines below are deployment convention, not protocol. Note that
+[`06-security.md` §3.3](../spec/06-security.md) requires broker ACL enforcement **on the mTLS
+client-certificate CN**, for the Server row of that table as well as the Station row, so a
+certificate-authenticated server connection is the path of least friction; a username/password
+server may not be able to obtain the publish grant on `ospp/v1/stations/+/to-station`. `Clean Start:
+true` is safe only because pending-command state lives in the shared store that
+[`02-transport.md` §6.3](../spec/02-transport.md) requires — not because the server holds no state:
 
 ```
 Client ID: csms-{instance-id}
@@ -685,13 +710,14 @@ QoS: 1 (always)
 1. Look up the station by `stationId`
 2. If unknown → respond `Rejected` with error `2001 STATION_NOT_REGISTERED`
 3. Validate the protocol version by **exact match** against the set your server supports — hold it as a configurable list, not a single value, so the set can be widened before a fleet moves. If the station's `protocolVersion` is not a member, respond `Rejected` with error `1007 PROTOCOL_VERSION_MISMATCH` and include both the `supportedVersions` array (e.g., `["0.3.0", "0.4.0"]`) and a `retryInterval` — the station stays in the `Rejected` restricted state and keeps retrying, so do not treat 1007 as a terminal state server-side. Do **not** compare MAJOR components: a shared MAJOR implies nothing, and every OSPP version to date has MAJOR `0`
-4. Generate a 32-byte random session key (for HMAC signing) — on **every** acceptance, unconditionally, whatever the signing mode. Bind its lifetime to the MQTT session and drop it on the LWT or any broker-reported disconnect; do not put a TTL on it.
+4. Generate a 32-byte random session key (for HMAC signing) — on **every `Accepted` and every `Pending`** response, unconditionally, whatever the signing mode. Bind its lifetime to the MQTT session and drop it on the LWT or any broker-reported disconnect; do not put a TTL on it.
 5. Respond `Accepted` with:
    - `serverTime` (ISO 8601 UTC) — station syncs its clock to this
    - `heartbeatIntervalSec` (default 30s)
    - `sessionKey` (Base64-encoded) — station uses this for HMAC-SHA256
    - Optional `configuration` overrides (key-value pairs)
-6. Mark station as online in your database
+6. Or respond `Pending` — for a station awaiting operator approval — with `serverTime`, `heartbeatIntervalSec`, **`retryInterval`**, and **`sessionKey`**. Both are schema-enforced: `boot-notification-response.schema.json` requires `sessionKey` for `Accepted` **and** `Pending`, and `retryInterval` for `Pending`. A `Pending` station answers signed commands — that channel is how the operator repairs whatever is holding the boot — and it cannot answer them without a key. A `Pending` response without one is schema-invalid, and a conforming station must treat it as malformed and refuse to enter `Pending` ([`boot-notification.md` §5.3](../spec/profiles/core/boot-notification.md)), so the approval window never opens and the station boot-loops.
+7. Mark station as online in your database
 
 **On Heartbeat REQUEST:**
 
@@ -841,7 +867,7 @@ Protect your REST API:
 | Sessions (start, stop, status) | 30/min per user |
 | Wallet (top-up, balance) | 20/min per user |
 | Web Payment | 5/30min per IP |
-| Admin API | 60/min per admin |
+| Admin API | 60/min per admin *(not specified by OSPP — deployment policy; the four rows above are [`02-transport.md` §9.5](../spec/02-transport.md))* |
 
 Return `429 Too Many Requests` with a `Retry-After` header.
 
@@ -1081,7 +1107,7 @@ Test the error scenarios in `/examples/error-scenarios/`:
 
 **Not initializing txCounter correctly.** The first offline transaction after each **boot or sync** must use `txCounter: 1` — not the first after provisioning ([`reconciliation.md` §4.1](../spec/profiles/offline/reconciliation.md) step 1). Starting at 0 or skipping values will not cost you a settlement — the server records the counter and does not gate on it — but it produces operator alerts on your station and makes your own offline log harder to audit.
 
-**Not capping duration by `maxCreditsPerTx`.** If the OfflinePass allows 30 credits max per transaction and the user requests a 5-minute service at 10 credits/min (= 50 credits), you must cap the session to 3 minutes (30 credits). Don't reject — cap.
+**Treating `maxCreditsPerTx` as a cap.** Check #8 is a hard reject, not a clamp: if the estimated cost of the requested service exceeds `maxCreditsPerTx`, reject with `4004 OFFLINE_PER_TX_EXCEEDED` ([`offline-pass.md` §4](../spec/profiles/offline/offline-pass.md) check #8, and the same check in `authorize-offline-pass.md` §5 and `06-security.md` §6.1.1). This guide previously said to cap silently, which contradicted its own §2.10 table. The only clamp in the offline path is `requestedDurationSeconds` against the **server-authorized** `durationSeconds` on Partial A / Partial B ([`ble-session.md` §2](../spec/profiles/offline/ble-session.md) rule 2) — Full Offline has no server-authorized value to clamp against.
 
 ### 6.5 Server Pitfalls
 
@@ -1108,14 +1134,14 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** QoS 1 for all messages
 - [ ] **[MUST]** Retain = false for all messages
 - [ ] **[MUST]** Clean Start = false with Session Expiry = 3600s
-- [ ] **[MUST]** Keep Alive = 30s
+- [ ] **[MUST]** Keep Alive = `mqttConfig.keepAliveSeconds` from the provisioning response, defaulting to 30s when absent
 - [ ] **[MUST]** Will Delay Interval = 10s for LWT
 - [ ] **[MUST]** LWT configured at CONNECT time (ConnectionLost message)
 - [ ] **[MUST]** Two topics: `ospp/v1/stations/{id}/to-server` and `ospp/v1/stations/{id}/to-station`
 - [ ] **[MUST]** Message deduplication (1000+ IDs or 1 hour window)
 - [ ] **[MUST]** Exponential backoff with jitter for reconnection (1s → 30s max)
 - [ ] **[MUST]** Continue active sessions during MQTT disconnect (do NOT stop hardware)
-- [ ] **[MUST]** Buffer outbound messages during disconnect (min 100 messages or 64 KB, absolute hardware minimum)
+- [ ] **[MUST]** Buffer TransactionEvent (1000, never discard), SessionEnded (never discard) and SecurityEvent (200, FIFO) during disconnect — **512 KB** dedicated storage minimum; StatusNotification and MeterValues MAY be discarded
 - [ ] **[MUST]** Message expiry intervals set per action category
 - [ ] **[MUST]** 0-RTT TLS resumption NOT used
 - [ ] **[SHOULD]** Max Packet Size = 65,536 bytes
@@ -1190,14 +1216,14 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[OFFLINE]** MTU negotiation to 247 bytes; fragmentation for messages > MTU-3
 - [ ] **[OFFLINE]** HELLO/CHALLENGE handshake with fresh nonces
 - [ ] **[OFFLINE]** Session key derivation: ECDH P-256 + HKDF-SHA256(es ‖ ee ‖ appNonce ‖ stationNonce) — NOT the LTK
-- [ ] **[OFFLINE]** OfflinePass validation: all 10 checks in order
+- [ ] **[OFFLINE]** OfflinePass validation: the 10 checks in order — 9 performable offline; #5 (station allowlist) is server-side only (§2.10)
 - [ ] **[OFFLINE]** ECDSA P-256 signature verification for OfflinePass
 - [ ] **[OFFLINE]** Key rotation support: accept `OfflinePassPublicKey` and cached previous key during grace period (300 s)
 - [ ] **[OFFLINE]** ECDSA P-256 receipt signing
 - [ ] **[OFFLINE]** Monotonic txCounter: increment by exactly 1 per offline transaction (forensic evidence; the server records it and does not gate on it)
-- [ ] **[OFFLINE]** Receipt retention on FFF6 for 5 minutes after session ends
+- [ ] **[OFFLINE]** Receipt retention on FFF6 for **at least 10 minutes** after service completion, or until the next session begins on the same bay ([`ble-session.md` §5](../spec/profiles/offline/ble-session.md) rule 3)
 - [ ] **[OFFLINE]** Persist offline state: pass usage counters, transaction log, session state
-- [ ] **[OFFLINE]** Cap session duration by `maxCreditsPerTx` (don't reject — cap)
+- [ ] **[OFFLINE]** Reject with `4004` when the estimated cost exceeds `maxCreditsPerTx` (check #8 is a reject, not a cap)
 - [ ] **[OFFLINE]** Reconciliation via TransactionEvent after connectivity restored
 
 ### User Agent
@@ -1239,8 +1265,8 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 | JWT access token | 15 min |
 | Web session token | 10 min |
 | OfflinePass validity | max 24 hours |
-| Reservation TTL | 180s default |
-| BLE receipt retention | 5 min |
+| Reservation TTL | 300s default (`ReservationDefaultTTL`, 60–1800); the web-payment flow uses 180s |
+| BLE receipt retention | 10 min minimum (or until next session on the bay) |
 
 ### Error Code Ranges
 
@@ -1271,4 +1297,4 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 
 ---
 
-*This guide covers OSPP 0.7.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*
+*This guide covers OSPP 0.11.2. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*

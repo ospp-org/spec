@@ -54,6 +54,12 @@ What defeated the more ambitious versions is recorded in each script's docstring
 `check-schema-conditionals` must not flag cross-artefact claims (JSON Schema cannot compare against
 an X.509 certificate or another message, so those descriptions are correct), and
 `check-config-defaults` must scope the number to within 40 characters of the key or it cross-pairs
-the rows that name two keys at once. A fourth check — "a claim naming an identifier absent from
-every normative artefact" — was built, measured at 18 flagged sites of which approximately zero
-were the defect, and discarded.
+the rows that name two keys at once.
+
+**Two further checks were built, measured and discarded — both at roughly zero precision.** "A
+claim naming an identifier absent from every normative artefact" flagged 18 sites, of which
+approximately none were the defect (11 were error-code names, flagged only because no schema
+enumerates error codes). "A key name with a bare number near it, no `default` required" flagged 12,
+of which **none** were real — nine were conformance cases deliberately setting a non-default value
+for faster test execution, and a gate that fails those is a gate somebody disables. The word
+"default", or a Default column header, is the whole signal.
