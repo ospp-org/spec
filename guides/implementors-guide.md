@@ -2,7 +2,7 @@
 
 > **For:** Developers building OSPP-compatible stations, servers, or user agents
 > **Level:** Practical guide, not formal spec. Read this first, then the spec chapters.
-> **Spec Version:** 0.12.1
+> **Spec Version:** 0.13.0
 
 ---
 
@@ -1298,4 +1298,4 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 
 ---
 
-*This guide covers OSPP 0.12.1. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*
+*This guide covers OSPP 0.13.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*

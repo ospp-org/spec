@@ -20,7 +20,7 @@ During `0.x` development, breaking changes MAY occur between minor versions. Eac
 
 ## The document version, and the sites that carry it
 
-The number in each chapter header — *OSPP Version: 0.12.1* — is the
+The number in each chapter header — *OSPP Version: 0.13.0* — is the
 **specification-document version**. It identifies **the release**, and it is the
 only thing in a checkout that tells a reader which release they are holding.
 
@@ -47,7 +47,7 @@ holds still across releases cannot identify one.
 > no way to tell `v0.11.1` from `v0.11.0`. An unmoving version is not a
 > conservative choice; it is a document asserting something untrue about itself.
 
-**Every site MUST carry the same value.** As of `0.12.1` there are **29**, across
+**Every site MUST carry the same value.** As of `0.13.0` there are **29**, across
 26 files — the count is stated so that a sweep can be checked rather than
 trusted:
 
@@ -75,7 +75,7 @@ Two things this version is **not**:
 
 - It is **not** the wire `protocolVersion`. See
   [`02-transport.md` §2.2](spec/02-transport.md) — the two evolve separately and
-  need not match, and at `0.12.1` they do not (`0.12.1` against `0.3.0`).
+  need not match, and at `0.13.0` they do not (`0.13.0` against `0.3.0`).
 - It is **not** either SDK's version. See *SDK Versions Are Not This Version*
   below.
 

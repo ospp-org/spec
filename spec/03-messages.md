@@ -1,6 +1,6 @@
 # Chapter 03 — Message Catalog
 
-> **Status:** Draft | **OSPP Version:** 0.12.1
+> **Status:** Draft | **OSPP Version:** 0.13.0
 
 This chapter is the normative reference for **every message** in the OSPP protocol. Each message is documented with its complete payload schema, metadata, and example.
 
