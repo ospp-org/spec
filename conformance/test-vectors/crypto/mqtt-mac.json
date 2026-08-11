@@ -1,0 +1,50 @@
+{
+  "_comment": "MQTT message-MAC vector for OSPP §5.4. It exists to pin ONE thing that the formula did not say in words until 0.13.0: the HMAC key is the DECODED 32 bytes of sessionKey, not the 44-character Base64 text that carries it on the wire. Both reference implementations already decoded; the spec never said so, and a reader following the formula literally would have produced `macIfKeyNotDecoded` and failed against every conforming peer. Re-check: node tools/verify-mqtt-mac.mjs (also runs as Category 19 of tools/verify-protocol.sh).",
+  "specRef": "0.13.0",
+  "source": "spec/06-security.md §5.3 (canonical-form worked example) and §5.4 (MAC computation)",
+
+  "key": {
+    "_comment": "Deterministic, not random — a vector must be reproducible. Derivation is recorded so the value can be regenerated from nothing but this file.",
+    "derivation": "SHA-256(UTF8(\"OSPP MQTT MAC test vector v1\"))",
+    "hex": "923bb05259cfbb30761f152d5a596ba2b191b80f5eadf2b5de45167afcc1ba28",
+    "sessionKeyBase64": "kjuwUlnPuzB2HxUtWllrorGRuA9erfK13kUWevzBuig=",
+    "decodedLengthBytes": 32,
+    "base64TextLengthChars": 44
+  },
+
+  "message": {
+    "protocolVersion": "0.3.0",
+    "messageId": "cmd_550e8400",
+    "action": "StartService",
+    "timestamp": "2026-01-30T12:00:00.000Z",
+    "source": "Server",
+    "messageType": "Request",
+    "payload": {
+      "sessionId": "sess_a1b2c3d4",
+      "bayId": "bay_c1d2e3f4a5b6",
+      "serviceId": "svc_eco",
+      "programNumber": 1,
+      "durationSeconds": 300,
+      "sessionSource": "MobileApp"
+    },
+    "mac": "will-be-removed"
+  },
+
+  "canonicalJson": "{\"action\":\"StartService\",\"messageId\":\"cmd_550e8400\",\"messageType\":\"Request\",\"payload\":{\"bayId\":\"bay_c1d2e3f4a5b6\",\"durationSeconds\":300,\"programNumber\":1,\"serviceId\":\"svc_eco\",\"sessionId\":\"sess_a1b2c3d4\",\"sessionSource\":\"MobileApp\"},\"protocolVersion\":\"0.3.0\",\"source\":\"Server\",\"timestamp\":\"2026-01-30T12:00:00.000Z\"}",
+  "canonicalLengthBytes": 316,
+
+  "mac": "erTp0jMKlFrA76eJfDpMoZ+3tr1ZwGvvvuooJWSREB0=",
+
+  "macIfKeyNotDecoded": {
+    "_comment": "NOT a conforming value. This is what HMAC-SHA256 returns when the 44-character Base64 TEXT is passed as the key — the literal reading of the pre-0.13.0 formula. It is recorded so an implementer who computes it can recognise the mistake immediately instead of hunting a canonicalization bug. A verifier MUST assert this differs from `mac`.",
+    "value": "5jZV+L8il/ysyTW8kMmVGZEXcdoyhnW7GrWlPCLYEJI="
+  },
+
+  "producedBy": {
+    "_comment": "Four independent oracles agreed on `mac` when this vector was written. The openssl line is the non-circular anchor: it depends on no OSPP code.",
+    "ospp-sdk-php": "Ospp\\Protocol\\Crypto\\MacSigner::sign — hash_hmac('sha256', $canonical, base64_decode($sessionKey), true)",
+    "sdk-ts": "@ospp/protocol computeMac — hmac(sha256, base64ToBytes(sessionKey), utf8ToBytes(canonicalize(message)))",
+    "node-crypto": "createHmac('sha256', Buffer.from(sessionKey,'base64')).update(canonical,'utf8').digest('base64')",
+    "openssl": "openssl dgst -sha256 -mac HMAC -macopt hexkey:923bb0... -binary canonical.txt | base64"
+  }
+}

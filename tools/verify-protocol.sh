@@ -1852,6 +1852,51 @@ function category17() {
   logCat(C);
 }
 
+// ==================== CATEGORY 19: MQTT MAC Vector ====================
+// §5.4's formula did not say, until 0.13.0, that the HMAC key is the DECODED sessionKey
+// rather than its 44-character Base64 text. Both reference SDKs decoded; the spec was
+// silent, so the agreement was convention rather than requirement. The sentence now says
+// it and this category keeps it true, by recomputing the vector on every run.
+//
+// The checks live in tools/verify-mqtt-mac.mjs and are spawned rather than required: that
+// file is an ES module (package.json is "type":"module") and this harness runs as CommonJS
+// from stdin. Spawning keeps one implementation instead of two that can drift.
+function category19() {
+  const C = 'c19'; initCat(C, 'MQTT MAC Vector');
+  log('## Category 19: MQTT MAC Vector');
+  log('');
+
+  const script = path.join(ROOT, 'tools', 'verify-mqtt-mac.mjs');
+  if (!fs.existsSync(script)) {
+    SKIP(C, 'tools/verify-mqtt-mac.mjs not present');
+    logCat(C);
+    return;
+  }
+
+  let result;
+  try {
+    const out = require('child_process')
+      .execFileSync('node', [script, '--json'], { encoding: 'utf8', cwd: ROOT });
+    result = JSON.parse(out);
+  } catch (e) {
+    FAIL(C, 'tools/verify-mqtt-mac.mjs', 0,
+      'verifier did not run: ' + (e.message || String(e)).split('\n')[0],
+      'a clean run emitting JSON');
+    logCat(C);
+    return;
+  }
+
+  const failed = new Set();
+  for (const f of result.failures) {
+    failed.add(f.what);
+    FAIL(C, result.vector, 0, f.what + ' — got ' + f.actual, f.expected);
+  }
+  for (let i = 0; i < result.checks - failed.size; i++) PASS(C);
+
+  log('MAC vector checks: ' + result.checks);
+  logCat(C);
+}
+
 // ==================== CATEGORY 18: Document Version Consistency ====================
 // The specification-document version identifies THE RELEASE and equals the release tag
 // (VERSIONING.md, "The document version, and the sites that carry it"). It was practice
@@ -1990,6 +2035,7 @@ category15();
 category16();
 category17();
 category18();
+category19();
 
 // ==================== SUMMARY ====================
 log('');
@@ -2001,7 +2047,7 @@ log('| Category | Checks | PASS | FAIL | SKIP |');
 log('|----------|-------:|-----:|-----:|-----:|');
 
 let totalChecks = 0, totalPass = 0, totalFail = 0, totalSkip = 0;
-const catOrder = ['c1','c2','c3','c4','c5','c6','c7','c8','c9','c10','c11','c12','c13','c14','c15','c16','c17','c18'];
+const catOrder = ['c1','c2','c3','c4','c5','c6','c7','c8','c9','c10','c11','c12','c13','c14','c15','c16','c17','c18','c19'];
 for (const id of catOrder) {
   const c = cats[id];
   if (!c) continue;

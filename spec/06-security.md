@@ -798,8 +798,12 @@ Canonical form (sorted keys, no `mac`, compact):
 ### 5.4 MAC Computation
 
 ```
-mac = Base64(HMAC-SHA256(sessionKey, UTF8(canonical_json)))
+mac = Base64(HMAC-SHA256(Base64Decode(sessionKey), UTF8(canonical_json)))
 ```
+
+The HMAC key is the **decoded 32-byte value**, NOT the 44-character Base64 text that carries it on the wire. `sessionKey` travels as Base64 ([§5.2](#52-session-key-establishment), [`boot-notification.md` §4](profiles/core/boot-notification.md)), and an implementation that passes those 44 characters to HMAC-SHA256 as the key produces a MAC that no conforming peer will verify. The same applies wherever `sessionKey` keys an HMAC, including the BLE `sessionKeyConfirmation` of [`ble-handshake.md` §5](profiles/offline/ble-handshake.md). This mirrors the rule already stated for the BLE nonces in [§6.5](#65-ble-session-key-derivation--hkdf-sha256) and for the receipt in [`reconciliation.md` §5](profiles/offline/reconciliation.md#5-receipt-signature-verification).
+
+`conformance/test-vectors/crypto/mqtt-mac.json` pins this with the worked example of §5.3, and records the value the literal reading produces so the two cannot be confused.
 
 The computed `mac` string is placed in the top-level `mac` field of the message envelope before transmission.
 
@@ -809,7 +813,7 @@ The receiver MUST verify the MAC before processing the payload:
 
 1. Extract and remove the `mac` field from the received message
 2. Compute the canonical form of the remaining message
-3. Compute `expected_mac = HMAC-SHA256(sessionKey, canonical_bytes)`
+3. Compute `expected_mac = HMAC-SHA256(Base64Decode(sessionKey), canonical_bytes)` — the key is the decoded 32 bytes, per §5.4
 4. Compare `expected_mac` with the received `mac` using **timing-safe comparison** (constant-time)
 5. If the comparison fails → reject the message
 

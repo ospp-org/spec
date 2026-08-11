@@ -22,6 +22,15 @@ python3 tools/verify-schemas.py
 
 `verify-protocol.sh` checks spec consistency (messages, schemas, error codes, config keys, state machines, diagrams, test vectors). `verify-schemas.py` validates all test vectors against their JSON schemas.
 
+### Crypto vectors
+
+```bash
+node tools/verify-mqtt-mac.mjs   # also runs as Category 19 of verify-protocol.sh
+node tools/verify-ble-crypto.mjs # BLE key schedule against its RFC anchors
+```
+
+`verify-mqtt-mac.mjs` recomputes `conformance/test-vectors/crypto/mqtt-mac.json`: the §4.8 canonical form, the MAC under the **decoded** session key, and — the check that gives the vector its point — the different MAC produced by keying with the Base64 *text*. A vector nothing recomputes is a claim, so this is spawned by Category 19 rather than duplicated into it.
+
 ## Drift checks
 
 Three checks for the class *"prose asserts a property and nothing establishes it"*. They are run
