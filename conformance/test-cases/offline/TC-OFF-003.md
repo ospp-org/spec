@@ -87,16 +87,20 @@ Verify that when a station reconnects to the server after an offline period, it 
 21. Observe the station reconnects and sends BootNotification again.
 22. Respond Accepted.
 23. Observe the station retransmits TX-C (`offlineTxId: "otx_c3d4e5f6a7b8"`).
-24. Server detects `offlineTxId: "otx_c3d4e5f6a7b8"` has already been processed.
-25. Respond Accepted (idempotent — no re-processing).
-26. Verify the station marks TX-C as reconciled and does NOT retransmit it again.
+24. Server detects `offlineTxId: "otx_c3d4e5f6a7b8"` has already been processed, and compares the arriving signed `receipt.data` against the stored one. They are byte-identical — this is the same transaction arriving twice.
+25. Respond `Duplicate` (idempotent — no re-processing, no second debit), with a `reason`; `reason` is REQUIRED on `Duplicate`.
+26. Verify the station deletes TX-C from its local queue and does NOT retransmit it again.
+27. **Different data under the same identifier.** Re-send `offlineTxId: "otx_c3d4e5f6a7b8"` a third time, this time carrying a **different** signed receipt — a validly signed receipt for the same `offlineTxId` whose `creditsCharged` differs from the stored one.
+28. Verify the server responds `Rejected`, does **not** debit the wallet a second time, and does **not** overwrite the stored record. Two distinct claims under one identifier is a collision or tampering (`reconciliation.md` §3, §9).
+29. Verify the server **retains both records** and raises an operator alert, and emits an `OfflinePassRejected` SecurityEvent whose `details` carry `errorCode` `2017` and `field: "receipt.data"`.
+30. Verify the station **retains** its local copy, marked rejected — `Rejected` never orders a deletion, and that copy is the second of the two records the operator compares.
 
 ### Part D — Billing Reconciliation
 
-27. After all 3 transactions are reconciled, verify the server calculates total offline charges:
+31. After all 3 transactions are reconciled, verify the server calculates total offline charges:
     - TX-A: 9 credits + TX-B: 12 credits + TX-C: 6 credits = **27 credits total**.
-28. Verify the server debits the user's wallet: `50.0 - 27 = 23.0` credits remaining.
-29. Verify the server stores each transaction with its receipt for audit purposes.
+32. Verify the server debits the user's wallet: `50.0 - 27 = 23.0` credits remaining.
+33. Verify the server stores each transaction with its receipt for audit purposes.
 
 ### Part E — txCounter Discontinuity Settles Normally (Positive Test)
 
@@ -104,29 +108,29 @@ Parts A-D leave the server holding recorded counters 5, 6, 7 for this station an
 
 **E.1 — Forward discontinuity (a transaction is genuinely missing)**
 
-30. Inject a TransactionEvent with `offlineTxId: "otx_d4e5f6a7b8c9"`, `txCounter: 9` (skipping 8), `creditsCharged: 8`, and a valid receipt signature.
-31. Verify the server responds `{ "status": "Accepted" }`. The server **MUST NOT** withhold, hold, or re-order the transaction on counter grounds, and **MUST NOT** make any response status conditional on the counter (`reconciliation.md` §4.2 step 2).
-32. Verify the money is recorded: the wallet moves `23.0 - 8 = 15.0`, and the transaction is persisted with `txCounter: 9` and its receipt.
-33. Verify an **operator alert on the station** is raised, recording the discontinuity (expected 8, received 9).
-34. Verify the discontinuity contributes **nothing** to the transaction's fraud score, and triggers no user-facing sanction (no offline-mode disable, no pass revocation, no account block). It is a station-fault signal, not a user-fraud signal (`06-security.md` §7.4).
-35. Verify the response body carries `status` and `reason` only — the schema is closed, and no error code is emitted for this condition (`07-errors.md` `1005` is **not** applicable).
+34. Inject a TransactionEvent with `offlineTxId: "otx_d4e5f6a7b8c9"`, `txCounter: 9` (skipping 8), `creditsCharged: 8`, and a valid receipt signature.
+35. Verify the server responds `{ "status": "Accepted" }`. The server **MUST NOT** withhold, hold, or re-order the transaction on counter grounds, and **MUST NOT** make any response status conditional on the counter (`reconciliation.md` §4.2 step 2).
+36. Verify the money is recorded: the wallet moves `23.0 - 8 = 15.0`, and the transaction is persisted with `txCounter: 9` and its receipt.
+37. Verify an **operator alert on the station** is raised, recording the discontinuity (expected 8, received 9).
+38. Verify the discontinuity contributes **nothing** to the transaction's fraud score, and triggers no user-facing sanction (no offline-mode disable, no pass revocation, no account block). It is a station-fault signal, not a user-fraud signal (`06-security.md` §7.4).
+39. Verify the response body carries `status` and `reason` only — the schema is closed, and no error code is emitted for this condition (`07-errors.md` `1005` is **not** applicable).
 
 **E.2 — Counter reset after a station reboot**
 
 This is the path that destroyed money before 0.9.0: §4.1 step 1 resets the counter on boot, and the retired §4.2 step 5 answered a counter at-or-below the watermark with `Duplicate`, which obliges the station to delete its local copy.
 
-36. Simulate a station reboot. The station restarts its counter at 1 and sends a **new, never-settled** transaction: `offlineTxId: "otx_e5f6a7b8c9d0"`, `txCounter: 1`, `creditsCharged: 5`, valid receipt signature.
-37. Verify the server responds `{ "status": "Accepted" }` — **not** `Duplicate`. The counter is at or below every counter previously recorded for this station, and the transaction is nonetheless new and unsettled. `Duplicate` here would direct the station to delete a payment the server never recorded.
-38. Verify the wallet moves `15.0 - 5 = 10.0` and the transaction is persisted with `txCounter: 1`.
-39. Verify deduplication still works on its own key: re-send the same `offlineTxId` and confirm it is answered idempotently without a second debit.
+40. Simulate a station reboot. The station restarts its counter at 1 and sends a **new, never-settled** transaction: `offlineTxId: "otx_e5f6a7b8c9d0"`, `txCounter: 1`, `creditsCharged: 5`, valid receipt signature.
+41. Verify the server responds `{ "status": "Accepted" }` — **not** `Duplicate`. The counter is at or below every counter previously recorded for this station, and the transaction is nonetheless new and unsettled. `Duplicate` here would direct the station to delete a payment the server never recorded.
+42. Verify the wallet moves `15.0 - 5 = 10.0` and the transaction is persisted with `txCounter: 1`.
+43. Verify deduplication still works on its own key: re-send the same `offlineTxId` with the same signed receipt and confirm it is answered `Duplicate` without a second debit.
 
 ### Part F — Negative Balance Handling
 
-40. Set up a scenario where the user's wallet has `5.0` credits remaining.
-41. Reconcile an offline transaction with `creditsCharged: 12`.
-42. Verify the server allows the debit (negative balance permitted per spec: "allows negative balance").
-43. Verify the user's wallet is now `-7.0` credits.
-44. Verify the server triggers a top-up reminder notification for the user.
+44. Set up a scenario where the user's wallet has `5.0` credits remaining.
+45. Reconcile an offline transaction with `creditsCharged: 12`.
+46. Verify the server allows the debit (negative balance permitted per spec: "allows negative balance").
+47. Verify the user's wallet is now `-7.0` credits.
+48. Verify the server triggers a top-up reminder notification for the user.
 
 ## Expected Results
 
@@ -134,7 +138,7 @@ This is the path that destroyed money before 0.9.0: §4.1 step 1 resets the coun
 2. Buffered TransactionEvents are sent in ascending `txCounter` order. This is RECOMMENDED, not required — out-of-order arrival is not a conformance failure.
 3. The server records each `txCounter` and settles every transaction on its own merits. No response status is conditional on the counter's value, its continuity, or its ordering.
 4. All receipt signatures (ECDSA-P256-SHA256) are valid when verified with the station's public key.
-5. Duplicate `offlineTxId` submissions are handled idempotently (Accepted without re-processing).
+5. A retransmission of the same transaction — same `offlineTxId`, byte-identical signed `receipt.data` — is answered `Duplicate` without re-processing, and the station deletes its copy. A **different** signed receipt under an `offlineTxId` the server already holds is answered `Rejected`, both records are retained, an operator alert is raised, and the station keeps its copy.
 6. The server correctly calculates total charges and debits the user's wallet.
 7. A transaction whose `txCounter` is discontinuous with the station's recorded history is settled normally, its money recorded, and an operator alert raised **on the station** — contributing nothing to the user's fraud score.
 8. A transaction whose `txCounter` is at or below previously recorded counters (station reboot) is settled and **never** answered `Duplicate`. Deduplication is keyed on `offlineTxId`, not on the counter.
@@ -147,8 +151,9 @@ This is the path that destroyed money before 0.9.0: §4.1 step 1 resets the coun
 3. The station's `txCounter` is discontinuous across legitimate transactions, indicating it failed to persist the counter. This is a **station** defect and is reported to the operator as one; it is never a reason for the server to withhold settlement.
 4. Receipt signature verification fails for legitimate (non-tampered) receipts.
 5. Duplicate `offlineTxId` causes double-billing (deducted twice from wallet).
-6. Server answers `Duplicate` to a new, unsettled transaction because its `txCounter` is at or below a previously recorded counter — this destroys the payment, since `Duplicate` obliges the station to delete its local copy.
-7. Server accepts a discontinuous counter **silently**, raising no operator alert. The counter's whole remaining purpose is forensic; recording it without surfacing a discontinuity loses the only value it still has.
-8. Server rejects a transaction that would cause a negative wallet balance (should allow it).
-9. Station does not retransmit unacknowledged transactions after a reconnection.
-10. Total wallet deduction does not match the sum of `creditsCharged` across all reconciled transactions.
+6. A second, **differing** signed receipt under an existing `offlineTxId` is answered `Duplicate`, or silently overwrites the stored record, or is answered without retaining both records. `Duplicate` orders the station to delete its copy, which destroys one of the two records the comparison needs.
+7. Server answers `Duplicate` to a new, unsettled transaction because its `txCounter` is at or below a previously recorded counter — this destroys the payment, since `Duplicate` obliges the station to delete its local copy.
+8. Server accepts a discontinuous counter **silently**, raising no operator alert. The counter's whole remaining purpose is forensic; recording it without surfacing a discontinuity loses the only value it still has.
+9. Server rejects a transaction that would cause a negative wallet balance (should allow it).
+10. Station does not retransmit unacknowledged transactions after a reconnection.
+11. Total wallet deduction does not match the sum of `creditsCharged` across all reconciled transactions.

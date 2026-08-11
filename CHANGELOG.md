@@ -10,6 +10,178 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ## [Unreleased]
 
+## [0.12.1] — 2026-08-11
+
+> **A conformance-corpus repair pass, and the resolution of a contradiction the corpus could not
+> be repaired around.** Three conformance cases stimulated the same condition — an `offlineTxId`
+> arriving twice — and two mandated `Duplicate` while one mandated `Accepted`. No server could
+> pass all three. The spec said both, four normative sites each way, all born in the initial
+> commit, neither side citing the other.
+>
+> **PATCH, and the reasoning is worth stating because it cuts the other way from `0.12.0`.**
+> Nothing here changes what binds. The corpus fixes make cases measure obligations `spec/` has
+> carried all along — `programNumber` was always required, the MAC was always envelope-scoped, the
+> firmware `signature` was always mandatory — so an implementation that "passed" a broken case was
+> **already non-conformant and only its instrument was wrong**. The reconciliation resolution
+> resolves a self-contradiction using a status value every implementation already handles. No
+> schema changes, no new status value, no new error code, no new field; `protocolVersion` stays
+> **`0.3.0`**.
+>
+> **The counter-argument, recorded rather than dismissed.** What a vendor must *demonstrate* to
+> certify has materially grown: verifying the station certificate before transmitting a credential,
+> and rejecting an unsigned firmware image, are now failure criteria where previously they were
+> not. Anyone holding that the corpus is itself normative would call this MINOR by the same
+> reasoning that made `0.12.0` MINOR. The distinction drawn here is that `0.12.0` changed which
+> sentences bind, whereas this changes only which sentences get tested. **A compliance claim
+> resting on the corrected cases was never valid**, and re-certification against `TC-OFF-001`,
+> `TC-SEC-001` and `TC-DM-002` is warranted.
+
+### Changed
+
+- **A duplicate `offlineTxId` now has two answers, because it was always two situations.** The
+  server **MUST** compare the arriving signed `receipt.data` against the stored one
+  ([`reconciliation.md` §3](spec/profiles/offline/reconciliation.md)):
+
+  - **Byte-identical** — a retransmission after a network failure. Answered **`Duplicate`**,
+    without re-processing. Unchanged in substance, and it is what the reference server and its
+    tests already do.
+  - **Different** — two distinct claims under one identifier: a collision or tampering. Answered
+    **`Rejected`**, with both records retained, an operator alert, and an `OfflinePassRejected`
+    SecurityEvent carrying `errorCode` `2017` and `details.field: "receipt.data"`.
+
+  `transaction-event.md` §7.2 previously read *"**MUST** respond with `Duplicate` **regardless of
+  payload differences**"*, and `reconciliation.md` §3 rule 3 previously read *"**MUST** respond
+  with `Accepted` without re-processing"*. Both are replaced by the comparison above.
+
+  **Why `Duplicate` could not cover the second case.** `Duplicate` orders the station to delete
+  its local copy. [§9 Conflict Resolution](spec/profiles/offline/reconciliation.md) requires the
+  server to **retain both records** for exactly that case — and the station's copy is one of the
+  two, the only one not under the control of whoever submitted the second claim. The spec was
+  ordering a station to destroy the evidence its own conflict-resolution rule wanted compared.
+  §9 assigned no status at all, which is how the two rules never met.
+
+  **The comparison is on the signed `receipt.data`, not field-by-field.** Two submissions that
+  agree on the station's signed statement are the same transaction by construction. Byte equality
+  over one value needs no field list to keep in step with the schema and cannot be defeated by an
+  attacker who controls the envelope, because the receipt is signed and the envelope is not.
+
+- **`Duplicate` and `Rejected` no longer imply the same thing about the station's record.** Each
+  status now carries **two separately stated obligations** — whether the station sends the
+  transaction again, and what it does with its local copy
+  ([`transaction-event.md` §5.1](spec/profiles/transaction/transaction-event.md)). They were
+  conflated in a single "terminal for the station's copy" framing, and nothing in the spec forced
+  the pairing: the text only ever said *delete*. `Rejected` is now explicitly **stop sending,
+  retain the record**; `Duplicate` and `Accepted` remain stop sending, delete. That separation is
+  what makes the different-data answer expressible at all.
+
+  **No wire change was needed to express it.** `Rejected` is already in the status enum and
+  already means "MUST NOT retry" to every deployed station; [§6.4](spec/profiles/offline/reconciliation.md)
+  already carries free-text `reason` on the wire with the machine-readable discriminator in the
+  SecurityEvent, stating that error codes are *"recorded rather than transmitted"*. A new status
+  value or a `reason` enum would each have been a wire change, and this release is a PATCH.
+
+### Fixed
+
+- **`Accepted` said both "MUST delete" and "MAY purge after 72 hours".**
+  `transaction-event.md` §6 rule 4 and `reconciliation.md` §2 step 5 gave different dispositions
+  for the same status, neither citing the other. Reconciled: the station **MUST NOT** send the
+  transaction again — immediately — and **MUST** delete the record, with deletion permitted to lag
+  by up to 72 hours for a local audit window. The two obligations were never in conflict once
+  separated; only the single word "delete" made them look it.
+- **`Rejected` was MUST-flag in one file and MAY-flag in another** (`transaction-event.md` §5.1
+  against `reconciliation.md` §6.4). Now **MUST**, in both, together with the retention that the
+  phrase "mark the transaction as rejected in its local log" already presupposed and never stated.
+- **`RetryLater` directed the station to wait `retryInterval`, a field that cannot reach it.**
+  [`transaction-event-response.schema.json`](schemas/mqtt/transaction-event-response.schema.json)
+  is closed over exactly `status` and `reason`, so no conforming response can carry an interval.
+  Both restatements — `03-messages.md` §4.1 and `04-flows.md` §11 — now say what is actually
+  available: station-side exponential backoff, initial 5 s, cap 300 s.
+- **The cross-channel collision was unspecified, and the specification now says so.** §9 row 1
+  makes the app's record display-only, so it does not settle and does not create the ledger entry
+  that would make the station's later TransactionEvent a duplicate. **The app→server submission
+  path itself is defined nowhere in `spec/`** — `examples/flows/05-partial-a-session.md` and the
+  implementors guide describe a `POST /me/offline-txs` endpoint the specification does not define,
+  and that example also has the app's upload settling ahead of the station, which §9 does not
+  permit. Until the path is specified, an implementation **MUST NOT** rely on an app-submitted
+  record to settle an offline transaction.
+- **The firmware example carried `sha256("test")` as the checksum of an image whose signature was
+  over the real binary.** [`03-messages.md`](spec/03-messages.md) §5's UpdateFirmware example
+  paired `9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08` — the digest of the
+  four-byte ASCII string `test` — with a signature over
+  `conformance/test-firmware/test-firmware.bin`, whose digest is `928de7ea…`. Signature and
+  checksum described different bytes, in the one example a firmware author copies verbatim, and it
+  would have failed verification with nothing on screen to suggest why. It is also why the repo's
+  own signer was **not idempotent at `v0.12.0`**: `tools/sign-inline-md.mjs --all` on a pristine
+  tag rewrites exactly this line, so `verify-all-signatures.sh`'s idempotency gate was red on the
+  tag. All five sites in `TC-DM-004` already carried the correct digest.
+- **`2017 OFFLINE_RECEIPT_MISMATCH`** now names its third cross-check target — the §3 stored-vs-
+  arriving receipt comparison — in both its Description and its `details.field` list. Measured
+  against the [§1.4](spec/07-errors.md) 500-character bound: 406.
+
+### Fixed — the conformance corpus
+
+Four cases were repaired ahead of the rest because they are the ones an implementer builds
+against and gets burned by.
+
+- **`TC-OFF-001` taught an unauthenticated BLE handshake and a key schedule two protocol versions
+  stale.** It instructed `IKM: LTK ‖ appNonce ‖ stationNonce`, salt `OSPP_BLE_SESSION_V1`, and
+  `Info: deviceId ‖ stationId` — every line wrong. [`06-security.md` §6.5](spec/06-security.md)
+  has the BLE Long-Term Key **explicitly not used**, being unobtainable by a mobile app, and gives
+  `es ‖ ee ‖ appNonce ‖ stationNonce`, salt `_V2`, and `Info: LP(deviceId) ‖ LP(transcriptHash)`.
+  The Hello fixture omitted `appEphemeralPubKey` and the Challenge omitted `stationCert` and
+  `stationEphemeralPubKey` — all REQUIRED, and without the certificate there is nothing
+  authenticating the station, so the case walked an app through handing an OfflinePass to whatever
+  answered the advertisement. Fixtures are now the `full` scenario of
+  `conformance/test-vectors/crypto/ble-handshake-keyschedule.json` — **the corpus's own golden
+  vector, which contradicted the case it exists to support** — so a harness can check its
+  derivation against `sessionKeyHex` rather than only against its own arithmetic. Verifying
+  `stationCert` before transmitting any credential is now a step and a failure criterion.
+  AuthResponse no longer returns a `sessionId` it has never carried.
+- **`TC-SEC-001` computed the HMAC over the payload rather than the envelope.**
+  [§5.3](spec/06-security.md) makes the input the whole envelope with `mac` removed, canonicalised
+  per §4.8; its worked example canonicalises `action`, `messageId`, `messageType`,
+  `protocolVersion`, `source`, `timestamp` **and** `payload`. MACing the payload alone leaves
+  `messageId` and `timestamp` unbound, which is what makes the MAC a replay defence at all. This
+  is the only case that pins MAC computation and it is mandatory at Standard level. Its
+  preconditions also posited a pre-provisioned shared secret, which OSPP does not have — §5.2
+  generates the key per boot and delivers it on the BootNotification RESPONSE.
+- **`TC-DM-002` omitted the REQUIRED `signature` from three UpdateFirmware payloads and expected
+  `Accepted`**, while `update-firmware-request-missing-signature.json` is byte-identical to that
+  shape and declared MUST-reject. [§4.6](spec/06-security.md): *"SHA-256 checksum verification
+  alone is **NOT** sufficient"* — and the checksum arrives in the same message as the URL, so
+  whoever chooses one chooses both. `5112 FIRMWARE_SIGNATURE_INVALID` is now a failure criterion.
+- **`programNumber` was missing from 13 StartService payloads across 9 files** — every
+  session-lifecycle case in the corpus taught a request a conforming station must reject with
+  `3017 PROGRAM_NOT_DECLARED`.
+
+Also: `TC-OFF-002`'s checks 6 and 7 required `maxUses: 0` and `maxTotalCredits: 0`, both
+`"minimum": 1` and therefore unsignable — they now exhaust a real pass; and its `counter` is
+documented as the envelope field it is. `TC-TX-007`'s three session IDs violated
+`^sess_[a-f0-9]{8,}$`. `TC-CORE-002` cited §5.4 for ConnectionLost (§5.5) and `TC-SEC-004` cited
+§5.5 for SecurityEvent (§5.6) — an un-cascaded §5.x renumbering — and `TC-SEC-004` counted 10
+event types where the enum has 12. `TC-TX-006` and `TC-OFF-004` applied §4.1's 60 s timeout to
+reconciliation, where the profile sets **30 s** and says so in a note. `TC-OFF-003` Part C now
+answers a retransmission `Duplicate` and gains the different-data collision, which nothing tested.
+`test-vectors/README` §3 stated the naming convention as `{action}.{variant}.json` against its own
+§1 and all 316 files. `sample-report.json` claimed `complianceLevel: "Core"`, which is a profile,
+not one of Development/Standard/Extended/Complete.
+
+### Left open — recorded, not fixed
+
+- **`deviceId` on the TransactionEvent fixtures of `TC-OFF-003`, `TC-OFF-004` and `TC-TX-006` is
+  deadlocked.** `transaction-event-request.schema.json` is closed and has no `deviceId`, but
+  `tools/sign-inline-md.mjs` reads `deviceId` off the outer object to build the signed receipt body
+  and throws without it. Removing it breaks the signer; keeping it leaves the fixture
+  schema-invalid. The repair is a tooling change plus a re-sign of every inline receipt.
+- **36 further non-conforming StartService payloads under `spec/` and `examples/`**, outside the
+  conformance corpus and several inside signed fences.
+- **The reference server does not implement the §3 comparison.** It deduplicates on `offlineTxId`
+  alone and answers `Duplicate` for every repeat, so the different-data case is currently
+  indistinguishable from a retransmission. That is an implementation gap this release creates
+  work for, and it is named here rather than left to be discovered.
+
+---
+
 ## [0.12.0] — 2026-08-11
 
 > **MINOR, and the reason is the whole release: dropping one qualifier makes 457 obligations bind

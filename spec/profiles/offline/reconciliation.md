@@ -1,6 +1,6 @@
 # Offline Transaction Reconciliation
 
-> **Status:** Draft | **OSPP Version:** 0.12.0
+> **Status:** Draft | **OSPP Version:** 0.12.1
 
 ## 1. Overview
 
@@ -14,7 +14,7 @@ The reconciliation sync follows this ordered flow:
 2. **Server acknowledges** with `Accepted`. The server notes the pending count and prepares for incoming offline transaction events.
 3. **Station sends TransactionEvent(Ended)** for each offline transaction. Each event includes the full offline payload: `offlineTxId`, `offlinePassId`, `passCounter`, `userId`, `bayId`, `serviceId`, timing data, `creditsCharged`, signed `receipt`, `txCounter`, and optional `meterValues`.
 4. **Server processes each event** -- performs (a) deduplication (§3), (b) receipt signature verification (§5), (c) **reconcile-time re-validation gate (§6)**, and (d) fraud scoring (§7). The `txCounter` is recorded as forensic evidence (§4) and gates nothing. The server responds with `Accepted` for each valid event. Any gate failure (§6) produces a `Rejected` response with the listed error code and emits a SecurityEvent.
-5. **Station marks synced transactions** as reconciled in its local storage. Successfully synced transactions **MAY** be purged from local storage after 72 hours.
+5. **Station marks synced transactions** as reconciled in its local storage. A transaction answered `Accepted` or `Duplicate` **MUST NOT** be sent again; its local record **MUST** be deleted, and that deletion **MAY** be deferred by up to 72 hours to leave a short local audit window. The two obligations are separate and only the first is immediate — [`transaction-event.md` §5.1](../transaction/transaction-event.md) is the canonical statement, and a transaction answered `Rejected` is retained rather than deleted.
 
 **Retry logic:** If the station does not receive a response within 30 seconds for any TransactionEvent, it **MUST** retry with exponential backoff (initial 5s, max 60s (offline batch reconciliation -- optimized for throughput), up to 10 retries). If all retries fail, the station **MUST** retain the transaction and attempt sync on the next successful connection.
 
@@ -30,8 +30,14 @@ The server uses the `offlineTxId` field to deduplicate offline transaction event
 
 1. Each offline transaction is assigned a unique `offlineTxId` (format: `otx_` prefix + random alphanumeric) by the station at the time of service start.
 2. When the server receives a TransactionEvent with an `offlineTxId`, it checks whether a transaction with that ID has already been processed.
-3. If the `offlineTxId` already exists in the server's ledger, the server **MUST** respond with `Accepted` without re-processing (idempotent acknowledgement). This handles retransmission after network failures.
+3. If the `offlineTxId` already exists in the server's ledger, the server **MUST** compare the arriving submission against the stored one before answering, and the two outcomes are different:
+   - **Same transaction** — the arriving signed `receipt.data` is **byte-identical** to the stored one. This is a retransmission after a network failure, and it is the common case. The server **MUST** respond `Duplicate` without re-processing (idempotent acknowledgement): no second debit, no second ledger row, no re-validation. The station deletes its copy ([`transaction-event.md` §5.1](../transaction/transaction-event.md)).
+   - **Different transaction** — the arriving signed `receipt.data` differs from the stored one. Two distinct claims are being made under one `offlineTxId`, which is either an identifier collision or tampering. The server **MUST** respond `Rejected`, **MUST NOT** debit or persist the arriving claim, **MUST** retain both records, and **MUST** alert the operator (§9). It **MUST** emit an `OfflinePassRejected` SecurityEvent carrying the same forensic detail as any other §6 rejection (§6.3), with `errorCode` `2017 OFFLINE_RECEIPT_MISMATCH` and `details.field: "receipt.data"`, plus the `offlineTxId` and the stored record's identifiers. The station **retains** its copy — `Rejected` never orders a deletion — and that copy is the second of the two records the operator compares.
 4. The server **MUST** retain `offlineTxId` values for at least 30 days for deduplication purposes.
+
+> **Why the comparison is on the signed `receipt.data` and not field-by-field.** The receipt body is the station's signed statement of what happened; two submissions that agree on it are the same transaction by construction, whatever the envelope around them looks like. Byte equality over that one value is cheap, needs no field list to keep in step with the schema, and cannot be defeated by an attacker who controls the envelope — the receipt is signed and the envelope is not. A submission whose receipt signature does not verify never reaches this comparison: signature verification is §5, and it rejects first.
+>
+> **This comparison is deduplication, not a §6 gate check.** It runs at §3, before the gate, and it is the reason check #13 (`passCounter` uniqueness) only ever sees a *distinct* `offlineTxId` reusing a counter value. `Rejected` is reused here as the answer because its station-side obligation — stop sending, keep your record — is exactly what this case needs, and because a status value that no deployed station already understands would be a wire change.
 
 ## 4. Transaction Counter (Forensic)
 
@@ -56,7 +62,7 @@ The station maintains a monotonically increasing transaction counter per station
 
 **What actually stops a replay.** Clone and replay protection is delivered by the global `(offlinePassId, passCounter)` uniqueness hard-gate — §6.1 **check #13**, error `2005 OFFLINE_COUNTER_REPLAY` — and by the cross-station cumulative factors of [`06-security.md` §7.4](../../06-security.md#74-fraud-detection--offline-transactions). Both key on `passCounter`, which the **app** generates and the station only echoes into the signed receipt; a station cannot renumber a value it did not choose. Neither depends on `txCounter`, and neither is affected by anything in this section.
 
-> **A repeated `offlineTxId`** is handled by deduplication (§3) and answered `Accepted`, whatever its `txCounter` says. A **lower or repeated `txCounter` is not, by itself, a duplicate** and **MUST NOT** be answered `Duplicate`: a station that reboots legitimately restarts its counter at 1 (§4.1 step 1), and answering that `Duplicate` would direct the station to delete a payment that was never settled (`profiles/transaction/transaction-event.md` §5.1).
+> **A repeated `offlineTxId`** is handled by deduplication (§3), whatever its `txCounter` says — `Duplicate` when the signed receipt matches the stored one, `Rejected` when it does not. A **lower or repeated `txCounter` is not, by itself, a duplicate** and **MUST NOT** be answered `Duplicate`: a station that reboots legitimately restarts its counter at 1 (§4.1 step 1), and answering that `Duplicate` would direct the station to delete a payment that was never settled (`profiles/transaction/transaction-event.md` §5.1).
 
 ## 5. Receipt Signature Verification
 
@@ -149,7 +155,7 @@ The response carries **no** `errorCode` and **no** `errorText`. [`transaction-ev
 
 The failing gate remains identifiable, by two routes. On the wire, the `reason` **MUST** identify the failed check — its §6.1 number, or its `errorText` as free text — well enough to be actionable without opening the audit trail; the schema bounds it at 256 characters. For machine-readable detail, the `OfflinePassRejected` SecurityEvent that [§6.3](#63-securityevent-emission) already **MUST** emit for the same failure carries the failed check number and the rejection `errorCode` in its `details`, and correlates to this response through the originating REQUEST's `messageId`. The §6.1 error codes are therefore recorded rather than transmitted: they identify the check in the audit trail, not on the TransactionEvent response.
 
-The station, on receiving `Rejected`, **MUST NOT** retry the same TransactionEvent. The transaction is permanently rejected at the server; the station MAY flag it for manual investigation.
+The station, on receiving `Rejected`, **MUST NOT** retry the same TransactionEvent, and **MUST** retain the transaction in its local log marked as rejected and flagged for manual investigation ([`transaction-event.md` §5.1 and §6 rule 5](../transaction/transaction-event.md), which are canonical). The transaction is permanently rejected at the server, but the station's copy is not therefore worthless: for a §3 different-data collision it is the second of the two records the operator compares, and for a gate failure it is the only station-side account of what the station believes it delivered. `Rejected` stops the sending; it never orders a deletion.
 
 ### 6.5 Storage-Layer FK Enforcement (Belt-and-Suspenders for Non-Gate Paths)
 
@@ -227,8 +233,8 @@ The following edge cases require special handling:
 
 | Scenario | Resolution |
 |------------------------------------------------------|-----------------------------------------------|
-| Same session reported by both app and station | **Prefer station data.** The station's signed receipt is the authoritative record. The app's record is used for display purposes only. |
-| Duplicate `offlineTxId` with different data | **Flag for investigation.** This indicates either a collision (extremely unlikely with UUID-quality IDs) or data tampering. The server **MUST** retain both records and alert the operator. |
+| Same session reported by both app and station | **Prefer station data.** The station's signed receipt is the authoritative record. The app's record is used for display purposes only — it does not settle, and therefore does not create a ledger entry that would make the station's later TransactionEvent a duplicate under §3. §3's comparison is keyed on `offlineTxId` and is channel-agnostic: whichever submission created the settling entry, a second arrival is compared against it by the same rule. **The app→server submission path itself is not specified in this version.** No chapter or profile defines it; `examples/flows/05-partial-a-session.md` and the implementors guide describe a `POST /me/offline-txs` endpoint that the specification does not define, and that example also has the app's upload settling ahead of the station, which this row does not permit. Until that path is specified, an implementation **MUST NOT** rely on an app-submitted record to settle an offline transaction. |
+| Duplicate `offlineTxId` with different data | **Answered `Rejected`, and flagged for investigation** (§3 rule 3, second bullet — that rule is normative and this row summarises it). This indicates either a collision (extremely unlikely with UUID-quality IDs) or data tampering. The server **MUST** retain both records and alert the operator. It **MUST NOT** answer `Duplicate`: that status orders the station to delete its local copy, which is the second of the two records this row requires be retained, and the only one not under the control of whoever submitted the second claim. |
 | Clock drift between station and server | **Use server time for billing, station time for audit.** The `startedAt` and `endedAt` timestamps from the station are stored for audit, but the server's receipt processing time is used for wallet debit timing. |
 | Station replaced/reset between offline period and sync | **Treat a serial-number change as a hardware swap, not a new station.** If the station's `stationId` matches but the serial number differs (detected via BootNotification), the server **MUST** flag all pending offline transactions from the old serial for manual review. |
 | Station offline window exceeded | If the station has been offline for longer than `stationOfflineWindowHours`, the server **SHOULD** accept the transactions but flag them for enhanced review. |

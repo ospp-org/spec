@@ -2,7 +2,7 @@
 
 > **For:** Developers building OSPP-compatible stations, servers, or user agents
 > **Level:** Practical guide, not formal spec. Read this first, then the spec chapters.
-> **Spec Version:** 0.12.0
+> **Spec Version:** 0.12.1
 
 ---
 
@@ -823,7 +823,7 @@ When a station reconnects after being offline, it sends TransactionEvent REQUEST
 3. **Verify the OfflinePass:** Check that it was valid at the time of the transaction (signature, epoch, limits).
 4. **Debit user wallets:** The credits weren't debited at session time (user was offline), so debit them now. If the user's balance goes negative, record it as a debt.
 5. **Run fraud scoring:** Check for anomalies (broken chain, excessive credits, suspiciously fast intervals).
-6. **Respond with `Accepted`** (the TransactionEvent RESPONSE only has `status` and `reason`).
+6. **Respond with `Accepted`** (the TransactionEvent RESPONSE only has `status` and `reason`). A repeat of an `offlineTxId` you already hold is `Duplicate` if the signed `receipt.data` is byte-identical to the stored one, and `Rejected` if it is not — the second case is a collision or tampering, so retain both records and alert an operator rather than answering `Duplicate`, which would tell the station to delete the copy you want to compare against (`reconciliation.md` §3, §9).
 
 **Fraud scoring model.** The authoritative model — its factors, the cross-station cumulative `maxUses` / `maxTotalCredits` computation, the `0.00`–`1.00` score scale, and the threshold → action bands — is defined **once** in [`06-security.md` §7.4](../spec/06-security.md#74-fraud-detection--offline-transactions). This guide does not restate it (finding F3: one authoritative source; `reconciliation.md` §7 and `04-flows.md` §10 are the other two pointers).
 
@@ -1297,4 +1297,4 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 
 ---
 
-*This guide covers OSPP 0.12.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*
+*This guide covers OSPP 0.12.1. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*

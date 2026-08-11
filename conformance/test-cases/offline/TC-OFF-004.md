@@ -73,7 +73,7 @@ Verify that the station correctly performs offline transaction reconciliation af
 
 ### Part B — Server Responds Duplicate
 
-16. Simulate the station re-sending a previously reconciled transaction (txCounter=1, same `offlineTxId`).
+16. Simulate the station re-sending a previously reconciled transaction (txCounter=1, same `offlineTxId`, **same signed `receipt.data`** — a retransmission, not a second claim; a differing receipt under the same identifier is answered `Rejected` instead, `reconciliation.md` §3).
 17. Send Duplicate response:
     ```json
     {

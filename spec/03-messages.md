@@ -1,6 +1,6 @@
 # Chapter 03 — Message Catalog
 
-> **Status:** Draft | **OSPP Version:** 0.12.0
+> **Status:** Draft | **OSPP Version:** 0.12.1
 
 This chapter is the normative reference for **every message** in the OSPP protocol. Each message is documented with its complete payload schema, metadata, and example.
 
@@ -773,7 +773,7 @@ Upon `Accepted`, the station MUST:
 | **Trigger** | Station reconnects to MQTT after offline sessions — reconciliation of offline transactions |
 | **Expected Response** | TransactionEvent RESPONSE |
 | **Timeout** | 60 seconds |
-| **Idempotency** | Yes — server deduplicates by `offlineTxId`; duplicate returns `Duplicate` |
+| **Idempotency** | Yes — server deduplicates by `offlineTxId`. A retransmission of the same transaction (byte-identical signed `receipt.data`) returns `Duplicate`; a *different* transaction under the same `offlineTxId` returns `Rejected` and both records are retained ([`reconciliation.md` §3](profiles/offline/reconciliation.md)) |
 | **Message Expiry** | Never (exempt — critical financial data) |
 
 Used for **offline transaction reconciliation**. When the station regains MQTT connectivity, it MUST send one TransactionEvent per offline transaction and wait for each RESPONSE before sending the next. Ascending `txCounter` order is RECOMMENDED but not required — the server settles each transaction on its own merits, in arrival order.
@@ -814,10 +814,10 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
 
 | Status | Station Action |
 |--------|---------------|
-| `Accepted` | Remove transaction from local queue |
-| `Duplicate` | Remove transaction from local queue (already processed) |
-| `Rejected` | Flag transaction for manual investigation; do NOT retry |
-| `RetryLater` | Keep in queue; retry after `retryInterval` seconds |
+| `Accepted` | Do not send again; delete the local record (deletion MAY be deferred up to 72 h) |
+| `Duplicate` | Do not send again; delete the local record (the server already holds this same transaction) |
+| `Rejected` | Do not send again; **retain** the local record, marked rejected and flagged for manual investigation |
+| `RetryLater` | Keep in queue; retry with exponential backoff (initial 5 s, cap 300 s). The response carries **no** retry interval — `transaction-event-response.schema.json` is closed over `status` and `reason` — so the backoff is the station's, not a server-supplied value |
 
 **Server-side processing:**
 1. Deduplicate by `offlineTxId`

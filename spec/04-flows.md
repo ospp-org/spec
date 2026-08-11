@@ -1,6 +1,6 @@
 # Chapter 04 — Protocol Flows
 
-> **Status:** Draft | **OSPP Version:** 0.12.0
+> **Status:** Draft | **OSPP Version:** 0.12.1
 
 This chapter documents every end-to-end protocol flow as a sequence of messages defined in [Chapter 03 — Message Catalog](03-messages.md). Each flow includes preconditions, a Mermaid sequence diagram, numbered happy-path steps, alternative paths, error paths, and postconditions.
 
@@ -1434,7 +1434,7 @@ sequenceDiagram
 3. For each transaction, SSP sends **TransactionEvent REQUEST** [MSG-007] containing the full transaction data, signed receipt, `txCounter`, and meter values
 4. SSP waits for the RESPONSE before sending the next transaction
 5. **Server** processes each transaction:
-   - **Step 1:** Deduplicate by `offlineTxId` (if already seen → `Duplicate`)
+   - **Step 1:** Deduplicate by `offlineTxId`. Already seen and the signed `receipt.data` matches → `Duplicate`; already seen and it differs → `Rejected`, retain both records, alert the operator ([`reconciliation.md` §3](profiles/offline/reconciliation.md))
    - **Step 2:** Verify ECDSA P-256 receipt signature — CRITICAL alert if invalid
    - **Step 3:** Record `txCounter` as forensic evidence — never gated on. If discontinuous: WARNING + operator alert on the **station**, process anyway (`profiles/offline/reconciliation.md` §4.2)
    - **Step 4:** Validate that the OfflinePass was valid at transaction time (check epoch, expiry, limits)
@@ -1788,7 +1788,7 @@ Consolidated timeout values across all flows:
 | UpdateServiceCatalog (boot) | Single retry | 2 | 10s |
 | Payment processor API | Exponential backoff | 3 | 1s, 2s, 4s |
 | BLE connect | Exponential backoff | 3 | 1s, 2s, 4s |
-| TransactionEvent (RetryLater) | Server-directed | Varies | Wait `retryInterval` |
+| TransactionEvent (RetryLater) | Server-directed | Varies | Station-side exponential backoff, initial 5 s, cap 300 s. The response carries no interval — it is closed over `status` and `reason` |
 
 ---
 

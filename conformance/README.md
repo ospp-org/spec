@@ -1,6 +1,6 @@
 # OSPP Conformance Testing
 
-> **Status:** Draft | **OSPP Version:** 0.12.0
+> **Status:** Draft | **OSPP Version:** 0.12.1
 
 This document defines the conformance testing framework for OSPP implementations.
 Conformance testing validates that a station or server implementation correctly

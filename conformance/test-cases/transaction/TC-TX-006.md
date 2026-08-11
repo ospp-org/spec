@@ -68,7 +68,7 @@ Verify that the station correctly sends TransactionEvent messages for offline tr
 
 ### Part B — Duplicate Response
 
-11. Simulate the station resending a previously accepted transaction (e.g., due to network glitch — station didn't receive the ACK for txCounter=5).
+11. Simulate the station resending a previously accepted transaction (e.g., due to network glitch — station didn't receive the ACK for txCounter=5). The resend carries the **same signed `receipt.data`** as the original, which is what makes it a retransmission rather than a second claim (`reconciliation.md` §3).
 12. Observe the station sends TransactionEvent with `offlineTxId: "otx_d4e5f6a7b8c9"` and `txCounter: 5`.
 13. Send Duplicate response:
     ```json
