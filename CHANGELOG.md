@@ -10,6 +10,196 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ## [Unreleased]
 
+## [0.12.0] — 2026-08-11
+
+> **MINOR, and the reason is the whole release: dropping one qualifier makes 457 obligations bind
+> that did not bind before.** Nothing moves on the wire. No message shape, field, enum or schema
+> constraint changes, and `protocolVersion` stays **`0.3.0`**. What changes is which sentences in
+> `spec/` are requirements at all. That is **conformance-breaking without being wire-breaking**: an
+> implementation that was conformant against `v0.11.2` can be non-conformant against `v0.12.0`
+> without altering a byte, because the set of requirements it is measured against is larger.
+>
+> **Why this cannot be a PATCH.** [VERSIONING.md](VERSIONING.md) defines PATCH as a
+> **non-normative** fix; this changes which text is normative, for 457 sentences. Its pre-1.0
+> policy also requires a break to be documented here under `### Changed` rather than left to be
+> discovered — so it is, first, and in the words that make the consequence plain.
+>
+> **The arc behind it.** A full-corpus sweep for the class *"prose claims enforcement that nothing
+> performs"* found **58 instances and closed 28**. The RFC 2119 qualifier was the largest single
+> one: a house convention that unbound a third of the specification's own obligations. Three
+> sub-shapes of the class turned out to be mechanically checkable and are now gates under `tools/`
+> with a workflow that runs them. The rest are not checkable, and the sweep says so rather than
+> implying a coverage it does not have.
+
+### Changed
+
+- **The RFC 2119 bold-only qualifier is dropped: 457 obligations that did not bind now bind.**
+  [`spec/00-introduction.md` §3.1](spec/00-introduction.md#31-normative-keywords) bound the BCP 14
+  keywords "when, and only when, they appear in **BOLD UPPERCASE**", and
+  [`spec/README.md`](spec/README.md) carried a copy of the same sentence. Both now read **ALL
+  CAPITALS**, which is the condition [RFC 8174](https://www.rfc-editor.org/rfc/rfc8174) — the
+  authority the sentence itself cites — actually states. The qualifier had added a condition on
+  *weight* that no cited authority imposes.
+
+  **What that does to a reader's obligations, stated so it cannot be missed.** **496 of the 1391**
+  capitalised MUST/SHALL keywords in `spec/` are unbolded, and under the old sentence every one of
+  them was **non-binding**. Categorised: **457 are genuine obligations**; 30 are requirement-level
+  table cells where MUST is the column *value*; 7 sit in revision-history rows; 2 are backticked
+  references to a rule. The 457 are not marginal text — they include the entire MQTT topic-ACL
+  apparatus ([Chapter 02 §6](spec/02-transport.md#6-access-control-acl)), all ten OfflinePass
+  validation checks ([Chapter 06 §6.1.1](spec/06-security.md)), and most of
+  [Chapter 08](spec/08-configuration.md): *"The station MUST present a valid X.509 client
+  certificate"*, *"every MQTT message MUST carry an HMAC-SHA256"*. **From this release those are
+  requirements.** A reader upgrading from `v0.11.2` should re-read the chapters above against a
+  larger obligation set, not a changed one — nothing was added, and nothing on the wire moved;
+  what was already written now binds.
+
+  **Why the qualifier was dropped rather than the 457 sentences bolded.** RFC 8174 conditions on
+  "all capitals" and says nothing about weight. No other document in the repo adopted the stricter
+  form: eighteen chapters and profiles restate the RFC 2119 paragraph and **all eighteen** give the
+  plain BCP 14 wording — only §3.1 and its `spec/README.md` copy carried it, so
+  [Chapter 08](spec/08-configuration.md) was asserting an interpretation §3.1 denied it. §3.1 also
+  contradicted itself: the paragraph directly below it identifies the non-binding case as
+  *"lowercase or mixed case"* and never as unbolded capitals, leaving an uppercase unbolded MUST in
+  a gap between two sentences of one section. And nothing in the 496 was deliberately soft, so
+  bolding 457 sentences across 18 files would have been an enormous diff with no semantic change
+  that still left §3.1 contradicting itself.
+
+  **Bold remains house style** ([CONTRIBUTING.md](CONTRIBUTING.md)). An unbolded keyword is now a
+  **style defect**, not a keyword that fails to bind, and `tools/check-normative-bold.py` ratchets
+  it — baseline **464**, after excluding code spans, fenced blocks and level-label cells.
+
+- **`maxCreditsPerTx` is a decline threshold, not a cap, and the example that taught otherwise is
+  corrected.** Three normative sites say the same thing — station-side
+  [`offline-pass.md` §4](spec/profiles/offline/offline-pass.md) check #8, server-side
+  [`authorize-offline-pass.md` §5](spec/profiles/offline/authorize-offline-pass.md) check #8, and
+  [`06-security.md` §6.1.1](spec/06-security.md) check #8 — all of them **MUST NOT exceed**,
+  rejecting with `4004 OFFLINE_PER_TX_EXCEEDED`, which
+  [Chapter 07](spec/07-errors.md) records as **not recoverable**.
+  [`examples/flows/04-full-offline-session.md`](examples/flows/04-full-offline-session.md) taught
+  the opposite in five places, including an arithmetic formula
+  (`min(requestedDurationSeconds, maxCreditsPerTx / priceCreditsPerMinute * 60)`) and a written
+  rationale ending *"gracefully displays the adjusted duration rather than rejecting the request"*.
+  An example with a formula and a justification is what an implementer copies.
+
+  **The decision is reject.** A limit is a decline threshold; silently serving less than was asked
+  for charges a user for something they did not agree to. The specification already assumed as
+  much in a place capping would have broken:
+  [`06-security.md` §7.4](spec/06-security.md) scores `creditsCharged` > `maxCreditsPerTx` as a
+  fraud signal at reconcile, which is only coherent if an over-limit transaction is **refused**
+  rather than trimmed.
+
+  **Shaping the request is the client's job, and the pass gives it what it needs.** The
+  OfflinePass carries `offlineAllowance.maxCreditsPerTx` as a plaintext signed field
+  ([`offline-pass.schema.json`](schemas/common/offline-pass.schema.json), required, `minimum: 1`),
+  held by the app in secure storage from issuance — so a client can read the limit and size its
+  offer to fit **before** it asks the station for anything. That is where capping belongs, and the
+  walkthrough now shows it there: the app bounds its duration picker at the limit, check #8 passes
+  on the merits, and every downstream figure in the flow is unchanged. The one clamp the offline
+  path does permit is `requestedDurationSeconds` against a **server-authorized** `durationSeconds`
+  on Partial A / Partial B ([`ble-session.md` §1](spec/profiles/offline/ble-session.md),
+  processing rule 2); Full Offline has no server-authorized value to clamp against.
+
+### Added
+
+- **Three drift gates under `tools/`, and a workflow that calls them.** Each targets a sub-shape of
+  *"prose asserts a property and nothing establishes it"* where both sides of the claim are
+  structured enough to compare mechanically. They are **ratchets, not allowlists**: every finding
+  prints on every run, the count may fall but must not rise, and each was **RED-tested** — watched
+  to fail on an injected defect and to recover when it was removed.
+
+  - `check-config-defaults.py` — restated configuration defaults against the
+    [Chapter 08](spec/08-configuration.md) registry. Two forms are recognised, prose proximity and
+    a markdown *Default* column; the 40-character proximity window is load-bearing, since matching
+    any key to any number on the line cross-pairs the rows that name two keys at once.
+  - `check-schema-conditionals.py` — a schema `description` asserting a conditional no `if`/`then`
+    or `dependentRequired` backs. Baseline **3**: the certificate-response family, whose fix is a
+    schema tightening that changes validation outcomes for existing implementations and is
+    therefore an open decision, recorded rather than silently allowlisted. Cross-artefact claims
+    are deliberately **not** flagged — JSON Schema structurally cannot compare against an X.509
+    certificate or another message, so those descriptions are correct as written.
+  - `check-normative-bold.py` — a capitalised keyword outside a `**…**` span. Baseline **464**.
+
+  [`.github/workflows/check-drift.yml`](.github/workflows/check-drift.yml) runs all three. A gate
+  in `tools/` that no job calls is the same defect one level up, and the workflow exists to be that
+  caller; its path filters are deliberately broad, because one of the config-default findings was a
+  conformance case citing Chapter 08 while contradicting it.
+
+  **Two further checks were built, measured and discarded at roughly zero precision** — recorded in
+  the scripts' docstrings so they are not rebuilt. "A claim naming an identifier absent from every
+  normative artefact" flagged 18 sites of which approximately none were the defect (11 were error
+  codes, flagged only because **no schema enumerates error codes anywhere**). "A key name with a
+  bare number near it" flagged 12, of which **none** were real — nine were conformance cases
+  deliberately setting non-default values for faster execution, and a gate that fails those is a
+  gate somebody disables.
+
+### Fixed
+
+- **Twenty-eight instances of prose claiming enforcement nothing performs**, across the chapters,
+  the profiles, the configuration registry and the conformance corpus — including a
+  [Chapter 08](spec/08-configuration.md) claim that would have broken every offline receipt, a
+  profile chapter instructing the station to return a credential, and three restated defaults
+  caught by the gate the sweep itself suggested writing.
+- **`guides/implementors-guide.md` — the worst-affected artefact, and nothing validates it.** Not
+  one inline payload, field list, enum or constant in the guide is checked by any job, and its
+  dangerous content is pseudocode: unvalidatable by construction. The divergences repaired here
+  include two of operational grade — a buffering section naming the two MAY-discard message types
+  as the ones to buffer while omitting TransactionEvent, SessionEnded and SecurityEvent (SessionEnded
+  being the sole billing source when no StopService answered), and a provisioning section describing
+  two on-device key pairs where the flow needs three, which leaves BLE dead after a successful
+  provisioning and is a truck roll to recover. **The only durable defence is a citation**, so every
+  repair replaced a restatement with a pointer.
+- **`ble-session.md` §1 was cited as §2** in the guide's anti-capping note. §2 is *Monitoring
+  Progress (FFF5)* and carries no clamp rule; the clamp is processing rule 2 of §1, *Starting a
+  Service*. A pointer that lands in the wrong section is the failure mode the citations were
+  introduced to prevent.
+- **CI that was green while checking nothing** — a markdown-lint job linting an empty file set, a
+  schema job that could not install, two schemas no job compiled, and a `$ref` that aborted the
+  validation run at 73 of 86.
+- **Conformance device-management cases** teaching a shape the schema forbids, and nine omitting
+  the capability that gates the profile.
+- **The `v0.11.1` firmware signature rule shipped with no changelog entry**, and now has one.
+
+### The document version, and a site that had no gate
+
+The document version moves to **0.12.0** across every site that carries it, per
+[VERSIONING.md](VERSIONING.md). `tools/verify-protocol.sh` Category 18 reports **29 sites**
+agreeing with `spec/README.md`'s front-matter, plus the newest `## [X.Y.Z]` changelog heading and
+the [Document History](spec/00-introduction.md#6-document-history) row.
+
+**29, not the 28 recorded at `0.11.2`, because one live version claim was outside the gate.**
+`guides/implementors-guide.md` states the version **twice** — the header and the closing line —
+and only the header was in the sites array, which is how that closing line had previously gone
+stale unnoticed while sitting under a correct header. It is now checked, RED-tested both ways (a
+wrong value fails; a missing line fails), and recorded in VERSIONING.md's site table. The same
+table's enumeration is corrected from *8* to *9* numbered chapters, which is what its own total of
+22 headers has always required.
+
+### SDK follow-up (report only — nothing done here)
+
+Both SDKs are at **0.13.0** pinning `.spec-ref = v0.11.1`. Between `v0.11.1` and `v0.12.0` the only
+files under `schemas/` to change are three `description` strings — in
+`change-configuration-response`, `get-configuration-request` and `get-configuration-response`. No
+`type`, `enum`, `required`, `pattern`, bound or `$ref` moves anywhere, so **nothing either SDK
+vendors changes meaning**, and neither needs a release on account of this tag. A re-pin to
+`v0.12.0` would require re-vendoring those three files byte-for-byte to satisfy each SDK's
+byte-identical gate — tidying, not work, and safe to fold into whichever release they cut next.
+
+### Left open — recorded, not fixed
+
+- **The conformance corpus needs its own arc.** It is where an implementer is actually burned, and
+  it carries roughly ten cases with stale or contradicting shapes. It is deliberately out of scope
+  here: the fixes are behavioural rather than editorial, and several change what a conforming
+  implementation is required to pass.
+- **`allowedServiceTypes` is a signed pass field that no check reads.** Three validation gates, 34
+  checks in total, and none takes a `serviceId` except the per-transaction cost check. The exact
+  inverse of `KNOWN-ISSUES.md` B-2, which is a check with no field.
+- **The certificate-response family's `errorText` conditional** — the standing baseline of
+  `check-schema-conditionals.py`. Enforcing it is a schema tightening that changes validation
+  outcomes for deployed implementations, and belongs with a decision about ship order.
+
+---
+
 ## [0.11.2] — 2026-08-07
 
 > **Arc 7 — the twelve defects, taken back to the spec and verified before being acted on.**

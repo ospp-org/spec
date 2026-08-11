@@ -2,7 +2,7 @@
 
 > **For:** Developers building OSPP-compatible stations, servers, or user agents
 > **Level:** Practical guide, not formal spec. Read this first, then the spec chapters.
-> **Spec Version:** 0.11.2
+> **Spec Version:** 0.12.0
 
 ---
 
@@ -1107,7 +1107,7 @@ Test the error scenarios in `/examples/error-scenarios/`:
 
 **Not initializing txCounter correctly.** The first offline transaction after each **boot or sync** must use `txCounter: 1` — not the first after provisioning ([`reconciliation.md` §4.1](../spec/profiles/offline/reconciliation.md) step 1). Starting at 0 or skipping values will not cost you a settlement — the server records the counter and does not gate on it — but it produces operator alerts on your station and makes your own offline log harder to audit.
 
-**Treating `maxCreditsPerTx` as a cap.** Check #8 is a hard reject, not a clamp: if the estimated cost of the requested service exceeds `maxCreditsPerTx`, reject with `4004 OFFLINE_PER_TX_EXCEEDED` ([`offline-pass.md` §4](../spec/profiles/offline/offline-pass.md) check #8, and the same check in `authorize-offline-pass.md` §5 and `06-security.md` §6.1.1). This guide previously said to cap silently, which contradicted its own §2.10 table. The only clamp in the offline path is `requestedDurationSeconds` against the **server-authorized** `durationSeconds` on Partial A / Partial B ([`ble-session.md` §2](../spec/profiles/offline/ble-session.md) rule 2) — Full Offline has no server-authorized value to clamp against.
+**Treating `maxCreditsPerTx` as a cap.** Check #8 is a hard reject, not a clamp: if the estimated cost of the requested service exceeds `maxCreditsPerTx`, reject with `4004 OFFLINE_PER_TX_EXCEEDED` ([`offline-pass.md` §4](../spec/profiles/offline/offline-pass.md) check #8, and the same check in `authorize-offline-pass.md` §5 and `06-security.md` §6.1.1). This guide previously said to cap silently, which contradicted its own §2.10 table. The only clamp in the offline path is `requestedDurationSeconds` against the **server-authorized** `durationSeconds` on Partial A / Partial B ([`ble-session.md` §1](../spec/profiles/offline/ble-session.md) *Starting a Service*, processing rule 2 — §2 is *Monitoring Progress* and carries no clamp) — Full Offline has no server-authorized value to clamp against.
 
 ### 6.5 Server Pitfalls
 
@@ -1297,4 +1297,4 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 
 ---
 
-*This guide covers OSPP 0.11.2. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*
+*This guide covers OSPP 0.12.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*

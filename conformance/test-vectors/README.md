@@ -1,6 +1,6 @@
 # Test Vectors
 
-> **Status:** Draft | **OSPP Version:** 0.11.2
+> **Status:** Draft | **OSPP Version:** 0.12.0
 
 Machine-readable test vectors for validating OSPP JSON Schema compliance.
 

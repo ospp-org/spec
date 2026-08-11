@@ -1883,6 +1883,10 @@ function category18() {
     ['README.md', new RegExp('version-' + SEMVER + '-blue', 'g'), 1],
     ['spec/README.md', new RegExp('^\\|\\s*OSPP Version\\s*\\|\\s*' + SEMVER + '\\s*\\|', 'gm'), 1],
     ['guides/implementors-guide.md', new RegExp('\\*\\*Spec Version:\\*\\*\\s*' + SEMVER, 'g'), 1],
+    // The guide states the version twice — the header and the closing line. Only the
+    // header was listed here, so the closing line went stale without anything noticing;
+    // a version claim outside this array is the defect this category exists to catch.
+    ['guides/implementors-guide.md', new RegExp('covers OSPP\\s+' + SEMVER, 'g'), 1],
     ['KNOWN-ISSUES.md', new RegExp('\\*\\*Specification-document version:\\*\\*\\s*' + SEMVER, 'g'), 1],
     // §2.2 renders the header as a worked example, in italics. A bold-only sweep misses
     // it, which is exactly how it went stale before.

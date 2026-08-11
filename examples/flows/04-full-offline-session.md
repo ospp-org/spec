@@ -35,7 +35,7 @@ It is a winter evening in Example City. Heavy snowfall has knocked out the inter
 18:32:04.500  App establishes BLE connection to station
 18:32:05.000  App reads FFF1 (StationInfo) — confirms station identity and offline status
 18:32:05.500  App reads FFF2 (AvailableServices) — displays service catalog
-18:32:12.000  Bob selects Bay 1, Eco Program, 5 min duration
+18:32:12.000  Bob selects Bay 1, Eco Program, 3 min duration
 18:32:12.500  App writes Hello to FFF3
 18:32:13.000  Station notifies Challenge on FFF4 (stationConnectivity: "Offline")
 18:32:13.200  App derives session key via HKDF-SHA256
@@ -167,7 +167,7 @@ The BLE connection state transitions: `CONNECTED` -> `HANDSHAKE`.
 
 **What Bob sees:**
 
-The app displays two bay cards. Both show "Available" (Available) in green. Under Bay 1, Bob sees "Eco Program (10 credits/min)" and "Standard Program (8 credits/min)". He taps Bay 1, then selects "Eco Program". A duration picker appears; he sets it to 5 minutes (50 credits). The app shows: "Estimated cost: 50 credits. Estimated offline balance: 72 credits."
+The app displays two bay cards. Both show "Available" (Available) in green. Under Bay 1, Bob sees "Eco Program (10 credits/min)" and "Standard Program (8 credits/min)". He taps Bay 1, then selects "Eco Program". A duration picker appears, bounded at 3 minutes: the pass the app is already holding carries `offlineAllowance.maxCreditsPerTx` (30) in plaintext, so the app can read the limit and shape its offer to fit **before** it asks the station for anything. He sets it to 3 minutes (30 credits). The app shows: "Estimated cost: 30 credits. Estimated offline balance: 72 credits."
 
 ---
 
@@ -237,7 +237,7 @@ The app displays a biometric prompt:
 
 > **Confirm offline payment**
 > Eco Program - Bay 1
-> Estimated: 50 credits (5 min)
+> Estimated: 30 credits (3 min)
 > [Authenticate with Face ID]
 
 Bob looks at his phone. Face ID succeeds. The app proceeds to send the OfflinePass.
@@ -300,13 +300,13 @@ The station performs all 10 validation checks sequentially:
 | 5 | Station allowed | Pass has no station restriction (applies to all stations) | PASS |
 | 6 | Max uses not exceeded | 3rd use <= `maxUses` (5) | PASS |
 | 7 | Max total credits not exceeded | Previous credits used (20) + this tx max (30) <= `maxTotalCredits` (100) | PASS |
-| 8 | Max credits per tx ok | Requested 50 credits, capped to `maxCreditsPerTx` (30) = 3 min max | PASS |
+| 8 | Max credits per tx ok | Estimated cost for the requested 3 minutes (30 credits) does not exceed `maxCreditsPerTx` (30) | PASS |
 | 9 | Min interval elapsed | Last tx from this pass was >60s ago (last was hours ago) | PASS |
 | 10 | Counter anti-replay | `counter` (3) > station's `lastSeenCounter` for this pass (2) | PASS |
 
 All 10 checks pass. The station:
 1. Updates `lastSeenCounter` for `opass_a8b9c0d1e2f3` to 3
-2. Authorizes the session with a cap of 30 credits (3 minutes at 10 credits/min)
+2. Authorizes the session as requested — 3 minutes, 30 credits at 10 credits/min
 
 ---
 
@@ -332,7 +332,7 @@ A green checkmark animation and "Authentication successful" (Authentication succ
 
 ### Step 13: App Writes StartServiceRequest to FFF3 (18:32:16.500)
 
-Note: The app requested 5 minutes (300s), but the station will cap to 3 minutes (180s) based on the `maxCreditsPerTx` limit of 30 credits at 10 credits/min.
+Note: the request is for 180 s — 30 credits at 10 credits/min, exactly `maxCreditsPerTx`. The app sized it from the pass before asking. Had it asked for 300 s, check #8 would have **rejected** the pass with `4004 OFFLINE_PER_TX_EXCEEDED` ([`offline-pass.md` §4](../../spec/profiles/offline/offline-pass.md) check #8); the station does not reduce an over-limit request to fit.
 
 **BLE GATT Write:** Characteristic `0000FFF3-0000-1000-8000-00805F9B34FB`
 
@@ -341,7 +341,7 @@ Note: The app requested 5 minutes (300s), but the station will cap to 3 minutes 
   "type": "StartServiceRequest",
   "bayId": "bay_c1d2e3f4a5b6",
   "serviceId": "svc_eco",
-  "requestedDurationSeconds": 300
+  "requestedDurationSeconds": 180
 }
 ```
 
@@ -351,7 +351,7 @@ Note: The app requested 5 minutes (300s), but the station will cap to 3 minutes 
 
 The station controller:
 1. Validates bay 1 is Available
-2. Calculates authorized duration: `min(requestedDurationSeconds, maxCreditsPerTx / priceCreditsPerMinute * 60)` = `min(300, 30/10*60)` = `min(300, 180)` = 180 seconds
+2. Authorizes the requested 180 seconds unchanged — check #8 already established that the estimated cost is within `maxCreditsPerTx`, so there is nothing to reduce
 3. Activates the dispenser relay on bay 1
 4. Starts the 180-second session timer
 5. Assigns a local session ID and offline transaction ID
@@ -369,7 +369,7 @@ The station controller:
 
 **What Bob sees:**
 
-The app transitions to the SessionActiveScreen. A large timer shows "3:00" (the station-authorized duration, not the requested 5 minutes). A note reads: "Duration adjusted to 3 min (offline limit: 30 credits)". The service icon pulses. A red "Stop service" button is visible at the bottom.
+The app transitions to the SessionActiveScreen. A large timer shows "3:00" — the duration Bob asked for, authorized as asked. A note reads: "Offline session (limit: 30 credits)". The service icon pulses. A red "Stop service" button is visible at the bottom.
 
 ---
 
@@ -765,7 +765,7 @@ The station removes the transaction from its local queue.
 
 1. **Station validates locally, not the server.** In the Full Offline flow, the station is the sole authority. It performs all 10 OfflinePass checks using the server's ECDSA P-256 public key stored in NVS. There is no round-trip to the server. This means the station must maintain its own counter tracking, revocation epoch, and usage limits per pass. The tradeoff is that the station cannot check the user's live wallet balance, which is why the OfflinePass has conservative credit limits.
 
-2. **maxCreditsPerTx caps the session duration.** Even though Bob requested 5 minutes (50 credits), the station authorized only 3 minutes (30 credits) because `maxCreditsPerTx` is 30. This hard cap protects against excessive offline spending. The app gracefully displays the adjusted duration rather than rejecting the request.
+2. **`maxCreditsPerTx` is a decline threshold, not a cap — and the shaping belongs in the app.** Check #8 compares the estimated cost against the limit and **rejects** with `4004 OFFLINE_PER_TX_EXCEEDED` when it is exceeded; it never trims the request to fit. All three normative statements of the check say so — [`offline-pass.md` §4](../../spec/profiles/offline/offline-pass.md) check #8 station-side, [`authorize-offline-pass.md` §5](../../spec/profiles/offline/authorize-offline-pass.md) check #8 server-side, and [`06-security.md` §6.1.1](../../spec/06-security.md) check #8 — and [`07-errors.md`](../../spec/07-errors.md) records `4004` as **not recoverable**, which a silently reduced session would contradict. Reducing unasked also charges a user for a service they did not agree to, and [`06-security.md` §7.4](../../spec/06-security.md) scores `creditsCharged` > `maxCreditsPerTx` as a fraud signal at reconcile — a scoring rule that only makes sense if an over-limit transaction is refused rather than trimmed. The app is the right place to fit the offer to the limit, and it has what it needs: the pass carries `maxCreditsPerTx` in plaintext from the moment it is issued, so a client can bound its own picker before it ever asks. That is where capping belongs. The one clamp the offline path does permit is `requestedDurationSeconds` against a **server-authorized** `durationSeconds` on Partial A / Partial B ([`ble-session.md` §1](../../spec/profiles/offline/ble-session.md) *Starting a Service*, processing rule 2) — Full Offline has no server-authorized value to clamp against.
 
 3. **ECDSA P-256 receipts for non-repudiation.** The station signs every offline transaction receipt with its ECDSA P-256 private key (generated during provisioning, never leaves the device). This means neither the station operator nor the user can forge a receipt. During reconciliation, the server verifies the signature against the station's registered public key.
 

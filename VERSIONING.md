@@ -20,7 +20,7 @@ During `0.x` development, breaking changes MAY occur between minor versions. Eac
 
 ## The document version, and the sites that carry it
 
-The number in each chapter header — *OSPP Version: 0.11.2* — is the
+The number in each chapter header — *OSPP Version: 0.12.0* — is the
 **specification-document version**. It identifies **the release**, and it is the
 only thing in a checkout that tells a reader which release they are holding.
 
@@ -47,16 +47,16 @@ holds still across releases cannot identify one.
 > no way to tell `v0.11.1` from `v0.11.0`. An unmoving version is not a
 > conservative choice; it is a document asserting something untrue about itself.
 
-**Every site MUST carry the same value.** As of `0.11.2` there are **28**, across
+**Every site MUST carry the same value.** As of `0.12.0` there are **29**, across
 26 files — the count is stated so that a sweep can be checked rather than
 trusted:
 
 | Sites | Where | Form |
 |------:|-------|------|
-| 22 | the 8 numbered chapters, `spec/glossary.md`, the 7 profile documents under `spec/profiles/`, and the `README`/`SECURITY` of `conformance/`, `conformance/test-vectors/`, `schemas/`, `examples/` | `**OSPP Version:** X.Y.Z` on line 3 |
+| 22 | the 9 numbered chapters, `spec/glossary.md`, the 7 profile documents under `spec/profiles/`, and the `README`/`SECURITY` of `conformance/`, `conformance/test-vectors/`, `schemas/`, `examples/` | `**OSPP Version:** X.Y.Z` on line 3 |
 | 1 | `README.md` | the version badge — the number appears **twice** on that line, in the alt text and in the shields.io URL |
 | 2 | `spec/README.md` | the `ospp-version:` front-matter key **and** the *OSPP Version* table row; these have disagreed with each other before, at `0.8.0` and `0.9.0` |
-| 1 | `guides/implementors-guide.md` | `**Spec Version:** X.Y.Z` |
+| 2 | `guides/implementors-guide.md` | `**Spec Version:** X.Y.Z` in the header **and** *"This guide covers OSPP X.Y.Z"* in the closing line; the closing line was unchecked until `0.12.0` and had gone stale unnoticed |
 | 1 | `spec/02-transport.md` §2.2 | a worked *example* of the header, in italics — a bold-only grep misses it |
 | 1 | `KNOWN-ISSUES.md` | `**Specification-document version:**` |
 
@@ -75,7 +75,7 @@ Two things this version is **not**:
 
 - It is **not** the wire `protocolVersion`. See
   [`02-transport.md` §2.2](spec/02-transport.md) — the two evolve separately and
-  need not match, and at `0.11.2` they do not (`0.11.2` against `0.3.0`).
+  need not match, and at `0.12.0` they do not (`0.12.0` against `0.3.0`).
 - It is **not** either SDK's version. See *SDK Versions Are Not This Version*
   below.
 
