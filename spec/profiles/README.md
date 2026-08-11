@@ -37,7 +37,7 @@ This section defines what each OSPP role **MUST** implement to claim conformance
 A station claiming OSPP conformance **MUST** implement:
 
 - The **Core** profile (BootNotification, Heartbeat, StatusNotification, ConnectionLost handling, DataTransfer, TriggerMessage).
-- The **Transaction** profile (StartService, StopService, MeterValues, TransactionEvent, ReserveBay, CancelReservation).
+- The **Transaction** profile (StartService, StopService, MeterValues, SessionEnded, TransactionEvent, ReserveBay, CancelReservation).
 - The **Security** profile (SecurityEvent, SignCertificate, CertificateInstall, TriggerCertificateRenewal).
 
 A station **MAY** additionally implement:
@@ -66,7 +66,7 @@ Client applications (mobile apps, web browsers) interact with the server via HTT
 | Profile | Path | Mandatory | Actions |
 |----------------------|-----------------------------------------------|-----------|---------|
 | Core | [core/](core/README.md) | Yes | 6 |
-| Transaction | [transaction/](transaction/README.md) | Yes | 6 |
+| Transaction | [transaction/](transaction/README.md) | Yes | 7 |
 | Security | [security/](security/README.md) | Yes | 4 |
 | Device Management | [device-management/](device-management/README.md) | No | 9 |
 | Offline / BLE | [offline/](offline/README.md) | No | 14 |

@@ -13,9 +13,9 @@ the arcs since
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 7 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) |
-| CLOSED | 1 | [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc; the entry is retained with its resolution |
-| **Total open** | **10** | |
+| OPEN | 8 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) |
+| CLOSED | 2 | [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
+| **Total open** | **11** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
@@ -572,6 +572,49 @@ writing it inside a signing arc would bury it.
 **What is settled and should not be re-litigated when it is taken up:** the MAC does not provide
 non-repudiation, the key to fix that already exists on every station, and the online money path is
 where it is missing.
+
+---
+
+## CLOSED (0.13.0) — SessionEnded belonged to no profile, and the note saying so was parked where nothing reads it
+
+**Raised 2026-06-04 in `CHANGELOG.md` [0.4.1], under "Flagged as known follow-ups". It sat there
+for 68 days and eight minor releases.** A changelog entry is a record of what a release did; it is
+not a worklist, nothing sweeps it, and the release that carries it scrolls out of view within a
+cycle. The note was accurate the whole time and nothing acted on it, which is a property of where
+it was written rather than of what it said. Follow-ups belong here.
+
+What it flagged: `SessionEnded` [MSG-040] had no profile. Core listed six actions, Transaction six,
+Security four, Device Management nine, Offline/BLE fourteen — 39 of the 40 messages. SessionEnded
+was the fortieth. It is in the message catalogue, it has its own section in Chapter 03, Chapter 01
+§6.5 forbids discarding it because it is billing evidence, and Chapter 02 §5.1 says it never
+expires — but no profile claimed it, so a station implementing every profile exactly as written
+would not have implemented the sole billing source for autonomously terminated sessions.
+
+Closed in 0.13.0 by assigning it to **Transaction**, not to Core as the 0.4.1 note assumed.
+Transaction owns the session lifecycle and the billing surface, and is mandatory from **Standard**
+compliance upward, so the obligation lands on every production station. Core would have bound it at
+**Development** too, where there are no sessions to end. Chapter 03 files it under "Status &
+Monitoring", which is a documentation taxonomy and not a profile assignment — MeterValues sits in
+the same section and has always been a Transaction action. New file:
+[`spec/profiles/transaction/session-ended.md`](spec/profiles/transaction/session-ended.md).
+
+---
+
+## OPEN — a server that detects fraud at reconciliation has no SecurityEvent to record the incident
+
+**Raised 2026-06-04 in `CHANGELOG.md` [0.4.1] alongside the SessionEnded note, and moved here in
+0.13.0 for the same reason.** Still open, and still unimplemented: `FraudDetected` appears nowhere
+in `spec/` or `schemas/`.
+
+When the server's offline-transaction reconciliation scoring concludes that a transaction is
+fraudulent, its **reaction** is well specified — disable offline mode for the user, revoke active
+passes ([`06-security.md` §7](spec/06-security.md)) — but those are administrative actions and out
+of scope for SecurityEvent. The **incident itself** has no spec-defined representation, so the
+event that triggered the reaction is not recorded in the audit channel that exists to record
+exactly that. A new server-originated `SecurityEvent` type and its emit rule are the shape of the
+fix; the reason it has not been written is that every existing `SecurityEvent` type is
+station-originated, and adding a server-originated one is a change to what the message means, not
+just to its enum.
 
 ---
 

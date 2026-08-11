@@ -4,7 +4,7 @@
 
 ## 1. Overview
 
-The **Transaction** profile covers the full session lifecycle -- from reservation through service start, metering, and stop, to final transaction reporting. This profile is mandatory for all stations at **Standard** compliance and above. Every production-deployed station MUST implement all six actions defined in this profile.
+The **Transaction** profile covers the full session lifecycle -- from reservation through service start, metering, and stop, to final transaction reporting, including the sessions that end without the server asking. This profile is mandatory for all stations at **Standard** compliance and above. Every production-deployed station MUST implement all seven actions defined in this profile.
 
 This profile provides the core mechanisms for:
 
@@ -25,6 +25,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 | [StopService](stop-service.md) | Server to Station | REQUEST/RESPONSE | Stop an active service on a bay. |
 | [MeterValues](meter-values.md) | Station to Server | EVENT | Periodic metering data during a session. |
 | [TransactionEvent](transaction-event.md) | Station to Server | REQUEST/RESPONSE | Report offline transactions for reconciliation. |
+| [SessionEnded](session-ended.md) | Station to Server | EVENT | Session terminated autonomously; sole billing source for that termination. |
 
 ## 3. Session Lifecycle Diagram
 
@@ -68,11 +69,12 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 
 ### 4.1 Mandatory Implementation
 
-All six actions in this profile are REQUIRED for OSPP compliance at Standard level and above (Standard, Extended, Complete). A station MUST:
+All seven actions in this profile are REQUIRED for OSPP compliance at Standard level and above (Standard, Extended, Complete). A station MUST:
 
 1. Accept and correctly process **ReserveBay**, **CancelReservation**, **StartService**, and **StopService** REQUEST messages from the server.
 2. Send **MeterValues** EVENT messages at the configured interval during active sessions (if `meterValuesSupported` is `true`).
 3. Send **TransactionEvent** REQUEST messages for all pending offline transactions after reconnection.
+4. Send a **SessionEnded** EVENT for every session that ends without a server-initiated StopService, and buffer it rather than discard it when it cannot be sent ([`session-ended.md`](session-ended.md)).
 
 ### 4.2 Timing Constraints
 

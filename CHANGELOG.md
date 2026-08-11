@@ -2374,9 +2374,15 @@ Focused tightening of the SecurityEvent dedup contract — closes one implicit-b
 
 ### Flagged as known follow-ups (not in this release)
 
-- `profiles/core/session-ended.md` profile is missing entirely — the `SessionEnded` action is referenced from `04-flows.md`, the SessionEndReason vocabulary was extended in v0.4.0 (Item 8), and crash-resilience rules were added in v0.4.0 (`05-state-machines.md §2.5`), but no dedicated profile markdown exists. To be authored in a future release.
+> **Both of these were moved to [KNOWN-ISSUES.md](KNOWN-ISSUES.md) in 0.13.0, and are recorded here
+> only as history.** They sat in this section for 68 days and eight minor releases without being
+> picked up, because a changelog records what a release *did* — nothing sweeps it for outstanding
+> work, and the release carrying it scrolls out of view within a cycle. Follow-ups now go to
+> KNOWN-ISSUES, where the summary table counts them.
 
-- Server-originated `FraudDetected` SecurityEvent type — when a server detects fraud via offline-tx reconciliation scoring, no SecurityEvent currently records the **incident** (the server's **reaction** — auto-disable of offline mode, revocation of active passes — is an administrative action and out of scope for SecurityEvent; the incident itself currently has no spec-defined SecurityEvent representation). A new server-originated type and emit rule will be considered in a future release.
+- ~~`profiles/core/session-ended.md` profile is missing entirely~~ — the `SessionEnded` action is referenced from `04-flows.md`, the SessionEndReason vocabulary was extended in v0.4.0 (Item 8), and crash-resilience rules were added in v0.4.0 (`05-state-machines.md §2.5`), but no dedicated profile markdown exists. **Closed in 0.13.0** — authored as `profiles/transaction/session-ended.md`, not under Core as assumed here.
+
+- Server-originated `FraudDetected` SecurityEvent type — when a server detects fraud via offline-tx reconciliation scoring, no SecurityEvent currently records the **incident** (the server's **reaction** — auto-disable of offline mode, revocation of active passes — is an administrative action and out of scope for SecurityEvent; the incident itself currently has no spec-defined SecurityEvent representation). A new server-originated type and emit rule will be considered in a future release. **Still open; tracked in KNOWN-ISSUES.**
 
 ### Migration
 

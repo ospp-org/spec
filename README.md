@@ -189,7 +189,7 @@ Each profile defines a subset of protocol actions. Implementations declare which
 | Profile | Messages | Description | Spec |
 |---------|:--------:|-------------|------|
 | **Core** | 6 | BootNotification, Heartbeat, StatusNotification, ConnectionLost, DataTransfer, TriggerMessage | [spec/profiles/core/](spec/profiles/core/) |
-| **Transaction** | 6 | StartService, StopService, TransactionEvent, MeterValues, ReserveBay, CancelReservation | [spec/profiles/transaction/](spec/profiles/transaction/) |
+| **Transaction** | 7 | StartService, StopService, TransactionEvent, MeterValues, SessionEnded, ReserveBay, CancelReservation | [spec/profiles/transaction/](spec/profiles/transaction/) |
 | **Security** | 4 | SecurityEvent, SignCertificate, CertificateInstall, TriggerCertificateRenewal | [spec/profiles/security/](spec/profiles/security/) |
 | **Device Management** | 9 | Config, Reset, Firmware, Diagnostics, Maintenance, ServiceCatalog | [spec/profiles/device-management/](spec/profiles/device-management/) |
 | **Offline / BLE** | 14 | AuthorizeOfflinePass (MQTT), BLE transport, handshake, offline sessions, OfflinePass, reconciliation | [spec/profiles/offline/](spec/profiles/offline/) |
@@ -229,7 +229,7 @@ Each profile defines a subset of protocol actions. Implementations declare which
 | 40 | SessionEnded | Station → Server | EVENT | — |
 
 > **Note:** MSG-027–039 are the 13 BLE messages, listed separately below.
-> SessionEnded [MSG-040] is emitted autonomously by the station on session termination — timer expiry or fault — rather than in reply to a command.
+> SessionEnded [MSG-040] is emitted autonomously by the station on session termination — timer expiry or fault — rather than in reply to a command. It is a **Transaction** action ([`session-ended.md`](spec/profiles/transaction/session-ended.md)); until 0.13.0 it belonged to no profile at all, so a station implementing every profile exactly as written still would not have implemented the sole billing source for autonomous terminations.
 
 **13 BLE Messages:** StationInfo (FFF1), AvailableServices (FFF2), HELLO, CHALLENGE, OfflineAuthRequest, ServerSignedAuth, AuthResponse, START/StopServiceRequest/RESPONSE, ServiceStatus (FFF5), Receipt (FFF6)
 
@@ -375,7 +375,7 @@ ospp/
 │   ├── glossary.md              Glossary of terms
 │   └── profiles/                Profile specifications
 │       ├── core/                    6 actions (BootNotification, Heartbeat, ...)
-│       ├── transaction/             6 actions (StartService, StopService, ...)
+│       ├── transaction/             7 actions (StartService, StopService, ...)
 │       ├── security/                4 actions (SecurityEvent, SignCertificate, ...)
 │       ├── device-management/       9 actions (Config, Firmware, Diagnostics, ...)
 │       └── offline/                 6 docs (AuthorizeOfflinePass, BLE transport, handshake, ...)
