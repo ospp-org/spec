@@ -21,7 +21,7 @@
       ]
     },
     "bayId": {
-      "type": "string",
+      "$ref": "../common/bay-id.schema.json",
       "description": "Bay identifier for bay-specific messages (StatusNotification, MeterValues). Optional."
     }
   }
