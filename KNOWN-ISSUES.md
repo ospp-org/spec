@@ -255,15 +255,19 @@ property of the code"*:
 On category, see the finding above: the spec has section *headings*, not a per-code category, and
 both SDKs derive one arithmetically from the numeric range.
 
-**Both SDKs invented answers anyway, and invented different ones.** Enumerated at
-`ospp-sdk-php` v0.8.4 + `sdk-ts` v0.7.0 working trees, 114 codes each:
+**Both SDKs invented answers anyway, and invented different ones.** First enumerated at
+`ospp-sdk-php` v0.8.4 + `sdk-ts` v0.7.0 working trees, 114 codes each. **Re-measured 2026-08-12
+against `sdk-ts` 0.13.0 and the current `ospp-sdk-php` tree: 118 codes each**, matching the
+registry — the earlier figure was a dated measurement, not a disagreement, and it went stale as
+the registry grew from 114 to 118 (`3xxx` 17 to 20, `6xxx` 8 to 9). The finding itself is
+unchanged; only the counts moved:
 
 | Field | Result |
 |-------|--------|
 | code numbers, names | identical |
 | `severity`, `recoverable` | identical — 0 diffs |
-| category *partition* | identical — 15 / 20 / 17 / 20 / 34 / 8 |
-| category *label* | **differs**: `5xxx` is `station` (PHP) vs `Hardware` (TS) |
+| category *partition* | identical — 15 / 20 / 20 / 20 / 34 / 9 (was 15 / 20 / 17 / 20 / 34 / 8 at 114) |
+| category *label* | **differs**: `5xxx` is `station` (PHP `OsppErrorCode.php`) vs `Hardware` (TS `OsppErrorCode.ts`) — still divergent at the 2026-08-12 re-measurement |
 | `httpStatus` | **51 of 114 disagree** |
 
 The 51 split into three kinds, and only the third is a disagreement about fact:
