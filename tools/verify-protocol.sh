@@ -1600,8 +1600,11 @@ function category16() {
   const dirs = ['examples/payloads', 'conformance/test-vectors'];
   const jsonFiles = dirs.flatMap(d => findFiles(d, '.json'));
 
-  // Also check markdown files with embedded JSON blocks (Fix 12)
-  const mdDirs = ['examples/flows', 'examples/error-scenarios'];
+  // Markdown roots. `spec/` and `guides/` were absent until 0.13.0, which is how
+  // `spec/00-introduction.md` §3.6 carried a non-conforming timestamp — in the very
+  // sentence mandating millisecond precision — from the initial commit to 0.13.0,
+  // while KNOWN-ISSUES V2-050 recorded it as repaired.
+  const mdDirs = ['spec', 'guides', 'examples/flows', 'examples/error-scenarios'];
   const mdFilesTs = mdDirs.flatMap(d => findFiles(d, '.md'));
 
   // Per-timestamp extraction regex (Fix 10: avoid per-line masking)
@@ -1642,14 +1645,18 @@ function category16() {
     checkTimestampsInContent(content, rel(file));
   }
 
-  // Check markdown embedded JSON blocks (Fix 12)
+  // Check markdown in full — prose included, not only fenced JSON.
+  //
+  // This path used to run `extractJsonBlocks` and check the re-serialized result, which
+  // made the category hollow in the two trees it already covered: a timestamp had to sit
+  // inside a ```json fence that PARSED before it could be seen, so every timestamp written
+  // in prose was invisible, and the reported line numbers were positions in a regenerated
+  // string rather than in the file. Four bad timestamps were sitting in `examples/` under
+  // that blind spot. A timestamp in prose is quoted at a reader who will copy it, so it is
+  // checked wherever it appears; scanning the raw text also restores real line numbers.
   for (const file of mdFilesTs) {
     const content = readSafe(file) || '';
-    const blocks = extractJsonBlocks(content);
-    if (blocks.length === 0) continue;
-    // Reconstruct JSON block text for timestamp checking
-    const blockText = blocks.map(b => JSON.stringify(b, null, 2)).join('\n');
-    checkTimestampsInContent(blockText, rel(file));
+    checkTimestampsInContent(content, rel(file));
   }
 
   logCat(C);

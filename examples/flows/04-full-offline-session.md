@@ -294,7 +294,7 @@ The station performs all 10 validation checks sequentially:
 | # | Check | Input | Result |
 |--:|-------|-------|--------|
 | 1 | ECDSA P-256 signature valid | `signature` verified against server's ECDSA P-256 public key in NVS | PASS |
-| 2 | Pass not expired | `expiresAt` (2026-02-14T06:00:00Z) > station clock (2026-02-13T18:32:15Z) | PASS |
+| 2 | Pass not expired | `expiresAt` (2026-02-14T06:00:00.000Z) > station clock (2026-02-13T18:32:15.000Z) | PASS |
 | 3 | Revocation epoch valid | Pass `revocationEpoch` (42) >= station's `RevocationEpoch` config (42) | PASS |
 | 4 | Device ID matches Hello | Pass `deviceId` == Hello `deviceId` (`device_b7c4de89f0123456`) | PASS |
 | 5 | Station allowed | Pass has no station restriction (applies to all stations) | PASS |

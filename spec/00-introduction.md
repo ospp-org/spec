@@ -175,7 +175,7 @@ Message payload schemas are defined using **JSON Schema Draft 2020-12**. Machine
 
 ### 3.6 Timestamps
 
-All timestamps in OSPP messages **MUST** be formatted as ISO 8601 strings in UTC with the `Z` suffix -- e.g., `"2026-02-13T10:30:00Z"`. Millisecond precision **MUST** be included -- e.g., `"2026-02-13T10:30:00.123Z"`. Implementations **MUST NOT** use timezone offsets other than `Z`.
+All timestamps in OSPP messages **MUST** be formatted as ISO 8601 strings in UTC with the `Z` suffix and millisecond precision -- e.g., `"2026-02-13T10:30:00.000Z"` or `"2026-02-13T10:30:00.123Z"`. Exactly three decimal places **MUST** be present, including when they are zero: a timestamp that omits them, or that carries any other number of them, is rejected by [`timestamp.schema.json`](../schemas/common/timestamp.schema.json). Implementations **MUST NOT** use timezone offsets other than `Z`.
 
 ### 3.7 Encoding
 

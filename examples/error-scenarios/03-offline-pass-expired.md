@@ -22,7 +22,7 @@ Alice's OfflinePass was issued on 2026-02-11 with a 24-hour validity window
 (expires 2026-02-12T10:00:00.000Z). The app did not refresh the pass because Alice
 had no connectivity since it expired. When the station performs its local
 validation of the OfflinePass, check #2 (expiration) fails because the current
-time (2026-02-13T10:30:05Z per the station's RTC) is past the `expiresAt`
+time (2026-02-13T10:30:05.000Z per the station's RTC) is past the `expiresAt`
 timestamp. The station rejects the offline authentication with error code
 **2003 OFFLINE_PASS_EXPIRED**.
 

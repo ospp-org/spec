@@ -62,6 +62,13 @@ The following 30 issues were resolved in the backlog batch fix.
 > and its default moved to `All`, the `mac` field is no longer conditional, and `bootReason` gained
 > `Reconnect` for the case V2-047 resolved as `ErrorRecovery`. Read [CHANGELOG.md](CHANGELOG.md)
 > for what is normative; read this for why a thing was once written the way it was.
+>
+> **And one of these rows was simply false.** V2-050 claimed a repair that `git log` shows was
+> never made, and it stood for five months because nothing checks a resolution against the tree it
+> describes. A registry that claims repairs it did not perform is worse than an incomplete one: an
+> incomplete registry sends you to look, and a false one tells you not to bother. The rows here are
+> **claims, not verified state** — the only row audited against the tree is V2-050, and it did not
+> survive the audit. Verify before relying on any of them.
 
 | ID | Category | Severity | Resolution |
 |----|----------|----------|------------|
@@ -92,7 +99,7 @@ The following 30 issues were resolved in the backlog batch fix.
 | V2-047 | Flow | MINOR | Flow 10: mqtt_reconnect→ErrorRecovery in narrative |
 | V2-048 | Flow | MINOR | Flow 11: arming package→OfflinePass, arm_pkg_→opass_ |
 | V2-049 | Flow | MINOR | Flow 09: math table shows both pure 3.5x and LWT-adjusted calculations |
-| V2-050 | Flow | MINOR | 00-introduction timestamp: added .000 milliseconds |
+| V2-050 | Flow | MINOR | ~~00-introduction timestamp: added .000 milliseconds~~ — **this repair was claimed and never performed.** `git log -S` on the literal shows `spec/00-introduction.md` §3.6 untouched from the initial commit `5e49f2e` until 0.13.0, still carrying `…T10:30:00Z` as the worked example in the sentence that mandates millisecond precision — a value its own [`timestamp.schema.json`](schemas/common/timestamp.schema.json) rejects. Actually fixed in 0.13.0, along with the gate that should have caught it (Category 16 did not scan `spec/`, and in the trees it did scan it read only parsed JSON blocks, so four further prose timestamps had been sitting in `examples/` in plain sight). |
 | V2-052 | Flow | MINOR | SecurityEvent example: failedMessageId→messageId, failedAction→action |
 | V2-053 | Security | MINOR | Security checklist references MessageSigningMode (default: Critical) |
 

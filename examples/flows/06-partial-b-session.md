@@ -313,7 +313,7 @@ The server runs the eleven authorize-time checks of
 in that order, stopping at the first failure:
 
 1. **Signature verification** — the ECDSA P-256 `signature` verifies against the server's own signing key
-2. **Not expired** — `expiresAt` (2026-02-14T06:00:00Z) is in the future
+2. **Not expired** — `expiresAt` (2026-02-14T06:00:00.000Z) is in the future
 3. **Revocation epoch** — pass `revocationEpoch` (42) >= the server's current `RevocationEpoch` (42)
 4. **Device binding** — `offlinePass.deviceId` (`device_b7c4de89f0123456`) matches the request's `deviceId`
 5. **Station allowance** — the stored pass record's `allowed_station_ids` is empty, so the pass is unscoped and this station is permitted
