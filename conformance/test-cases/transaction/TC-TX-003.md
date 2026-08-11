@@ -35,6 +35,7 @@ Verify that when a session is stopped before its natural expiry (early stop), th
    {
      "bayId": "bay_a1b2c3d4",
      "serviceId": "svc_basic",
+     "programNumber": 1,
      "sessionId": "sess_b3c4d5e6f7a8",
      "sessionSource": "MobileApp",
      "durationSeconds": 300

@@ -13,7 +13,7 @@ Verify that the station correctly handles MQTT disconnection scenarios: graceful
 - `spec/profiles/core/connection-lost.md` — ConnectionLost LWT behavior
 - `spec/profiles/core/boot-notification.md` — BootNotification on reconnect
 - `spec/profiles/core/heartbeat.md` — Heartbeat resumption
-- `spec/03-messages.md` §5.4 — ConnectionLost payload
+- `spec/03-messages.md` §5.5 — ConnectionLost payload (§5.4 is SessionEnded)
 - `spec/08-configuration.md` §2 — `ConnectionLostGracePeriod` (default 300s)
 - `schemas/mqtt/boot-notification-response.schema.json`
 
@@ -47,7 +47,7 @@ Verify that the station correctly handles MQTT disconnection scenarios: graceful
      "reason": "UnexpectedDisconnect"
    }
    ```
-9. Verify the payload contains `stationId` (REQUIRED per `spec/03-messages.md` §5.4).
+9. Verify the payload contains `stationId` (REQUIRED per `spec/03-messages.md` §5.5).
 10. Verify the server receives the ConnectionLost event and starts the `ConnectionLostGracePeriod` timer (300s).
 11. Wait 300 seconds without the station reconnecting.
 12. Verify the server marks the station as `Offline`.

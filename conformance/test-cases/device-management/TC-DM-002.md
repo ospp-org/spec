@@ -13,8 +13,10 @@ Verify the complete firmware update flow: UpdateFirmware command is accepted, th
 - `spec/profiles/device-management/update-firmware.md` — UpdateFirmware command, A/B partition strategy
 - `spec/profiles/device-management/firmware-status.md` — FirmwareStatusNotification states
 - `spec/profiles/core/boot-notification.md` — BootNotification after reboot
-- `spec/07-errors.md` §4.2 — Error codes: 5107 `OPERATION_IN_PROGRESS`, 5103 `STORAGE_ERROR`, 1011 `URL_UNREACHABLE`
+- `spec/07-errors.md` §4.2 — Error codes: 5107 `OPERATION_IN_PROGRESS`, 5103 `STORAGE_ERROR`, 1011 `URL_UNREACHABLE`, 5112 `FIRMWARE_SIGNATURE_INVALID`
+- **`spec/06-security.md` §4.6 — firmware code-signing. `signature` is REQUIRED on UpdateFirmware, and "SHA-256 checksum verification alone is **NOT** sufficient — it protects against corruption but not against malicious replacement." An absent or non-verifying signature is rejected with `5112 FIRMWARE_SIGNATURE_INVALID` and a `FirmwareIntegrityFailure` SecurityEvent.**
 - `schemas/mqtt/boot-notification-request.schema.json`
+- **`schemas/mqtt/update-firmware-request.schema.json` — `required: [firmwareUrl, firmwareVersion, checksum, signature]`. The illustrative `signature` values below are signatures produced by `conformance/test-keys/firmware-test-key.pem` over `conformance/test-firmware/test-firmware.bin` (ECDSA is randomised, so any valid signature over the same binary serves); a harness driving real binaries substitutes its own, and `conformance/test-vectors/invalid/device-management/update-firmware-request-missing-signature.json` is the negative vector for omitting the field.**
 
 ## Preconditions
 
@@ -35,8 +37,9 @@ Verify the complete firmware update flow: UpdateFirmware command is accepted, th
    ```json
    {
      "firmwareUrl": "https://test-server/firmware/v1.1.0.bin",
+     "firmwareVersion": "1.1.0",
      "checksum": "sha256:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
-     "firmwareVersion": "1.1.0"
+     "signature": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtg=="
    }
    ```
 3. Receive UpdateFirmware RESPONSE: `status: "Accepted"`.
@@ -57,8 +60,9 @@ Verify the complete firmware update flow: UpdateFirmware command is accepted, th
     ```json
     {
       "firmwareUrl": "https://test-server/firmware/v1.1.0-bad.bin",
+      "firmwareVersion": "1.2.0",
       "checksum": "sha256:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
-      "firmwareVersion": "1.2.0"
+      "signature": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtg=="
     }
     ```
 15. Receive UpdateFirmware RESPONSE: `status: "Accepted"` (accepted for processing).
@@ -83,8 +87,9 @@ Verify the complete firmware update flow: UpdateFirmware command is accepted, th
     ```json
     {
       "firmwareUrl": "https://nonexistent.invalid/firmware.bin",
+      "firmwareVersion": "2.0.0",
       "checksum": "sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-      "firmwareVersion": "2.0.0"
+      "signature": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtg=="
     }
     ```
 28. Receive UpdateFirmware Accepted (accepted for processing).
@@ -97,10 +102,11 @@ Verify the complete firmware update flow: UpdateFirmware command is accepted, th
 1. UpdateFirmware is accepted and the station progresses through: Downloading -> Downloaded -> Installing -> Installed.
 2. After installation, the station reboots and sends BootNotification with the new firmware version.
 3. The SHA-256 checksum is verified after download; a mismatch triggers Failed without reboot.
-4. A second UpdateFirmware during an active update is rejected with `5107 OPERATION_IN_PROGRESS`.
-5. An unreachable URL results in Failed without affecting current firmware.
-6. FirmwareStatusNotification events are sent at each stage transition.
-7. The station remains fully operational (and on the previous firmware) after any update failure.
+4. **Every UpdateFirmware in this case carries `signature`, and the station verifies it against its trusted Firmware Signing Certificate before installing.** Checksum verification does not substitute for it — the checksum is supplied by the same message as the URL, so an attacker who can choose one can choose both.
+5. A second UpdateFirmware during an active update is rejected with `5107 OPERATION_IN_PROGRESS`.
+6. An unreachable URL results in Failed without affecting current firmware.
+7. FirmwareStatusNotification events are sent at each stage transition.
+8. The station remains fully operational (and on the previous firmware) after any update failure.
 
 ## Failure Criteria
 
@@ -111,3 +117,4 @@ Verify the complete firmware update flow: UpdateFirmware command is accepted, th
 5. Station enters a non-recoverable state after a failed firmware update (A/B rollback failure).
 6. Station stops normal operation (session handling, heartbeat) during firmware download.
 7. Checksum mismatch is not detected (station proceeds to install corrupt firmware).
+8. **The station accepts an UpdateFirmware with no `signature`, or with one that does not verify, instead of rejecting it with `5112 FIRMWARE_SIGNATURE_INVALID` and emitting a `FirmwareIntegrityFailure` SecurityEvent.** This is the code-signing gate: a station that installs on checksum alone can be made to install anything the commanding party can also hash.

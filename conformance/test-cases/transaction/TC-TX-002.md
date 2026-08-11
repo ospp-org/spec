@@ -47,6 +47,7 @@ Verify the complete reservation lifecycle: ReserveBay transitions the bay to Res
    {
      "bayId": "bay_a1b2c3d4",
      "serviceId": "svc_premium",
+     "programNumber": 2,
      "sessionId": "sess_d1e2f3a4b5c6",
      "sessionSource": "MobileApp",
      "durationSeconds": 120
@@ -58,6 +59,7 @@ Verify the complete reservation lifecycle: ReserveBay transitions the bay to Res
    {
      "bayId": "bay_a1b2c3d4",
      "serviceId": "svc_premium",
+     "programNumber": 2,
      "sessionId": "sess_b2c3d4e5f6a7",
      "sessionSource": "MobileApp",
      "durationSeconds": 180,

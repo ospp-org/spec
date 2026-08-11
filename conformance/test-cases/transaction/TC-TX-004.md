@@ -123,6 +123,7 @@ Verify that the station correctly handles CancelReservation for valid reservatio
       "sessionId": "sess_b1c2d3e4f5a6",
       "bayId": "bay_c1d2e3f4a5b6",
       "serviceId": "svc_basic",
+      "programNumber": 1,
       "durationSeconds": 300,
       "sessionSource": "MobileApp",
       "reservationId": "rsv_a7b8c9d0e1f2"

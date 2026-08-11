@@ -85,7 +85,7 @@ structure is validated separately via `schemas/mqtt/mqtt-envelope.schema.json`.
 When adding new test vectors:
 
 1. Place the file in the correct `valid/` or `invalid/` subdirectory.
-2. Follow the naming convention: `{action}.{variant}.json`.
+2. Follow the naming convention: `{action}-{variant}.json`, as §1 states and as all existing vectors use.
 3. Ensure valid vectors pass and invalid vectors fail schema validation.
 4. For invalid vectors, include a comment in the file describing which constraint is violated:
 

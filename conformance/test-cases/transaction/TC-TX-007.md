@@ -34,7 +34,8 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
    {
      "bayId": "bay_a1b2c3d4",
      "serviceId": "svc_basic",
-     "sessionId": "sess_timer01",
+     "programNumber": 1,
+     "sessionId": "sess_a1b2c3d4e5f6",
      "sessionSource": "MobileApp",
      "durationSeconds": 30
    }
@@ -44,7 +45,7 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
 4. Do NOT send StopService. Wait for `durationSeconds` (30s) to elapse.
 5. Observe SessionEnded EVENT from station. Validate:
    - `action: "SessionEnded"`
-   - `payload.sessionId: "sess_timer01"`
+   - `payload.sessionId: "sess_a1b2c3d4e5f6"`
    - `payload.bayId: "bay_a1b2c3d4"`
    - `payload.reason: "TimerExpired"`
    - `payload.actualDurationSeconds` is approximately 30 (+/- 3s)
@@ -53,7 +54,7 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
 6. Observe StatusNotification: `Occupied` → `Finishing`.
 7. Observe StatusNotification: `Finishing` → `Available`.
 8. Verify no StopService RESPONSE is sent by the station (SessionEnded replaces it for autonomous stops).
-9. Verify no further MeterValues events are emitted for `sess_timer01` after SessionEnded.
+9. Verify no further MeterValues events are emitted for `sess_a1b2c3d4e5f6` after SessionEnded.
 
 ### Part B — Hardware Fault During Session
 
@@ -62,7 +63,8 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
     {
       "bayId": "bay_a1b2c3d4",
       "serviceId": "svc_basic",
-      "sessionId": "sess_fault01",
+      "programNumber": 1,
+      "sessionId": "sess_b2c3d4e5f6a7",
       "sessionSource": "MobileApp",
       "durationSeconds": 300
     }
@@ -72,7 +74,7 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
 13. Trigger a hardware fault on the test station (implementation-specific method).
 14. Observe SessionEnded EVENT from station. Validate:
     - `action: "SessionEnded"`
-    - `payload.sessionId: "sess_fault01"`
+    - `payload.sessionId: "sess_b2c3d4e5f6a7"`
     - `payload.reason: "Fault"`
     - `payload.actualDurationSeconds` > 0
     - `payload.creditsCharged` >= 0
@@ -88,7 +90,8 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
     {
       "bayId": "bay_a1b2c3d4",
       "serviceId": "svc_basic",
-      "sessionId": "sess_local01",
+      "programNumber": 1,
+      "sessionId": "sess_c3d4e5f6a7b8",
       "sessionSource": "MobileApp",
       "durationSeconds": 300
     }

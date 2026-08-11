@@ -1650,7 +1650,7 @@ Instructs the station to download and install a new firmware version. The statio
 {
   "firmwareUrl": "https://firmware.example.com/station/v1.3.0.bin",
   "firmwareVersion": "1.3.0",
-  "checksum": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+  "checksum": "sha256:928de7ea35ba13fd64dfdec744051a7af9142a06bab3404a8bc548b5761644b0",
   "signature": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtg=="
 }
 ```

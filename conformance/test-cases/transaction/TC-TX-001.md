@@ -36,6 +36,7 @@ Verify that a station correctly handles the complete online session lifecycle fr
    {
      "bayId": "bay_a1b2c3d4",
      "serviceId": "svc_basic",
+     "programNumber": 1,
      "sessionId": "sess_b1c2d3e4f5a6",
      "sessionSource": "MobileApp",
      "durationSeconds": 120

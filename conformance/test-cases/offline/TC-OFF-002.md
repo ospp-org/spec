@@ -35,7 +35,7 @@ Verify that the station correctly performs all 10 OfflinePass validation checks 
    - `deviceId` matches test device, station-scoping constraint includes `"stn_b1c2d3e4f5a6"`.
    - `maxUses: 10` (not exhausted), `maxTotalCredits: 100` (not exhausted).
    - `maxCreditsPerTx: 20`, `minIntervalSec: 60`.
-   - `counter: 11` (greater than station's `lastSeenCounter` of 10).
+   - The OfflineAuthRequest envelope carries `counter: 11` (greater than the station's `lastSeenCounter` of 10). `counter` is a member of [`offline-auth-request.schema.json`](../../../schemas/ble/offline-auth-request.schema.json), **not** of the pass — `offline-pass.schema.json` is closed and has no such field.
 7. BLE connection is established and HELLO/CHALLENGE handshake is completed for each sub-test.
 
 ## Steps
@@ -79,13 +79,13 @@ Verify that the station correctly performs all 10 OfflinePass validation checks 
 
 ### Check 6 — Maximum Uses (maxUses)
 
-20. Create an OfflinePass with `maxUses: 0` (exhausted).
+20. Exhaust the pass rather than minting an exhausted one: `offlineAllowance.maxUses` carries `"minimum": 1` in [`offline-pass.schema.json`](../../../schemas/common/offline-pass.schema.json), so `maxUses: 0` is schema-invalid and cannot be signed. Issue a pass with `maxUses: 1`, spend it once, then present it again.
 21. Send OfflineAuthRequest.
 22. Verify AuthResponse: `result: "Rejected"`, error code `4002` (`OFFLINE_LIMIT_EXCEEDED`).
 
 ### Check 7 — Maximum Total Credits (maxTotalCredits)
 
-23. Create an OfflinePass with `maxTotalCredits: 0` (exhausted, or set to a value less than the minimum service cost).
+23. Likewise for credits — `maxTotalCredits` also carries `"minimum": 1`, so `maxTotalCredits: 0` is not constructible. Issue a pass whose `maxTotalCredits` is below the cost of the cheapest service (e.g. `1`), so the check fails on the first request.
 24. Send OfflineAuthRequest.
 25. Verify AuthResponse: `result: "Rejected"`, error code `4002` (`OFFLINE_LIMIT_EXCEEDED`).
 
@@ -113,7 +113,7 @@ Verify that the station correctly performs all 10 OfflinePass validation checks 
 ### Positive Control — All Checks Pass
 
 38. Send OfflineAuthRequest with the unmodified baseline valid OfflinePass (`counter: 11`).
-39. Verify AuthResponse: `result: "Accepted"`, `sessionId` is returned.
+39. Verify AuthResponse: `result: "Accepted"` with `sessionKeyConfirmation`. There is no `sessionId` on AuthResponse — [`auth-response.schema.json`](../../../schemas/ble/auth-response.schema.json) is closed and does not carry one; the session identifier arrives on StartServiceResponse.
 40. Verify the station updates `lastSeenCounter` to `11`.
 
 ## Expected Results

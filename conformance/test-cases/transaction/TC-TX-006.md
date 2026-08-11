@@ -12,7 +12,8 @@ Verify that the station correctly sends TransactionEvent messages for offline tr
 
 - `spec/profiles/transaction/transaction-event.md` — TransactionEvent behavior
 - `spec/profiles/offline/reconciliation.md` — Offline reconciliation flow
-- `spec/03-messages.md` §4.1 — TransactionEvent payload (timeout 60s)
+- `spec/profiles/offline/reconciliation.md` §2 — **response timeout 30 s on this path.** This is a reconciliation case, and the reconciliation profile sets **30 s**, not §4.1's 60 s, and says so explicitly ("This profile uses a shorter response timeout (30s) than the standard TransactionEvent timeout (60s)"). §4.1's 60 s governs the non-reconciliation TransactionEvent.
+- `spec/03-messages.md` §4.1 — TransactionEvent payload
 - `spec/07-errors.md` §5 — Retry policies
 - `schemas/mqtt/transaction-event-response.schema.json`
 
@@ -52,7 +53,7 @@ Verify that the station correctly sends TransactionEvent messages for offline tr
 ```
 2. Verify all required fields are present: `offlineTxId`, `offlinePassId`, `userId`, `bayId`, `serviceId`, `startedAt`, `endedAt`, `durationSeconds`, `creditsCharged`, `receipt`, `txCounter`.
 3. Verify `receipt.signatureAlgorithm` is `"ECDSA-P256-SHA256"`.
-4. Send TransactionEvent response within 60 seconds:
+4. Send TransactionEvent response within 30 seconds:
    ```json
    {
      "status": "Accepted"
@@ -116,7 +117,7 @@ Verify that the station correctly sends TransactionEvent messages for offline tr
 5. `Duplicate` — station removes transaction from queue (already processed) and proceeds.
 6. `RetryLater` — station keeps transaction in queue and retries with backoff.
 7. `Rejected` — station flags transaction for investigation and proceeds (no retry).
-8. TransactionEvent response timeout is 60 seconds.
+8. TransactionEvent response timeout is 30 seconds on the reconciliation path (`reconciliation.md` §2).
 
 ## Failure Criteria
 
@@ -126,4 +127,4 @@ Verify that the station correctly sends TransactionEvent messages for offline tr
 4. Station retries after receiving `Rejected` status.
 5. Station retries after receiving `Duplicate` status.
 6. Station does not retry after receiving `RetryLater` status.
-7. Station does not send TransactionEvent response within the 60-second timeout window.
+7. Server does not send the TransactionEvent response within the 30-second timeout window.

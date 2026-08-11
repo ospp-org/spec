@@ -12,7 +12,8 @@ Verify that the station correctly performs offline transaction reconciliation af
 
 - `spec/profiles/offline/reconciliation.md` — Reconciliation behavior
 - `spec/profiles/transaction/transaction-event.md` — TransactionEvent message
-- `spec/03-messages.md` §4.1 — TransactionEvent payload (timeout 60s)
+- `spec/profiles/offline/reconciliation.md` §2 — **response timeout 30 s on this path.** This is a reconciliation case, and the reconciliation profile sets **30 s**, not §4.1's 60 s, and says so explicitly. §4.1's 60 s governs the non-reconciliation TransactionEvent.
+- `spec/03-messages.md` §4.1 — TransactionEvent payload
 - `spec/07-errors.md` §5 — Retry policies
 - `schemas/mqtt/transaction-event-response.schema.json`
 
@@ -57,7 +58,7 @@ Verify that the station correctly performs offline transaction reconciliation af
 }
 ```
 3. Verify `txCounter` is 1 (first in sequence).
-4. Send `Accepted` response within 60 seconds.
+4. Send `Accepted` response within 30 seconds.
 5. Observe TransactionEvent with `txCounter: 2`.
 6. Verify `txCounter` is sequential (2 follows 1).
 7. Send `Accepted` response.
@@ -112,6 +113,7 @@ Verify that the station correctly performs offline transaction reconciliation af
       "sessionId": "sess_d3e4f5a6b7c8",
       "bayId": "bay_c1d2e3f4a5b6",
       "serviceId": "svc_eco",
+      "programNumber": 1,
       "durationSeconds": 120,
       "sessionSource": "MobileApp"
     }
@@ -135,7 +137,7 @@ Verify that the station correctly performs offline transaction reconciliation af
 4. `RetryLater` response causes the station to retry with backoff.
 5. All 5 transactions in Part A are successfully reconciled.
 6. After reconciliation, the station operates normally in online mode.
-7. TransactionEvent response timeout is 60 seconds per message.
+7. TransactionEvent response timeout is 30 seconds per message on the reconciliation path (`reconciliation.md` §2).
 
 ## Failure Criteria
 

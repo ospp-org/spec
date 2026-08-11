@@ -19,9 +19,9 @@ Verify that the station correctly computes and attaches HMAC-SHA256 signatures t
 
 1. Station is booted and has received BootNotification ACCEPTED.
 2. `MessageSigningMode` configuration key is set to `"All"` on the station — this is its default, and the only other value is `"None"`.
-3. A shared HMAC secret key is provisioned on both the station and the test harness.
+3. The harness holds the **session key the server issued in the BootNotification RESPONSE** of precondition 1. There is no pre-provisioned shared secret in OSPP: the server generates a random 32-byte key per boot, delivers it as `sessionKey` on every `Accepted` and every `Pending` response, and both sides hold it in volatile memory only for the life of that MQTT session ([`06-security.md` §5.2](../../../spec/06-security.md)). A harness that expects a static provisioned secret cannot run this case against a conforming station, and re-running it after a station reboot requires re-reading the new key.
 4. MQTT connection is stable.
-5. The test harness can compute valid HMAC-SHA256 signatures using the same shared secret.
+5. The test harness can compute valid HMAC-SHA256 signatures using that session key.
 6. The station's SecurityEvent topic is subscribed to by the test harness.
 
 ## Steps
@@ -32,14 +32,14 @@ Verify that the station correctly computes and attaches HMAC-SHA256 signatures t
 2. Capture the Heartbeat message from the station.
 3. Verify that the message envelope contains a `mac` field.
 4. Extract the `mac` value (hex or base64-encoded HMAC-SHA256).
-5. Independently compute the expected HMAC-SHA256 over the message payload (excluding the `mac` field itself) using the shared secret.
+5. Independently compute the expected HMAC-SHA256 using the session key. **The MAC input is the whole message envelope with the `mac` field removed, reduced to OSPP Canonical Form — not the `payload` object alone** ([`06-security.md` §5.3](../../../spec/06-security.md#53-canonical-form), which applies §4.8 to the envelope; its worked example canonicalises `action`, `messageId`, `messageType`, `protocolVersion`, `source`, `timestamp` **and** `payload`). A harness that MACs only the payload leaves `messageId` and `timestamp` unbound, which is what makes the MAC a replay defence at all.
 6. Verify that the station's `mac` matches the independently computed value.
 7. Trigger the station to send a StatusNotification (e.g., by starting and stopping a session or querying bay status).
 8. Verify the StatusNotification also contains a valid `mac` field with correct HMAC.
 
 ### Part B — Station Accepts Validly Signed Messages
 
-9. Construct a GetConfiguration command with a valid HMAC-SHA256 `mac` field computed over the payload.
+9. Construct a GetConfiguration command with a valid HMAC-SHA256 `mac` field computed over the canonicalised envelope less `mac` (§5.3), as in step 5.
 10. Send the signed GetConfiguration command.
 11. Verify the station processes the command and returns a valid GetConfiguration RESPONSE.
 12. Verify the RESPONSE also contains a valid `mac` field.
@@ -73,7 +73,7 @@ Verify that the station correctly computes and attaches HMAC-SHA256 signatures t
 ## Expected Results
 
 1. All outgoing station messages include a `mac` field, except BootNotification REQUEST and the LWT. A Heartbeat, StatusNotification or MeterValues without one fails this case: there is no informational exemption.
-2. The `mac` field contains a correct HMAC-SHA256 computed over the message payload using the shared secret.
+2. The `mac` field contains a correct HMAC-SHA256 computed over the **canonicalised envelope with `mac` removed** (§5.3), using the session key — not over the `payload` object alone.
 3. The station processes incoming messages with valid HMAC signatures normally.
 4. Messages with invalid HMAC are rejected with error `1012 MAC_VERIFICATION_FAILED` and severity `Critical`.
 5. Messages with missing HMAC are rejected with error `1013 MAC_MISSING` and severity `Error`.

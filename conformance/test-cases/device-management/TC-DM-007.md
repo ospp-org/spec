@@ -52,6 +52,7 @@ Verify that the station correctly handles SetMaintenanceMode for enabling and di
      "sessionId": "sess_b1c2d3e4f5a6",
      "bayId": "bay_c1d2e3f4a5b6",
      "serviceId": "svc_basic",
+     "programNumber": 1,
      "durationSeconds": 120,
      "sessionSource": "MobileApp"
    }
@@ -82,6 +83,7 @@ Verify that the station correctly handles SetMaintenanceMode for enabling and di
       "sessionId": "sess_c2d3e4f5a6b7",
       "bayId": "bay_c1d2e3f4a5b6",
       "serviceId": "svc_basic",
+      "programNumber": 1,
       "durationSeconds": 300,
       "sessionSource": "MobileApp"
     }

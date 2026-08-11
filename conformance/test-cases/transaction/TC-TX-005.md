@@ -34,6 +34,7 @@ Verify that the station sends periodic MeterValues events at the configured `Met
      "sessionId": "sess_b1c2d3e4f5a6",
      "bayId": "bay_c1d2e3f4a5b6",
      "serviceId": "svc_basic",
+     "programNumber": 1,
      "durationSeconds": 60,
      "sessionSource": "MobileApp"
    }

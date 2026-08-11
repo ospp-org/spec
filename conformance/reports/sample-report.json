@@ -2,7 +2,8 @@
   "_comment": "Sample conformance report format — see conformance/README.md for details",
   "reportVersion": "0.1.0-draft.1",
   "protocolVersion": "0.3.0",
-  "complianceLevel": "Core",
+  "_complianceLevelNote": "One of Development | Standard | Extended | Complete (conformance/README.md section 2). Core is a PROFILE name, not a level; nothing validates this file, so the value is checked by reading only.",
+  "complianceLevel": "Standard",
   "stationInfo": {
     "vendor": "ExampleVendor",
     "model": "ExampleModel",

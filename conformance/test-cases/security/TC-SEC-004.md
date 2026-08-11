@@ -11,7 +11,7 @@ Verify that the station generates SecurityEvent [MSG-012] messages with correct 
 ## References
 
 - `spec/profiles/security/security-event.md` — SecurityEvent behavior, event types, severity levels, processing rules
-- `spec/03-messages.md` §5.5 — SecurityEvent payload (EVENT, fire-and-forget, no response)
+- `spec/03-messages.md` §5.6 — SecurityEvent payload (EVENT, fire-and-forget, no response). §5.5 is ConnectionLost.
 - `spec/06-security.md` §7.5 — Security monitoring and event generation
 - `schemas/mqtt/security-event.schema.json`
 
@@ -119,7 +119,7 @@ Verify that the station generates SecurityEvent [MSG-012] messages with correct 
 25. Capture any SecurityEvent from Part A or Part B.
 26. Verify all required fields are present:
     - `eventId` (string, starts with `sec_`, minimum 12 characters)
-    - `type` (string, one of the 10 defined event types)
+    - `type` (string, one of the **12** defined event types — [`security-event.schema.json`](../../../schemas/mqtt/security-event.schema.json) `type.enum` and [`security-event.md` §4](../../../spec/profiles/security/security-event.md) both enumerate 12; the count last read 10, before `ServerSignedAuthReplay` and `ClockSkew` were added)
     - `severity` (string, one of: `"Critical"`, `"Error"`, `"Warning"`, `"Info"`)
     - `timestamp` (string, ISO 8601 UTC)
     - `details` (object)
