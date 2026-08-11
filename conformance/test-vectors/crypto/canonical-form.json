@@ -1,0 +1,207 @@
+{
+  "_comment": "OSPP Canonical Form vectors for spec/06-security.md §4.8.1. Each vector gives a JSON input and the EXACT canonical string it must produce. The canonical values are the ORACLE: they were recomputed from the rule text in a third language, with a hand-written escaper cross-checked against an independent JSON encoder, and NOT taken from either SDK's output — a vector generated from an implementation can only prove that implementation agrees with itself. Six of these separate defects that both reference SDKs shipped: key-order-is-utf8-bytes-not-utf16, integer-like-keys-are-not-numerically-ordered, line-and-paragraph-separators-are-literal, separators-are-literal-in-keys-too, del-is-not-escaped, start-service-params-vendor-keys. Re-check: node tools/verify-canonical-form.mjs (also Category 20 of tools/verify-protocol.sh).",
+  "specRef": "0.13.0",
+  "specSection": "06-security.md §4.8.1 (lines 677-688)",
+  "vectors": [
+    {
+      "name": "worked-example",
+      "why": "§4.8.2 verbatim: the one canonical form the spec itself prints.",
+      "input": {
+        "protocolVersion": "0.3.0",
+        "messageId": "cmd_550e8400",
+        "action": "StartService",
+        "payload": {
+          "sessionId": "sess_a1b2c3d4",
+          "bayId": "bay_c1d2e3f4a5b6",
+          "durationSeconds": 300
+        }
+      },
+      "canonical": "{\"action\":\"StartService\",\"messageId\":\"cmd_550e8400\",\"payload\":{\"bayId\":\"bay_c1d2e3f4a5b6\",\"durationSeconds\":300,\"sessionId\":\"sess_a1b2c3d4\"},\"protocolVersion\":\"0.3.0\"}"
+    },
+    {
+      "name": "empty-object-payload",
+      "why": "Heartbeat REQUEST. The divergence this fixture exists for: PHP emitted \"payload\":[] and sdk-ts \"payload\":{}, so the MACs differed on the most frequent message on the wire.",
+      "input": {
+        "action": "Heartbeat",
+        "messageId": "msg_0001",
+        "messageType": "Request",
+        "payload": {},
+        "protocolVersion": "0.3.0",
+        "source": "Station",
+        "timestamp": "2026-02-13T10:00:00.000Z"
+      },
+      "canonical": "{\"action\":\"Heartbeat\",\"messageId\":\"msg_0001\",\"messageType\":\"Request\",\"payload\":{},\"protocolVersion\":\"0.3.0\",\"source\":\"Station\",\"timestamp\":\"2026-02-13T10:00:00.000Z\"}"
+    },
+    {
+      "name": "empty-array-stays-an-array",
+      "why": "The other half of the same rule: an empty ARRAY is [] and MUST NOT become {}.",
+      "input": {
+        "a": [],
+        "b": {}
+      },
+      "canonical": "{\"a\":[],\"b\":{}}"
+    },
+    {
+      "name": "nested-empty-object",
+      "why": "The distinction holds at every depth, not just the top level.",
+      "input": {
+        "outer": {
+          "inner": {}
+        }
+      },
+      "canonical": "{\"outer\":{\"inner\":{}}}"
+    },
+    {
+      "name": "key-sort-is-recursive",
+      "why": "§4.8.1 step 1: sort at EVERY nesting level.",
+      "input": {
+        "z": 1,
+        "a": {
+          "z": 1,
+          "a": 2
+        }
+      },
+      "canonical": "{\"a\":{\"a\":2,\"z\":1},\"z\":1}"
+    },
+    {
+      "name": "array-order-is-preserved",
+      "why": "§4.8.1 step 1: array element order is preserved; arrays are not reordered. programNumbers is compared as a set by the SERVER, but canonicalization does not reorder it.",
+      "input": {
+        "programNumbers": [
+          3,
+          1,
+          2
+        ]
+      },
+      "canonical": "{\"programNumbers\":[3,1,2]}"
+    },
+    {
+      "name": "bays-topology",
+      "why": "A real bays[] declaration: array of objects, each sorted, order kept.",
+      "input": {
+        "bays": [
+          {
+            "programNumbers": [
+              1,
+              2,
+              3
+            ],
+            "bayNumber": 1
+          },
+          {
+            "programNumbers": [
+              1
+            ],
+            "bayNumber": 3
+          }
+        ]
+      },
+      "canonical": "{\"bays\":[{\"bayNumber\":1,\"programNumbers\":[1,2,3]},{\"bayNumber\":3,\"programNumbers\":[1]}]}"
+    },
+    {
+      "name": "scalars",
+      "why": "§4.8.1 step 3: booleans and null emit as true/false/null; integers without leading zeros or a trailing point.",
+      "input": {
+        "t": true,
+        "f": false,
+        "n": null,
+        "i": 0,
+        "neg": -7
+      },
+      "canonical": "{\"f\":false,\"i\":0,\"n\":null,\"neg\":-7,\"t\":true}"
+    },
+    {
+      "name": "slashes-are-not-escaped",
+      "why": "§4.8.1 step 3: characters that do not require escaping MUST be emitted literally.",
+      "input": {
+        "url": "https://ospp-standard.org/a/b"
+      },
+      "canonical": "{\"url\":\"https://ospp-standard.org/a/b\"}"
+    },
+    {
+      "name": "unicode-is-literal",
+      "why": "Same rule: no \\uXXXX for characters that do not require escaping.",
+      "input": {
+        "s": "Bucureşti"
+      },
+      "canonical": "{\"s\":\"Bucureşti\"}"
+    },
+    {
+      "name": "control-chars-are-escaped",
+      "why": "§4.8.1 step 3: control characters, quote and backslash DO require escaping.",
+      "input": {
+        "s": "a\"b\\c\nd"
+      },
+      "canonical": "{\"s\":\"a\\\"b\\\\c\\nd\"}"
+    },
+    {
+      "name": "key-order-is-utf8-bytes-not-utf16",
+      "why": "§4.8.1 step 1 orders keys by the UTF-8 BYTES of the key string. JavaScript's Array.prototype.sort() compares UTF-16 code units, and the two disagree across the BMP boundary: U+1D400 is the surrogate pair D835 DC00, so UTF-16 sorts it BELOW U+FFFD, while its UTF-8 encoding F0 9D 90 80 sorts it ABOVE EF BF BD. sdk-ts emitted these two reversed.",
+      "input": {
+        "𝐀": "astral",
+        "�": "bmp"
+      },
+      "canonical": "{\"�\":\"bmp\",\"𝐀\":\"astral\"}"
+    },
+    {
+      "name": "integer-like-keys-are-not-numerically-ordered",
+      "why": "The same rule, and the half likelier to fire, because it needs no exotic character. JavaScript objects hold integer-like keys in ascending NUMERIC order ahead of every string key, whatever order they were inserted in, so rebuilding a sorted object throws the sort away for exactly those keys — no comparator can fix it. Byte order is \"1\" < \"10\" < \"2\", because '1' is 0x31 and '2' is 0x32. sdk-ts emitted 1,2,10; ospp-sdk-php emitted 1,10,2. This is ordinary JSON, and it is reachable wherever the protocol does not constrain the keys.",
+      "input": {
+        "10": "a",
+        "2": "b",
+        "banana": "d",
+        "1": "c"
+      },
+      "canonical": "{\"1\":\"c\",\"10\":\"a\",\"2\":\"b\",\"banana\":\"d\"}"
+    },
+    {
+      "name": "line-and-paragraph-separators-are-literal",
+      "why": "§4.8.1 step 3 admits exactly three reasons to escape — control characters, quote, backslash. U+2028 and U+2029 are Unicode categories Zl and Zp, not control characters, and JSON itself mandates escaping only below U+0020, so both MUST be emitted literally. PHP escapes them even under JSON_UNESCAPED_UNICODE and needs JSON_UNESCAPED_LINE_TERMINATORS as well, because the flag was written to protect a pre-ES2019 JavaScript consumer that could not parse them inside a string literal. That is one host language's hazard, not the protocol's — JSON.stringify has always emitted them literally, so ospp-sdk-php was the side that diverged.",
+      "input": {
+        "s": "a b c"
+      },
+      "canonical": "{\"s\":\"a b c\"}"
+    },
+    {
+      "name": "separators-are-literal-in-keys-too",
+      "why": "Keys carry the same minimal-escaping rule as values, and they sort on the same UTF-8 bytes: U+2028 encodes as E2 80 A8, so it FOLLOWS both ASCII 'a' (0x61) and 'b' (0x62) rather than preceding them.",
+      "input": {
+        " ": 1,
+        "b": 2,
+        "a": 3
+      },
+      "canonical": "{\"a\":3,\"b\":2,\" \":1}"
+    },
+    {
+      "name": "del-is-not-escaped",
+      "why": "A regression guard rather than a repair — both SDKs already agree here. U+007F DEL is Unicode category Cc, but JSON requires escaping only below U+0020 and §4.8.1 asks for the MINIMAL required escaping, so DEL is emitted literally. Canonicalizers that escape it exist, and would not interoperate with either SDK.",
+      "input": {
+        "s": "ab"
+      },
+      "canonical": "{\"s\":\"ab\"}"
+    },
+    {
+      "name": "start-service-params-vendor-keys",
+      "why": "Both defects on one ordinary message, in message shape rather than in the abstract. StartService.params is a free-form map (schemas/mqtt/start-service-request.schema.json declares no properties and does not forbid additional ones), so vendor keys are unconstrained and may be integer-like or non-ASCII. The other open-object sites on the signed path are DataTransfer.data in both directions and SecurityEvent.details.",
+      "input": {
+        "action": "StartService",
+        "messageId": "cmd_0001",
+        "messageType": "Request",
+        "payload": {
+          "sessionId": "sess_a1b2c3d4",
+          "bayId": "bay_c1d2e3f4a5b6",
+          "durationSeconds": 300,
+          "params": {
+            "10": "ten",
+            "2": "two",
+            "note": "ligne suivante"
+          }
+        },
+        "protocolVersion": "0.3.0",
+        "source": "Server",
+        "timestamp": "2026-02-13T10:00:00.000Z"
+      },
+      "canonical": "{\"action\":\"StartService\",\"messageId\":\"cmd_0001\",\"messageType\":\"Request\",\"payload\":{\"bayId\":\"bay_c1d2e3f4a5b6\",\"durationSeconds\":300,\"params\":{\"10\":\"ten\",\"2\":\"two\",\"note\":\"ligne suivante\"},\"sessionId\":\"sess_a1b2c3d4\"},\"protocolVersion\":\"0.3.0\",\"source\":\"Server\",\"timestamp\":\"2026-02-13T10:00:00.000Z\"}"
+    }
+  ]
+}

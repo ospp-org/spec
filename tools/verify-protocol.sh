@@ -1897,6 +1897,53 @@ function category19() {
   logCat(C);
 }
 
+// ==================== CATEGORY 20: Canonical Form Vectors ====================
+// §4.8.1 step 1 orders keys by UTF-8 BYTES. Both reference SDKs shipped
+// `Object.keys().sort()` instead, which is UTF-16 code-unit order, and so did this
+// repo's own first MAC verifier. The rule is now implemented once, in
+// tools/canonical-form.mjs, and this category holds it to the vector corpus.
+//
+// Deliberately NOT `@ospp/protocol`: a gate that canonicalizes with the SDK verifies
+// the SDK against itself and passes whatever it does. See the header of
+// tools/canonical-form.mjs.
+function category20() {
+  const C = 'c20'; initCat(C, 'Canonical Form Vectors');
+  log('## Category 20: Canonical Form Vectors');
+  log('');
+
+  const script = path.join(ROOT, 'tools', 'verify-canonical-form.mjs');
+  if (!fs.existsSync(script)) {
+    SKIP(C, 'tools/verify-canonical-form.mjs not present');
+    logCat(C);
+    return;
+  }
+
+  let result;
+  try {
+    const out = require('child_process')
+      .execFileSync('node', [script, '--json'], { encoding: 'utf8', cwd: ROOT });
+    result = JSON.parse(out);
+  } catch (e) {
+    FAIL(C, 'tools/verify-canonical-form.mjs', 0,
+      'verifier did not run: ' + (e.message || String(e)).split('\n')[0],
+      'a clean run emitting JSON');
+    logCat(C);
+    return;
+  }
+
+  const failed = new Set();
+  for (const f of result.failures) {
+    failed.add(f.what);
+    FAIL(C, result.vector, 0, f.what + ' — got ' + f.actual, f.expected);
+  }
+  for (let i = 0; i < result.checks - failed.size; i++) PASS(C);
+
+  log('Canonical form checks: ' + result.checks);
+  log('Vectors that reject a UTF-16-sorting implementation: ' +
+    (result.discriminating || []).length);
+  logCat(C);
+}
+
 // ==================== CATEGORY 18: Document Version Consistency ====================
 // The specification-document version identifies THE RELEASE and equals the release tag
 // (VERSIONING.md, "The document version, and the sites that carry it"). It was practice
@@ -2036,6 +2083,7 @@ category16();
 category17();
 category18();
 category19();
+category20();
 
 // ==================== SUMMARY ====================
 log('');
@@ -2047,7 +2095,7 @@ log('| Category | Checks | PASS | FAIL | SKIP |');
 log('|----------|-------:|-----:|-----:|-----:|');
 
 let totalChecks = 0, totalPass = 0, totalFail = 0, totalSkip = 0;
-const catOrder = ['c1','c2','c3','c4','c5','c6','c7','c8','c9','c10','c11','c12','c13','c14','c15','c16','c17','c18','c19'];
+const catOrder = ['c1','c2','c3','c4','c5','c6','c7','c8','c9','c10','c11','c12','c13','c14','c15','c16','c17','c18','c19','c20'];
 for (const id of catOrder) {
   const c = cats[id];
   if (!c) continue;

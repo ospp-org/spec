@@ -13,9 +13,9 @@ the arcs since
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 8 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) |
+| OPEN | 9 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) |
 | CLOSED | 2 | [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
-| **Total open** | **11** | |
+| **Total open** | **12** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
@@ -572,6 +572,39 @@ writing it inside a signing arc would bury it.
 **What is settled and should not be re-litigated when it is taken up:** the MAC does not provide
 non-repudiation, the key to fix that already exists on every station, and the online money path is
 where it is missing.
+
+---
+
+## OPEN — the signing toolchain canonicalizes with the SDK, so it verifies the SDK against itself
+
+**Raised 2026-08-12, while deciding where the spec repo's own canonical-form implementation
+should live.** Five tools import the rule they exist to check:
+
+`tools/sign-inline-md.mjs`, `tools/sign-example.mjs`, `tools/verify-example-signatures.mjs`,
+`tools/verify-ble-crypto.mjs` and `tools/generate-ble-vectors.mjs` all do
+`import { canonicalize } from '@ospp/protocol'`. That is the whole signing **and**
+signature-verification chain. A gate that canonicalizes with the SDK passes whatever the SDK
+does, including whatever it does wrong — `verify-example-signatures.mjs` checks signatures using
+the same canonicalizer that produced them, so it cannot fail on a canonicalization defect by
+construction. This is the third instance of the shape: a gate once compared the two SDKs to each
+other instead of to the registry, and a suite once defended the wrong value for `5004`.
+
+**And the import currently resolves to defective code.** `package.json` declares `^0.13.0`;
+`node_modules/@ospp/protocol` is **0.5.4**, whose `CanonicalJsonSerializer.js` carries both
+defects the SDKs repaired at 0.13.0 — `Object.keys(value).sort()` (UTF-16 code-unit order where
+[§4.8.1 step 1](spec/06-security.md) requires UTF-8 byte order) and `JSON.stringify(sortKeys(…))`,
+which rebuilds a sorted object and thereby discards the sort for integer-like keys.
+
+**Measured exposure: zero.** Across 372 committed JSON files and 1846 objects, no object has keys
+whose UTF-8 and UTF-16 orderings differ and none has an integer-like key. No committed signature
+is wrong. The defect is latent, not active, which is why 0.13.0 did not re-point the signing chain
+in the same change: doing so re-canonicalizes signed artefacts for no present correctness gain,
+and the safe order is to bump the dependency first and re-measure.
+
+The fix is to move those five tools onto [`tools/canonical-form.mjs`](tools/canonical-form.mjs),
+the single implementation written from the text, and to bring the installed dependency in line
+with the declared one. Until then the exposure must be re-measured whenever a signed payload gains
+a non-ASCII or integer-like key.
 
 ---
 

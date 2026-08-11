@@ -25,11 +25,24 @@ python3 tools/verify-schemas.py
 ### Crypto vectors
 
 ```bash
-node tools/verify-mqtt-mac.mjs   # also runs as Category 19 of verify-protocol.sh
-node tools/verify-ble-crypto.mjs # BLE key schedule against its RFC anchors
+node tools/verify-canonical-form.mjs # OSPP Canonical Form — Category 20
+node tools/verify-mqtt-mac.mjs       # MQTT message MAC — Category 19
+node tools/verify-ble-crypto.mjs     # BLE key schedule against its RFC anchors
 ```
 
 `verify-mqtt-mac.mjs` recomputes `conformance/test-vectors/crypto/mqtt-mac.json`: the §4.8 canonical form, the MAC under the **decoded** session key, and — the check that gives the vector its point — the different MAC produced by keying with the Base64 *text*. A vector nothing recomputes is a claim, so this is spawned by Category 19 rather than duplicated into it.
+
+`verify-canonical-form.mjs` holds [`canonical-form.mjs`](canonical-form.mjs) to the 17 vectors in `conformance/test-vectors/crypto/canonical-form.json`, pins the key comparator directly, and asserts the corpus is still **falsifiable** — it runs a deliberately broken canonicalizer and requires the vectors to reject it. Three currently do. A corpus that stops discriminating passes silently otherwise.
+
+### One implementation of the canonical form, and why it is not the SDK's
+
+[`canonical-form.mjs`](canonical-form.mjs) is the single place these tools implement `06-security.md` §4.8.1. Every step cites the rule and line it comes from, so it can be checked against the text without opening another repository.
+
+It deliberately does **not** `import { canonicalize } from '@ospp/protocol'`. A conformance gate that canonicalizes with the SDK verifies the SDK against the SDK's own implementation: it passes whatever the SDK does, including whatever it does wrong. This repository has produced that shape twice before — a gate that compared the two SDKs to each other rather than to the registry, and a suite that defended the wrong value for `5004`.
+
+Re-implementing is the point; re-implementing *per tool* is not. Before 0.13.0 `verify-mqtt-mac.mjs` carried its own copy, and it was wrong in exactly the way both SDKs had just been repaired for.
+
+> **Still outstanding:** `sign-inline-md.mjs`, `sign-example.mjs`, `verify-example-signatures.mjs`, `verify-ble-crypto.mjs` and `generate-ble-vectors.mjs` do import `canonicalize` from `@ospp/protocol`, and the installed copy is **0.5.4** while `package.json` declares `^0.13.0`. Measured exposure is currently zero — no signed payload in the tree has keys whose UTF-8 and UTF-16 orderings differ, and none has integer-like keys — which is why moving that chain is tracked in KNOWN-ISSUES rather than done here.
 
 ## Drift checks
 

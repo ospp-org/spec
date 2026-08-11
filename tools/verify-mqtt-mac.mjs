@@ -19,20 +19,16 @@ import { createHmac } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { canonicalForm } from './canonical-form.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const VECTOR = 'conformance/test-vectors/crypto/mqtt-mac.json';
 
-/** OSPP Canonical Form (06-security.md §4.8): recursive key sort, compact, arrays in order. */
-function canonicalize(value) {
-  if (Array.isArray(value)) return '[' + value.map(canonicalize).join(',') + ']';
-  if (value !== null && typeof value === 'object') {
-    return '{' + Object.keys(value).sort()
-      .map(k => JSON.stringify(k) + ':' + canonicalize(value[k]))
-      .join(',') + '}';
-  }
-  return JSON.stringify(value);
-}
+// The canonical form comes from tools/canonical-form.mjs, the one place this repo
+// implements §4.8.1. This file used to carry its own copy, and it was wrong in the
+// same way both SDKs were: `Object.keys(value).sort()` is UTF-16 code-unit order,
+// where :679 requires UTF-8 byte order. It passed only because this vector's keys
+// are ASCII. Three implementations of one rule is three chances to get it wrong.
 
 export function verifyMqttMacVector(root = ROOT) {
   const failures = [];
@@ -61,7 +57,7 @@ export function verifyMqttMacVector(root = ROOT) {
 
   // 1. Canonical form reproduces, byte for byte.
   const { mac: _dropped, ...withoutMac } = v.message;
-  const canonical = canonicalize(withoutMac);
+  const canonical = canonicalForm(withoutMac);
   checks++;
   if (canonical !== v.canonicalJson) {
     fail('canonical form (§4.8) of message minus `mac`', v.canonicalJson, canonical);
