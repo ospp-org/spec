@@ -874,7 +874,7 @@ All timestamps MUST use **ISO 8601** format with **millisecond precision** and *
 
 - The `Z` suffix (UTC) is REQUIRED. Local timezone offsets MUST NOT be used.
 - Millisecond precision (3 decimal places) is REQUIRED, even if the value is `.000`.
-- Stations MUST synchronize their clock using the `serverTime` field from Heartbeat responses. Clock drift exceeding **5 seconds** SHOULD trigger a warning log.
+- Stations **MUST** compare their clock against the `serverTime` field of every Heartbeat response, and **SHOULD** correct it when the absolute drift exceeds **2 seconds**. Drift exceeding **5 minutes** **MUST** be logged as `5106 CLOCK_ERROR`. [`profiles/core/heartbeat.md` §6](profiles/core/heartbeat.md#6-clock-synchronization) is the normative statement of this rule; the thresholds are restated here and nowhere else.
 
 ---
 

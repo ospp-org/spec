@@ -951,7 +951,7 @@ The Heartbeat REQUEST payload is **empty**:
 | `5106` | `CLOCK_ERROR` — clock drift exceeds acceptable threshold |
 | `6001` | `SERVER_INTERNAL_ERROR` — server encountered an unexpected error |
 
-**Clock synchronization:** The station **SHOULD** synchronize its clock using `serverTime` from the Heartbeat RESPONSE. Maximum acceptable clock skew is **300 seconds** (5 minutes). If drift exceeds this threshold, the station **SHOULD** send a SecurityEvent [MSG-012] with `type: ClockSkew` and `severity: Warning` in addition to logging error `5106 CLOCK_ERROR`.
+**Clock synchronization:** The station **MUST** compare `serverTime` from the Heartbeat RESPONSE against its local clock, and **SHOULD** correct the clock when the absolute drift exceeds **2 seconds** — [`profiles/core/heartbeat.md` §6](profiles/core/heartbeat.md#6-clock-synchronization) is the normative statement. Maximum acceptable clock skew is **300 seconds** (5 minutes); above that the station **MUST** log error `5106 CLOCK_ERROR` and **SHOULD** send a SecurityEvent [MSG-012] with `type: ClockSkew` and `severity: Warning`.
 
 ---
 

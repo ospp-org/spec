@@ -43,6 +43,8 @@ The Heartbeat request has an **empty payload** (`{}`). The station identity is d
 4. The station **MUST** use the synchronized clock for all subsequent timestamps in StatusNotification, MeterValues, and TransactionEvent messages.
 5. Clock adjustments **MUST NOT** affect the duration of active sessions. Session elapsed time **MUST** be tracked using a monotonic timer, not the wall clock.
 
+> **Why rule 2 is `SHOULD` and not `MUST`.** Nothing in the protocol breaks at 2.1 seconds of drift. Billing does not ride the wall clock (rule 5 puts session duration on a monotonic timer); anti-replay does not either (it is `messageId` binding and monotonic counters — [`06-security.md` §5.3, §6.3](../../06-security.md) — and a clock-based TTL on the session key is expressly forbidden). The one mechanism that does consume station timestamps is the StatusNotification ordering floor, and it states its own tolerance: the protocol "treats several minutes of station skew as unremarkable" ([`02-transport.md` §3.2](../../02-transport.md#32-message-ordering)). The hard boundary is therefore rule 3's 5 minutes, and it **is** a `MUST`. Two seconds is a quality target for timestamp accuracy. Making it a `MUST` would also fail stations for their network rather than their clock: the drift a station measures includes the server's processing time plus the downlink delay, which on a cellular link can approach the threshold on its own. Rule 1 stays a `MUST` because rule 3 cannot be satisfied without it.
+
 ## 7. Processing Rules
 
 1. The station **MUST** send a Heartbeat every `heartbeatIntervalSec` seconds after receiving BootNotification `Accepted`.

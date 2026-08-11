@@ -34,7 +34,7 @@ The Core profile establishes the foundation upon which all other profiles (Sessi
 | CORE-007 | The server MUST detect station disconnection via LWT or heartbeat timeout (3.5× `heartbeatIntervalSec`). | MUST |
 | CORE-008 | The server MUST mark all bays as `Unknown` when a station disconnects. | MUST |
 | CORE-009 | The station MUST buffer StatusNotification events during MQTT disconnection (up to 1000 events or 24 hours (StatusNotification-specific recommendation)) and replay them on reconnection. | MUST |
-| CORE-010 | The station MUST synchronize its internal clock from the Heartbeat response `serverTime` when drift exceeds 2 seconds. | MUST |
+| CORE-010 | The station **MUST** compare the Heartbeat response `serverTime` against its local clock on every heartbeat, and **SHOULD** adjust the clock to match when the absolute drift exceeds 2 seconds. Drift exceeding 5 minutes **MUST** be logged as `5106 CLOCK_ERROR`. The 2-second figure is a quality target, not an interoperability boundary; the protocol's tolerance for station skew is 5 minutes ([Heartbeat §6](heartbeat.md#6-clock-synchronization)). | MUST / SHOULD |
 | CORE-011 | The station MUST retry BootNotification indefinitely if rejected or timed out, using the `retryInterval` from the response (or 30 seconds default). | MUST |
 | CORE-012 | The station MUST include the bay-level `errorCode` and `errorText` in StatusNotification when a bay transitions to `Faulted`. | MUST |
 | CORE-013 | The station MUST report every program the bay declared at provisioning in `programs[]`, marking an unusable one `available: false` rather than omitting it. It SHOULD accompany an unavailable program with `programs[].errorCode` and `programs[].errorText`. | MUST / SHOULD |

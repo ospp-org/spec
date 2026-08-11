@@ -1185,7 +1185,8 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** Sync clock from BootNotification RESPONSE `serverTime`
 - [ ] **[MUST]** StatusNotification for each bay after boot
 - [ ] **[MUST]** Heartbeat at server-specified `heartbeatIntervalSec`
-- [ ] **[MUST]** Clock sync from Heartbeat RESPONSE `serverTime`
+- [ ] **[MUST]** Compare Heartbeat RESPONSE `serverTime` against the local clock on every heartbeat
+- [ ] **[SHOULD]** Correct the clock when that drift exceeds 2 seconds (**[MUST]** log `5106 CLOCK_ERROR` above 5 minutes)
 - [ ] **[MUST]** Bay state machine: the 20 `Station` rows of [`05-state-machines.md` §2.3](../spec/05-state-machines.md#23-transition-table) — all of them, and none of the 6 `Server` rows
 - [ ] **[MUST NOT]** Implement any transition into `Unknown` — those are the server's inference, not yours (§2.6)
 - [ ] **[MUST NOT]** Report `Unknown` in `status` or `previousStatus` — it is your power-on state, not a wire value (§2.6)
