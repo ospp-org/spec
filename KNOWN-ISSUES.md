@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-11
 **Specification-document version:** 0.14.0 (release tag `v0.14.0`)
-**Status:** 3 blockers open (all BLE), 9 non-blocking issues open
+**Status:** 3 blockers open (all BLE), 10 non-blocking issues open
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle and
 the arcs since
 
@@ -13,9 +13,9 @@ the arcs since
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 9 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) |
+| OPEN | 10 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** |
 | CLOSED | 2 | [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
-| **Total open** | **12** | |
+| **Total open** | **13** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
@@ -578,6 +578,73 @@ non-repudiation, the key to fix that already exists on every station, and the on
 where it is missing.
 
 ---
+
+## OPEN — a restatement that does not cite its source cannot be checked against it, and 103 of 127 restatements cite nothing
+
+**This is the cause the session-cycle contradictions sit on top of, not another instance of them.**
+The 0.14.0 pass resolved 31 self-contradictions on one message family. Every one of them was the
+same shape: a value, a rule or a field list defined in one place and re-typed in another, where the
+copy drifted and **nothing in the copy said what it was a copy of**. A reader cannot verify a
+restatement against its source if the restatement does not name one, and a maintainer editing the
+source has no way to find the copies.
+
+**Measured at `0.14.0`:**
+
+| Category | Restating sites | Self-declaring | Bare link only | **No pointer at all** |
+|---|---:|---:|---:|---:|
+| Error-code tables | 23 | **0** | 1 | **22** |
+| Configuration defaults / ranges | 21 | 3 | 8 | 10 |
+| Timeouts / intervals | 19 | 1 | 1 | 17 |
+| State transitions | 19 | 5 | 4 | 10 |
+| Field lists / payload tables | 43–45 | 1 | 0 | 42–44 |
+| **Total** | **~127** | **10** | **14** | **~103 (≈81%)** |
+
+Two of those numbers were re-measured directly rather than inherited. **Zero of the 11 profile
+documents carrying an `## N. Error Codes` section names [`07-errors.md` §3](spec/07-errors.md) as
+the registry that governs it** — the three files that contain governing language use it about state
+machines, not about error codes. And the cross-reference graph is lopsided in exactly the direction
+that hurts:
+
+| Chapter | Referenced by (of 36 profile documents) |
+|---|---:|
+| `07-errors.md` | **31** |
+| `06-security.md` | 15 |
+| `02-transport.md` | 12 |
+| `05-state-machines.md` | 8 |
+| `08-configuration.md` | 4 |
+| **`03-messages.md`** | **2** |
+
+`03-messages.md:5` calls itself *"the normative reference for **every message** in the OSPP
+protocol."* It is invisible from **34 of the 36 documents that restate it**. That is the structural
+reason the duplicate-ReserveBay question was hard to settle: `reserve-bay.md` references Chapter 03
+**zero** times, so a firmware author working from the profile had no signal that a chapter said
+something different about the same message.
+
+**The convention exists and works — it is simply not policy.** The spec has excellent governing
+pointers: *"and it governs where this table disagrees with it"* ([`05-state-machines.md`
+§3.4](spec/05-state-machines.md)), *"This is the canonical table. Nothing else in this
+specification restates it."* ([§2.3](spec/05-state-machines.md)), *"on any discrepancy, §6.5
+governs"* ([`ble-handshake.md`](spec/profiles/offline/ble-handshake.md)). They appear at **10 of
+~127 sites**, clustered in files with a visible repair history. **The pointer is added after a
+drift incident, never before one.**
+
+**And there is no general precedence rule.** Authority is declared locally and in both directions —
+chapters defer to profiles (`03-messages.md`, `02-transport.md`, `06-security.md` each name a
+profile document as the normative statement of some rule) and profiles defer to chapters (~20
+sites). `ble-handshake.md` does both, on adjacent cryptographic topics, each decided on its own
+merits. The only global rule is [`00-introduction.md` §3.5](spec/00-introduction.md) — *"Where the
+prose description and the JSON Schema disagree, the JSON Schema is authoritative"* — which covers
+prose-versus-schema and nothing else. **When a numbered chapter and a profile document disagree and
+neither cites the other, the specification does not say which wins.**
+
+**Not repaired here, deliberately.** ~103 sites is its own arc, and a partial sweep is the failure
+mode this registry has already named as worse than the original defect. What would close it is a
+policy — every restatement names its definer — plus a check for the mechanically detectable part of
+it, in the shape of the three existing drift ratchets in `tools/`. The error-code tables are the
+obvious first target: 23 sites, 0 citing, and both sides structured enough to compare.
+
+**One number carries a caveat:** the payload-table total is 43–45 depending on how contiguous
+sections are counted, and it was not re-derived independently. The other rows were.
 
 ## OPEN — the signing toolchain canonicalizes with the SDK, so it verifies the SDK against itself
 

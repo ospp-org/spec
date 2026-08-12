@@ -41,15 +41,29 @@ The reservation state machine is [`05-state-machines.md` §4](../../05-state-mac
 3. When a StartService request arrives with a matching `reservationId`, the station **MUST** consume the reservation and transition the bay from `Reserved` to `Occupied`. The expiry timer **MUST** be cancelled.
 4. If the `expirationTime` elapses before the reservation is consumed or cancelled, the station **MUST** automatically release the reservation and transition the bay back to `Available`. The station **MUST** report this via a StatusNotification event, within 1 second — this is a bay state change like any other and [CORE-005](../core/README.md) admits no exception for it. An earlier revision said **SHOULD**, which left a server holding a bay `Reserved` after the station had released it, with no conforming way to find out.
 5. When a CancelReservation request arrives with a matching `reservationId`, the station **MUST** release the reservation and transition the bay back to `Available`.
-6. Only one reservation **MAY** be active per bay at any time. A bay in `Reserved` state **MUST** reject new reservation requests with `3014 BAY_RESERVED`.
+6. Only one reservation **MAY** be active per bay at any time. A bay in `Reserved` state **MUST** reject a reservation request naming a **different** `reservationId` with `3014 BAY_RESERVED`. A request naming the `reservationId` the bay already holds is governed by rule 7, not by this rule.
+7. **Idempotent repeat.** A ReserveBay request whose `reservationId` names the reservation this bay currently holds, and whose payload is otherwise **identical** to the request that created it, is a repeat: the station **MUST** return the same `Accepted` response and **MUST NOT** restart the expiry timer, re-arm hardware, or emit a second StatusNotification. "Identical" means every field of the payload — `bayId`, `expirationTime` and `sessionSource` — matches. This mirrors the idempotency the sibling operations already have ([`cancel-reservation.md` §5](cancel-reservation.md) rule 2, [`stop-service.md` §6](stop-service.md) rule 10): two operations on the same resource that behave differently on a re-send is a worse outcome than either answer alone.
+8. **A differing payload is not a repeat.** If the `reservationId` matches but any other field differs — most importantly a different `expirationTime` — the request is **not** the same request, and rule 7 does not apply. The station **MUST** fall through to normal processing, where the bay is `Reserved` and the answer is `3014 BAY_RESERVED`. OSPP has no operation that extends or amends a live reservation; changing its terms is a CancelReservation followed by a new ReserveBay. The principle is the one [`03-messages.md` §4.1](../../03-messages.md) already applies to `offlineTxId`: identity of the identifier is not identity of the request, and two different claims under one identifier are a collision rather than a duplicate.
+9. **A dead `reservationId` is not reusable.** If the `reservationId` names a reservation this station has already expired, the station **MUST** respond `3013 RESERVATION_EXPIRED`; if it names one already consumed by a StartService, it **MUST** respond `3012 RESERVATION_NOT_FOUND`. Neither is a duplicate — the bay may well be free, and accepting would create a *new* reservation under an identifier whose history the server and station no longer agree about. The caller creates a new reservation with a new identifier.
+
+### 5.2 Reservation Record Retention
+
+The station **MUST** retain, for each reservation that reaches a terminal state (`Expired`, `Cancelled`, or consumed by a StartService), the `reservationId`, the bay it was on, the terminal state itself, and the payload of the request that created it.
+
+**How long, and why that long.** Retention is what makes rules 7 to 9 executable at all: each of them answers by comparing an arriving request against a record, and — in the words this specification already uses for the provisioning binding at [`04-flows.md` §2](../../04-flows.md) — *"the comparison has nothing to compare against once the binding is discarded."* So the record **MUST** outlive the reservation by at least as long as a request that must be judged against it can still legitimately arrive. This specification already states that bound: the transport deduplication window, *"at least 1000 message IDs or 1 hour, whichever is larger"* ([`02-transport.md` §3.3](../../02-transport.md)). Until it closes, the transport may still deliver a ReserveBay, StartService or CancelReservation naming that `reservationId`, and the receiver is obliged to answer identically each time.
+
+The floor is therefore **the transport deduplication window, measured from the moment the reservation reaches a terminal state** — not a separately chosen number. A **consumed** reservation needs nothing further: it is part of the billing provenance of the session it became, and that session's record is already retained for the **OSPP Session Retention Horizon** ([`02-transport.md` §5.3](../../02-transport.md)), which is longer.
+
+This obligation is not new work invented for rule 7. Two existing obligations already required it and neither said so: [`cancel-reservation.md` §5](cancel-reservation.md) rule 3 requires `3013` for an expired `reservationId`, and [`05-state-machines.md` §4.5](../../05-state-machines.md) requires `3013` for a StartService arriving after expiry — both of which a station that discarded the record the instant it released the bay could not answer.
 
 ## 6. Processing Rules
 
 1. The station **MUST** validate that the `bayId` exists; if not, it **MUST** respond with `3005 BAY_NOT_FOUND`.
-2. The station **MUST** validate that the bay is in `Available` state. If the bay is `Occupied` or `Finishing`, it **MUST** respond with `3001 BAY_BUSY`. If the bay is already `Reserved`, it **MUST** respond with `3014 BAY_RESERVED`.
-3. If the bay is in `Unknown`, `Faulted`, or transitioning state, the station **MUST** respond with `3002 BAY_NOT_READY`.
-4. If the bay is in `Unavailable` state due to maintenance, the station **MUST** respond with `3011 BAY_MAINTENANCE`.
-5. On acceptance, the station **MUST** respond with `status: "Accepted"` and transition the bay to `Reserved`.
+2. The station **MUST** first resolve the `reservationId` against its own records and apply §5.1 rules 7 to 9 — repeat, differing payload, expired, or consumed. **These are evaluated before the bay-state checks below**, and the order is not cosmetic: an expired reservation has already returned its bay to `Available`, so a bay-state check reached first would silently accept a *new* reservation under a spent identifier.
+3. If the `reservationId` is unknown to the station, it **MUST** validate that the bay is in `Available` state. If the bay is `Occupied` or `Finishing`, it **MUST** respond with `3001 BAY_BUSY`. If the bay is already `Reserved`, it **MUST** respond with `3014 BAY_RESERVED`.
+4. If the bay is in `Unknown`, `Faulted`, or transitioning state, the station **MUST** respond with `3002 BAY_NOT_READY`.
+5. If the bay is in `Unavailable` state due to maintenance, the station **MUST** respond with `3011 BAY_MAINTENANCE`.
+6. On acceptance, the station **MUST** respond with `status: "Accepted"` and transition the bay to `Reserved`.
 
 ## 7. Error Codes
 
@@ -59,7 +73,9 @@ The reservation state machine is [`05-state-machines.md` §4](../../05-state-mac
 | 3002 | `BAY_NOT_READY` | Warning | Bay is in `Unknown`, `Faulted`, or transitioning state. |
 | 3005 | `BAY_NOT_FOUND` | Error | `bayId` does not match any bay on this station. |
 | 3011 | `BAY_MAINTENANCE` | Warning | Bay is in maintenance mode. |
-| 3014 | `BAY_RESERVED` | Warning | Bay already has an active reservation. |
+| 3012 | `RESERVATION_NOT_FOUND` | Error | The `reservationId` names a reservation this station has already consumed into a session. The identifier is spent; create a new reservation. |
+| 3013 | `RESERVATION_EXPIRED` | Warning | The `reservationId` names a reservation this station has already expired. The identifier is spent; create a new reservation. |
+| 3014 | `BAY_RESERVED` | Warning | The bay holds an active reservation under a **different** `reservationId`, or under the same one with differing terms (§5.1 rule 8). |
 
 ## 8. Examples
 
@@ -123,4 +139,4 @@ The reservation state machine is [`05-state-machines.md` §4](../../05-state-mac
 - Bay ID: [`bay-id.schema.json`](../../../schemas/common/bay-id.schema.json)
 - Reservation ID: [`reservation-id.schema.json`](../../../schemas/common/reservation-id.schema.json)
 - Timestamp: [`timestamp.schema.json`](../../../schemas/common/timestamp.schema.json)
-- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 3001, 3002, 3005, 3011, 3014)
+- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 3001, 3002, 3005, 3011, 3012, 3013, 3014)

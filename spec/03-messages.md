@@ -442,7 +442,7 @@ In the **Partial B** offline scenario (phone offline, station online), the mobil
 | **Trigger** | Web payment initiation (`POST /pay/{code}/start`) or mobile app pre-reservation |
 | **Expected Response** | ReserveBay RESPONSE |
 | **Timeout** | 5 seconds |
-| **Idempotency** | Yes — same `reservationId` MUST return same result |
+| **Idempotency** | Yes, bounded — a request naming the reservation the bay currently holds, with an **identical** payload, MUST return the same `Accepted` without restarting the timer. A differing payload under that `reservationId` is not a repeat (→ `3014`); an already-expired one is `3013` and an already-consumed one is `3012`. See [`reserve-bay.md` §5.1](profiles/transaction/reserve-bay.md) rules 7--9, which govern |
 | **Message Expiry** | 30 seconds |
 
 Reserves a specific bay for an upcoming session. The station MUST transition the bay to `Reserved` status and reject any other StartService or ReserveBay commands for that bay until the reservation expires or is cancelled.
@@ -505,7 +505,9 @@ The default reservation TTL is configured by the `ReservationDefaultTTL` key (de
 | `3002` | `BAY_NOT_READY` — bay hardware not ready |
 | `3005` | `BAY_NOT_FOUND` — unknown bay identifier |
 | `3011` | `BAY_MAINTENANCE` — bay is in maintenance mode |
-| `3014` | `BAY_RESERVED` — bay already reserved by another session |
+| `3012` | `RESERVATION_NOT_FOUND` — the `reservationId` was already consumed by a StartService |
+| `3013` | `RESERVATION_EXPIRED` — the `reservationId` was already expired by the station |
+| `3014` | `BAY_RESERVED` — bay reserved under a different `reservationId`, or under the same one with differing terms |
 
 > Other hardware codes from the `5000–5009` range MAY also apply depending on station capabilities.
 
