@@ -1,6 +1,6 @@
 # Chapter 07 — Error Codes & Resilience
 
-> **Status:** Draft | **OSPP Version:** 0.14.0
+> **Status:** Draft | **OSPP Version:** 0.15.0
 
 This chapter defines the complete error taxonomy for the OSPP protocol, including the error code registry, standard error response format, retry policies, circuit breaker patterns, and graceful degradation behavior.
 
@@ -89,7 +89,7 @@ This is the field the receiver acts on, and it is the reason the field is REQUIR
 
 **Recommended actions are per-code, so they must hold on every path.** This is a rule for *authoring this registry*, and it binds the entry — not a second obligation on the emitter, which discharges §1.4 by carrying what §3 gives. A `recommendedAction` **MUST** be correct in every context from which its `errorCode` is reachable ([§4](#4-error-code-usage-per-message)). Where a code is reachable from two paths whose safe recovery differs, the entry **MUST** either be split into two codes, or state the branches and name the `details` member that selects them — which the emitter then **MUST** carry. A branching entry is emitted **in full**; emitting only the selected branch violates the per-code equality rule above. Where branches disagree on safety, the entry **MUST** name the branch a receiver assumes when the discriminator is absent, and that default **MUST** be the one whose failure mode is recoverable.
 
-The last clause is the load-bearing one. A receiver generally cannot tell which path it is on — that is precisely why the discriminator exists — so an absent discriminator must not leave it guessing. Defaulting to the recoverable branch means the worst consequence of an emitter that omits the field is a wasted round trip, never a state the receiver cannot leave. `4010`, `4016` and `4019` are the worked examples: all three default to `retry`, under which the station leaves its keys alone. `4018` is the same rule on a different discriminator: its `already_consumed` branch is the recoverable one and is therefore the default, and neither branch permits regenerating a key.
+The last clause is the load-bearing one. A receiver generally cannot tell which path it is on — that is precisely why the discriminator exists — so an absent discriminator must not leave it guessing. Defaulting to the recoverable branch means the worst consequence of an emitter that omits the field is a wasted round trip, never a state the receiver cannot leave. `4010`, `4016` and `4019` are the worked examples: all three default to `retry`, under which the station leaves its keys alone. `4018` is the same rule on a different discriminator: its `already_consumed` branch is the recoverable one and is therefore the default, and neither branch permits regenerating a key. `6008` applies the rule to an **absent** discriminator rather than an unrecognised one: with no `details.wouldBe` a receiver cannot know what the station would have said, so it defaults to the command having been refused and not performed. Re-issuing a command that was already refused costs a round trip; believing a command ran that never left the server is a state the receiver cannot detect and cannot leave.
 
 **This does not make `details` mandatory in general.** [§1.3](#13-error-object-fields) marks `details` **OPTIONAL**, and it remains optional for every code whose registry entry does not branch. The requirement here is conditional and code-scoped: for a code whose entry names a discriminator inside `details`, that member is **REQUIRED** on that code, and the code's own registry row is where the obligation is stated. A branching entry is a stated exception to §1.3's default, not a revision of it.
 
@@ -433,7 +433,7 @@ Station errors are reported by the station itself and cover physical hardware fa
 | 5104 | `WATCHDOG_RESET` | Critical | true | Hardware watchdog timer expired — a firmware task was unresponsive. Station performed an automatic reset. | Station: send BootNotification [MSG-001] with `bootReason: "Watchdog"` after reboot. Server: flag for monitoring — 3+ watchdog resets in 24h triggers operator alert. |
 | 5105 | `MEMORY_ERROR` | Critical | true | Available RAM dropped below the critical threshold. | Station: release non-essential buffers (meter value history, BLE advertising data). If insufficient, perform a soft reset. Report via SecurityEvent. |
 | 5106 | `CLOCK_ERROR` | Warning | true | Real-time clock (RTC) failure or clock drift exceeds 5 minutes from server time (detected at Heartbeat [MSG-008] time sync). | Station: sync clock from next Heartbeat response. If RTC hardware is faulty, use server time exclusively. Flag for operator — large drift may indicate battery failure. |
-| 5107 | `OPERATION_IN_PROGRESS` | Warning | true | Another long-running operation is already active (e.g., firmware update, diagnostics upload) and the new request cannot be processed concurrently. | Retry after the in-progress operation completes. Check FirmwareStatusNotification [MSG-017] or DiagnosticsNotification [MSG-019] for progress. |
+| 5107 | `OPERATION_IN_PROGRESS` | Warning | true | Another long-running operation is already active (e.g., firmware update, diagnostics upload) and the new request cannot be processed concurrently. Also covers the **full command queue** of [`02-transport.md` §3.2](02-transport.md): the station processes Server→Station commands sequentially and queues at most 10, and a command arriving on a full queue is refused with this code. That case is reachable from **every** Server→Station REQUEST rather than from any particular action, which is why it appears in no single row of [§4.2](#42-server--station-mqtt-actions). Both readings are the same condition — the station is busy and the request has not been lost, only declined — which is why one code serves them and why it is `recoverable`. | Retry after the in-progress operation completes. Check FirmwareStatusNotification [MSG-017] or DiagnosticsNotification [MSG-019] for progress. Where the cause is a full command queue, reduce the rate of concurrent commands to this station rather than retrying immediately. |
 | 5108 | `CONFIGURATION_KEY_READONLY` | Error | false | The specified configuration key is read-only and cannot be modified via ChangeConfiguration [MSG-013]. | Use a different key, or accept the current value. Read-only keys can only be changed via firmware update or provisioning. |
 | 5109 | `INVALID_CONFIGURATION_VALUE` | Error | false | The configuration value is out of range, has an invalid type, or violates the key's constraints. | Check the valid range and type for the configuration key in the configuration registry. |
 | 5110 | `RESET_FAILED` | Critical | false | The Reset command failed to execute. The station could not complete the reset sequence due to a hardware or software fault. | Dispatch technician. A physical power cycle may be required. Report via SecurityEvent [MSG-012]. |
@@ -453,7 +453,7 @@ Server errors are generated by the server and returned to mobile apps, web payme
 | 6005 | `SESSION_ALREADY_ACTIVE` | Warning | true | The user already has an active session (only one active session per user is allowed). | App: show the existing active session. The user must stop or wait for the current session before starting a new one. |
 | 6006 | `RATE_LIMIT_EXCEEDED` | Warning | true | The request was rejected due to rate limiting (per-IP, per-user, or per-device). | Wait before retrying. The `Retry-After` HTTP header (if present) indicates when to retry. See Chapter 06 §7.1 for rate limit thresholds. |
 | 6007 | `SERVICE_DEGRADED` | Info | true | One or more server subsystems are operating in degraded mode (e.g., payment processor unreachable, search index stale). | Non-blocking. The server continues to function with reduced capabilities. Degraded features are listed in the `details` field. |
-| 6008 | `COMMAND_PRE_EMPTED` | Warning | true | The **server** refused to dispatch a command it can already see the station would refuse, and stopped it locally. A server **MAY** do this — it holds enough state to know the answer — and when it does it **MUST** answer with this code and **MUST NOT** borrow the station's. `details.wouldBe` **MUST** carry the code the station would have answered (for a Reset with sessions running, `3016`), and `details.reason` **SHOULD** name the condition. The pairing is the point: an operator seeing `3016` knows the message reached the station and the station said no; an operator seeing `6008` knows it never left the server. Those have different remedies, because the server's view can be **stale** — it may hold a session the station finished seconds ago — and a stale pre-empt is repaired by reconciling the server, not by touching the station. One code covering both hides exactly that difference. A pre-empt is an OPTIMISATION and is never required: a server that dispatches and lets the station answer is equally conforming. A server that pre-empts **MUST NOT** pre-empt a command carrying an override the station would honour — a Reset with `force: true` **MUST** be dispatched however many sessions are running, because forcing is precisely the instruction to proceed anyway. | Operator: read `details.wouldBe` for the underlying condition and treat it as that code's row directs. If the condition does not match what the station actually reports, the server's view is stale — reconcile it; the station is not at fault. Server: carry `details.wouldBe`, and never pre-empt a forced command. |
+| 6008 | `COMMAND_PRE_EMPTED` | Warning | true | The **server** refused to dispatch a command and stopped it locally, so it never reached the station. A server **MAY** do this and **MUST** answer with this code when it does, and **MUST NOT** borrow the station's. `details.reason` **MUST** name the condition, because it is the only member present on every occurrence and it says which of the two kinds of pre-empt this is. **(1) Predicted refusal** — the server holds enough state to see the station would decline, as for a Reset with sessions running. `details.wouldBe` **MUST** carry the code the station would have answered (`3016` for that Reset). **(2) Server-protective** — the server declines for a reason of its own, the circuit breaker of [§6.3](#63-server--station-command-circuit-breaker) being the defined case. Here `details.wouldBe` **MUST** be absent: the station was never going to refuse, it was never going to answer at all, and inventing a code it never gave is the borrowing this entry exists to forbid. **When `details.wouldBe` is absent the receiver MUST treat the command as refused and not performed**, and **MUST NOT** infer that it would have succeeded — an unpredictable outcome is not a safe one, and this is the only default under which the worst case is a command that must be re-issued rather than one believed done that never ran. The pairing is the point: an operator seeing `3016` knows the message reached the station and the station said no; an operator seeing `6008` knows it never left the server. Those have different remedies, because the server's view can be **stale** — it may hold a session the station finished seconds ago — and a stale pre-empt is repaired by reconciling the server, not by touching the station. A pre-empt is an OPTIMISATION and is never required: a server that dispatches and lets the station answer is equally conforming. A server **MUST NOT** pre-empt a command carrying an override the station would honour — a Reset with `force: true` **MUST** be dispatched however many sessions are running, because forcing is precisely the instruction to proceed anyway. **Scope:** this code is reachable from in-scope endpoints that dispatch a station command ([§4.4](#44-rest-api-endpoints)) and from operator surfaces this specification does not define ([§2.4](#24-rest-api-error-response), *Scope*) — an administrative Reset being the worked example. On the latter the contract above still describes the answer, but there is nothing for a conformance test to address, which is why no test case exercises that path. | Operator: read `details.reason` — it says which kind of pre-empt this is. If `details.wouldBe` is present, treat it as that code's row directs; where it disagrees with the station, the server's view is stale — reconcile the server, do not visit the station. If absent, the command did not run and no outcome may be assumed; re-issue once the named condition clears. Server: always carry `details.reason`; carry `details.wouldBe` only for a predicted refusal; never pre-empt a forced command. |
 
 ---
 
@@ -533,10 +533,10 @@ This table maps which error codes can appear in the RESPONSE or rejection of eac
 
 | Endpoint | HTTP | Particular Error Codes (**+ the four universal codes above**) |
 |----------|:----:|---------------------|
-| `POST /sessions/start` | 400, 402, 404, 409, 422, 500, 504 | 3000, 3001, 3002, 3003, 3004, 3005, 3008, 3009, 3010, 3011, 3012, 3013, 3014, 3019, 4001, 5000–5009, 5111, 6002, 6003, 6005 |
+| `POST /sessions/start` | 400, 402, 404, 409, 422, 500, 504 | 3000, 3001, 3002, 3003, 3004, 3005, 3008, 3009, 3010, 3011, 3012, 3013, 3014, 3019, 4001, 5000–5009, 5111, 6002, 6003, 6005, 6008 |
 | `POST /sessions/{id}/stop` | 404, 409, 503 | 3000, 3005, 3006, 3007, 3011, 6002 |
 | `GET /sessions/{id}` | 404 | 3006 |
-| `POST /pay/{code}/start` | 400, 402, 404, 409, 422, 500, 504 | 3000, 3001, 3002, 3003, 3004, 3005, 3008, 3009, 3010, 3011, 3012, 3013, 3014, 4001, 5000–5009, 5111, 6002, 6003 |
+| `POST /pay/{code}/start` | 400, 402, 404, 409, 422, 500, 504 | 3000, 3001, 3002, 3003, 3004, 3005, 3008, 3009, 3010, 3011, 3012, 3013, 3014, 4001, 5000–5009, 5111, 6002, 6003, 6008 |
 | `GET /pay/sessions/{token}/status` | 401, 404 | 2011, 2012, 3006 |
 | `POST /me/offline-txs` | 400, 401 | 2009, 2010, 3015 |
 | `POST /sessions/offline-auth` | 400, 401, 402, 403 | 2008, 2009, 2010, 4001 |
@@ -648,6 +648,10 @@ Each MQTT command (Server → Station) has a specific retry policy based on urge
 | GetDiagnostics | 1 | — | 300s | Log failure, retry via operator action |
 | UpdateServiceCatalog (at boot) | 2 | 0s, +10s | 30s | Use cached catalog |
 
+**Retry delays are measured from the preceding attempt's timeout, not from the first dispatch.** An attempt has not failed until its *Timeout per Attempt* has elapsed with no RESPONSE, and only a failed attempt is retried ([glossary](glossary.md), *REQUEST*). So `StartService (web)` dispatches at `0s`, `15s`, `35s` and `60s` — not at `0s, 5s, 10s, 15s` — and exhausts at `70s`; `UpdateServiceCatalog (at boot)` dispatches at `0s` and `40s`. Read from the first dispatch instead, the second attempt would go out while the first is still inside its own timeout, which no rule here licenses and which the retry rule contradicts outright. The distinction is only visible on the two actions with more than one attempt; the other ten are single-attempt and have no delay to measure.
+
+A retry re-sends the **same `messageId`** (glossary, *REQUEST*), so a retry the station has already answered is collapsed by transport-layer deduplication into a re-send of the cached RESPONSE ([`02-transport.md` §3.3](02-transport.md)) rather than executed a second time. This is what makes a multi-attempt policy safe to state without qualifying it per action.
+
 ### 5.4 BLE Retry Policies
 
 | Operation | Max Attempts | Retry Delays | On Failure |
@@ -728,8 +732,8 @@ The server tracks per-station command success/failure rates.
 
 **Behavior in OPEN state:**
 - Server marks the station as "unresponsive" (not "offline" — LWT not received).
-- New StartService commands for that station → immediate `6002 ACK_TIMEOUT` response to the app (without sending MQTT command).
-- Server continues sending Heartbeat [MSG-008] as probes during HALF-OPEN.
+- New StartService commands for that station are **not dispatched**, and are answered immediately with `6008 COMMAND_PRE_EMPTED` carrying `details.reason` naming the open breaker and **no** `details.wouldBe` — this is the server-protective pre-empt of that entry, not a predicted station refusal. An earlier revision answered `6002 ACK_TIMEOUT` here, which asserts *"the server **sent** a command … but did not receive a RESPONSE"* and maps to `504`; nothing was sent, so it reported a dispatch that never happened and put the fault on a station that was never asked. `6002` is unchanged and still means what it says — it is reached when a command **is** dispatched and the station does not answer.
+- During HALF-OPEN the server lets a **single command** through as the probe — the next one it would have dispatched, whichever action that is. This is why the success threshold above reads *any action*, and it is the generic HALF-OPEN behaviour of [§6.1](#61-overview) rather than an exception to it. **There is no server-initiated probe message.** An earlier revision named Heartbeat [MSG-008] here; Heartbeat is **Station → Server** ([Chapter 03 §5.1](03-messages.md)), there is no schema for a server-sent one, and a server following that sentence literally could not have built the mechanism it described.
 
 ### 6.4 Server → Payment Processor Circuit Breaker
 
@@ -1209,6 +1213,32 @@ The following JSON Schema validates the **Error Object** — the complete struct
           }
         }
       }
+    },
+    {
+      "$comment": "6008 branches on details.reason, which is REQUIRED because it is present on both kinds of pre-empt (§3.6). details.wouldBe is conditional — REQUIRED on a predicted station refusal, absent on a server-protective one — so the schema bounds it by the registry's own range rather than requiring it; its absence is the discriminator a receiver defaults on.",
+      "if": {
+        "properties": { "errorCode": { "const": 6008 } },
+        "required": ["errorCode"]
+      },
+      "then": {
+        "required": ["details"],
+        "properties": {
+          "details": {
+            "required": ["reason"],
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "wouldBe": {
+                "type": "integer",
+                "minimum": 1000,
+                "maximum": 9999
+              }
+            }
+          }
+        }
+      }
     }
   ],
   "additionalProperties": false
@@ -1217,6 +1247,10 @@ The following JSON Schema validates the **Error Object** — the complete struct
 
 **On the conditional blocks.** `details` stays OPTIONAL in general — the `required` array above is the same seven fields it has always been, and the general case is unchanged. The `allOf` adds one `if`/`then` per **branching** entry (§1.4), which makes the discriminator a validation error rather than a matter of trust. This is expressible in the dialect in use: the schema declares JSON Schema **draft 2020-12**, where `if`/`then` is standard, so the constraint is machine-checkable by any conforming validator and no reader need assume validation covers something it does not.
 
-Exactly five entries branch today — `1004` on `details.cause`, `4010`, `4016` and `4019` on `details.phase`, and `4018` on `details.reason` — and each has a block above. **Any entry that gains a branch MUST gain a block here in the same change**, or the discriminator it declares is unenforced. Note that `2019` carries `details.reason` as a **SHOULD** rather than a branch: its four causes share one recovery, so there is nothing for a receiver to select between and no block is required.
+Exactly six entries branch today — `1004` on `details.cause`, `4010`, `4016` and `4019` on `details.phase`, and `4018` and `6008` on `details.reason` — and each has a block above. **Any entry that gains a branch MUST gain a block here in the same change**, or the discriminator it declares is unenforced. Note that `2019` carries `details.reason` as a **SHOULD** rather than a branch: its four causes share one recovery, so there is nothing for a receiver to select between and no block is required.
+
+**`6008` is the one block whose discriminator is not an enumeration, and the one that constrains a second member it does not require.** `details.reason` is required because it is present on both kinds of pre-empt, and it is a free string rather than an enum because the conditions a server may protect itself against are not a closed set — an open circuit breaker is the one this specification defines, not the only one an implementation may have. `details.wouldBe` is the opposite case: **REQUIRED on a predicted station refusal, and absent on a server-protective one**, so a schema that required it would forbid the second kind outright. What the schema can do is bound it when it appears, and refuse a value outside the registry's own range — which is what a fabricated code would most likely be. Its **absence carries meaning**, and that meaning is the fail-safe default of [§1.4](#14-provenance-of-errordescription-and-recommendedaction): the command did not run and no outcome may be assumed.
+
+The entry was added in `0.11.1`, three minors and eleven days after the rule above was written in `0.8.0`, and did not carry a block until now — the first branching entry added after the rule was also the first to violate it. That is exactly the failure the rule exists to prevent, and the reason it is stated as a **MUST** on the change rather than as advice.
 
 This does **not** retire the fail-safe defaults. Schema validation binds the **emitter**; the defaults in §1.4 tell a **receiver** what to assume when a non-conforming emitter omits the discriminator anyway, and a receiver is not entitled to assume every peer validates its output. Both hold: the emitter MUST send the member, and the receiver MUST still default to the recoverable branch if it is absent.

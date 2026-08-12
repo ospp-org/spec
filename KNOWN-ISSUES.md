@@ -1,7 +1,7 @@
 # OSPP Known Issues
 
 **Date:** 2026-08-11
-**Specification-document version:** 0.14.0 (release tag `v0.14.0`)
+**Specification-document version:** 0.15.0 (release tag `v0.15.0`)
 **Status:** 3 blockers open (all BLE), 12 non-blocking issues open
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle and
 the arcs since
@@ -13,9 +13,9 @@ the arcs since
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 12 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** |
+| OPEN | 13 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** |
 | CLOSED | 2 | [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
-| **Total open** | **15** | |
+| **Total open** | **16** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
@@ -629,6 +629,67 @@ same *restatement-without-a-citation* shape as the finding below, expressed in t
 **Not built here** — this repository cannot add a job to another repository's CI, and the spec-side
 half already exists (`tools/verify-schemas.py`, which validates all 317 and would have caught the
 stale vector the moment it was committed here).
+
+## OPEN — nothing checks a per-message `Message Expiry` against the category it names, and a repair landed on the wrong message because of it
+
+**The fourth gate-that-looks-somewhere-else, and the first whose consequence was a regression shipped
+inside the repair that announced it fixed.** `02-transport.md` §5.1 assigns every action to an expiry
+**category** and gives that category one MQTT Expiry Interval. `03-messages.md` restates the value in
+each per-message metadata block, and Appendix B restates it a third time. **No gate joins the three.**
+Category 4 *Numeric Consistency* checks numbers that appear twice in prose; it has never known that a
+`| **Message Expiry** | 120 seconds |` row belongs to a category table three chapters away.
+
+**Measured at `v0.14.0` → `v0.15.0`.** `0.14.0` set out to fix MeterValues' expiry, which read `30 s`
+against §5.1's `120 s`. At `0.13.0` **two** per-message blocks carried the byte-identical string
+`| **Message Expiry** | 30 seconds |`, and the edit took the first — which is **AuthorizeOfflinePass**,
+some 780 lines above MeterValues. The single hunk in `git diff v0.13.0..v0.14.0 -- spec/03-messages.md`
+shows it. So `0.14.0` shipped with the announced defect **still open** and a **new** one created, and
+the companion Appendix B edit in the same commit was correct — which is exactly why it looked finished.
+`verify-protocol.sh` reported **29/29 PASS** on Numeric Consistency across the entire cycle. Both are
+repaired in `0.15.0`, along with CertificateInstall's `300 s` against its category's `60 s`.
+
+**Both sides are already structured, which is what makes this cheap.** §5.1 is a four-column table
+whose *Actions* cell is a comma-separated action list; each per-message block is a `| Property | Value |`
+table under a `### N.M ActionName` heading, carrying a `| **Message Expiry** | … |` row; Appendix B is a
+four-column table keyed by action. Three parsers, one join on action name. Nothing needs a new file
+format and nothing needs hand-maintained lists.
+
+**What the gate must do, and the three ratchet properties it must have:**
+
+| Side | Parse | Yields |
+|---|---|---|
+| `02-transport.md` §5.1 | category table, expanding *Actions* | action → (category, expiry, max age) |
+| `03-messages.md` per-message blocks | `### N.M Name` + `Message Expiry` row | action → expiry, and the category it *names*, if any |
+| `03-messages.md` Appendix B | action-keyed table | action → expiry |
+
+1. **Refuse on a thin parse.** Assert a floor on each side before comparing — §5.1 yields 27 actions
+   across 6 categories, Chapter 03 yields 27 per-message blocks, Appendix B yields 22 rows. A selector
+   that quietly stops matching is this repository's most-repeated failure, and a gate that reports a
+   pass on four parsed rows has tested nothing.
+2. **Zero matched pairs is a FAIL, never a pass.** If the join produces no pairs the parser has broken,
+   not the specification agreed — the same shape as a Pest run collecting zero tests and exiting green.
+   The pass condition is *N pairs compared and N agreed*, with N asserted `> 0`, never *no disagreement
+   found*.
+3. **Check the citation, not only the number.** A block naming a category **MUST** be in it. This is the
+   half that catches the actual regression: AuthorizeOfflinePass's new line was `120 seconds (Periodic
+   reporting category)` and AuthorizeOfflinePass appears in **no** §5.1 category at all, so the value
+   and the citation were both wrong and either check alone would have caught it. Membership is a
+   distinct verdict from disagreement and must be reported as such.
+
+**Three states, not two.** An action can agree, disagree, or be **named in no category** — `TriggerMessage`
+and `DataTransfer` are in no §5.1 row, and five actions are absent from Appendix B (see the separate item
+on that). The gate **MUST NOT** treat absence as a failure or it will be silenced on day one; it reports
+absence as coverage and fails only on disagreement or a false citation.
+
+**What it would have caught, in order:** the `0.14.0` MeterValues regression, both halves; CertificateInstall
+at `300 s` against a category giving `60 s`, which had stood since the block was written; and any future
+recurrence of the same edit. The category citations added to the three repaired blocks in `0.15.0` are a
+**convention** that makes the two lines textually distinct — they are not enforcement, and a maintainer who
+omits one on the next block restores the original hazard exactly.
+
+**Not built here** — recorded with its specification so the next cycle can build it, in the shape of the
+existing `tools/check-config-defaults.py`, which already does the equivalent join for configuration
+defaults and is the closest working model.
 
 ## OPEN — 170 numbered processing rules, and nothing says whether the numbering binds
 

@@ -1,6 +1,6 @@
 # Chapter 03 — Message Catalog
 
-> **Status:** Draft | **OSPP Version:** 0.14.0
+> **Status:** Draft | **OSPP Version:** 0.15.0
 
 This chapter is the normative reference for **every message** in the OSPP protocol. Each message is documented with its complete payload schema, metadata, and example.
 
@@ -327,7 +327,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
 | **Expected Response** | AuthorizeOfflinePass RESPONSE |
 | **Timeout** | 15 seconds |
 | **Idempotency** | Yes — server MUST return the same result for the same `offlinePassId` |
-| **Message Expiry** | 120 seconds (Periodic reporting category — see [`02-transport.md` §5.1](02-transport.md)) |
+| **Message Expiry** | 30 seconds (no [`02-transport.md` §5.1](02-transport.md) category covers this action; Appendix B is the cross-check) |
 
 In the **Partial B** offline scenario (phone offline, station online), the mobile app presents an OfflinePass to the station via BLE. The station forwards it to the server for real-time validation instead of performing local validation.
 
@@ -1112,7 +1112,7 @@ Which transitions between these values are legal is [Chapter 05 §2.3](05-state-
 | **Expected Response** | None (EVENT) |
 | **Timeout** | N/A |
 | **Idempotency** | Yes — duplicate meter readings are deduplicated by timestamp |
-| **Message Expiry** | 30 seconds |
+| **Message Expiry** | 120 seconds (Periodic reporting category — see [`02-transport.md` §5.1](02-transport.md)) |
 
 Reports consumption telemetry during an active session. Sent at the interval configured by `MeterValuesInterval` (default: 60 seconds). Only sent when `meterValuesSupported` capability is `true`.
 
@@ -1948,7 +1948,7 @@ Transitions one or all bays to/from `Unavailable` (maintenance) status. The stat
 
 Pushes the complete service catalog to the station. This is a **full replacement** — the station MUST replace its entire catalog in NVS with the new data.
 
-**The BootNotification response does not carry the catalog.** Its schema ([`boot-notification-response.schema.json`](../schemas/mqtt/boot-notification-response.schema.json)) is closed and declares no field that could: the `configuration` member is a string-to-string map of configuration keys ([Chapter 08 §8.3](08-configuration.md#83-configuration-via-bootnotification)), not a service list. A station therefore receives its catalog **only** through UpdateServiceCatalog, and a freshly provisioned station has **no** catalog until the server pushes one. The server **SHOULD** push the catalog promptly after accepting a boot, since until it does the station knows no `serviceId` and can start nothing. If a catalog update fails the station **MAY** retry once after 10 seconds.
+**The BootNotification response does not carry the catalog.** Its schema ([`boot-notification-response.schema.json`](../schemas/mqtt/boot-notification-response.schema.json)) is closed and declares no field that could: the `configuration` member is a string-to-string map of configuration keys ([Chapter 08 §8.3](08-configuration.md#83-configuration-via-bootnotification)), not a service list. A station therefore receives its catalog **only** through UpdateServiceCatalog, and a freshly provisioned station has **no** catalog until the server pushes one. The server **SHOULD** push the catalog promptly after accepting a boot, since until it does the station knows no `serviceId` and can start nothing. If the push fails, the retry is the **server's** and is defined once, in [`07-errors.md` §5.3](07-errors.md) — two attempts at boot, the second after 10 seconds, falling back to the cached catalog. It is not the station's: UpdateServiceCatalog is Server → Station, so the station is the receiver and has no request to re-send.
 
 #### REQUEST Payload
 
@@ -2110,7 +2110,7 @@ See [Certificate Renewal](profiles/security/certificate-renewal.md) for the comp
 | **Expected Response** | CertificateInstall RESPONSE |
 | **Timeout** | 30 seconds |
 | **Idempotency** | Yes — same certificate serial number is a no-op |
-| **Message Expiry** | 300 seconds |
+| **Message Expiry** | 60 seconds (Certificate renewal category — see [`02-transport.md` §5.1](02-transport.md)) |
 
 Delivers a signed X.509 certificate (and optional CA chain) to the station. The station validates the certificate chain, installs it to secure storage, and uses it for subsequent TLS connections.
 
@@ -2345,9 +2345,13 @@ Instructs the station to send a specific message immediately, outside of its nor
 
 TriggerMessage does not define message-specific error codes. The `NotImplemented` status value indicates the station does not support triggering the requested message type.
 
+**`NotImplemented` and `2007` answer different questions, and the scope is what separates them.** `2007 COMMAND_NOT_SUPPORTED` is implicit for every Server→Station REQUEST (see *Implicit Error Codes* above) and is about the **action**: the station does not implement TriggerMessage at all, or has it disabled by configuration. `NotImplemented` is about the **argument**: the station implements TriggerMessage, received it, and cannot produce the specific `requestedMessage` asked for. A station that supports TriggerMessage **MUST** answer an unsupported `requestedMessage` with `NotImplemented` and **MUST NOT** substitute `2007`, which would tell the server the command itself is unavailable and stop it asking for any message type.
+
 #### Rate Limiting
 
-The server **SHOULD NOT** send more than **1 TriggerMessage per action type per 30-second window**. The station **MAY** ignore duplicate triggers for the same `requestedMessage` within 30 seconds.
+The server **SHOULD NOT** send more than **1 TriggerMessage per action type, per station, per 30-second window**. The station **MAY** ignore duplicate triggers for the same `requestedMessage` within 30 seconds.
+
+**The limit is per station, not fleet-wide.** It exists to stop one station being asked the same question repeatedly, which is a per-station concern — and the station-side sentence above is its mirror, necessarily scoped to the one station applying it. Read fleet-wide it would mean a single unresponsive station could silence the whole estate: an operator with forty bays awaiting a StatusNotification could repair one every thirty seconds, and a rate limit meant to protect stations would have become an availability limit on the operator.
 
 ---
 

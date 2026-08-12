@@ -124,7 +124,7 @@ Message msg_s2c_ll220001:
 ```
 10:20:01.500  Server waiting for RESPONSE on topic:
               ospp/v1/stations/stn_a1b2c3d4/to-server
-              relatesTo: msg_s2c_ll220001
+              correlating on messageId: msg_s2c_ll220001
 
 10:20:04.500  [3s]   No response. App polling: pending_ack interval (1s)
 10:20:07.500  [6s]   No response. App shows "Station preparing..."
