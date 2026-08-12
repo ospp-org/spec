@@ -12,7 +12,7 @@ Verify that the station correctly sends TransactionEvent messages for offline tr
 
 - `spec/profiles/transaction/transaction-event.md` — TransactionEvent behavior
 - `spec/profiles/offline/reconciliation.md` — Offline reconciliation flow
-- `spec/profiles/offline/reconciliation.md` §2 — **response timeout 30 s on this path.** This is a reconciliation case, and the reconciliation profile sets **30 s**, not §4.1's 60 s, and says so explicitly ("This profile uses a shorter response timeout (30s) than the standard TransactionEvent timeout (60s)"). §4.1's 60 s governs the non-reconciliation TransactionEvent.
+- `spec/profiles/offline/reconciliation.md` §2 — **response timeout 30 s on this path.** This is a reconciliation case, and the reconciliation profile sets **30 s**, not §4.1's 60 s, and says so explicitly ("This profile uses a shorter response timeout (30s) than the standard TransactionEvent timeout (60s)"). Note that TransactionEvent is defined as an offline-reconciliation message only, so 30 s is in practice the timeout for every TransactionEvent that exists; §4.1's 60 s is a general-table entry with no message left to govern.
 - `spec/03-messages.md` §4.1 — TransactionEvent payload
 - `spec/07-errors.md` §5 — Retry policies
 - `schemas/mqtt/transaction-event-response.schema.json`
@@ -47,11 +47,10 @@ Verify that the station correctly sends TransactionEvent messages for offline tr
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "txCounter": 5,
-  "deviceId": "dev_d4e5f6a7",
   "passCounter": 36
 }
 ```
-2. Verify all required fields are present: `offlineTxId`, `offlinePassId`, `userId`, `bayId`, `serviceId`, `startedAt`, `endedAt`, `durationSeconds`, `creditsCharged`, `receipt`, `txCounter`.
+2. Verify all required fields are present: `offlineTxId`, `offlinePassId`, `passCounter`, `userId`, `bayId`, `serviceId`, `startedAt`, `endedAt`, `durationSeconds`, `creditsCharged`, `receipt`, `txCounter`. (`offlinePassId` + `passCounter` are the **pass-form** pair; an auth-form message carries `authId` + `sessionId` instead and forbids both of these.)
 3. Verify `receipt.signatureAlgorithm` is `"ECDSA-P256-SHA256"`.
 4. Send TransactionEvent response within 30 seconds:
    ```json

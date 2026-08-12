@@ -636,6 +636,7 @@ When the station regains MQTT connectivity, it performs the reconciliation flow 
   "payload": {
     "offlineTxId": "otx_a3b4c5d6e7f8",
     "offlinePassId": "opass_a8b9c0d1e2f3",
+    "passCounter": 1,
     "userId": "sub_bob2026",
     "bayId": "bay_c1d2e3f4a5b6",
     "serviceId": "svc_eco",

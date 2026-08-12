@@ -156,4 +156,4 @@ If the watchdog timer expires and automatic rollback fails (e.g., both firmware 
 - Response: [`update-firmware-response.schema.json`](../../../schemas/mqtt/update-firmware-response.schema.json)
 - FirmwareStatusNotification: [`firmware-status-notification.schema.json`](../../../schemas/mqtt/firmware-status-notification.schema.json)
 - Timestamp: [`timestamp.schema.json`](../../../schemas/common/timestamp.schema.json)
-- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 5014--5018, 5112)
+- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 1011, 5014--5018, 5103, 5107, 5112)

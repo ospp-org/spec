@@ -135,4 +135,4 @@ The station **MUST** upload the archive via HTTP PUT to the provided `uploadUrl`
 - Response: [`get-diagnostics-response.schema.json`](../../../schemas/mqtt/get-diagnostics-response.schema.json)
 - DiagnosticsNotification: [`diagnostics-notification.schema.json`](../../../schemas/mqtt/diagnostics-notification.schema.json)
 - Timestamp: [`timestamp.schema.json`](../../../schemas/common/timestamp.schema.json)
-- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 5019--5021)
+- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 1011, 5019--5021, 5103, 5107)

@@ -45,7 +45,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 
 1. The station **MUST** validate that the `bayId` exists; if not, it **MUST** respond with `3005 BAY_NOT_FOUND`.
 2. The station **MUST** validate that the bay is in `Available` or `Reserved` state. If the bay is `Occupied` or `Finishing`, it **MUST** respond with `3001 BAY_BUSY`. If the bay is `Faulted`, `Unknown`, or transitioning, it **MUST** respond with `3002 BAY_NOT_READY`.
-3. If the bay has an active reservation held by a different `reservationId`, the station **MUST** respond with `3014 BAY_RESERVED`.
+3. If the bay has an active reservation, the station **MUST** respond with `3014 BAY_RESERVED` unless the request carries a `reservationId` matching that reservation. A request that **omits** `reservationId` entirely is not the holder and is refused the same way — the field being absent is not a licence to start on a reserved bay.
 4. If the bay is in `Unavailable` state due to maintenance, the station **MUST** respond with `3011 BAY_MAINTENANCE`.
 5. The station **MUST** validate that the `serviceId` exists in its service catalog. If not, it **MUST** respond with `3004 INVALID_SERVICE`.
 5a. The **server MUST NOT dispatch this message at all** unless it holds a service->program binding
@@ -73,6 +73,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 | 3004 | `INVALID_SERVICE` | Error | `serviceId` not found in the station's service catalog. |
 | 3017 | `PROGRAM_NOT_DECLARED` | Error | `programNumber` was never declared for the target bay. Fail closed — reject, never accept and do nothing. |
 | 3005 | `BAY_NOT_FOUND` | Error | `bayId` does not match any bay on this station. |
+| 3006 | `SESSION_NOT_FOUND` | Error | The `sessionId` names a session that has already completed or failed. |
 | 3008 | `DURATION_INVALID` | Error | `durationSeconds` is zero, negative, or below the service minimum. |
 | 3009 | `HARDWARE_ACTIVATION_FAILED` | Error | Hardware failed to start within the activation timeout. |
 | 3010 | `MAX_DURATION_EXCEEDED` | Warning | `durationSeconds` exceeds `MaxSessionDurationSeconds`. |
@@ -161,4 +162,4 @@ If the `sessionId` matches a completed or failed session, the station **MUST** r
 - Bay ID: [`bay-id.schema.json`](../../../schemas/common/bay-id.schema.json)
 - Service ID: [`service-id.schema.json`](../../../schemas/common/service-id.schema.json)
 - Reservation ID: [`reservation-id.schema.json`](../../../schemas/common/reservation-id.schema.json)
-- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 3001--3014, 5001, 5004)
+- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 3001--3014, 3017, 5001, 5004, 5111)

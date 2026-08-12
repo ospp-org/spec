@@ -1,6 +1,6 @@
 # Chapter 04 — Protocol Flows
 
-> **Status:** Draft | **OSPP Version:** 0.13.0
+> **Status:** Draft | **OSPP Version:** 0.14.0
 
 This chapter documents every end-to-end protocol flow as a sequence of messages defined in [Chapter 03 — Message Catalog](03-messages.md). Each flow includes preconditions, a Mermaid sequence diagram, numbered happy-path steps, alternative paths, error paths, and postconditions.
 
@@ -520,7 +520,7 @@ sequenceDiagram
 2. **Server** validates: bay exists, bay is Available (or Reserved by this user), service is in catalog, user has sufficient credits, user has no active session
 3. **Server** debits credits from user's wallet (pre-authorization for max duration)
 4. **Server** creates a session record with `status: pending_ack`
-5. **Server** sends **StartService REQUEST** [MSG-005] to the SSP via MQTT with `sessionId`, `bayId`, `serviceId`, `durationSeconds`, `sessionSource: "MobileApp"`
+5. **Server** sends **StartService REQUEST** [MSG-005] to the SSP via MQTT with `sessionId`, `bayId`, `serviceId`, `programNumber`, `durationSeconds`, `sessionSource: "MobileApp"`
 6. **SSP** validates the bay state, activates the hardware
 7. **SSP** sends **StartService RESPONSE** [MSG-005] with `status: "Accepted"`
 8. **SSP** sends **StatusNotification** [MSG-009] with `status: "Occupied"`
@@ -548,7 +548,7 @@ sequenceDiagram
 | 7 | `3001 BAY_BUSY` | Bay became occupied between validation and command | Server refunds 100% |
 | 7 | `3009 HARDWARE_ACTIVATION_FAILED` | Hardware failed to start | Server refunds 100% |
 
-**Refund policy:** Any failure at or after step 3 (credits debited) but **before the service begins delivering** triggers an automatic full refund to the user's wallet — every error above occurs pre-delivery, so `delivered = 0`. Once the service has begun delivering, a terminal failure is settled by the per-reason **Refund Policy** in the Session End flow (pro-rated by delivered time; a full refund only when `< 50%` was delivered **and** the reason is `Fault`), not an automatic full refund.
+**Refund policy:** Any failure at or after step 3 (credits debited) but **before the service begins delivering** triggers an automatic full refund to the user's wallet — every error above occurs pre-delivery, so `delivered = 0`. Once the service has begun delivering, a terminal failure is settled by the per-reason **Refund Policy** in the Session End flow (pro-rated by delivered time; a full refund only when less than `faultFullRefundThreshold` of the booked duration was delivered **and** the reason is `Fault`), not an automatic full refund.
 
 ### Postconditions
 
@@ -634,7 +634,7 @@ sequenceDiagram
 2. **Browser** calls `GET /pay/{code}/bays` — retrieves bay list with services and prices
 3. User selects a bay and service
 4. **Browser** sends `POST /pay/{code}/start` with `bayId`, `serviceId`, and optional `email` (for receipt)
-5. **Server** sends **ReserveBay REQUEST** [MSG-003] to the SSP with `reservationId`, bay, and expiration (default 180s TTL)
+5. **Server** sends **ReserveBay REQUEST** [MSG-003] to the SSP with `reservationId`, bay, and expiration (180s TTL for this flow — shorter than the `ReservationDefaultTTL` registry default of 300s, to bound the 3DS window)
 6. **SSP** transitions bay to `Reserved`, sends **ReserveBay RESPONSE** [MSG-003] `Accepted`
 7. **SSP** sends **StatusNotification** [MSG-009] with `status: "Reserved"`
 8. **Server** creates a PaymentIntent (`created` → `pending`), returns a `sessionToken` (RFC 4122 UUID, any version; 10-min TTL) and payment gateway redirect URL to the Browser
@@ -647,8 +647,8 @@ sequenceDiagram
 15. **SSP** sends **StatusNotification** [MSG-009] with `status: "Occupied"`
 16. **Server** updates session to `active`
 17. **Browser** polls `GET /pay/sessions/{sessionToken}/status` for progress
-18. Timer expires → **SSP** sends **StatusNotification** [MSG-009] `Finishing` then `Available`
-19. **Server** marks session as `completed`
+18. Timer expires → **SSP** auto-stops and sends **SessionEnded EVENT** [MSG-040] with `reason: "TimerExpired"`, then **StatusNotification** [MSG-009] `Finishing` then `Available`
+19. **Server** settles the session from SessionEnded — it is the billing record for an autonomous stop, and a server **MUST NOT** settle from StatusNotification alone ([Chapter 03 §5.4](03-messages.md)) — and marks it `completed`
 20. If `email` was provided, Server sends a receipt email
 
 ### Alternative Paths
@@ -1053,7 +1053,7 @@ This separation ensures that a misconfigured or compromised station cannot overc
 
 ### Alternative Paths
 
-**A1 — Hardware error during session:** SSP detects a hardware fault → auto-stops → sends **SessionEnded EVENT** [MSG-040] with `reason: "Fault"`, followed by StatusNotification `Faulted` [MSG-009]. Server uses `creditsCharged` from SessionEnded for billing and applies refund policy (if < 50% duration delivered → full refund).
+**A1 — Hardware error during session:** SSP detects a hardware fault → auto-stops → sends **SessionEnded EVENT** [MSG-040] with `reason: "Fault"`, followed by StatusNotification `Faulted` [MSG-009]. Server recomputes billing from the reported duration (the station's `creditsCharged` is advisory) and applies the refund policy (full refund if less than `faultFullRefundThreshold` of the booked duration was delivered).
 
 **A2 — MQTT disconnect during session:** SSP continues the service (does NOT stop the service). On reconnection, SSP re-boots (BootNotification [MSG-001]) and reports the session outcome.
 
@@ -1114,11 +1114,19 @@ of by what was delivered.
 
 > **Refund scope clarification:** The low-delivery override applies **only** when SessionEnded reason is `Fault`. It does **not** apply to `TimerExpired` sessions: a session that runs to its booked timer is billed for the full pre-authorized duration regardless of meter values, because the user received the time they paid for. The override formula is `actualDurationSeconds < faultFullRefundThreshold × durationSeconds`, evaluated against the booked `durationSeconds` from StartService.
 >
-> **`faultFullRefundThreshold` (explicit, configurable product parameter — default `0.50`).** The fraction of the booked duration below which a `Fault`-terminated session is deemed to have delivered nothing of value and is refunded in full. This is a **product decision** — *below what fraction is the delivered service worthless?* — so it is a **named, documented, server-configurable value**, never a constant baked into an implementation. A conforming server MUST read it from configuration and MUST keep its configured value and this specification value in lockstep; the default is `0.50` (the historical "< 50%" rule). It is `Fault`-only: a voluntary (`Local`) stop below the threshold is still billed pro-rata, not made free.
+> **`faultFullRefundThreshold` (explicit, configurable product parameter — default `0.50`).** The fraction of the booked duration below which a `Fault`-terminated session is deemed to have delivered nothing of value and is refunded in full. This is a **product decision** — *below what fraction is the delivered service worthless?* — so it is a **named, documented, server-configurable value**, never a constant baked into an implementation. A conforming server **MUST** read it from configuration rather than from a compiled-in constant, and **MUST** ship `0.50` as the configured default (the historical "< 50%" rule) so that a server nobody has tuned behaves as this specification describes. Operators MAY set another value; doing so is a deliberate product choice, not a conformance failure.
+>
+> **Where it is configured.** This is a **server-local** parameter and it is deliberately **not** a Chapter 08 key. Chapter 08 is the registry of *station* configuration, distributed over the wire and readable by the station; this value is never sent to a station, never appears in any message, and no station behaviour depends on it. OSPP does not define a server configuration surface, so the key's name, storage and discovery are the server implementation's own — what this specification fixes is that the value is **read**, that it is **named** where an operator can find it, and that its default is `0.50`.
+>
+> **Scope.** It is `Fault`-only: a voluntary (`Local`) stop below the threshold is still billed pro-rata, not made free. It is also **`UserDuration`-only** — under *Settlement by Service Kind* below, a `Fault` on a `FixedDuration` or `MultiUnit` session is already a full refund unconditionally, so the threshold is never consulted for those kinds.
 
 ### Settlement by Service Kind
 
-The refund matrix above is the **pro-rata baseline**. The settlement a session actually receives on a terminal reason is modulated by its **service kind** — a settlement attribute each service in the operator catalog declares, describing *what kind of thing the session delivers*. The kind is **snapshot onto the session at start**, so a later catalog edit never retroactively changes how an in-flight or already-settled session bills. The **server is the sole settlement authority** (see **Billing Authority** above); a station never computes a refund and never reports a kind.
+The refund matrix above is the **pro-rata baseline**. The settlement a session actually receives on a terminal reason is modulated by its **service kind** — a settlement attribute describing *what kind of thing the session delivers*. The kind is **snapshot onto the session at start**, so a later catalog edit never retroactively changes how an in-flight or already-settled session bills. The **server is the sole settlement authority** (see **Billing Authority** above); a station never computes a refund and never reports a kind.
+
+> **The kind is server-side product data and is not carried by the protocol.** It is declared against each service in the **operator's own catalog inside the server** — not in the OSPP catalog pushed to stations by UpdateServiceCatalog [MSG-023], whose [`service-item.schema.json`](../schemas/common/service-item.schema.json) is `additionalProperties: false` and has no such field. A server that tries to publish a kind to a station will be rejected with `5023 INVALID_CATALOG`, and correctly so: no station behaviour depends on the kind, and settlement happens entirely server-side.
+>
+> The consequence is that **this section is not conformance-testable over any OSPP interface**, and that is why no test case exercises it. Nothing observable on the wire distinguishes a `UserDuration` service from a `FixedDuration` one. What is testable is the *server's* settled amount for a given reason, which is what the money-path cases assert.
 
 Three kinds are defined:
 
@@ -1128,7 +1136,7 @@ Three kinds are defined:
 | `FixedDuration` | A preset programme of fixed length (e.g. a 5-minute wash) | **All-or-nothing** — a started programme is consumed; a broken one delivered nothing. |
 | `MultiUnit` | A discrete actuation (e.g. a 1–5 s dispense pulse) | **All-or-nothing per unit** — a dispensed unit is charged; a missed one is refunded. |
 
-For `UserDuration`, settlement is exactly the reason-keyed matrix above. `FixedDuration` and `MultiUnit` are both **all-or-nothing**: the kind overrides the pro-rata amount on the two reasons where the models diverge, and matches it on the rest.
+For `UserDuration`, settlement is exactly the reason-keyed matrix above. `FixedDuration` and `MultiUnit` are both **all-or-nothing**: the kind overrides the pro-rata amount on the three reasons where the models diverge, and matches it on the rest.
 
 | SessionEnded reason | `UserDuration` | `FixedDuration` / `MultiUnit` |
 |---------------------|----------------|-------------------------------|

@@ -213,7 +213,7 @@ sequenceDiagram
     Broker->>Server: StatusNotification [MSG-009]
 
     rect rgb(240, 248, 255)
-        Note over Station,Server: Periodic MeterValues (every MeterValuesInterval (default 15s))
+        Note over Station,Server: Periodic MeterValues (every MeterValuesInterval (default 60s))
         Station->>Broker: MeterValues EVENT [MSG-010]
         Broker->>Server: MeterValues
     end

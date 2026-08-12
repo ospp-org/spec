@@ -45,6 +45,10 @@ The meter value reporting interval is controlled by the `MeterValuesInterval` co
 |---------------------------------------|---------|---------|---------|---------|-----------------------------------------------|
 | `MeterValuesInterval` | integer | 60 | 10 | 3600 | Interval in seconds between MeterValues events. |
 
+This row is a **restatement**. The defining registry — default, range and access mode — is
+[Chapter 08 — Configuration §3](../../08-configuration.md#3-transaction-configuration-keys), and it
+governs where this table disagrees with it.
+
 ### 5.1 Interval Rules
 
 1. The station **MUST** send the first MeterValues event within `MeterValuesInterval` of service activation.

@@ -24,7 +24,8 @@ The high-pressure pump's bearings have worn beyond tolerance. Under load, the
 motor draws 8.2A -- exceeding the 6A overcurrent protection threshold. The
 station's hardware monitoring subsystem detects the anomaly within 200ms and
 triggers an emergency shutdown of Bay 1's pump circuit. Because only 40% of the
-service was delivered (below the 50% threshold), Alice receives a full refund.
+service was delivered (below `faultFullRefundThreshold`, whose default is `0.50`), Alice
+receives a full refund.
 
 ## Timeline
 
@@ -37,7 +38,7 @@ service was delivered (below the 50% threshold), Alice receives a full refund.
 | 10:17:01.000 | Station sends SessionEnded EVENT (reason: Fault, actualDurationSeconds: 120, creditsCharged: 20) |
 | 10:17:01.500 | Station sends StatusNotification EVENT (bay: Occupied → Faulted) |
 | 10:17:02.000 | Server processes session interruption |
-| 10:17:02.500 | Server calculates refund: 40% delivered < 50% -> full refund |
+| 10:17:02.500 | Server calculates refund: 40% delivered < threshold -> full refund |
 | 10:17:03.000 | Server credits 50 credits to Alice's wallet |
 | 10:17:03.500 | App shows hardware error notification |
 | 10:17:04.000 | Operator dashboard receives critical alert |
@@ -171,7 +172,8 @@ Refund calculation:
   - Planned duration:  300 seconds
   - Actual duration:   120 seconds (from SessionEnded)
   - Delivery ratio:    120 / 300 = 0.40 (40%)
-  - Policy:            delivery < 50% -> full refund (override creditsCharged)
+  - Policy:            delivery < faultFullRefundThreshold (default 0.50)
+                       -> full refund (override creditsCharged)
   - Refund amount:     50 credits (100% of pre-authorized)
 ```
 

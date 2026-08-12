@@ -81,7 +81,7 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
     - Payload validates against `schemas/mqtt/session-ended-event.schema.json`
 15. Observe StatusNotification: `Occupied` → `Faulted` (with `errorCode` present).
 16. Verify SessionEnded EVENT is received BEFORE StatusNotification `Faulted`.
-17. Verify server applies refund policy: if `actualDurationSeconds < 0.5 * durationSeconds` → full refund.
+17. Verify server applies refund policy: if `actualDurationSeconds < faultFullRefundThreshold * durationSeconds` → full refund. At the default threshold of `0.50` and a booked 300s, that boundary is 150s.
 
 ### Part C — Local User Stop at Station (v0.4.0+)
 

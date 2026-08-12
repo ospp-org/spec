@@ -2,7 +2,7 @@
 
 ## Scenario
 
-Alice is using bay 1 of "Station Alpha -- Example City". She started a Eco Program session (`sess_f7e8d9c0`) and pre-paid 50 credits for an estimated 5-minute session at 10 credits/minute. After about 3 minutes, she decides she is done and taps "Stop" in the app. The server sends a StopService command to the station, the station deactivates the dispenser, reports actual usage, and the server calculates a pro-rated refund of 10 credits.
+Alice is using bay 1 of "Station Alpha -- Example City". She started a Eco Program session (`sess_f7e8d9c0`) and pre-paid 50 credits for an estimated 5-minute session at 10 credits/minute. After about 3 minutes, she decides she is done and taps "Stop" in the app. The server sends a StopService command to the station, the station deactivates the dispenser, reports actual usage, and the server calculates a pro-rated refund of 19 credits.
 
 ## Participants
 
@@ -32,9 +32,9 @@ Alice is using bay 1 of "Station Alpha -- Example City". She started a Eco Progr
 10:18:03.200  Station sends StopService RESPONSE (Accepted, actual usage)
 10:18:03.500  Station sends StatusNotification: Occupied -> Finishing
 10:18:04.000  Server receives StopService RESPONSE, calculates pro-rated credits
-10:18:04.200  Server processes refund: 50 paid - 40 charged = 10 credits refunded
+10:18:04.200  Server processes refund: 50 paid - 31 charged = 19 credits refunded
 10:18:04.500  Server sends HTTP response to app with session summary
-10:18:05.000  App displays: "Service stopped. Duration: 3m 2s. Credits: 40 (refund 10 credits)"
+10:18:05.000  App displays: "Service stopped. Duration: 3m 2s. Credits: 31 (refund 19 credits)"
 10:18:06.500  Station finishes drain cycle on bay 1
 10:18:06.500  Station sends StatusNotification: Finishing -> Available
 10:18:06.800  Server updates bay status, bay 1 is now available for next user
@@ -113,7 +113,7 @@ The station's bay controller receives the StopService command. It:
 1. Sends the relay-off signal to the dispenser on bay 1
 2. Reads the final meter values (water flow, electricity, duration)
 3. Calculates actual duration: started at 10:15:00.000, stopped at 10:18:02.800 = 182.8 seconds
-4. Calculates credits charged: `ceil(182.8 / 60) * 10 = 4 * 10 = 40 credits` (but station reports raw seconds; server does the billing math)
+4. Calculates credits charged: `ceil(182.8 / 60 * 10) = ceil(30.47) = 31 credits` (but station reports raw seconds; server does the billing math)
 
 ---
 
@@ -132,7 +132,7 @@ The station's bay controller receives the StopService command. It:
   "payload": {
     "status": "Accepted",
     "actualDurationSeconds": 182,
-    "creditsCharged": 40,
+    "creditsCharged": 31,
     "meterValues": {
       "liquidMl": 45200,
       "consumableMl": 1200,
@@ -192,14 +192,13 @@ The server receives the StopService RESPONSE and performs billing:
 | Pre-paid credits | 50 |
 | Service rate | 10 credits/min (metered) |
 | Actual duration | 182 seconds (3m 2s) |
-| Billing granularity | Per-minute, rounded up |
-| Billed minutes | ceil(182/60) = 4 minutes |
-| Credits charged | 4 x 10 = 40 credits |
-| Refund | 50 - 40 = **10 credits** |
+| Billing granularity | Credits, rounded up (the rounding is applied to the credit total, not to the minutes) |
+| Credits charged | ceil(182 / 60 * 10) = ceil(30.33) = **31 credits** |
+| Refund | 50 - 31 = **19 credits** |
 
 The server:
 1. Marks session `sess_f7e8d9c0` as `completed`
-2. Credits 10 credits back to Alice's wallet (balance: old + 10)
+2. Credits 19 credits back to Alice's wallet (balance: old + 19)
 3. Creates a transaction record for the refund
 4. Prepares the HTTP response
 
@@ -236,14 +235,13 @@ X-Request-Id: req_stop_8a3b1c2d
   },
   "billing": {
     "creditsPrepaid": 50,
-    "creditsCharged": 40,
-    "creditsRefunded": 10,
-    "billedMinutes": 4,
+    "creditsCharged": 31,
+    "creditsRefunded": 19,
     "ratePerMinute": 10
   },
   "wallet": {
     "previousBalance": 70,
-    "newBalance": 80
+    "newBalance": 89
   },
   "meterValues": {
     "liquidMl": 45200,
@@ -269,10 +267,10 @@ The app transitions to the SessionCompletedScreen showing:
 |   Duration: 3m 2s                  |
 |                                  |
 |   Credits charged:    50         |
-|   Credits used:  40         |
-|   Refund:        +10         |
+|   Credits used:  31         |
+|   Refund:        +19         |
 |                                  |
-|   Current balance: 80 credits        |
+|   Current balance: 89 credits        |
 |                                  |
 |   Liquid: 45.2L | Energy: 0.85kWh |
 |                                  |
@@ -280,7 +278,7 @@ The app transitions to the SessionCompletedScreen showing:
 +----------------------------------+
 ```
 
-The key message: **"Service stopped. Duration: 3m 2s. Credits: 40 (refund 10 credits)"**
+The key message: **"Service stopped. Duration: 3m 2s. Credits: 31 (refund 19 credits)"**
 
 ---
 
@@ -333,11 +331,11 @@ On the Operator Dashboard, Charlie sees:
 ```
 [10:18:04] Session sess_f7e8d9c0 completed
            User: Alice | Bay 1 | Eco Program
-           Duration: 3m 2s | Credits: 40/50 (10 refunded)
+           Duration: 3m 2s | Credits: 31/50 (19 refunded)
            Liquid: 45.2L | Consumable: 1.2L | Energy: 0.85kWh
 ```
 
-3. The station revenue counter updates: +40 credits for this session
+3. The station revenue counter updates: +31 credits for this session
 
 ## Message Sequence Diagram
 
@@ -356,7 +354,7 @@ On the Operator Dashboard, Charlie sees:
      |                      |<-------------------------|
      |                      |                          |
      |                      | calculate billing        |
-     |                      | refund 10 credits        |
+     |                      | refund 19 credits        |
      |                      |                          |
      |  200 OK (summary)    |                          |
      |<---------------------|                          |
@@ -369,10 +367,10 @@ On the Operator Dashboard, Charlie sees:
 
 ## Key Design Decisions
 
-1. **Station reports raw duration; server does billing.** The station reports `actualDurationSeconds: 182` and `creditsCharged: 40` as an estimate, but the server is the authoritative billing engine. This prevents station firmware bugs from affecting revenue.
+1. **Station reports raw duration; server does billing.** The station reports `actualDurationSeconds: 182` and `creditsCharged: 31` as an estimate, but the server is the authoritative billing engine. This prevents station firmware bugs from affecting revenue.
 
 2. **Finishing state allows drain cycle.** The bay does not go directly from `Occupied` to `Available`. The `Finishing` intermediate state gives the hardware time to complete the drain cycle and retract nozzles safely.
 
 3. **Refunds are immediate.** Credits are refunded to Alice's wallet as soon as the server processes the StopService RESPONSE. There is no pending/delayed refund state.
 
-4. **Per-minute rounding.** The billing granularity is per-minute, rounded up. 182 seconds = 3.03 minutes, billed as 4 minutes. This is displayed transparently to the user.
+4. **Rounding is on credits, not on minutes.** The normative formula is `ceil(actualDurationSeconds / 60 * priceCreditsPerMinute)` — the ceiling is applied once, to the credit total. 182 seconds at 10 credits/min is `ceil(30.33) = 31` credits. Rounding the *minutes* first (`ceil(182/60) = 4`, then `4 x 10 = 40`) is a different rule that overcharges by 9 credits here, and it is not the one OSPP specifies. This is displayed transparently to the user.

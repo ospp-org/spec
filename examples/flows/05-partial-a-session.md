@@ -51,7 +51,7 @@ Alice is at "Station Alpha -- Example City" and wants to start the Eco Program s
 14:32:08.000  ServiceStatus update: 120s elapsed, 180s remaining
 14:33:02.000  Alice taps "Stop service" — app writes StopServiceRequest
 14:33:02.400  Station deactivates dispenser, reads meters
-14:33:02.600  Station sends StopServiceResponse (174s, 30 credits)
+14:33:02.600  Station sends StopServiceResponse (174s, 29 credits)
 14:33:03.000  Station generates ECDSA receipt, increments txCounter
 14:33:03.200  Station sends ServiceStatus (ReceiptReady)
 14:33:03.500  App reads Receipt from FFF6, stores in offline tx log
@@ -432,7 +432,7 @@ The station's bay controller:
 1. Sends relay-off signal to the dispenser on Bay 1
 2. Reads final meter values
 3. Calculates actual duration: started at 14:30:08.500, stopped at 14:33:02.400 = 174 seconds
-4. Calculates credits: `ceil(174 / 60) * 10 = 3 * 10 = 30 credits`
+4. Calculates credits: `ceil(174 / 60 * 10) = ceil(29.0) = 29 credits`
 
 **BLE Notify FFF4 [MSG-037]:**
 
@@ -441,7 +441,7 @@ The station's bay controller:
   "type": "StopServiceResponse",
   "result": "Accepted",
   "actualDurationSeconds": 174,
-  "creditsCharged": 30
+  "creditsCharged": 29
 }
 ```
 
@@ -483,7 +483,7 @@ The station generates a signed receipt:
   "startedAt": "2026-02-13T14:30:08.500Z",
   "endedAt": "2026-02-13T14:33:02.400Z",
   "durationSeconds": 174,
-  "creditsCharged": 30,
+  "creditsCharged": 29,
   "meterValues": {
     "liquidMl": 39800,
     "consumableMl": 470,
@@ -516,11 +516,11 @@ The app transitions to the SessionCompletedScreen:
 |   Duration: 2m 54s                 |
 |                                  |
 |   Credits debited (server): 50   |
-|   Credits used:            30    |
-|   Refund pending:          +20   |
+|   Credits used:            29    |
+|   Refund pending:          +21   |
 |                                  |
 |   Current balance: 70 credits        |
-|   (refund: ~90 credits)      |
+|   (refund: ~91 credits)      |
 |                                  |
 |   Liquid: 39.8L | Consumable: 470mL     |
 |                                  |
@@ -530,7 +530,7 @@ The app transitions to the SessionCompletedScreen:
 +----------------------------------+
 ```
 
-Since the server pre-debited 50 credits but only 30 were used, the app notifies the server of the actual usage. The server will refund the remaining 20 credits once it receives the reconciliation data from the station (or from the app's own sync).
+Since the server pre-debited 50 credits but only 29 were used, the app notifies the server of the actual usage. The server will refund the remaining 21 credits once it receives the reconciliation data from the station (or from the app's own sync).
 
 ---
 
@@ -559,7 +559,7 @@ X-Request-Id: req_sync_9e0f1a2b
       "startedAt": "2026-02-13T14:30:08.500Z",
       "endedAt": "2026-02-13T14:33:02.400Z",
       "durationSeconds": 174,
-      "creditsCharged": 30,
+      "creditsCharged": 29,
       "receipt": {
         "data": "eyJvZmZsaW5lVHhJZCI6Im90eF9wYV9lNWY2ZzdoOCIsImJheUlkIjoiYmF5X3gxeTJ6MyIsInNlcnZpY2VJZCI6InN2Y19mb2FtIiwiZHVyYXRpb24iOjE3NCwiY3JlZGl0cyI6MzB9",
         "signature": "MEQCIGpXvN8hJpLyD3kWm0aOxCqFb5sE7nGdT2fYiJwKxQAiALvHaRH3A/PmY28encskVtipPWxdwDSMp7p9mhacGBQh",
@@ -576,9 +576,9 @@ The server receives this, verifies the ECDSA receipt, and processes the refund:
 | Field | Value |
 |-------|-------|
 | Pre-debited credits | 50 |
-| Actual credits used | 30 |
-| Refund | 50 - 30 = **20 credits** |
-| Alice's new balance | 70 + 20 = **90 credits** |
+| Actual credits used | 29 |
+| Refund | 50 - 29 = **21 credits** |
+| Alice's new balance | 70 + 21 = **91 credits** |
 
 ---
 
@@ -592,7 +592,7 @@ On the Operator Dashboard, Charlie sees:
 ```
 [14:33:05] Session sess_c4d5e6f7a8b9 completed (Partial A)
            User: Alice | Bay 1 | Eco Program
-           Duration: 2m 54s | Credits: 30/50 (20 refunded)
+           Duration: 2m 54s | Credits: 29/50 (21 refunded)
            Liquid: 39.8L | Consumable: 470mL
            Auth: Server-signed ECDSA P-256 (delivered via BLE)
            Station sync: Pending (station offline)
@@ -652,7 +652,7 @@ On the Operator Dashboard, Charlie sees:
      |  POST /me/offline-txs|                          |
      |--------------------->|                          |
      |                      | verify receipt           |
-     |                      | refund 20 credits        |
+     |                      | refund 21 credits        |
      |  200 OK              |                          |
      |<---------------------|                          |
      |                      |                          |

@@ -1,6 +1,6 @@
 # Offline Transaction Reconciliation
 
-> **Status:** Draft | **OSPP Version:** 0.13.0
+> **Status:** Draft | **OSPP Version:** 0.14.0
 
 ## 1. Overview
 
@@ -270,7 +270,6 @@ The following edge cases require special handling:
       "consumableMl": 470,
       "energyWh": 138
     },
-    "deviceId": "dev_d4e5f6a7",
     "passCounter": 7
   }
 }

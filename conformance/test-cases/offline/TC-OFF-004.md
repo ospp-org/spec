@@ -12,7 +12,7 @@ Verify that the station correctly performs offline transaction reconciliation af
 
 - `spec/profiles/offline/reconciliation.md` — Reconciliation behavior
 - `spec/profiles/transaction/transaction-event.md` — TransactionEvent message
-- `spec/profiles/offline/reconciliation.md` §2 — **response timeout 30 s on this path.** This is a reconciliation case, and the reconciliation profile sets **30 s**, not §4.1's 60 s, and says so explicitly. §4.1's 60 s governs the non-reconciliation TransactionEvent.
+- `spec/profiles/offline/reconciliation.md` §2 — **response timeout 30 s on this path.** This is a reconciliation case, and the reconciliation profile sets **30 s**, not §4.1's 60 s, and says so explicitly. Note that TransactionEvent is defined as an offline-reconciliation message only, so 30 s is in practice the timeout for every TransactionEvent that exists; §4.1's 60 s is a general-table entry with no message left to govern.
 - `spec/03-messages.md` §4.1 — TransactionEvent payload
 - `spec/07-errors.md` §5 — Retry policies
 - `schemas/mqtt/transaction-event-response.schema.json`

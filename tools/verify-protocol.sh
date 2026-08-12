@@ -269,15 +269,18 @@ function category4() {
   log('## Category 4: Numeric Consistency');
   log('');
 
-  // Canonical config defaults
+  // Canonical config defaults. These MUST equal the Chapter 08 registry — this table
+  // is a mirror of it, not an independent authority. It carried 15 for
+  // MeterValuesInterval and 600 for MaxSessionDurationSeconds (registry: 60 and 900)
+  // and a BLEAdvertisingInterval key that exists nowhere in the spec, so the gate was
+  // defending the drift it was built to catch. When a default moves, move it here too.
   const configDefaults = {
     HeartbeatIntervalSeconds: '30',
-    MeterValuesInterval: '15',
+    MeterValuesInterval: '60',
     ReconnectBackoffMax: '30',
     BootRetryInterval: '30',
-    MaxSessionDurationSeconds: '600',
+    MaxSessionDurationSeconds: '900',
     ConnectionLostGracePeriod: '300',
-    BLEAdvertisingInterval: '200',
   };
 
   // Extract Quick Reference timeouts from 03-messages.md
@@ -385,20 +388,23 @@ function category4() {
     PASS(C);
   }
 
-  // MeterValuesInterval: check no file says default is 60
+  // MeterValuesInterval: check no file says the default is the drifted 15.
+  // This check was inverted — it failed any file stating the registry's own 60 and
+  // demanded 15 — so it would have rejected a correct document.
+  // Scanned per LINE, not from the first occurrence in the file. The previous form read
+  // only a window around content.indexOf(...) — the FIRST mention — so a drifted default
+  // anywhere below it was invisible, which is how "default 15s" survived three sweeps.
   const allSpecFiles = findFiles('spec', '.md');
   for (const f of allSpecFiles) {
     const content = readSafe(f) || '';
-    // Look for "MeterValuesInterval" near a wrong default
-    const mviIdx = content.indexOf('MeterValuesInterval');
-    if (mviIdx !== -1) {
-      const near = content.substring(Math.max(0, mviIdx - 50), mviIdx + 150);
-      if (near.includes('default') && (near.includes('60') && !near.includes('600'))) {
-        // Check more carefully - might be MaxSessionDurationSeconds 600
-        if (near.match(/MeterValuesInterval.*default.*\b60\b/) && !near.includes('600')) {
-          FAIL(C, rel(f), findLineNum(content, 'MeterValuesInterval'),
-            'MeterValuesInterval default 60', 'default should be 15');
-        }
+    if (!content.includes('MeterValuesInterval')) continue;
+    const lines = content.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      if (!lines[i].includes('MeterValuesInterval')) continue;
+      if (/MeterValuesInterval[^\n]{0,60}default[^\n]{0,20}\b15\b/i.test(lines[i]) ||
+          /default[^\n]{0,20}\b15\b[^\n]{0,60}MeterValuesInterval/i.test(lines[i])) {
+        FAIL(C, rel(f), i + 1,
+          'MeterValuesInterval default 15', 'default should be 60 (Chapter 08 §3)');
       }
     }
   }

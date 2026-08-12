@@ -45,9 +45,10 @@ Alice opens the app on her phone while parked at "Station Alpha -- Example City"
               ... MeterValues every 15s ...
 10:04:54.100  Station sends 19th MeterValues (285s)
 10:05:09.100  Timer expires — station auto-stops dispenser
+10:05:09.200  Station sends SessionEnded EVENT (reason: TimerExpired)
 10:05:09.400  Station sends StatusNotification: Occupied -> Finishing
 10:05:10.800  Station sends StatusNotification: Finishing -> Available
-10:05:11.000  Server marks session completed, no refund (full duration used)
+10:05:11.000  Server settles from SessionEnded, no refund (full duration used)
 10:05:13.000  App polls, receives status: completed
 10:05:13.500  App displays SessionCompletedScreen
 ```
@@ -154,7 +155,7 @@ All checks pass. The server:
     "sessionId": "sess_f7e8d9c0",
     "bayId": "bay_c1d2e3f4a5b6",
     "serviceId": "svc_eco",
-      "programNumber": 1,
+    "programNumber": 1,
     "durationSeconds": 300,
     "sessionSource": "MobileApp"
   }
@@ -723,10 +724,10 @@ On the Operator Dashboard, Charlie sees:
 
 3. **Polling, not WebSocket.** The app discovers session completion via polling (`GET /sessions/{id}/status` every 3 seconds). This is simpler than maintaining a WebSocket for the occasional 5-minute session, and the 3-second latency is imperceptible for a service session. In background, the interval doubles to 6 seconds to conserve battery.
 
-4. **MeterValues are informational, not billing.** The station sends meter readings every 15 seconds for analytics and operator dashboards. Billing is strictly time-based: `creditsCharged = ceil(actualDurationSeconds / 60) * priceCreditsPerMinute`. This avoids disputes over meter calibration.
+4. **MeterValues are informational, not billing.** The station sends meter readings every 15 seconds for analytics and operator dashboards. Billing is strictly time-based: `creditsCharged = ceil(actualDurationSeconds / 60 * priceCreditsPerMinute)`. The ceiling is applied once, to the credit total — not to the minutes. This avoids disputes over meter calibration.
 
 5. **Finishing state ensures clean shutdown.** After the dispenser stops, the bay enters `Finishing` for the drain cycle (residual fluid flush, actuator retraction). The bay does not return to `Available` until the hardware is fully idle. This prevents a new session from starting while equipment is still resetting.
 
-6. **Zero refund on full consumption.** When the timer runs to completion (300 seconds = 5 minutes exactly), the billed amount equals the pre-authorized amount: `ceil(300/60) * 10 = 50 credits`. No wallet adjustment is needed. Partial refunds only occur when the user stops early (see Flow 07).
+6. **Zero refund on full consumption.** When the timer runs to completion (300 seconds = 5 minutes exactly), the billed amount equals the pre-authorized amount: `ceil(300 / 60 * 10) = 50 credits`. No wallet adjustment is needed. Partial refunds only occur when the user stops early (see Flow 07).
 
 7. **Session source tracking.** The StartService REQUEST includes `sessionSource: "MobileApp"` so the server can distinguish between mobile app sessions, web payment sessions, and BLE offline sessions. This enables per-channel analytics and different retry policies (mobile app: single attempt; web payment: 4 retries).

@@ -1,7 +1,7 @@
 # OSPP Known Issues
 
 **Date:** 2026-08-11
-**Specification-document version:** 0.13.0 (release tag `v0.13.0`)
+**Specification-document version:** 0.14.0 (release tag `v0.14.0`)
 **Status:** 3 blockers open (all BLE), 9 non-blocking issues open
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle and
 the arcs since

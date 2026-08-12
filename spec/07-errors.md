@@ -1,6 +1,6 @@
 # Chapter 07 — Error Codes & Resilience
 
-> **Status:** Draft | **OSPP Version:** 0.13.0
+> **Status:** Draft | **OSPP Version:** 0.14.0
 
 This chapter defines the complete error taxonomy for the OSPP protocol, including the error code registry, standard error response format, retry policies, circuit breaker patterns, and graceful degradation behavior.
 
@@ -486,7 +486,7 @@ This table maps which error codes can appear in the RESPONSE or rejection of eac
 |--------|---------------------|
 | ReserveBay [MSG-003] | **3001**, **3002**, 3005, 3011, 3014, 5000–5009 |
 | CancelReservation [MSG-004] | **3012**, **3013**, 3005 |
-| StartService [MSG-005] | **3001**, **3002**, **3004**, **3009**, **3017**, 3003, 3005, 3008, 3010, 3011, 3012, 3013, 3014, 5000–5009, 5111 |
+| StartService [MSG-005] | **3001**, **3002**, **3004**, **3009**, **3017**, 3003, 3005, 3006, 3008, 3010, 3011, 3012, 3013, 3014, 5000–5009, 5111 |
 | StopService [MSG-006] | **3006**, **3007**, 3005, 3011 |
 | Reset [MSG-015] | **3016**, 5107, 5110 |
 | ChangeConfiguration [MSG-013] | **3015**, 1012, 2008, 5108, 5109 |
@@ -838,8 +838,10 @@ When errors occur during the session lifecycle, the following refund rules apply
 | ACK_TIMEOUT (mobile) | 6002 | Full (credits) | 100% |
 | Hardware error during active session | 5001–5009 | Partial (pro-rated) | Based on time delivered |
 | Station offline during active session | 1001 (followed by session timeout) | Partial (pro-rated) | Based on time delivered |
-| Pro-rated rule | — | Full if < 50% delivered | 100% if `actualDurationSeconds < 0.5 × durationSeconds` |
+| Low-delivery override | — | See [`04-flows.md §6`](04-flows.md) | Defined there, and **not restated here**: it is scoped to a single SessionEnded `reason` and its threshold is a configurable parameter, both of which this table has previously got wrong by restating them |
 | Payment processor refund failure | 4007 | Manual refund queue | Per original amount |
+
+> This table is keyed by **error code**, and it is the pro-rata baseline only. The refund a session actually receives is keyed by SessionEnded `reason` and modulated by service kind — both are defined in [`04-flows.md §6`](04-flows.md), which governs where this table disagrees with it. Restating either here is what previously put an unqualified low-delivery rule under a row about station-offline sessions.
 
 ---
 

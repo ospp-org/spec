@@ -1,6 +1,6 @@
 # Chapter 02 — Transport
 
-> **Status:** Draft | **OSPP Version:** 0.13.0
+> **Status:** Draft | **OSPP Version:** 0.14.0
 
 OSPP defines three transport layers for communication between participants. Each transport serves a distinct channel with its own security model, reliability guarantees, and failure modes.
 
@@ -143,7 +143,7 @@ The `v1` segment in the topic path is a **namespace identifier**, NOT the protoc
 - The protocol version is carried inside the message envelope via the `protocolVersion` field (see [Chapter 03 — Messages](03-messages.md)) and checked at boot by **exact match** against the set the server supports ([VERSIONING.md](../VERSIONING.md)). "Negotiation" here means that check and its `1007` outcome; the two peers do not converge on a version, and a shared MAJOR implies nothing.
 - The topic namespace `v1` MUST remain `v1` for every OSPP protocol version, regardless of that version's MAJOR component. The two numbers are unrelated: the namespace identifies the topic layout, the envelope field identifies the message contract.
 - A new topic namespace (e.g., `v2`) would only be introduced for a fundamental transport-level change — a different topic shape or a different addressing scheme — not for any change the envelope's `protocolVersion` can express.
-- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.13.0*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.3.0`): the two version numbers evolve separately and need not match.
+- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.14.0*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.3.0`): the two version numbers evolve separately and need not match.
 
 ### 2.3 Server Subscription Patterns
 
@@ -191,7 +191,7 @@ Receivers MUST handle out-of-order messages gracefully:
 - **TransactionEvents**: The `txCounter` field is forensic evidence, not an ordering guarantee (per-pass, per-station; see [`profiles/transaction/transaction-event.md`](profiles/transaction/transaction-event.md)). Ascending order is RECOMMENDED; the receiver settles each transaction on its own merits in arrival order and does not gate on the counter.
 - **Online session-scoped EVENTs (Per-Session `seqNo`, OPTIONAL)**: MeterValues and SessionEnded MAY carry a per-session monotonic `seqNo` field starting at `0` for the first session-scoped EVENT and incrementing by exactly `1` for each subsequent EVENT in the same session (same `sessionId`). If `seqNo` is present:
     - The receiver MUST verify that consecutive EVENTs for the same `sessionId` increment `seqNo` by exactly `1`.
-    - On detected gap (e.g., received seqNo `5` after seqNo `3`), the receiver SHOULD log a warning. If the missing seqNo range crosses a billing-milestone boundary — for example, the `< 50% duration delivered` threshold defined in the refund policy at [`04-flows.md §6`](04-flows.md) — the receiver MUST flag the session for HIGH-severity reconciliation audit. **This is not the `txCounter` rule.** `seqNo` is server-observable within a live session and a gap in it means a message was genuinely lost in transit, so it is actionable; the offline `txCounter` is emitted by the station across reboots and is forensic only ([`profiles/offline/reconciliation.md §4.2`](profiles/offline/reconciliation.md)). Do not generalise one to the other.
+    - On detected gap (e.g., received seqNo `5` after seqNo `3`), the receiver SHOULD log a warning. If the missing seqNo range crosses a billing-milestone boundary — for example, the low-delivery threshold `faultFullRefundThreshold` defined in the refund policy at [`04-flows.md §6`](04-flows.md) — the receiver MUST flag the session for HIGH-severity reconciliation audit. **This is not the `txCounter` rule.** `seqNo` is server-observable within a live session and a gap in it means a message was genuinely lost in transit, so it is actionable; the offline `txCounter` is emitted by the station across reboots and is forensic only ([`profiles/offline/reconciliation.md §4.2`](profiles/offline/reconciliation.md)). Do not generalise one to the other.
     - If `seqNo` is absent, the receiver falls back to `timestamp` ordering.
     - `seqNo` is online + per-session and is distinct from `txCounter` (offline + per-pass + per-station). The two counters live in disjoint scopes — a single station may have an active online session emitting `seqNo` and a pending offline transaction queue emitting `txCounter` simultaneously.
 

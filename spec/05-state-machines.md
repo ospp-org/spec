@@ -1,6 +1,6 @@
 # Chapter 05 — State Machines
 
-> **Status:** Draft | **OSPP Version:** 0.13.0
+> **Status:** Draft | **OSPP Version:** 0.14.0
 
 This chapter defines all finite state machines (FSMs) governing OSPP entities — the station, its bays, sessions, reservations, BLE connections and firmware updates. Each FSM specifies the complete set of states, valid transitions, guards, actions, and a Mermaid diagram. A transition not listed for a machine is invalid, and implementations MUST NOT perform one.
 
@@ -412,7 +412,7 @@ stateDiagram-v2
 | **Pending** | Session has been initiated by the user (mobile app or web payment). The server is verifying payment authorization or credit balance. |
 | **Authorized** | Payment or credits have been verified. The server is sending StartService [MSG-005] to the station and awaiting acknowledgment. |
 | **Active** | The station has accepted the StartService command and is delivering the service. MeterValues [MSG-010] are being sent periodically. The session duration timer is running. |
-| **Stopping** | A StopService [MSG-006] command has been sent (user-initiated, server-initiated, or duration elapsed). The station is performing hardware wind-down. |
+| **Stopping** | The session is ending — either a StopService [MSG-006] command has been sent (user-initiated or server-initiated), or the `durationSeconds` timer elapsed and the station auto-stopped without any command. The station is performing hardware wind-down. |
 | **Completed** | The session has ended normally. The station has confirmed the stop, final MeterValues have been received, and the receipt has been generated. |
 | **Failed** | The session terminated abnormally due to an error, timeout, or fault. The server MUST initiate a refund if payment was collected and no service was delivered. |
 
@@ -429,12 +429,14 @@ stateDiagram-v2
 | Station confirms stop | Stopping | Completed | Station sends StopService Response [MSG-006] with `actualDurationSeconds`, `creditsCharged`, and final `meterValues` (user-initiated stop) | Server calculates final cost, generates receipt, updates wallet |
 | Timer elapsed | Stopping | Completed | Station sends SessionEnded EVENT [MSG-040] with `reason: TimerExpired`, `actualDurationSeconds`, `creditsCharged`, and final `meterValues` | Server charges the full pre-authorized amount (booked duration delivered in full; station-reported values are advisory input), generates receipt, updates wallet |
 | Stop timeout | Stopping | Failed | 10 seconds elapse without station confirmation | Server marks session as failed, initiates partial refund based on last known MeterValues |
-| Hardware fault | Active | Failed | Station sends SessionEnded EVENT [MSG-040] with `reason: Fault`, followed by StatusNotification `Faulted` [MSG-009] | Server computes billing from the reported duration (station values are advisory input) and applies the refund policy (if < 50% duration delivered → full refund) |
+| Hardware fault | Active | Failed | Station sends SessionEnded EVENT [MSG-040] with `reason: Fault`, followed by StatusNotification `Faulted` [MSG-009] | Server computes billing from the reported duration (station values are advisory input) and applies the refund policy (full refund if less than `faultFullRefundThreshold` of the booked duration was delivered — the threshold is configurable, see [`04-flows.md §6`](04-flows.md)) |
 | User manual stop at station | Active | Completed | Station sends SessionEnded EVENT [MSG-040] with `reason: Local` (e.g., user pressed physical Stop button on the bay) | Server treats as user-initiated stop: charges pro-rated `creditsCharged` from event, refunds unused pre-auth, generates receipt |
 | Offline credit exhausted | Active | Completed | Station running offline detects that the user's offline credit pool is exhausted; sends SessionEnded EVENT [MSG-040] with `reason: LocalOutOfCredit` and `creditsCharged: 0` | Server records terminal state; full refund of pre-authorized amount; no charge issued (offline limits enforced) |
 | Operator ended it | Active | Completed | An operator ended the session deliberately — a Reset carrying `force: true`, or a station disable. The station settles the session first, then acts: it sends SessionEnded EVENT [MSG-040] with `reason: OperatorStopped`, the real `actualDurationSeconds`, and the `creditsCharged` those seconds earned | Server treats it as a user-initiated stop for billing: charges the pro-rated `creditsCharged`, refunds the unused pre-auth, generates a receipt. **Completed, not Failed** — the customer received a wash, and the operator's reason for ending it is not theirs to absorb |
 | Mid-session deauthorization | Active | Failed | Station detects offline pass revocation via `RevocationEpoch` bump (e.g., received through ChangeConfiguration) and stops the active session; sends SessionEnded EVENT [MSG-040] with `reason: Deauthorized` and `creditsCharged: 0` | Server records terminal state; full refund of pre-authorized amount; flag for security audit (mid-session revocation usually indicates fraud or compromise) |
 | Connection lost | Active | Failed | ConnectionLost [MSG-011] received and station does not reconnect within `ConnectionLostGracePeriod` (default: 300s) | Server marks session as failed after grace period; on reconnect, reconciles via TransactionEvent |
+
+The billing instructions in the **Action** column are the `UserDuration` case. The amount a session actually settles at is additionally modulated by its **service kind** — the defining section is *Settlement by Service Kind* in [Chapter 04 §6](04-flows.md), and it governs where this table is read as unconditional. This table is not restating it.
 
 ### 3.4 Timeouts
 

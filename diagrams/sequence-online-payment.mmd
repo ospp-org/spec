@@ -30,7 +30,7 @@ sequenceDiagram
 
     %% Meter values (periodic)
     rect rgb(240, 248, 255)
-        Note over Station,Server: Every MeterValuesInterval (default 15s)
+        Note over Station,Server: Every MeterValuesInterval (default 60s)
         Station->>Broker: MeterValues EVENT [MSG-010]
         Broker->>Server: MeterValues (liquidMl, consumableMl, energyWh)
         Server-->>User: Real-time usage update

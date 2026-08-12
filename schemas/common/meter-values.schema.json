@@ -21,5 +21,6 @@
       "description": "Energy consumption in watt-hours"
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "minProperties": 1
 }

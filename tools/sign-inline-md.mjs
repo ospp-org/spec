@@ -95,11 +95,17 @@ function deriveDeviceId(offlineTxId) {
 // (offlinePassId, userId added to the v0.4.2 wrapper). Hashes the otx so the
 // same `otx_*` always yields the same synthetic claim values — keeps re-runs
 // idempotent without forcing reviewers to invent illustrative IDs.
+// Returns the set of keys this function had to invent, so the caller can put the
+// envelope back the way it found it. `deviceId` in particular is a RECEIPT field and
+// is NOT a member of transaction-event-request.schema.json, which is
+// `additionalProperties: false` — leaving a synthesised one behind makes the very
+// payload this tool just signed invalid against its own schema.
 function deriveReceiptStaleFields(outer) {
   const seed = outer.offlineTxId ?? '';
   const h = (label) => createHash('sha256').update(`${label}|${seed}`).digest('hex');
+  const synthesised = new Set();
   if (!('userId' in outer))        outer.userId        = `sub_${h('userId').slice(0, 16)}`;
-  if (!('deviceId' in outer))      outer.deviceId      = deriveDeviceId(outer.offlineTxId);
+  if (!('deviceId' in outer))    { outer.deviceId      = deriveDeviceId(outer.offlineTxId); synthesised.add('deviceId'); }
   // Auth-form (Partial A) bodies carry {authId, sessionId} and no pass; synthesise
   // the pass-form {offlinePassId, passCounter} only for pass-form bodies.
   const isAuthForm = ('authId' in outer) || ('sessionId' in outer);
@@ -108,10 +114,11 @@ function deriveReceiptStaleFields(outer) {
     // passCounter (finding N7): app-global pass usage counter, signed into the receipt.
     if (!('passCounter' in outer))   outer.passCounter   = (parseInt(h('passCounter').slice(0, 6), 16) % 64) + 1;
   }
+  return synthesised;
 }
 
 function signReceipt(outer) {
-  deriveReceiptStaleFields(outer);
+  const synthesised = deriveReceiptStaleFields(outer);
   const isAuthForm = ('authId' in outer) || ('sessionId' in outer);
   const fields = [...RECEIPT_SHARED_FIELDS, ...(isAuthForm ? RECEIPT_AUTH_FORM_FIELDS : RECEIPT_PASS_FORM_FIELDS)];
   const body = {};
@@ -126,6 +133,10 @@ function signReceipt(outer) {
     signature: ecdsaSign(STATION_KEY, bytes),
     signatureAlgorithm: SIG_ALG,
   };
+  // Remove only what we invented above. A `deviceId` the document already carried is
+  // left alone (BLE receipt wrappers legitimately carry one); a synthesised one is
+  // dropped, because it lives in the signed body and not on the envelope.
+  for (const k of synthesised) delete outer[k];
   return 'receipt';
 }
 

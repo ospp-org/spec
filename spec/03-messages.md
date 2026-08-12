@@ -1,6 +1,6 @@
 # Chapter 03 — Message Catalog
 
-> **Status:** Draft | **OSPP Version:** 0.13.0
+> **Status:** Draft | **OSPP Version:** 0.14.0
 
 This chapter is the normative reference for **every message** in the OSPP protocol. Each message is documented with its complete payload schema, metadata, and example.
 
@@ -327,7 +327,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
 | **Expected Response** | AuthorizeOfflinePass RESPONSE |
 | **Timeout** | 15 seconds |
 | **Idempotency** | Yes — server MUST return the same result for the same `offlinePassId` |
-| **Message Expiry** | 30 seconds |
+| **Message Expiry** | 120 seconds (Periodic reporting category — see [`02-transport.md` §5.1](02-transport.md)) |
 
 In the **Partial B** offline scenario (phone offline, station online), the mobile app presents an OfflinePass to the station via BLE. The station forwards it to the server for real-time validation instead of performing local validation.
 
@@ -663,6 +663,7 @@ Upon `Accepted`, the station MUST:
 | `3003` | `SERVICE_UNAVAILABLE` — service is temporarily disabled |
 | `3004` | `INVALID_SERVICE` — service ID not in station catalog |
 | `3005` | `BAY_NOT_FOUND` — unknown bay identifier |
+| `3006` | `SESSION_NOT_FOUND` — the `sessionId` names an already completed or failed session |
 | `3008` | `DURATION_INVALID` — duration <= 0 or exceeds limits |
 | `3009` | `HARDWARE_ACTIVATION_FAILED` — hardware failed to start |
 | `3010` | `MAX_DURATION_EXCEEDED` — exceeds `MaxSessionDurationSeconds` config |
@@ -712,6 +713,7 @@ Instructs the station to stop an active service. The station MUST deactivate the
 | `meterValues.liquidMl` | integer | No | Total liquid consumed in milliliters |
 | `meterValues.consumableMl` | integer | No | Total consumable consumed in milliliters |
 | `meterValues.energyWh` | integer | No | Total energy consumed in watt-hours |
+| `finalSeqNo` | integer | No | Canonical session-final `seqNo` marker. Set when the station has emitted any `seqNo`-bearing events for this session; the server discards later MeterValues whose `seqNo` exceeds it (see [`02-transport.md` §3.2](02-transport.md)) |
 | `errorCode` | integer | Cond. | Error code (when `Rejected`) |
 | `errorText` | string | Cond. | Error code name (when `Rejected`) |
 
@@ -754,8 +756,8 @@ Upon `Accepted`, the station MUST:
 |------------|-----------|
 | `3005` | `BAY_NOT_FOUND` — unknown bay identifier |
 | `3006` | `SESSION_NOT_FOUND` — no active session with this ID |
-| `3007` | `SESSION_MISMATCH` — session exists but on a different bay |
-| `3011` | `BAY_MAINTENANCE` — bay entered maintenance during session |
+| `3007` | `SESSION_MISMATCH` — a session is active on the addressed bay, but its `sessionId` differs from the one requested. If the addressed bay has **no** active session at all, the answer is `3006`, not this code — including when the named session is alive on some other bay |
+| `3011` | `BAY_MAINTENANCE` — the bay is in maintenance mode and cannot process the stop. A bay cannot *enter* maintenance while `Occupied` ([`05-state-machines.md` §2.3](05-state-machines.md) refuses that with `3001`); this code covers a stop addressed to a bay already `Unavailable`, such as after a fault-then-maintenance sequence the server has not yet observed |
 
 ---
 
@@ -785,7 +787,10 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
 | `offlineTxId` | string | Yes | Unique offline transaction ID (`otx_{uuid}`) |
-| `offlinePassId` | string | Yes | OfflinePass used for authorization (`opass_{uuid}`) |
+| `offlinePassId` | string | Cond. | **pass-form only** — OfflinePass used for authorization (`opass_{uuid}`). Required in pass-form; **forbidden** in auth-form |
+| `passCounter` | integer | Cond. | **pass-form only** — per-pass monotonic counter. Required in pass-form; **forbidden** in auth-form |
+| `authId` | string | Cond. | **auth-form only** — the server-signed authorization this session ran under. Required in auth-form; **forbidden** in pass-form |
+| `sessionId` | string | Cond. | **auth-form only** — the session identifier (`sess_{id}`). Required in auth-form; **forbidden** in pass-form |
 | `userId` | string | Yes | User subject identifier (`sub_{id}`) |
 | `bayId` | string | Yes | Bay where service was provided (`bay_{uuid}`) |
 | `serviceId` | string | Yes | Service that was activated (`svc_{id}`) |
@@ -802,6 +807,13 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
 | `meterValues.liquidMl` | integer | No | Liquid consumed in milliliters |
 | `meterValues.consumableMl` | integer | No | Consumable consumed in milliliters |
 | `meterValues.energyWh` | integer | No | Energy consumed in watt-hours |
+
+> **Two mutually exclusive forms.** [`transaction-event-request.schema.json`](../schemas/mqtt/transaction-event-request.schema.json) constrains this payload with a `oneOf` over two shapes, and exactly one applies to any given message:
+>
+> - **pass-form** (Full Offline / Partial B) — carries `offlinePassId` + `passCounter`, and **MUST NOT** carry `authId` or `sessionId`. The session was authorized by an OfflinePass held on the station.
+> - **auth-form** (Partial A — ServerSignedAuth) — carries `authId` + `sessionId`, and **MUST NOT** carry `offlinePassId` or `passCounter`. The session was authorized by a server-signed blob delivered over BLE.
+>
+> The *Required* column above reads `Cond.` for all four for this reason. Every other field is required in both forms.
 
 #### RESPONSE Payload
 
@@ -855,7 +867,6 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
     "consumableMl": 500,
     "energyWh": 150
   },
-  "deviceId": "dev_d4e5f6a7",
   "passCounter": 36
 }
 ```
@@ -1157,7 +1168,7 @@ Reports the end of a session that was terminated autonomously by the station, wi
 4. **Offline credit exhausted:** The station was operating in offline mode and the user's offline credit pool reached zero mid-session, forcing an immediate stop.
 5. **Mid-session deauthorization:** The user's offline pass was revoked (e.g., via a `RevocationEpoch` bump propagated through ChangeConfiguration) while the session was active; the station MUST stop the service when it detects the revocation.
 
-The server MUST use the `actualDurationSeconds`, `creditsCharged`, and `meterValues` fields from this event for final billing. The server MUST NOT rely solely on StatusNotification for billing calculations when this event is expected.
+The server **MUST** settle the session from this event rather than from StatusNotification — it **MUST NOT** rely solely on StatusNotification for billing calculations when this event is expected. The event's `actualDurationSeconds` and `meterValues` are the delivery record; its `creditsCharged` is **advisory input only**. The server **MUST** recompute the amount itself under the active tariff (see **Billing Authority** in [`04-flows.md §6`](04-flows.md)) and **MUST NOT** accept the station's figure as the charge.
 
 The server is the authoritative billing engine; the station's `creditsCharged` value is advisory and the server applies the active tariff to produce the final invoice. See [Billing Authority in `04-flows.md`](04-flows.md) for the normative statement of this separation.
 
@@ -1176,7 +1187,7 @@ This message is NOT sent when the session is stopped by a server-initiated StopS
 | `meterValues.liquidMl` | integer | No | Total liquid consumed in milliliters |
 | `meterValues.consumableMl` | integer | No | Total consumable consumed in milliliters |
 | `meterValues.energyWh` | integer | No | Total energy consumed in watt-hours |
-| `seqNo` | integer | No | Per-session monotonic counter — matches the running `seqNo` of the last MeterValues for the session. See [`02-transport.md §3.2`](02-transport.md). |
+| `seqNo` | integer | No | Per-session monotonic counter — **continues** the session's MeterValues sequence, incrementing by exactly `1` for this event as for any other session-scoped EVENT. It is the next value after the last MeterValues, not a repeat of it. Receivers **MUST** verify the increment. See [`02-transport.md §3.2`](02-transport.md). |
 | `finalSeqNo` | integer | No | Canonical session-final marker — the highest `seqNo` emitted for this session. Servers MUST discard MeterValues with `seqNo > finalSeqNo` received after this SessionEnded for the same `sessionId`. See [`02-transport.md §3.2`](02-transport.md). |
 
 **`reason` enum values:**
@@ -3053,7 +3064,6 @@ The app MUST store the receipt in its offline transaction log and sync it to the
   "txCounter": 5,
   "offlinePassId": "opass_92df0d5c011eaf74",
   "userId": "sub_06072a829e3918a8",
-  "deviceId": "dev_d4e5f6a7",
   "passCounter": 36
 }
 ```
@@ -3090,8 +3100,9 @@ Cross-reference table for MQTT Message Expiry Interval per action (see [Chapter 
 | BootNotification | 30s | — | Yes |
 | Heartbeat | 30s | 30s | No |
 | StatusNotification | — | 30s | No |
-| MeterValues | — | 30s | No |
+| MeterValues | — | 120s | No |
 | TransactionEvent | 60s | — | Yes |
+| SessionEnded | — | — | Yes |
 | SecurityEvent | — | — | Yes |
 | ConnectionLost | — | — | Yes |
 | AuthorizeOfflinePass | 15s | 30s | No |
@@ -3154,7 +3165,7 @@ Error codes referenced in this chapter. For the full catalog, see [Chapter 07 �
 | 3003 | `SERVICE_UNAVAILABLE` | StartService, BLE StartServiceResponse |
 | 3004 | `INVALID_SERVICE` | StartService, BLE StartServiceResponse |
 | 3005 | `BAY_NOT_FOUND` | StartService, StopService, ReserveBay, CancelReservation, SetMaintenanceMode, BLE StartServiceResponse |
-| 3006 | `SESSION_NOT_FOUND` | StopService, BLE StopServiceResponse |
+| 3006 | `SESSION_NOT_FOUND` | StartService, StopService, BLE StopServiceResponse |
 | 3007 | `SESSION_MISMATCH` | StopService, BLE StopServiceResponse |
 | 3008 | `DURATION_INVALID` | StartService, BLE StartServiceResponse |
 | 3009 | `HARDWARE_ACTIVATION_FAILED` | StartService, BLE StartServiceResponse |

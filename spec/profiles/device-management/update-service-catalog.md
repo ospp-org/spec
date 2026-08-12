@@ -152,4 +152,4 @@ The station **MUST** reject the catalog if any service entry fails validation.
 - Response: [`update-service-catalog-response.schema.json`](../../../schemas/mqtt/update-service-catalog-response.schema.json)
 - Service Item: [`service-item.schema.json`](../../../schemas/common/service-item.schema.json)
 - Service ID: [`service-id.schema.json`](../../../schemas/common/service-id.schema.json)
-- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 5023--5025)
+- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 3015, 5023--5025, 5103)

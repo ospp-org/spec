@@ -28,7 +28,7 @@ stateDiagram-v2
 
     state Active {
         [*] --> Dispensing
-        Dispensing --> Dispensing : MeterValues<br/>(every MeterValuesInterval (default 15s))
+        Dispensing --> Dispensing : MeterValues<br/>(every MeterValuesInterval (default 60s))
     }
 
     note right of Pending

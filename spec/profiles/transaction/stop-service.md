@@ -41,7 +41,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 ## 6. Processing Rules
 
 1. The station **MUST** validate that the `bayId` exists; if not, it **MUST** respond with `3005 BAY_NOT_FOUND`.
-2. The station **MUST** validate that there is an active session on the specified bay. If no session is active, it **MUST** respond with `3006 SESSION_NOT_FOUND`.
+2. The station **MUST** validate that there is an active session on the specified bay. If no session is active, it **MUST** respond with `3006 SESSION_NOT_FOUND` — **unless rule 10 applies**, which it does whenever the `sessionId` names a session this station itself stopped within the retention horizon. Rule 10 is evaluated **before** this rule; these rules are not independent and applying them in listed order without that check is the failure mode rule 10 exists to prevent.
 3. The station **MUST** validate that the `sessionId` matches the currently active session on the bay. If there is a mismatch, it **MUST** respond with `3007 SESSION_MISMATCH`.
 4. Upon acceptance, the station **MUST** immediately deactivate the hardware (pump, valve, motor) on the bay.
 5. The station **MUST** calculate `actualDurationSeconds` from the service start time to the moment of deactivation.
@@ -56,7 +56,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 | Code | errorText | Severity | Description |
 |:----:|----------------------|:--------:|-----------------------------------------------|
 | 3005 | `BAY_NOT_FOUND` | Error | `bayId` does not match any bay on this station. |
-| 3006 | `SESSION_NOT_FOUND` | Error | No active session exists on the specified bay, or the session has already ended. |
+| 3006 | `SESSION_NOT_FOUND` | Error | No active session exists on the specified bay, or the session ended longer ago than the OSPP Session Retention Horizon. A session that ended **within** the horizon is answered by the cached RESPONSE, not by this code (rule 10). |
 | 3007 | `SESSION_MISMATCH` | Error | `sessionId` does not match the currently active session on the bay. |
 | 3011 | `BAY_MAINTENANCE` | Warning | Bay is in maintenance mode and cannot process stop requests. |
 

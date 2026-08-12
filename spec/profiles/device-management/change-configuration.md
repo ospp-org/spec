@@ -161,4 +161,4 @@ Single-key requests (array of 1) are the common case. The array format enables a
 
 - Request: [`change-configuration-request.schema.json`](../../../schemas/mqtt/change-configuration-request.schema.json)
 - Response: [`change-configuration-response.schema.json`](../../../schemas/mqtt/change-configuration-response.schema.json)
-- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 5108, 5109)
+- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 1012, 2008, 3015, 5108, 5109)

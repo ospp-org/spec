@@ -44,11 +44,13 @@ The authoritative field list is [Chapter 03 §5.4](../../03-messages.md#54-sessi
 | Value | Billing |
 |-------|---------|
 | `TimerExpired` | Full booked duration delivered. |
-| `Fault` | Pro-rated on delivered duration; refund policy applies below 50%. |
+| `Fault` | Pro-rated on delivered duration; the low-delivery override applies below `faultFullRefundThreshold` of the booked duration. |
 | `Local` | Pro-rated; unused pre-authorization refunded. |
 | `LocalOutOfCredit` | **Zero.** |
 | `Deauthorized` | **Zero.** |
 | `OperatorStopped` | Pro-rated — the only reason here that bills a non-zero amount for a session the station did not run to completion. |
+
+The **Billing** column above is the `UserDuration` case — the pro-rata baseline. It is **not** the whole settlement rule: under *Settlement by Service Kind* ([Chapter 04 §6](../../04-flows.md)), a `FixedDuration` or `MultiUnit` session settles all-or-nothing, which changes the `Local`, `Fault` and `OperatorStopped` rows. That section governs where this table is read as unconditional.
 
 The normative descriptions of each value, and the reasoning behind `OperatorStopped`, are in [Chapter 03 §5.4](../../03-messages.md#54-sessionended). Server-side state transitions for each are in [Chapter 05 §3](../../05-state-machines.md).
 

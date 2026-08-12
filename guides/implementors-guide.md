@@ -2,7 +2,7 @@
 
 > **For:** Developers building OSPP-compatible stations, servers, or user agents
 > **Level:** Practical guide, not formal spec. Read this first, then the spec chapters.
-> **Spec Version:** 0.13.0
+> **Spec Version:** 0.14.0
 
 ---
 
@@ -245,7 +245,7 @@ The `v1` is a namespace identifier, not the protocol version. It stays `v1` for 
 
 **Retain flag:** Always `false`. No retained messages.
 
-**Rate limiting:** Broker SHOULD enforce per-client rate limits: max **100 PUBLISH per minute** per station. This default assumes ≤4 bays at the registry default `MeterValuesInterval` of 60s. Operators deploying stations with more bays or `MeterValuesInterval` below 10s SHOULD increase this limit proportionally (recommended formula: `bays × 60/MeterValuesInterval + 20` overhead). Station implements exponential backoff with jitter per [`02-transport.md` §4.5](../spec/02-transport.md#45-exponential-backoff-with-jitter): 1s initial, capped at `ReconnectBackoffMax` (default 30s, range 30–3600), jitter factor 0.3 applied one-sided.
+**Rate limiting:** Broker SHOULD enforce per-client rate limits: max **100 PUBLISH per minute** per station. This default assumes ≤4 bays at the registry default `MeterValuesInterval` of 60s. Operators deploying stations with more bays, or with `MeterValuesInterval` at the low end of its legal 10--3600 range, SHOULD increase this limit proportionally (recommended formula: `bays × 60/MeterValuesInterval + 20` overhead). Station implements exponential backoff with jitter per [`02-transport.md` §4.5](../spec/02-transport.md#45-exponential-backoff-with-jitter): 1s initial, capped at `ReconnectBackoffMax` (default 30s, range 30–3600), jitter factor 0.3 applied one-sided.
 
 **Message deduplication:** You MUST maintain a set of recently seen `messageId` values (at least 1000 IDs or 1 hour). If you see a duplicate REQUEST, re-send your cached RESPONSE. Don't re-process it.
 
@@ -761,10 +761,10 @@ When you receive StopService RESPONSE (user-initiated stop):
 3. Update session to `completed`
 4. Update bay status to `Available`
 
-When you receive SessionEnded EVENT [MSG-040], switch on `reason`:
+When you receive SessionEnded EVENT [MSG-040], switch on `reason`. **The arms below are the `UserDuration` case.** If the session's service kind is `FixedDuration` or `MultiUnit`, settlement is all-or-nothing and three of these arms change — see *Settlement by Service Kind* in [`04-flows.md §6`](../spec/04-flows.md), which governs. Do not implement this list without reading that section first: it is the pro-rata baseline, not the whole rule.
 
-1. **`TimerExpired`** — Session ran to its booked timer. Charge full `creditsCharged` from event. No < 50% override (user received the booked duration). Refund: `refund = preAuthAmount - creditsCharged`. Session → `completed`. Bay → `Available`.
-2. **`Fault`** — Hardware fault during session. Charge `creditsCharged` from event UNLESS `actualDurationSeconds < 0.5 * durationSeconds` — in that case override `creditsCharged` to 0 and refund 100%. Session → `failed`. Bay → `Faulted`.
+1. **`TimerExpired`** — Session ran to its booked timer. Charge the **full pre-authorized amount**, *not* the station-reported `creditsCharged`: the user received the booked duration, so `refund = 0` regardless of what the event or the meter values say. The low-delivery override does not apply. Session → `completed`. Bay → `Available`.
+2. **`Fault`** — Hardware fault during session. Charge `creditsCharged` from event UNLESS `actualDurationSeconds < faultFullRefundThreshold * durationSeconds` — in that case override `creditsCharged` to 0 and refund 100%. Read the threshold from configuration; do not compile the default `0.50` in. Session → `failed`. Bay → `Faulted`.
 3. **`Local`** (v0.4.0+) — User manually stopped at the station. Treat identically to a user-initiated StopService for billing purposes: charge pro-rated `creditsCharged` from event, refund the unused portion. Session → `completed`. Bay → `Available`.
 4. **`LocalOutOfCredit`** (v0.4.0+) — Offline credit pool exhausted mid-session. Station MUST emit `creditsCharged: 0`; if a non-zero value arrives, log a CRITICAL anomaly and override to 0 server-side. Refund 100% of the pre-authorized amount. Session → `completed`. Bay → `Available`.
 5. **`Deauthorized`** (v0.4.0+) — Offline pass revoked mid-session. Station MUST emit `creditsCharged: 0`. Refund 100% of pre-auth. Flag the session record for security review (mid-session revocation usually indicates fraud or compromise). Session → `failed`. Bay → `Available`.
@@ -776,7 +776,7 @@ Note: `creditsCharged` from the station is **advisory** — the server is the au
 **Per-session `seqNo` handling (when station emits the optional field):**
 
 - Track the running `seqNo` per `sessionId`. On consecutive session-scoped EVENTs (MeterValues, SessionEnded), verify that `seqNo` increments by exactly `1`.
-- On detected gap, log a warning and continue processing. If the missing `seqNo` range crosses the `< 50% duration delivered` billing-milestone boundary (refund policy at [`04-flows.md §6`](../spec/04-flows.md)), flag the session for HIGH-severity reconciliation audit.
+- On detected gap, log a warning and continue processing. If the missing `seqNo` range crosses the low-delivery billing-milestone boundary — `faultFullRefundThreshold` of the booked duration, refund policy at [`04-flows.md §6`](../spec/04-flows.md) — flag the session for HIGH-severity reconciliation audit.
 - When you receive a `finalSeqNo` (on StopService RESPONSE or SessionEnded EVENT), record it for the session. Subsequently, discard any MeterValues for the same `sessionId` whose `seqNo > finalSeqNo` — these are stale events that flushed after the stop was processed (e.g., from a station-side retransmission queue).
 - If `seqNo` is absent on incoming EVENTs (v0.3.0 stations), fall back to `timestamp` ordering as before. The seqNo handling is purely additive — its absence does not change processing behavior.
 
@@ -1298,4 +1298,4 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 
 ---
 
-*This guide covers OSPP 0.13.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*
+*This guide covers OSPP 0.14.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*

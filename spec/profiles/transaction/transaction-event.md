@@ -104,6 +104,13 @@ When the station reports `pendingOfflineTransactions > 0` in BootNotification, t
 | OfflinePass revocation epoch mismatch | `2004 OFFLINE_EPOCH_REVOKED` | Server responds with `Rejected`. |
 | Invalid payload format | `1005 INVALID_MESSAGE_FORMAT` | Server responds with `Rejected`. |
 | Payload semantically invalid | `3015 PAYLOAD_INVALID` | Server responds with `Rejected`. |
+| OfflinePass expired | `2003 OFFLINE_PASS_EXPIRED` | Server responds with `Rejected`. |
+| Pass counter or `(authId, sessionId)` replayed | `2005 OFFLINE_COUNTER_REPLAY` | Server responds with `Rejected` and emits the gate SecurityEvent. |
+| Pass not valid for the reporting station | `2006 OFFLINE_STATION_MISMATCH` | Server responds with `Rejected`. |
+| OfflinePass individually revoked | `2014 OFFLINE_PASS_REVOKED` | Server responds with `Rejected`. |
+| Pass issued for a different operator | `2015 OFFLINE_ORG_MISMATCH` | Server responds with `Rejected`. |
+| Pass bound to a different user than the envelope claims | `2016 OFFLINE_USER_MISMATCH` | Server responds with `Rejected`. |
+| Signed receipt disagrees with the envelope or the pass's device binding | `2017 OFFLINE_RECEIPT_MISMATCH` | Server responds with `Rejected`; both records retained. |
 | Server internal error | `6001 SERVER_INTERNAL_ERROR` | Server responds with `RetryLater`. |
 
 ## 9. Examples
@@ -139,7 +146,6 @@ When the station reports `pendingOfflineTransactions > 0` in BootNotification, t
       "consumableMl": 470,
       "energyWh": 138
     },
-    "deviceId": "dev_d4e5f6a7",
     "passCounter": 7
   }
 }
@@ -204,4 +210,4 @@ When the station reports `pendingOfflineTransactions > 0` in BootNotification, t
 - Receipt: [`receipt.schema.json`](../../../schemas/common/receipt.schema.json)
 - Meter Values: [`meter-values.schema.json`](../../../schemas/common/meter-values.schema.json)
 - Credit Amount: [`credit-amount.schema.json`](../../../schemas/common/credit-amount.schema.json)
-- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 2002, 2004, 1005, 3015, 6001)
+- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 2002--2006, 2014--2017, 1005, 3015, 6001)

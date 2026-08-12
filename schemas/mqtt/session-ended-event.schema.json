@@ -60,7 +60,7 @@
     "seqNo": {
       "type": "integer",
       "minimum": 0,
-      "description": "Optional per-session monotonic counter (matches the running seqNo of the last MeterValues emitted for the session). See spec/02-transport.md \u00a73.2."
+      "description": "Optional per-session monotonic counter, continuing the session's MeterValues sequence \u2014 the next value after the last MeterValues emitted, not a repeat of it. See spec/02-transport.md \u00a73.2."
     },
     "finalSeqNo": {
       "type": "integer",
