@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-11
 **Specification-document version:** 0.14.0 (release tag `v0.14.0`)
-**Status:** 3 blockers open (all BLE), 10 non-blocking issues open
+**Status:** 3 blockers open (all BLE), 11 non-blocking issues open
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle and
 the arcs since
 
@@ -13,9 +13,9 @@ the arcs since
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 10 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** |
+| OPEN | 11 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** |
 | CLOSED | 2 | [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
-| **Total open** | **13** | |
+| **Total open** | **14** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
@@ -578,6 +578,49 @@ non-repudiation, the key to fix that already exists on every station, and the on
 where it is missing.
 
 ---
+
+## OPEN — 170 numbered processing rules, and nothing says whether the numbering binds
+
+**Same class as the citation finding below: a rule that cannot be checked against anything.**
+Twice in the `0.14.0` cycle a correct, deliberately-written rule turned out to be unreachable
+because another rule in the same numbered list fired first. Two instances in one pass, in adjacent
+messages of one profile, is a shape rather than a coincidence.
+
+| Where | What happened |
+|---|---|
+| [`stop-service.md`](spec/profiles/transaction/stop-service.md) §6 | Rule 2 mandates `3006 SESSION_NOT_FOUND` whenever no session is active on the bay. Rule 10 — added in `0.4.0`, three chapters deep — mandates the **cached RESPONSE** for a duplicate stop inside the 24-hour retention horizon, which is precisely a case rule 2 catches first. An implementer applying §6 in listed order never reaches rule 10. The conformance corpus had encoded rule 2's answer as the required one. |
+| [`reserve-bay.md`](spec/profiles/transaction/reserve-bay.md) §6 | Rule 2 validated bay state. An **expired** reservation has already returned its bay to `Available`, so the bay-state check passes and a new reservation is silently accepted under a spent `reservationId` — the identifier check that would have refused it sits later. |
+
+**The measurement.** `spec/profiles/` carries **170 numbered rules across 23 documents** with a
+`## N. Processing Rules` section. **None of the 23 states whether the numbering is normative.** Two
+documents elsewhere in the tree do say it, and neither is a Processing Rules section:
+`authorize-offline-pass.md` §5 *"Validation Checks"* — *"The server **MUST** perform all of the
+following checks **in order**. Processing **MUST** stop at the first failure."* — and
+`connection-lost.md` §5 *"Server-Side Handling"* — *"**MUST** perform the following steps in
+order."* Both prove the specification knows how to say it. Neither generalises, and the sections
+that most need it are the ones without it.
+
+**Why it is unverifiable rather than merely ambiguous.** A numbered list *reads* as ordered — that
+is what numbering is for — so an implementer applying rules 1..n sequentially is behaving
+reasonably. An implementer reading them as a set of invariants that must all hold, in whatever
+order is convenient, is also behaving reasonably. **The two produce different wire behaviour, and
+neither is wrong against the text**, because the text does not say. There is no statement to check a
+station against, so no conformance case can exist for it and no reviewer can call either reading a
+defect. Both `0.14.0` incidents were found by reading, not by any gate.
+
+**The two readings are not equivalent wherever a later rule carves out an earlier one.** That is
+exactly the shape both incidents had, and it is the shape any *idempotency* or *cached-response*
+rule has by construction: such a rule is always an exception to a more general validation stated
+earlier. `stop-service.md` §6 and `reserve-bay.md` §6 now say explicitly which rule is evaluated
+first and why, but they were repaired one at a time, after the fact — the same
+*pointer-added-only-after-a-drift-incident* pattern the citation finding below measures.
+
+**Not repaired here.** What would close it is a single sentence in the profile template — whether a
+`Processing Rules` list is an ordered procedure or an unordered set of invariants — applied to all
+23, plus an explicit statement at each list that carves out an earlier rule. Deciding which of the
+two readings is intended is a normative choice affecting every profile document, not a drift
+repair, and a partial sweep of 23 sections is the failure mode this registry has already named as
+worse than the original defect.
 
 ## OPEN — a restatement that does not cite its source cannot be checked against it, and 103 of 127 restatements cite nothing
 
