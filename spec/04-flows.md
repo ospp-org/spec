@@ -1827,7 +1827,19 @@ transition table — and is not restated here. Every path below is a walk throug
 
 ### Session State Transitions
 
-| Flow | Transition |
+**These are the server's own bookkeeping names, not protocol states, and no station
+obligation attaches to any of them.** The OSPP session machine has six states —
+`Pending`, `Authorized`, `Active`, `Stopping`, `Completed`, `Failed` — defined once in
+[Chapter 05 §3](05-state-machines.md#3-session-state-machine). `idle`, `pending_ack`,
+`reserving` and `reserved` exist in none of them, and deliberately so: a station never
+observes them, they are carried by no message, and a station can therefore be neither
+conformant nor non-conformant with respect to them. Aligning them to Chapter 05 would
+promote four unobservable names to normative states, which is the opposite of what the
+protocol can enforce. The rows below trace where the *server* is in its own lifecycle
+while it walks the Chapter 05 machine. (The PaymentIntent table that follows is
+server-internal for the same reason.)
+
+| Flow | Server-internal path |
 |------|------------|
 | Online Session (§3) | idle → pending_ack → active → stopping → completed |
 | Web Payment (§4) | idle → reserving → reserved → pending_ack → active → completed |

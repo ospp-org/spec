@@ -4,3 +4,4 @@ node_modules/
 *.log
 *.tmp
 *.bak
+verification-report.md

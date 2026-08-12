@@ -48,7 +48,8 @@ When the server detects a ConnectionLost event (via LWT or heartbeat timeout), i
 4. **Handle active sessions:** For each active session on the disconnected station:
    - The server **MUST** start a **session recovery timer** (default: 300 seconds, configurable via `ConnectionLostGracePeriod`).
    - If the station reconnects before the timer expires, the session is reconciled (see section 6).
-   - If the timer expires without reconnection, the server **MUST** close the session with status `failed` and apply pro-rated billing: 100% refund if less than 50% of the requested duration was delivered, otherwise bill for actual time delivered.
+   - If the timer expires without reconnection, the server **MUST** close the session with status `failed` and bill **pro-rata on the time delivered**, refunding the remainder of the pre-authorization.
+   - The low-delivery full-refund override (`faultFullRefundThreshold`, [`04-flows.md §6`](../../04-flows.md)) **MUST NOT** be applied here, however little was delivered. That override is keyed on a SessionEnded `reason` of `Fault` — the service itself failing — and a grace-period expiry produces no SessionEnded at all. What failed here is the *communication*, which says nothing about what the customer received; they received what they received, and are billed for it. An earlier revision applied the override on this path, which made a station's network fault a free wash.
 5. **Update fleet dashboard:** The server **MUST** update the station's connection status to `offline` in the real-time fleet view.
 6. **Log the event:** The server **MUST** log the ConnectionLost event with severity `Warning` for monitoring and analytics.
 

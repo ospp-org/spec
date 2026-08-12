@@ -103,6 +103,38 @@ A station MUST support all keys in the required profiles. A station that adverti
 | `ReservationDefaultTTL` | integer | `300` | RW | Dynamic | 60--1800 | Reservation time-to-live in seconds. Expired reservations are automatically cancelled. |
 | `DefaultCreditsPerSession` | integer | `100` | RW | Dynamic | 1--10000 | Default credit authorization amount in minor currency units when no explicit amount is provided. |
 
+> **`SessionTimeout` is not fully specified, and this note is the specification of that fact.**
+> The key is retained because deployed configurations carry it, but three gaps stand between it
+> and an implementable obligation. They are recorded here rather than closed, because closing the
+> first one is a wire change nobody has asked for.
+>
+> 1. **A station that acts on it cannot say so.** The row above permits stopping an idle session,
+>    and [`session-ended.md` §6](profiles/transaction/session-ended.md) requires a SessionEnded for
+>    every session terminating without a StopService. The `reason` enum is closed at six members —
+>    `TimerExpired`, `Fault`, `Local`, `LocalOutOfCredit`, `Deauthorized`, `OperatorStopped` — and
+>    none of them is an inactivity timeout. So the one event that would report the stop has no
+>    value to report it with, and the station is left choosing between an inaccurate `reason` and
+>    a silent termination. Widening the enum is a coordinated wire change and has deliberately
+>    **not** been made.
+> 2. **The two statements of the rule use different triggers, and the transition one of them names
+>    does not exist.** This registry says *no user interaction*; [`05-state-machines.md`
+>    §3.4](05-state-machines.md) says *no MeterValues or user interaction*. On a metered bay those
+>    are different conditions, and which one governs decides whether the timer ever runs. Worse,
+>    §3.4 states the outcome as a transition to `Stopping` — but §3.3, the session transition table,
+>    carries no inactivity row among its fifteen triggers, and neither the §3.1 diagram nor
+>    `diagrams/state-machine-session.mmd` has such an edge. The only transitions into `Stopping` are
+>    a StopService and the duration timer.
+> 3. **Under the MeterValues-counting reading the mechanism breaks in both directions, at legal
+>    settings.** At the **default pair** — `MeterValuesInterval` `60`, `SessionTimeout` `120` —
+>    a MeterValues always arrives inside the window, so the timeout can never fire and the feature
+>    is inert as shipped. At the **legal extreme** — `MeterValuesInterval` `3600` against
+>    `SessionTimeout` `600`, both inside their published ranges — no MeterValues can arrive inside
+>    the window, so every session still running at 600 s is stopped as idle while it is being
+>    delivered normally. The registry admits both pairs and warns against neither.
+>
+> Until these are resolved, treat the behaviour as implementation-defined: a server cannot infer
+> from the protocol that a session ended because this timer elapsed.
+
 ---
 
 ## 4. Security Configuration Keys

@@ -447,7 +447,7 @@ The billing instructions in the **Action** column are the `UserDuration` case. T
 | Maximum session duration | `MaxSessionDurationSeconds` config key (default: 900s) | Yes | Station auto-stops service; session transitions to `Stopping` |
 | StopService confirmation | 10 seconds | No | Transition to `Failed`; partial refund based on last MeterValues |
 | MeterValues interval | `MeterValuesInterval` config key (default: 60s) | Yes | Station sends MeterValues at this interval; server uses last-known values if a report is missed |
-| Session inactivity | `SessionTimeout` config key (see §8 Configuration) | Yes | If no MeterValues or user interaction within the timeout period, session transitions to `Stopping` |
+| Session inactivity | `SessionTimeout` config key (see §8 Configuration) | Yes | If no MeterValues or user interaction within the timeout period, session transitions to `Stopping`. **Not fully specified — see the note on `SessionTimeout` in [Chapter 08 §3](08-configuration.md), including that this row's trigger and the registry's do not agree** |
 | Connection lost grace | `ConnectionLostGracePeriod` config key (default: 300s) | Yes | If station reconnects within grace period, session continues; otherwise transitions to `Failed` |
 
 Every value in the *Configurable = Yes* rows is a restatement. The defining registry — defaults, ranges
