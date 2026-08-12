@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-11
 **Specification-document version:** 0.14.0 (release tag `v0.14.0`)
-**Status:** 3 blockers open (all BLE), 11 non-blocking issues open
+**Status:** 3 blockers open (all BLE), 12 non-blocking issues open
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle and
 the arcs since
 
@@ -13,9 +13,9 @@ the arcs since
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 11 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** |
+| OPEN | 12 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** |
 | CLOSED | 2 | [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
-| **Total open** | **14** | |
+| **Total open** | **15** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
@@ -578,6 +578,57 @@ non-repudiation, the key to fix that already exists on every station, and the on
 where it is missing.
 
 ---
+
+## OPEN — the SDKs byte-guard the vendored schemas and guard the vendored vector corpus with nothing
+
+**Third instance in the `0.14.0` cycle of a gate that looks somewhere else**, and the first whose
+consequence is that doing the *right* thing breaks the build. Both SDKs vendor two artefacts from
+this repository: the JSON schema tree **and** `conformance/test-vectors/`. Both CIs clone the spec
+at `.spec-ref` and `diff -rq` the schema tree against it. **Neither diffs the vector corpus.** So
+the schemas cannot drift and the vectors drift freely — which is what happened.
+
+**Measured at `v0.14.0`.** `common/meter-values.schema.json` gained `minProperties: 1`, enforcing a
+MUST that had never been enforced, and the corpus moved with it: `meter-values-event-minimal.json`
+was rewritten to carry one reading, and `invalid/transaction/meter-values-event-empty-values.json`
+was added so the rule is falsifiable. Counts went **160 valid + 156 invalid = 316** to **160 + 157
+= 317**. In both SDKs today:
+
+- `valid/transaction/meter-values-event-minimal.json` still carries `"values": {}` — under the new
+  schema it is **invalid while sitting in `valid/`**, so the parity suites assert it must validate
+  and it will not;
+- the new invalid vector is **absent from both**;
+- the totals are **hardcoded**: `ospp-sdk-php` `tests/Contract/Schemas/ConformanceVectorTest.php`
+  asserts `160` and `156`; `sdk-ts` `tests/validation/SchemaValidator.test.ts` asserts `316`.
+
+A maintainer who does exactly the right thing — `cp -r spec/schemas → schemas/`, bump `.spec-ref` —
+gets two red suites and no indication that the vectors were the other half of the job.
+
+**What needs building, and where.** This is an **SDK** gate, not a spec gate; it is specified here
+because this registry is where the class is tracked. Mirror the existing schema step, in the same
+job, in both repos:
+
+| Repo | Add beside | Vendored corpus |
+|---|---|---|
+| `ospp-sdk-php` | the *Byte-identity check (schemas/ ↔ spec/schemas/)* step in `.github/workflows/tests.yml` | `tests/Fixtures/test-vectors/` |
+| `sdk-ts` | the *Byte-identity check (src/schemas/ ↔ spec/schemas/)* step in `.github/workflows/ci.yml` | `src/test-vectors/` |
+
+Same shape as the schema step and for the same stated reason — `diff -rq` of the whole tree against
+`/tmp/spec-source/conformance/test-vectors/`, **never a hand-maintained file list**, because a list
+is a second place to forget and its failure is silent.
+
+**And the count must be asserted, not hardcoded.** The two halves compose and neither is sufficient
+alone: byte-identity answers *is this the right tree*, and a non-zero parsed count answers *did we
+actually read it*. **A gate that parses zero vectors must not report a pass** — the shape this
+repository already had to repair once, where a Pest run collecting zero tests exited green. So the
+suites should derive their totals from the vendored tree at run time and assert only that the count
+is **> 0** (identity already pins *which* vectors), replacing the three literals above. A number
+fixed in code that a human must hand-update on every new vector is precisely what makes this drift
+invisible: the literal is not a check on the corpus, it is a second copy of a fact about it — the
+same *restatement-without-a-citation* shape as the finding below, expressed in test code.
+
+**Not built here** — this repository cannot add a job to another repository's CI, and the spec-side
+half already exists (`tools/verify-schemas.py`, which validates all 317 and would have caught the
+stale vector the moment it was committed here).
 
 ## OPEN — 170 numbered processing rules, and nothing says whether the numbering binds
 

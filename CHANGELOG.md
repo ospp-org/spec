@@ -10,6 +10,23 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ## [Unreleased]
 
+### Housekeeping
+
+- **KNOWN-ISSUES:** new open entry — **the SDKs byte-guard the vendored schemas and guard the vendored vector corpus with nothing.** Both SDKs vendor two artefacts from this repository, and both CIs `diff -rq` only one of them. `v0.14.0` moved the corpus with the schema — `meter-values-event-minimal.json` rewritten, `meter-values-event-empty-values.json` added, 316 → 317 — so a maintainer who does exactly the right thing (`cp -r spec/schemas`, bump `.spec-ref`) gets two red suites and no indication that the vectors were the other half of the job. The entry specifies the gate to build and where, in the shape of the existing schema step, and records that the three hardcoded corpus totals should become run-time counts asserted `> 0` rather than literals a human hand-updates per vector.
+
+### Downstream adoption order for `v0.14.0`
+
+Not a spec change; recorded here because getting it wrong is a red CI and the reason is not obvious from either repository. **One schema moved substantively** — `common/meter-values.schema.json` gained `minProperties: 1` — and `mqtt/session-ended-event.schema.json` changed a `description` only. Neither SDK needs a production `src/` change: neither models per-message error-code sets, so `3012`/`3013` becoming permitted ReserveBay responses is a nil code change. The order is forced:
+
+1. re-vendor `schemas/` (PHP `schemas/`, TS `src/schemas/`);
+2. re-vendor `conformance/test-vectors/` (PHP `tests/Fixtures/test-vectors/`, TS `src/test-vectors/`) — **this is the step that is easy to miss, because nothing checks it**;
+3. update the three hardcoded totals — `ConformanceVectorTest.php` `156` → `157`, `SchemaValidator.test.ts` `316` → `317` (the valid count `160` is unchanged);
+4. move `.spec-ref` to `v0.14.0`;
+5. release.
+
+**Reversing 4 and 1–3 turns CI red**, in both repos, because each CI clones this repository at the tag named in `.spec-ref` and byte-diffs the vendored tree against it. And note the asymmetry in what the schema change actually does: **`sdk-ts` validates at runtime** (`SchemaValidator` compiles Ajv over the vendored tree and is a public export), so `minProperties` is a behavioural tightening on a public API the day it ships; the PHP SDK ships schemas as artefacts (`opis/json-schema` is `require-dev`), so nothing changes inside it — the effect lands in the consumer.
+
+
 ## [0.14.0] — 2026-08-12
 
 A session-cycle consistency pass. Thirty-one claimed self-contradictions were re-verified one at a time against the files rather than inherited from the report that raised them; **one was disproved outright**, several were understated, and the rest are repaired here. MINOR is carried by two obligation changes that widen what a conformance claim binds: the CancelReservation StatusNotification moves **SHOULD → MUST**, and `TC-TX-003` stops requiring the opposite of what four normative sites mandate. No wire change; `protocolVersion` stays `0.3.0`.
