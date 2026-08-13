@@ -2,7 +2,7 @@
 
 > **For:** Developers building OSPP-compatible stations, servers, or user agents
 > **Level:** Practical guide, not formal spec. Read this first, then the spec chapters.
-> **Spec Version:** 0.18.0
+> **Spec Version:** 0.19.0
 
 ---
 
@@ -218,7 +218,7 @@ Power on
   → Wait for RESPONSE (30s timeout)
     - Accepted → sync clock, store sessionKey, apply config
     - Rejected → **restricted state**: accept no commands, send nothing but BootNotification retries, serve no customers; wait retryInterval, retry
-    - Pending → **restricted state**: receive and ANSWER commands, send nothing unsolicited, serve no customers; wait retryInterval, re-send BootNotification. Normal operation begins only after receiving `Accepted`
+    - Pending → **restricted state**: receive and ANSWER commands, originate nothing but BootNotification retries and a SignCertificate renewal, serve no customers; wait retryInterval, re-send BootNotification. Normal operation begins only after receiving `Accepted`
     - Timeout → wait 60s, retry
   → PUBLISH StatusNotification for EACH bay
   → Start heartbeat timer
@@ -1308,4 +1308,4 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 
 ---
 
-*This guide covers OSPP 0.18.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*
+*This guide covers OSPP 0.19.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*

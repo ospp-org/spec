@@ -8,6 +8,119 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.19.0] — 2026-08-14
+
+> **A restricted station could not renew its own certificate — by any path — and the repair was to
+> restate the reason for an existing exception rather than add a second name to a list.**
+> §1.4 forbade a restricted station any originated message but BootNotification. SignCertificate
+> [MSG-022] is originated, and §4.7.1's automatic renewal is unsolicited by construction, so
+> **station-initiated renewal was blocked as categorically as the server-triggered kind** — and more
+> cleanly, since no counter-text existed anywhere for it. The server-triggered case was never the
+> defect; it was the only place the defect was *visible*, because one table happened to give two
+> answers there.
+>
+> **Why this outranked simply refusing the command.** The restricted state is **unbounded** —
+> retries are unlimited, no edge leaves `Pending` but an `Accepted` boot, and both entry reasons are
+> cleared by a person, never by time. A station certificate is valid for one year and renewal opens
+> 30 days before expiry (configurable 7–90), so **the renewal window is about one twelfth of the
+> certificate's life** — and the two ways into `Pending`, an outstanding operator approval and a
+> `3018 TOPOLOGY_MISMATCH`, are exactly the state a station is in just after a technician has been
+> on site, which is also when a topology record is most likely half-updated. Renewal exists so that
+> expiry — whose recovery is a physical site visit — does not happen. A rule that suspends it in an
+> unbounded state does not merely tolerate that outcome; it **specifies** it.
+>
+> **MINOR, and breaking for anything that enforced the old prohibition.** `protocolVersion` stays
+> **`0.3.0`**, no schema changes, and no field, message, error code or configuration key is added:
+> SignCertificate already existed and was already a legal `requestedMessage`. What changes is *when*
+> it may be sent. **This release is not pin-only for the SDKs** — see below.
+
+### Decided
+
+- **spec:** **The rule states a test, not a pair.** A restricted station may originate exactly those
+  messages that **repair its own standing with the server**. BootNotification restores its
+  registration; SignCertificate restores the credential without which it cannot connect at all.
+  Nothing else qualifies — StatusNotification, MeterValues, Heartbeat, TransactionEvent,
+  SessionEnded, DiagnosticsNotification, FirmwareStatusNotification and SecurityEvent all report on
+  the station's *work*, and a restricted station has not been cleared to do that work. The question
+  is not whether a message is useful; it is whether the station's ability to *be served at all*
+  depends on sending it.
+- **spec:** **Why a test rather than a second name.** Naming SignCertificate beside BootNotification
+  was the cheaper diff and was rejected: it would have left the stated reason — *"the act that ends
+  the restriction"* — false for one of the two members. That is precisely the mechanism that
+  produced this contradiction, a rule whose reason no longer covers its own contents. A list has to
+  be remembered; a test can be applied by the next reader.
+- **spec:** **The exception limits itself, and §1.4 now says so and tells the reader not to add a
+  scope rule.** SignCertificate is among the 44 signed message types — not one of the three
+  structural exemptions of §5.6 — and a sender holding no key **MUST** refuse to send rather than
+  send unsigned (§5.7). `Booting` and `Rejected` hold no session key. The permission is therefore
+  structurally exercisable only in `Pending`, with no written scope required. A later reader who
+  adds *"except in `Pending`"* is restating what the signing rules already enforce, and a redundant
+  restriction is how a rule starts drifting from the thing it duplicates.
+- **spec:** **The `Pending` command table is grouped by an explicit discriminator** — whether a
+  command has an effect independent of the message it would emit. That produced three outcomes
+  instead of one undifferentiated "answered normally", and repaired the neighbouring row in the same
+  change: **GetDiagnostics** is answered normally with its DiagnosticsNotification progress events
+  suppressed, exactly as SetMaintenanceMode's StatusNotification already was, because the archive
+  upload is an HTTP PUT that completes regardless. The phrase *"a certificate operation"* is gone —
+  it collapsed CertificateInstall, which returns its result in a RESPONSE, with
+  TriggerCertificateRenewal, which cannot, and that collapse is what hid the disagreement.
+- **spec:** **The two routes to one act now give one answer.** TriggerMessage with
+  `requestedMessage: "SignCertificate"` and TriggerCertificateRenewal [MSG-024] are answered
+  `Accepted` alike. TriggerMessage for any other message stays `Rejected`.
+
+### Fixed
+
+- **spec:** **`TriggerMessage` was `[MSG-018]` at one site**, in the `Pending` command table — the
+  only such site in the tree, against six giving MSG-018 to GetDiagnostics and three giving
+  TriggerMessage its actual `[MSG-026]`. Corrected in the row that was being rewritten anyway. Same
+  class as the SecurityEvent MSG-ID corrected in `0.17.1`.
+
+### Changed — every site that states the rule
+
+Fourteen restatements moved with the definition. A restatement left holding the old rule is how this
+contradiction was born, so the sweep was by assertion rather than by keyword: *"sends nothing
+unsolicited"*, *"may originate no EVENT"*, *"any REQUEST other than BootNotification"*, *"not
+`Operational`, so not permitted to originate"*.
+
+- `05-state-machines.md` §1.4 — the table row, the envelope paragraph, the new rule and its
+  self-limitation, the no-carve-out sentence, and three rows of the command table
+- `01-architecture.md` §7 boot-status table · `03-messages.md` §1.1 and its BootNotification status
+  table · `04-flows.md` A2 and its sequence-diagram note · `06-security.md` §5.7 no-key table and
+  §4.7.1 · `07-errors.md` §5.2 retry table
+- `profiles/core/README.md` **CORE-002** · `profiles/core/boot-notification.md` §1 and §5 rule 5 ·
+  `profiles/core/trigger-message.md` §5
+- `guides/implementors-guide.md` boot pseudocode · `examples/flows/01-boot-sequence.md` design note
+
+### Changed — conformance
+
+- **`TC-SEC-003` gains Part F — Renewal While `Pending`.** The first Part in that case to run
+  against a restricted station, and the executable witness for the new permission: the station must
+  originate SignCertificate while `Pending`, complete the install, answer `Accepted` to both
+  TriggerCertificateRenewal and TriggerMessage/`SignCertificate`, and still answer `Rejected` to
+  TriggerMessage for anything else. Two Failure Criteria added — one for a station that enforces a
+  restriction the specification does not place on it, one for a station that treats the exception as
+  a general loosening.
+- **`TC-CORE-001` step 25 and Expected Result 9** asserted the old rule outright (*"Only
+  BootNotification retries"*). They now name both permitted messages, and Part C is scoped to a
+  certificate **well outside** the renewal window so that silence there is conforming rather than an
+  untested renewal.
+
+### SDK — this release is not pin-only
+
+- **Both SDKs model the old row as an exported predicate, and it changes shape.**
+  `StationState::maySendUnsolicited()` (`ospp-sdk-php/src/Enums/StationState.php`) and
+  `maySendUnsolicited(state)` (`sdk-ts/src/state-machines/StationStateMachine.ts`, re-exported from
+  `src/index.ts`) both return `state === Operational`, both carry a docblock citing *"§1.4 row"*, and
+  both are contract-tested — `StationTransitionsContractTest::sendsAnythingElseUnsolicited` and
+  `StationStateMachine.test.ts` *"matches §1.4 row"* — asserting `Pending` is `false`. A single
+  boolean can no longer answer the question, because the answer is now message-dependent. The shape
+  of the fix is a message-aware predicate, or a companion for the standing-repair set with
+  `maySendUnsolicited` documented as "anything other than those". The `StationState` docblocks in
+  both SDKs also restate the old rule in prose.
+- **No schema, vector or example payload moved**, so the vendored trees are unaffected; the change is
+  in hand-written state-machine code, which is why "all Markdown in the spec" was necessary and not
+  sufficient here.
+
 ## [0.18.0] — 2026-08-14
 
 > **Two of the three contradictions `0.17.1` recorded are decided, and both were decided against

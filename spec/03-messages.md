@@ -1,6 +1,6 @@
 # Chapter 03 — Message Catalog
 
-> **Status:** Draft | **OSPP Version:** 0.18.0
+> **Status:** Draft | **OSPP Version:** 0.19.0
 
 This chapter is the normative reference for **every message** in the OSPP protocol. Each message is documented with its complete payload schema, metadata, and example.
 
@@ -146,7 +146,7 @@ Each message below includes:
 | **Idempotency** | Yes — server MUST accept duplicate BootNotification and respond identically |
 | **Message Expiry** | Never (exempt from message expiry) |
 
-The station MUST send a BootNotification REQUEST immediately after subscribing to its `to-station` topic on every MQTT connection. Until it receives an `Accepted` response the station MUST NOT send any message it originates — any EVENT, or any REQUEST other than BootNotification. A RESPONSE to a server command is permitted while `Pending`, which is the restricted state in which the station answers commands ([Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states)).
+The station MUST send a BootNotification REQUEST immediately after subscribing to its `to-station` topic on every MQTT connection. Until it receives an `Accepted` response the station MUST NOT send any message it originates — any EVENT, or any REQUEST other than BootNotification. The one further exception is SignCertificate [MSG-022] while `Pending`: renewing its own certificate repairs the station's standing rather than reporting on its work, and `Pending` is the only restricted state holding the session key that message must be signed with ([Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states) is normative). A RESPONSE to a server command is permitted while `Pending`, which is the restricted state in which the station answers commands ([Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states)).
 
 > **Note:** BootNotification declares the station's bay **topology** — which bays exist and which program ordinals each has — but not bay *status* or program *availability*. Those are reported via [StatusNotification](#52-statusnotification) events sent immediately after a successful boot.
 
@@ -211,7 +211,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
 |--------|---------------|
 | `Accepted` | Sync clock → apply configuration → send StatusNotification per bay → start heartbeat → enter normal operation |
 | `Rejected` | Enter the `Rejected` restricted state — refuse commands, send nothing but retries, serve no customers → wait `retryInterval` seconds → retry BootNotification |
-| `Pending` | Enter the `Pending` restricted state — **answer** commands, send nothing unsolicited, refuse StartService/ReserveBay with `3002 BAY_NOT_READY` → wait `retryInterval` seconds → retry BootNotification. See [Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states) |
+| `Pending` | Enter the `Pending` restricted state — **answer** commands, originate nothing but BootNotification retries and a SignCertificate [MSG-022] renewal, refuse StartService/ReserveBay with `3002 BAY_NOT_READY` → wait `retryInterval` seconds → retry BootNotification. See [Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states) |
 
 **Heartbeat interval precedence:** If both `heartbeatIntervalSec` (dedicated field) and `configuration.HeartbeatIntervalSeconds` (config map) are present, the dedicated field `heartbeatIntervalSec` takes precedence. Stations MUST use the dedicated field value and SHOULD ignore the config map entry for this key.
 

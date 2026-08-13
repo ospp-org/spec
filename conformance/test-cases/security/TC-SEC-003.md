@@ -6,7 +6,7 @@ Security Profile
 
 ## Purpose
 
-Verify the complete certificate renewal lifecycle: automatic station-initiated renewal when the certificate approaches expiry, server-triggered renewal via TriggerCertificateRenewal, CSR rejection handling with retry and SecurityEvent escalation, certificate chain validation failure, and keypair generation failure.
+Verify the complete certificate renewal lifecycle: automatic station-initiated renewal when the certificate approaches expiry, server-triggered renewal via TriggerCertificateRenewal, CSR rejection handling with retry and SecurityEvent escalation, certificate chain validation failure, keypair generation failure, and renewal from the `Pending` restricted state.
 
 ## References
 
@@ -27,7 +27,7 @@ Verify the complete certificate renewal lifecycle: automatic station-initiated r
 
 ## Preconditions
 
-1. Station `stn_a1b2c3d4` is booted and has received BootNotification `Accepted`.
+1. Station `stn_a1b2c3d4` is booted and has received BootNotification `Accepted`. **Part F is the exception** — it re-boots the station into `Pending` deliberately, and is the only Part that runs against a restricted station.
 2. MQTT connection is stable; Heartbeat exchange is functioning.
 3. Station has an existing valid X.509 client certificate with a known expiry date.
 4. `CertificateRenewalEnabled` is `true` (default).
@@ -206,6 +206,33 @@ Verify the complete certificate renewal lifecycle: automatic station-initiated r
     ```
 43. Verify the station continues normal operation (existing certificate remains valid).
 
+### Part F — Renewal While `Pending`
+
+The state this exception exists for. Every Part above runs against an `Operational` station; this one
+does not, and it is the only Part whose precondition 1 does not hold.
+
+44. Provision the station with a certificate **inside** the renewal window (within
+    `CertificateRenewalThresholdDays` of `notAfter`).
+45. Reboot the station and answer its BootNotification with `status: "Pending"`, carrying a
+    `sessionKey` — required on `Pending` exactly as on `Accepted`
+    ([`boot-notification.md` §5.3](../../../spec/profiles/core/boot-notification.md)).
+46. Verify the station enters the `Pending` restricted state: no Heartbeat, no StatusNotification, no
+    TransactionEvent.
+47. Verify the station **does** originate SignCertificate [MSG-022], carrying a valid HMAC computed
+    with the `Pending` response's `sessionKey`. A station that stays silent here **fails**: a
+    restricted station may originate the messages that repair its own standing, and its certificate is
+    one of them ([`05-state-machines.md` §1.4](../../../spec/05-state-machines.md#14-the-restricted-states)).
+48. Complete the flow — sign the CSR, send CertificateInstall [MSG-023] — and verify the station
+    installs the certificate and updates `CertificateSerialNumber` while still `Pending`.
+49. Send TriggerCertificateRenewal [MSG-024] to the still-`Pending` station and verify it answers
+    `Accepted` and runs the flow, **not** `Rejected`.
+50. Send TriggerMessage [MSG-026] with `requestedMessage: "SignCertificate"` to the still-`Pending`
+    station and verify it also answers `Accepted`. The two routes to one act must give one answer.
+51. Send TriggerMessage with `requestedMessage: "StatusNotification"` and verify it answers
+    `Rejected` — the exception is the two standing-repair messages, not a general loosening.
+52. Answer a subsequent BootNotification `Accepted` and verify the station reaches `Operational`
+    using the certificate it renewed while restricted.
+
 ## Expected Results
 
 1. Station detects certificate within renewal threshold and initiates SignCertificate automatically.
@@ -220,6 +247,7 @@ Verify the complete certificate renewal lifecycle: automatic station-initiated r
 10. Keypair generation failure returns `4014 KEYPAIR_GENERATION_FAILED` + SecurityEvent `HardwareFault`.
 11. All TriggerCertificateRenewal responses arrive within the 10-second timeout.
 12. All SignCertificate and CertificateInstall responses arrive within the 30-second timeout.
+13. A `Pending` station inside the renewal window originates SignCertificate, completes the install, and updates `CertificateSerialNumber` — while sending no Heartbeat, StatusNotification or TransactionEvent. It answers `Accepted` to both TriggerCertificateRenewal and TriggerMessage/`SignCertificate`, and `Rejected` to TriggerMessage for any other message.
 
 ## Failure Criteria
 
@@ -235,3 +263,5 @@ Verify the complete certificate renewal lifecycle: automatic station-initiated r
 10. Station disrupts its MQTT connection or stops operating after a certificate installation failure.
 11. Keypair generation failure does not produce a SecurityEvent with `HardwareFault` type.
 12. Any response exceeds its specified timeout (10s for TriggerCertificateRenewal, 30s for others).
+13. A `Pending` station inside the renewal window does not originate SignCertificate, or refuses TriggerCertificateRenewal, or refuses TriggerMessage/`SignCertificate` — each of these is the station enforcing a restriction the specification does not place on it, and each ends in an expired certificate and a site visit.
+14. A `Pending` station originates anything beyond BootNotification retries and SignCertificate — a Heartbeat, a StatusNotification, or an accepted TriggerMessage for any other message. The exception is two named-by-test messages, not a general loosening.

@@ -1,6 +1,6 @@
 # Chapter 07 — Error Codes & Resilience
 
-> **Status:** Draft | **OSPP Version:** 0.18.0
+> **Status:** Draft | **OSPP Version:** 0.19.0
 
 This chapter defines the complete error taxonomy for the OSPP protocol, including the error code registry, standard error response format, retry policies, circuit breaker patterns, and graceful degradation behavior.
 
@@ -624,7 +624,7 @@ Attempt  Delay    Max Delay
 |----------|-------|:------------:|------------|
 | RESPONSE: `ACCEPTED` | — | — | Normal operation |
 | RESPONSE: `REJECTED` | `retryInterval` from response (default 30s) | Unlimited | Station enters the `Rejected` restricted state — accepts no commands, sends nothing but its retries, serves no customers ([Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states)) |
-| RESPONSE: `PENDING` | `retryInterval` from response (default 30s) | Unlimited | Station enters the `Pending` restricted state — **answers** commands so an operator can repair it, sends nothing unsolicited, refuses StartService and ReserveBay with `3002 BAY_NOT_READY` ([Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states)) |
+| RESPONSE: `PENDING` | `retryInterval` from response (default 30s) | Unlimited | Station enters the `Pending` restricted state — **answers** commands so an operator can repair it, originates nothing but BootNotification retries and a SignCertificate [MSG-022] renewal, refuses StartService and ReserveBay with `3002 BAY_NOT_READY` ([Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states)) |
 | Timeout (no response in 30s) | 60s fixed | Unlimited | Log `1010 MESSAGE_TIMEOUT`, retry indefinitely |
 
 The default retry interval (30s) is configurable via `BootRetryInterval` (see §8 Configuration).

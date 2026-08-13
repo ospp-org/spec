@@ -1,8 +1,8 @@
 # OSPP Known Issues
 
 **Date:** 2026-08-13
-**Specification-document version:** 0.18.0 (release tag `v0.18.0`)
-**Status:** 3 blockers open (all BLE), 16 non-blocking issues open, 3 decisions recorded
+**Specification-document version:** 0.19.0 (release tag `v0.19.0`)
+**Status:** 3 blockers open (all BLE), 15 non-blocking issues open, 4 decisions recorded
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle and
 the arcs since
 
@@ -13,10 +13,10 @@ the arcs since
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 16 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** · **[one table gives the same act opposite verdicts](#open--one-table-gives-the-same-act-opposite-verdicts-and-a-certificate-renewal-cannot-conclude-in-the-state-the-spec-keeps-open-for-repairs)** · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) |
+| OPEN | 15 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) |
 | CLOSED | 4 | [Device Management Required vs RECOMMENDED](#closed-0160--the-device-management-profile-was-required-in-chapter-08-and-recommended-not-mandatory-in-its-own-readme) — closed in 0.16.0 in favour of the capability · [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
-| DECIDED | 3 | [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
-| **Total open** | **19** | |
+| DECIDED | 4 | **[a restricted station may renew its own certificate](#decided-0190--one-table-gave-the-same-act-opposite-verdicts-and-a-certificate-renewal-could-not-conclude-in-the-state-the-spec-keeps-open-for-repairs)** — the exception's *reason* restated to cover both members rather than a second name added to a list · [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
+| **Total open** | **18** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
@@ -1176,7 +1176,7 @@ alone and annotated in the case itself, so the latitude is visible rather than i
 
 ---
 
-## OPEN — one table gives the same act opposite verdicts, and a certificate renewal cannot conclude in the state the spec keeps open for repairs
+## DECIDED (0.19.0) — one table gave the same act opposite verdicts, and a certificate renewal could not conclude in the state the spec keeps open for repairs
 
 `05-state-machines.md` §1.4, *Command sent to a `Pending` station*, is a single table at
 `:106--111`. Two of its rows govern the same act — the station originating a SignCertificate
@@ -1219,20 +1219,49 @@ HTTP PUT to a URL and completes regardless, so only the progress reporting is su
 RESPONSE stays truthful. **The certificate case admits no such repair** — there the
 station-originated message is the entire effect.
 
-**The option space.** (a) Move TriggerCertificateRenewal to the `Rejected` row on the ground
-`:109` already gives, accepting that a station which enters `Pending` inside its renewal window
-can be recovered only by re-provisioning. (b) Widen the `Pending` exemption from BootNotification
-alone to BootNotification plus SignCertificate, on the ground that both are the station asking to
-be let back in — this changes a **MUST NOT** in the §1.4 state table and so changes what a
-conforming station may emit. (c) Keep the acceptance and define a deferred completion: the
-station accepts, records the obligation, and originates the CSR at the first boot reaching
-`Operational` — which needs new text for where that obligation is held and for how long.
-Recording rather than picking: (a) narrows what an operator can repair, (b) changes a wire
-obligation, and (c) adds a mechanism.
+**Decided in 0.19.0: the reason for the existing exception was restated to cover both members, and
+no second name was added to a list.** A restricted station may originate exactly those messages
+that **repair its own standing with the server**. BootNotification restores its registration;
+SignCertificate restores the credential without which it cannot connect at all. Nothing else
+qualifies — every other originated message reports on the station's *work*, and a restricted
+station has not been cleared to do that work.
 
-Independently of the choice, **the phrase "a certificate operation" should not survive it.** It
-collapses CertificateInstall [MSG-023], which genuinely returns its result in a RESPONSE, with
-TriggerCertificateRenewal, which cannot — and the collapse is what hid the disagreement.
+**Why a test and not a list.** The alternative was to name SignCertificate beside BootNotification
+and leave the stated reason — *"the act that ends the restriction"* — false for one of the two
+members. That is the exact mechanism that produced this contradiction: a rule whose reason no
+longer covers its own contents drifts from whatever restates it. A list has to be remembered; a
+test can be applied by the next reader.
+
+**Three measurements decided it against the cheaper option of simply refusing the command.**
+
+1. **Automatic renewal was blocked by the same rule, and more cleanly.** §4.7.1's flow is
+   unsolicited by construction, so `:85`, `:96` and `06-security.md`'s signing table all forbade
+   it with no counter-text anywhere. The triggered case was never the defect — it was the only
+   place the defect was *visible*, because one table happened to give two answers there.
+2. **The restricted state is unbounded.** Retries are unlimited (`:71`, `boot-notification.md`
+   §5), no edge leaves `Pending` but an `Accepted` boot (`:74`), and both entry reasons are
+   cleared by a person and never by time. Against a one-year certificate with a 30-day renewal
+   window — about one twelfth of its life — and two entry reasons that are exactly the state a
+   station is in just after a technician has been on site, the overlap is ordinary rather than
+   exotic.
+3. **Refusing would have specified the failure the mechanism exists to prevent.** Renewal was
+   introduced so that expiry — whose recovery is a site visit — does not happen. A rule that
+   suspends it in an unbounded state produces that site visit by design.
+
+**The exception limits itself and the specification says so, deliberately.** SignCertificate is in
+the signed 44 (`06-security.md` §5.6) and a sender with no key **MUST** refuse to send rather than
+send unsigned (§5.7); `Booting` and `Rejected` hold no session key. It is therefore structurally
+impossible outside `Pending`, and §1.4 now tells the reader **not** to add a scope rule saying so —
+a redundant restriction is how a rule starts drifting from the thing it duplicates.
+
+**The phrase "a certificate operation" did not survive.** It collapsed CertificateInstall
+[MSG-023], which genuinely returns its result in a RESPONSE, with TriggerCertificateRenewal, which
+cannot — and the collapse is what hid the disagreement. The table is now grouped by an explicit
+discriminator: whether the command has an effect independent of the message it would emit.
+**GetDiagnostics was repaired in the same change** under that discriminator — its archive upload is
+an HTTP PUT that completes, so only the DiagnosticsNotification progress events are suppressed,
+exactly as for SetMaintenanceMode. And `TriggerMessage` was mislabelled `[MSG-018]` at `:108` — the
+only such site in the tree, against six that give MSG-018 to GetDiagnostics — corrected in passing.
 
 ---
 

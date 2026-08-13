@@ -1,6 +1,6 @@
 # Chapter 04 — Protocol Flows
 
-> **Status:** Draft | **OSPP Version:** 0.18.0
+> **Status:** Draft | **OSPP Version:** 0.19.0
 
 This chapter documents every end-to-end protocol flow as a sequence of messages defined in [Chapter 03 — Message Catalog](03-messages.md). Each flow includes preconditions, a Mermaid sequence diagram, numbered happy-path steps, alternative paths, error paths, and postconditions.
 
@@ -130,7 +130,7 @@ sequenceDiagram
 
     else Pending
         Server-->>SSP: BootNotification RESPONSE (Pending, retryInterval)
-        Note over SSP: Restricted: ANSWER commands,<br/>send nothing unsolicited,<br/>serve nobody
+        Note over SSP: Restricted: ANSWER commands,<br/>originate only boot retries<br/>and a cert renewal,<br/>serve nobody
         Server->>SSP: ChangeConfiguration REQUEST [MSG-013]
         SSP-->>Server: ChangeConfiguration RESPONSE
         Note over SSP: Wait retryInterval seconds
@@ -160,7 +160,7 @@ sequenceDiagram
 
 **A1 — Rejected:** Server returns `Rejected` with `retryInterval`. The SSP waits `retryInterval` seconds and retries from step 6. Common causes: station not registered, certificate revoked, station decommissioned.
 
-**A2 — Pending:** Server returns `Pending` with `retryInterval`. The SSP enters the `Pending` **restricted** state ([Chapter 05 — State Machines §1.4](05-state-machines.md#14-the-restricted-states)): it answers server commands, sends nothing unsolicited, and serves no customer — StartService and ReserveBay are refused with `3002 BAY_NOT_READY`. It waits and retries. This occurs when an operator approval is outstanding, when the server is starting up or under maintenance, or on a `3018 TOPOLOGY_MISMATCH`.
+**A2 — Pending:** Server returns `Pending` with `retryInterval`. The SSP enters the `Pending` **restricted** state ([Chapter 05 — State Machines §1.4](05-state-machines.md#14-the-restricted-states)): it answers server commands, originates nothing but BootNotification retries and a SignCertificate [MSG-022] renewal, and serves no customer — StartService and ReserveBay are refused with `3002 BAY_NOT_READY`. It waits and retries. This occurs when an operator approval is outstanding, when the server is starting up or under maintenance, or on a `3018 TOPOLOGY_MISMATCH`.
 
 **A3 — Timeout:** No response received within 30 seconds. The SSP waits 60 seconds and retries from step 6. The SSP MUST NOT send any other messages until BootNotification succeeds.
 

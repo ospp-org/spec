@@ -34,15 +34,22 @@ The TriggerMessage action allows the server to request the station to send a spe
 
 ## 5. Processing Rules
 
-> **A restricted station answers `Rejected` to every `requestedMessage` except `BootNotification`.**
-> `Pending` and `Rejected` stations may originate no EVENT and no REQUEST other than BootNotification
-> ([`05-state-machines.md` §1.4](../../05-state-machines.md#14-the-restricted-states)), so accepting
-> any other trigger would promise a message the station is forbidden to send — and sending it anyway
-> would break the restriction. `BootNotification` is the exception and the useful one: it is the
-> message a restricted station is already required to retry, and triggering it lets an operator who
-> has just approved a registration or corrected a topology record end the restriction now instead of
-> waiting out `retryInterval`. A `Rejected` station processes no commands at all, so in practice this
-> governs `Pending`. The rules below apply to an `Operational` station.
+> **A restricted station answers `Rejected` to every `requestedMessage` except `BootNotification` and
+> `SignCertificate`.** A restricted station may originate only the messages that repair its own
+> standing with the server ([`05-state-machines.md` §1.4](../../05-state-machines.md#14-the-restricted-states)),
+> and those two are the whole of that set, so accepting any other trigger would promise a message the
+> station is forbidden to send — and sending it anyway would break the restriction.
+>
+> `BootNotification` is the obvious one: it is the message a restricted station is already required to
+> retry, and triggering it lets an operator who has just approved a registration or corrected a
+> topology record end the restriction now instead of waiting out `retryInterval`. `SignCertificate` is
+> the other, because a certificate that expires while the station is restricted cannot be renewed
+> afterwards over any channel. Triggering it here and sending TriggerCertificateRenewal [MSG-024] are
+> two routes to one act, and they get one answer.
+>
+> A `Rejected` station processes no commands at all, so in practice this governs `Pending` — which is
+> also the only restricted state that can sign a SignCertificate, since `Rejected` holds no session
+> key. The rules below apply to an `Operational` station.
 
 1. After responding `Accepted`, the station MUST send the requested message within **5 seconds**.
 2. The triggered message is a normal message instance — it uses the same format, topic, and processing rules as if it were sent on schedule.

@@ -1,6 +1,6 @@
 # Chapter 06 — Security
 
-> **Status:** Draft | **OSPP Version:** 0.18.0
+> **Status:** Draft | **OSPP Version:** 0.19.0
 
 This chapter defines the complete security model for the OSPP protocol, covering threat analysis, authentication, authorization, cryptographic requirements, message integrity, offline security, anti-abuse mechanisms, and data protection.
 
@@ -566,6 +566,8 @@ Three MQTT messages support the certificate lifecycle:
 
 The station **SHOULD** initiate certificate renewal automatically when the current certificate is within `CertificateRenewalThresholdDays` (default: 30 days, configurable 7–90) of expiry. See [Chapter 08 — Configuration](08-configuration.md), §4.
 
+**This obligation is not suspended by a restricted state.** SignCertificate [MSG-022] is one of the two messages a restricted station may originate, because renewing its own certificate repairs the station's standing rather than reporting on its work ([Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states)). A station held at `Pending` through its renewal window **SHOULD** renew from there — the alternative is an expired certificate, whose only recoveries are the two named in [§4.7.3](#473-emergency-renewal). In `Booting` and `Rejected` the station holds no session key and so cannot sign the message at all, which scopes the permission to `Pending` without any rule needing to say so.
+
 **Automatic renewal flow:**
 
 1. Station generates a new ECDSA P-256 keypair on-device (the private key **MUST NOT** leave the station)
@@ -602,7 +604,7 @@ nothing ordered them. The profile now points here.
 | > 30 | Normal | The station **SHOULD** re-evaluate its certificate's remaining validity daily. It initiates no renewal unless the server triggers one ([§4.7.2](#472-server-triggered-renewal)). |
 | 7–30 | Elevated | The station **SHOULD** initiate the automatic renewal flow of [§4.7.1](#471-automatic-renewal). This is the same obligation §4.7.1 states, expressed as a band. The server **SHOULD** log a background alert. |
 | < 7 | High | The station **SHOULD** initiate renewal immediately rather than wait for its next daily re-evaluation. The server **SHOULD** send TriggerCertificateRenewal [MSG-024] if the station has not already started, and **SHOULD** alert the operator. |
-| 0 (expired) | Emergency | The certificate has expired. The station **MUST** enter offline-only mode (BLE), and **MUST NOT** enter provisioning mode or discard its stored credentials ([Chapter 07 §3.1](07-errors.md#31-transport-errors-1xxx), `1004`). Expiry is determinable locally from the certificate's own `notAfter`, and the station **MUST NOT** make entering that mode conditional on first observing a rejected handshake. Recovery requires a server-triggered renewal over an existing session, or physical [re-provisioning](04-flows.md#re-provisioning-an-already-provisioned-station). |
+| 0 (expired) | Emergency | The certificate has expired. The station **MUST** enter offline-only mode (BLE), and **MUST NOT** enter provisioning mode or discard its stored credentials ([Chapter 07 §3.1](07-errors.md#31-transport-errors-1xxx), `1004`). Expiry is determinable locally from the certificate's own `notAfter`, and the station **MUST NOT** make entering that mode conditional on first observing a rejected handshake. Recovery requires a server-triggered renewal over an existing session — including a `Pending` one, which can both answer the trigger and originate the CSR ([Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states)) — or physical [re-provisioning](04-flows.md#re-provisioning-an-already-provisioned-station). |
 
 **Why the expired row does not begin with a reconnection attempt.** The superseded copy had the
 station treat the next TLS failure as connection loss and reconnect, entering offline-only mode
@@ -894,7 +896,7 @@ Everything in this section applies **while `MessageSigningMode` is `All`** — t
 |-----------|--------|
 | No session key held for the peer | **Refuse to send.** The sender **MUST NOT** publish the message unsigned. It **MUST** log the refusal and surface it to the operator, and **MUST NOT** silently drop it without a record |
 | Sender is a **server** with no key for the target station | Withhold the command. The station is not in a state where it can act on one: no key means the station is `Rejected`, or its session has ended — a `Pending` station holds a key precisely so this case does not close its repair channel ([`boot-notification.md` §5.3](profiles/core/boot-notification.md)). Treat the command as undeliverable and fail whatever operation depended on it, rather than emitting something the station must reject |
-| Sender is a **station** with no key | It is not `Operational` — it is `Booting`, restricted, or disconnected ([Chapter 05 §1](05-state-machines.md#1-station-state-machine)) — and in none of those states is it permitted to originate a message anyway. Boot first |
+| Sender is a **station** with no key | It is not `Operational` — it is `Booting`, `Rejected`, or disconnected ([Chapter 05 §1](05-state-machines.md#1-station-state-machine)) — and in none of those states is it permitted to originate a message anyway. Note that `Pending` is **not** in this row: it holds a session key, and it is the one restricted state in which the station may originate SignCertificate [MSG-022] to renew its own certificate ([Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states)). Boot first |
 
 > **Why the sending half is normative, and why it is the more important half.**
 >

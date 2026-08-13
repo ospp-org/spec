@@ -1,6 +1,6 @@
 # Chapter 01 — Architecture
 
-> **Status:** Draft | **OSPP Version:** 0.18.0
+> **Status:** Draft | **OSPP Version:** 0.19.0
 
 This chapter defines the foundational system model upon which all subsequent chapters build: the participants, their communication channels, the hardware model, the identity scheme, the controller topologies, and the layered communication stack.
 
@@ -487,7 +487,7 @@ The last three rows are **required on every pattern**, and the runtime path of �
 | Status | Meaning | Station Behavior |
 |--------|---------|------------------|
 | **Accepted** | Station is registered and authorized | Proceed to `Operational` |
-| **Pending** | Admin approval outstanding, or a `3018 TOPOLOGY_MISMATCH` to repair | Enter the `Pending` restricted state — answer commands, send nothing unsolicited, serve no customers — and retry BootNotification at `retryInterval` |
+| **Pending** | Admin approval outstanding, or a `3018 TOPOLOGY_MISMATCH` to repair | Enter the `Pending` restricted state — answer commands, originate nothing but BootNotification retries and a SignCertificate [MSG-022] renewal ([Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states)), serve no customers — and retry BootNotification at `retryInterval` |
 | **Rejected** | Invalid credentials or policy violation | Enter the `Rejected` restricted state — refuse commands too — and retry at `retryInterval` |
 
 ### 7.4 Server-Side Registration
