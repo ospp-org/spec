@@ -1,6 +1,6 @@
 # Chapter 08 — Configuration
 
-> **Status:** Draft | **OSPP Version:** 0.16.0
+> **Status:** Draft | **OSPP Version:** 0.17.0
 
 This chapter defines the configuration model for OSPP stations, including the key-value store structure, supported data types, access modes, mutability semantics, and the complete registry of standard configuration keys. Configuration is read and written via the [GetConfiguration](03-messages.md#62-getconfiguration) and [ChangeConfiguration](03-messages.md#61-changeconfiguration) messages defined in Chapter 03.
 
@@ -168,7 +168,7 @@ Two such pairs exist. `HeartbeatIntervalSeconds` with `heartbeatIntervalSec` **a
 | `CertificateSerialNumber` | string | -- | R | Static | -- | Serial number of the station's **CURRENT** X.509 client certificate. ReadOnly; updated when a new certificate is provisioned. A PREVIOUS certificate retained during rotation is deliberately not represented here — this key is single-valued by design, and the overlap it does not show is bounded by [Chapter 06 — Security](06-security.md), §4.7.6. |
 | `AuthorizationCacheEnabled` | boolean | `true` | RW | Dynamic | -- | When `true`, the station caches authorization responses locally for faster repeat authorizations. |
 | `MessageSigningMode` | string | `"All"` | RW | **Static** | `"All"`, `"None"` | Controls HMAC-SHA256 message signing. `All` = every message except the three structural exemptions (see [Chapter 06](06-security.md), §5.6); `None` = disabled, development and test harnesses only. **Static**, not Dynamic: the mode is bound to the session key, which is issued at boot, so a mid-session change would leave one peer signing and the other not — and verification fails closed while signing fails closed too, so the station goes silent in both directions. Taking effect at the next reboot means the change and the new key land on the same event. |
-| `OfflinePassPublicKey` | string | -- | W | Dynamic | valid SEC1 key | Server's ECDSA P-256 public key for OfflinePass signature verification (uncompressed or compressed SEC1 format). Updated via ChangeConfiguration during key rotation. Stations MUST accept passes signed by the current or immediately previous key. |
+| `OfflinePassPublicKey` | string | -- | W | Dynamic | valid SEC1 key | Server's ECDSA P-256 public key for OfflinePass signature verification (uncompressed or compressed SEC1 format). Updated via ChangeConfiguration during key rotation. Stations MUST accept passes signed by the current key, and the immediately previous key **for the grace period only** — the window is bounded by [Chapter 06 — Security](06-security.md), §6.7 step 4, which is its only statement; after it expires the station **MUST** discard the cached previous key. |
 | `CertificateRenewalThresholdDays` | integer | `30` | RW | Dynamic | 7--90 | Days before certificate expiry to initiate automatic renewal. The station checks daily and starts the SignCertificate flow when within this threshold. See [Chapter 06 — Security](06-security.md), §4.7. |
 | `CertificateRenewalEnabled` | boolean | `true` | RW | Dynamic | -- | Master switch for automatic certificate renewal. When `false`, the station does not initiate renewal automatically but still responds to server-triggered renewal (TriggerCertificateRenewal [MSG-024]). |
 

@@ -1,8 +1,8 @@
 # OSPP Known Issues
 
-**Date:** 2026-08-11
-**Specification-document version:** 0.16.0 (release tag `v0.16.0`)
-**Status:** 3 blockers open (all BLE), 14 non-blocking issues open
+**Date:** 2026-08-13
+**Specification-document version:** 0.17.0 (release tag `v0.17.0`)
+**Status:** 3 blockers open (all BLE), 14 non-blocking issues open, 1 option evaluated and rejected
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle and
 the arcs since
 
@@ -15,6 +15,7 @@ the arcs since
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
 | OPEN | 14 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** |
 | CLOSED | 4 | [Device Management Required vs RECOMMENDED](#closed-0160--the-device-management-profile-was-required-in-chapter-08-and-recommended-not-mandatory-in-its-own-readme) — closed in 0.16.0 in favour of the capability · [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
+| DECIDED | 1 | [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it |
 | **Total open** | **17** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
@@ -1138,3 +1139,49 @@ Adjacent, and already fixed: the ordering rule was specified twice the same way,
 provenance-bearing version in the chapter a server implementer does not read
 ([`02-transport.md` §3.2](spec/02-transport.md)) and a weaker one in the profile they do. That
 one **was** a text edit and was settled in this arc.
+
+---
+
+## DECIDED (0.17.0) — a wire mechanism to shorten the previous-key grace period was evaluated for compromise response and rejected
+
+`06-security.md` §6.7.1 gives the server a compromise posture that changes obligations and adds
+nothing to the wire. One wire mechanism was considered on the way there and is recorded here with
+its cost, because the gap it addresses is real and the next reader will re-derive it otherwise.
+
+**What was proposed.** A way for the server to tell a station *"discard the cached previous key
+now"* — a new Dynamic registry key, or a flag on ChangeConfiguration [MSG-013] — so that
+compromise response is not obliged to leave a compromised key acceptable for the grace period at
+stations it has already reached.
+
+**Why it looks compelling.** §6.7 step 3 says so outright: the cached key and the grace period are
+both internal, *"a server cannot read or set either over the protocol"*. So the one exposure window
+the server has actually reached is the one window it has no way to close, and it must wait out a
+period whose length it cannot even read.
+
+**Why it was rejected.**
+
+1. **It buys at most the grace period, and only where the server has already succeeded.** Default
+   300 seconds, at stations that took the new key. The *unbounded* window — a station not yet
+   updated, which goes on accepting the compromised key until it reconnects — is untouched, and
+   §6.7.1 establishes that this is the larger exposure by a wide margin: an unreached station does
+   not lose verification, it keeps verifying whatever the attacker signs.
+2. **The window it closes closes by itself.** Step 4 already obliges the station to discard the
+   cached key when the period expires. The mechanism would only make that happen sooner, against
+   an attacker who must additionally be physically present at that station over BLE inside the
+   window that follows that station's own update.
+3. **The cost is not small, and part of it is perverse.** A new key must be authored in both
+   statements of the registry (`08-configuration.md` §§2--6 *and* §9) and keep
+   `tools/check-config-ranges.py` at baseline; every station must implement it; both SDKs and the
+   server gain surface. And because an unrecognized key makes its entry `NotSupported` and *"no key
+   in the request is applied"* (`08-configuration.md` §1.3), a server that batches the new key with
+   the `OfflinePassPublicKey` push against a station predating it **loses the key push as well** —
+   the mechanism can prevent the very remediation it exists to accelerate. Pushing it separately
+   avoids that and costs a second round trip to every station during an incident.
+
+**What would reopen it.** The grace period is implementation-defined and this specification states
+**no upper bound** on it — §6.7 step 3 gives a 300-second default and lets a vendor expose it as a
+`Vendor_` key. A deployment whose stations use a materially longer period turns point 1 on its
+head: the window at *updated* stations stops being negligible, and a mechanism to cut it short
+starts paying for itself. Evidence of such a deployment — not a hypothetical one — is what should
+reopen this. Bounding the grace period from above in §6.7 is the cheaper alternative to reach for
+first, and it needs no wire surface either.

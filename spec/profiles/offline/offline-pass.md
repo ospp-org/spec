@@ -1,6 +1,6 @@
 # OfflinePass Structure
 
-> **Status:** Draft | **OSPP Version:** 0.16.0
+> **Status:** Draft | **OSPP Version:** 0.17.0
 
 ## 1. Overview
 
@@ -68,7 +68,7 @@ The server signs the OfflinePass using ECDSA P-256 with SHA-256 (FIPS 186-4). Th
 3. **Base64 encoding** -- the resulting DER-encoded signature is Base64-encoded and placed in the `signature` field.
 4. **Verification** -- the station verifies the signature using the server's ECDSA P-256 public key, which is provisioned during BootNotification or via ChangeConfiguration. The station **MUST** reject any pass that fails signature verification with error `2002 OFFLINE_PASS_INVALID`. Verification is malleability-agnostic — it MUST accept any valid DER ECDSA P-256 signature regardless of which half of the order `s` lies in; low-s normalisation is a signing-time requirement only.
 
-The server **MUST** rotate signing keys periodically. Key rotation is communicated to stations via ChangeConfiguration with the `OfflinePassPublicKey` key (an ECDSA P-256 public key in uncompressed or compressed SEC1 format). Stations **MUST** accept passes signed by the current key or the immediately previous key (to handle rotation race conditions).
+The server **MUST** rotate signing keys periodically. Key rotation is communicated to stations via ChangeConfiguration with the `OfflinePassPublicKey` key (an ECDSA P-256 public key in uncompressed or compressed SEC1 format). Stations **MUST** accept passes signed by the current key, and the immediately previous key **for the grace period only** (to handle rotation race conditions). The window is bounded by [`06-security.md` §6.7](../../06-security.md) step 4, which is its only statement; when the grace period expires the station **MUST** discard the cached previous key. An unbounded reading would leave a superseded key — including one an attacker holds ([`06-security.md` §6.7.1](../../06-security.md)) — acceptable indefinitely, until a second rotation displaced it.
 
 ## 4. Validation Checks (10)
 
