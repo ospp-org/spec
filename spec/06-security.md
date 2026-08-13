@@ -1,6 +1,6 @@
 # Chapter 06 — Security
 
-> **Status:** Draft | **OSPP Version:** 0.17.1
+> **Status:** Draft | **OSPP Version:** 0.18.0
 
 This chapter defines the complete security model for the OSPP protocol, covering threat analysis, authentication, authorization, cryptographic requirements, message integrity, offline security, anti-abuse mechanisms, and data protection.
 
@@ -592,12 +592,30 @@ Upon receiving a TriggerCertificateRenewal REQUEST, the station responds with `A
 
 #### 4.7.3 Emergency Renewal
 
+**This table is the normative statement of the renewal urgency scale.** It was stated twice — here
+and in [`certificate-renewal.md` §5](profiles/security/certificate-renewal.md) — the two copies
+disagreed on the `0 (expired)` row, and neither carried an RFC 2119 keyword, so neither bound and
+nothing ordered them. The profile now points here.
+
 | Days to Expiry | Priority | Behavior |
 |:-:|:---:|---|
-| > 30 | Normal | Station checks daily. No action unless server-triggered. |
-| 7–30 | Elevated | Station initiates automatic renewal. Server logs a background alert. |
-| < 7 | High | Station initiates renewal immediately. Server sends TriggerCertificateRenewal if station has not already started. Server alerts operator. |
-| 0 (expired) | Emergency | Certificate has expired. Station enters offline-only mode (BLE). Recovery requires server-triggered renewal over an existing session or physical [re-provisioning](04-flows.md#re-provisioning-an-already-provisioned-station). |
+| > 30 | Normal | The station **SHOULD** re-evaluate its certificate's remaining validity daily. It initiates no renewal unless the server triggers one ([§4.7.2](#472-server-triggered-renewal)). |
+| 7–30 | Elevated | The station **SHOULD** initiate the automatic renewal flow of [§4.7.1](#471-automatic-renewal). This is the same obligation §4.7.1 states, expressed as a band. The server **SHOULD** log a background alert. |
+| < 7 | High | The station **SHOULD** initiate renewal immediately rather than wait for its next daily re-evaluation. The server **SHOULD** send TriggerCertificateRenewal [MSG-024] if the station has not already started, and **SHOULD** alert the operator. |
+| 0 (expired) | Emergency | The certificate has expired. The station **MUST** enter offline-only mode (BLE), and **MUST NOT** enter provisioning mode or discard its stored credentials ([Chapter 07 §3.1](07-errors.md#31-transport-errors-1xxx), `1004`). Expiry is determinable locally from the certificate's own `notAfter`, and the station **MUST NOT** make entering that mode conditional on first observing a rejected handshake. Recovery requires a server-triggered renewal over an existing session, or physical [re-provisioning](04-flows.md#re-provisioning-an-already-provisioned-station). |
+
+**Why the expired row does not begin with a reconnection attempt.** The superseded copy had the
+station treat the next TLS failure as connection loss and reconnect, entering offline-only mode
+only if that reconnection was refused on the certificate. The attempt cannot succeed — the
+certificate is expired, so every cycle fails for the reason that started it — and nothing bounds
+the cycle, leaving the station neither online nor serving BLE customers for as long as its backoff
+runs. [Chapter 02 §1.3](02-transport.md#13-tls-12-floor-13-recommended) withholds the retry on
+this row for the same reason, giving expiry *alert operator* where the row beside it gives *retry
+with backoff*. The one station the attempt would serve is one whose clock is **fast** — believing
+itself expired while the server would still accept it — and that case is narrow, since a station
+that cannot connect also cannot resynchronise. A **single** probe rather than a cycle is the shape
+to add if it is judged worth covering; it is recorded in
+[KNOWN-ISSUES](../KNOWN-ISSUES.md) rather than adopted here.
 
 #### 4.7.4 Failure Handling
 

@@ -70,7 +70,7 @@ This establishes that the station connects at all, so that the refusals in Parts
 13. Trigger a connection.
 14. Verify the TLS handshake does **not** complete.
 15. Verify **no MQTT CONNECT** is sent and no BootNotification appears.
-16. Verify the station reports `1003 TLS_HANDSHAKE_FAILED` or `1004 CERTIFICATE_ERROR` on its local diagnostic channel.
+16. Verify the station reports `1003 TLS_HANDSHAKE_FAILED` or `1004 CERTIFICATE_ERROR` on its local diagnostic channel. **This is the one refusal in this case whose code is not yet pinned, deliberately.** Parts D and E present a certificate that fails validation and are `1004`; here the presented certificate is sound and *would* validate — what is missing is the station's anchor, so no certificate is at fault and the deployment has failed to supply a required configuration row ([`01-architecture.md` §7.2](../../../spec/01-architecture.md#72-physical-configuration), *Broker trust policy*). Which code names that is recorded as open in [KNOWN-ISSUES](../../../KNOWN-ISSUES.md); until it is decided this step accepts either, and that latitude is scoped to Part C alone.
 17. Observe at least three reconnection cycles. Verify the station does not escalate into an unverified connection after repeated failures.
 
 ### Part D — Anchor present, chain does not validate: the station refuses
@@ -79,7 +79,7 @@ This establishes that the station connects at all, so that the refusals in Parts
 19. Configure the harness to present the **`H_rogue`** server certificate, carrying the same SAN and hostname as `H_good`'s.
 20. Trigger a connection.
 21. Verify the TLS handshake does not complete, no MQTT CONNECT is sent, and no BootNotification appears.
-22. Verify `1003` or `1004` is reported locally.
+22. Verify `1004 CERTIFICATE_ERROR` with `details.cause: invalid-chain` is reported locally. A chain was presented and did not validate against the anchor held, which is a failure a certificate caused — `07-errors.md` §3.1 gives `1004` precedence over `1003` for all of those. `1003` is not accepted here.
 
 ### Part E — `stationCaChain` is not the station's server anchor
 
@@ -87,7 +87,7 @@ The substitution this case exists for.
 
 23. Set the *Broker trust policy* to the station's own `stationCaChain`, exactly as the provisioning response delivered it (Station CA, optionally followed by Root CA).
 24. Configure the harness to present the `H_good` server certificate.
-25. Verify the station refuses, per Parts C and D. `stationCaChain` anchors the station's own client certificate and cannot anchor the broker's; this is Part D's condition reached through the field an integrator is most likely to mis-assign.
+25. Verify the station refuses **and reports `1004` with `details.cause: invalid-chain`, exactly as Part D** — an anchor was supplied and the presented chain did not validate against it. `stationCaChain` anchors the station's own client certificate and cannot anchor the broker's; this is Part D's condition reached through the field an integrator is most likely to mis-assign, so it is Part D's code and not Part C's open one.
 26. Verify that in no configuration across Parts C, D and E did an accepted handshake occur while `stationCaChain` was the only anchor present.
 
 ### Part F — The TLS floor is not a refusal reason
@@ -105,7 +105,7 @@ Guards against a false pass: a station that refuses Parts C–E for the wrong re
 4. With an anchor present and a chain that does not validate against it, the station refuses.
 5. `stationCaChain` in the anchor slot produces a refusal, never a connection.
 6. Every refusal is a non-completed TLS handshake with no MQTT CONNECT and no BootNotification.
-7. Every refusal is reported locally as `1003` or `1004`.
+7. Every refusal is reported locally. Parts D and E report `1004 CERTIFICATE_ERROR` with `details.cause: invalid-chain` — a presented chain that did not validate is a failure a certificate caused, and `1003` is not an accepted alternative. Part C accepts `1003` or `1004`, alone among the three, because no certificate is at fault there and which code names a missing anchor is open.
 
 ## Failure Criteria
 

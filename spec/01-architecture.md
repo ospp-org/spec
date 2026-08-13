@@ -1,6 +1,6 @@
 # Chapter 01 — Architecture
 
-> **Status:** Draft | **OSPP Version:** 0.17.1
+> **Status:** Draft | **OSPP Version:** 0.18.0
 
 This chapter defines the foundational system model upon which all subsequent chapters build: the participants, their communication channels, the hardware model, the identity scheme, the controller topologies, and the layered communication stack.
 

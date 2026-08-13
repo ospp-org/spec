@@ -6,7 +6,7 @@ Security Profile
 
 ## Purpose
 
-Verify that the station presents a valid X.509 client certificate during the TLS handshake (TLS 1.2 or 1.3) with the MQTT broker, that the server validates the certificate chain correctly, and that connections with expired, revoked, or self-signed certificates are rejected with the appropriate error codes (`1003 TLS_HANDSHAKE_FAILED`, `1004 CERTIFICATE_ERROR`).
+Verify that the station presents a valid X.509 client certificate during the TLS handshake (TLS 1.2 or 1.3) with the MQTT broker, that the server validates the certificate chain correctly, and that connections with expired, revoked, or self-signed certificates are rejected and reported as `1004 CERTIFICATE_ERROR` carrying the `details.cause` that names the fault. `1003 TLS_HANDSHAKE_FAILED` is **not** an accepted alternative on any of them: `07-errors.md` §3.1 gives `1004` precedence for every handshake failure a certificate caused.
 
 ## References
 
@@ -55,7 +55,7 @@ Verify that the station presents a valid X.509 client certificate during the TLS
 15. Trigger the station to connect to the MQTT broker.
 16. Observe the TLS handshake.
 17. Verify that the broker rejects the connection during the TLS handshake.
-18. Verify the station logs error `1004` (`CERTIFICATE_ERROR`) locally.
+18. Verify the station logs error `1004` (`CERTIFICATE_ERROR`) with `details.cause: expired` locally.
 19. Verify the station does NOT establish an MQTT connection.
 20. Verify the station does NOT send BootNotification (no MQTT session exists).
 21. If the station has an alternative reporting channel (e.g., management interface), verify a SecurityEvent is generated with relevant certificate error details.
@@ -65,7 +65,7 @@ Verify that the station presents a valid X.509 client certificate during the TLS
 22. Provision the station with the self-signed certificate.
 23. Trigger the station to connect to the MQTT broker.
 24. Verify the TLS handshake fails (broker rejects the unknown CA).
-25. Verify the station logs error `1003` (`TLS_HANDSHAKE_FAILED`) or `1004` (`CERTIFICATE_ERROR`).
+25. Verify the station logs error `1004` (`CERTIFICATE_ERROR`) with `details.cause: self-signed`. `1003` is **not** accepted here: `07-errors.md` §3.1 gives `1004` precedence over `1003` for every handshake failure a certificate caused.
 26. Verify no MQTT connection is established.
 
 ### Part E — Revoked Certificate Rejection
@@ -74,7 +74,7 @@ Verify that the station presents a valid X.509 client certificate during the TLS
 28. Ensure the broker's CRL or OCSP responder is updated to reflect the revocation.
 29. Trigger the station to connect.
 30. Verify the TLS handshake fails due to certificate revocation.
-31. Verify the station logs error `1004` (`CERTIFICATE_ERROR`).
+31. Verify the station logs error `1004` (`CERTIFICATE_ERROR`) with `details.cause: revoked`.
 32. Verify no MQTT connection is established.
 
 ### Part F — Certificate Renewal Behavior
@@ -93,7 +93,7 @@ Verify that the station presents a valid X.509 client certificate during the TLS
 3. An expired certificate causes TLS handshake failure; no MQTT connection is established.
 4. A self-signed certificate causes TLS handshake failure; no MQTT connection is established.
 5. A revoked certificate causes TLS handshake failure; no MQTT connection is established.
-6. The station logs the appropriate error code (`1003` or `1004`) for each certificate failure scenario.
+6. The station logs `1004 CERTIFICATE_ERROR` for **every** certificate failure scenario, each carrying the `details.cause` that names it — `expired` in Part C, `self-signed` in Part D, `revoked` in Part E. `1003` is not an acceptable substitute on any of them, and a missing or wrong `details.cause` is not a pass: the discriminator is what the station's own recovery branches on.
 7. On an expired certificate the station enters offline-only BLE mode, and on no branch of `1004` does it enter provisioning mode or discard its stored credentials.
 8. After operator-initiated certificate renewal, the station successfully reconnects and resumes normal operation.
 
@@ -103,7 +103,7 @@ Verify that the station presents a valid X.509 client certificate during the TLS
 2. Station connects successfully with a self-signed certificate.
 3. Station connects successfully with a revoked certificate.
 4. Station does not present a client certificate during the TLS handshake.
-5. Station does not log error `1003` or `1004` on certificate rejection.
+5. Station logs no error on a certificate rejection, **or logs `1003` instead of `1004`**, or logs `1004` without `details.cause`, or with a `details.cause` that does not match the scenario. `07-errors.md` §3.1 gives `1004` precedence over `1003` for every handshake failure a certificate caused, so `1003` here is a wrong answer and not a permitted alternative.
 6. Station sends MQTT messages (including BootNotification) without a successful TLS handshake.
 7. Station enters provisioning mode, or discards or overwrites stored credentials, on an expired, revoked, self-signed or otherwise invalid certificate. `1004` forbids both on every branch: re-provisioning is operator-initiated, and on the `expired` branch the station enters offline-only BLE mode instead.
 8. TLS version negotiated is below **1.2** — the floor is TLS 1.2, with TLS 1.3 RECOMMENDED and negotiated whenever both peers support it (`spec/02-transport.md` §1.3). Negotiating 1.2 is **not** a failure: the floor exists for constrained cellular modems that cap at 1.2 with no firmware path to 1.3.

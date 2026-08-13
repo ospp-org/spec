@@ -94,12 +94,19 @@ This is used when:
 
 ## 5. Priority Levels
 
-| Days to Expiry | Priority | Behavior |
-|:-:|:---:|---|
-| > 30 | Normal | Station checks daily. No action unless server-triggered. |
-| 7 — 30 | Elevated | Station initiates automatic renewal. Server logs a background alert. |
-| < 7 | High | Station initiates renewal immediately. Server sends TriggerCertificateRenewal if station has not already started. Server alerts operator. |
-| 0 (expired) | Emergency | Certificate has expired. Station treats next TLS failure as connection loss and reconnects. If reconnection fails due to certificate rejection, station enters offline-only mode (BLE). Recovery requires server-triggered renewal over an existing session or physical [re-provisioning](../../04-flows.md#re-provisioning-an-already-provisioned-station). |
+The renewal urgency scale — the four days-to-expiry bands and what each obliges of the station and
+the server — is stated normatively in
+[Chapter 06 — Security §4.7.3](../../06-security.md#473-emergency-renewal) and is **not** restated
+here.
+
+It was previously carried in both places. The two copies agreed on three of four rows and
+disagreed on `0 (expired)`, where this file inserted a reconnection attempt the chapter did not
+have; neither copy carried an RFC 2119 keyword, so neither bound, and no precedence rule ordered a
+chapter against a profile document. §4.7.3 is the site the rest of the specification already cites
+for this behaviour — the `1004 CERTIFICATE_ERROR` entry in
+[Chapter 07 §3.1](../../07-errors.md#31-transport-errors-1xxx) names it as the fixed recovery for
+the `expired` branch — so it is the copy that was kept, and the reconnection step was dropped with
+its reasoning recorded there.
 
 ## 6. Error Handling
 

@@ -1,6 +1,6 @@
 # Chapter 02 — Transport
 
-> **Status:** Draft | **OSPP Version:** 0.17.1
+> **Status:** Draft | **OSPP Version:** 0.18.0
 
 OSPP defines three transport layers for communication between participants. Each transport serves a distinct channel with its own security model, reliability guarantees, and failure modes.
 
@@ -103,8 +103,9 @@ Station                                              Broker
 
 | Scenario | Behavior |
 |----------|----------|
-| TLS handshake fails (invalid cert) | Station MUST log error `1003` (`TLS_HANDSHAKE_FAILED`), retry with backoff |
-| Certificate expired | Station MUST log error `1004` (`CERTIFICATE_ERROR`), alert operator |
+| TLS handshake fails, no certificate at fault (cipher suite or protocol version) | Station MUST log error `1003` (`TLS_HANDSHAKE_FAILED`), retry with backoff |
+| TLS handshake fails because a certificate was rejected — revoked, self-signed, or an invalid chain | Station **MUST** log error `1004` (`CERTIFICATE_ERROR`) with the matching `details.cause`, keep its credentials, stay off the broker, alert operator. **Not `1003`** — [07-errors §3.1](07-errors.md#31-transport-errors-1xxx) gives `1004` precedence over `1003` for every failure a certificate caused |
+| Certificate expired | Station MUST log error `1004` (`CERTIFICATE_ERROR`) with `details.cause: expired`, alert operator |
 | CONNACK with non-zero reason code | Station MUST log the reason code, retry with backoff |
 | CONNACK `0x86` (Bad Username or Password) | Likely mTLS misconfiguration — station MUST NOT retry without operator intervention |
 
@@ -143,7 +144,7 @@ The `v1` segment in the topic path is a **namespace identifier**, NOT the protoc
 - The protocol version is carried inside the message envelope via the `protocolVersion` field (see [Chapter 03 — Messages](03-messages.md)) and checked at boot by **exact match** against the set the server supports ([VERSIONING.md](../VERSIONING.md)). "Negotiation" here means that check and its `1007` outcome; the two peers do not converge on a version, and a shared MAJOR implies nothing.
 - The topic namespace `v1` MUST remain `v1` for every OSPP protocol version, regardless of that version's MAJOR component. The two numbers are unrelated: the namespace identifies the topic layout, the envelope field identifies the message contract.
 - A new topic namespace (e.g., `v2`) would only be introduced for a fundamental transport-level change — a different topic shape or a different addressing scheme — not for any change the envelope's `protocolVersion` can express.
-- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.17.1*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.3.0`): the two version numbers evolve separately and need not match.
+- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.18.0*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.3.0`): the two version numbers evolve separately and need not match.
 
 ### 2.3 Server Subscription Patterns
 
@@ -883,8 +884,9 @@ All timestamps MUST use **ISO 8601** format with **millisecond precision** and *
 | Scenario | Transport | Detection | Recovery |
 |----------|-----------|-----------|----------|
 | MQTT broker unreachable | MQTT | TCP connect fails | Exponential backoff (Section 4.5) |
-| TLS handshake fails | MQTT | TLS error | Log `1003`, retry with backoff |
-| Certificate expired | MQTT | TLS error | Log `1004`, alert operator |
+| TLS handshake fails, no certificate at fault | MQTT | TLS error | Log `1003`, retry with backoff |
+| TLS handshake fails, a certificate was rejected | MQTT | TLS error | Log `1004` with the matching `details.cause` — never `1003` ([07-errors §3.1](07-errors.md#31-transport-errors-1xxx)) |
+| Certificate expired | MQTT | TLS error | Log `1004` with `details.cause: expired`, alert operator |
 | CONNACK rejected | MQTT | MQTT reason code | Log reason, retry with backoff |
 | MQTT connection lost | MQTT | PINGRESP timeout / TCP reset | Continue BLE, buffer messages, backoff |
 | Keep-alive timeout (server side) | MQTT | No heartbeat for 3.5 × interval | Mark station offline, fire LWT |

@@ -1,8 +1,8 @@
 # OSPP Known Issues
 
 **Date:** 2026-08-13
-**Specification-document version:** 0.17.1 (release tag `v0.17.1`)
-**Status:** 3 blockers open (all BLE), 17 non-blocking issues open, 1 option evaluated and rejected
+**Specification-document version:** 0.18.0 (release tag `v0.18.0`)
+**Status:** 3 blockers open (all BLE), 16 non-blocking issues open, 3 decisions recorded
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle and
 the arcs since
 
@@ -13,10 +13,10 @@ the arcs since
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 17 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** · **[one table gives the same act opposite verdicts](#open--one-table-gives-the-same-act-opposite-verdicts-and-a-certificate-renewal-cannot-conclude-in-the-state-the-spec-keeps-open-for-repairs)** · **[`1004`'s causes are all instances of `1003`'s](#open--every-cause-of-1004-is-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepts-either)** · [the certificate urgency scale is stated twice](#open--the-certificate-urgency-scale-is-stated-twice-and-the-expired-row-is-the-one-that-differs) |
+| OPEN | 16 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** · **[one table gives the same act opposite verdicts](#open--one-table-gives-the-same-act-opposite-verdicts-and-a-certificate-renewal-cannot-conclude-in-the-state-the-spec-keeps-open-for-repairs)** · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) |
 | CLOSED | 4 | [Device Management Required vs RECOMMENDED](#closed-0160--the-device-management-profile-was-required-in-chapter-08-and-recommended-not-mandatory-in-its-own-readme) — closed in 0.16.0 in favour of the capability · [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
-| DECIDED | 1 | [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it |
-| **Total open** | **20** | |
+| DECIDED | 3 | [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
+| **Total open** | **19** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
@@ -1142,6 +1142,40 @@ one **was** a text edit and was settled in this arc.
 
 ---
 
+## OPEN — a station that refuses for want of a trust anchor has no code that fits, and narrowing `1003` made that visible
+
+Surfaced by the `1003`/`1004` decision above rather than introduced by it. `TC-SEC-008` Part C
+exercises a station that refuses the broker because **no trust anchor is obtainable** — the
+presented certificate is sound and *would* validate; only the anchor is missing. Under the
+specificity rule now in force, that failure belongs to neither code:
+
+- It is not `1004`. No certificate is at fault, and `1004`'s four `details.cause` values all name
+  a defect **in a certificate**. Filing it under `invalid-chain` would report an operator
+  misconfiguration as a certificate defect — though note the recovery `1004` prescribes for its
+  three non-expiry branches (*keep credentials, stay off the broker, alert the operator*) is
+  exactly right here, which is why the two were conflated for as long as they were.
+- It is not `1003` as now narrowed. Nothing failed in cipher-suite or protocol-version
+  negotiation.
+
+`06-security.md` §2.1 groups the two conditions under one obligation — *"whether no trust anchor
+is obtainable at all or an anchor is present and the presented chain does not validate against
+it"* — and says the deployment *"has failed to supply a required row of Chapter 01 §7.2"*. That
+sentence names the fault as **configuration**, not certificate.
+
+**The option space.** (a) A fifth `details.cause` on `1004` — `no-anchor` — which keeps one code
+for "the TLS peer could not be trusted" and needs a matching change to the conditional block at
+`07-errors.md` §1.4, per the **MUST** there that any entry gaining a branch gains a block in the
+same change; it also stretches `CERTIFICATE_ERROR` to cover a case where no certificate is at
+fault. (b) `5102 CONFIGURATION_ERROR`, which is what §2.1's own wording points at and whose
+recovery — an operator supplies the missing row — is the correct one, but which moves a
+connection-time refusal out of the 1xxx transport band where every sibling condition lives.
+(c) A new 1xxx code for it, which is the honest classification and the most expensive.
+Recording rather than picking: (a) and (c) change the registry, and (b) changes which band an
+integrator looks in. **`TC-SEC-008` Part C accepts either code meanwhile**, scoped to that Part
+alone and annotated in the case itself, so the latitude is visible rather than inherited.
+
+---
+
 ## OPEN — one table gives the same act opposite verdicts, and a certificate renewal cannot conclude in the state the spec keeps open for repairs
 
 `05-state-machines.md` §1.4, *Command sent to a `Pending` station*, is a single table at
@@ -1202,7 +1236,7 @@ TriggerCertificateRenewal, which cannot — and the collapse is what hid the dis
 
 ---
 
-## OPEN — every cause of `1004` is an instance of `1003`'s second cause, and the conformance case exercising both accepts either
+## DECIDED (0.18.0) — every cause of `1004` was an instance of `1003`'s second cause, and the conformance case exercising both accepted either
 
 `07-errors.md:266` defines `1003 TLS_HANDSHAKE_FAILED` as *"TLS handshake failed (cipher
 negotiation, certificate validation, or version mismatch)"*. `:267` defines `1004
@@ -1234,21 +1268,29 @@ entries carry an explicit **"Distinct from"** clause naming the code they must n
 with — `2014` (`:299`), `2015` (`:300`), `4017` (`:364`) and `4020` (`:382`). **Neither `1003`
 nor `1004` carries one.**
 
-**The option space.** (a) Specificity wins — every certificate-validation failure is `1004` with
-its required `details.cause`, and `1003` retains cipher negotiation and version mismatch only.
-This matches `1004`'s existing four-way branch and the two `TC-SEC-002` steps that already pin
-it, and requires editing `02-transport.md:106`, whose *"invalid cert"* parenthetical currently
-claims the whole class. (b) Layer wins — anything observed at a handshake is `1003`, and `1004`
-is reserved for a certificate judged invalid outside one; this contradicts `1004`'s `expired`
-recovery text, which is reached at a handshake. (c) Both, deliberately — the station logs `1003`
-for the transport event and `1004` for the certificate judgement, stated as a rule rather than
-left to the reader; this is the only option that makes the conformance suite's "either"
-correct, and it needs saying in both entries. Recording rather than picking: each changes what a
-conforming station logs, and (a) additionally narrows `1003`.
+**Decided in 0.18.0: specificity wins.** Every failure a certificate caused is `1004` with its
+required `details.cause`; `1003` is narrowed to a handshake that failed for a reason no
+certificate caused — cipher-suite or protocol-version negotiation. It was the only option
+consistent with `1004`'s existing four-way branch and with the two `TC-SEC-002` steps that already
+pinned it. The two alternatives were rejected: *layer wins* (anything at a handshake is `1003`)
+contradicts `1004`'s own `expired` recovery, which is reached at a handshake; *both,
+deliberately* would keep two codes for one event and leaves a receiver selecting between them.
+
+**The missing convention was treated as the cause, not the symptom.** Both entries now carry an
+explicit **"Distinct from"** clause naming the other, in the form `2014`, `2015`, `4017` and
+`4020` already use — the absence of that clause is what let the two registry entries describe
+overlapping conditions for as long as they did.
+
+**The instrument was repaired in the same change**, because it could not adjudicate itself:
+`TC-SEC-002` now requires `1004` with the matching `details.cause` at every one of its three
+certificate scenarios, and its Expected Results and Failure Criteria no longer accept `1003` as a
+substitute — previously a station logging `1003` for a revoked certificate failed step 31 and
+passed both summary criteria. `TC-SEC-008` Parts D and E are pinned to `1004` /
+`details.cause: invalid-chain`. **Part C is the residue and is recorded separately below.**
 
 ---
 
-## OPEN — the certificate urgency scale is stated twice, and the expired row is the one that differs
+## DECIDED (0.18.0) — the certificate urgency scale was stated twice, and the expired row was the one that differed
 
 The four-row scale appears at `06-security.md:595--600` (§4.7.3 *Emergency Renewal*) and at
 [`certificate-renewal.md` §5](spec/profiles/security/certificate-renewal.md) *Priority Levels*,
@@ -1278,15 +1320,30 @@ profile without ordering the two.
 customers immediately. Under the profile it is in a reconnect cycle first, and every attempt in
 that cycle fails for the reason that started it — the certificate is expired.
 
-**The option space.** (a) The profile's step is real and the chapter is the stale copy: keep the
-reconnect attempt and reduce the chapter to a pointer — this makes time-to-BLE depend on a
-reconnect backoff that nothing bounds. (b) The chapter is right and the inserted step is an
-artefact: enter BLE-only at expiry, which is locally determinable from the certificate's own
-`notAfter` — `07-errors.md:267` says so explicitly — and needs no failed handshake to discover.
-(c) Keep the reconnect but bound it to a single attempt, which is a requirement neither copy
-currently states. Recording rather than picking: all three change how long a station stays
-unreachable after its certificate expires. **Whichever is chosen, the scale should exist once**,
-with the other site reduced to a pointer; the duplication is what let the copies drift.
+**Decided in 0.18.0: one normative statement, the other site refers to it.** The duplication was
+treated as the cause — three copies, none carrying an RFC 2119 keyword, is why they drifted — so
+the scale now exists once and binds.
+
+**`06-security.md` §4.7.3 is the normative home**, chosen on a measurable criterion rather than on
+which document felt more authoritative: it is the site the rest of the specification already cites
+for this behaviour. The `1004 CERTIFICATE_ERROR` entry in `07-errors.md:267` — the code that
+*branches* on expiry — names §4.7.3 as the fixed recovery for its `expired` branch, twice, and
+`TC-SEC-002` step 33 cites it as well. Nothing cited `certificate-renewal.md` §5. That section is
+now a pointer, and the four rows carry **SHOULD** at the strengths §4.7.1 and §4.7.2 already
+state, with **MUST** on the expired row only.
+
+**The reconnection step was dropped, and that is the one substantive behaviour change.** It cannot
+succeed — an expired certificate fails every attempt in the cycle for the reason that started it —
+and nothing bounded the cycle, so the station was neither online nor serving BLE customers for the
+length of its backoff. `02-transport.md` withholds the retry on that row for the same reason.
+
+**What was considered and not adopted, recorded because it is the argument that would reopen
+this.** A station whose clock is **fast** believes itself expired while the server would still
+accept it, and for that station a probe is not pointless. The case is narrow — a station that
+cannot connect also cannot resynchronise, and the drift must straddle `notAfter` — and the shape
+that would cover it is a **single** probe, not the unbounded cycle the superseded copy described.
+Adding it is a new requirement neither copy stated, so it was not smuggled in under a
+de-duplication; §4.7.3 names it as the shape to reach for if the case is judged worth covering.
 
 ---
 

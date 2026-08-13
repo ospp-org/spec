@@ -1,6 +1,6 @@
 # Examples
 
-**Status: Draft** | **OSPP Version:** 0.17.1
+**Status: Draft** | **OSPP Version:** 0.18.0
 
 Validated example payloads and annotated flow sequences for the OSPP protocol.
 

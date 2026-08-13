@@ -8,6 +8,93 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.18.0] — 2026-08-14
+
+> **Two of the three contradictions `0.17.1` recorded are decided, and both were decided against
+> the duplication rather than in favour of one copy.** In each case the specification said a thing
+> twice, the copies drifted, and no rule ordered them — so picking a winner and leaving the second
+> statement standing would have rebuilt the same defect with different words. `1003`/`1004` now
+> carry the *Distinct from* convention the registry already applied to four other pairs, and the
+> urgency scale exists once.
+>
+> **MINOR, carried by obligation changes, exactly as `0.17.0` was.** Four rows that carried no RFC
+> 2119 keyword now carry **SHOULD**, the expired row carries **MUST**, and `1003` and `1004` each
+> gain a precedence obligation. Nothing moves on the wire: `protocolVersion` stays **`0.3.0`**, no
+> schema changes, and no field, message, error code or configuration key is added in either
+> direction.
+>
+> **What an implementer must actually change.** A station that logged `1003` on a rejected
+> certificate was defensible under the old text and is non-conforming now — that is the one
+> behaviour change with a firmware cost, and it is small: the code and its `details.cause` are
+> already determinable from the same TLS error the station handles today. A station that entered
+> offline-only BLE mode only after a failed reconnection must now enter it on `notAfter` alone.
+
+### Decided
+
+- **spec:** **`1003` and `1004` described the same event, and specificity wins.** Every cause
+  `1004` lists — expired, revoked, self-signed, invalid chain — is a certificate-validation
+  failure, and `1003` named *"certificate validation"* as its own second cause, so `1004` was a
+  strict subset of `1003`. The two sites that assigned them disagreed: `02-transport.md` §1.3 sent
+  every invalid certificate but expiry to `1003`, while `06-security.md` §7.5 and the `1004`
+  registry row sent revocation to `1004`. **Every failure a certificate caused is now `1004`**
+  with its required `details.cause`; `1003` is narrowed to a handshake that failed for a reason no
+  certificate caused — cipher-suite or protocol-version negotiation — and its recommended action
+  now says so, telling a station not to regenerate or discard credentials in response to it. The
+  two rejected alternatives are recorded in `KNOWN-ISSUES.md`: *layer wins* contradicts `1004`'s
+  own `expired` recovery, which is reached at a handshake; *both, deliberately* keeps two codes
+  for one event.
+- **spec:** **The missing convention was the cause, not a symptom.** `07-errors.md` already
+  carried an explicit **"Distinct from"** clause on `2014`, `2015`, `4017` and `4020` — every
+  other pair of entries close enough to be confused — and on neither of these two. Both now carry
+  one, naming the other code and stating which takes precedence. This is why the pair could
+  describe overlapping conditions for as long as it did.
+- **conformance:** **The instrument could not adjudicate itself.** `TC-SEC-002` pinned `1004`
+  alone for expired (step 18) and revoked (step 31), accepted *"`1003` or `1004`"* for self-signed
+  (step 25), then stated in Expected Results that the station logs *"the appropriate error code
+  (`1003` or `1004`) for each certificate failure scenario"*, with Failure Criterion 5 failing a
+  station only if it logged **neither**. A station logging `1003` for a revoked certificate failed
+  step 31 and passed both summary criteria. All three scenarios now require `1004` with the
+  matching `details.cause`, and both summary criteria refuse `1003` as a substitute.
+  `TC-SEC-008` Parts D and E are pinned to `1004` / `invalid-chain`.
+- **spec:** **The certificate urgency scale binds once.** It was stated in `06-security.md`
+  §4.7.3 and `certificate-renewal.md` §5; three of four rows were identical and `0 (expired)` was
+  not, one copy inserting a reconnection attempt the other lacked. Neither carried an RFC 2119
+  keyword, so neither bound, and no precedence rule reaches a chapter against a profile document.
+  **§4.7.3 is the normative home** — chosen because it is the site the rest of the specification
+  already cites, the `1004` entry naming it as the fixed recovery for its `expired` branch, where
+  nothing cited the profile section. `certificate-renewal.md` §5 is now a pointer.
+- **spec:** **The reconnection step was dropped, and that is the substantive behaviour change.**
+  It cannot succeed: the certificate is expired, so every attempt in the cycle fails for the
+  reason that started it, and nothing bounded the cycle — the station was neither online nor
+  serving BLE customers for as long as its backoff ran. `02-transport.md` §1.3 withholds the retry
+  on that row for the same reason, giving expiry *alert operator* where the row beside it gives
+  *retry with backoff*. Expiry is determinable from the certificate's own `notAfter`, and the
+  station **MUST NOT** make entering offline-only mode conditional on first observing a rejected
+  handshake.
+
+### Left open — recorded, not fixed
+
+- **spec:** **Narrowing `1003` surfaced a refusal that fits neither code.** `TC-SEC-008` Part C
+  exercises a station refusing the broker because **no trust anchor is obtainable** — the
+  presented certificate is sound and would validate; only the anchor is missing. It is not `1004`,
+  because no certificate is at fault and all four `details.cause` values name a defect *in a
+  certificate*; it is not `1003` as now narrowed, because nothing failed in negotiation.
+  `06-security.md` §2.1 calls it a deployment that *"has failed to supply a required row of
+  Chapter 01 §7.2"* — naming the fault as configuration. Three options are recorded: a fifth
+  `details.cause` on `1004`, `5102 CONFIGURATION_ERROR`, or a new 1xxx code. **Part C accepts
+  either code meanwhile**, scoped to that Part alone and annotated in the case, so the latitude is
+  visible rather than inherited.
+- **spec:** The `Pending`-state table contradiction recorded in `0.17.1` is unchanged and still
+  open; it needs a decision whose cost falls on firmware.
+
+### Not changed, and why
+
+- **No schema, vector or example payload moved.** Measured against `v0.17.1`: every changed file is
+  Markdown, no `.json` changed, and no `tools/check-*.py` gate source changed. This release is
+  **pin-only** for `ospp-protocol-php` and `ospp-protocol-ts` — their `.spec-ref` markers move to
+  `0.18.0` and nothing they implement changes. Neither SDK carries an error-code precedence rule
+  or a renewal scheduler; both surfaces belong to station firmware.
+
 ## [0.17.1] — 2026-08-13
 
 > **A certificate-cycle consistency pass. Three index-level statements were wrong and are
