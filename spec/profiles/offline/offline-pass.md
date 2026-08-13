@@ -1,6 +1,6 @@
 # OfflinePass Structure
 
-> **Status:** Draft | **OSPP Version:** 0.15.0
+> **Status:** Draft | **OSPP Version:** 0.16.0
 
 ## 1. Overview
 

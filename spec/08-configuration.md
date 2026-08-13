@@ -1,6 +1,6 @@
 # Chapter 08 — Configuration
 
-> **Status:** Draft | **OSPP Version:** 0.15.0
+> **Status:** Draft | **OSPP Version:** 0.16.0
 
 This chapter defines the configuration model for OSPP stations, including the key-value store structure, supported data types, access modes, mutability semantics, and the complete registry of standard configuration keys. Configuration is read and written via the [GetConfiguration](03-messages.md#62-getconfiguration) and [ChangeConfiguration](03-messages.md#61-changeconfiguration) messages defined in Chapter 03.
 
@@ -73,6 +73,24 @@ Configuration keys are organized into profiles that align with station capabilit
 | **Vendor-Specific** | `Vendor_{VendorName}_*` | No |
 
 A station MUST support all keys in the required profiles. A station that advertises `capabilities.bleSupported = true` in BootNotification MUST additionally support all Offline / BLE keys.
+
+### 1.6 Value Ranges
+
+The **Range** column of the registry tables in Sections 2--6 is **normative**. It is the range §1.1 and §8.2 rule 4 require the station to validate against, and a value outside it **MUST** be rejected with `status: "Rejected"` and `5109 INVALID_CONFIGURATION_VALUE`. The column appears in Sections 2--6 only; the Section 9 summary does not carry it (§9).
+
+Every cell takes one of five forms, and no others:
+
+| Form | Meaning | Keys |
+|------|---------|-----:|
+| `<min>--<max>` | Inclusive integer bounds. Both endpoints are legal values. | 15 |
+| `--` | No range constraint beyond the declared type of §1.2. | 8 |
+| `max <n> chars` | Maximum length in UTF-8 characters. | 1 |
+| A list of quoted literals | The complete set of legal values, stated inline. | 2 |
+| A named external constraint | Defined by the key's own Description or by the chapter it cites. | 3 |
+
+The counts above are checked by `tools/check-config-ranges.py`, which also verifies that every restatement of a range elsewhere in this specification agrees with the cell here.
+
+**A quantity that also travels as a dedicated wire field is bound by two constraints** — its registry range and that field's schema — and both apply. Two such pairs exist: `HeartbeatIntervalSeconds` with `heartbeatIntervalSec`, and `BootRetryInterval` with `retryInterval`. In both, the two bounds currently disagree. That disagreement is a defect in this specification, is recorded in [`KNOWN-ISSUES.md`](../KNOWN-ISSUES.md), and is **not** resolved by the reader choosing one.
 
 ---
 
@@ -169,7 +187,7 @@ These keys are REQUIRED when the station reports `capabilities.bleSupported = tr
 |-----|------|---------|:------:|:----------:|-------|-------------|
 | `FirmwareUpdateEnabled` | boolean | `true` | RW | Dynamic | -- | When `true`, the station accepts OTA firmware update commands. When `false`, UpdateFirmware requests are rejected. |
 | `DiagnosticsUploadUrl` | string | `""` | RW | Static | valid URL | HTTPS URL for diagnostics file upload. Empty string disables diagnostics upload. |
-| `LogLevel` | string | `"Info"` | RW | Dynamic | see enum | Station logging verbosity. Valid values: `"Debug"`, `"Info"`, `"Warn"`, `"Error"`. |
+| `LogLevel` | string | `"Info"` | RW | Dynamic | `"Debug"`, `"Info"`, `"Warn"`, `"Error"` | Station logging verbosity. |
 | `AutoRebootEnabled` | boolean | `false` | RW | Dynamic | -- | When `true`, the station automatically reboots on critical errors (error severity `Critical`). When `false`, the station transitions to `Faulted` state and waits for a manual Reset command. |
 
 ---
@@ -199,7 +217,7 @@ Vendor key names MUST NOT conflict with any standard OSPP key name defined in Se
 - Vendor keys are **ReadWrite** by default unless the vendor documents otherwise.
 - Vendor keys are **Dynamic** by default unless the vendor documents otherwise.
 - The station MUST include vendor keys in GetConfiguration responses when all keys are requested (empty `keys` array) — unless the vendor documents the key as WriteOnly, in which case §1.3 applies and it is never returned.
-- The server MUST NOT reject unknown vendor keys during GetConfiguration. Unknown keys requested by name MUST be returned in the `unknownKeys` array per the standard GetConfiguration RESPONSE schema.
+- The server MUST NOT reject a GetConfiguration RESPONSE because it carries vendor keys the server does not recognize. Where a vendor key is requested by name and the **station** does not recognize it, the station MUST return it in the `unknownKeys` array per the standard GetConfiguration RESPONSE schema.
 - Vendors SHOULD document all custom keys in their station implementation guide, including type, default value, valid range, and description.
 
 ---
@@ -264,14 +282,16 @@ The server sets one or more configuration keys by sending a **ChangeConfiguratio
 
 **Per-key `results[].status` values:**
 
+**Every entry is a per-key verdict on validation, not a record that the value was stored.** Because the operation is atomic, the outcome of a key depends on the whole batch: an `Accepted` or `RebootRequired` entry results in the value being applied **only if no entry in the same `results` array is `Rejected` or `NotSupported`**. In a batch that carries either, nothing is applied — including the keys whose own entry passed.
+
 | Status | Meaning |
 |--------|---------|
-| `Accepted` | Value applied immediately (Dynamic key). |
-| `RebootRequired` | Value persisted; takes effect after reboot (Static key). |
-| `Rejected` | Value rejected -- ReadOnly key, invalid type, or out-of-range value. |
-| `NotSupported` | Key not recognized by this station. |
+| `Accepted` | The value passed validation for a Dynamic key. Applied immediately if the batch carries no `Rejected` or `NotSupported` entry. |
+| `RebootRequired` | The value passed validation for a Static key. Persisted if the batch carries no `Rejected` or `NotSupported` entry, and takes effect at the next reboot. |
+| `Rejected` | Value rejected -- ReadOnly key, invalid type, or out-of-range value. Nothing in the batch is applied. |
+| `NotSupported` | Key not recognized by this station. Nothing in the batch is applied. |
 
-When a `results` entry is `Rejected` or `NotSupported`, it SHOULD also carry `results[].errorCode` and `results[].errorText` to assist diagnostics.
+A `Rejected` entry **MUST** carry `results[].errorCode` and `results[].errorText` for the two causes this specification names: `5108 CONFIGURATION_KEY_READONLY` for a ReadOnly key (§1.3), and `5109 INVALID_CONFIGURATION_VALUE` for a value that fails type parsing or range validation ([`change-configuration.md`](profiles/device-management/change-configuration.md) §6 rules 4 and 6). For any other `Rejected` or `NotSupported` entry the specification names no code, and the pair **SHOULD** be carried to assist diagnostics. The response schema leaves both members optional because the requirement is conditional on the cause, which a bare `required` list cannot express.
 
 **Example -- accepted:**
 
@@ -348,7 +368,9 @@ If NVS is unavailable or corrupt on boot, the station MUST use default values fo
 
 ## 9. Configuration Key Summary
 
-The following table provides a consolidated reference of all standard configuration keys.
+**Sections 2--6 are the registry; this table is derived from them.** Two obligations in this chapter name Sections 2--6 as the definitional key set and neither names this section — §1.3, which decides what makes a key unrecognized, and §7.1, which forbids a vendor key from colliding with a standard one. Where this table and Sections 2--6 disagree, Sections 2--6 govern and the disagreement is a defect; `tools/check-config-ranges.py` compares the two on the key set and on all four columns they share, so it cannot open silently.
+
+The table adds two columns Sections 2--6 do not carry — the index number and the profile label — and omits two they do: **Range** (§1.6) and Description. It is therefore a cross-reference, not a superset, and a reader validating a value **MUST** use Sections 2--6.
 
 | # | Key | Type | Default | Access | Mutability | Profile |
 |--:|-----|------|---------|:------:|:----------:|---------|
@@ -377,9 +399,9 @@ The following table provides a consolidated reference of all standard configurat
 | 23 | `MaxOfflineTransactions` | integer | `50` | RW | Dynamic | Offline / BLE |
 | 24 | `OfflinePassMaxAge` | integer | `3600` | RW | Dynamic | Offline / BLE |
 | 25 | `RevocationEpoch` | integer | `0` | RW | Dynamic | Offline / BLE |
-| 26 | `FirmwareUpdateEnabled` | boolean | `true` | RW | Dynamic | Device Mgmt |
-| 27 | `DiagnosticsUploadUrl` | string | `""` | RW | Static | Device Mgmt |
-| 28 | `LogLevel` | string | `"Info"` | RW | Dynamic | Device Mgmt |
-| 29 | `AutoRebootEnabled` | boolean | `false` | RW | Dynamic | Device Mgmt |
+| 26 | `FirmwareUpdateEnabled` | boolean | `true` | RW | Dynamic | Device Management |
+| 27 | `DiagnosticsUploadUrl` | string | `""` | RW | Static | Device Management |
+| 28 | `LogLevel` | string | `"Info"` | RW | Dynamic | Device Management |
+| 29 | `AutoRebootEnabled` | boolean | `false` | RW | Dynamic | Device Management |
 
 **Total: 29 standard configuration keys** (9 Core + 6 Transaction + 6 Security + 4 Offline/BLE + 4 Device Management).

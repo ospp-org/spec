@@ -1,6 +1,6 @@
 # Chapter 06 — Security
 
-> **Status:** Draft | **OSPP Version:** 0.15.0
+> **Status:** Draft | **OSPP Version:** 0.16.0
 
 This chapter defines the complete security model for the OSPP protocol, covering threat analysis, authentication, authorization, cryptographic requirements, message integrity, offline security, anti-abuse mechanisms, and data protection.
 
@@ -1393,9 +1393,9 @@ sequenceDiagram
 **Steps:**
 1. Server generates a new ECDSA P-256 key pair (RFC 6979 deterministic nonces for signing)
 2. Push the **new** public key as `OfflinePassPublicKey` via ChangeConfiguration [MSG-013]
-3. Upon receiving the new key, the station MUST store it as the active key and SHOULD cache the previous key internally for a configurable grace period (default 300 seconds). No separate configuration key is required for the previous key.
+3. Upon receiving the new key, the station MUST store it as the active key and SHOULD cache the previous key internally for a grace period, default 300 seconds. **No OSPP configuration key governs either half of this**: the cached key is internal and is deliberately not represented in the registry, and the grace period is implementation-defined — a vendor **MAY** expose it as a `Vendor_` key ([Chapter 08 — Configuration](08-configuration.md), §7). A server cannot read or set either over the protocol.
 4. **Grace period:** During the grace period the station accepts ECDSA P-256 signatures from both the new and the cached previous key. After the grace period expires the station MUST discard the cached key.
-5. After ALL stations have been updated, revoke the old key. **There is no read-back:** `OfflinePassPublicKey` is a **WriteOnly** key and **MUST NOT** be returned in a GetConfiguration [MSG-014] response ([Chapter 08 — Configuration](08-configuration.md), §2), precisely so that credentials cannot be harvested from a config dump. The server therefore tracks rollout from the **ChangeConfiguration [MSG-013] RESPONSE it received from each station** — a station counts as updated when, and only when, it has returned `Accepted`. A station that is offline, or has not answered, **MUST** be treated as not yet updated, and the old key **MUST NOT** be revoked while any such station remains within the retention window for passes it may still hold.
+5. After ALL stations have been updated, revoke the old key. **There is no read-back:** `OfflinePassPublicKey` is a **WriteOnly** key (the access mode is defined in [Chapter 08 — Configuration](08-configuration.md), §1.3; the key's registry row is in §4) and **MUST NOT** be returned in a GetConfiguration [MSG-014] response, precisely so that credentials cannot be harvested from a config dump. The server therefore tracks rollout from the **ChangeConfiguration [MSG-013] RESPONSE it received from each station** — a station counts as updated when, and only when, that RESPONSE reported `Accepted` for `OfflinePassPublicKey` **and no entry in the same `results` array was `Rejected` or `NotSupported`**. ChangeConfiguration is atomic ([Chapter 08](08-configuration.md) §8.2): an `Accepted` entry in a batch carrying either is a validation verdict on that key, not a record that the station stored it, so counting it as rolled out would revoke a signing key the station never received. Pushing `OfflinePassPublicKey` in a batch of exactly one key avoids the question entirely and is **RECOMMENDED**. A station that is offline, or has not answered, **MUST** be treated as not yet updated, and the old key **MUST NOT** be revoked while any such station remains within the retention window for passes it may still hold.
 
 ---
 

@@ -46,31 +46,47 @@ Re-implementing is the point; re-implementing *per tool* is not. Before 0.13.0 `
 
 ## Drift checks
 
-Three checks for the class *"prose asserts a property and nothing establishes it"*. They are run
+Four checks for the class *"prose asserts a property and nothing establishes it"*. They are run
 by `.github/workflows/check-drift.yml`; each takes no arguments and is cwd-independent.
 
 ```bash
 python3 tools/check-config-defaults.py       # restated defaults vs the Chapter 08 registry
 python3 tools/check-schema-conditionals.py   # schema descriptions asserting unenforced conditionals
 python3 tools/check-normative-bold.py --list # normative keywords a reader will not see as normative
+python3 tools/check-config-ranges.py         # the Range column, §9 vs §§2--6, and restated ranges
 ```
 
 They exist because most of that class is *not* mechanically checkable — a claim in prose is not
-machine-comparable to anything. These three are the exceptions, and each is narrow on purpose:
+machine-comparable to anything. These four are the exceptions, and each is narrow on purpose:
 
 | Check | Why it works | Measured precision |
 |---|---|---|
 | `check-config-defaults` | Both sides are structured — Chapter 08 is a `(key, default, range)` table, a restatement is a key name with a number near it | 37 sites, 3 flagged, **3 real** |
 | `check-schema-conditionals` | Both sides are in one JSON file — the `description` and the `if`/`then` that should back it | 33 claims, 5 flagged, **5 real** |
 | `check-normative-bold` | Pure typography — a capitalised keyword outside a `**…**` span | exact, no inference |
+| `check-config-ranges` | Same structure argument as `check-config-defaults`, one column over — a range restatement is a key name with `<lo>--<hi>` near it, and `--` is as strong a signal as the word "default" | 16 sites, 4 flagged, **4 real**; plus 2 schema-bound comparisons, both real |
+
+`check-config-ranges` also does what no other check does: it compares **the registry against its own
+summary**. Chapter 08 states the key table twice — §§2--6 with Range and Description, §9 with an
+index and a profile label — and until this check nothing compared them, while the two gates that
+existed each read only one (`check-config-defaults` and the PHP SDK's `check-config-registry.php`
+read §§2--6; `verify-protocol.sh` Categories 4 and 6 parse §9). That split is why §9 could carry
+`Device Mgmt` against §1.5's `Device Management` without anything noticing, and why neither SDK
+matched the spec on the profile label — there was no single spelling to match.
+
+Its limit is `ALIASES`, which is hand-maintained. A dedicated wire field mirroring a registry key
+is invisible to check D until somebody adds the pair, and there is no mechanical signal for "these
+two names denote one quantity" — the spec asserts it in prose and nothing marks it up. Both known
+pairs were found by reading, not by the check.
 
 Each carries a `BASELINE` or exits non-zero on any finding. **They are ratchets, not allowlists:**
 every finding is printed on every run, and the count may fall but must not rise. When it falls,
 lower the constant in the script so the improvement cannot silently regress.
 
-All three are RED-tested: injecting one drifted default, one unenforced conditional and one
-unbolded keyword makes each exit 1, and removing the injection returns it to 0. A gate nobody has
-watched fail is a gate nobody knows works.
+All four are RED-tested: injecting one drifted default, one unenforced conditional, one unbolded
+keyword, and — for `check-config-ranges`, once per check it performs — one drifted §9 cell, one
+malformed Range cell and one drifted registry range, makes each exit 1, and removing the injection
+returns it to 0. A gate nobody has watched fail is a gate nobody knows works.
 
 What defeated the more ambitious versions is recorded in each script's docstring. In short:
 `check-schema-conditionals` must not flag cross-artefact claims (JSON Schema cannot compare against

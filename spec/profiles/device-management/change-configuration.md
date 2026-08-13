@@ -30,15 +30,17 @@ Single-key requests (array of 1) are the common case. The array format enables a
 | `results` | array | Yes | Per-key results in the same order as the request `keys` array. |
 | `results[].key` | string | Yes | Configuration key name (echoed from request). |
 | `results[].status` | string | Yes | One of: `Accepted`, `RebootRequired`, `Rejected`, `NotSupported`. |
-| `results[].errorCode` | integer | No | OSPP error code (present when `status` is `Rejected` or `NotSupported`). |
-| `results[].errorText` | string | No | Machine-readable error name (present when `status` is `Rejected` or `NotSupported`). |
+| `results[].errorCode` | integer | Cond. | OSPP error code. **Required** for the two causes §6 names — `5108` for a ReadOnly key (rule 4) and `5109` for an unparseable or out-of-range value (rule 6). SHOULD accompany any other `Rejected` or `NotSupported` entry ([`08-configuration.md`](../../08-configuration.md) §8.2). Absent otherwise. |
+| `results[].errorText` | string | Cond. | Machine-readable error name in `UPPER_SNAKE_CASE`. Accompanies `errorCode` whenever that is present. |
 
 ## 5. Per-Key Status
 
+Each entry is this station's **validation verdict for one key**. Whether the value is stored depends on the whole batch: rule 2 applies none of them if any entry is `Rejected` or `NotSupported`.
+
 | Status | Description |
 |---------------------|---------------------------------------------------------------|
-| `Accepted` | The key was set successfully and is effective immediately. |
-| `RebootRequired` | The key was set successfully but requires a station reboot to take effect. The server **MAY** send a Reset command to apply the change. |
+| `Accepted` | The value passed validation for a Dynamic key. It takes effect immediately **provided no entry in this `results` array is `Rejected` or `NotSupported`**; otherwise it is discarded with the rest of the batch. |
+| `RebootRequired` | The value passed validation for a Static key. It is persisted under the same proviso, and takes effect after a station reboot. The server **MAY** send a Reset command to apply the change. |
 | `Rejected` | The key is read-only, the value is invalid, or the station cannot apply the change. The `errorCode` and `errorText` fields provide details. |
 | `NotSupported` | The key is not recognized by the station. |
 
@@ -114,7 +116,7 @@ Single-key requests (array of 1) are the common case. The array format enables a
   "payload": {
     "keys": [
       { "key": "OfflinePassPublicKey", "value": "BPkKbj...base64..." },
-      { "key": "RevocationEpoch", "value": "5" }
+      { "key": "RevocationEpoch", "value": "-1" }
     ]
   }
 }
@@ -133,25 +135,45 @@ Single-key requests (array of 1) are the common case. The array format enables a
   "payload": {
     "results": [
       { "key": "OfflinePassPublicKey", "status": "Accepted" },
-      { "key": "FirmwareVersion", "status": "Rejected", "errorCode": 5108, "errorText": "CONFIGURATION_KEY_READONLY" }
+      { "key": "RevocationEpoch", "status": "Rejected", "errorCode": 5109, "errorText": "INVALID_CONFIGURATION_VALUE" }
     ]
   }
 }
 ```
 
-### 8.5 Response (RebootRequired)
+**`OfflinePassPublicKey` was not applied.** Its entry reports that the value passed validation; the batch carried a `Rejected` entry, so rule 2 applies and the station stored nothing. A server rotating its OfflinePass signing key **MUST NOT** read this `Accepted` as evidence that the station holds the new key — see [Chapter 06 — Security](../../06-security.md) §6.7, whose rollout tracking depends on that distinction.
+
+### 8.5 Request and Response (Static key — RebootRequired)
+
+`RebootRequired` is the answer for a **Static** key (§5). `StationName` is Static; `HeartbeatIntervalSeconds` in §8.1 is Dynamic, which is why that exchange answers `Accepted`.
 
 ```json
 {
-  "messageId": "msg_b3c4d5e6-f7a8-9012-5678-345678901abc",
+  "messageId": "msg_d5e6f7a8-b9c0-1234-789a-56789012cdef",
+  "messageType": "Request",
+  "action": "ChangeConfiguration",
+  "timestamp": "2026-02-13T10:23:00.000Z",
+  "source": "Server",
+  "protocolVersion": "0.3.0",
+  "payload": {
+    "keys": [
+      { "key": "StationName", "value": "Bay Alpha - Downtown" }
+    ]
+  }
+}
+```
+
+```json
+{
+  "messageId": "msg_d5e6f7a8-b9c0-1234-789a-56789012cdef",
   "messageType": "Response",
   "action": "ChangeConfiguration",
-  "timestamp": "2026-02-13T10:21:00.180Z",
+  "timestamp": "2026-02-13T10:23:00.180Z",
   "source": "Station",
   "protocolVersion": "0.3.0",
   "payload": {
     "results": [
-      { "key": "HeartbeatIntervalSeconds", "status": "RebootRequired" }
+      { "key": "StationName", "status": "RebootRequired" }
     ]
   }
 }

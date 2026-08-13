@@ -1,8 +1,8 @@
 # OSPP Known Issues
 
 **Date:** 2026-08-11
-**Specification-document version:** 0.15.0 (release tag `v0.15.0`)
-**Status:** 3 blockers open (all BLE), 12 non-blocking issues open
+**Specification-document version:** 0.16.0 (release tag `v0.16.0`)
+**Status:** 3 blockers open (all BLE), 14 non-blocking issues open
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle and
 the arcs since
 
@@ -13,9 +13,9 @@ the arcs since
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 13 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** |
+| OPEN | 15 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[two config keys travel as wire fields with a different legal range](#open--two-configuration-keys-travel-as-dedicated-wire-fields-and-each-pair-declares-two-different-legal-ranges)** · **[Device Management is Required in Chapter 08 and optional in its own README](#open--the-device-management-profile-is-required-in-chapter-08-and-recommended-not-mandatory-in-its-own-readme)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** |
 | CLOSED | 2 | [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
-| **Total open** | **16** | |
+| **Total open** | **18** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
@@ -501,13 +501,13 @@ rather than being absorbed into a repair pass.
 
 ## OPEN — `StationIdentityCertificate` is named as a ChangeConfiguration key but is not in the Chapter 08 registry
 
-`06-security.md:1208` defines how the BLE StationIdentity certificate reaches the station:
+`06-security.md:1290` defines how the BLE StationIdentity certificate reaches the station:
 
 > "**Delivery to the station.** Provisioning response, and thereafter ChangeConfiguration [MSG-013]
 > (key `StationIdentityCertificate`) for re-issuance — mirroring `OfflinePassPublicKey`
 > distribution (§6.7)."
 
-and `provisioning-response.schema.json:66` repeats it for the `stationIdentity` field. But
+and `provisioning-response.schema.json:82` repeats it for the `stationIdentity` field. But
 `StationIdentityCertificate` does not appear anywhere in `08-configuration.md`, whose §2–§6
 tables are the registry of standard keys — 29 of them, and this is not one.
 
@@ -519,7 +519,7 @@ tables are the registry of standard keys — 29 of them, and this is not one.
 
 So a **conforming** station **MUST** reject the re-issuance write, and the rotation path §6.5.2
 depends on cannot complete. The certificate still arrives at first provisioning, so the defect is
-confined to re-issuance — which is exactly the path `:1209` says the server relies on, since
+confined to re-issuance — which is exactly the path `:1291` says the server relies on, since
 `expiresAt` "SHOULD be short" and "the server re-issues before expiry".
 
 **Not fixed here** because closing it means authoring a registry row, and every column is a
@@ -530,10 +530,95 @@ the overlap window `:1209` describes. Recording it rather than inventing those.
 
 Found by a sweep of the Chapter 08 key table for keys whose delivery channel does not exist. That
 sweep also confirms the table is otherwise sound: 29 keys, counts agreeing across
-`README.md:135`, `08-configuration.md:352` and the §1.5 profile grouping; the three keys with no
+`README.md:182`, `08-configuration.md:407` and the §1.5 profile grouping; the three keys with no
 default (`FirmwareVersion`, `CertificateSerialNumber`, `OfflinePassPublicKey`) each have a
 working source; and no key encodes `stationId` or any other certificate-bound identity, so no
 configuration write can alter what the client certificate binds.
+
+---
+
+## OPEN — two configuration keys travel as dedicated wire fields, and each pair declares two different legal ranges
+
+`08-configuration.md` §1.6 states that a quantity carried both by a registry key and by a
+dedicated wire field is bound by the registry range **and** by that field's schema. Two such
+pairs exist and **both disagree**. Neither is resolved here, because resolving either decides
+what values are legal on the wire.
+
+**`HeartbeatIntervalSeconds` / `heartbeatIntervalSec` — 30 against 10.** The registry says
+`30--3600` (`08-configuration.md:83`). Four other sites say `10--3600`:
+`03-messages.md:199`, `profiles/core/boot-notification.md:55`, `profiles/core/heartbeat.md:32`,
+and `boot-notification-response.schema.json` with `"minimum": 10`. A fifth,
+`profiles/core/connection-lost.md:75`, publishes the derived staleness window as `35--12600s`
+— which is 3.5× a **10**-second floor; against the registry's 30 it would be `105--12600s`.
+
+The two are the same quantity and the specification says so twice: the registry row's own
+Description reads *"Also configurable via BootNotification RESPONSE"*, and `03-messages.md:216`
+gives a precedence rule for the case where both arrive. So a station cannot treat them as
+separate settings.
+
+The collision is a **MUST against a MUST**. For `ChangeConfiguration {HeartbeatIntervalSeconds:
+"15"}`, `08-configuration.md` §8.2 rule 4 requires `status: "Rejected"` — the value is outside
+`30--3600`. `heartbeat.md:35` requires the station to **clamp it to 10 and log `5102`** — the
+value is inside `10--3600`, so no clamping is even due, and the write stands. The disposition
+rules differ as well as the bound: one rejects out-of-range values, the other clamps them.
+
+The global precedence rule (`00-introduction.md` §3.5, the schema is authoritative) settles only
+the **boot** branch, where a schema exists. The ChangeConfiguration path is constrained by no
+schema — `key` and `value` are free strings — so it stays unarbitrated.
+
+**`BootRetryInterval` / `retryInterval` — 10--600 against 1--unbounded.** The registry says
+`10--600` (`08-configuration.md:90`). `boot-notification-response.schema.json` bounds
+`retryInterval` at `"minimum": 1` with no maximum. `05-state-machines.md:71` binds the two
+explicitly — *"The interval from the response has passed (default 30 s, `BootRetryInterval`)"* —
+and both carry the default 30. A schema-conformant server may therefore send `retryInterval: 1`,
+or `86400`, either of which the key's own range forbids. Unlike the heartbeat pair, there is **no
+precedence rule at all**.
+
+**The option space is the same for both, and it is a product decision.** Widen the registry range
+to match the schema; or narrow the schema to match the registry, which is a breaking wire change
+that invalidates any server already emitting the lower values; or declare the wire field and the
+config key separate settings and give each its own name and rule, which contradicts the
+Description and the precedence rule that tie them together today. Recording the disagreement
+rather than picking.
+
+`tools/check-config-ranges.py` holds all six sites at a baseline so the set cannot grow while the
+decision is outstanding.
+
+---
+
+## OPEN — the Device Management profile is Required in Chapter 08 and RECOMMENDED-not-mandatory in its own README
+
+`08-configuration.md:72` marks the **Device Management** row **Required: Yes**, unconditionally,
+and `:75` obliges a station to support every key of every required profile. The row's four keys
+are `FirmwareUpdateEnabled`, `DiagnosticsUploadUrl`, `LogLevel` and `AutoRebootEnabled`.
+
+`profiles/device-management/README.md:9` calls the same profile *"a RECOMMENDED (not mandatory)
+profile"*, and `:29` *"RECOMMENDED but OPTIONAL. A station is not required to support it"*,
+conditioning every rule on the `deviceManagementSupported` capability — which
+`boot-notification-request.schema.json:110` makes optional. The sibling profiles do not have this
+problem: Core is *"mandatory for every OSPP-compliant station"*, Transaction and Security are
+mandatory at Standard and above, and Offline/BLE is optional — and §1.5 already expresses exactly
+that kind of conditionality for the Offline/BLE row, *"Conditional (required if
+`capabilities.bleSupported = true`)"*.
+
+**The two documents are not obviously talking about the same thing, and that is the difficulty.**
+The README governs the profile's **nine actions**; §1.5 governs **four configuration keys**. A
+station could implement `LogLevel` and `AutoRebootEnabled` — both purely local behaviours —
+without implementing GetConfiguration or any other Device Management action. But the two are
+labelled with one name and one requirement level, and nothing in the specification distinguishes
+a key profile from an action profile.
+
+Deciding it changes a normative Required cell, so it is recorded rather than transcribed. The
+option space: mark the §1.5 row *"Conditional (required if `capabilities.deviceManagementSupported
+= true`)"*, matching the Offline/BLE row and the treatment `f872b23` already applied to nine
+conformance cases; or keep **Required: Yes** and correct the README, accepting that four keys are
+mandatory for a station that implements none of the actions that read them; or split the notion,
+naming key profiles and action profiles separately.
+
+Note that for a station **not** declaring the capability, the only surviving path to any
+configuration key is the BootNotification RESPONSE `configuration` block (§8.3), since
+GetConfiguration and ChangeConfiguration are themselves Device Management actions. Whichever way
+the decision goes, that is the path on which it has observable consequences.
 
 ---
 

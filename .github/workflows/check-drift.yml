@@ -1,6 +1,6 @@
 name: Check Drift
 
-# Three checks for the class "prose asserts a property and nothing establishes it".
+# Four checks for the class "prose asserts a property and nothing establishes it".
 #
 # A gate in tools/ that no job runs is the same defect one level up, so this workflow
 # exists to be that caller. Each script is a ratchet: it prints every finding on every
@@ -47,3 +47,9 @@ jobs:
 
       - name: Normative keywords not bolded
         run: python3 tools/check-normative-bold.py
+
+      # Reads schemas/ as well as the markdown: check D compares a registry range against
+      # the JSON Schema bounds of the wire field carrying the same quantity, so a schema
+      # edit alone can move this result. That is why 'schemas/**' is in the triggers above.
+      - name: Chapter 08 Range column, §9 against §§2--6, and restated ranges
+        run: python3 tools/check-config-ranges.py
