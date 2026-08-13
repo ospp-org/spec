@@ -1,6 +1,6 @@
 # Chapter 06 — Security
 
-> **Status:** Draft | **OSPP Version:** 0.17.0
+> **Status:** Draft | **OSPP Version:** 0.17.1
 
 This chapter defines the complete security model for the OSPP protocol, covering threat analysis, authentication, authorization, cryptographic requirements, message integrity, offline security, anti-abuse mechanisms, and data protection.
 

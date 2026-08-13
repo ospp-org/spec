@@ -1,8 +1,8 @@
 # OSPP Known Issues
 
 **Date:** 2026-08-13
-**Specification-document version:** 0.17.0 (release tag `v0.17.0`)
-**Status:** 3 blockers open (all BLE), 14 non-blocking issues open, 1 option evaluated and rejected
+**Specification-document version:** 0.17.1 (release tag `v0.17.1`)
+**Status:** 3 blockers open (all BLE), 17 non-blocking issues open, 1 option evaluated and rejected
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle and
 the arcs since
 
@@ -13,10 +13,10 @@ the arcs since
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 14 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** |
+| OPEN | 17 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** · **[one table gives the same act opposite verdicts](#open--one-table-gives-the-same-act-opposite-verdicts-and-a-certificate-renewal-cannot-conclude-in-the-state-the-spec-keeps-open-for-repairs)** · **[`1004`'s causes are all instances of `1003`'s](#open--every-cause-of-1004-is-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepts-either)** · [the certificate urgency scale is stated twice](#open--the-certificate-urgency-scale-is-stated-twice-and-the-expired-row-is-the-one-that-differs) |
 | CLOSED | 4 | [Device Management Required vs RECOMMENDED](#closed-0160--the-device-management-profile-was-required-in-chapter-08-and-recommended-not-mandatory-in-its-own-readme) — closed in 0.16.0 in favour of the capability · [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
 | DECIDED | 1 | [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it |
-| **Total open** | **17** | |
+| **Total open** | **20** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
@@ -1139,6 +1139,154 @@ Adjacent, and already fixed: the ordering rule was specified twice the same way,
 provenance-bearing version in the chapter a server implementer does not read
 ([`02-transport.md` §3.2](spec/02-transport.md)) and a weaker one in the profile they do. That
 one **was** a text edit and was settled in this arc.
+
+---
+
+## OPEN — one table gives the same act opposite verdicts, and a certificate renewal cannot conclude in the state the spec keeps open for repairs
+
+`05-state-machines.md` §1.4, *Command sent to a `Pending` station*, is a single table at
+`:106--111`. Two of its rows govern the same act — the station originating a SignCertificate
+REQUEST [MSG-022] — and reach opposite verdicts.
+
+- `:109` refuses it. TriggerMessage [MSG-026] with `requestedMessage: "SignCertificate"` is
+  **`Rejected`**, and the row states its reason: *"SignCertificate originates a REQUEST it may
+  not send either"*.
+- `:111` permits it. *"ChangeConfiguration, GetConfiguration, GetDiagnostics,
+  UpdateServiceCatalog, a certificate operation, Reset"* are **"Answered normally"**, on the
+  stated ground that *"Each returns its result in a RESPONSE, which is not something the
+  station originates"*.
+
+TriggerCertificateRenewal [MSG-024] is a certificate operation, and `06-security.md:591` fixes
+what answering it normally means: *"the station responds with `Accepted` and initiates the
+automatic renewal flow (steps 1--11 above)"*. Step 3 of that flow (`06-security.md:573`) is
+*"Station sends the CSR via SignCertificate REQUEST [MSG-022]"* — the exact message `:109`
+declares forbidden. **The stated ground is false for this member of its own list:** a
+TriggerCertificateRenewal RESPONSE is not the result, it is an acknowledgement that the result
+will arrive in a message the station may not send.
+
+The outcome is the one the paragraph directly above the table condemns. `:104`: *"A command
+whose only effect is an EVENT cannot be honoured while restricted, and must be refused rather
+than half-done. ... one that accepts it and stays silent **has answered `Accepted` to something
+it did not do**. Neither is conforming."*
+
+**The consequence is not symmetric with the other restricted-state gaps.** `:92` explains that
+`Pending` holds the command channel open so a human can repair something, and names *"a
+certificate operation"* among the repairs. A station held at `Pending` inside its renewal
+window is the case that window exists for, and renewal is the one repair it cannot perform.
+
+**A second row has the same defect and a different fix.** GetDiagnostics is also in the
+"Answered normally" list, and [`get-diagnostics.md` §5 rule 2](spec/profiles/device-management/get-diagnostics.md)
+states *"On `Accepted`, the station **MUST** begin collecting diagnostics and send
+DiagnosticsNotification events to report progress"* — while `:109` names DiagnosticsNotification
+among the EVENTs a restricted station may not send. That one is repairable by the carve-out the
+table already applies to SetMaintenanceMode at `:110`, which names the suppressed
+StatusNotification explicitly and observes that nothing is lost: the diagnostics upload is an
+HTTP PUT to a URL and completes regardless, so only the progress reporting is suppressed and the
+RESPONSE stays truthful. **The certificate case admits no such repair** — there the
+station-originated message is the entire effect.
+
+**The option space.** (a) Move TriggerCertificateRenewal to the `Rejected` row on the ground
+`:109` already gives, accepting that a station which enters `Pending` inside its renewal window
+can be recovered only by re-provisioning. (b) Widen the `Pending` exemption from BootNotification
+alone to BootNotification plus SignCertificate, on the ground that both are the station asking to
+be let back in — this changes a **MUST NOT** in the §1.4 state table and so changes what a
+conforming station may emit. (c) Keep the acceptance and define a deferred completion: the
+station accepts, records the obligation, and originates the CSR at the first boot reaching
+`Operational` — which needs new text for where that obligation is held and for how long.
+Recording rather than picking: (a) narrows what an operator can repair, (b) changes a wire
+obligation, and (c) adds a mechanism.
+
+Independently of the choice, **the phrase "a certificate operation" should not survive it.** It
+collapses CertificateInstall [MSG-023], which genuinely returns its result in a RESPONSE, with
+TriggerCertificateRenewal, which cannot — and the collapse is what hid the disagreement.
+
+---
+
+## OPEN — every cause of `1004` is an instance of `1003`'s second cause, and the conformance case exercising both accepts either
+
+`07-errors.md:266` defines `1003 TLS_HANDSHAKE_FAILED` as *"TLS handshake failed (cipher
+negotiation, certificate validation, or version mismatch)"*. `:267` defines `1004
+CERTIFICATE_ERROR` as *"X.509 certificate is expired, revoked, self-signed, or has an invalid
+chain"*. **All four of `1004`'s causes are certificate-validation failures**, so `1004` names a
+strict subset of `1003`'s second cause. Both are `Critical`, both are category `T`
+(`:896--897`). Nothing states which applies when both do.
+
+The two sites that assign them disagree about the overlap:
+
+- `02-transport.md:106--107` carves out exactly one cause — *"TLS handshake fails (invalid
+  cert) | Station **MUST** log error `1003`, retry with backoff"* against *"Certificate expired
+  | Station **MUST** log error `1004`, alert operator"*, restated at `:886--887`. **Revoked,
+  self-signed and invalid-chain fall to `1003` here**, being invalid certs and not expiry.
+- `06-security.md:1511` sends one of those three the other way: *"BootNotification from revoked
+  certificate | Reject with `1004 CERTIFICATE_ERROR`"*, and `07-errors.md:267` agrees, requiring
+  `revoked` as a `details.cause` branch of `1004`.
+
+**The conformance case cannot adjudicate itself.** `TC-SEC-002` pins `1004` alone for expired
+(`:58`) and for revoked (`:77`), accepts *"`1003` ... or `1004`"* for self-signed (`:68`), and
+then states in Expected Results that *"The station logs the appropriate error code (`1003` or
+`1004`) for each certificate failure scenario"* (`:96`), with Failure Criterion 5 failing a
+station only if it logs **neither** (`:106`). A station logging `1003` for a revoked certificate
+fails step 31 and passes both summary criteria. `TC-SEC-008` accepts either code at all three of
+its checks (`:73`, `:82`, `:108`).
+
+`07-errors.md` has an established convention for precisely this, unapplied here: four registry
+entries carry an explicit **"Distinct from"** clause naming the code they must not be confused
+with — `2014` (`:299`), `2015` (`:300`), `4017` (`:364`) and `4020` (`:382`). **Neither `1003`
+nor `1004` carries one.**
+
+**The option space.** (a) Specificity wins — every certificate-validation failure is `1004` with
+its required `details.cause`, and `1003` retains cipher negotiation and version mismatch only.
+This matches `1004`'s existing four-way branch and the two `TC-SEC-002` steps that already pin
+it, and requires editing `02-transport.md:106`, whose *"invalid cert"* parenthetical currently
+claims the whole class. (b) Layer wins — anything observed at a handshake is `1003`, and `1004`
+is reserved for a certificate judged invalid outside one; this contradicts `1004`'s `expired`
+recovery text, which is reached at a handshake. (c) Both, deliberately — the station logs `1003`
+for the transport event and `1004` for the certificate judgement, stated as a rule rather than
+left to the reader; this is the only option that makes the conformance suite's "either"
+correct, and it needs saying in both entries. Recording rather than picking: each changes what a
+conforming station logs, and (a) additionally narrows `1003`.
+
+---
+
+## OPEN — the certificate urgency scale is stated twice, and the expired row is the one that differs
+
+The four-row scale appears at `06-security.md:595--600` (§4.7.3 *Emergency Renewal*) and at
+[`certificate-renewal.md` §5](spec/profiles/security/certificate-renewal.md) *Priority Levels*,
+`:96--102`. **Three of the four rows are identical.** The `0 (expired)` row is not:
+
+- `06-security.md:600` — *"Certificate has expired. **Station enters offline-only mode (BLE).**
+  Recovery requires..."*
+- `certificate-renewal.md:102` — *"Certificate has expired. **Station treats next TLS failure as
+  connection loss and reconnects. If reconnection fails due to certificate rejection,** station
+  enters offline-only mode (BLE). Recovery requires..."*
+
+A third site describes the same moment and matches neither: `02-transport.md:107` gives expiry
+*"log `1004`, alert operator"*, where the row beside it gives a failed handshake *"retry with
+backoff"*. The contrast between adjacent rows reads as withholding the retry — which is the step
+`certificate-renewal.md:102` inserts.
+
+**Neither copy of the scale carries an RFC 2119 keyword on any row**, so neither binds on its own
+and the ordinary tie-breakers do not reach them. No general precedence rule exists between a
+chapter and a profile document: `00-introduction.md:174` orders schema above prose,
+`05-state-machines.md:741` orders the station FSM above the bay and session FSMs, and
+`06-security.md:431` marks one bullet as *"a summary of §2.1, which states the requirement
+normatively and is authoritative"* — but §4.7.3 is marked neither summary nor source, and
+`06-security.md:617`'s *"For the complete certificate renewal profile, see..."* points at the
+profile without ordering the two.
+
+**What separates the copies is observable.** Under the chapter, an expired station is serving BLE
+customers immediately. Under the profile it is in a reconnect cycle first, and every attempt in
+that cycle fails for the reason that started it — the certificate is expired.
+
+**The option space.** (a) The profile's step is real and the chapter is the stale copy: keep the
+reconnect attempt and reduce the chapter to a pointer — this makes time-to-BLE depend on a
+reconnect backoff that nothing bounds. (b) The chapter is right and the inserted step is an
+artefact: enter BLE-only at expiry, which is locally determinable from the certificate's own
+`notAfter` — `07-errors.md:267` says so explicitly — and needs no failed handshake to discover.
+(c) Keep the reconnect but bound it to a single attempt, which is a requirement neither copy
+currently states. Recording rather than picking: all three change how long a station stays
+unreachable after its certificate expires. **Whichever is chosen, the scale should exist once**,
+with the other site reduced to a pointer; the duplication is what let the copies drift.
 
 ---
 

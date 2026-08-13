@@ -8,6 +8,113 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.17.1] — 2026-08-13
+
+> **A certificate-cycle consistency pass. Three index-level statements were wrong and are
+> corrected; three contradictions need a decision and are recorded rather than guessed at.**
+> The corrections share a shape: all three are in documents that *index* normative text —
+> the Security profile's own README and the reading guide — and all three disagree with the
+> file they point at. `profiles/security/README.md` §1 states the rule it then broke twice
+> in its own tables: it *"indexes them and states nothing about them that file does not."*
+>
+> **PATCH.** Nothing here changes what binds. No schema changes, no vector changes, no new
+> field, message, error code or configuration key; `protocolVersion` stays **`0.3.0`**. Every
+> corrected statement was already contradicted by a normative source that did not move — the
+> message-ID table, the CertificateInstall schema, and the profile README's own §1 — so an
+> implementation built against the normative text was **always** correct and only its index
+> was wrong. The three recorded contradictions change nothing in this release by construction:
+> each needs a decision that would alter station behaviour, and picking one silently is what
+> this entry exists to avoid.
+>
+> **The one that costs an implementer real work is S1.** `profiles/security/README.md` is the
+> first document an implementer of a **mandatory** profile opens, and it named SecurityEvent
+> `[MSG-021]` — which is UpdateServiceCatalog. A station built from that line emits a message
+> nothing recognises, and the 48 sites that say MSG-012 are all in documents it had no reason
+> to open first.
+
+### Fixed
+
+- **spec:** **SecurityEvent was `[MSG-021]` in one place and MSG-012 in forty-eight.**
+  `profiles/security/README.md` §Document Index carried `[MSG-021]`. That ID belongs to
+  **UpdateServiceCatalog** — `04-flows.md:30` assigns it, and `04-flows.md:1677`/`:1680`/`:1686`
+  and `07-errors.md:320`/`:421`/`:497` all use it that way. SecurityEvent is MSG-012 across the
+  tree, including `04-flows.md:41`, `06-security.md:336`/`:1412`, `03-messages.md:967`,
+  `05-state-machines.md:680` and `TC-SEC-004`. **One site in the whole repository disagreed, and
+  it was the index of a profile mandatory at Standard compliance and above.** Corrected to
+  MSG-012.
+- **spec:** **CertificateInstall was said to deliver a trust anchor, which it has no way to
+  carry.** `profiles/security/README.md` §2 described [MSG-023] as delivering *"an issued
+  certificate, or a trust anchor, for the station to install"*.
+  `certificate-install-request.schema.json` declares `certificateType` as a two-value enum —
+  `StationCertificate`, `MQTTClientCertificate` — with `additionalProperties: false` and a
+  required `certificate` that must be a PEM leaf. Neither value is an anchor and no property can
+  hold one. The optional `caCertificateChain` is not the anchor either, and the specification
+  states the parallel case in as many words: `04-flows.md:358` and
+  `provisioning-response.schema.json` both say a CA chain is what the station **presents**, and
+  is *"NOT the station's own trust anchor for the broker, under any deployment shape"* — that
+  anchor is `brokerRootCa`, which arrives in the provisioning response over HTTPS and never on
+  MQTT. `00-introduction.md:174` makes the schema authoritative where prose disagrees. The row
+  now reads *"and optionally the CA chain that verifies it"*, matching the schema's own
+  description and `06-security.md:562`.
+- **spec:** **The reading guide described the Security profile without half of it.**
+  `spec/README.md`'s profile table gave Security as *"Security event reporting — real-time
+  incident notifications"*, while `profiles/security/README.md` §1 says the profile covers
+  **two** things — event reporting **and the certificate lifecycle** — and `profiles/README.md`
+  §4.1 lists four messages a conforming station must implement for it, three of them
+  certificate messages. The map omitted the half of a mandatory profile that a station cannot
+  renew its identity without.
+
+### Left open — recorded, not fixed
+
+Three contradictions in the certificate cycle were measured and each requires a decision that
+changes station behaviour. All three are now in `KNOWN-ISSUES.md` with their evidence and their
+option space; the open count moves 14 → 17.
+
+- **spec:** **One table gives the same act opposite verdicts, and a renewal cannot conclude in
+  `Pending`.** `05-state-machines.md` §1.4's *Command sent to a `Pending` station* table refuses
+  TriggerMessage with `requestedMessage: "SignCertificate"` at `:109` — *"SignCertificate
+  originates a REQUEST it may not send either"* — and answers *"a certificate operation"*
+  normally at `:111`, on the ground that *"Each returns its result in a RESPONSE"*. That ground
+  is false for TriggerCertificateRenewal [MSG-024]: `06-security.md:591` makes answering it
+  normally mean initiating the flow whose step 3 (`:573`) is the SignCertificate REQUEST `:109`
+  forbids. The paragraph above the table (`:104`) condemns exactly the resulting state — *"has
+  answered `Accepted` to something it did not do"* — and `:92` names *"a certificate operation"*
+  among the repairs `Pending` is held open for. **GetDiagnostics is in the same row with the same
+  defect** and a different remedy: its `MUST` to send DiagnosticsNotification events collides
+  with the same prohibition, but is repairable by the carve-out the table already applies to
+  SetMaintenanceMode at `:110`. The certificate case is not.
+- **spec:** **`1004`'s four causes are all instances of `1003`'s second cause.** `07-errors.md:266`
+  gives `1003 TLS_HANDSHAKE_FAILED` the causes *"cipher negotiation, certificate validation, or
+  version mismatch"*; `:267` gives `1004 CERTIFICATE_ERROR` *"expired, revoked, self-signed, or
+  has an invalid chain"* — every one a certificate-validation failure. `02-transport.md:106--107`
+  sends everything but expiry to `1003`; `06-security.md:1511` and `07-errors.md:267` send
+  revocation to `1004`. **The conformance case cannot adjudicate itself**: `TC-SEC-002` pins
+  `1004` alone at `:58` and `:77`, accepts either at `:68`, then accepts either for *every*
+  scenario at `:96`, with Failure Criterion 5 failing a station only if it logs neither. The
+  registry's own **"Distinct from"** convention — used by `2014`, `2015`, `4017` and `4020` — is
+  applied to neither code.
+- **spec:** **The certificate urgency scale is stated twice and the expired row differs.**
+  `06-security.md:600` has an expired station enter offline-only BLE mode;
+  `certificate-renewal.md:102` inserts a reconnect attempt first. Three of the four rows are
+  identical; this one is not, and a third site (`02-transport.md:107`) gives expiry *"alert
+  operator"* where the row beside it gives *"retry with backoff"*. **Neither copy carries an RFC
+  2119 keyword on any row**, and no precedence rule covers a chapter against a profile document —
+  `00-introduction.md:174` orders schema above prose and `06-security.md:431` marks one bullet a
+  summary of its normative source, but §4.7.3 is marked neither.
+
+### Not changed, and why
+
+- **No schema, vector or example payload moved.** Measured against `v0.17.0`: every changed file
+  in this release is Markdown, and under `schemas/`, `conformance/test-vectors/` and `examples/`
+  the only changed lines are the three version headers those trees' `README.md` files carry as
+  part of the 29-site cascade. No `.json` file changed, and no `tools/check-*.py` gate source
+  changed. Both SDKs vendor those trees and validate against them, so this release is
+  **pin-only** for `ospp-protocol-php` and `ospp-protocol-ts`: their `.spec-ref` markers may move
+  to `0.17.1`, and nothing they implement changes.
+- **The server owes nothing from the three corrections** — they correct index prose against
+  normative text the server was already built from. What the three **recorded** contradictions
+  will owe depends on which option is chosen, and none is chosen here.
+
 ## [0.17.0] — 2026-08-13
 
 **§6.7 described one rotation, and the other one needs the opposite behaviour from the same step.** The section opens with *"MUST be rotated periodically"*, gives an annual cadence, and ends with a step 5 that forbids revoking the previous key while any station remains unconfirmed. That is right for a scheduled rotation, which faces no adversary. It says nothing about rotating a key **because it is believed to be compromised** — and a server that carried step 5's unconditional `MUST NOT` into that case would be applying a rule written for the wrong situation. Two conformant servers could disagree about when revocation is permitted, each citing the same paragraph. §6.7 now names both postures and states which obligations change.

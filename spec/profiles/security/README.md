@@ -23,7 +23,7 @@ The Security profile is mandatory for all stations at **Standard** compliance an
 
 | Document | Contents |
 |----------|----------|
-| [security-event.md](security-event.md) | SecurityEvent [MSG-021] — event types, severities, buffering |
+| [security-event.md](security-event.md) | SecurityEvent [MSG-012] — event types, severities, buffering |
 | [certificate-renewal.md](certificate-renewal.md) | SignCertificate [MSG-022], CertificateInstall [MSG-023], TriggerCertificateRenewal [MSG-024] — renewal flows, certificate types, error handling |
 
 ## 2. Actions Summary
@@ -32,7 +32,7 @@ The Security profile is mandatory for all stations at **Standard** compliance an
 |-------------------------------------------|-------------------|---------|-----------------------------------------------|
 | [SecurityEvent](security-event.md) | Station to Server | EVENT | Report security incidents to the server |
 | [SignCertificate](certificate-renewal.md) | Station to Server | REQ/RES | Submit a CSR to renew the station's own identity certificate |
-| [CertificateInstall](certificate-renewal.md) | Server to Station | REQ/RES | Deliver an issued certificate, or a trust anchor, for the station to install |
+| [CertificateInstall](certificate-renewal.md) | Server to Station | REQ/RES | Deliver an issued certificate, and optionally the CA chain that verifies it, for the station to install |
 | [TriggerCertificateRenewal](certificate-renewal.md) | Server to Station | REQ/RES | Instruct the station to begin a renewal it has not initiated itself |
 
 ## 3. Compliance Requirements

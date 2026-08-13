@@ -1,6 +1,6 @@
 ---
 status: Draft
-ospp-version: 0.17.0
+ospp-version: 0.17.1
 ---
 
 # OSPP Specification — Reading Guide
@@ -14,7 +14,7 @@ ospp-version: 0.17.0
 | Field | Value |
 |-------|-------|
 | Status | Draft |
-| OSPP Version | 0.17.0 |
+| OSPP Version | 0.17.1 |
 | Last Updated | 2026-07-28 |
 
 > **Not all of this specification is at the same maturity.** The MQTT station↔server surface,
@@ -56,7 +56,7 @@ domain-specific behavior.
 | Core | [profiles/core/README.md](profiles/core/README.md) | Heartbeat, status notification, boot notification — mandatory for all stations. |
 | Transaction | [profiles/transaction/README.md](profiles/transaction/README.md) | Session start/stop, meter values, reservation lifecycle. |
 | Device Management | [profiles/device-management/README.md](profiles/device-management/README.md) | Configuration, firmware update, diagnostics, remote commands. |
-| Security | [profiles/security/README.md](profiles/security/README.md) | Security event reporting — real-time incident notifications (tamper, auth failure, firmware integrity). |
+| Security | [profiles/security/README.md](profiles/security/README.md) | Two things: security event reporting — real-time incident notifications (tamper, auth failure, firmware integrity) — and the certificate lifecycle (SignCertificate, CertificateInstall, TriggerCertificateRenewal). |
 | Offline | [profiles/offline/README.md](profiles/offline/README.md) | OfflinePass authorization, offline transaction log, reconciliation — **stable**. BLE transport, handshake and session — **EXPERIMENTAL**, see [B-1/B-2/B-3](../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-three-defects). |
 
 ## Normative Language
