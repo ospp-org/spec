@@ -1079,6 +1079,15 @@ Test the error scenarios in `/examples/error-scenarios/`:
 
 **Using TLS 0-RTT.** TLS 1.3 offers 0-RTT resumption, which is vulnerable to replay attacks. OSPP explicitly forbids it. Don't enable it.
 
+**Counting a bare `Accepted` as proof that a station took your new OfflinePass signing key.** This is the one place in OSPP where a per-key status decides whether a **cryptographic key may be destroyed**, and reading it wrongly takes a station offline for every offline authorization it will ever be asked to perform. `06-security.md` §6.7 rotates the key by pushing `OfflinePassPublicKey` via ChangeConfiguration and revoking the old key once every station has confirmed. But ChangeConfiguration is **atomic**: a `results` entry of `Accepted` is that key's *validation verdict*, and if any other entry in the same batch is `Rejected` or `NotSupported`, **the station stored nothing** — while still answering `Accepted` for your key. Count that as rolled out, revoke the previous key, and that station can verify no pass signed by either key.
+
+Two things follow, and the second is the one to implement:
+
+1. A station counts as updated only when its RESPONSE reported `Accepted` for `OfflinePassPublicKey` **and no entry in the same `results` array was `Rejected` or `NotSupported`**.
+2. **Push `OfflinePassPublicKey` in a batch of exactly one key.** §6.7 makes this RECOMMENDED precisely so the question cannot arise. Note that this cuts against the general advice in [§2.13](#213-configuration-keys) to batch correlated settings: `OfflinePassPublicKey` + `RevocationEpoch` *are* correlated, and batching them is right for the station — but if you batch them you MUST apply check 1 before revoking, because a rejected `RevocationEpoch` silently discards the key push.
+
+If you are auditing an existing implementation, the question to ask is narrow: *does the code that decides "this station has the new key" look at any entry other than its own?* If it does not, it is wrong for every batch of more than one key. Server-side this is the rotation finalizer — the routine that overwrites and unlinks the previous key file — not the code that sends the push.
+
 **Logging sensitive fields in plaintext.** Never log session tokens, payment credentials, MAC values, HMAC session keys, certificate private keys, or full OfflinePass content. Redaction rules per `spec/06-security.md` §8.5:
 
 - **Session tokens (JWT/web)** — first 8 characters only
@@ -1207,6 +1216,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[SHOULD]** Shared subscriptions (`$share/...`) for horizontal scaling
 - [ ] **[SHOULD]** Rate limiting on REST API
 - [ ] **[SHOULD]** Anti-abuse layers for web payment (5 layers)
+- [ ] **[MUST]** OfflinePass key rotation: before revoking the previous signing key, confirm each station returned `Accepted` for `OfflinePassPublicKey` **in a batch where no other entry was `Rejected` or `NotSupported`** — an `Accepted` inside a refused batch means the station stored nothing ([§6.2](#62-security-pitfalls), [`06-security.md` §6.7](../spec/06-security.md))
 
 ### Offline / BLE
 

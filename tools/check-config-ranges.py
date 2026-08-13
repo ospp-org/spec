@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Gate: the Chapter 08 Range column, and the two places the registry states itself.
+"""Gate: the Chapter 08 Range column, the profile identifier, and the two places the
+registry states itself.
 
 `spec/08-configuration.md` states the configuration registry twice. Sections 2--6 are the
 registry proper -- the set §1.3 and §7.1 both name when they decide what counts as a
@@ -10,7 +11,7 @@ only one of them (`check-config-defaults.py` and the PHP SDK's `check-config-reg
 read §§2--6; `verify-protocol.sh` Categories 4 and 6 parse §9). A registry that states
 itself twice with no comparison between the statements is how the two drift apart.
 
-Four checks, in the order a defect propagates:
+Five checks, in the order a defect propagates:
 
 A. **§9 against §§2--6** -- the key set in both directions, and the four columns they share
    (Type, Default, Access, Mutability). This is the check whose absence let §9 carry
@@ -24,30 +25,45 @@ B. **The Range column's form.** Every cell must match one of the five forms §1.
 C. **Restated ranges.** The `check-config-defaults.py` argument applies unchanged: both
    sides are structured -- Chapter 08 is a `(key, range)` table and a restatement is a key
    name with `<lo>--<hi>` near it -- so the comparison is mechanical rather than inferred.
-   Measured on the corpus at the time of writing: 12 sites carrying a range restatement
-   under the key's own name, **12 agreeing**, zero false positives.
+
+   A range that scales BOTH endpoints of the registry range by one factor is *derived*, not
+   in disagreement: `connection-lost.md` publishes the staleness window as 3.5x the
+   heartbeat interval. Requiring the same factor at both ends is what stops this excusing a
+   real drift -- a restatement that moves one endpoint only has no single factor and is
+   still reported. RED-tested by moving one endpoint.
 
 D. **Wire fields that carry a registry quantity.** A key whose value also travels as a
    dedicated field in a schema is bound by both the registry range and that field's
-   `minimum`/`maximum`, and the two must agree (§1.6). This is where check C is blind: the
-   restatement is written under the *wire field's* name, so a check keyed on the config key
-   name never sees it. Both known pairs disagree, and both went unseen for exactly that
-   reason -- `heartbeatIntervalSec` restates `10--3600` against a registry range of
-   `30--3600` at four sites, and `retryInterval` admits `1` against `BootRetryInterval`'s
-   `10--600`.
+   `minimum`/`maximum` (§1.6). This is where check C is blind: the restatement is written
+   under the *wire field's* name, so a check keyed on the config key name never sees it.
+   That is exactly how `heartbeatIntervalSec` held `10--3600` against a registry cell of
+   `30--3600` across four sites without anything noticing.
+
+   The two known pairs are NOT the same shape, and 0.16.0 resolved only one of them.
+   `heartbeatIntervalSec` declares BOTH bounds -- one of only six integer properties in
+   `schemas/mqtt/` that do -- so it is a considered range, and `heartbeat.md` §5 already
+   clamped to its lower bound. The registry cell was the wrong one and was widened to match.
+   `retryInterval` declares `minimum: 1` and no maximum, which is the majority shape in
+   these schemas (17 properties) and a type floor rather than a range; aligning the registry
+   to it would delete the constraint instead of correcting it. It stays open.
+
+E. **The profile identifier.** §1.5 carries a display label and a normative Profile ID; the
+   IDs must be exactly the declared vocabulary and must each be usable as a program
+   identifier, and every profile label §9 uses must be a row of the §1.5 table. The ID
+   column exists because `Offline / BLE` does not survive being made an enum case, and each
+   SDK invented its own answer.
 
 ALIASES is hand-maintained and that is this check's real limit: a new dedicated field
-mirroring a registry key is invisible here until somebody adds the pair. There is no
+mirroring a registry key is invisible to check D until somebody adds the pair. There is no
 mechanical signal for "these two names denote one quantity" -- the spec asserts it in prose
 (`08-configuration.md` §1.6, `03-messages.md` §5.1's precedence rule, `05-state-machines.md`
-§2's transition table) and nothing marks it up.
+§2's transition table) and nothing marks it up. Both pairs were found by reading.
 
 BASELINE is the count of known-open findings. It is not an allowlist: every finding is
-printed on every run. Lower it as they are closed; a run finding more than BASELINE fails.
-The open findings are the two disagreements of check D and the four restatement sites of
-check C that follow from the first of them, all recorded in KNOWN-ISSUES.md. They are not
-repaired here because both are decisions about what values are legal on the wire, not
-transcription errors.
+printed on every run. Lower it as they are closed; a run finding more than BASELINE fails,
+and so does a run finding FEWER, so that an improvement cannot be pocketed silently. The one
+open finding is check D's `retryInterval` pair, recorded in KNOWN-ISSUES.md -- a decision
+about what values are legal on the wire, not a transcription error.
 
 Usage
 -----
@@ -55,7 +71,7 @@ Usage
 
 Exit
 ----
-0 if the flagged count is at or below BASELINE, 1 above it.
+0 if the flagged count equals BASELINE, 1 otherwise.
 """
 import glob
 import os
@@ -63,7 +79,7 @@ import re
 import sys
 
 REGISTRY = 'spec/08-configuration.md'
-BASELINE = 6
+BASELINE = 1
 PROXIMITY = 120
 
 # A §§2--6 row: | `Key` | type | `default` | access | mutability | range | description |
@@ -72,6 +88,14 @@ SECTION_ROW = re.compile(
 # A §9 row: | n | `Key` | type | `default` | access | mutability | profile |
 SUMMARY_ROW = re.compile(
     r'^\|\s*(\d+)\s*\|\s*`([A-Za-z][A-Za-z0-9_]*)`\s*\|\s*(\w+)\s*\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|')
+
+# A §1.5 profile row: | **Name** | `ProfileID` | keys... | Required |. Parsed only inside
+# the §1.5 section: §1.2, §1.3 and §1.4 are also two-column tables and a looser pattern
+# harvested 'Type', 'Symbol' and 'Behavior' from their headers.
+PROFILE_SECTION = re.compile(r'^###\s+1\.5\b')
+SECTION_END = re.compile(r'^(###\s|---\s*$|##\s)')
+PROFILE_ROW = re.compile(r'^\|\s*\*{0,2}([A-Za-z /-]+?)\*{0,2}\s*\|\s*`?([A-Za-z]+|--)`?\s*\|')
+EXPECTED_PROFILE_IDS = {'Core', 'Transaction', 'Security', 'OfflineBLE', 'DeviceManagement'}
 
 NUMERIC = re.compile(r'^(\d+)--(\d+)$')
 MAXCHARS = re.compile(r'^max \d+ chars$')
@@ -207,7 +231,7 @@ def main():
             names[field] = key
 
     files = sorted({p for g in SEARCH_GLOBS for p in glob.glob(g, recursive=True)})
-    restated, seen = 0, set()
+    restated, derived, seen = 0, 0, set()
     for path in files:
         for lineno, line in enumerate(open(path, encoding='utf-8').read().split('\n'), 1):
             if path == REGISTRY and line.lstrip().startswith('|'):
@@ -226,7 +250,16 @@ def main():
                             continue
                         seen.add(tag)
                         restated += 1
-                        if got != (lo, hi):
+                        # A range derived from the registry by scaling BOTH endpoints by
+                        # one factor is consistent with it, not a disagreement --
+                        # connection-lost.md publishes the staleness window as
+                        # 3.5 x heartbeat. Requiring the SAME factor on both ends is what
+                        # keeps this from excusing a real drift: a restatement that moves
+                        # one endpoint only has no single factor and is still reported.
+                        if got != (lo, hi) and lo and hi:
+                            if got[0] * hi == got[1] * lo:
+                                derived += 1
+                                continue
                             findings.append((
                                 'C', path, lineno,
                                 f'{name} (registry key {key}, range {lo}--{hi}) appears '
@@ -251,11 +284,46 @@ def main():
                 f'{field} carries {key}, whose registry range is {lo}--{hi}, but the '
                 f'schema bounds it at minimum={smin}, maximum={smax}'))
 
+    # --- E. Profile labels and the normative Profile ID -----------------------
+    prof_rows, inside = {}, False
+    for lineno, line in enumerate(open(os.path.join(root, REGISTRY),
+                                      encoding='utf-8'), 1):
+        line = line.rstrip('\n')
+        if PROFILE_SECTION.match(line):
+            inside = True
+            continue
+        if inside and SECTION_END.match(line):
+            break
+        if not inside:
+            continue
+        m = PROFILE_ROW.match(line)
+        if m and m.group(1).strip() not in ('Profile', '---------'):
+            prof_rows[m.group(1).strip().strip('*')] = (m.group(2).strip(), lineno)
+    if not prof_rows:
+        sys.exit('§1.5 yielded zero profile rows -- the table format changed. '
+                 'Refusing to report success for zero work.')
+    ids = {pid for pid, _ in prof_rows.values() if pid != '--'}
+    if ids != EXPECTED_PROFILE_IDS:
+        findings.append(('E', REGISTRY, 0,
+                         f'§1.5 Profile IDs are {sorted(ids)}; expected '
+                         f'{sorted(EXPECTED_PROFILE_IDS)}'))
+    for pid in sorted(ids):
+        if not pid.isalnum():
+            findings.append(('E', REGISTRY, 0,
+                             f'Profile ID {pid!r} is not usable as a program identifier'))
+    labels = {row['profile'] for row in summary.values()}
+    unknown = sorted(labels - set(prof_rows))
+    for lab in unknown:
+        findings.append(('E', REGISTRY, 0,
+                         f'§9 carries the profile label {lab!r}, which is not a row of '
+                         f'the §1.5 profile table'))
+
     print(f'registry rows (§§2--6)        : {len(sections)}')
     print(f'summary rows (§9)             : {len(summary)}')
     print(f'shared cells compared         : {shared}')
     print(f'numeric-range keys            : {len(numeric)}')
-    print(f'restated-range sites          : {restated}')
+    print(f'restated-range sites          : {restated}  ({derived} derived by a shared factor)')
+    print(f'profile rows (§1.5)           : {len(prof_rows)}')
     print(f'wire-field aliases checked    : {len(ALIASES)}')
     print(f'findings                      : {len(findings)}  (baseline {BASELINE})')
 

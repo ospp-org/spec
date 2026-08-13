@@ -63,16 +63,20 @@ The server SHOULD track keys that returned `RebootRequired` and issue a [Reset](
 
 Configuration keys are organized into profiles that align with station capabilities:
 
-| Profile | Keys | Required |
-|---------|------|:--------:|
-| **Core** | HeartbeatIntervalSeconds, ConnectionTimeout, ReconnectBackoffMax, StationName, TimeZone, ProtocolVersion, FirmwareVersion, BootRetryInterval, ConnectionLostGracePeriod | Yes |
-| **Transaction** | MeterValuesInterval, MeterValuesSampleInterval, MaxSessionDurationSeconds, SessionTimeout, ReservationDefaultTTL, DefaultCreditsPerSession | Yes |
-| **Security** | CertificateSerialNumber, AuthorizationCacheEnabled, MessageSigningMode, OfflinePassPublicKey, CertificateRenewalThresholdDays, CertificateRenewalEnabled | Yes |
-| **Offline / BLE** | OfflineModeEnabled, MaxOfflineTransactions, OfflinePassMaxAge, RevocationEpoch | Conditional (required if `capabilities.bleSupported = true`) |
-| **Device Management** | FirmwareUpdateEnabled, DiagnosticsUploadUrl, LogLevel, AutoRebootEnabled | Yes |
-| **Vendor-Specific** | `Vendor_{VendorName}_*` | No |
+| Profile | Profile ID | Keys | Required |
+|---------|------------|------|:--------:|
+| **Core** | `Core` | HeartbeatIntervalSeconds, ConnectionTimeout, ReconnectBackoffMax, StationName, TimeZone, ProtocolVersion, FirmwareVersion, BootRetryInterval, ConnectionLostGracePeriod | Yes |
+| **Transaction** | `Transaction` | MeterValuesInterval, MeterValuesSampleInterval, MaxSessionDurationSeconds, SessionTimeout, ReservationDefaultTTL, DefaultCreditsPerSession | Yes |
+| **Security** | `Security` | CertificateSerialNumber, AuthorizationCacheEnabled, MessageSigningMode, OfflinePassPublicKey, CertificateRenewalThresholdDays, CertificateRenewalEnabled | Yes |
+| **Offline / BLE** | `OfflineBLE` | OfflineModeEnabled, MaxOfflineTransactions, OfflinePassMaxAge, RevocationEpoch | Conditional (required if `capabilities.bleSupported = true`) |
+| **Device Management** | `DeviceManagement` | FirmwareUpdateEnabled, DiagnosticsUploadUrl, LogLevel, AutoRebootEnabled | Conditional (required if `capabilities.deviceManagementSupported = true`) |
+| **Vendor-Specific** | -- | `Vendor_{VendorName}_*` | No |
 
-A station MUST support all keys in the required profiles. A station that advertises `capabilities.bleSupported = true` in BootNotification MUST additionally support all Offline / BLE keys.
+**The Profile column is a display label; the Profile ID is the normative identifier.** An implementation that exposes a key's profile as a program value — an enum case, a string constant, a database column — **MUST** use the Profile ID exactly as spelled here. The display label carries a space and a slash and does not survive being made an identifier, which is how the two SDKs arrived at three different spellings of two profiles between them with nothing to compare against. `tools/check-config-ranges.py` checks that the two columns stay in step and that §9's labels are drawn from this table; an SDK gate compares its own registry to the Profile ID column.
+
+A station **MUST** support all keys in the required profiles. A station that advertises `capabilities.bleSupported = true` in BootNotification **MUST** additionally support all Offline / BLE keys, and a station that advertises `capabilities.deviceManagementSupported = true` **MUST** additionally support all Device Management keys.
+
+**Why Device Management is conditional and not required.** The four keys have no protocol surface of their own: GetConfiguration and ChangeConfiguration are themselves Device Management actions, so a station that does not declare the capability can be neither asked for these keys nor told to set them. Two of the four — `FirmwareUpdateEnabled` and `DiagnosticsUploadUrl` — are switches for Device Management actions such a station does not implement, and govern nothing without them. Requiring them unconditionally would make a station non-conforming for keys it has no way to carry, and would contradict [`profiles/device-management/README.md`](profiles/device-management/README.md) §1 and §3, which have always made the profile RECOMMENDED and gated its rules on the capability. The one path that survives is the BootNotification `configuration` block (§8.3), which is a Core mechanism; §8.3 states what a station does with a key it does not support.
 
 ### 1.6 Value Ranges
 
@@ -90,7 +94,9 @@ Every cell takes one of five forms, and no others:
 
 The counts above are checked by `tools/check-config-ranges.py`, which also verifies that every restatement of a range elsewhere in this specification agrees with the cell here.
 
-**A quantity that also travels as a dedicated wire field is bound by two constraints** — its registry range and that field's schema — and both apply. Two such pairs exist: `HeartbeatIntervalSeconds` with `heartbeatIntervalSec`, and `BootRetryInterval` with `retryInterval`. In both, the two bounds currently disagree. That disagreement is a defect in this specification, is recorded in [`KNOWN-ISSUES.md`](../KNOWN-ISSUES.md), and is **not** resolved by the reader choosing one.
+**A quantity that also travels as a dedicated wire field is bound by two constraints** — its registry range and that field's schema — and both apply. Where the two can disagree, **the schema governs**, per [§3.5 of Chapter 00](00-introduction.md): it is what actually validates the message, and narrowing it to match a registry cell would make non-conforming every server already emitting a value the schema admits.
+
+Two such pairs exist. `HeartbeatIntervalSeconds` with `heartbeatIntervalSec` **agree**: the registry cell was the wrong one and now reads `10--3600`, matching `boot-notification-response.schema.json` and the clamping rule in [`heartbeat.md`](profiles/core/heartbeat.md) §5, which had assumed the lower floor all along. `BootRetryInterval` with `retryInterval` **still disagree**, and are not resolved the same way: that field's schema states `minimum: 1` and **no maximum**, which is a type floor rather than a considered range, so aligning the registry to it would delete the constraint instead of correcting it. That one is recorded in [`KNOWN-ISSUES.md`](../KNOWN-ISSUES.md) and is **not** resolved by the reader choosing one.
 
 ---
 
@@ -98,7 +104,7 @@ The counts above are checked by `tools/check-config-ranges.py`, which also verif
 
 | Key | Type | Default | Access | Mutability | Range | Description |
 |-----|------|---------|:------:|:----------:|-------|-------------|
-| `HeartbeatIntervalSeconds` | integer | `30` | RW | Dynamic | 30--3600 | Heartbeat period in seconds. The station sends a Heartbeat REQUEST at this interval. Also configurable via BootNotification RESPONSE. |
+| `HeartbeatIntervalSeconds` | integer | `30` | RW | Dynamic | 10--3600 | Heartbeat period in seconds. The station sends a Heartbeat REQUEST at this interval. Also configurable via BootNotification RESPONSE. |
 | `ConnectionTimeout` | integer | `60` | RW | Dynamic | 10--300 | MQTT connection timeout in seconds. If the station cannot establish a connection within this window, it MUST initiate reconnection with backoff. |
 | `ReconnectBackoffMax` | integer | `30` | RW | Dynamic | 30--3600 | Maximum reconnect backoff delay in seconds (see [Chapter 02](02-transport.md), Section 4.5). |
 | `StationName` | string | `""` | RW | Static | max 100 chars | Human-readable station name for display in management dashboards. |
@@ -357,6 +363,8 @@ A `Rejected` entry **MUST** carry `results[].errorCode` and `results[].errorText
 The BootNotification RESPONSE MAY include a `configuration` object containing key-value pairs that the station MUST apply immediately upon boot acceptance. This mechanism allows the server to push initial or corrected configuration without requiring separate ChangeConfiguration messages.
 
 Keys delivered via BootNotification `configuration` follow the same type, range, and mutability rules as ChangeConfiguration. The station MUST validate each key-value pair and SHOULD log a warning for any invalid entries rather than failing the entire boot sequence.
+
+A key the station does **not support** — a Device Management or Offline / BLE key on a station that declares neither capability (§1.5), or a `Vendor_` key it does not recognize — is treated the same way: the station **MUST** ignore that entry, **SHOULD** log a warning, and **MUST NOT** fail the boot. This block is **not atomic**, which is the difference from ChangeConfiguration: an entry the station cannot apply does not prevent the others from being applied, and there is no `results` array in which to report it. A server that needs to know whether a key was taken **MUST** use ChangeConfiguration, which answers per key.
 
 ### 8.4 Configuration Persistence
 

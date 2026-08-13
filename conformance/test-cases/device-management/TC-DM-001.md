@@ -28,7 +28,7 @@ ChangeConfiguration is an **array-valued, atomic** exchange: the REQUEST carries
 1. Station is booted and has received BootNotification Accepted, **declaring `capabilities.deviceManagementSupported: true`** in that BootNotification. The capability is OPTIONAL in the schema and the profile's rules apply only to a station that declares it (`spec/profiles/device-management/README.md` §3); where it is not stated, a server MAY withhold these commands altogether (`spec/profiles/core/boot-notification.md` §5.1 rule 3), and the refusal that follows is conforming behaviour rather than a test failure.
 2. MQTT connection is stable.
 3. The station's configuration includes at least:
-   - A dynamic key: `HeartbeatIntervalSeconds` (writable, takes effect immediately; default 30, range 30–3600).
+   - A dynamic key: `HeartbeatIntervalSeconds` (writable, takes effect immediately; default 30, range 10–3600).
    - A dynamic key: `MeterValuesInterval` (writable, takes effect immediately; default 60, range 10–3600).
    - A read-only key: `FirmwareVersion` (not writable).
    - A WriteOnly key: `OfflinePassPublicKey` (Security profile, writable, never returned by GetConfiguration).
