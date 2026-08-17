@@ -1,6 +1,6 @@
 # Chapter 03 — Message Catalog
 
-> **Status:** Draft | **OSPP Version:** 0.21.0
+> **Status:** Draft | **OSPP Version:** 0.22.0
 
 This chapter is the normative reference for **every message** in the OSPP protocol. Each message is documented with its complete payload schema, metadata, and example.
 
@@ -1961,10 +1961,10 @@ Pushes the complete service catalog to the station. This is a **full replacement
 | `services[].serviceName` | string | Yes | Human-readable name (e.g., `"Eco Program"`) |
 | `services[].bindings` | array | Yes | Where this service physically runs: one `{bayNumber, programNumber}` per bay-and-program it is bound to. Created on the server by an operator; the station never originates it, and it is what lets the station start the right program offline |
 | `services[].pricingType` | string | Yes | `"PerMinute"` or `"Fixed"` |
-| `services[].priceCreditsPerMinute` | integer | Cond. | Credit price per minute (when `PerMinute`) |
-| `services[].priceCreditsFixed` | integer | Cond. | Fixed credit price per session (when `Fixed`) |
-| `services[].priceLocalPerMinute` | integer | Cond. | Local-currency price in minor units per minute, informational (when `PerMinute`) |
-| `services[].priceLocalFixed` | integer | Cond. | Local-currency price in minor units fixed, informational (when `Fixed`) |
+| `services[].priceCreditsPerMinute` | integer | Cond. | Credit price per minute. Required when `pricingType` is `PerMinute`; **MUST NOT** be present when it is `Fixed` |
+| `services[].priceCreditsFixed` | integer | Cond. | Fixed credit price per session. Required when `pricingType` is `Fixed`; **MUST NOT** be present when it is `PerMinute` |
+| `services[].priceLocalPerMinute` | integer | No | Local-currency price in minor units per minute, informational. **MUST NOT** be present when `pricingType` is `Fixed` |
+| `services[].priceLocalFixed` | integer | No | Local-currency price in minor units fixed, informational. **MUST NOT** be present when `pricingType` is `PerMinute` |
 | `services[].available` | boolean | Yes | Whether the service is enabled |
 
 > **Dual pricing:** The `priceCredits*` fields are used by the station for offline charging calculations. The `priceLocal*` fields are informational, used for station display only (e.g., `priceLocalPerMinute = 50` → display "0.50/min" in local currency). All monetary values are **integers in the smallest unit** (credits or minor currency units).
@@ -1992,7 +1992,13 @@ Pushes the complete service catalog to the station. This is a **full replacement
       "pricingType": "PerMinute",
       "priceCreditsPerMinute": 10,
       "priceLocalPerMinute": 50,
-      "available": true
+      "available": true,
+      "bindings": [
+        {
+          "bayNumber": 1,
+          "programNumber": 1
+        }
+      ]
     },
     {
       "serviceId": "svc_standard",
@@ -2000,7 +2006,13 @@ Pushes the complete service catalog to the station. This is a **full replacement
       "pricingType": "PerMinute",
       "priceCreditsPerMinute": 8,
       "priceLocalPerMinute": 40,
-      "available": true
+      "available": true,
+      "bindings": [
+        {
+          "bayNumber": 1,
+          "programNumber": 2
+        }
+      ]
     },
     {
       "serviceId": "svc_deluxe",
@@ -2008,7 +2020,13 @@ Pushes the complete service catalog to the station. This is a **full replacement
       "pricingType": "Fixed",
       "priceCreditsFixed": 15,
       "priceLocalFixed": 75,
-      "available": true
+      "available": true,
+      "bindings": [
+        {
+          "bayNumber": 1,
+          "programNumber": 3
+        }
+      ]
     }
   ]
 }
@@ -2027,9 +2045,9 @@ Pushes the complete service catalog to the station. This is a **full replacement
 
 | Error Code | Condition |
 |------------|-----------|
-| `3015` | `PAYLOAD_INVALID` — malformed catalog data |
-| `5023` | `INVALID_CATALOG` — catalog structure is invalid or incomplete |
-| `5024` | `UNSUPPORTED_SERVICE` — catalog contains a service type the station does not support |
+| `3015` | `PAYLOAD_INVALID` — a payload-level value wrong in itself, such as an empty `catalogVersion`; a malformed service *entry* is `5023`, not this |
+| `5023` | `INVALID_CATALOG` — any entry failed validation (missing field, invalid pricing type, missing or conflicting price), or the catalog is internally inconsistent (duplicate `serviceId`) |
+| `5024` | `UNSUPPORTED_SERVICE` — the catalog names a service the station cannot run, or binds one to a bay or program ordinal it never declared; the whole catalog is refused, not the offending entry |
 | `5025` | `CATALOG_TOO_LARGE` — catalog exceeds station storage capacity |
 | `5103` | `STORAGE_ERROR` — NVS write failed |
 
@@ -2436,10 +2454,10 @@ Returns the full service catalog with pricing for all bays. The app uses this to
 | `bays[].services[].serviceId` | string | Yes | Service identifier (`svc_{id}`) |
 | `bays[].services[].serviceName` | string | Yes | Human-readable name |
 | `bays[].services[].pricingType` | string | Yes | `"PerMinute"` or `"Fixed"` |
-| `bays[].services[].priceCreditsPerMinute` | integer | Cond. | Credit price per minute |
-| `bays[].services[].priceCreditsFixed` | integer | Cond. | Fixed credit price |
-| `bays[].services[].priceLocalPerMinute` | integer | Cond. | Local-currency price in minor units per minute |
-| `bays[].services[].priceLocalFixed` | integer | Cond. | Local-currency price in minor units fixed |
+| `bays[].services[].priceCreditsPerMinute` | integer | Cond. | Credit price per minute. Required when `pricingType` is `PerMinute`; **MUST NOT** be present when it is `Fixed` |
+| `bays[].services[].priceCreditsFixed` | integer | Cond. | Fixed credit price. Required when `pricingType` is `Fixed`; **MUST NOT** be present when it is `PerMinute` |
+| `bays[].services[].priceLocalPerMinute` | integer | No | Local-currency price in minor units per minute, informational. **MUST NOT** be present when `pricingType` is `Fixed` |
+| `bays[].services[].priceLocalFixed` | integer | No | Local-currency price in minor units fixed, informational. **MUST NOT** be present when `pricingType` is `PerMinute` |
 | `bays[].services[].available` | boolean | Yes | Whether the service is operational |
 
 #### Example

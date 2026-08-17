@@ -6,13 +6,22 @@ Device Management Profile
 
 ## Purpose
 
-Verify that the station correctly handles UpdateServiceCatalog including successful catalog replacement with `previousCatalogVersion` returned, rejection of structurally invalid payloads with `3015 PAYLOAD_INVALID`, rejection of semantically invalid catalogs with `5023 INVALID_CATALOG`, and idempotent catalog updates.
+Verify that the station correctly handles UpdateServiceCatalog including successful catalog replacement with `previousCatalogVersion` returned, rejection of an entry missing a required field with `5023 INVALID_CATALOG`, rejection of a catalog whose entries are each well-formed but collide with `5023 INVALID_CATALOG`, and idempotent catalog updates.
+
+> **Both refusals carry `5023`, and that is not a duplicated step.** They exercise different
+> station logic — per-entry validation in Part B, cross-entry uniqueness in Part D — and a
+> station can pass one while failing the other. Earlier revisions of this case asked Part B
+> for `3015 PAYLOAD_INVALID`. That contradicted rule 1 of the profile, which sends *every*
+> malformed entry to `5023`, and the registry, which lists "missing required fields" under
+> `5023` and narrows `3015` to a value that could never be valid — which a missing field is
+> not. In this message `3015` reaches only a payload-level value outside the `services`
+> array, an empty `catalogVersion` being the example.
 
 ## References
 
 - `spec/profiles/device-management/update-service-catalog.md` — UpdateServiceCatalog behavior
 - `spec/03-messages.md` §6.9 — UpdateServiceCatalog payload (timeout 30s)
-- `spec/07-errors.md` §3.5 — Error codes 5023 `INVALID_CATALOG`, 3015 `PAYLOAD_INVALID`
+- `spec/07-errors.md` §3.5 — Error code 5023 `INVALID_CATALOG`; §3.3 — 3015 `PAYLOAD_INVALID` and its narrowed scope
 - `schemas/mqtt/update-service-catalog-response.schema.json`
 
 ## Preconditions
@@ -36,7 +45,13 @@ Verify that the station correctly handles UpdateServiceCatalog including success
          "pricingType": "PerMinute",
          "priceCreditsPerMinute": 10,
          "priceLocalPerMinute": 50,
-         "available": true
+         "available": true,
+         "bindings": [
+           {
+             "bayNumber": 1,
+             "programNumber": 1
+           }
+         ]
        },
        {
          "serviceId": "svc_standard",
@@ -44,7 +59,13 @@ Verify that the station correctly handles UpdateServiceCatalog including success
          "pricingType": "PerMinute",
          "priceCreditsPerMinute": 8,
          "priceLocalPerMinute": 40,
-         "available": true
+         "available": true,
+         "bindings": [
+           {
+             "bayNumber": 1,
+             "programNumber": 2
+           }
+         ]
        },
        {
          "serviceId": "svc_deluxe",
@@ -52,7 +73,13 @@ Verify that the station correctly handles UpdateServiceCatalog including success
          "pricingType": "Fixed",
          "priceCreditsFixed": 15,
          "priceLocalFixed": 75,
-         "available": true
+         "available": true,
+         "bindings": [
+           {
+             "bayNumber": 1,
+             "programNumber": 3
+           }
+         ]
        }
      ]
    }
@@ -85,7 +112,7 @@ Verify that the station correctly handles UpdateServiceCatalog including success
    }
    ```
 
-### Part B — Invalid Catalog Payload (3015)
+### Part B — Entry Missing a Required Field (5023)
 
 7. Send UpdateServiceCatalog with a malformed catalog (missing required `serviceName` field):
    ```json
@@ -96,7 +123,13 @@ Verify that the station correctly handles UpdateServiceCatalog including success
          "serviceId": "svc_broken",
          "pricingType": "PerMinute",
          "priceCreditsPerMinute": 10,
-         "available": true
+         "available": true,
+         "bindings": [
+           {
+             "bayNumber": 1,
+             "programNumber": 1
+           }
+         ]
        }
      ]
    }
@@ -105,8 +138,8 @@ Verify that the station correctly handles UpdateServiceCatalog including success
    ```json
    {
      "status": "Rejected",
-     "errorCode": 3015,
-     "errorText": "PAYLOAD_INVALID"
+     "errorCode": 5023,
+     "errorText": "INVALID_CATALOG"
    }
    ```
 9. Verify the station still uses the previous valid catalog (`"2026-01-30-01"`).
@@ -124,7 +157,13 @@ Verify that the station correctly handles UpdateServiceCatalog including success
           "pricingType": "PerMinute",
           "priceCreditsPerMinute": 10,
           "priceLocalPerMinute": 50,
-          "available": true
+          "available": true,
+          "bindings": [
+            {
+              "bayNumber": 1,
+              "programNumber": 1
+            }
+          ]
         },
         {
           "serviceId": "svc_standard",
@@ -132,7 +171,13 @@ Verify that the station correctly handles UpdateServiceCatalog including success
           "pricingType": "PerMinute",
           "priceCreditsPerMinute": 8,
           "priceLocalPerMinute": 40,
-          "available": true
+          "available": true,
+          "bindings": [
+            {
+              "bayNumber": 1,
+              "programNumber": 2
+            }
+          ]
         },
         {
           "serviceId": "svc_deluxe",
@@ -140,16 +185,22 @@ Verify that the station correctly handles UpdateServiceCatalog including success
           "pricingType": "Fixed",
           "priceCreditsFixed": 15,
           "priceLocalFixed": 75,
-          "available": true
+          "available": true,
+          "bindings": [
+            {
+              "bayNumber": 1,
+              "programNumber": 3
+            }
+          ]
         }
       ]
     }
     ```
 11. Verify UpdateServiceCatalog response `status: "Accepted"` (idempotent — same `catalogVersion` is a no-op).
 
-### Part D — Semantic Catalog Error (5023)
+### Part D — Duplicate `serviceId` (5023)
 
-12. Send UpdateServiceCatalog with a semantically invalid catalog (duplicate `serviceId`):
+12. Send UpdateServiceCatalog with a catalog whose entries are each individually valid but collide (duplicate `serviceId`):
     ```json
     {
       "catalogVersion": "2026-01-30-03",
@@ -160,7 +211,13 @@ Verify that the station correctly handles UpdateServiceCatalog including success
           "pricingType": "PerMinute",
           "priceCreditsPerMinute": 10,
           "priceLocalPerMinute": 50,
-          "available": true
+          "available": true,
+          "bindings": [
+            {
+              "bayNumber": 1,
+              "programNumber": 1
+            }
+          ]
         },
         {
           "serviceId": "svc_eco",
@@ -168,7 +225,13 @@ Verify that the station correctly handles UpdateServiceCatalog including success
           "pricingType": "PerMinute",
           "priceCreditsPerMinute": 12,
           "priceLocalPerMinute": 60,
-          "available": true
+          "available": true,
+          "bindings": [
+            {
+              "bayNumber": 1,
+              "programNumber": 1
+            }
+          ]
         }
       ]
     }
@@ -187,8 +250,8 @@ Verify that the station correctly handles UpdateServiceCatalog including success
 
 1. Valid catalog update returns `Accepted` with `previousCatalogVersion`.
 2. Station uses the new catalog for subsequent sessions (new services recognized).
-3. Structurally invalid catalog payload (missing required fields) returns `Rejected` with `3015 PAYLOAD_INVALID`.
-4. Semantically invalid catalog (duplicate `serviceId`) returns `Rejected` with `5023 INVALID_CATALOG`.
+3. An entry missing a required field returns `Rejected` with `5023 INVALID_CATALOG`.
+4. A catalog with a duplicate `serviceId` returns `Rejected` with `5023 INVALID_CATALOG`.
 5. Same `catalogVersion` is handled idempotently.
 6. All responses arrive within the 30-second timeout.
 
@@ -196,7 +259,7 @@ Verify that the station correctly handles UpdateServiceCatalog including success
 
 1. Valid catalog update returns `Rejected`.
 2. `previousCatalogVersion` is missing from `Accepted` response.
-3. Structurally invalid catalog is accepted without `3015` error.
-4. Semantically invalid catalog (duplicate serviceId) is accepted without `5023` error.
+3. An entry missing a required field is accepted, or is refused with a code other than `5023`.
+4. A catalog with a duplicate `serviceId` is accepted, or is refused with a code other than `5023`.
 5. Station does not recognize services from the new catalog.
 6. UpdateServiceCatalog response exceeds the 30-second timeout.

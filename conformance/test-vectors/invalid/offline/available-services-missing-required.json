@@ -9,6 +9,7 @@
           "serviceId": "svc_basic",
           "serviceName": "Basic Service",
           "pricingType": "PerMinute",
+          "priceCreditsPerMinute": 10,
           "available": true
         }
       ]

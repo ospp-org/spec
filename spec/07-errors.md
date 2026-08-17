@@ -1,6 +1,6 @@
 # Chapter 07 — Error Codes & Resilience
 
-> **Status:** Draft | **OSPP Version:** 0.21.0
+> **Status:** Draft | **OSPP Version:** 0.22.0
 
 This chapter defines the complete error taxonomy for the OSPP protocol, including the error code registry, standard error response format, retry policies, circuit breaker patterns, and graceful degradation behavior.
 
@@ -418,8 +418,8 @@ Station errors are reported by the station itself and cover physical hardware fa
 | 5019 | `UPLOAD_FAILED` | Error | true | The diagnostics archive could not be uploaded to the provided URL. | Verify the `uploadUrl` is reachable and accepts uploads. Retry the GetDiagnostics [MSG-018] command. |
 | 5020 | `INVALID_TIME_WINDOW` | Warning | false | The `startTime` is after `endTime`, or the requested time window is otherwise invalid. | Fix the time window parameters in the GetDiagnostics request. |
 | 5021 | `NO_DIAGNOSTICS_AVAILABLE` | Warning | false | No diagnostic data is available for the requested time window. | Request a broader time window, or wait for the station to accumulate more diagnostic data. |
-| 5023 | `INVALID_CATALOG` | Error | false | One or more service entries in the UpdateServiceCatalog [MSG-021] request failed validation (missing required fields, invalid pricing type, malformed service definition). | Fix the catalog payload. Inspect the `details` field for specific validation errors. |
-| 5024 | `UNSUPPORTED_SERVICE` | Warning | false | The catalog contains a `serviceId` that the station hardware does not support. The unsupported service is ignored; supported services are applied. | Remove unsupported services from the catalog, or accept the partial application. |
+| 5023 | `INVALID_CATALOG` | Error | false | One or more service entries in the UpdateServiceCatalog [MSG-021] request failed validation — a missing required field, an invalid pricing type, no price for the declared `pricingType` or the other type's price present ([`service-item.schema.json`](../schemas/common/service-item.schema.json) enforces both with `if`/`then`), a malformed service definition — or the catalog as a whole is inconsistent, a duplicate `serviceId` across entries being the case that arises. **Scope:** this is the code for every entry-level *and* catalog-level validation failure in this message. `3015 PAYLOAD_INVALID` does not compete with it: [§3.3](#33-session--bay-errors-3xxx) narrows `3015` to a value that could never be valid, which reaches only a payload-level member outside the `services` array, an empty `catalogVersion` being the example. | Fix the catalog payload. The response for this message is a **closed** schema with no `details` member ([`update-service-catalog-response.schema.json`](../schemas/mqtt/update-service-catalog-response.schema.json)), so `errorCode` and `errorText` are the whole of what the station can say — the server locates the offending entry by re-validating the payload it sent against the service-item schema, not by reading the reply. |
+| 5024 | `UNSUPPORTED_SERVICE` | Error | false | The catalog contains a service the station cannot run — a `serviceId` its hardware does not support, or, the case that now arises in practice, a `bindings` entry naming a `(bayNumber, programNumber)` pair the station never declared. The station declares its bays and their program ordinals at provisioning and re-declares them on every boot ([Chapter 01 §4.2](01-architecture.md)), so this is decidable from the payload alone. **The station rejects the entire catalog and keeps the one it had.** Earlier revisions had the station ignore the offending entry and apply the rest; that is withdrawn. Nothing in the response can name which entries were dropped — [`update-service-catalog-response.schema.json`](../schemas/mqtt/update-service-catalog-response.schema.json) is closed and carries `status`, `previousCatalogVersion`, `errorCode`, `errorText` and nothing else — so a partial application left the server holding a `catalogVersion` for a catalog no station had, with no way to discover it. A refusal the server can see is worth more than an application it cannot. | Station: respond `Rejected` with this code and leave the previous catalog in force. Server/Operator: the catalog names a service this station cannot run. Correct the binding, remove the entry, or re-provision the station if its hardware genuinely changed. Do **NOT** re-send unchanged. |
 | 5025 | `CATALOG_TOO_LARGE` | Error | false | The service catalog exceeds the station's storage or processing capacity. | Reduce the number of services in the catalog. Check station capabilities for maximum catalog size. |
 
 #### 5.1xx — Software Errors
@@ -984,7 +984,7 @@ Vendors MAY define custom error codes in the **9000–9999** range for proprieta
 | 5020 | `INVALID_TIME_WINDOW` | Warning | H |
 | 5021 | `NO_DIAGNOSTICS_AVAILABLE` | Warning | H |
 | 5023 | `INVALID_CATALOG` | Error | H |
-| 5024 | `UNSUPPORTED_SERVICE` | Warning | H |
+| 5024 | `UNSUPPORTED_SERVICE` | Error | H |
 | 5025 | `CATALOG_TOO_LARGE` | Error | H |
 | 5100 | `SOFTWARE_GENERIC` | Error | H |
 | 5101 | `FIRMWARE_ERROR` | Critical | H |

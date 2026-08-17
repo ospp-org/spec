@@ -31,16 +31,48 @@ Two further filters earn their keep:
   * compound -- "Present when status is Accepted and the station has ..." depends on
     something outside the document.
 
+Match the SHAPE, not a word list
+-------------------------------
+The first implementation required the clause to open with one of
+`REQUIRED|Required|Present|present|MUST be present`. That is narrower than the rule
+stated two paragraphs above, and the corpus fell through the gap in two ways:
+
+  * a synonym -- `common/service-item.schema.json` wrote "(applicable when pricingType
+    is PerMinute)";
+  * no lead word at all -- three certificate responses write "Error code when status is
+    Rejected", where the noun phrase *is* the assertion.
+
+Measured at v0.21.0: 41 descriptions under `schemas/**` carry the shape
+"when <field> is <value>". The word list selected 31 of them as candidates; the shape
+selects 37. Five of the six gained are vocabulary misses -- two "applicable when", three
+"Error code when" -- and all five were real findings, so the fix is not another synonym.
+The lead-in is dropped entirely and the shape alone selects a candidate; the modality and
+compound filters, which is what actually keeps precision, are what remain. Swept at the
+same time: no description in `schemas/**` carries the shape with a lead-in that means
+something other than presence ("ignored when", "interpreted when"), so widening added no
+false positive. If one ever appears, it will be flagged and must be reworded -- that is
+the intended failure, not a regression.
+
+Descriptions are read by walking the parsed document, not by matching the raw text. A
+regex reading a JSON string as `"[^"]*"` stops at the first escaped quote:
+`ble/auth-response.schema.json` embeds one in `sessionKeyConfirmation`, whose conditional
+therefore went uncounted for as long as both existed. It happens to be enforced, so it hid
+no finding -- it deflated the denominator, which is the same blindness pointed the other
+way.
+
 Precision
 ---------
-Measured at the time of writing: 33 candidate claims, 28 enforced, 5 flagged, 5 real.
-Without the modality filter, 8 flagged and 3 of those were false.
+Measured after both widenings and the pricing fix they surfaced: 39 candidate claims,
+33 enforced, 6 flagged, 6 real. Under the old word list at v0.21.0: 31 / 28 / 3. Every
+one of those 3 is still flagged -- the widening moved the set in one direction only.
 
 BASELINE is the count of known-open findings. It is not an allowlist: the findings are
 listed every run. Lower it as they are closed; a run that finds more than BASELINE fails.
-Today's 3 are the certificate-response family, whose fix is a schema tightening that
-changes validation outcomes for existing implementations -- an open decision, not an
-oversight. See `spec/07-errors.md` section 2.1.
+Today's 6 are the certificate-response family -- `errorText` AND `errorCode` in each of
+the same three schemas -- whose fix is a schema tightening that changes validation
+outcomes for existing implementations: an open decision, not an oversight. See
+`spec/07-errors.md` section 2.1. It was 3 before the widening and the corpus did not get
+worse; the instrument stopped seeing half of each file.
 
 Exit status
 -----------
@@ -52,13 +84,26 @@ import os
 import re
 import sys
 
-BASELINE = 3
+BASELINE = 6
 
 CLAIM = re.compile(
-    r'\b(REQUIRED|Required|Present|present|MUST be present)\b'
-    r'[^.]{0,40}?\bwhen\b\s+`?([A-Za-z][A-Za-z0-9_.]*)`?\s+is\s+`?([A-Za-z0-9_]+)`?')
+    r'\bwhen\b\s+`?([A-Za-z][A-Za-z0-9_.]*)`?\s+is\s+`?([A-Za-z0-9_]+)`?')
 SOFT = re.compile(r'\b(MAY|OPTIONAL|Optional|optional|SHOULD)\b')
-PROP = re.compile(r'"([A-Za-z0-9_]+)"\s*:\s*\{([^{}]*"description"\s*:\s*"([^"]*)")')
+
+
+def property_descriptions(node):
+    """Yield (property name, description) for every described property, at any depth."""
+    if isinstance(node, dict):
+        props = node.get('properties')
+        if isinstance(props, dict):
+            for name, sub in props.items():
+                if isinstance(sub, dict) and isinstance(sub.get('description'), str):
+                    yield name, sub['description']
+        for value in node.values():
+            yield from property_descriptions(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from property_descriptions(value)
 
 
 def covered_by(doc, field, trigger_value):
@@ -96,20 +141,25 @@ def main():
     findings = []
 
     for path in schemas:
-        raw = open(path, encoding='utf-8').read()
-        doc = json.loads(raw)
-        for m in PROP.finditer(raw):
-            field, desc = m.group(1), m.group(3)
+        doc = json.loads(open(path, encoding='utf-8').read())
+        for field, desc in property_descriptions(doc):
             claim = CLAIM.search(desc)
             if not claim:
                 continue
             if SOFT.search(desc):
                 continue
-            tail = desc[claim.start():claim.end() + 40]
+            # Compound test, bounded by the sentence. The clause it must catch is
+            # "Present when status is Accepted AND the station has ..." -- a conjunction
+            # inside the condition. A following SENTENCE is not part of the condition, and
+            # a fixed 40-character window that runs past the full stop drops the candidate
+            # for a word belonging to the next thought: writing "Required when `pricingType`
+            # is `PerMinute`, and MUST be absent otherwise" made this check skip a
+            # conditional that is enforced right there in the same file.
+            tail = desc[claim.end():claim.end() + 40].split('.', 1)[0]
             if re.search(r'\band\b', tail):
                 continue
             total += 1
-            trigger_field, trigger_value = claim.group(2), claim.group(3)
+            trigger_field, trigger_value = claim.group(1), claim.group(2)
             if covered_by(doc, field, trigger_value):
                 enforced += 1
             else:

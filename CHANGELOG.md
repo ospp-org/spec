@@ -8,6 +8,125 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.22.0] — 2026-08-18
+
+> **A gate existed for exactly this defect, and the defect walked past it on one word.**
+> `tools/check-schema-conditionals.py` exists to flag a schema description asserting a conditional
+> the schema does not enforce. `common/service-item.schema.json` wrote *"(applicable when
+> pricingType is PerMinute)"*; the matcher's word list wanted `REQUIRED|Required|Present|present|
+> MUST be present`. Both have been in the tree since `v0.1.0-draft.1`. The gate ran, reported
+> `31 candidates / 28 enforced / 3 flagged`, and exited `0` — indistinguishable from a clean tree.
+>
+> **The word list was not the whole of it, and that is the part worth keeping.** Swept properly,
+> `schemas/**` carries **41** descriptions of the form *"when `<field>` is `<value>`"*. The word
+> list selected **31**. The six it missed were **five real findings** plus one description the
+> extraction never saw at all: a regex reading a JSON string as `"[^"]*"` truncates at the escaped
+> quote inside `ble/auth-response.schema.json`. Three of the five misses carry no lead-in word —
+> *"Error code when status is Rejected"*, where the noun phrase **is** the assertion — so no
+> synonym could have reached them. The matcher now keys on the shape the docstring always claimed
+> to check, and reads descriptions by walking the parsed document. The set moved in one direction
+> only: all 3 previously-flagged findings are still flagged.
+>
+> **A fourth narrowing surfaced while fixing the third.** The compound filter's 40-character window
+> ran past the full stop, so writing *"Required when `pricingType` is `PerMinute`, and MUST be
+> absent otherwise"* made the gate skip a conditional enforced in the same file. It is now bounded
+> by the sentence. Final: **39 candidates / 33 enforced / 6 flagged**, baseline `3 → 6` — the corpus
+> did not get worse, the instrument stopped seeing half of each certificate response.
+>
+> **The pricing conditional is now in the schema, so both SDKs get it without writing a line.**
+> Three prose sites stated it and none enforced it, and they disagreed about which fields it
+> covered: the profile called the local-currency prices *Optional*, while `03-messages.md` and
+> `ble-transport.md` marked all four `Cond.` — the latter contradicted by its own dual-pricing note
+> two lines below, which calls them informational. The credit price is required for the declared
+> `pricingType` and the other type's prices are forbidden, which is also the first definition
+> `3015`'s *"conflicting pricing fields"* has ever had. Censused first: of **51** service entries
+> in the repository, **zero** carried a mismatched price, so the prohibition breaks nothing.
+>
+> **`5024 UNSUPPORTED_SERVICE` mandated a partial application that no implementation performs.**
+> The registry said the unsupported entry is ignored and the rest applied; the profile's rule 2
+> forbids a partial catalog being active; and no response member can name what was dropped. Both
+> station simulators are all-or-nothing, no conformance vector exercises it, and the server persists
+> the catalog **it sent** rather than anything the reply reports — so a partial application left the
+> server holding a `catalogVersion` for a catalog no station had, undiscoverable. It is now a
+> rejection cause, **severity `Warning` → `Error`**: a vendor branching on severity rather than on
+> the code changes with it.
+
+### Changed
+
+- **BREAKING — `common/service-item.schema.json` enforces the pricing conditional.** `PerMinute`
+  requires `priceCreditsPerMinute` and forbids `priceCreditsFixed` / `priceLocalFixed`; `Fixed` is
+  the mirror. A `PerMinute` service with no price validated clean before this release, and the
+  conformance vector `update-service-catalog-request-minimal.json` **was exactly that payload**.
+- **BREAKING — `ble/available-services.schema.json` gains the same conditional.** Its inline service
+  entry carried the identical defect, and stated it in a *third* vocabulary — *"for PerMinute
+  services"* — that the widened matcher still would not reach, so its descriptions are normalised to
+  the house form. Left alone it would have stayed invisible to the instrument this release repairs.
+- **BREAKING — `5024 UNSUPPORTED_SERVICE` refuses the whole catalog** and its severity moves
+  `Warning` → `Error` (`07-errors.md` registry row, severity table, `03-messages.md`, the profile).
+  With `bindings` REQUIRED the condition is decidable from the payload: an unsupported service is
+  one whose binding names a `(bayNumber, programNumber)` the station never declared.
+- **BREAKING — `TC-DM-008` Part B now expects `5023`, not `3015`.** A missing required field is
+  `5023` under rule 1 of the profile *and* under the registry, which lists *"missing required
+  fields"* there and narrows `3015` to a value that could never be valid. Part D's `5023` for a
+  duplicate `serviceId` was already correct against that narrowing — the stale artefact was the
+  **profile's** `3015` row, not the test's Part D, so this is not the two-way inversion it looked
+  like.
+- `priceLocalPerMinute` / `priceLocalFixed` are marked Required = **No**, not `Cond.`, in
+  `03-messages.md` (both catalog tables) and `ble-transport.md`, agreeing with the profile, the
+  schema and the dual-pricing note.
+- `3015 PAYLOAD_INVALID` is scoped in the catalog context to a payload-level value wrong in itself —
+  an empty `catalogVersion` — since every entry-level failure is `5023` by rule 1.
+
+### Fixed
+
+- `tools/check-schema-conditionals.py`: matches the documented shape rather than a word list; reads
+  descriptions from the parsed document rather than by regex over raw text; bounds the compound
+  filter by the sentence. BASELINE `3 → 6`, the six being `errorText` **and** `errorCode` in each of
+  the three certificate responses — previously it saw only the `errorText` of each.
+- `service-item.schema.json` described `pricingType is fixed` where the enum value is `Fixed`.
+  `covered_by()` compares case-sensitively, so the correct `if`/`then` alone would have left the
+  finding flagged.
+- **`bindings` added to all 15 catalog entries embedded in markdown** — 9 in `TC-DM-008` (the
+  recon said ten; the tenth `"serviceId"` in that file is a StartService payload), 3 in
+  `03-messages.md`, 3 in the profile. It was REQUIRED and present in **every** CI-validated body and
+  absent from **every** markdown-embedded one, because no gate parses JSON out of a fence.
+- `07-errors.md`'s `5023` row now names the failures it actually covers — missing field, invalid
+  pricing type, missing or conflicting price, duplicate `serviceId` — and no longer tells the reader
+  to inspect a `details` field, which the closed response schema does not carry.
+- Four conformance vectors updated. The two invalid ones gained a price so they keep failing for
+  **one** reason: `update-service-catalog-request-invalid-type.json` still fails only on
+  `catalogVersion`'s type, `available-services-missing-required.json` only on its absent
+  `catalogVersion`.
+
+### Added
+
+- Profile rule 8: the station **MUST** reject the whole catalog with `5024` and keep the previous
+  one, and **MUST NOT** apply the remainder and report success.
+- Rule 2 states that its subject is *tearing* — no observer may see a half-applied swap — and that
+  whether a subset may be applied at all is rule 8's question. The rule was written about atomicity;
+  its literal text also forbade permanent subsetting, which is how it came to contradict `5024`.
+
+### Open — recorded, not decided
+
+- **Ten registry rows tell the reader to inspect a `details` field; two schemas declare one**
+  (`boot-notification-response`, `security-event`). Fixed here for `5023` only, because that row was
+  already being rewritten. Codes `3015`, `3018`, `3019`, `4016`, `4017`, `4020`, `6004`, `6007`
+  still carry it and need their own pass — the REST-scoped ones may be answered by an HTTP error
+  body no schema in this repo models.
+- **No gate parses JSON out of a markdown fence.** That is the mechanism behind the `bindings`
+  divergence, not an accident of it, and it will produce the next one.
+
+### SDK and server impact
+
+- **Both SDKs vendor `service-item.schema.json` and the conformance vectors**, so the enforcement
+  arrives with the next sync at no cost — but the vendored `update-service-catalog-request-minimal.json`
+  must move with it or `ConformanceVectorTest` (PHP) and `SchemaValidator.test.ts` (TS) both go red
+  on a vector that is no longer valid. The BLE change reaches PHP only: `sdk-ts` skips the entire
+  `offline` category.
+- **Server:** no change is required by this release, and one is now visible without it — the
+  outbound catalog is built through `MessageBuilder` rather than `MessageFactory`, so nothing
+  validates it against the schema that now carries the rule.
+
 ## [0.21.0] — 2026-08-17
 
 > **`0.20.0` refused UpdateFirmware to a `Pending` station, and the refusal was unconstructible.**

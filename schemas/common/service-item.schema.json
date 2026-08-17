@@ -33,22 +33,22 @@
     "priceCreditsPerMinute": {
       "type": "integer",
       "minimum": 1,
-      "description": "Price in credits per minute (applicable when pricingType is PerMinute)"
+      "description": "Price in credits per minute. Required when `pricingType` is `PerMinute`. MUST be absent otherwise."
     },
     "priceCreditsFixed": {
       "type": "integer",
       "minimum": 1,
-      "description": "Fixed price in credits (applicable when pricingType is fixed)"
+      "description": "Fixed price in credits. Required when `pricingType` is `Fixed`. MUST be absent otherwise."
     },
     "priceLocalPerMinute": {
       "type": "integer",
       "minimum": 0,
-      "description": "Optional price in local-currency minor units per minute"
+      "description": "Optional price in local-currency minor units per minute — informational, for station display only. Never the basis of a charge, and MUST be absent when `pricingType` is `Fixed`."
     },
     "priceLocalFixed": {
       "type": "integer",
       "minimum": 0,
-      "description": "Optional fixed price in local-currency minor units"
+      "description": "Optional fixed price in local-currency minor units — informational, for station display only. Never the basis of a charge, and MUST be absent when `pricingType` is `PerMinute`."
     },
     "available": {
       "type": "boolean",
@@ -83,5 +83,33 @@
       }
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": { "pricingType": { "const": "PerMinute" } },
+        "required": ["pricingType"]
+      },
+      "then": {
+        "required": ["priceCreditsPerMinute"],
+        "properties": {
+          "priceCreditsFixed": false,
+          "priceLocalFixed": false
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "pricingType": { "const": "Fixed" } },
+        "required": ["pricingType"]
+      },
+      "then": {
+        "required": ["priceCreditsFixed"],
+        "properties": {
+          "priceCreditsPerMinute": false,
+          "priceLocalPerMinute": false
+        }
+      }
+    }
+  ]
 }

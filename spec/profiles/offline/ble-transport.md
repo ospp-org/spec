@@ -1,6 +1,6 @@
 # BLE Transport
 
-> **Status: EXPERIMENTAL** | **OSPP Version:** 0.21.0
+> **Status: EXPERIMENTAL** | **OSPP Version:** 0.22.0
 >
 > Published for review, **not** for implementation. May change incompatibly without a MAJOR
 > bump. See [Release status](../../../README.md#ble-is-experimental-in-08).
@@ -102,10 +102,10 @@ Each service object:
 | `serviceId` | string | Yes | Service identifier. |
 | `serviceName` | string | Yes | Display name of the service. |
 | `pricingType` | string | Yes | `PerMinute` or `Fixed`. |
-| `priceCreditsPerMinute` | integer | Cond. | Credits per minute (present when `PerMinute`). |
-| `priceCreditsFixed` | integer | Cond. | Fixed price in credits (present when `"Fixed"`). |
-| `priceLocalPerMinute` | integer | Cond. | Local-currency minor units per minute (present when `PerMinute`). |
-| `priceLocalFixed` | integer | Cond. | Fixed price in local-currency minor units (present when `"Fixed"`). |
+| `priceCreditsPerMinute` | integer | Cond. | Credits per minute. Required when `pricingType` is `PerMinute`; **MUST NOT** be present when it is `Fixed`. |
+| `priceCreditsFixed` | integer | Cond. | Fixed price in credits. Required when `pricingType` is `Fixed`; **MUST NOT** be present when it is `PerMinute`. |
+| `priceLocalPerMinute` | integer | No | Local-currency minor units per minute, informational. **MUST NOT** be present when `pricingType` is `Fixed`. |
+| `priceLocalFixed` | integer | No | Fixed price in local-currency minor units, informational. **MUST NOT** be present when `pricingType` is `PerMinute`. |
 | `available` | boolean | Yes | Whether this service is currently available. |
 
 **Example:**
