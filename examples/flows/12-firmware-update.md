@@ -131,7 +131,7 @@ The server validates:
 
 ### Step 3: Station Accepts Update Request (22:00:01.300)
 
-The station validates the request (checks available flash space, verifies it is not currently servicing a bay) and accepts.
+The station validates the request (checks available flash space) and accepts. Bay state is **not** an acceptance condition: the gate is on the install, never the download, so a station that is servicing a bay still accepts, downloads and verifies, and then holds the verified image until every bay is idle (`spec/05-state-machines.md` §7.4, `update-firmware.md` §5 rules 1 and 7).
 
 **MQTT Topic:** `ospp/v1/stations/stn_a1b2c3d4/to-server`
 

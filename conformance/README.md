@@ -1,6 +1,6 @@
 # OSPP Conformance Testing
 
-> **Status:** Draft | **OSPP Version:** 0.20.2
+> **Status:** Draft | **OSPP Version:** 0.21.0
 
 This document defines the conformance testing framework for OSPP implementations.
 Conformance testing validates that a station or server implementation correctly
@@ -124,6 +124,7 @@ validation, and offline session reconciliation.
 | All Standard requirements | TC-CORE-*, TC-TX-*, TC-SEC-* |
 | Configuration read/write | TC-DM-001 |
 | Firmware update | TC-DM-002, TC-DM-004 |
+| Firmware update to a **restricted** station (accepted, notifications suppressed) | TC-DM-002 (Part E) |
 | Offline/BLE operation | TC-OFF-* |
 
 ### 2.4 Complete Compliance

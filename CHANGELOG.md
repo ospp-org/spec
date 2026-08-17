@@ -8,6 +8,126 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.21.0] — 2026-08-17
+
+> **`0.20.0` refused UpdateFirmware to a `Pending` station, and the refusal was unconstructible.**
+> `update-firmware-response.schema.json` requires `errorCode` **and** `errorText` on every
+> `Rejected`, and the nine codes `07-errors.md` §4 lists for UpdateFirmware — `5014`, `5015`,
+> `5016`, `5017`, `5018`, `5103`, `5107`, `5112`, `1011` — contain nothing that describes a
+> restricted station. A station obeying the rule emitted either a schema-invalid response or a code
+> meaning something else. That is the class `0.20.0` repaired two paragraphs away, where a
+> notification status the schema forbids made a **MUST** unobeyable; it shipped a second instance of
+> it in the same release.
+>
+> **Its premise was contradicted 600 lines down its own chapter.** The refusal rested on
+> FirmwareStatusNotification being *"the entire account of the update"*. §6.6's mapping table
+> already gave the update's terminal state, `Activated`, no notification value and said in terms
+> that it is *reported via BootNotification [MSG-001]* — and `firmwareVersion` is **REQUIRED** on
+> every BootNotification, which a restricted station **MUST** keep sending at `retryInterval`
+> without limit. The outcome travels on the one message the restriction **compels**, and it arrives
+> sooner than from an `Operational` station, which need never boot again. The account was the only
+> one for a **bounded** interval and was read as permanent.
+>
+> **The citation that supported it was a misquotation, and its correction is why nothing cascaded.**
+> The decision cited `07-errors.md`'s `1007` entry for *"cannot be handed a firmware update while
+> **restricted**"*. That entry says *"while it is **rejected**"* — as do all five other sites
+> carrying the argument (`VERSIONING.md`, `04-flows.md`, `boot-notification.md` §6, `TC-CORE-001`
+> step 45 and failure criterion 9). Every one is about `Rejected`, where the limit is **structural**:
+> no session key, and signing fails closed in both directions, so no command can be delivered or
+> accepted. **All six are unchanged by this release**, which is the tell that they were never
+> evidence for refusing in `Pending`.
+>
+> **So: `Accepted`, with every notification suppressed — option 2 of the recorded option space,
+> scoped to `Pending` alone.** The station downloads, verifies, installs behind the same install
+> gate and reboots; nothing about the update changes but the reporting, which is **suppressed, not
+> deferred**. `Rejected` is untouched and untouchable. **The discriminator's second clause is kept
+> verbatim** — it was the reading that failed, not the test — and gains the rule for applying it:
+> look for the later account on **any** message the station may send, and refuse only when no
+> message it may ever send would carry the outcome. Option 3 stays rejected on `0.19.0`'s ground.
+>
+> **MINOR, and breaking for anything that implemented the refusal** — which is four days old, so the
+> exposure is one release wide. `protocolVersion` stays **`0.3.0`**, no schema changes, and
+> **nothing is added to any registry**: the reversal is the one outcome that needs no new error code,
+> whereas keeping `0.20.0` would have required one.
+
+### Changed
+
+- **spec:** **UpdateFirmware to a `Pending` station is `Accepted`, and its FirmwareStatusNotifications
+  are suppressed** — `05-state-machines.md` §1.4's table row, and `update-firmware.md` §5 rule 9,
+  which additionally states in its own paragraph why `Rejected` is not and cannot be covered. The
+  update runs in full behind the install gate of §7.4; the server reads the result from the
+  `firmwareVersion` of the next BootNotification, whether that boot is answered `Pending` or
+  `Accepted`.
+- **spec:** **the discriminator gains its application rule, not a third clause.** §1.4 now says the
+  later account may arrive on any message the station may send — including one the restriction itself
+  compels — and that a command is refused only when no such message exists. The clause still refuses
+  TriggerMessage for a StatusNotification or a MeterValues, where nothing later restates the
+  suppressed reading.
+- **spec:** **§1.4 states that the two restricted-state permissions are two mechanisms with one
+  reason, and not two exceptions to one rule.** The origination test governs what the station
+  **sends** (BootNotification, SignCertificate); the discriminator governs what it does with a
+  command it **receives**. They run in opposite directions and merging them would invite the question
+  `0.19.0`'s test exists to refuse — whether FirmwareStatusNotification repairs the station's
+  standing. It does not, which is exactly why it stays forbidden.
+- **spec:** the station FSM's **`Reboot` row named one `From` state** and now names three
+  (`Operational, Pending, Rejected`). This **adds no edge**: `Pending -> Booting` and
+  `Rejected -> Booting` are already listed under *`retryInterval` elapsed*, so a conformance check
+  counting `(from, to)` pairs sees the same number as before — only the trigger coverage widens. Two
+  of the three were already reachable and unlisted, since Reset is answered normally while `Pending`
+  and a watchdog or a power cycle is physical.
+
+### Fixed
+
+- **spec:** **the stall rule is suspended, not scoped, while a station is restricted.**
+  `firmware-status.md` §6 rule 3's five minutes run from *"the later of the last notification and the
+  moment the gate opens"*, and on a restricted station **both anchors are absent rather than late**:
+  no notification is ever sent, and the server holds every bay at `Unknown`, which is the very thing
+  the `Verified` scoping leans on (*"it holds the bay states the gate turns on"*). A server running
+  the timer would fire on **every** such update, and the remedies the rule authorises are a re-issue
+  or a **Reset** — a Reset during `Installing` is an interrupted partition write. `0.20.0` rejected
+  option 2 partly for needing this exception, in the same release that had already granted rule 3 one
+  for the `Verified` wait.
+- **spec:** **the same defect in the twin rule, pre-existing and never scoped.**
+  `diagnostics-status.md` §5 rule 6 is the identical 5-minute rule for GetDiagnostics, which has been
+  answered `Accepted` while `Pending` with its events suppressed since before this arc — so that
+  timer has been firing on healthy uploads all along. It has no BootNotification equivalent and needs
+  none: the archive is an HTTP PUT to a URL the command supplied.
+- **spec:** **an OCPP citation wider than its source.** §1.4 read *"the CSMS is free to issue
+  requests"*, citing *B02 Cold Boot — Pending*. `B02.FR.01` names four Provisioning use cases and no
+  others, and `B02.FR.05` has the station reject a remote start or stop outright. **OCPP does not
+  decide the firmware question in either generation**: 1.6 §4.2 forbids the Central System exactly
+  two messages while Pending, neither of them a firmware command, and 2.0.1's Firmware Management
+  block never mentions registration status. Restated at the altitude the text supports, with the
+  silence named — the decision rests on this specification's own grounds.
+- **spec:** `05-state-machines.md` §6.6 states that the mapping emits **nothing** on a restricted
+  station and that §1.4 overrides the *Action* column of §6.3, which §7.1's precedence rule already
+  implied for every machine in the chapter but no firmware site said.
+- **examples / conformance:** two residues of `0.20.0`'s install-gate sweep, both stating bay state
+  as an **acceptance** condition when the gate is on the install —
+  `examples/flows/12-firmware-update.md` Step 3 (*"verifies it is not currently servicing a bay"* as
+  part of validating the request) and `TC-DM-002` precondition 3, whose parenthetical gave the same
+  reason for what is only a determinism precondition.
+- **spec:** a mis-citation inherited from the rule being replaced. `update-firmware.md` rule 9 cited
+  the stall timer as *"§6 rule 3"*, but §6 of **that** document is the *Download and Install Flow* —
+  the stall rule is `firmware-status.md` §6 rule 3, and has never lived in `update-firmware.md`. Now
+  cited by file.
+- **guides:** `implementors-guide.md` §2.14 told a station to ACK `Accepted` and send progress events
+  unconditionally — correct for `Pending` after this release, but silent on the suppression. It now
+  states which step to skip, and warns server implementers off the stall timer.
+
+### Added
+
+- **conformance:** **`TC-DM-002` Part E — firmware update while `Pending`**, the first Part in that
+  case to run against a restricted station. It verifies `Accepted`; verifies silence across the whole
+  download and install **plus five further minutes**, so a server applying the stall rule would have
+  fired inside the observation window; verifies no Reset or re-issue arrives in it; and verifies the
+  new `firmwareVersion` on a boot that is **still answered `Pending`**, which is the step the whole
+  Part rests on. Three expected results and four failure criteria, one of which names what a
+  conforming `Rejected` would have had to contain and cannot. Before this the `Pending` command table
+  was enforced by prose alone — and for its other rows it still is: no gate in `tools/` reads it.
+
+---
+
 ## [0.20.2] — 2026-08-17
 
 > **`verify-protocol.sh` reported nine findings and three of them were the checker's own

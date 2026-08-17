@@ -2,7 +2,7 @@
 
 > **For:** Developers building OSPP-compatible stations, servers, or user agents
 > **Level:** Practical guide, not formal spec. Read this first, then the spec chapters.
-> **Spec Version:** 0.20.2
+> **Spec Version:** 0.21.0
 
 ---
 
@@ -548,6 +548,20 @@ When you receive an UpdateFirmware REQUEST:
 8. If firmware installation fails AND rollback also fails, station enters `Faulted` state, emits SecurityEvent `FirmwareIntegrityFailure` (Critical), and requires manual intervention via physical access
 
 > This value accounts for boot sequence (~60s), local health check (~120s), and network reconnection margin (~120s).
+
+**While your station is `Pending`, do all of this except step 3.** A restricted station accepts a
+firmware update on the same terms as an accepted one, and sends **no** FirmwareStatusNotification
+for as long as the restriction lasts (`spec/05-state-machines.md` §1.4). Steps 1, 2 and 4–8 are
+unchanged; step 3 is skipped entirely rather than buffered. You do not need to report the result:
+`firmwareVersion` is required on every BootNotification and you keep sending those at
+`retryInterval`, so the boot after the reboot tells the server what it needs to know. A station in
+`Rejected` never reaches this section — it processes no commands at all.
+
+**Server implementers: do not run the stall timer against a restricted station.** Its five minutes
+are measured on notifications you have yourself suppressed, and its remedies are a re-issue or a
+Reset — a Reset during installation interrupts a partition write. Read the outcome from the next
+BootNotification instead (`spec/profiles/device-management/firmware-status.md` §6 rule 3). The same
+applies to GetDiagnostics (`spec/profiles/device-management/diagnostics-status.md` §5 rule 6).
 
 ### 2.15 Certificate Renewal
 
@@ -1308,4 +1322,4 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 
 ---
 
-*This guide covers OSPP 0.20.2. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*
+*This guide covers OSPP 0.21.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*

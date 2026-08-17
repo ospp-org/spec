@@ -38,7 +38,7 @@ DiagnosticsStatusNotification (action: `DiagnosticsNotification`) is a station-i
 3. During `Uploading`, the station **SHOULD** send progress updates at every 10% increment.
 4. The `progress` field is only meaningful during the `Uploading` status. It **MUST** be omitted for `Collecting`, `Uploaded`, and `Failed`.
 5. On transition to `Failed`, the station **MUST** include a descriptive `errorText`.
-6. If the station does not send a DiagnosticsNotification within 5 minutes of the last notification, the server **SHOULD** consider the operation stalled and **MAY** re-issue the GetDiagnostics command.
+6. If the station does not send a DiagnosticsNotification within 5 minutes of the last notification, the server **SHOULD** consider the operation stalled and **MAY** re-issue the GetDiagnostics command. **The clock does not run while the station is restricted.** A `Pending` station is answered `Accepted` for GetDiagnostics [MSG-018] and the events that would report its progress are suppressed ([`05-state-machines.md` §1.4](../../05-state-machines.md)), so there is no last notification to measure from and this rule would fire on every such upload. The server **MUST NOT** apply it to a restricted station. There is no later message that carries the result here, and none is needed: the archive is an HTTP PUT to a URL the command supplied, so the upload either lands there or it does not, and that is where the server looks. Stated in `0.21.0` alongside the same defect in the firmware twin ([`firmware-status.md` §6](firmware-status.md) rule 3), though here it has been live since GetDiagnostics was first answered `Accepted` while restricted.
 
 ### 5.1 Expected State Transition Sequence
 

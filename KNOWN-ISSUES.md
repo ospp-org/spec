@@ -1,8 +1,9 @@
 # OSPP Known Issues
 
 **Date:** 2026-08-17
-**Specification-document version:** 0.20.2 (release tag `v0.20.2`)
-**Status:** 3 blockers open (all BLE), 19 non-blocking issues open, 7 decisions recorded
+**Specification-document version:** 0.21.0 (release tag `v0.21.0`)
+**Status:** 3 blockers open (all BLE), 19 non-blocking issues open, 8 decisions recorded (one of
+them reversing another)
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle and
 the arcs since
 
@@ -15,7 +16,7 @@ the arcs since
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
 | OPEN | 19 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) · **[`5016` is required for two conditions and named for one](#open--5016-version_already_installed-is-required-for-two-conditions-and-one-of-them-is-the-opposite-of-what-the-name-says)** · **[UpdateFirmware is both idempotent and `5107`](#open--updatefirmware-is-documented-as-idempotent-and-as-rejected-with-5107-for-the-same-second-command)** · **[no code describes a non-HTTPS firmware URL](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal)** · **[`offeredVersion` vs `attemptedVersion`](#open--the-firmwaredowngradeattempt-securityevent-names-the-offered-version-with-two-different-member-names-and-nothing-can-tell)** |
 | CLOSED | 4 | [Device Management Required vs RECOMMENDED](#closed-0160--the-device-management-profile-was-required-in-chapter-08-and-recommended-not-mandatory-in-its-own-readme) — closed in 0.16.0 in favour of the capability · [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
-| DECIDED | 7 | **[nine gates in `tools/` were reachable from no job](#decided-0201--two-validation-scripts-reported-100-failure-and-no-workflow-ran-them-the-workflows-now-call-the-scripts-and-a-census-guards-the-class)** — the workflows now call the scripts, and `check-tool-callers.py` guards the class · **[the firmware gate is on the INSTALL, not the download](#decided-0200--the-active-session-gate-named-three-stages-it-gates-the-install-and-scheduledat-defers-the-install-with-it)** — and `scheduledAt` defers the install with it; the stall rule scoped rather than `Verified` given a wire value · **[UpdateFirmware to a `Pending` station is `Rejected`](#decided-0200--updatefirmware-had-no-row-in-the-pending-command-table-it-is-rejected-and-the-discriminator-gained-the-clause-that-says-why)** — the discriminator gained the clause that made the first one answer wrongly · **[a restricted station may renew its own certificate](#decided-0190--one-table-gave-the-same-act-opposite-verdicts-and-a-certificate-renewal-could-not-conclude-in-the-state-the-spec-keeps-open-for-repairs)** — the exception's *reason* restated to cover both members rather than a second name added to a list · [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
+| DECIDED | 8 | **[UpdateFirmware to a `Pending` station is `Accepted`, notifications suppressed](#decided-0210--updatefirmware-to-a-pending-station-was-refused-on-a-premise-the-same-chapter-contradicts-and-with-a-response-no-error-code-could-carry)** — **reverses the `0.20.0` row below**: the `Rejected` it mandated needed an `errorCode` no registry entry supplies, and §6.6 already reported the outcome on BootNotification; the discriminator's second clause survives, its reading did not · **[nine gates in `tools/` were reachable from no job](#decided-0201--two-validation-scripts-reported-100-failure-and-no-workflow-ran-them-the-workflows-now-call-the-scripts-and-a-census-guards-the-class)** — the workflows now call the scripts, and `check-tool-callers.py` guards the class · **[the firmware gate is on the INSTALL, not the download](#decided-0200--the-active-session-gate-named-three-stages-it-gates-the-install-and-scheduledat-defers-the-install-with-it)** — and `scheduledAt` defers the install with it; the stall rule scoped rather than `Verified` given a wire value · **[~~UpdateFirmware to a `Pending` station is `Rejected`~~ — REVERSED in `0.21.0`](#decided-0200--updatefirmware-had-no-row-in-the-pending-command-table-it-is-rejected-and-the-discriminator-gained-the-clause-that-says-why)** — kept as the record; the row it added was right, the verdict in it was not · **[a restricted station may renew its own certificate](#decided-0190--one-table-gave-the-same-act-opposite-verdicts-and-a-certificate-renewal-could-not-conclude-in-the-state-the-spec-keeps-open-for-repairs)** — the exception's *reason* restated to cover both members rather than a second name added to a list · [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
 | **Total open** | **22** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
@@ -1176,6 +1177,118 @@ alone and annotated in the case itself, so the latitude is visible rather than i
 
 ---
 
+## DECIDED (0.21.0) — UpdateFirmware to a `Pending` station was refused on a premise the same chapter contradicts, and with a response no error code could carry
+
+**Raised 2026-08-17, reversing a decision taken four commits earlier in the same arc. The author of
+the `0.20.0` verdict is the one reopening it.**
+
+`0.20.0` gave the `Pending` command table its missing UpdateFirmware row and made it **`Rejected`**
+([`05-state-machines.md` §1.4](spec/05-state-machines.md),
+[`update-firmware.md` §5](spec/profiles/device-management/update-firmware.md) rule 9). **Four
+independent grounds say that was wrong**, and they are listed in order of how hard they are to
+argue with rather than how they were found.
+
+**1 — The response it mandated could not be constructed.**
+[`update-firmware-response.schema.json`](schemas/mqtt/update-firmware-response.schema.json) requires
+`errorCode` **and** `errorText` whenever `status` is `Rejected`. The codes
+[`07-errors.md` §4](spec/07-errors.md) lists for UpdateFirmware are `5014 DOWNLOAD_FAILED`,
+`5015 CHECKSUM_MISMATCH`, `5016 VERSION_ALREADY_INSTALLED`, `5017 INSUFFICIENT_STORAGE`,
+`5018 INSTALLATION_FAILED`, `5103 STORAGE_ERROR`, `5107 OPERATION_IN_PROGRESS`,
+`5112 FIRMWARE_SIGNATURE_INVALID` and `1011 URL_UNREACHABLE`. **Not one of them describes a
+restricted station.** A station obeying the rule had to emit either a schema-invalid response or a
+code that means something else. This is the identical class `0.20.0` itself repaired two paragraphs
+away — *"`Accepted` was listed as a notification status the schema forbids, so a conforming station
+could not obey the **MUST** that named it"* — and the reversal costs no registry addition, because
+`Accepted` needs no code.
+
+**2 — "The entire account of the update" is contradicted by the same chapter, 600 lines down.**
+The verdict rested on FirmwareStatusNotification being the only account the update would ever get.
+[§6.6](spec/05-state-machines.md)'s mapping table already says otherwise, of the update's own
+terminal state: *"`Activated` | -- | **Reported via BootNotification [MSG-001], not
+FirmwareStatusNotification**"*. And `firmwareVersion` is **REQUIRED** on every BootNotification
+([`boot-notification-request.schema.json`](schemas/mqtt/boot-notification-request.schema.json)),
+which a restricted station **MUST** keep sending at `retryInterval` without limit. So the outcome
+travels on the one message the restriction *compels*, and it arrives **sooner** than from an
+`Operational` station, which is under no obligation to boot again at all. The clause was sound; it
+was applied to a **bounded** silence as though it were permanent.
+
+**3 — The supporting citation was a misquotation.** Option 1 below argues that *"`07-errors.md`'s
+`1007` entry already treats 'cannot be handed a firmware update **while restricted**' as the thing
+that forces a site visit."* `07-errors.md` says *"while it is **rejected**"*, and so do all five
+other sites carrying that argument ([`VERSIONING.md`](VERSIONING.md),
+[`04-flows.md`](spec/04-flows.md), [`boot-notification.md` §6](spec/profiles/core/boot-notification.md),
+`TC-CORE-001` steps 45 and failure criterion 9). Every one of them is about `Rejected`, where the
+limit is **structural** — no session key, signing fails closed both ways — and none is about
+`Pending`. The quoted support for refusing in `Pending` was evidence about the state where refusing
+was never in question. **All six sites are therefore untouched by this reversal**, which is the tell
+that they were never evidence for it.
+
+**4 — The state it locked is the state that most needs the mechanism.** `Pending` is unbounded,
+entered by an outstanding approval or a `3018 TOPOLOGY_MISMATCH`, and cleared by a person and never
+by time. A station driven there **by a firmware defect** could then be repaired only on site — and
+avoiding the site visit is what the protocol is for. This is verbatim the argument
+[DECIDED (0.19.0)](#decided-0190--one-table-gave-the-same-act-opposite-verdicts-and-a-certificate-renewal-could-not-conclude-in-the-state-the-spec-keeps-open-for-repairs)
+used for certificate renewal: *a rule suspending a repair mechanism in an unbounded state specifies
+the failure the mechanism was built to prevent*. `0.20.0` decided the firmware case four commits
+later without applying it.
+
+**Decided 2026-08-17, for `0.21.0`: option 2 — `Accepted`, notifications suppressed.** The station
+downloads, verifies, installs behind the same install gate and reboots; every
+FirmwareStatusNotification is **suppressed, not deferred**; the server reads the result from the
+next BootNotification's `firmwareVersion`. Scoped to **`Pending` only** — `Rejected` is unchanged
+and unchangeable.
+
+**What the `0.20.0` reasoning got right, and is kept.** The discriminator's second clause — *is the
+suppressed message a report about the effect, or the only account of it there will ever be?* — is
+**retained verbatim**. It was never the defect. What is added is how to apply it: look for the later
+account on **any** message the station may send, not only on the one the command would have emitted,
+and refuse only when no message the station may ever send would carry the outcome. Option 3 stays
+rejected for the reason `0.19.0` gave: FirmwareStatusNotification reports on the station's *work*,
+it does not repair the station's standing, so it stays forbidden and the suppression stays.
+
+**The cost `0.20.0` named is real, and is paid rather than absorbed.** Option 2 was rejected partly
+because *"§6 rule 3 would need an exception for restricted stations"*. It does, and the same release
+had **already** given rule 3 exactly such an exception, for the `Verified` gate-open wait — so the
+objection was conceded in one paragraph and used to refuse in another. The exception here is
+**stronger than a scoping: it is a suspension**, because both of rule 3's anchors are *absent* and
+not merely late. There is no last notification, since none is ever sent; and the moment the gate
+opens cannot be located either, because the server holds every bay of a restricted station at
+`Unknown` — which is precisely what the `Verified` scoping leans on (*"it holds the bay states the
+gate turns on"*). An inoperative clock whose remedies are a re-issue or a **Reset** is worse than no
+clock: a Reset during `Installing` is an interrupted partition write.
+
+**Three consequences swept with it.**
+
+- **The stall rule's twin.** [`diagnostics-status.md` §5](spec/profiles/device-management/diagnostics-status.md)
+  rule 6 is the same 5-minute rule for GetDiagnostics, and it was **never** scoped. GetDiagnostics
+  has been answered `Accepted` while `Pending` with its events suppressed since before this arc, so
+  that timer has been firing on healthy uploads all along. Fixed here, and labelled as pre-existing.
+- **The station FSM's `Reboot` row named one `From` state.** It said `Operational`, and a firmware
+  update out of `Pending` now ends in a reboot. Widened to `Operational, Pending, Rejected`, which
+  **adds no edge** — `Pending -> Booting` and `Rejected -> Booting` are already listed under
+  *`retryInterval` elapsed*, so a check counting `(from, to)` pairs sees the same number. Two of the
+  three were already reachable and unlisted: Reset is answered normally while `Pending`, and a
+  watchdog or power cycle is physical.
+- **An OCPP citation wider than its source.** §1.4 read *"the CSMS is free to issue requests"*,
+  citing *B02 Cold Boot — Pending*. `B02.FR.01` names four Provisioning use cases and no others, and
+  `B02.FR.05` has the station reject a remote start or stop. **OCPP does not decide the firmware
+  question in either generation** — 1.6 §4.2 forbids the Central System exactly two messages while
+  Pending, neither of them firmware, and 2.0.1's Firmware Management block never mentions
+  registration status. Corrected to what the text supports; the decision rests on grounds 1--4, not
+  on the citation.
+
+**And the rule is now checkable.** `TC-DM-002` gains **Part E**, the first Part in that case to run
+against a restricted station: `Accepted` verified, silence verified across the install **plus five
+minutes** so a stall timer would have fired inside the window, and the new `firmwareVersion` verified
+on a boot that is still answered `Pending`. Before this, the `Pending` command table was enforced by
+prose alone — no conformance case and no gate in `tools/` reads it, and that remains true of the
+table's other rows.
+
+**The option space as it stood at `0.20.0`** is recorded in the entry below and is not restated here;
+what changed is not the options but two facts about option 1 that were not measured — that its
+response was unconstructible, and that §6.6 already contradicted its premise.
+
+---
 ## DECIDED (0.20.1) — two validation scripts reported 100% failure and no workflow ran them; the workflows now call the scripts, and a census guards the class
 
 **Raised and decided 2026-08-17. The thing worth keeping is not the two bugs — it is that a
@@ -1513,6 +1626,12 @@ none.
 ---
 
 ## DECIDED (0.20.0) — UpdateFirmware had no row in the `Pending` command table; it is `Rejected`, and the discriminator gained the clause that says why
+
+> **REVERSED in `0.21.0`.** The verdict below was wrong and the entry is kept unedited as the record
+> of it. Option 2 — `Accepted` with the notifications suppressed — was the right one, and the
+> reasoning that rejected it is dissected in
+> [DECIDED (0.21.0)](#decided-0210--updatefirmware-to-a-pending-station-was-refused-on-a-premise-the-same-chapter-contradicts-and-with-a-response-no-error-code-could-carry).
+> **The discriminator's second clause survives the reversal**; only the reading of it was defective.
 
 **Raised 2026-08-17, in the firmware-cycle arc. This one blocks a server implementation, not just a
 reader.**

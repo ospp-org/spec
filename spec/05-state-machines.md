@@ -1,6 +1,6 @@
 # Chapter 05 — State Machines
 
-> **Status:** Draft | **OSPP Version:** 0.20.2
+> **Status:** Draft | **OSPP Version:** 0.21.0
 
 This chapter defines all finite state machines (FSMs) governing OSPP entities — the station, its bays, sessions, reservations, BLE connections and firmware updates. Each FSM specifies the complete set of states, valid transitions, guards, actions, and a Mermaid diagram. A transition not listed for a machine is invalid, and implementations MUST NOT perform one.
 
@@ -71,9 +71,20 @@ stateDiagram-v2
 | `retryInterval` elapsed | Pending, Rejected | Booting | The interval from the response has passed (default 30 s, `BootRetryInterval`) | Station re-publishes BootNotification [MSG-001]. Retries are unlimited ([CORE-011](profiles/core/README.md)) |
 | MQTT connection lost | Booting, Pending, Rejected, Operational | Disconnected | PINGRESP timeout, TCP reset, or broker unavailable | Station continues active sessions, keeps BLE available, buffers per [Chapter 01 §6.5](01-architecture.md#65-offline-message-buffering); server receives the LWT [MSG-011] and marks every bay `Unknown`. Both sides discard the session key |
 | MQTT reconnected | Disconnected | Booting | Transport re-established with backoff ([Chapter 02 §4.5](02-transport.md)) | Station re-subscribes and publishes BootNotification with `bootReason: "Reconnect"` if it did not reboot |
-| Reboot | Operational | Booting | Reset [MSG-015], firmware update, watchdog, or power cycle | Station restarts, reconnects, and publishes BootNotification with the `bootReason` that names the cause |
+| Reboot | Operational, Pending, Rejected | Booting | Reset [MSG-015], firmware update, watchdog, or power cycle | Station restarts, reconnects, and publishes BootNotification with the `bootReason` that names the cause |
 
 Any transition not listed here is invalid. In particular there is **no** edge from `Pending` or `Rejected` directly to `Operational`: a station leaves a restricted state only by re-sending BootNotification and receiving `Accepted`. The server cannot promote a station in place, and a station **MUST NOT** infer promotion from a command arriving while it is `Pending`.
+
+> **The *Reboot* row names three `From` states and adds no edge.** `Pending -> Booting` and
+> `Rejected -> Booting` are already listed above, under *`retryInterval` elapsed*; what the wider
+> `From` column adds is a second and third **trigger** for pairs the table already had, so the edge
+> set is unchanged and a conformance check counting `(from, to)` pairs sees the same number as
+> before. It is stated because *"any transition not listed here is invalid"* is otherwise read
+> against the trigger, and three reboots out of a restricted state are reachable: Reset [MSG-015]
+> is answered normally while `Pending` ([§1.4](#14-the-restricted-states)), a firmware update is
+> now accepted there and ends in a reboot, and a watchdog or a power cycle is physical — no state
+> forbids it, `Rejected` included. Only the first of those three is new in `0.21.0`; the row was
+> already too narrow for the other two.
 
 ### 1.4 The Restricted States
 
@@ -90,7 +101,19 @@ Any transition not listed here is invalid. In particular there is **no** edge fr
 | Continues a session already running | **MUST** | **MUST** | **MUST** | **MUST** |
 | Holds a session key | no | **yes** | no | **yes** |
 
-**Why `Pending` answers commands and `Rejected` does not.** `Pending` exists so that a human can repair something — approve a registration, or correct a topology record — and the repair may need the command channel: ChangeConfiguration, GetConfiguration, GetDiagnostics, UpdateServiceCatalog, TriggerMessage, a certificate operation, or a Reset. Closing that channel would leave the operator no way to do the very thing the window exists for. `Rejected` carries no such expectation: the server has said the station is not registered, or is speaking a protocol version it does not support, and it has nothing to configure. This is the shape OCPP 2.0.1 uses for the same case — in *B02 Cold Boot — Pending* the charging station sends nothing but its boot retries while the CSMS is free to issue requests.
+**Why `Pending` answers commands and `Rejected` does not.** `Pending` exists so that a human can repair something — approve a registration, or correct a topology record — and the repair may need the command channel: ChangeConfiguration, GetConfiguration, GetDiagnostics, UpdateServiceCatalog, TriggerMessage, a certificate operation, a firmware update, or a Reset. Closing that channel would leave the operator no way to do the very thing the window exists for. `Rejected` carries no such expectation: the server has said the station is not registered, or is speaking a protocol version it does not support, and it has nothing to configure.
+
+> **What OCPP does with this case, stated at the altitude its text supports.** The asymmetry is
+> real and 2.0.1 has it: in *B02 Cold Boot — Pending*, `B02.FR.02` forbids the charging station
+> every CALL but BootNotificationRequest unless the CSMS prompts it, while `B02.FR.01` lets the
+> CSMS retrieve information and set variables. It is an asymmetry and **not** a free hand for the
+> server: `B02.FR.01` names four Provisioning use cases and no others, and `B02.FR.05` has the
+> station reject a remote start or stop outright. **On the firmware question OCPP is silent, in
+> both generations** — 1.6 §4.2 forbids the Central System exactly two messages while Pending and
+> neither is a firmware command, and 2.0.1's Firmware Management block never mentions registration
+> status at all. So the row below is decided on this specification's own grounds. This note replaces
+> a sentence that read *"the CSMS is free to issue requests"*, which is wider than `B02.FR.01` says
+> and would have been the citation a reader leaned on.
 
 **The key row is what makes the rest of the table possible, and it is easy to get wrong.** Every command is signed, and both the sending and the receiving path fail closed on a missing key ([Chapter 06 §5.7](06-security.md#57-failure-handling--both-directions-fail-closed)). If a `Pending` station held no key, the server could not send a command, the station could not accept one, and it could not answer — the repair channel would exist only on paper. So the `Pending` response carries a `sessionKey`, exactly as an `Accepted` one does ([`boot-notification.md` §5.3](profiles/core/boot-notification.md)). `Rejected` needs none: it answers nothing.
 
@@ -117,7 +140,9 @@ This is the session-scope twin of the bay rule below: reachable, unreported, and
 
 **The discriminator is whether the command has an effect independent of the message it would emit — and, where it has one, whether the suppressed message is a *report about* that effect or the *only account of it there will ever be*.** Three outcomes follow, and the table below is grouped by them. A command that completes entirely in its RESPONSE is answered normally. A command whose substantive effect happens locally, with only a *report* blocked, is answered normally with that report suppressed — nothing is lost, because a restricted station's bays are held at `Unknown` server-side regardless and the state is carried by the post-boot report. A command whose **only** effect is a message the station may not send is refused.
 
-**The second clause was added because UpdateFirmware needed it and the first clause alone answered wrongly.** UpdateFirmware's effect is emphatically independent of any message — it downloads, verifies, writes a partition and reboots — so the first clause alone puts it with SetMaintenanceMode and GetDiagnostics, answered `Accepted` with its notifications suppressed. That answer is wrong, and the reason is a difference in kind rather than degree. SetMaintenanceMode's suppressed StatusNotification is a *report about* a bay whose state the post-boot report will carry anyway; GetDiagnostics' suppressed events are progress on an upload that completes and lands at a URL the server chose. FirmwareStatusNotification is neither: from `Accepted` until the station reboots it is the **entire** account of the update, and suppressing it leaves the server holding an `Accepted` for a multi-minute operation it will hear nothing further about — not a stalled update it can detect, because the stall rule is measured on the very messages that were suppressed. A command whose only observable effect is forbidden is not a command safely accommodated; it is one with nothing left to mean. Concretely:
+**The second clause asks whether an account will *ever* exist, and applying it means looking on every message the station may send — not only on the one the command would have emitted.** UpdateFirmware is the case that made the clause necessary and the case that shows how to read it. Its effect is emphatically independent of any message — it downloads, verifies, writes a partition and reboots — so the first clause puts it with SetMaintenanceMode and GetDiagnostics, answered `Accepted` with its notifications suppressed, and the second clause leaves it there. FirmwareStatusNotification is the entire account of the update from `Accepted` until the station reboots, and that interval is **bounded**. It is not the only account there will ever be: [§6.6](#66-firmwarestatusnotification-mapping) gives the update's terminal state, `Activated`, no notification value at all and says in terms that it is *reported via BootNotification [MSG-001]* — and `firmwareVersion` is REQUIRED on every BootNotification ([`boot-notification.md` §3](profiles/core/boot-notification.md)), which a restricted station **MUST** keep sending at `retryInterval`, without limit ([§1.3](#13-transition-table)). So the outcome travels on the one message the restriction itself **compels**, and it arrives sooner than from an `Operational` station, which is under no obligation to boot again at all.
+
+**A command is refused only when no message the station may ever send would carry the outcome**, and the clause still refuses on that test: TriggerMessage for a StatusNotification or a MeterValues is refused because nothing later restates the reading that was suppressed. What the clause does **not** license is reading a bounded silence as a permanent one. Concretely:
 
 | Command sent to a `Pending` station | What it does |
 |---|---|
@@ -127,10 +152,27 @@ This is the session-scope twin of the bay rule below: reachable, unreported, and
 | SetMaintenanceMode [MSG-020] | **`Accepted`**, the bay state changes locally, and the StatusNotification the command would normally emit ([set-maintenance-mode.md §5 rule 4](profiles/device-management/set-maintenance-mode.md)) is **not sent**. Nothing is lost: the server holds every bay of a restricted station at `Unknown` regardless, and the new state is carried by the post-boot report when the station reaches `Operational` |
 | GetDiagnostics [MSG-018] | **`Accepted`**, the archive is collected and uploaded, and the DiagnosticsNotification [MSG-019] events that would report progress ([get-diagnostics.md §6 rule 2](profiles/device-management/get-diagnostics.md)) are **not sent**. The upload is an HTTP PUT to a URL the command supplies, so the substantive effect completes and the RESPONSE stays truthful; only the progress reporting is suppressed, exactly as for SetMaintenanceMode above |
 | TriggerCertificateRenewal [MSG-024] | **`Accepted`**, and the station runs the renewal flow, including the SignCertificate [MSG-022] it originates — permitted by the rule above. This is the one command in this table whose completion *requires* an origination, which is why it needed the rule rather than a suppression |
-| UpdateFirmware [MSG-016] | **`Rejected`.** The station **MUST NOT** accept a firmware update while restricted. Its progress and its outcome are carried entirely by FirmwareStatusNotification [MSG-017], which §1.4 forbids, so an `Accepted` here would commit the station to a multi-minute operation the server would hear nothing about — and could not detect as stalled, since the stall rule of [`firmware-status.md` §6](profiles/device-management/firmware-status.md) rule 3 is measured on exactly the messages being suppressed. Refusing is also the honest answer about capability: a station whose registration or topology record is unresolved is not one to re-flash. An operator who needs new firmware on it clears the `Pending` condition first — which is a person's act in both entry cases ([§1.5](#15-topology-at-boot)) — and pushes the update to the `Operational` station that results |
+| UpdateFirmware [MSG-016] | **`Accepted`**, the update runs in full — download, verify, install behind the gate of [§7.4](#74-firmware-update----bay-constraint), reboot — and every FirmwareStatusNotification [MSG-017] it would emit is **not sent**, exactly as for SetMaintenanceMode and GetDiagnostics above. The command is not what reports the result: the server reads it from the `firmwareVersion` of the next BootNotification, REQUIRED on every one and arriving at `retryInterval` because the restriction compels the retries. Two rules move with this. The stall timer of [`firmware-status.md` §6](profiles/device-management/firmware-status.md) rule 3 **MUST NOT** run while the station is restricted — both of its anchors are absent, not late — and the reboot out of `Pending` is a listed trigger at [§1.3](#13-transition-table) |
 | ChangeConfiguration, GetConfiguration, UpdateServiceCatalog, CertificateInstall [MSG-023], Reset | **Answered normally.** Each returns its result in a RESPONSE, which is not something the station originates, and none has any further effect the restriction touches |
 
-`Rejected` stations process none of this — they refuse every command, so the question does not arise.
+`Rejected` stations process none of this — they refuse every command, so the question does not arise. That limit is structural rather than chosen: `Rejected` holds no session key, and signing fails closed in both directions ([Chapter 06 §5.7](06-security.md#57-failure-handling--both-directions-fail-closed)), so no command can be delivered to such a station or accepted by it. It is why `1007 PROTOCOL_VERSION_MISMATCH` still names on-site service as the recovery for a station that stops retrying ([Chapter 07 §3.1](07-errors.md)), and why the row above is scoped to `Pending` and says nothing about `Rejected`.
+
+> **Two mechanisms, one reason — and not two exceptions to one rule.** A restricted station may
+> originate SignCertificate, and a `Pending` station may now be sent a firmware update. Both are
+> traffic that repairs the station's situation, so it is tempting to state them as a single
+> principle. They cannot be, because they run in opposite directions. The origination test above
+> governs what the station **sends**, and SignCertificate is one of its two members. The
+> discriminator governs what the station **does with a command it receives**, and UpdateFirmware is
+> no longer an exception to it — it is its ordinary middle outcome. Neither rule reaches the other's
+> direction, and merging them would invite the one question the origination test exists to refuse:
+> whether FirmwareStatusNotification *repairs the station's standing*. It does not — it reports on
+> the station's work — which is why it stays forbidden and the progress reporting stays suppressed.
+>
+> **What the two share is the reason.** `Pending` is unbounded and is cleared by a person and never
+> by time ([§1.5](#15-topology-at-boot)), so a rule that withholds a repair mechanism there
+> specifies the failure the mechanism was built to prevent. That sentence decided the certificate
+> case in `0.19.0` and it decides this one: a station made restricted **by** a firmware defect is
+> precisely the station a firmware update has to be able to reach.
 
 **What the server may assume.** A `Pending` or `Rejected` station has sent no StatusNotification, so the server holds every one of its bays at `Unknown` and **MUST NOT** offer them for sale. The absence of bay reports is the signal, and it is the same signal a `Disconnected` station produces — which is why no new state value is needed on the wire to express it.
 
@@ -780,6 +822,18 @@ that nothing on the wire can ever set.
 > the stall timer of [firmware-status.md §6](profiles/device-management/firmware-status.md) rule 3,
 > which starts from the last notification of any kind. A server that models `Verifying` as a state
 > it expects to be told about will wait for a message the protocol never sends.
+
+> **And on a restricted station the mapping emits nothing at all.** A `Pending` station accepts
+> UpdateFirmware and runs the whole machine below with **every** row of this mapping suppressed
+> ([§1.4](#14-the-restricted-states)). Where the *Action* column of [§6.3](#63-transition-table)
+> says the station sends a notification, §1.4 wins — [§7.1](#71-station----bay----session-coupling)
+> already fixes that precedence for every machine in this chapter, and the same subordination
+> already governs GetDiagnostics and SetMaintenanceMode. The five states with a notification value
+> therefore have none while the station is restricted, and the server's account of the update is the
+> `firmwareVersion` on the next BootNotification — the one message the restriction compels, and the
+> same message this table already names as the only report of `Activated`. The stall timer **MUST
+> NOT** be run against such an update ([`firmware-status.md` §6](profiles/device-management/firmware-status.md)
+> rule 3).
 
 ---
 
