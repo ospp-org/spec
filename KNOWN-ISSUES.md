@@ -1,8 +1,8 @@
 # OSPP Known Issues
 
 **Date:** 2026-08-17
-**Specification-document version:** 0.20.0 (release tag `v0.20.0`)
-**Status:** 3 blockers open (all BLE), 20 non-blocking issues open, 6 decisions recorded
+**Specification-document version:** 0.20.1 (release tag `v0.20.1`)
+**Status:** 3 blockers open (all BLE), 19 non-blocking issues open, 7 decisions recorded
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle and
 the arcs since
 
@@ -13,10 +13,10 @@ the arcs since
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 20 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) · **[`5016` is required for two conditions and named for one](#open--5016-version_already_installed-is-required-for-two-conditions-and-one-of-them-is-the-opposite-of-what-the-name-says)** · **[UpdateFirmware is both idempotent and `5107`](#open--updatefirmware-is-documented-as-idempotent-and-as-rejected-with-5107-for-the-same-second-command)** · **[no code describes a non-HTTPS firmware URL](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal)** · **[`offeredVersion` vs `attemptedVersion`](#open--the-firmwaredowngradeattempt-securityevent-names-the-offered-version-with-two-different-member-names-and-nothing-can-tell)** · **[two validation scripts report 100% failure](#open--two-validation-scripts-report-100-failure-which-reads-as-a-broken-environment-and-is-how-they-stopped-being-run)** |
+| OPEN | 19 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) · **[`5016` is required for two conditions and named for one](#open--5016-version_already_installed-is-required-for-two-conditions-and-one-of-them-is-the-opposite-of-what-the-name-says)** · **[UpdateFirmware is both idempotent and `5107`](#open--updatefirmware-is-documented-as-idempotent-and-as-rejected-with-5107-for-the-same-second-command)** · **[no code describes a non-HTTPS firmware URL](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal)** · **[`offeredVersion` vs `attemptedVersion`](#open--the-firmwaredowngradeattempt-securityevent-names-the-offered-version-with-two-different-member-names-and-nothing-can-tell)** |
 | CLOSED | 4 | [Device Management Required vs RECOMMENDED](#closed-0160--the-device-management-profile-was-required-in-chapter-08-and-recommended-not-mandatory-in-its-own-readme) — closed in 0.16.0 in favour of the capability · [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
-| DECIDED | 6 | **[the firmware gate is on the INSTALL, not the download](#decided-0200--the-active-session-gate-named-three-stages-it-gates-the-install-and-scheduledat-defers-the-install-with-it)** — and `scheduledAt` defers the install with it; the stall rule scoped rather than `Verified` given a wire value · **[UpdateFirmware to a `Pending` station is `Rejected`](#decided-0200--updatefirmware-had-no-row-in-the-pending-command-table-it-is-rejected-and-the-discriminator-gained-the-clause-that-says-why)** — the discriminator gained the clause that made the first one answer wrongly · **[a restricted station may renew its own certificate](#decided-0190--one-table-gave-the-same-act-opposite-verdicts-and-a-certificate-renewal-could-not-conclude-in-the-state-the-spec-keeps-open-for-repairs)** — the exception's *reason* restated to cover both members rather than a second name added to a list · [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
-| **Total open** | **23** | |
+| DECIDED | 7 | **[nine gates in `tools/` were reachable from no job](#decided-0201--two-validation-scripts-reported-100-failure-and-no-workflow-ran-them-the-workflows-now-call-the-scripts-and-a-census-guards-the-class)** — the workflows now call the scripts, and `check-tool-callers.py` guards the class · **[the firmware gate is on the INSTALL, not the download](#decided-0200--the-active-session-gate-named-three-stages-it-gates-the-install-and-scheduledat-defers-the-install-with-it)** — and `scheduledAt` defers the install with it; the stall rule scoped rather than `Verified` given a wire value · **[UpdateFirmware to a `Pending` station is `Rejected`](#decided-0200--updatefirmware-had-no-row-in-the-pending-command-table-it-is-rejected-and-the-discriminator-gained-the-clause-that-says-why)** — the discriminator gained the clause that made the first one answer wrongly · **[a restricted station may renew its own certificate](#decided-0190--one-table-gave-the-same-act-opposite-verdicts-and-a-certificate-renewal-could-not-conclude-in-the-state-the-spec-keeps-open-for-repairs)** — the exception's *reason* restated to cover both members rather than a second name added to a list · [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
+| **Total open** | **22** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
@@ -1176,11 +1176,36 @@ alone and annotated in the case itself, so the latitude is visible rather than i
 
 ---
 
-## OPEN — two validation scripts report 100% failure, which reads as a broken environment and is how they stopped being run
+## DECIDED (0.20.1) — two validation scripts reported 100% failure and no workflow ran them; the workflows now call the scripts, and a census guards the class
 
-**Raised 2026-08-17. Recorded rather than repaired, because the thing worth writing down is not the
-two bugs — it is that a totally-failing instrument is indistinguishable from a broken machine, and
-gets walked past.**
+**Raised and decided 2026-08-17. The thing worth keeping is not the two bugs — it is that a
+totally-failing instrument is indistinguishable from a broken machine and gets walked past, and
+that a gate nobody runs emits no signal at all.**
+
+**Decided: option 3 — the workflows call the scripts.** It was the only one of the three that
+removes the duplication rather than choosing a side of it. Two implementations of one gate, of
+which CI ran the copy that could not be reproduced locally, is why the `tools/` copy rotted
+unwatched in the first place. Both scripts were repaired first, then wired:
+`validate-schemas.sh` now compiles **86/86** (the two "genuine failures" were entirely its
+ref-passing defect — no schema was ever wrong), `validate-examples.sh` passes **52/52**, and both
+now **exit 2 with a diagnosis** when no `ajv` binary is found instead of reporting a failure count
+equal to their denominator. `verify-all-signatures.sh` got the caller it never had, in
+`verify-signatures.yml`.
+
+**The census the entry really needed exists now:** `tools/check-tool-callers.py`, run by
+`check-drift.yml`, computes reachability from workflows through tool-to-tool calls and fails when
+a gate has no caller. It found **nine** unreached gates, not the three this entry named — the
+transitive chain under `verify-all-signatures.sh` was invisible to a by-hand count.
+
+**What remains:** `tools/verify-protocol.sh`, the single entry in that census's `BASELINE`. It is
+not broken and not wired — it exits 1 on a clean tree from 9 pre-existing findings with no
+baseline mechanism (`exitCode = totalFail > 0`), so wiring it as-is lands a permanently red job,
+which is the most reliable way to get a gate ignored again. Giving it the ratchet the four
+`check-*.py` scripts already have is what would let it join `verify-signatures.yml`, and that is a
+decision about whether those 9 findings are accepted debt. The count cannot rise without failing
+the census either way.
+
+**The option space as it stood:**
 
 `tools/validate-schemas.sh` reports **86 of 86 schemas failed**. `tools/validate-examples.sh`
 reports **52 of 52 examples failed**. A denominator equal to the numerator is the signature of an
@@ -1224,13 +1249,14 @@ nonce check) runs only when somebody runs it by hand. `check-drift.yml`'s own he
 principle: *"A gate in tools/ that no job runs is the same defect one level up, so this workflow
 exists to be that caller."* Three tools are still waiting for one.
 
-**Not decided here:** whether to (1) repair the two scripts and give all three a workflow caller,
-(2) delete the two scripts and let the workflows' inline versions be the single implementation, or
-(3) invert it — make the workflows call the scripts, so there is one implementation and CI is
-reproducible locally. Option 3 is the only one that removes the duplication rather than choosing a
-side of it; it is also the largest, because the inline Node in `validate-examples.yml` currently
-does something the shell script does not (and the script covers one pair CI does not:
-`examples/payloads/http/provisioning.request.json`).
+(1) repair the two scripts and give all three a workflow caller, (2) delete the two scripts and let
+the workflows' inline versions be the single implementation, or (3) invert it — make the workflows
+call the scripts. **(3) was chosen.** The inline `validate-examples.yml` did three things the shell
+script did not — every schema loaded as a ref, absent pairs counted rather than silently skipped,
+and a refusal to report success for zero work — and all three were carried into the script rather
+than lost. The difference the other way was kept too: the script covered
+`examples/payloads/http/provisioning.request.json` and the workflow did not, so the pair only the
+unrun script checked is now the pair CI checks, and that gate went from 51 to **52**.
 
 ---
 ## DECIDED (0.20.0) — the active-session gate named three stages; it gates the INSTALL, and `scheduledAt` defers the install with it

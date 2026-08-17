@@ -18,6 +18,8 @@ on:
       - 'schemas/**'
       - 'tools/check-*.py'
       - 'tools/verify-test-nonces.mjs'
+      - 'tools/check-tool-callers.py'
+      - '.github/workflows/**'
       - '.github/workflows/check-drift.yml'
   pull_request:
     paths:
@@ -25,6 +27,8 @@ on:
       - 'schemas/**'
       - 'tools/check-*.py'
       - 'tools/verify-test-nonces.mjs'
+      - 'tools/check-tool-callers.py'
+      - '.github/workflows/**'
   workflow_dispatch:
 
 jobs:
@@ -69,3 +73,11 @@ jobs:
       # cross-document reuse.
       - name: Handshake nonces are derived from their labels and unique per document
         run: node tools/verify-test-nonces.mjs
+
+      # The check with no signal of its own. A gate that verifies the wrong thing still emits a
+      # verdict; a gate nothing starts emits nothing at all, so it can only be found by
+      # subtracting the set of callers from the set of tools. On the run that introduced this,
+      # NINE gates were unreachable from any job — including the whole signed-conformance guard.
+      # Triggers include .github/workflows/** so that deleting a caller fails here.
+      - name: Every gate in tools/ is reachable from some job
+        run: python3 tools/check-tool-callers.py --list

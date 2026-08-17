@@ -1,15 +1,35 @@
 name: Validate Example Payloads
 
+# Calls tools/validate-examples.sh. It did not, and that was the defect.
+#
+# This job used to carry ~90 lines of inline Node while a script of the same name sat in tools/
+# doing the same work differently and worse. Two implementations of one gate, of which CI ran
+# the one that could not be reproduced locally — so the script rotted unnoticed (an unquoted
+# $REFS word-splitting a glob into 22 paths after a single -r, and npx resolving to the ajv
+# *library*) and reported 52 failures out of 52 to anyone who tried it. Its content was clean
+# the entire time.
+#
+# The script now carries the three properties this job had and the script did not: every schema
+# loaded as a ref, an absent pair counted rather than silently skipped, and a refusal to report
+# success for zero work.
+#
+# One difference the other way, which the merge KEEPS rather than drops: the script checks
+# examples/payloads/http/provisioning.request.json against schemas/provisioning-request.schema.json.
+# The inline version never did. So the pair that only the unrun script covered is now the pair
+# CI covers — 52 checked here, against 51 before.
+
 on:
   push:
     paths:
       - 'schemas/**'
       - 'examples/payloads/**'
+      - 'tools/validate-examples.sh'
       - '.github/workflows/validate-examples.yml'
   pull_request:
     paths:
       - 'schemas/**'
       - 'examples/payloads/**'
+      - 'tools/validate-examples.sh'
   workflow_dispatch:
 
 jobs:
@@ -22,117 +42,15 @@ jobs:
         with:
           node-version: '20'
 
-      # Installed OUTSIDE the checkout, deliberately. Installing into the repo made
-      # this job read package.json, whose only dependency is @ospp/protocol — a
-      # package this script never loads. A version cascade set that dependency to
-      # ^0.8.0, a version npm has never carried (0.7.0 is followed by 0.9.0), and
-      # from then on `npm install ajv` failed ETARGET before a single payload was
-      # checked. The job needs ajv and ajv-formats; --prefix gives it exactly those
-      # and nothing in the manifest can break it again.
-      - name: Install dependencies
-        run: npm install --no-save --prefix "$RUNNER_TEMP/gate" ajv ajv-formats
+      # Installed OUTSIDE the checkout, deliberately, and the script reads AJV_BIN so it can be.
+      # Installing into the repo makes this job read package.json, whose only dependency is
+      # @ospp/protocol — a package this gate never loads. A version cascade once pinned that to
+      # ^0.8.0, a version npm has never carried (0.7.0 is followed by 0.9.0), and from then on
+      # the install failed ETARGET before a single payload was checked.
+      - name: Install ajv-cli
+        run: npm install --no-save --prefix "$RUNNER_TEMP/gate" ajv-cli@5 ajv-formats@3
 
-      - name: Validate all example payloads
+      - name: Validate every example payload against its schema
         env:
-          NODE_PATH: ${{ runner.temp }}/gate/node_modules
-        run: |
-          node << 'SCRIPT'
-          const Ajv = require('ajv/dist/2020');
-          const addFormats = require('ajv-formats');
-          const fs = require('fs');
-          const path = require('path');
-
-          const ajv = new Ajv({ strict: false, allErrors: true });
-          addFormats(ajv);
-
-          // Load every schema under schemas/ as a ref, at any depth. Loading only
-          // schemas/common left BLE -> BLE references unresolvable: ajv.compile threw
-          // "can't resolve reference station-identity.schema.json" on
-          // ble/challenge.schema.json and the exception was never caught, so this job
-          // died mid-run instead of reporting a result.
-          function findSchemas(dir) {
-            return fs.readdirSync(dir, { withFileTypes: true }).flatMap(e => {
-              const p = path.join(dir, e.name);
-              if (e.isDirectory()) return findSchemas(p);
-              return e.name.endsWith('.schema.json') ? [p] : [];
-            });
-          }
-          const allSchemas = findSchemas('schemas').sort();
-          console.log('Loaded ' + allSchemas.length + ' schemas as refs');
-          for (const p of allSchemas) {
-            const s = JSON.parse(fs.readFileSync(p, 'utf8'));
-            ajv.addSchema(s, s.$id || p);
-          }
-
-          // Every schema is registered above, so resolve by $id instead of compiling
-          // again — compiling an already-registered $id is a duplicate-$id error.
-          const cache = new Map();
-          function getValidator(schemaPath) {
-            if (cache.has(schemaPath)) return cache.get(schemaPath);
-            const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
-            let v = schema.$id ? ajv.getSchema(schema.$id) : null;
-            if (!v) v = ajv.compile(schema);
-            cache.set(schemaPath, v);
-            return v;
-          }
-
-          let pass = 0, fail = 0, absent = 0;
-
-          function validate(schemaPath, dataPath) {
-            // A missing pair is skipped rather than failed, as before — but it is
-            // counted, so a renamed example cannot quietly shrink the run and still
-            // report success.
-            if (!fs.existsSync(schemaPath) || !fs.existsSync(dataPath)) { absent++; return; }
-            const v = getValidator(schemaPath);
-            const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
-            if (v(data)) {
-              console.log('PASS ' + dataPath);
-              pass++;
-            } else {
-              console.error('FAIL ' + dataPath + ': ' + ajv.errorsText(v.errors));
-              fail++;
-            }
-          }
-
-          // MQTT request/response pairs
-          const actions = [
-            'boot-notification', 'heartbeat', 'authorize-offline-pass',
-            'reserve-bay', 'cancel-reservation', 'start-service', 'stop-service',
-            'transaction-event', 'change-configuration', 'get-configuration',
-            'reset', 'update-firmware', 'get-diagnostics', 'set-maintenance-mode',
-            'update-service-catalog'
-          ];
-          for (const a of actions) {
-            for (const t of ['request', 'response']) {
-              validate('schemas/mqtt/' + a + '-' + t + '.schema.json', 'examples/payloads/mqtt/' + a + '.' + t + '.json');
-            }
-          }
-
-          // MQTT events
-          const events = [
-            'status-notification', 'connection-lost', 'security-event',
-            'firmware-status-notification', 'diagnostics-notification'
-          ];
-          for (const e of events) {
-            validate('schemas/mqtt/' + e + '.schema.json', 'examples/payloads/mqtt/' + e + '.event.json');
-          }
-          validate('schemas/mqtt/meter-values-event.schema.json', 'examples/payloads/mqtt/meter-values.event.json');
-
-          // BLE payloads
-          const ble = [
-            'station-info', 'available-services', 'hello', 'challenge',
-            'offline-auth-request', 'server-signed-auth',
-            'start-service-request', 'start-service-response',
-            'stop-service-request', 'stop-service-response', 'receipt'
-          ];
-          for (const m of ble) {
-            validate('schemas/ble/' + m + '.schema.json', 'examples/payloads/ble/' + m + '.json');
-          }
-          validate('schemas/ble/auth-response.schema.json', 'examples/payloads/ble/auth-response.accepted.json');
-          validate('schemas/ble/auth-response.schema.json', 'examples/payloads/ble/auth-response.rejected.json');
-          validate('schemas/ble/service-status.schema.json', 'examples/payloads/ble/service-status.running.json');
-          validate('schemas/ble/service-status.schema.json', 'examples/payloads/ble/service-status.receipt-ready.json');
-
-          console.log('\nTotal: ' + (pass + fail) + ' checked, ' + pass + ' PASS, ' + fail + ' FAIL, ' + absent + ' pair(s) absent');
-          if (fail > 0) process.exit(1);
-          SCRIPT
+          AJV_BIN: ${{ runner.temp }}/gate/node_modules/.bin/ajv
+        run: bash tools/validate-examples.sh

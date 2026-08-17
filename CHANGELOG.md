@@ -8,6 +8,100 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.20.1] — 2026-08-17
+
+> **Nine of the fifteen gates in `tools/` were reachable from no job at all.** Not failing —
+> *unstarted*. `tools/verify-all-signatures.sh` has always passed and nothing has ever run it, so
+> the entire signed-conformance guard existed only as something a person could type: every vector
+> signature against five committed keys, the RFC 5903/5869/8439-anchored BLE crypto oracle, the
+> signer-idempotency check that keeps a **negative** signature fixture from being regenerated into
+> a valid one, the placeholder scan, the canonical-form oracle, and the MQTT MAC vectors.
+>
+> **This is the quietest failure in the family, and the reason is structural.** A gate that verifies
+> the wrong thing still emits a verdict, and a verdict can later be found wrong. A gate nothing
+> starts emits nothing — no pass, no failure, no log line, no artefact, no run to re-read. It can
+> only be found by enumerating the tools, enumerating the callers, and subtracting; that is a
+> census, and a census has to be remembered and repeated.
+>
+> **So the census is now a check.** `tools/check-tool-callers.py` computes reachability from the
+> workflows through tool-to-tool calls, and fails when a gate has no caller. It nearly shipped
+> green and wrong, twice: matching any `tools/<name>` string counted a *comment* as a caller — and
+> prose about a tool is the opposite of a caller for it, so the more carefully an absence is
+> documented the more confident an unstripped scan becomes — and, after comments were stripped, a
+> workflow's `paths:` trigger still counted, which names exactly the tool the job calls, so
+> deleting the `run:` line changed nothing. Both are fixed and both are the reason the file
+> explains itself at length.
+>
+> **PATCH.** No chapter, profile, schema, vector or conformance case changed. `protocolVersion`
+> stays **`0.3.0`**. Every change is in `tools/` and `.github/workflows/`. Pin-only for both SDKs
+> and for the server.
+
+### Decided
+
+- **tooling:** **The workflows call the scripts.** `validate-schemas.sh` and
+  `validate-examples.sh` each had a second, divergent implementation inline in the workflow of the
+  same name — and CI ran the copy that could not be reproduced locally, so the copy in `tools/`
+  rotted unwatched and reported **100% failure** to anyone who tried it. Two implementations of one
+  gate, of which the runnable one was the unreproducible one, is the shape this arc keeps closing.
+  The scripts are now the single implementation and the workflows are thin callers, so what CI runs
+  is what a developer can run.
+- **tooling:** **A totally-failing instrument is a diagnosis, not a result, and both now say so.**
+  Each script resolves its `ajv` binary explicitly and **exits 2 with an explanation** when it
+  cannot find one, instead of reporting a failure count equal to its denominator. `2>/dev/null` is
+  gone from both: hiding stderr is what turned a fixable environment fault into an unattributable
+  number, and the number is what got them walked past.
+
+### Fixed
+
+- **tooling:** `validate-schemas.sh` — `npx ajv` resolved to the `ajv` **library** in this repo's
+  `node_modules`, which ships no `bin`. Unfixable by PATH: npm resolves `npx <name>` by package
+  name, so a global `ajv-cli` still loses to the local `ajv`. It also passed only `schemas/common`
+  as `-r`, leaving BLE→BLE references unresolvable, and globbed four directories by name. Now
+  `find`-based, every other schema passed as `-r`, with a non-vacuity guard. **86 of 86 compile** —
+  the two "genuine failures" measured earlier were entirely the ref-passing defect, and no schema
+  was ever wrong.
+- **tooling:** `validate-examples.sh` — `REFS="-r …/common/*.schema.json"` was used **unquoted**, so
+  bash word-split *and* glob-expanded it into 22 paths after a single `-r`; ajv rejected all 52
+  invocations with a syntax error. Two independent faults, either of which alone produces 100%
+  failure. Now **52 of 52 pass**, with every schema as a ref and absent pairs counted rather than
+  silently skipped.
+- **tooling:** both scripts read `$AJV_BIN`, and both workflows install ajv **outside the
+  checkout**. That is carried over deliberately from the inline job it replaces: this repo's
+  `package.json` depends on `@ospp/protocol`, and a version cascade once pinned it to `^0.8.0` — a
+  version npm has never carried — after which the install failed `ETARGET` before a single payload
+  was checked. A gate must not be able to die of a dependency it never loads.
+
+### Added
+
+- **tooling:** `tools/check-tool-callers.py` — the gate over the gates. `EXCLUSIONS` is a written
+  decision with a reason per entry (modules and generators are not gates, and a **stale** exclusion
+  naming a file that no longer exists is a hard exit 2, so the list cannot outlive what it
+  excused). `BASELINE` is a ratchet that may fall and must not rise; it stands at **1**.
+- **CI:** `.github/workflows/verify-signatures.yml` — the caller `verify-all-signatures.sh` never
+  had. It also runs `verify-canonical-form.mjs` and `verify-mqtt-mac.mjs` directly, which reach CI
+  by no other route. **The job mutates the working tree on purpose** and the file says so at
+  length: section 2 re-runs the signer and compares hashes, so the mutation *is* the measurement —
+  which means this job must never be combined with anything asserting a clean tree, and must be run
+  locally only on a committed one.
+- **CI:** `check-drift.yml` gains `check-tool-callers.py`, and triggers on `.github/workflows/**`
+  so that **deleting a caller** fails it.
+- **coverage:** `examples/payloads/http/provisioning.request.json` is now checked by CI. It was
+  covered by the script alone — the thing that never ran — and by no workflow, so the merge raises
+  the example gate from **51 pairs to 52**. This is the one thing the unrun script did that the
+  running job did not.
+
+### Remaining
+
+- `tools/verify-protocol.sh` is the single entry in `check-tool-callers.py`'s baseline. It is not
+  broken and it is not wired: it exits 1 on a clean tree from **9 pre-existing findings** with no
+  baseline mechanism at all (`exitCode = totalFail > 0`), so wiring it as-is lands a permanently red
+  job — the most reliable way to get a gate ignored again. Giving it the ratchet the four
+  `check-*.py` scripts already have is what would let it join `verify-signatures.yml`, and that is
+  a decision about whether those 9 findings are accepted debt. **The count is now guarded either
+  way:** it cannot rise without failing the census.
+
+---
+
 ## [0.20.0] — 2026-08-17
 
 > **The code-signing conformance case could not fail.** `TC-DM-004` Part E exists to prove a

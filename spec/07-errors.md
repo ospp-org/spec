@@ -1,6 +1,6 @@
 # Chapter 07 — Error Codes & Resilience
 
-> **Status:** Draft | **OSPP Version:** 0.20.0
+> **Status:** Draft | **OSPP Version:** 0.20.1
 
 This chapter defines the complete error taxonomy for the OSPP protocol, including the error code registry, standard error response format, retry policies, circuit breaker patterns, and graceful degradation behavior.
 

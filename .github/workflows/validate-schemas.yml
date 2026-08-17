@@ -1,12 +1,29 @@
 name: Validate JSON Schemas
 
+# Calls tools/validate-schemas.sh. It did not, and that was the defect.
+#
+# This job used to carry its own inline reimplementation while a script of the same name sat in
+# tools/ doing the same work differently and worse. Two implementations of one gate, of which CI
+# ran the one that could not be reproduced locally — so the script rotted unnoticed (npx
+# resolving to the ajv *library*, refs limited to schemas/common, four directories globbed by
+# name) and reported 86 failures out of 86 to anyone who tried it. A denominator equal to the
+# numerator reads as a broken machine, so nobody did try it twice.
+#
+# The script now carries everything the inline version had — `find`-based discovery so no
+# directory has to be remembered, every other schema passed as -r so BLE -> BLE references
+# resolve, a non-vacuity guard, and stderr left alone — and this file is the caller.
+
 on:
   push:
     paths:
       - 'schemas/**'
+      - 'tools/validate-schemas.sh'
+      - '.github/workflows/validate-schemas.yml'
   pull_request:
     paths:
       - 'schemas/**'
+      - 'tools/validate-schemas.sh'
+  workflow_dispatch:
 
 jobs:
   validate:
@@ -18,38 +35,16 @@ jobs:
         with:
           node-version: '20'
 
+      # Installed OUTSIDE the checkout, deliberately, and the script reads AJV_BIN so it can be.
+      # Installing into the repo makes this job read package.json, whose only dependency is
+      # @ospp/protocol — a package this gate never loads. A version cascade once pinned that to
+      # ^0.8.0, a version npm has never carried (0.7.0 is followed by 0.9.0), and from then on
+      # the install failed ETARGET before a single schema was checked. A gate must not be able to
+      # die of a dependency it never loads.
       - name: Install ajv-cli
-        run: npm install -g ajv-cli@5 ajv-formats@3
+        run: npm install --no-save --prefix "$RUNNER_TEMP/gate" ajv-cli@5 ajv-formats@3
 
-      - name: Validate all schemas
-        run: |
-          # Every *.schema.json under schemas/, at any depth.
-          #
-          # This replaces three steps that globbed schemas/common, schemas/mqtt and
-          # schemas/ble by name. That reached 84 of the 86 files: provisioning-request
-          # and provisioning-response sit at the root of schemas/ and were compiled by
-          # no step at all. A directory named in a glob is a directory someone has to
-          # remember to add; find cannot forget one.
-          #
-          # Each schema is compiled with every OTHER schema passed as -r, so a $ref
-          # resolves whichever directory it points into. The old MQTT and BLE steps
-          # passed only schemas/common, which left BLE -> BLE references unresolvable
-          # (ble/challenge.schema.json refs ble/station-identity.schema.json). Self is
-          # excluded from -r, which ajv rejects as an "already exists" error.
-          schemas=$(find schemas -name '*.schema.json' | sort)
-          count=$(printf '%s\n' "$schemas" | grep -c . || true)
-          echo "Found $count schemas under schemas/"
-          if [ "$count" -eq 0 ]; then
-            echo "No schemas found. The layout moved and this job would otherwise pass"
-            echo "vacuously, reporting success for zero work."
-            exit 1
-          fi
-          for schema in $schemas; do
-            echo "Validating $schema..."
-            refs=""
-            for ref in $schemas; do
-              [ "$ref" = "$schema" ] && continue
-              refs="$refs -r $ref"
-            done
-            ajv compile -s "$schema" $refs --spec=draft2020 -c ajv-formats
-          done
+      - name: Compile every schema with every other as a $ref
+        env:
+          AJV_BIN: ${{ runner.temp }}/gate/node_modules/.bin/ajv
+        run: bash tools/validate-schemas.sh

@@ -1,0 +1,97 @@
+name: Verify Signed Conformance
+
+# The caller the signed-conformance guard never had.
+#
+# tools/verify-all-signatures.sh has always passed. Nothing has ever run it. That is the
+# quietest failure in this family: a gate that verifies wrongly still emits a verdict, and a
+# verdict can later be found wrong, but a gate nothing starts emits nothing at all — no pass,
+# no failure, no log line — so the only way to find it is to enumerate the tools, enumerate the
+# callers, and subtract. tools/check-tool-callers.py now does that subtraction on every run;
+# this file is what it was asking for.
+#
+# What runs here, and what would be unguarded without it:
+#   * every signed conformance vector and example payload, against five committed test keys
+#   * the BLE key schedule and AEAD, re-derived from inputs and anchored on RFC 5903/5869/8439
+#   * sign-inline-md.mjs idempotency across 20 documents — the check that keeps a *negative*
+#     signature fixture from being silently regenerated into a valid one
+#   * handshake nonce derivation and cross-document uniqueness
+#   * the residual-placeholder scan over every signature / HMAC field
+#   * a verify-schemas.py regression pass
+#   * the canonical-form oracle and the MQTT MAC vectors, which reach CI by no other route:
+#     tools/verify-protocol.sh is their only other caller and it is not wired (see below)
+#
+# ─── This job MUTATES the working tree, on purpose ───────────────────────────────────────────
+#
+# Section 2 of verify-all-signatures.sh runs `sign-inline-md.mjs --all`, which WRITES the
+# markdown, and then compares the before/after hashes. Re-running the signer is the only way to
+# assert it is deterministic, so the mutation is the measurement and cannot be removed.
+#
+# Two consequences, stated because neither is visible from the step name:
+#   1. This job MUST NOT be combined with — or run before, in the same job — anything that
+#      asserts a clean tree (`git diff --exit-code`, a "no uncommitted changes" guard, a
+#      release packaging step). Such a check would fail on a green run, and its failure would
+#      read as drift when nothing drifted. Keep it in its own job with its own checkout.
+#   2. Run locally only on a committed tree. On a dirty one it will rewrite files under
+#      spec/, conformance/ and examples/ and give you no way to tell its edits from yours.
+#
+# tools/verify-protocol.sh is deliberately NOT wired here. It exits 1 on a clean tree from 9
+# pre-existing findings and has no baseline mechanism — `exitCode = totalFail > 0` — so wiring
+# it as-is lands a permanently red job, which is the most reliable way to get a gate ignored
+# again. It is the one entry left in check-tool-callers.py's BASELINE, and giving it a ratchet
+# like the four check-*.py scripts have is what would let it join this file.
+
+on:
+  push:
+    paths:
+      - 'conformance/**'
+      - 'examples/**'
+      - 'schemas/**'
+      - 'spec/**'
+      - 'tools/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/verify-signatures.yml'
+  pull_request:
+    paths:
+      - 'conformance/**'
+      - 'examples/**'
+      - 'schemas/**'
+      - 'spec/**'
+      - 'tools/**'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+jobs:
+  signatures:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # Both runtimes are required, and the script fails opaquely without either: section 2
+      # signs through @ospp/protocol (node + node_modules) and section 4 calls
+      # tools/verify-schemas.py (python + jsonschema).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          pip install jsonschema
+
+      - name: Signed conformance corpus (vectors, crypto oracle, signer idempotency, nonces)
+        run: bash tools/verify-all-signatures.sh
+
+      # Reached by no other job. verify-protocol.sh runs both as its categories 19 and 20, and
+      # verify-protocol.sh is not wired — so without these two steps the canonical-form oracle
+      # and the MQTT MAC vectors are verified by nothing.
+      - name: Canonical form oracle
+        run: node tools/verify-canonical-form.mjs
+
+      - name: MQTT MAC vectors
+        run: node tools/verify-mqtt-mac.mjs
