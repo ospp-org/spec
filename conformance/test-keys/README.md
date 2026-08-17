@@ -17,6 +17,20 @@ vectors and example payloads can be re-verified by any implementer.**
 
 - **ECDSA keypairs**: generated with `openssl ecparam -name prime256v1 -genkey -noout`. Private keys are random per generation; the public-key counterpart is what verifiers consume. Public keys committed alongside privates so the *whole conformance suite* is reproducible end-to-end (signing, then verifying, then re-signing).
 - **`session-test-key.bin`**: deterministic, re-derivable via `printf '%s' "OSPP_TEST_SESSION_KEY_V1" | openssl dgst -sha256 -binary > session-test-key.bin`. This anchors the HMAC test vectors to a known seed string anyone can reproduce.
+- **Handshake nonces** in the worked documents: deterministic, one label per handshake, re-derivable via
+  `printf '%s' "OSPP_TEST_NONCE_V1:<label>:<field>" | openssl dgst -sha256 -binary | base64`
+  where `<field>` is `appNonce` or `stationNonce`. SHA-256 is 32 bytes, which is exactly what
+  `hello.schema.json` and `challenge.schema.json` require (`^[A-Za-z0-9+/]{43}=$`).
+  `tools/verify-test-nonces.mjs` regenerates them with `--write` and verifies them without it.
+  **They are derived rather than typed because they were typed, and one pair ended up in four
+  different handshakes** — including the negative scenario — while
+  [`ble-handshake.md` §4.2.2](../../spec/profiles/offline/ble-handshake.md) rests the claim-layer
+  replay defence on the nonce *never being reused across handshakes*. A nonce is schema-valid
+  whatever its value, so nothing caught it; the same tool now fails if any literal appears in two
+  documents. The nonces under `conformance/test-vectors/` are deliberately **out of scope**: those
+  in `crypto/ble-handshake-keyschedule.json` are the anchored inputs of a key schedule and are
+  shared with the `hello-*`/`challenge-*` vectors *because* the schedule is derived from those
+  exact bytes.
 
 ## Verification
 

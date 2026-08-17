@@ -22,7 +22,7 @@ UpdateFirmware is a server-initiated command that instructs the station to downl
 | `checksum` | string | Yes | SHA-256 hex digest prefixed with `sha256:` (e.g., `sha256:a3f2...`). |
 | `signature` | string | Yes | Base64-encoded ECDSA P-256 signature of the firmware image (see [Chapter 06 — Security](../../06-security.md), §4.6). |
 | `forceDowngrade` | boolean | No | When `true`, override anti-downgrade protection and allow installing an older firmware version (default: `false`). See [Chapter 06 — Security](../../06-security.md), §4.6. |
-| `scheduledAt` | string | No | ISO 8601 UTC timestamp to begin the update. If omitted, the station **MUST** begin immediately. |
+| `scheduledAt` | string | No | ISO 8601 UTC timestamp at which to **install**. The station downloads and verifies immediately on receipt regardless; this field defers only the partition write and the reboot that follows it (§5 rules 5 and 7). If omitted, the station **MUST** install as soon as the bay gate permits. |
 
 ## 4. Response Payload
 
@@ -34,7 +34,7 @@ UpdateFirmware is a server-initiated command that instructs the station to downl
 
 ## 5. Processing Rules
 
-1. The station **MUST** validate the request fields before responding. If the request is valid, the station **MUST** respond with `Accepted` and begin the download at the scheduled time (or immediately).
+1. The station **MUST** validate the request fields before responding. If the request is valid, the station **MUST** respond with `Accepted` and begin the download **immediately** — the download is not deferred by `scheduledAt` and is not gated on bay state.
 2. The station **MUST** send a FirmwareStatusNotification at each stage transition (see section 6).
 3. The station **MUST** verify the downloaded binary against the provided `checksum` before proceeding to installation. If verification fails, the station **MUST** send a FirmwareStatusNotification with `Failed` status.
 4. The station **MUST** verify the `signature` over the downloaded binary before proceeding to installation, and **MUST NOT** install a binary whose signature it has not verified. Verification is ECDSA P-256 against the pre-provisioned Firmware Signing Certificate, or its CA, held in the station's secure element or encrypted NVS ([Chapter 06 — Security §4.6](../../06-security.md)). If the signature does not verify — or if the station holds no Firmware Signing Certificate to verify it against — the station **MUST** treat the binary as untrusted, **MUST NOT** write it to the inactive partition, **MUST** send a FirmwareStatusNotification with `Failed` status and a descriptive `errorText`, and **MUST** report `5112 FIRMWARE_SIGNATURE_INVALID` by sending a `FirmwareIntegrityFailure` SecurityEvent [MSG-012] ([Chapter 07 §3](../../07-errors.md)).
@@ -42,20 +42,29 @@ UpdateFirmware is a server-initiated command that instructs the station to downl
    `5112` travels on the SecurityEvent, not on the FirmwareStatusNotification: that message carries no `errorCode` field and is closed to additional properties, so the SecurityEvent is the only channel on which the code can be reported. Its `errorText` stays free prose, as §6 requires.
 
    The checksum of rule 3 does **not** discharge this. A checksum establishes that the bytes arrived intact; it is computed over content that whoever controls `firmwareUrl` also controls, and it travels in the same message as the URL, so an attacker able to substitute the binary can substitute the checksum with it. Only the signature establishes **origin**. Both checks are required, and passing one is never grounds for skipping the other.
-5. If `scheduledAt` is in the past, the station **MUST** begin the update immediately.
+5. `scheduledAt` defers the **installation**, not the download. The station **MUST** download and verify on receipt, hold the verified image, and begin writing the inactive partition at `scheduledAt` — or immediately if `scheduledAt` is absent or in the past — subject to rule 7.
 6. If the station is already running the requested `firmwareVersion`, it **MUST** respond with `Rejected` and error code `5016 VERSION_ALREADY_INSTALLED`.
-7. The station **MUST NOT** begin installation while active sessions are in progress. It **MUST** wait for sessions to complete or time out before installing.
+7. The station **MUST NOT** begin installation while active sessions are in progress. It **MUST** wait for sessions to complete or time out before installing. This is the same gate as [`05-state-machines.md` §7.4](../../05-state-machines.md) and it is the **only** one: downloading and verifying are not gated on bay state, because they touch the network and the staging area and not the partition the station boots from. A station that could not prepare while busy could never prepare at all, and the busiest stations in a fleet would be the last to be patched.
 8. The response `messageId` **MUST** match the request `messageId`.
+9. A station in a **restricted** state (`Pending` or `Rejected`) **MUST NOT** accept a firmware update. In `Pending` it answers `Rejected`; in `Rejected` it processes no command at all ([`05-state-machines.md` §1.4](../../05-state-machines.md)). The reason is that this command's entire account of itself — progress, failure, and completion — travels on FirmwareStatusNotification [MSG-017], which a restricted station may not originate. Accepting would commit the station to a multi-minute operation the server would hear nothing about, and could not detect as stalled, because §6 rule 3's timer is measured on the messages that were suppressed.
 
 ## 6. Download and Install Flow
 
-The firmware update proceeds through the following stages. The station **MUST** send a FirmwareStatusNotification at each transition:
+The update opens with the **RESPONSE**, not with a notification. The station acknowledges the
+request by answering `Accepted` on the UpdateFirmware RESPONSE (§4) and schedules the download.
+`Accepted` is a value of the RESPONSE's `status`; it is **not** a FirmwareStatusNotification
+status, and a station **MUST NOT** attempt to send one. The notification's `status` is a closed
+enumeration of the four stages below plus `Failed`
+([`firmware-status-notification.schema.json`](../../../schemas/mqtt/firmware-status-notification.schema.json)),
+and that schema is `additionalProperties: false`.
 
-1. **Accepted** -- The station acknowledges the request and schedules the download.
-2. **Downloading** -- The station begins downloading the firmware binary from `firmwareUrl`. Progress updates **SHOULD** be sent at every 10% increment.
-3. **Downloaded** -- Download is complete, the SHA-256 checksum has been verified successfully, and the ECDSA P-256 `signature` has been verified against the Firmware Signing Certificate (§5 rule 4). A station **MUST NOT** report `Downloaded` on the strength of the checksum alone.
-4. **Installing** -- The firmware is being written to the inactive partition. The station **SHOULD** report progress at key milestones (25%, 50%, 75%, 100%).
-5. **Installed** -- Installation is complete. The station reboots into the new partition and sends a BootNotification with the new `firmwareVersion`.
+The update then proceeds through the following stages. The station **MUST** send a
+FirmwareStatusNotification at each transition:
+
+1. **Downloading** -- The station begins downloading the firmware binary from `firmwareUrl`. Progress updates **SHOULD** be sent at every 10% increment, and at least every 30 seconds while the download is running — whichever falls sooner. On a slow link the 30-second floor is the binding one; on a fast link the 10% marks are.
+2. **Downloaded** -- Download is complete, the SHA-256 checksum has been verified successfully, and the ECDSA P-256 `signature` has been verified against the Firmware Signing Certificate (§5 rule 4). A station **MUST NOT** report `Downloaded` on the strength of the checksum alone.
+3. **Installing** -- The firmware is being written to the inactive partition. The station **SHOULD** report progress at key milestones (25%, 50%, 75%, 100%).
+4. **Installed** -- Installation is complete. The station sends this notification **before** it reboots, on the connection it is about to drop; it then reboots into the new partition and sends a BootNotification with the new `firmwareVersion`. See [`firmware-status.md` §6](firmware-status.md) rule 4.
 
 If any stage fails, the station **MUST** send a FirmwareStatusNotification with `Failed` status and a descriptive `errorText`.
 

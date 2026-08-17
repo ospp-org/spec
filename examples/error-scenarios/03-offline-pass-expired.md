@@ -68,7 +68,7 @@ timestamp. The station rejects the offline authentication with error code
 {
   "type": "Hello",
   "deviceId": "device_a8f3bc12e4567890",
-  "appNonce": "k7Rz2mPqXvN8dF5sYwB1cA0hJ6tL9oKe3iGnUxMpWbQ=",
+  "appNonce": "M8MZRxjMBBxLhQ6vT0764RNX9V9CJcmayPBQgXVsH88=",
   "appVersion": "1.8.0"
 }
 ```
@@ -80,7 +80,7 @@ timestamp. The station rejects the offline authentication with error code
 ```json
 {
   "type": "Challenge",
-  "stationNonce": "Qm4xR9vTfH2wLpZjK0sNcYgX5uOdA8rE1iBn6CtJkWe=",
+  "stationNonce": "WmplP7lhWDDjNoOR711wziZf41PUY1my5fMgfCebSw8=",
   "stationConnectivity": "Offline",
   "availableServices": [
     { "bayId": "bay_c1d2e3f4a5b6", "serviceId": "svc_eco", "available": true },
@@ -112,18 +112,22 @@ The `expiresAt` field clearly shows the pass expired over 24 hours ago.
       "maxTotalCredits": 100,
       "maxUses": 5,
       "maxCreditsPerTx": 30,
-      "allowedServiceTypes": ["svc_eco", "svc_standard", "svc_deluxe"]
+      "allowedServiceTypes": [
+        "svc_eco",
+        "svc_standard",
+        "svc_deluxe"
+      ]
     },
     "constraints": {
       "minIntervalSec": 60,
       "stationOfflineWindowHours": 72,
       "stationMaxOfflineTx": 100
     },
-    "signature": "V2hYcE9wR3FkN21MbjZzWnRKdUF4Q2JrRjVlUmlXZ0g4VTNQYW9EeUtsTXZCOXdmMGpBaFRjSWxFcDNyTnlPZA==",
-    "signatureAlgorithm": "ECDSA-P256-SHA256"
+    "signatureAlgorithm": "ECDSA-P256-SHA256",
+    "signature": "MEUCIQC9G52Px/9kqSJPxFfcWh7VA1IXtYxj+pIA5R8mMv7+xgIgVR8A/SJLEhhN1qUwnY6prnTEmON5EjSBVrzuk6DF/FM="
   },
   "counter": 3,
-  "sessionProof": "dG1SZ1VXMXB5THNrQWZKZU9jTmhCNndiRHhpWnZLcTk="
+  "sessionProof": "EtKD75H71pKdOC5mrEsIAS7a04p7oQzRcdNZv/G0uPA="
 }
 ```
 

@@ -8,6 +8,235 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.20.0] — 2026-08-17
+
+> **The code-signing conformance case could not fail.** `TC-DM-004` Part E exists to prove a
+> station rejects a firmware image whose ECDSA P-256 signature does not verify. The signature it
+> supplied as *"an invalid (corrupted) signature"* was **byte-identical** to the valid one used in
+> Parts A–D of the same file — the same 96 characters, the same value that verifies against
+> `conformance/test-keys/firmware-test-pub.pem` over `conformance/test-firmware/test-firmware.bin`.
+> A vendor running the case sent a **valid** signature, saw the update proceed, and recorded a pass.
+> An implementation that never verified a firmware signature at all passed it identically.
+>
+> **The corpus could not hold the fix, which is why the defect survived.** `tools/sign-inline-md.mjs`
+> signs every JSON block carrying `firmwareUrl` + `signature` and overwrites both `checksum` and
+> `signature` with the true values; `TC-DM-004.md` is in its file list, and
+> `tools/verify-all-signatures.sh` gates on that signer being a no-op. A corrupted signature typed
+> into the file was reverted on the next run and the guard then reported a clean tree. The
+> placeholder scan blocks the other escape — a marker string such as `FAKE` or `Example` in a
+> signature field is a hard error. **There was no way to express a negative signature fixture**, so
+> the case shipped with a positive one wearing a negative label.
+>
+> **So the corruption is now generated rather than typed.** A new `<!-- ospp-sign: firmware-corrupted -->`
+> directive makes the signer derive the invalid value from the same key and the same binary as the
+> valid one, on every run: the valid signature with the **low bit of the final byte of `s` flipped**.
+> The DER framing is untouched, so it parses as a well-formed ECDSA P-256 signature and fails the
+> verification *maths* rather than the parser — a station that rejects it as malformed has not
+> exercised the path the case measures, and that is now Failure Criterion 9. The directive cannot
+> silently do nothing: one that matches no signing mode is a hard error, because a directive that
+> quietly no-ops is exactly how a negative fixture reverts to a positive one.
+>
+> **The same class was swept out of the offline corpus, where it was worse.** Four narrative
+> documents were in **neither** the signer's file list nor the CI guard's, so their crypto literals
+> were never regenerated and never verified. One OfflinePass `signature` was shared by an **expired**
+> pass and three valid ones — and the literal was 64 printable ASCII bytes, **not a DER structure at
+> all**, so the negative scenario proved the parser rather than the rule. A `sessionProof` was
+> identical between the negative scenario and the valid flow. One `appNonce`/`stationNonce` pair
+> appeared in **four documents depicting four different handshakes**, while `ble-handshake.md` §4.2.2
+> rests the claim-layer replay defence on those nonces *never being reused across handshakes*. All
+> four documents now sit in both lists, so their signatures, HMACs and session proofs are generated;
+> the nonces are derived from a per-handshake label and guarded by a new check for cross-document
+> reuse, because a nonce is schema-valid whatever its value and nothing else could see it.
+>
+> **MINOR, and breaking for a vendor holding a passing `TC-DM-004`.** `protocolVersion` stays
+> **`0.3.0`**, no schema changes, and no field, message, error code or configuration key is added.
+> What changes is that a station which does not verify firmware signatures now **fails** a case it
+> previously passed, that `Installed` is unambiguously sent before the reboot, that the active-session
+> gate is on the **install** and not the download, and that UpdateFirmware to a restricted station is
+> **`Rejected`**. **This release is not pin-only for `ospp-sdk-php`** — see below.
+
+### Decided
+
+- **spec:** **`Installed` is sent before the reboot.** Six sites said before and five said after,
+  and the *after* reading was in both flow documents. Before wins because it is what the normative
+  sites say — `firmware-status.md` §6 rule 4 (*after `Installed`, the next message **MUST** be a
+  BootNotification*), `05-state-machines.md` §6.3's `Installed -> Rebooting` row, §6.6's mapping
+  note, and `update-firmware.md` §6 — and because *after* is unimplementable against rule 4: a
+  station that reports `Installed` after its post-update boot has sent that boot first. `Installed`
+  says the image is on the device and the boot target is set; it does not say the station came back
+  on it. That second claim is the BootNotification's, and the two are deliberately separate — if the
+  new image never boots, `Installed` was still true and the watchdog rollback is what the server
+  learns from next.
+- **spec:** **`Accepted` is not a FirmwareStatusNotification status.** `update-firmware.md` §6 listed
+  it as stage 1 of a **MUST** to notify at each transition, while
+  `firmware-status-notification.schema.json` has a five-value enum without it and is
+  `additionalProperties: false`. **A conforming station could not obey that MUST.** `Accepted` is a
+  value of the UpdateFirmware RESPONSE's `status`; §6 now opens by saying so and the MUST covers the
+  four notification stages only.
+- **spec:** **`Downloaded` asserts the signature, everywhere.** `13c5c56` raised signature
+  verification to a processing rule but touched three files; four sites still defined `Downloaded` as
+  checksum-only and one of them was the sequence diagram in `04-flows.md` §11, where the word
+  `signature` did not appear at all. All are corrected. The consequence for the wire is stated where
+  it bites: a station whose signature check fails **does not send `Downloaded`** — it goes
+  `Downloading -> Failed`.
+- **spec:** **The active-session gate is on the install, and `scheduledAt` defers the install with
+  it.** The gate was stated at three stages — installation, the `Idle -> Downloading` transition, and
+  the `Rebooting` transition — with two of the three in the same chapter contradicting each other,
+  and four implementations had picked four different stages. Downloading and verifying are now
+  ungated: they touch the network and the staging area, and gating them would mean a busy station can
+  never *prepare*, making the busiest stations in a fleet the last to be patched. It would also put
+  the machine in a lie, since acceptance takes `Idle -> Downloading` and a station deferring its
+  download would sit in `Downloading` downloading nothing. **The cost was closed rather than
+  absorbed:** `Verified` becomes an unbounded wait state with no notification value, so instead of
+  giving it a wire value — a schema change, and breaking — the stall rule is scoped. The server
+  issued the `scheduledAt` and holds the bay states the gate turns on, so it measures the five
+  minutes from the later of the last notification and the moment the gate opens. `TC-DM-002`'s
+  criterion 6 becomes **reachable** for the first time.
+- **spec:** **UpdateFirmware to a restricted station is `Rejected`, and §1.4's table now says so in a
+  row.** It had no row at all, not even in the collective one, and an absent row is what produced the
+  ambiguity. **The discriminator gained a second clause because the first answered wrongly:** *"an
+  effect independent of the message it would emit"* grouped UpdateFirmware with SetMaintenanceMode
+  and GetDiagnostics, whose suppressed messages *report on* an effect the server learns of anyway.
+  FirmwareStatusNotification is the **entire** account of the update from `Accepted` until the
+  reboot, so an `Accepted` would commit the station to a multi-minute operation the server hears
+  nothing about — and cannot detect as stalled, because the stall rule is measured on exactly the
+  messages being suppressed. The discriminator now also asks whether the suppressed message is a
+  *report about* the effect or the *only account of it there will ever be*.
+- **spec:** **The download-progress rate and floor are one rule, not two.** `firmware-status.md` §5
+  carried the 10% increment as a SHOULD; `03-messages.md` §6.5 and `05-state-machines.md` §6.6
+  carried *"at least every 30 seconds"* with no keyword, in a document that is not the profile. They
+  are a rate and a floor and bind *whichever falls sooner* — a fast download crosses 10% marks more
+  often than every 30s, a slow one goes minutes between marks. The profile now states both and the
+  other two refer to it.
+
+### Added
+
+- **conformance:** `TC-DM-004` Failure Criterion 7 — *station reports `Downloaded` for a binary whose
+  signature did not verify*. This is the criterion that separates a station verifying the signature
+  from one verifying only the checksum, and it fires **before** any installation is attempted;
+  criterion 6 catches the same station only if it also goes on to install.
+- **conformance:** `TC-DM-004` Failure Criterion 9 — *station rejects the Part E signature as
+  malformed rather than as failing verification*.
+- **conformance:** `update-firmware-request-http-url.json` under `test-vectors/invalid/` — the
+  `^https://` pattern had no negative vector. The schema-level refusal is now exercised regardless of
+  how the error-code question below is answered.
+- **tooling:** `tools/verify-test-nonces.mjs` — derives every handshake nonce in the worked documents
+  from a per-handshake label (`SHA-256("OSPP_TEST_NONCE_V1:<label>:<field>")`, documented in
+  `conformance/test-keys/README.md` beside the session key's derivation) and **fails if any literal
+  appears in two documents**. `--write` regenerates. Wired into `check-drift.yml`, whose own header
+  states the principle: *a gate in `tools/` that no job runs is the same defect one level up*.
+  `conformance/test-vectors/**` is deliberately out of scope — the nonces in
+  `crypto/ble-handshake-keyschedule.json` are the anchored inputs of a key schedule and are shared
+  with the `hello-*`/`challenge-*` vectors *because* the schedule is derived from those exact bytes.
+- **spec:** `05-state-machines.md` §6.6 gains rows for `Idle`, `Verifying`, `Verified` and
+  `Rebooting`, all `--`. **Four of the ten states have no notification value**, and the two in the
+  middle cover a SHA-256 and an ECDSA verification over a whole image — the longest compute in the
+  cycle and the one interval in which the server hears nothing. A server modelling the station's ten
+  states holds four that nothing on the wire can set; the only instrument for that interval is §6
+  rule 3's stall timer.
+- **spec:** `05-state-machines.md` §6.3 now says **fourteen rows, thirteen edges** — `Verifying ->
+  Failed` appears twice because it has two triggers and two codes, not because it is two
+  transitions. A conformance check asserting a transition *count* must assert 13. It also states
+  that `Failed` is **not** terminal: its one outgoing edge is `Failed -> Idle`, and a machine
+  treating it as terminal can run one firmware update and never a second.
+
+### Fixed
+
+- **tooling:** `tools/sign-inline-md.mjs` gains the `firmware-corrupted` mode and the
+  `<!-- ospp-sign: <mode> -->` directive, with an error on any directive that claims no block.
+- **tooling:** `examples/flows/12-firmware-update.md` joins the signed set. Its `checksum` was
+  `e3b0c442…` — **the SHA-256 of the empty string** — presented as the digest of a 12 MB firmware
+  image, in the one worked example that teaches the firmware cycle. It is now the reproducible digest
+  of the committed reference binary, with the matching signature.
+- **examples/tooling:** `error-scenarios/03-offline-pass-expired.md` and `flows/04`, `05`, `06` join
+  the signed set in both `tools/sign-inline-md.mjs` and `tools/verify-all-signatures.sh`. Their
+  OfflinePass signatures, receipts, session proofs, session-key confirmations and ServerSignedAuth
+  claims are now generated from the committed test keys and verify; grafting one document's pass
+  signature onto another's pass is now rejected, which is precisely what the shared literal could
+  never detect. Their handshake nonces are derived per document.
+- **conformance:** the `firmware-status-notification-full.json` vector carried `progress: 72` with
+  `status: "Failed"`, against `firmware-status.md` §5 rule 3 (*`progress` **MUST** be omitted or set
+  to `0`*). It sat in `valid/` and passed, because the schema has no conditional to catch it. Now
+  `progress: 0`, which keeps the vector exercising every member and obeys the rule.
+- **conformance:** `TC-DM-004` Part C observed `Downloading -> Downloaded -> Installing` and then
+  rebooted, skipping `Installed`. Part A observed `Downloaded` *before* the signature-verification
+  step. Both corrected.
+- **conformance:** `TC-DM-004` step 37 required `errorText: "FIRMWARE_SIGNATURE_INVALID"` on a
+  FirmwareStatusNotification — the UPPER_SNAKE_CASE reading of a field this specification has
+  deliberately left as prose on that message (`firmware-status.md` §3, `update-firmware.md` §5 rule
+  4), and the subject of an open naming decision. It now asks for a descriptive `errorText` and says
+  not to match it programmatically.
+- **spec:** `06-security.md` §3.2's UpdateFirmware row said *"Station verifies HMAC + checksum"* in a
+  column about **message** authorization, where every sibling row says HMAC alone. The artefact
+  verification belongs to §4.6 and the row now points there instead of naming two of its three
+  checks.
+- **spec:** `04-flows.md` §11 omitted `signature` from the request in the sequence-diagram note, in
+  the happy path, and from the Error Paths table, which had no `5112` row. `CHANGELOG` records the
+  identical defect being repaired in `03-messages.md` §6.4 at `0.9.0`; §11 was never swept with it.
+- **spec:** `profiles/core/README.md` named three profiles that do not exist — *Session*,
+  *Reservation* and *Firmware*. The four that do are now named and linked.
+- **conformance:** `README.md` §2.3 mapped the *Firmware update* capability to `TC-DM-002` alone,
+  while the prose four lines above already requires all `TC-DM-*`. The table now agrees with the
+  prose it summarises, so the capability covers auto-rollback, non-HTTPS and signature rejection.
+- **examples:** `flows/12-firmware-update.md` taught three things the protocol does not have — a
+  `reason` member (the field is `errorText`), a `selfTestResult` member on a schema that is
+  `additionalProperties: false`, and a server-initiated rollback. It also gave *"3 failed boots"* as
+  the rollback trigger, a count that appears nowhere else against the watchdog's 5 minutes, and
+  *"retry up to 3 times"* for a download, for which **no normative retry policy exists anywhere in
+  this specification**. A second invented retry count in `firmware-status.md` §7.4's example is
+  corrected with it.
+- **KNOWN-ISSUES:** the `errorText` entry cited `spec/03-messages.md:1679` for a string that lives at
+  `:1745`; line 1679 is a section heading. Its sibling citation was correct — the drift is per line,
+  not per file.
+
+### Open — recorded, not decided
+
+Four contradictions in the firmware cycle still need a product decision and are recorded in
+[KNOWN-ISSUES.md](KNOWN-ISSUES.md) with their option spaces rather than guessed at:
+
+- **`5016 VERSION_ALREADY_INSTALLED` is required for two conditions**, one of which is a refused
+  downgrade — a version that by definition is not installed. `5010`–`5013` are free.
+- **UpdateFirmware is documented as idempotent and as `Rejected` with `5107`** for the same second
+  command, and **superseding is absent from the specification entirely**.
+- **A non-HTTPS firmware URL has no error code that fits.** `1011` is about reachability the station
+  never tested, `1005` is scoped to unintelligible messages, and `3015` — the best fit by definition
+  — is not listed for UpdateFirmware. `TC-DM-004` Part D is left asserting `1011` with a note saying
+  the code is unsettled and the refusal is what it measures.
+- **`FirmwareDowngradeAttempt` names the offered version `offeredVersion` in the vector and
+  `attemptedVersion` in the conformance case**, and `details` is an open object, so nothing detects
+  the divergence and no normative document defines the shape.
+
+And one recorded outside the firmware cycle, because this arc is what surfaced it:
+
+- **Two validation scripts report 100% failure**, which reads as a broken environment and is how
+  they stopped being run. `validate-schemas.sh` calls `npx ajv`, which resolves to the local `ajv`
+  *library* (no `bin`) because npm resolves by package name — unfixable by PATH while `ajv` is a
+  local dependency and `ajv-cli` is not. Its real content answer is **84/86**, and the 2 failures are
+  the exact BLE-ref defect `validate-schemas.yml` says in its own comment that it fixed: the workflow
+  was repaired, the script beside it was not. `validate-examples.sh` word-splits an unquoted `-r`
+  glob into 22 paths, failing all 52 with a syntax error; the CI equivalent reports 51/51 PASS.
+  **Neither is invoked by any workflow**, and neither is `verify-all-signatures.sh`, which is not
+  broken at all — so the entire signed-conformance guard runs only by hand.
+
+### SDK — this release is not pin-only
+
+- **`ospp-sdk-php`:** `FirmwareTransitions` disagrees with `05-state-machines.md` §6.3 on **three
+  edges**, and the disagreement is fixed in its own tests. It has `downloaded -> failed` and
+  `installed -> failed`, neither of which the specification has; it is missing `failed -> idle`,
+  which the specification states twice — in the §6.1 diagram and as the §6.3 *Rollback complete* row
+  — and which §6.5 rule 1 makes a **MUST**. With `'failed' => []` the machine is single-use: a
+  station that fails one update can never begin another. `FirmwareTransitionsContractTest` pins
+  `transitionCount() === 14`, which is the **row** count of §6.3's table, not its edge count; the
+  correct assertion is **13**.
+- **`sdk-ts`:** `FirmwareStateMachine` already matches the specification exactly — 13 edges, the same
+  13. Pin-only.
+- **Neither SDK has a canonical cross-SDK fixture for the firmware machine.** The bay machine has
+  one, and its file says why: a disagreement between the two mirrors *"becomes a defect in every
+  consumer — it has once already, which is why this table now has one home."* The firmware machine
+  never got that home, and this is the divergence that survived in the gap.
+
+---
+
 ## [0.19.0] — 2026-08-14
 
 > **A restricted station could not renew its own certificate — by any path — and the repair was to

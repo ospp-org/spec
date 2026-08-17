@@ -1,6 +1,6 @@
 # Chapter 03 — Message Catalog
 
-> **Status:** Draft | **OSPP Version:** 0.19.0
+> **Status:** Draft | **OSPP Version:** 0.20.0
 
 This chapter is the normative reference for **every message** in the OSPP protocol. Each message is documented with its complete payload schema, metadata, and example.
 
@@ -1638,7 +1638,7 @@ Instructs the station to download and install a new firmware version. The statio
 | `checksum` | string | Yes | `"sha256:{hex-digest}"` — integrity hash of the firmware binary |
 | `signature` | string | Yes | Base64-encoded ECDSA P-256 signature of the firmware image (see [Chapter 06 — Security](06-security.md), §4.6) |
 | `forceDowngrade` | boolean | No | When `true`, override anti-downgrade protection and allow installing an older firmware version (default: `false`). See §4.6.1. |
-| `scheduledAt` | string | No | ISO 8601 UTC — schedule update for later (station downloads now, installs at scheduled time) |
+| `scheduledAt` | string | No | ISO 8601 UTC — station downloads and verifies **now**, installs at the scheduled time ([update-firmware.md §5](profiles/device-management/update-firmware.md) rule 5) |
 
 #### RESPONSE Payload
 
@@ -1650,10 +1650,11 @@ Instructs the station to download and install a new firmware version. The statio
 
 **Post-acceptance flow:**
 1. Station sends [FirmwareStatusNotification](#65-firmwarestatusnotification) `Downloading` (with progress %)
-2. Station verifies checksum → `Downloaded`
+2. Station verifies the checksum **and** the ECDSA P-256 `signature` over the downloaded binary → `Downloaded`. Both checks are required; `Downloaded` **MUST NOT** be reported on the checksum alone ([update-firmware.md §5](profiles/device-management/update-firmware.md) rule 4)
 3. Station writes to inactive partition → `Installing`
-4. Station reboots → `Installed` (reported via [BootNotification](#11-bootnotification) with new `firmwareVersion`)
-5. On any failure → `Failed` (automatic rollback to previous partition)
+4. Write completes → `Installed`, sent **before** the station reboots
+5. Station reboots and comes back with a [BootNotification](#11-bootnotification) carrying the new `firmwareVersion` — that boot, not a further FirmwareStatusNotification, is how the update's outcome is reported
+6. On any failure → `Failed` (automatic rollback to previous partition)
 
 #### Example
 
@@ -1706,7 +1707,7 @@ Instructs the station to download and install a new firmware version. The statio
 | **Idempotency** | Yes — duplicate status updates are ignored |
 | **Message Expiry** | 60 seconds |
 
-Reports firmware update progress. Sent at each stage transition and periodically during download (at least every 30 seconds while downloading).
+Reports firmware update progress. Sent at each stage transition and periodically during download — at every 10% increment and at least every 30 seconds, whichever falls sooner ([firmware-status.md §5](profiles/device-management/firmware-status.md), which is the normative home for both).
 
 #### Payload
 
@@ -1722,9 +1723,9 @@ Reports firmware update progress. Sent at each stage transition and periodically
 | Value | Description |
 |-------|-------------|
 | `Downloading` | Firmware binary is being downloaded |
-| `Downloaded` | Download complete, checksum verified |
+| `Downloaded` | Download complete, checksum verified **and** ECDSA P-256 signature verified |
 | `Installing` | Firmware is being written to inactive partition |
-| `Installed` | Installation complete, reboot pending or completed |
+| `Installed` | Installation complete, reboot pending — sent before the reboot, never after it |
 | `Failed` | Update failed — automatic rollback initiated |
 
 #### Example

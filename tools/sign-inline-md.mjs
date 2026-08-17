@@ -62,6 +62,18 @@ const ALL_FILES = [
   'conformance/test-cases/transaction/TC-TX-006.md',
   'conformance/test-cases/security/TC-SEC-004.md',
   'conformance/test-cases/device-management/TC-DM-004.md',
+  // The one worked example that carries a firmware payload. It was outside this list and
+  // its `checksum` was the SHA-256 of the empty string — a digest of nothing, presented as
+  // the digest of a 12 MB image. Unsigned files do not drift; they simply were never true.
+  'examples/flows/12-firmware-update.md',
+  // Four narrative documents that were in neither this list nor verify-all-signatures.sh's,
+  // so their crypto literals were never regenerated and never verified. One `signature` was
+  // shared by an EXPIRED pass and three valid ones -- and was not DER at all, so the negative
+  // scenario proved the parser rather than the rule.
+  'examples/error-scenarios/03-offline-pass-expired.md',
+  'examples/flows/04-full-offline-session.md',
+  'examples/flows/05-partial-a-session.md',
+  'examples/flows/06-partial-b-session.md',
 ];
 
 const STATION_KEY = readFileSync(`${KEY_DIR}/station-test-key.pem`, 'utf-8');
@@ -201,6 +213,41 @@ function signFirmware(outer) {
   return 'firmware';
 }
 
+// A negative fixture has to be *derived*, not typed in.
+//
+// A conformance case that tests the rejection of a bad firmware signature needs a
+// signature that fails verification. Typing one in does not survive: this signer runs
+// over the same file and overwrites `signature` with the valid one, and the CI
+// idempotency guard then reports a clean tree. TC-DM-004 Part E carried the valid
+// signature under the label "corrupted" for exactly that reason, so the part passed
+// against any implementation, including one that never verified anything.
+//
+// So the corruption is generated here, from the same key and the same binary as the
+// valid value, and re-derived on every run. It cannot drift from the key material and
+// it cannot be silently repaired.
+//
+// The corruption is one bit: the low bit of the final byte of `s`. The DER framing
+// (`30 44 02 20 <r> 02 20 <s>`) is untouched, so the value still parses as a well-formed
+// ECDSA P-256 signature and fails the verification *maths* rather than the parser. A
+// station that rejects it as malformed has not exercised the signature path, which is
+// the thing the case exists to measure.
+function signFirmwareCorrupted(outer) {
+  signFirmware(outer);
+  const der = Buffer.from(outer.signature, 'base64');
+  if (der[0] !== 0x30 || der[1] >= 0x80) {
+    throw new Error('firmware-corrupted: signature is not a short-form DER SEQUENCE');
+  }
+  let i = 2;
+  if (der[i] !== 0x02) throw new Error('firmware-corrupted: no INTEGER r');
+  i += 2 + der[i + 1];
+  if (der[i] !== 0x02) throw new Error('firmware-corrupted: no INTEGER s');
+  const sEnd = i + 2 + der[i + 1];
+  if (sEnd !== der.length) throw new Error('firmware-corrupted: trailing bytes after s');
+  der[sEnd - 1] ^= 0x01;
+  outer.signature = der.toString('base64');
+  return 'firmware-corrupted';
+}
+
 // Length-prefix: U16BE(byteLength) ‖ UTF-8 bytes (06-security.md §6.5 Pin 3 / Pin 4).
 function lp(s) {
   const b = Buffer.from(s, 'utf-8');
@@ -234,11 +281,11 @@ function signSessionKeyConfirmation(outer) {
 // Mode dispatcher — handles MQTT-envelope unwrap
 // -----------------------------------------------------------------------------
 
-function signBody(node) {
+function signBody(node, directive) {
   const ops = [];
   // MQTT envelope: recurse into payload
   if (node && typeof node === 'object' && node !== null && 'payload' in node && typeof node.payload === 'object') {
-    ops.push(...signBody(node.payload));
+    ops.push(...signBody(node.payload, directive));
     return ops;
   }
   // Mode dispatch — order matters (some payloads carry multiple things)
@@ -252,7 +299,7 @@ function signBody(node) {
     ops.push(signServerSignedAuth(node));
   }
   if (typeof node.firmwareUrl === 'string' && typeof node.signature === 'string') {
-    ops.push(signFirmware(node));
+    ops.push(directive === 'firmware-corrupted' ? signFirmwareCorrupted(node) : signFirmware(node));
   }
   if (node.type === 'OfflineAuthRequest' && 'sessionProof' in node) {
     ops.push(signSessionProof(node));
@@ -281,6 +328,12 @@ function signBody(node) {
 // .md block extraction + re-injection
 // -----------------------------------------------------------------------------
 
+// A block may be preceded by `<!-- ospp-sign: <mode> -->` to select a non-default signing
+// mode. The marker is claimed by the block that follows it, and an unclaimed marker is a
+// hard error rather than a silent no-op: a directive that quietly does nothing is how a
+// negative fixture reverts to a positive one without anybody seeing it.
+const SIGN_DIRECTIVE = /<!--\s*ospp-sign:\s*([a-z][a-z0-9-]*)\s*-->/g;
+
 function processFile(file) {
   const original = readFileSync(file, 'utf-8');
   const fence = /(```json\s*\n)([\s\S]*?)(```)/g;
@@ -293,14 +346,19 @@ function processFile(file) {
     const blockStart = match.index;
     stats.blocks++;
 
-    // Append everything before this block unchanged
-    out += original.slice(lastIndex, blockStart);
+    // Everything between the previous block and this one, unchanged — and the place a
+    // signing directive for this block would live.
+    const gap = original.slice(lastIndex, blockStart);
+    out += gap;
+    const found = [...gap.matchAll(SIGN_DIRECTIVE)];
+    const directive = found.length ? found[found.length - 1][1] : undefined;
 
     // Try to parse + sign
     let parsed;
     try {
       parsed = JSON.parse(body);
     } catch {
+      if (directive) throw new Error(`${file}: ospp-sign: ${directive} precedes a block that is not valid JSON`);
       out += whole;
       lastIndex = blockStart + whole.length;
       continue;
@@ -314,12 +372,20 @@ function processFile(file) {
       flat.includes('"sessionProof"') ||
       flat.includes('"sessionKeyConfirmation"');
     if (!hasSig) {
+      if (directive) throw new Error(`${file}: ospp-sign: ${directive} precedes a block that carries no signature field`);
       out += whole;
       lastIndex = blockStart + whole.length;
       continue;
     }
 
-    const ops = signBody(parsed);
+    const ops = signBody(parsed, directive);
+    if (directive && !ops.includes(directive)) {
+      throw new Error(
+        `${file}: ospp-sign: ${directive} matched no signing mode on the block that follows it ` +
+        `(the block was signed as: ${ops.join(', ') || 'nothing'}). ` +
+        `An unclaimed directive would leave a negative fixture silently signed as a valid one.`,
+      );
+    }
     if (ops.length === 0) {
       out += whole;
       lastIndex = blockStart + whole.length;

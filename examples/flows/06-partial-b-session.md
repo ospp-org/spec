@@ -178,7 +178,7 @@ Bob places his finger on the sensor. The biometric check passes.
 {
   "type": "Hello",
   "deviceId": "device_b7c4de89f0123456",
-  "appNonce": "Xp9Tm3KqWvR7eG4sLwC8bA1hN6uJ2oYf5iDnSxZpHcE=",
+  "appNonce": "WO03ZYwjXP/EJYncyjympxk/pS+1OyW+bgw2TL2Haxg=",
   "appVersion": "2.1.0"
 }
 ```
@@ -194,7 +194,7 @@ The station generates its nonce and reports its connectivity status.
 ```json
 {
   "type": "Challenge",
-  "stationNonce": "Hn7kV3wYfA9xRpQjM2sUcBgZ8uLdE1rI4oCn5FtKmWe=",
+  "stationNonce": "8yucONtbmYBdu+dzLhegGw3QnMNjJcmmoFgNP0vii/k=",
   "stationConnectivity": "Online",
   "availableServices": [
     { "bayId": "bay_c1d2e3f4a5b6", "serviceId": "svc_eco", "available": true },
@@ -241,18 +241,22 @@ The app presents the pre-armed OfflinePass. In Partial B, the station does NOT v
       "maxTotalCredits": 200,
       "maxUses": 5,
       "maxCreditsPerTx": 60,
-      "allowedServiceTypes": ["svc_eco", "svc_deluxe", "svc_standard"]
+      "allowedServiceTypes": [
+        "svc_eco",
+        "svc_deluxe",
+        "svc_standard"
+      ]
     },
     "constraints": {
       "minIntervalSec": 60,
       "stationOfflineWindowHours": 72,
       "stationMaxOfflineTx": 100
     },
-    "signature": "V2hYcE9wR3FkN21MbjZzWnRKdUF4Q2JrRjVlUmlXZ0g4VTNQYW9EeUtsTXZCOXdmMGpBaFRjSWxFcDNyTnlPZA==",
-    "signatureAlgorithm": "ECDSA-P256-SHA256"
+    "signatureAlgorithm": "ECDSA-P256-SHA256",
+    "signature": "MEUCIQCX8jIRa9VQUgwWleELd2icmn0Nk/k608JtlFPNxz2lqAIgNIm76KijjkqTPGN1nlZLk0yGQUPGkK+qy6Xr4Bjjkig="
   },
   "counter": 3,
-  "sessionProof": "aG1BeFRrTnBjSEJyV2taemRFcHVRWGhEWW10R05XVlNhVmRuU0RoVk0="
+  "sessionProof": "hAW4BhA445dJmlLG78qcEn36DHEhkjIDNt3fZOGGh0c="
 }
 ```
 
@@ -286,15 +290,19 @@ Because the station is online (`stationConnectivity: "Online"`), it does NOT per
         "maxTotalCredits": 200,
         "maxUses": 5,
         "maxCreditsPerTx": 60,
-        "allowedServiceTypes": ["svc_eco", "svc_deluxe", "svc_standard"]
+        "allowedServiceTypes": [
+          "svc_eco",
+          "svc_deluxe",
+          "svc_standard"
+        ]
       },
       "constraints": {
         "minIntervalSec": 60,
         "stationOfflineWindowHours": 72,
         "stationMaxOfflineTx": 100
       },
-      "signature": "V2hYcE9wR3FkN21MbjZzWnRKdUF4Q2JrRjVlUmlXZ0g4VTNQYW9EeUtsTXZCOXdmMGpBaFRjSWxFcDNyTnlPZA==",
-      "signatureAlgorithm": "ECDSA-P256-SHA256"
+      "signatureAlgorithm": "ECDSA-P256-SHA256",
+      "signature": "MEUCIQCX8jIRa9VQUgwWleELd2icmn0Nk/k608JtlFPNxz2lqAIgNIm76KijjkqTPGN1nlZLk0yGQUPGkK+qy6Xr4Bjjkig="
     },
     "deviceId": "device_b7c4de89f0123456",
     "counter": 3,
@@ -369,7 +377,7 @@ The station receives the server's acceptance and relays it to the app over BLE.
 {
   "type": "AuthResponse",
   "result": "Accepted",
-  "sessionKeyConfirmation": "rKn4LxOw9eSsRz1iYdGk6uTcBfPjH8nV3JgCwYtMk7p="
+  "sessionKeyConfirmation": "uo31nIXlLPNLPc8rCOeJWYwbDh/ycVRE692174J5jp0="
 }
 ```
 
@@ -673,11 +681,14 @@ The station generates a signed receipt:
     "energyWh": 180
   },
   "receipt": {
-    "data": "eyJvZmZsaW5lVHhJZCI6Im90eF9wYl9mNmc3aDhpOSIsImJheUlkIjoiYmF5X2EyYjNjNCIsInNlcnZpY2VJZCI6InN2Y193YXgiLCJkdXJhdGlvbiI6MjQwLCJjcmVkaXRzIjo0OH0=",
-    "signature": "MEUCIQDnKp3TvR8yWz0aOxCqFb5sE7nGdT2fYiJwKxQhRgAiEAK7x2kR9wPz5mNvHp3LdFbYqT1sXcA0jKe6fZoWnBgU=",
+    "data": "eyJiYXlJZCI6ImJheV9hMmIzYzRkNWU2ZjciLCJjcmVkaXRzQ2hhcmdlZCI6NDgsImRldmljZUlkIjoiZGV2X2Y2YTdiOGM5IiwiZHVyYXRpb25TZWNvbmRzIjoyNDAsImVuZGVkQXQiOiIyMDI2LTAyLTEzVDE1OjE0OjA4LjAwMFoiLCJtZXRlclZhbHVlcyI6eyJjb25zdW1hYmxlTWwiOjM0MCwiZW5lcmd5V2giOjE4MCwibGlxdWlkTWwiOjB9LCJvZmZsaW5lUGFzc0lkIjoib3Bhc3NfNGU1YWFlYTMzOTE2YTk2NCIsIm9mZmxpbmVUeElkIjoib3R4X2Y2YTdiOGM5ZDBlMSIsInBhc3NDb3VudGVyIjoxMywic2VydmljZUlkIjoic3ZjX2RlbHV4ZSIsInN0YXJ0ZWRBdCI6IjIwMjYtMDItMTNUMTU6MTA6MDguMDAwWiIsInR4Q291bnRlciI6OSwidXNlcklkIjoic3ViX2M4NTIzMWY4MGY5MzAxYWMifQ==",
+    "signature": "MEUCIQCjhokHC8nNYNQgzn0PsmvtQloX5BSsLpXQOH2uDR4BBgIgLVx5c/1JDlbXp751rd/YStDU27sV+LngLV6B+NjwBfI=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
-  "txCounter": 9
+  "txCounter": 9,
+  "userId": "sub_c85231f80f9301ac",
+  "offlinePassId": "opass_4e5aaea33916a964",
+  "passCounter": 13
 }
 ```
 

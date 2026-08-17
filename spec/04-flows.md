@@ -1,6 +1,6 @@
 # Chapter 04 — Protocol Flows
 
-> **Status:** Draft | **OSPP Version:** 0.19.0
+> **Status:** Draft | **OSPP Version:** 0.20.0
 
 This chapter documents every end-to-end protocol flow as a sequence of messages defined in [Chapter 03 — Message Catalog](03-messages.md). Each flow includes preconditions, a Mermaid sequence diagram, numbered happy-path steps, alternative paths, error paths, and postconditions.
 
@@ -1495,7 +1495,7 @@ sequenceDiagram
     participant SSP as SSP (Station)
 
     Server->>SSP: UpdateFirmware REQUEST [MSG-016]
-    Note right of Server: {firmwareUrl, firmwareVersion, checksum}
+    Note right of Server: {firmwareUrl, firmwareVersion, checksum, signature}
     SSP-->>Server: UpdateFirmware RESPONSE (Accepted) [MSG-016]
 
     SSP->>SSP: Download firmware (HTTPS)
@@ -1503,11 +1503,12 @@ sequenceDiagram
     SSP->>Server: FirmwareStatusNotification (Downloading, 50%) [MSG-017]
     SSP->>Server: FirmwareStatusNotification (Downloading, 100%) [MSG-017]
 
-    SSP->>SSP: Verify checksum (SHA-256)
+    SSP->>SSP: Verify checksum (SHA-256) AND signature (ECDSA P-256)
     SSP->>Server: FirmwareStatusNotification (Downloaded) [MSG-017]
 
     SSP->>SSP: Write to inactive partition (A/B scheme)
     SSP->>Server: FirmwareStatusNotification (Installing) [MSG-017]
+    SSP->>Server: FirmwareStatusNotification (Installed) [MSG-017]
 
     SSP->>SSP: Reboot → bootloader switches partition
 
@@ -1515,7 +1516,6 @@ sequenceDiagram
         SSP->>Server: BootNotification REQUEST [MSG-001]
         Note right of SSP: firmwareVersion = new version
         Server-->>SSP: BootNotification RESPONSE (Accepted) [MSG-001]
-        SSP->>Server: FirmwareStatusNotification (Installed) [MSG-017]
     else Self-test fails OR boot Rejected
         Note over SSP: Watchdog triggers rollback
         SSP->>SSP: Revert to previous partition
@@ -1527,17 +1527,16 @@ sequenceDiagram
 
 ### Happy Path
 
-1. **Server** sends **UpdateFirmware REQUEST** [MSG-016] with `firmwareUrl`, `firmwareVersion`, and `checksum` (SHA-256)
+1. **Server** sends **UpdateFirmware REQUEST** [MSG-016] with `firmwareUrl`, `firmwareVersion`, `checksum` (SHA-256), and `signature` (ECDSA P-256 over the binary) — all four are `required` by [`update-firmware-request.schema.json`](../schemas/mqtt/update-firmware-request.schema.json)
 2. **SSP** validates the request (no other operation in progress, sufficient storage), responds `Accepted`
 3. **SSP** downloads the firmware binary via HTTPS
 4. **SSP** sends periodic **FirmwareStatusNotification** [MSG-017] `Downloading` with progress %
-5. **SSP** verifies the SHA-256 checksum — sends `Downloaded` status
+5. **SSP** verifies the SHA-256 checksum **and** the ECDSA P-256 signature against the Firmware Signing Certificate — only then sends `Downloaded` status. The checksum alone is not sufficient ([Chapter 06 §4.6](06-security.md)); it establishes that the bytes arrived intact, and it travels in the same message as the URL it was computed over, so only the signature establishes origin
 6. **SSP** writes firmware to the inactive A/B partition — sends `Installing` status
-7. **SSP** reboots; bootloader switches to the new partition
+7. **SSP** sends `Installed` once the write is verified, **then** reboots; bootloader switches to the new partition
 8. New firmware runs self-test
 9. **SSP** sends **BootNotification** [MSG-001] with the new `firmwareVersion`
-10. **Server** accepts the boot — firmware update is confirmed
-11. **SSP** sends **FirmwareStatusNotification** [MSG-017] `Installed`
+10. **Server** accepts the boot — firmware update is confirmed by that boot, not by a further notification
 
 ### Error Paths
 
@@ -1546,7 +1545,8 @@ sequenceDiagram
 | 2 | `5107 OPERATION_IN_PROGRESS` | SSP rejects — retry later |
 | 2 | `5103 STORAGE_ERROR` | SSP rejects — insufficient space |
 | 3 | Download fails / `1011 URL_UNREACHABLE` | SSP sends `Failed`, no partition change |
-| 5 | Checksum mismatch | SSP sends `Failed`, discards download |
+| 5 | Checksum mismatch / `5015 CHECKSUM_MISMATCH` | SSP sends `Failed`, discards download — no `Downloaded` is sent |
+| 5 | Signature invalid / `5112 FIRMWARE_SIGNATURE_INVALID` | SSP sends `Failed`, discards download, writes nothing to the inactive partition, and reports the code on a `FirmwareIntegrityFailure` SecurityEvent [MSG-012]. No `Downloaded` is sent: `Downloaded` asserts the signature verified |
 | 8 | Self-test fails | Watchdog triggers → rollback to previous partition → boot with old version |
 | 9 | BootNotification `Rejected` (new version) | Rollback to previous partition |
 

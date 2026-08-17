@@ -17,12 +17,14 @@ on:
       - '**/*.md'
       - 'schemas/**'
       - 'tools/check-*.py'
+      - 'tools/verify-test-nonces.mjs'
       - '.github/workflows/check-drift.yml'
   pull_request:
     paths:
       - '**/*.md'
       - 'schemas/**'
       - 'tools/check-*.py'
+      - 'tools/verify-test-nonces.mjs'
   workflow_dispatch:
 
 jobs:
@@ -34,6 +36,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      # verify-test-nonces.mjs is stdlib-only Node, like the Python checks above are
+      # stdlib-only Python — nothing to install.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       # stdlib only, by design — nothing to install, nothing that can ETARGET the way
       # validate-examples did when a version cascade pointed package.json at a version
@@ -53,3 +61,11 @@ jobs:
       # edit alone can move this result. That is why 'schemas/**' is in the triggers above.
       - name: Chapter 08 Range column, §9 against §§2--6, and restated ranges
         run: python3 tools/check-config-ranges.py
+
+      # A nonce is schema-valid whatever its value, so nothing else can see this: one
+      # appNonce/stationNonce pair had reached four documents depicting four different
+      # handshakes, while ble-handshake.md §4.2.2 rests the claim-layer replay defence on
+      # them never being reused. Derived from a per-handshake label, and checked for
+      # cross-document reuse.
+      - name: Handshake nonces are derived from their labels and unique per document
+        run: node tools/verify-test-nonces.mjs

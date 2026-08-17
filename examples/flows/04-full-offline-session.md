@@ -179,7 +179,7 @@ The app displays two bay cards. Both show "Available" (Available) in green. Unde
 {
   "type": "Hello",
   "deviceId": "device_b7c4de89f0123456",
-  "appNonce": "k7Rz2mPqXvN8dF5sYwB1cA0hJ6tL9oKe3iGnUxMpWbQ=",
+  "appNonce": "sH5WmIMfOYRb4zfrKESykXKz0UF5XR5HgU/iKijUAUg=",
   "appVersion": "2.1.0"
 }
 ```
@@ -195,7 +195,7 @@ The app generates a cryptographically random 32-byte nonce (`appNonce`) for sess
 ```json
 {
   "type": "Challenge",
-  "stationNonce": "Qm4xR9vTfH2wLpZjK0sNcYgX5uOdA8rE1iBn6CtJkWe=",
+  "stationNonce": "nl+FBpL/lU0181wqYJgSi8QFcbi5ZZMRz0XrZhPUpvw=",
   "stationConnectivity": "Offline",
   "availableServices": [
     { "bayId": "bay_c1d2e3f4a5b6", "serviceId": "svc_eco", "available": true },
@@ -273,11 +273,11 @@ Bob looks at his phone. Face ID succeeds. The app proceeds to send the OfflinePa
       "stationOfflineWindowHours": 72,
       "stationMaxOfflineTx": 100
     },
-    "signature": "V2hYcE9wR3FkN21MbjZzWnRKdUF4Q2JrRjVlUmlXZ0g4VTNQYW9EeUtsTXZCOXdmMGpBaFRjSWxFcDNyTnlPZA==",
-    "signatureAlgorithm": "ECDSA-P256-SHA256"
+    "signatureAlgorithm": "ECDSA-P256-SHA256",
+    "signature": "MEQCIBzC45smDhOxczuPyE2aLygdzCpg/CEw8er4EDUPH2KzAiB3MOHIdtxJyZeLHUQpUcemQ0Gk36LFLOi9CcnQXYsB+g=="
   },
   "counter": 3,
-  "sessionProof": "dG1SZ1VXMXB5THNrQWZKZU9jTmhCNndiRHhpWnZLcTk="
+  "sessionProof": "hAW4BhA445dJmlLG78qcEn36DHEhkjIDNt3fZOGGh0c="
 }
 ```
 
@@ -318,7 +318,7 @@ All 10 checks pass. The station:
 {
   "type": "AuthResponse",
   "result": "Accepted",
-  "sessionKeyConfirmation": "pLm3KxNv8dRqWz0hYcFj5sTbAeOiG7nU2JfBwXtIk6o="
+  "sessionKeyConfirmation": "uo31nIXlLPNLPc8rCOeJWYwbDh/ycVRE692174J5jp0="
 }
 ```
 
@@ -567,11 +567,14 @@ txCounter:           8 (station's 8th offline transaction)
     "energyWh": 85
   },
   "receipt": {
-    "data": "eyJvZmZsaW5lVHhJZCI6Im90eF9tM240bzVwNiIsImJheUlkIjoiYmF5X3gxeTJ6MyIsInNlcnZpY2VJZCI6InN2Y19mb2FtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xM1QxODozMjoxNy4wMDBaIiwiZW5kZWRBdCI6IjIwMjYtMDItMTNUMTg6MzU6MTcuMDAwWiIsImR1cmF0aW9uU2Vjb25kcyI6MTgwLCJjcmVkaXRzQ2hhcmdlZCI6MzB9",
-    "signature": "MEUCIQC7x2kR9wPz5mNvHp3LdFbYqT1sXcA0jKe6fZoWnBgUIQIgRtM4vN8hJpLyD3kWm0aOxCqFb5sE7nGdT2fYiJwKxQ==",
+    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQ2hhcmdlZCI6MzAsImRldmljZUlkIjoiZGV2X2EzYjRjNWQ2IiwiZHVyYXRpb25TZWNvbmRzIjoxODAsImVuZGVkQXQiOiIyMDI2LTAyLTEzVDE4OjM1OjE3LjAwMFoiLCJtZXRlclZhbHVlcyI6eyJjb25zdW1hYmxlTWwiOjM3NSwiZW5lcmd5V2giOjg1LCJsaXF1aWRNbCI6MzM0MDB9LCJvZmZsaW5lUGFzc0lkIjoib3Bhc3NfNDQ2OTQ2ZGRhOTlkYWNmOCIsIm9mZmxpbmVUeElkIjoib3R4X2EzYjRjNWQ2ZTdmOCIsInBhc3NDb3VudGVyIjo1Nywic2VydmljZUlkIjoic3ZjX2VjbyIsInN0YXJ0ZWRBdCI6IjIwMjYtMDItMTNUMTg6MzI6MTcuMDAwWiIsInR4Q291bnRlciI6OCwidXNlcklkIjoic3ViXzBiYjRiY2E0NDFjMDFiMzAifQ==",
+    "signature": "MEUCIQD8ovcmLlGOOsEggTnKz0KPclUSq5m95lUkLLY9bn0eBwIgNRl/nvf1d0n8UJY58eWpOfZ4qBhHZ6LZh948261PeYM=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
-  "txCounter": 8
+  "txCounter": 8,
+  "userId": "sub_0bb4bca441c01b30",
+  "offlinePassId": "opass_446946dda99dacf8",
+  "passCounter": 57
 }
 ```
 
@@ -645,8 +648,8 @@ When the station regains MQTT connectivity, it performs the reconciliation flow 
     "durationSeconds": 180,
     "creditsCharged": 30,
     "receipt": {
-      "data": "eyJvZmZsaW5lVHhJZCI6Im90eF9tM240bzVwNiIsImJheUlkIjoiYmF5X3gxeTJ6MyIsInNlcnZpY2VJZCI6InN2Y19mb2FtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xM1QxODozMjoxNy4wMDBaIiwiZW5kZWRBdCI6IjIwMjYtMDItMTNUMTg6MzU6MTcuMDAwWiIsImR1cmF0aW9uU2Vjb25kcyI6MTgwLCJjcmVkaXRzQ2hhcmdlZCI6MzB9",
-      "signature": "MEUCIQC7x2kR9wPz5mNvHp3LdFbYqT1sXcA0jKe6fZoWnBgUIQIgRtM4vN8hJpLyD3kWm0aOxCqFb5sE7nGdT2fYiJwKxQ==",
+      "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQ2hhcmdlZCI6MzAsImRldmljZUlkIjoiZGV2X2EzYjRjNWQ2IiwiZHVyYXRpb25TZWNvbmRzIjoxODAsImVuZGVkQXQiOiIyMDI2LTAyLTEzVDE4OjM1OjE3LjAwMFoiLCJtZXRlclZhbHVlcyI6eyJjb25zdW1hYmxlTWwiOjM3NSwiZW5lcmd5V2giOjg1LCJsaXF1aWRNbCI6MzM0MDB9LCJvZmZsaW5lUGFzc0lkIjoib3Bhc3NfYThiOWMwZDFlMmYzIiwib2ZmbGluZVR4SWQiOiJvdHhfYTNiNGM1ZDZlN2Y4IiwicGFzc0NvdW50ZXIiOjEsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDE4OjMyOjE3LjAwMFoiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9ib2IyMDI2In0=",
+      "signature": "MEQCIE3/emR+wNWVGobnPTWffhDgjJjuJByVCs5W9lkZo97WAiBuqbbMlCpmrTifeeJRB7bPT99OMQT+aMWQzWrZYEd6Zg==",
       "signatureAlgorithm": "ECDSA-P256-SHA256"
     },
     "txCounter": 8,

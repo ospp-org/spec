@@ -1,6 +1,6 @@
 # Chapter 05 — State Machines
 
-> **Status:** Draft | **OSPP Version:** 0.19.0
+> **Status:** Draft | **OSPP Version:** 0.20.0
 
 This chapter defines all finite state machines (FSMs) governing OSPP entities — the station, its bays, sessions, reservations, BLE connections and firmware updates. Each FSM specifies the complete set of states, valid transitions, guards, actions, and a Mermaid diagram. A transition not listed for a machine is invalid, and implementations MUST NOT perform one.
 
@@ -115,7 +115,9 @@ This is the session-scope twin of the bay rule below: reachable, unreported, and
 
 **A command whose only effect is a forbidden message cannot be honoured while restricted, and must be refused rather than half-done.** The `MUST NOT` has no carve-out beyond the two messages named above, so a `Pending` station that accepts such a command and then emits the message breaks the row above, and one that accepts it and stays silent has answered `Accepted` to something it did not do. Neither is conforming.
 
-**The discriminator is whether the command has an effect independent of the message it would emit.** Three outcomes follow from it, and the table below is grouped by them. A command that completes entirely in its RESPONSE is answered normally. A command whose substantive effect happens locally, with only a *report* blocked, is answered normally with that report suppressed — nothing is lost, because a restricted station's bays are held at `Unknown` server-side regardless and the state is carried by the post-boot report. A command whose **only** effect is a message the station may not send is refused. Concretely:
+**The discriminator is whether the command has an effect independent of the message it would emit — and, where it has one, whether the suppressed message is a *report about* that effect or the *only account of it there will ever be*.** Three outcomes follow, and the table below is grouped by them. A command that completes entirely in its RESPONSE is answered normally. A command whose substantive effect happens locally, with only a *report* blocked, is answered normally with that report suppressed — nothing is lost, because a restricted station's bays are held at `Unknown` server-side regardless and the state is carried by the post-boot report. A command whose **only** effect is a message the station may not send is refused.
+
+**The second clause was added because UpdateFirmware needed it and the first clause alone answered wrongly.** UpdateFirmware's effect is emphatically independent of any message — it downloads, verifies, writes a partition and reboots — so the first clause alone puts it with SetMaintenanceMode and GetDiagnostics, answered `Accepted` with its notifications suppressed. That answer is wrong, and the reason is a difference in kind rather than degree. SetMaintenanceMode's suppressed StatusNotification is a *report about* a bay whose state the post-boot report will carry anyway; GetDiagnostics' suppressed events are progress on an upload that completes and lands at a URL the server chose. FirmwareStatusNotification is neither: from `Accepted` until the station reboots it is the **entire** account of the update, and suppressing it leaves the server holding an `Accepted` for a multi-minute operation it will hear nothing further about — not a stalled update it can detect, because the stall rule is measured on the very messages that were suppressed. A command whose only observable effect is forbidden is not a command safely accommodated; it is one with nothing left to mean. Concretely:
 
 | Command sent to a `Pending` station | What it does |
 |---|---|
@@ -125,6 +127,7 @@ This is the session-scope twin of the bay rule below: reachable, unreported, and
 | SetMaintenanceMode [MSG-020] | **`Accepted`**, the bay state changes locally, and the StatusNotification the command would normally emit ([set-maintenance-mode.md §5 rule 4](profiles/device-management/set-maintenance-mode.md)) is **not sent**. Nothing is lost: the server holds every bay of a restricted station at `Unknown` regardless, and the new state is carried by the post-boot report when the station reaches `Operational` |
 | GetDiagnostics [MSG-018] | **`Accepted`**, the archive is collected and uploaded, and the DiagnosticsNotification [MSG-019] events that would report progress ([get-diagnostics.md §6 rule 2](profiles/device-management/get-diagnostics.md)) are **not sent**. The upload is an HTTP PUT to a URL the command supplies, so the substantive effect completes and the RESPONSE stays truthful; only the progress reporting is suppressed, exactly as for SetMaintenanceMode above |
 | TriggerCertificateRenewal [MSG-024] | **`Accepted`**, and the station runs the renewal flow, including the SignCertificate [MSG-022] it originates — permitted by the rule above. This is the one command in this table whose completion *requires* an origination, which is why it needed the rule rather than a suppression |
+| UpdateFirmware [MSG-016] | **`Rejected`.** The station **MUST NOT** accept a firmware update while restricted. Its progress and its outcome are carried entirely by FirmwareStatusNotification [MSG-017], which §1.4 forbids, so an `Accepted` here would commit the station to a multi-minute operation the server would hear nothing about — and could not detect as stalled, since the stall rule of [`firmware-status.md` §6](profiles/device-management/firmware-status.md) rule 3 is measured on exactly the messages being suppressed. Refusing is also the honest answer about capability: a station whose registration or topology record is unresolved is not one to re-flash. An operator who needs new firmware on it clears the `Pending` condition first — which is a person's act in both entry cases ([§1.5](#15-topology-at-boot)) — and pushes the update to the `Operational` station that results |
 | ChangeConfiguration, GetConfiguration, UpdateServiceCatalog, CertificateInstall [MSG-023], Reset | **Answered normally.** Each returns its result in a RESPONSE, which is not something the station originates, and none has any further effect the restriction touches |
 
 `Rejected` stations process none of this — they refuse every command, so the question does not arise.
@@ -695,13 +698,24 @@ stateDiagram-v2
 | Checksum matches and signature verifies | Verifying | Verified | Computed hash equals `checksum` from UpdateFirmware **and** the ECDSA P-256 `signature` verifies against the Firmware Signing Certificate | Station logs verification success |
 | Checksum mismatch | Verifying | Failed | Computed hash does not match expected `checksum` | Station sends FirmwareStatusNotification `Failed` with `errorText: "Checksum mismatch"` |
 | Signature invalid | Verifying | Failed | The `signature` does not verify against the Firmware Signing Certificate, or the station holds no such certificate to verify it against | Station sends FirmwareStatusNotification `Failed` with a descriptive `errorText`, reports `5112 FIRMWARE_SIGNATURE_INVALID` via a `FirmwareIntegrityFailure` SecurityEvent [MSG-012], and does **NOT** write to the inactive partition |
-| Write to inactive partition | Verified | Installing | Inactive partition is writable and has sufficient space | Station begins flash write, sends FirmwareStatusNotification `Installing` |
+| Write to inactive partition | Verified | Installing | Inactive partition is writable and has sufficient space; **no bay is `Occupied` or `Finishing`**; and, if `scheduledAt` was given, that time has been reached ([§6.5](#65-rollback-behavior) rule 5, [§7.4](#74-firmware-update----bay-constraint)) | Station begins flash write, sends FirmwareStatusNotification `Installing` |
 | Write complete | Installing | Installed | Partition write verified (read-back check) | Station marks inactive partition as next boot target |
 | Write error | Installing | Failed | Flash write error or read-back mismatch (`5103 STORAGE_ERROR`) | Station sends FirmwareStatusNotification `Failed`, does NOT modify boot target |
 | Station reboots | Installed | Rebooting | Station initiates reboot; all active sessions MUST be completed or stopped first | Station sends FirmwareStatusNotification `Installed`, disconnects MQTT, reboots |
 | Boot on new partition | Rebooting | Activated | Bootloader loads new partition; station passes self-test | Station reconnects, sends BootNotification with new `firmwareVersion` and `reason: "FirmwareUpdate"` |
 | Boot failure / watchdog | Rebooting | Failed | Station fails to send BootNotification within 5 minutes (watchdog timer) | Bootloader reverts to previous partition; station boots on old firmware and sends FirmwareStatusNotification `Failed` |
 | Rollback complete | Failed | Idle | Station is running on previous (known-good) firmware | Station resumes normal operation; server records update failure |
+
+**Fourteen rows, thirteen edges.** `Verifying -> Failed` appears twice — once for a checksum
+mismatch and once for an invalid signature — because the two have different actions and different
+error codes, not because they are two transitions. An implementation of this machine has **13**
+`(from, to)` pairs, and a conformance check that asserts a transition *count* must assert 13; one
+that counts the rows of this table gets 14 and then has to invent an edge to reach it.
+
+No other state is a duplicated destination: from every other state the listed targets are distinct.
+The state with the most outgoing edges is `Verifying` (2 distinct), and `Activated` has none — it is
+terminal. `Failed` has exactly one outgoing edge, `Failed -> Idle`; it is **not** terminal, and a
+machine that treats it as terminal can run one firmware update and never a second.
 
 > **Note:** The 5-minute watchdog includes ~3 minutes for boot and local health check (BootFailureTimeout 60s + HealthCheckTimeout 120s) plus ~2 minutes margin for MQTT/TLS connection establishment and BootNotification round-trip over potentially slow cellular networks.
 
@@ -732,20 +746,40 @@ Rollback MUST be automatic and safe:
 2. **Manual rollback:** The server MAY send a Reset [MSG-015] command to force a reboot. If the current firmware is unstable, the station will fail the watchdog and roll back automatically.
 3. **Data preservation:** Rollback MUST NOT erase configuration data, NVS storage, session logs, or pending offline transactions.
 4. **Notification:** After a rollback, the station MUST send a FirmwareStatusNotification [MSG-017] with `status: "Failed"` and an `errorText` describing the rollback reason.
-5. **Scheduling constraint:** The station MUST NOT begin a firmware update (transition from Idle to Downloading) while any bay is in `Occupied` or `Finishing` state. If sessions are active, the station MUST wait until all sessions complete before proceeding. The UpdateFirmware command MAY include a `scheduledAt` field to defer the update.
+5. **Scheduling constraint:** The station **MUST NOT** *install* a firmware update — the `Verified -> Installing` transition — while any bay is in `Occupied` or `Finishing` state. It **MUST** wait in `Verified` until every session has completed or been stopped. Downloading and verifying are **not** gated: they touch the network and the staging area, neither of which the running session uses, and a station that could not prepare while busy could never prepare at all. The UpdateFirmware command MAY include a `scheduledAt` field, which defers the **installation** and not the download ([§7.4](#74-firmware-update----bay-constraint)).
 
 ### 6.6 FirmwareStatusNotification Mapping
 
-Each state transition maps to a FirmwareStatusNotification [MSG-017] `status` value:
+This machine is the **station's**. Every action in [§6.3](#63-transition-table) is something the
+station does; the single server action in the table is the last one, *"server records update
+failure"*. A server mirrors the machine from what it is told, and it is told only what the mapping
+below emits — which is **five** of the ten states. Four states have no notification value at all
+and are, from the server's side, unobservable. That is stated here rather than left to be inferred
+from an absent row, because a server that models the station's ten states will hold four of them
+that nothing on the wire can ever set.
 
 | FSM State | FirmwareStatusNotification `status` | Notes |
 |-----------|--------------------------------------|-------|
-| Downloading | `Downloading` | Sent periodically (at least every 30s) with `progress` percentage |
-| Downloaded | `Downloaded` | Sent once on download completion |
+| Idle | -- | Not reported. The absence of an update in progress is not an event |
+| Downloading | `Downloading` | Sent at every 10% increment and at least every 30s, whichever falls sooner ([firmware-status.md §5](profiles/device-management/firmware-status.md)) |
+| Downloaded | `Downloaded` | Sent once, after **both** the checksum and the signature have verified |
+| **Verifying** | -- | **Not reported.** Not a member of the notification enum |
+| **Verified** | -- | **Not reported.** Not a member of the notification enum |
 | Installing | `Installing` | Sent at start of partition write; MAY include `progress` |
-| Installed | `Installed` | Sent before reboot |
-| Failed | `Failed` | Sent with `errorText` describing the failure |
+| Installed | `Installed` | Sent **before** the reboot, on the connection the station is about to drop |
+| Rebooting | -- | Not reported. The station is offline for the whole of this state, which is why it cannot report it |
 | Activated | -- | Reported via BootNotification [MSG-001], not FirmwareStatusNotification |
+| Failed | `Failed` | Sent with `errorText` describing the failure |
+
+> **The silent interval, and what a server may conclude from it.** `Verifying` and `Verified` are
+> the two states with no wire representation and no adjacent one either: the station falls silent
+> after `Downloaded`'s predecessor work and speaks again at `Downloaded`. That interval covers a
+> SHA-256 over the whole image **and** an ECDSA P-256 verification over the whole image, which on
+> constrained hardware is the longest compute in the cycle. A server therefore **cannot** distinguish
+> "verifying" from "hung" by state, and **MUST NOT** try: the only instrument for that interval is
+> the stall timer of [firmware-status.md §6](profiles/device-management/firmware-status.md) rule 3,
+> which starts from the last notification of any kind. A server that models `Verifying` as a state
+> it expects to be told about will wait for a message the protocol never sends.
 
 ---
 
@@ -799,4 +833,28 @@ unexpected, and a station built to satisfy it will skip a wind-down it physicall
 
 ### 7.4 Firmware Update -- Bay Constraint
 
-A firmware update MUST NOT proceed to the `Rebooting` state while any bay is in `Occupied` or `Finishing` state. The station MUST complete or fail all active sessions before rebooting. If the `scheduledAt` field is provided in UpdateFirmware, the station SHOULD download and verify the firmware immediately but defer the reboot until the scheduled time and all bays are idle.
+**The gate is on installation, and the download is deliberately outside it.** A firmware update
+**MUST NOT** leave the `Verified` state while any bay is in `Occupied` or `Finishing` state; the
+station **MUST** complete or fail all active sessions before it begins writing the inactive
+partition, and the reboot that follows `Installed` is therefore gated with it. Downloading and
+verifying happen whenever the command arrives. If the `scheduledAt` field is provided, the station
+**SHOULD** download and verify the firmware immediately and defer the **installation** until the
+scheduled time and all bays are idle.
+
+**Why the download is not gated.** The download uses the network and the staging area, and the
+verification uses the CPU; the partition write is the first step that touches the thing the station
+boots from, and the reboot is the first that interrupts a customer. Gating the download instead
+would mean a station that is busy can never *prepare* — the update would have to wait for an idle
+moment to even begin fetching, so the busiest stations in a fleet would be the last to be patched,
+which is the opposite of what a security update needs. It would also put the state machine in a
+lie: acceptance takes `Idle -> Downloading` ([§6.3](#63-transition-table)), so a station deferring
+its download would sit in `Downloading` downloading nothing, and every server watching it would see
+a stalled transfer.
+
+**What this costs, stated because it is real.** `Verified` is now a wait state of unbounded length,
+and it is one of the four states with **no FirmwareStatusNotification value**
+([§6.6](#66-firmwarestatusnotification-mapping)). A station holding an image for a scheduled 03:00
+install sends nothing between `Downloaded` and `Installing`. The server is not blind to it, but it
+must read the wait from what it already holds rather than from the wire: it issued the `scheduledAt`
+itself, and it has the bay states the gate turns on. The stall rule is scoped to match — see
+[`firmware-status.md` §6](profiles/device-management/firmware-status.md) rule 3.

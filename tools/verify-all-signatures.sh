@@ -128,6 +128,11 @@ INLINE_FILES=(
   conformance/test-cases/transaction/TC-TX-006.md
   conformance/test-cases/security/TC-SEC-004.md
   conformance/test-cases/device-management/TC-DM-004.md
+  examples/flows/12-firmware-update.md
+  examples/error-scenarios/03-offline-pass-expired.md
+  examples/flows/04-full-offline-session.md
+  examples/flows/05-partial-a-session.md
+  examples/flows/06-partial-b-session.md
 )
 
 before=$(for f in "${INLINE_FILES[@]}"; do sha256sum "$f"; done | sha256sum | cut -d' ' -f1)
@@ -138,6 +143,20 @@ if [[ "$before" == "$after" ]]; then
 else
   err "sign-inline-md.mjs produced drift on re-run — inline signatures are no longer reproducible"
   git diff --stat -- "${INLINE_FILES[@]}" | sed 's/^/      /'
+fi
+
+# -----------------------------------------------------------------------------
+# 2b. Handshake nonces — derived from their labels, and never shared between two
+#     documents. The profile rests its claim-layer replay defence on exactly that
+#     property, and one pair had reached four different handshakes.
+# -----------------------------------------------------------------------------
+
+section "Handshake nonce derivation + cross-document uniqueness"
+
+if node tools/verify-test-nonces.mjs >/tmp/vas-nonce 2>&1; then
+  ok "$(tail -1 /tmp/vas-nonce)"
+else
+  err "handshake nonces FAILED:"; sed 's/^/      /' /tmp/vas-nonce
 fi
 
 # -----------------------------------------------------------------------------

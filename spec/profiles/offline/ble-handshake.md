@@ -1,6 +1,6 @@
 # BLE Handshake Protocol
 
-> **Status: EXPERIMENTAL** | **OSPP Version:** 0.19.0
+> **Status: EXPERIMENTAL** | **OSPP Version:** 0.20.0
 >
 > Published for review, **not** for implementation. May change incompatibly without a MAJOR
 > bump. See [Release status](../../../README.md#ble-is-experimental-in-08) and the three
@@ -46,7 +46,7 @@ The `appNonce` serves two purposes:
 {
   "type": "Hello",
   "deviceId": "dev_a8f3bc12e4567890",
-  "appNonce": "k7Rz2mPqXvN8dF5sYwB1cA0hJ6tL9oKe3iGnUxMpWbQ=",
+  "appNonce": "bKsxxAOCCNkWNpyePge8Npt7OkX3PsFJFEhcgW2rpII=",
   "appVersion": "2.1.0",
   "appEphemeralPubKey": "AjRkc2Vzc2lvbi1lcGhlbWVyYWwtcHVia2V5LWFwcDEy"
 }
@@ -80,7 +80,7 @@ The `stationConnectivity` field is critical for path selection:
 ```json
 {
   "type": "Challenge",
-  "stationNonce": "Qm4xR9vTfH2wLpZjK0sNcYgX5uOdA8rE1iBn6CtJkWe=",
+  "stationNonce": "bt8L0mYAoDDqk+6swnQMgM0lDWMe+tPXBvaj8A4TfR0=",
   "stationCert": {
     "stationId": "stn_a1b2c3d4",
     "organizationId": "org_7f3a9c2e1b5d",

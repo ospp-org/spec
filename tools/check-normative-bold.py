@@ -40,7 +40,7 @@ import re
 import sys
 from collections import Counter
 
-BASELINE = 456
+BASELINE = 452
 
 KEYWORD = re.compile(r'\b(MUST NOT|MUST|SHALL NOT|SHALL)\b')
 FENCE = re.compile(r'```.*?```', re.S)

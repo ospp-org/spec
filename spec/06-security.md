@@ -1,6 +1,6 @@
 # Chapter 06 — Security
 
-> **Status:** Draft | **OSPP Version:** 0.19.0
+> **Status:** Draft | **OSPP Version:** 0.20.0
 
 This chapter defines the complete security model for the OSPP protocol, covering threat analysis, authentication, authorization, cryptographic requirements, message integrity, offline security, anti-abuse mechanisms, and data protection.
 
@@ -338,7 +338,7 @@ Each MQTT message has an implicit authorization based on its direction and the a
 | StopService [MSG-006] | Server | Station verifies HMAC (session key) |
 | ReserveBay [MSG-003] | Server | Station verifies HMAC (session key) |
 | ChangeConfiguration [MSG-013] | Server | Station verifies HMAC (session key) |
-| UpdateFirmware [MSG-016] | Server | Station verifies HMAC + checksum |
+| UpdateFirmware [MSG-016] | Server | Station verifies HMAC (session key). The *firmware image* the message points at is verified separately, by checksum **and** ECDSA P-256 signature — see [§4.6](#46-firmware-code-signing); this column is about the message, not the artefact |
 | All server→station commands | Server | Station MUST verify HMAC before execution, and MUST reject rather than execute when the MAC is absent or unverifiable ([§5.7](#57-failure-handling--both-directions-fail-closed)) |
 | All station→server messages | Station (via mTLS CN) | Server MUST verify HMAC before processing, on the same terms |
 

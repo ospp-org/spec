@@ -213,7 +213,7 @@ With the signed authorization in hand, the app proceeds with the BLE handshake.
 {
   "type": "Hello",
   "deviceId": "device_a8f3bc12e4567890",
-  "appNonce": "k7Rz2mPqXvN8dF5sYwB1cA0hJ6tL9oKe3iGnUxMpWbQ=",
+  "appNonce": "XwmXIvgMokhZYNANPS8kzhlgT9dVDATP4Bd6Ed3mE34=",
   "appVersion": "2.1.0"
 }
 ```
@@ -229,7 +229,7 @@ The station generates its own nonce and reports its connectivity status.
 ```json
 {
   "type": "Challenge",
-  "stationNonce": "Qm4xR9vTfH2wLpZjK0sNcYgX5uOdA8rE1iBn6CtJkWe=",
+  "stationNonce": "/kLv1LXl1SeQiYke7YZChUTxp9jfhgRDkkf3CNbr8kY=",
   "stationConnectivity": "Offline",
   "availableServices": [
     { "bayId": "bay_c1d2e3f4a5b6", "serviceId": "svc_eco", "available": true },
@@ -263,7 +263,11 @@ The app delivers the server-signed authorization obtained in Step 5.
 ```json
 {
   "type": "ServerSignedAuth",
-  "signedAuthorization": "eyJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJiYXlJZCI6ImJheV94MXkyejMiLCJzZXJ2aWNlSWQiOiJzdmNfZm9hbSIsImR1cmF0aW9uU2Vjb25kcyI6MzAwLCJpc3N1ZWRBdCI6IjIwMjYtMDItMTNUMTQ6MzA6MDUuODAwWiIsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTQ6MzU6MDUuODAwWiIsInNpZ25hdHVyZSI6IlRWUnNWbFV5VVhsUFJFVjNUa1JCTlUxRVVURk9SRTB4VGtSbk1rNTZaM2hOYWxrd1RtcEJNVTFVVVRWTmVtUm9UbnBKZVU1dFJUMD0ifQ==",
+  "signedAuthorization": {
+    "data": "eyJhcHBOb25jZSI6IjJYa2VZRjZsaG9rQk9KcEs5THNieEg1L1c1YlFOS3VxOERXdENNQ1FSaWM9IiwiYXV0aElkIjoiYXV0aF9jODk3MzE5Mjc4OTIiLCJiYXlJZCI6ImJheV9jNDE1MzA5YWVlZmQiLCJjcmVkaXRzQXV0aG9yaXplZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9iZjFhMTU0NjZjNmQ3OGVmIiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfYzRkNWU2ZjdhOGI5Iiwic3RhdGlvbklkIjoic3RuXzA1NTU1MDcwIiwic3ViIjoic3ViX2E5YTFiZWI1NzlmNGViMmYifQ==",
+    "signature": "MEUCIQC8+ZHjLSsejgsx5ffg5lWgUuMn3iH5jpo1TLi3uWmqkgIgZYKFrdlZPB3A4ccR9Wi0vE/39+UR+0g4nFoBloENBhw=",
+    "signatureAlgorithm": "ECDSA-P256-SHA256"
+  },
   "sessionId": "sess_c4d5e6f7a8b9"
 }
 ```
@@ -293,7 +297,7 @@ All checks pass. The station accepts the authorization.
 {
   "type": "AuthResponse",
   "result": "Accepted",
-  "sessionKeyConfirmation": "pLm3KxNv8dRqWz0hYcFj5sTbAeOiG7nU2JfBwXtIk6o="
+  "sessionKeyConfirmation": "uo31nIXlLPNLPc8rCOeJWYwbDh/ycVRE692174J5jp0="
 }
 ```
 
@@ -490,11 +494,14 @@ The station generates a signed receipt:
     "energyWh": 120
   },
   "receipt": {
-    "data": "eyJvZmZsaW5lVHhJZCI6Im90eF9wYV9lNWY2ZzdoOCIsImJheUlkIjoiYmF5X3gxeTJ6MyIsInNlcnZpY2VJZCI6InN2Y19mb2FtIiwiZHVyYXRpb24iOjE3NCwiY3JlZGl0cyI6MzB9",
-    "signature": "MEQCIGpXvN8hJpLyD3kWm0aOxCqFb5sE7nGdT2fYiJwKxQAiALvHaRH3A/PmY28encskVtipPWxdwDSMp7p9mhacGBQh",
+    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQ2hhcmdlZCI6MjksImRldmljZUlkIjoiZGV2X2U1ZjZhN2I4IiwiZHVyYXRpb25TZWNvbmRzIjoxNzQsImVuZGVkQXQiOiIyMDI2LTAyLTEzVDE0OjMzOjAyLjQwMFoiLCJtZXRlclZhbHVlcyI6eyJjb25zdW1hYmxlTWwiOjQ3MCwiZW5lcmd5V2giOjEyMCwibGlxdWlkTWwiOjM5ODAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzXzBjMDMyMGMzZWJjMTgwM2UiLCJvZmZsaW5lVHhJZCI6Im90eF9lNWY2YTdiOGM5ZDAiLCJwYXNzQ291bnRlciI6NjAsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDE0OjMwOjA4LjUwMFoiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl83NmZhYWY2OWUxNzBjMjMwIn0=",
+    "signature": "MEQCIAIYG+rPwGt+tym0ozyFhZ8a26yNtfnmh9o6J8VOPWXeAiBTC5sG10DnPxleMHw7+amtHH1PUfRhCIZftlpV2uLckQ==",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
-  "txCounter": 8
+  "txCounter": 8,
+  "userId": "sub_76faaf69e170c230",
+  "offlinePassId": "opass_0c0320c3ebc1803e",
+  "passCounter": 60
 }
 ```
 

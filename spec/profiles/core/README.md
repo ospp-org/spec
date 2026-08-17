@@ -8,7 +8,7 @@ The **Core** profile is mandatory for every OSPP-compliant station at any compli
 
 > **Note:** A station implementing only the Core profile achieves **Development** compliance, which is intended for testing and prototyping only. Production deployments MUST achieve **Standard** compliance or higher (Core + Transaction + Security). See the [Compliance Levels](../../../README.md#compliance-levels) section in the main README.
 
-The Core profile establishes the foundation upon which all other profiles (Session, Reservation, Firmware, etc.) depend. Without a successful BootNotification exchange, no other OSPP actions are permitted.
+The Core profile establishes the foundation upon which all other profiles — [Transaction](../transaction/README.md), [Security](../security/README.md), [Device Management](../device-management/README.md) and [Offline](../offline/README.md) — depend. Without a successful BootNotification exchange, no other OSPP actions are permitted.
 
 ## 2. Actions Summary
 
