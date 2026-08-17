@@ -28,6 +28,17 @@ What is deliberately not reported
 BASELINE is a ratchet, not an allowlist: every finding is printed every run. The point is
 that the count may fall and must not rise. Lower it as sections get bolded.
 
+Measurement points, so the number is never quoted without one:
+
+    b35eef6  2026-08-18  v0.22.0   452 unbolded, 1062 bolded spans
+    a6770c3  2026-08-17  v0.21.0   452 unbolded
+    (earlier)                      456 — superseded, and it outlived its accuracy by
+                                   being carried in notes rather than read from here
+
+The ratchet counts UNBOLDED keywords, so adding a bolded **MUST** costs nothing and
+adding a plain one fails CI at zero headroom. That asymmetry is the whole design and it
+is the thing most often misread.
+
 Exit status
 -----------
 0 at or below BASELINE, 1 above. `--list` prints every finding rather than a summary

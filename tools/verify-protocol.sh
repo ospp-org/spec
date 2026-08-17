@@ -1,6 +1,23 @@
 #!/bin/bash
 # OSPP Protocol Verification Script
 # Runs all consistency checks and produces verification-report.md
+#
+# MEASURED BASELINE — this script has NO baseline constant and exits 1 on a clean tree,
+# so the only way to read its output is to diff the failure SET against a known point.
+# Record every re-measurement here, with its commit and date, because a count carried
+# without one is how the previous figure went stale: `9 FAIL / 6 SKIP` was true at
+# v0.20.0 and was still being quoted after 0.20.1 and 0.20.2 had closed three of them.
+#
+#   b35eef6  2026-08-18  v0.22.0   6 FAIL, 6 SKIP  (3862 checks, 3850 PASS)
+#   a6770c3  2026-08-18  v0.21.0   6 FAIL, 6 SKIP  — re-measured from a pristine
+#                                  `git archive`, NOT inherited
+#   (v0.20.0)            9 FAIL, 6 SKIP — superseded; 0.20.1 and 0.20.2 closed three
+#
+# The 6 are one root cause: ble-secure-frame and station-identity exist as schemas with
+# no 03-messages.md heading and no test vectors (4), plus auth-response and receipt (2).
+# The 6 SKIPs are silent — SKIP(c, reason) discards the reason — and are BLE schema
+# resolution noise. Category 8 says 6 SKIP where verify-schemas.py says 0, and CI gates
+# on verify-schemas.py, so that discovery gap is invisible to the gate.
 cd "$(dirname "$0")/.."
 
 if ! node -e "require('ajv')" 2>/dev/null; then

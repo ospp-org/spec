@@ -651,6 +651,40 @@ where it is missing.
 
 ---
 
+## OPEN — no gate parses JSON out of a markdown fence, and 511 payloads live there
+
+**Recorded at `0.22.0`, where it produced the defect for the second time in two days.**
+`bindings` became REQUIRED on a service item. It is present in **every** body CI validates — the
+`examples/payloads/` files, the conformance vectors — and was absent from **every** payload
+embedded in markdown: nine entries in `TC-DM-008`, three in `03-messages.md`, three in the
+profile's own §8.1, sitting 44 lines below a table listing `bindings` as Required = Yes. That is
+not fifteen independent oversights. It is the shape a gate leaves behind: the guarded surface
+stayed correct and the unguarded one drifted, and the boundary between them is exactly the CI
+glob.
+
+**The surface, measured at `b35eef6`.** Tracked `.md` files carry **511** ` ```json ` fences;
+**507** parse. Of those, **236 are self-identifying** — 168 full MQTT envelopes carrying both
+`action` and `messageType`, and 68 BLE frames carrying a `type` discriminator — so a gate resolves
+schema and validate them **with no human decision and no annotation**. That is 46% of the surface
+reachable for the cost of writing the resolver. The remaining **271 are bare payload fragments**
+with nothing in them to say what they are; those need a per-fence directive.
+
+**The directive already exists in this repository.** `tools/sign-inline-md.mjs` selects fences with
+an HTML comment — `<!-- ospp-sign: receipt -->` — and reports per file how many blocks it saw and
+how many it signed. A schema gate is the same mechanism with a different map: `<!-- ospp-schema:
+update-service-catalog-request -->`, defaulting to the envelope's own `action` where one is
+present. So the 236 need no directives at all, and the 271 can be annotated incrementally with the
+count of un-annotated fences as the ratchet.
+
+**Why this is worth its cost.** Every other gate in `tools/` guards a machine-readable tree.
+`03-messages.md` alone holds **80** fences and is the document implementers read first; it is the
+one artefact where a wrong example is most expensive and least likely to be caught. The signer
+already walks it and finds 7 signable blocks, so the traversal is written — what is missing is the
+schema resolution and the assertion.
+
+**Not built here, deliberately.** Mapping the 271 fragments is the bulk of the work and it is a
+judgement call per fence, not a sweep. The 236 are not.
+
 ## OPEN — the SDKs byte-guard the vendored schemas and guard the vendored vector corpus with nothing
 
 **Third instance in the `0.14.0` cycle of a gate that looks somewhere else**, and the first whose
