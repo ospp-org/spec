@@ -8,6 +8,62 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.20.2] — 2026-08-17
+
+> **`verify-protocol.sh` reported nine findings and three of them were the checker's own
+> assumption.** Two of its categories held that `spec/03-messages.md` is the only place a message
+> can be documented. It is not: `ble-secure-frame` is specified in
+> `profiles/offline/ble-transport.md` and `06-security.md`, `station-identity` in
+> `ble-handshake.md` and `06-security.md`, and the field tables of the BLE messages live in the
+> offline profiles — `durationSeconds` appears in seven files under `spec/`, four of the six
+> `receipt` members in three. **Not an exception to add; an assumption to correct** — and the same
+> instrument defect this repo has now corrected three times in one arc: a gate asserting a
+> narrower home than the corpus has.
+>
+> **Nine to six.** The criterion is deliberately exact rather than fuzzy — a document *documents*
+> a schema when it names the schema **file**, which the offline profiles do outright — so a
+> genuinely orphaned schema, named nowhere, still fails. Verified: injecting an undocumented member
+> into `ble/hello.schema.json` is still caught.
+>
+> **PATCH.** Only `tools/verify-protocol.sh` changed. No chapter, profile, schema, vector or
+> conformance case; `protocolVersion` stays **`0.3.0`**. Pin-only for both SDKs and the server.
+
+### Fixed
+
+- **tooling:** Category 11 (*Message ↔ Schema Coverage*) accepts a profile document as a home.
+  **2 findings closed**, and the category is now 62/62.
+- **tooling:** Category 13 (*Schema ↔ Spec Field Matching*) treats a field documented in a profile
+  that names the schema as documented. It suppresses **one direction only**: a profile document
+  carries the field tables of *every* message it specifies, so unioning them into the spec-side set
+  turned the other direction into **60 false failures** on the first attempt. The count stays 2 but
+  their content shrank — `auth-response` from two members to one, `receipt` from six to two.
+- **tooling:** Category 6 (*Config Key Consistency*) exempts `ConnectionTimeout`, per key and with
+  its reason. A configuration key restated nowhere else is the **correct** state: the Chapter 08
+  registry is its single normative home, and a restatement elsewhere is a second copy that can
+  drift — which is what `check-config-defaults.py` exists to catch. `ConnectionTimeout` is
+  transport-local, bounding the MQTT connect attempt before any OSPP message exists, so nothing in
+  the protocol observes it, branches on it, or reports it. **1 finding closed**, category now 87/87.
+
+### Remaining — and still not wired
+
+The six survivors are **all BLE**, all in a surface marked EXPERIMENTAL with three open blockers:
+four schemas with no test vector (`ble-secure-frame`, `station-identity`, valid and invalid each),
+and two field gaps (`ble/auth-response.creditsAuthorized`; `ble/receipt.passCounter`, `.authId`) —
+members documented for their **MQTT siblings** but not in any document specifying the BLE message.
+Vectors written before that surface is implementable would prove nothing.
+
+`verify-protocol.sh` therefore **stays unwired**, and remains the single entry in
+`check-tool-callers.py`'s baseline. Six coherent findings read better than nine mixed ones, but the
+job state is what a CI check communicates, and a job that is always red communicates nothing: a
+seventh finding — in any category — would arrive into an already-red job and be invisible. That is
+the same inverted signal as the two bugs fixed in `0.20.1`. What would make it wireable is one
+exemption list of the same shape as `ConnectionTimeout`'s, naming those six with their reasons; it
+is not written here because whether a real defect in an experimental surface should be exempted or
+fixed is a decision, not a cleanup. **The gap is not silent either way** — the census fails if it
+grows.
+
+---
+
 ## [0.20.1] — 2026-08-17
 
 > **Nine of the fifteen gates in `tools/` were reachable from no job at all.** Not failing —

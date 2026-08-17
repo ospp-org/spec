@@ -1,7 +1,7 @@
 # OSPP Known Issues
 
 **Date:** 2026-08-17
-**Specification-document version:** 0.20.1 (release tag `v0.20.1`)
+**Specification-document version:** 0.20.2 (release tag `v0.20.2`)
 **Status:** 3 blockers open (all BLE), 19 non-blocking issues open, 7 decisions recorded
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle and
 the arcs since
@@ -1198,12 +1198,28 @@ a gate has no caller. It found **nine** unreached gates, not the three this entr
 transitive chain under `verify-all-signatures.sh` was invisible to a by-hand count.
 
 **What remains:** `tools/verify-protocol.sh`, the single entry in that census's `BASELINE`. It is
-not broken and not wired — it exits 1 on a clean tree from 9 pre-existing findings with no
-baseline mechanism (`exitCode = totalFail > 0`), so wiring it as-is lands a permanently red job,
-which is the most reliable way to get a gate ignored again. Giving it the ratchet the four
-`check-*.py` scripts already have is what would let it join `verify-signatures.yml`, and that is a
-decision about whether those 9 findings are accepted debt. The count cannot rise without failing
-the census either way.
+not broken and not wired.
+
+**Its nine findings were examined in 0.20.2 rather than capped, and three were the checker's own
+assumption** — two categories held that `03-messages.md` is the only place a message can be
+documented, which the BLE surface disproves, and one flagged a config key for not being restated
+anywhere, which is the correct state. Correcting the assumption and exempting the key took it to
+**six**. A ratchet was considered and rejected: a ceiling over a number that was 8/9 one zone
+guards less than examining the zone, and examining it is what removed a third of the findings.
+
+The six survivors are **all BLE**, in a surface marked EXPERIMENTAL with three open blockers —
+four schemas with no test vector, and two field gaps where a member is documented for its MQTT
+sibling but not for the BLE message. Vectors written before that surface is implementable would
+prove nothing, so they stand.
+
+**It stays unwired, and the reason is about signal rather than tidiness.** Six coherent findings
+read better than nine mixed ones, but what a CI check communicates is its *state*, and a job that
+is always red communicates nothing: a seventh finding, in any category, would arrive into an
+already-red job and be invisible — the same inverted signal as the two bugs the census itself had.
+What would make it wireable is one exemption list of the same shape as `ConnectionTimeout`'s,
+naming those six with their reasons. Whether a real defect in an experimental surface should be
+exempted or fixed is a decision, not a cleanup, so it is not written. **The gap is not silent
+either way:** `check-tool-callers.py` reports it on every run and fails if it grows.
 
 **The option space as it stood:**
 

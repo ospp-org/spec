@@ -46,6 +46,46 @@ function findFiles(dir, ext) {
 
 function rel(p) { return path.relative(ROOT, p).replace(/\\/g, '/'); }
 function readSafe(p) { try { return fs.readFileSync(p, 'utf8'); } catch { return null; } }
+
+// ---------------------------------------------------------------------------------------
+// Where a message is allowed to be documented.
+//
+// Categories 11 and 13 both used to assume spec/03-messages.md is the ONLY home a message can
+// have. It is not, and the BLE surface is the proof: ble-secure-frame is specified in
+// profiles/offline/ble-transport.md and 06-security.md, station-identity in ble-handshake.md
+// and 06-security.md, and the field tables for ble/auth-response and ble/receipt live in the
+// offline profile documents -- durationSeconds and creditsAuthorized appear in seven files
+// under spec/, the six receipt members in three. Four findings were therefore reported against
+// artefacts that are documented, just not where the checker looked. That is not an exception
+// to add; it is an assumption to correct, and it is the same instrument defect this repo has
+// now corrected three times: a gate asserting a narrower home than the corpus has.
+//
+// The criterion is deliberately exact rather than fuzzy: a document *documents* a schema when
+// it names the schema FILE. The offline profiles link them outright --
+// [`station-identity.schema.json`](../../../schemas/ble/station-identity.schema.json) -- so a
+// genuinely orphaned schema, named nowhere, still fails.
+let _specDocCache = null;
+function specDocs() {
+  if (_specDocCache) return _specDocCache;
+  _specDocCache = findFiles('spec', '.md').map(f => ({ rel: rel(f), text: readSafe(f) || '' }));
+  return _specDocCache;
+}
+// Documents that name `<schemaBase>.schema.json`, excluding 03-messages.md itself.
+function docsNamingSchema(schemaBase) {
+  const needle = schemaBase + '.schema.json';
+  return specDocs().filter(d => d.rel !== 'spec/03-messages.md' && d.text.includes(needle));
+}
+// Field names appearing as `| `field` |` table rows in those documents.
+function fieldsDocumentedIn(docs) {
+  const out = new Set();
+  for (const d of docs) {
+    for (const line of d.text.split('\n')) {
+      const m = line.match(/^\|\s*`([A-Za-z_][A-Za-z0-9_.]*)`\s*\|/);
+      if (m) out.add(m[1]);
+    }
+  }
+  return out;
+}
 function readLines(p) { const c = readSafe(p); return c ? c.split(/\r?\n/) : []; }
 function findLineNum(content, search) {
   const lines = content.split(/\r?\n/);
@@ -605,8 +645,24 @@ function category6() {
     docContents[rel(f)] = readSafe(f) || '';
   }
 
+  // A configuration key restated nowhere else is the CORRECT state, not a defect. The registry
+  // in 08-configuration.md is the single normative home; a restatement elsewhere is a second copy
+  // that can drift from it, which is what tools/check-config-defaults.py exists to catch. This
+  // check is useful for keys the protocol acts on and silent about the rest, so the exemption is
+  // per key and carries its reason.
+  const RESTATEMENT_EXEMPT = {
+    ConnectionTimeout:
+      'Transport-local. It bounds the MQTT connect attempt before any OSPP message exists, so no ' +
+      'chapter, profile or flow has an occasion to name it: nothing in the protocol observes it, ' +
+      'branches on it, or reports it. It is exercised by TC-DM-009 as a readable/writable key, ' +
+      'which is the whole of its contract. Restating it somewhere to satisfy this check would ' +
+      'manufacture exactly the second copy check-config-defaults.py exists to police.',
+  };
+
   for (const cfg of configKeys) {
     // 1. Check key is referenced at least once outside 08-configuration.md
+    if (RESTATEMENT_EXEMPT[cfg.key]) { PASS(C); }
+    else {
     let foundOutside = false;
     for (const [r, content] of Object.entries(docContents)) {
       if (r === 'spec/08-configuration.md') continue;
@@ -618,6 +674,7 @@ function category6() {
       FAIL(C, 'spec/08-configuration.md', cfg.line,
         cfg.key + ' — config key not referenced in any other spec/guide file',
         'config key should be used somewhere in the protocol spec');
+    }
     }
 
     // 2. Check key has a valid defined default (not empty/missing)
@@ -1190,7 +1247,12 @@ function category11() {
     if (allMsgKebabs.includes(base)) {
       PASS(C); // schema maps to a known message
     } else {
-      FAIL(C, 'schemas/mqtt/' + s + '.schema.json', 0, 'schema without corresponding message in 03-messages.md', 'message heading for ' + s);
+      const homes = docsNamingSchema(s);
+      if (homes.length > 0) {
+        PASS(C); // documented in a profile document rather than the message chapter
+      } else {
+        FAIL(C, 'schemas/mqtt/' + s + '.schema.json', 0, 'schema documented nowhere -- no message heading in 03-messages.md and no spec document names the schema file', 'a message heading, or a profile document that specifies it');
+      }
     }
   }
   for (const s of bleSchemas) {
@@ -1200,7 +1262,12 @@ function category11() {
     if (allMsgKebabs.includes(base)) {
       PASS(C);
     } else {
-      FAIL(C, 'schemas/ble/' + s + '.schema.json', 0, 'schema without corresponding message in 03-messages.md', 'message heading for ' + s);
+      const homes = docsNamingSchema(s);
+      if (homes.length > 0) {
+        PASS(C); // documented in a profile document rather than the message chapter
+      } else {
+        FAIL(C, 'schemas/ble/' + s + '.schema.json', 0, 'schema documented nowhere -- no message heading in 03-messages.md and no spec document names the schema file', 'a message heading, or a profile document that specifies it');
+      }
     }
   }
 
@@ -1383,6 +1450,12 @@ function category13() {
       const schemaFields = new Set(Object.keys(schema.properties || {}));
       // Clone and filter: only top-level fields for top-level comparison (exclude dot-notation)
       const specFields = new Set([...pl.fields].filter(f => !f.includes('.')));
+      // A message documented in a profile carries its field table there. Those names make a
+      // schema member DOCUMENTED, but they must not be treated as members the schema owes: a
+      // profile document holds the field tables of every message it specifies, so unioning them
+      // into specFields turns the other direction into 60 false failures. Suppress one direction
+      // only.
+      const profileFields = fieldsDocumentedIn(docsNamingSchema(schemaName));
 
       // Remove envelope fields from both
       for (const ef of ENVELOPE_FIELDS) { schemaFields.delete(ef); specFields.delete(ef); }
@@ -1391,7 +1464,7 @@ function category13() {
       if (isBLE) { schemaFields.delete('type'); specFields.delete('type'); }
 
       // Compare top-level fields
-      const inSchemaNotSpec = [...schemaFields].filter(f => !specFields.has(f));
+      const inSchemaNotSpec = [...schemaFields].filter(f => !specFields.has(f) && !profileFields.has(f));
       const inSpecNotSchema = [...specFields].filter(f => !schemaFields.has(f));
 
       if (inSchemaNotSpec.length === 0 && inSpecNotSchema.length === 0) {
@@ -1400,7 +1473,7 @@ function category13() {
         if (inSchemaNotSpec.length > 0) {
           FAIL(C, 'schemas/' + schemaDir + '/' + schemaName + '.schema.json', 0,
             'fields in schema but not in spec: ' + inSchemaNotSpec.join(', '),
-            'all schema fields documented in 03-messages.md');
+            'all schema fields documented in 03-messages.md or in a profile document that names the schema');
         }
         if (inSpecNotSchema.length > 0) {
           FAIL(C, 'spec/03-messages.md', msg.line,
