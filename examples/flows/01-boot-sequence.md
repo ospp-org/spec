@@ -211,7 +211,7 @@ The server validates the station: certificate matches the registered station ID,
     "sessionKey": "hmac_k9x7v2m4p1w8q3n6a5y0j8r2t4e1u7i",
     "configuration": {
       "MeterValuesInterval": "60",
-      "MaxOfflineTransactions": "50",
+      "MaxOfflineTransactions": "1000",
       "OfflineModeEnabled": "true"
     }
   }
@@ -222,7 +222,7 @@ The station processes the response:
 
 1. **Clock sync:** Sets internal RTC to `2026-02-13T10:00:03.100Z`
 2. **Session key:** Stores the HMAC session key for message signing
-3. **Config:** Applies `MeterValuesInterval=60`, `MaxOfflineTransactions=50`, `OfflineModeEnabled=true`
+3. **Config:** Applies `MeterValuesInterval=60`, `MaxOfflineTransactions=1000`, `OfflineModeEnabled=true`
 4. **Heartbeat:** Configures heartbeat timer to fire every 30 seconds
 
 ---

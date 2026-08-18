@@ -8,6 +8,35 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.24.1] — 2026-08-18
+
+> **`0.24.0` raised `MaxOfflineTransactions` past the values its own corpus carries, and nothing
+> could see it.** The registry range became `1000--10000`; three sites went on depicting `50` — a
+> `valid` conformance vector, and an example flow's payload and its prose summary. All three show a
+> server pushing a value a conformant station must now refuse with
+> `5109 INVALID_CONFIGURATION_VALUE`.
+>
+> **No gate reads a configuration value out of a payload and range-checks it.**
+> `check-config-defaults.py` compares *restated defaults in prose* against the registry;
+> `check-config-ranges.py` compares *range statements* against each other and against schema bounds.
+> A literal sitting inside an example's `configuration` block is neither, so all three sites passed
+> every gate in the repository, before and after the change. Recorded as OPEN.
+
+### Fixed
+
+- **`conformance/test-vectors/valid/core/boot-notification-response-full.json`**,
+  **`examples/flows/01-boot-sequence.md`** (payload and prose): `MaxOfflineTransactions`
+  `50` → `1000`. The corpus moves with the rule that invalidated it; neither file is signed, so no
+  re-signing was required.
+- **`KNOWN-ISSUES.md` shipped in `0.24.0` with a 935-line span duplicated** — nineteen headings
+  appeared twice, including the class index added in that release. Cause: a splice that computed
+  its end offset from the first match of a heading which, by then, sat *earlier* in the file than
+  the region being replaced, so the tail was re-appended instead of cut. The file is rebuilt from
+  the `d553820` base with each intended section re-applied once, and verified by heading-uniqueness
+  rather than by eye. **Nothing detected it**: `markdownlint` disables `MD024` (duplicate headings)
+  in the CI invocation, and `KNOWN-ISSUES.md` is one of the 105 tracked markdown files that
+  invocation does not name in the first place.
+
 ## [0.24.0] — 2026-08-18
 
 > **The offline profile contradicted itself in eight places, and only one of them was a decision.**

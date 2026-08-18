@@ -4,7 +4,7 @@
   "heartbeatIntervalSec": 60,
   "configuration": {
     "MeterValuesInterval": "10",
-    "MaxOfflineTransactions": "50"
+    "MaxOfflineTransactions": "1000"
   },
   "sessionKey": "dGhpcyBpcyBhIGJhc2U2NCBlbmNvZGVkIHNlc3Npb24ga2V5IQ=="
 }
