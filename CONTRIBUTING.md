@@ -199,6 +199,43 @@ If you add a new field to a message:
 
 A PR that changes only the schema but not the spec (or vice versa) will be rejected.
 
+### The "No Number Without Its Measurement Point" Rule
+
+**Every count this repository writes down MUST carry the commit and date it was measured
+at.** Not "the baseline is 9" — "`b35eef6`, 2026-08-18, v0.22.0: 6 FAIL, 6 SKIP".
+
+This is a rule because we have broken it repeatedly and it fails in a way nobody notices.
+A number without a measurement point cannot be checked, so it is carried forward by
+copying rather than by re-running, and it goes on being quoted after the thing it measured
+has moved. It reads exactly like a number that is still true. Three cases inside two
+releases:
+
+| Where | Said | Was | For how long |
+|---|---|---|---|
+| `tools/check-normative-bold.py` header | 456 unbolded | 452 | across two releases |
+| `tools/verify-protocol.sh` header | 9 FAIL | 6 | `0.20.1` and `0.20.2` closed three |
+| `.github/workflows/verify-signatures.yml` | *"exits 1 ... from 9 pre-existing findings"* | 6 | the same two releases, in a third file |
+
+The third one survived the pass that fixed the first two, because that pass corrected the
+two numbers it knew about rather than sweeping for the class.
+
+The rules that follow from it:
+
+1. **A count in prose or in a comment carries `<commit> <date> <version>` beside it.** The
+   headers of `check-normative-bold.py` and `verify-protocol.sh` are the worked examples.
+2. **Re-measure; never inherit.** If you are about to write a number you did not produce in
+   this session, run the thing that produces it first. A number copied from a note, an
+   earlier PR, or a previous CHANGELOG entry is the failure mode above.
+3. **Prefer one home.** A count restated in a second place is a count that will drift —
+   `§1.6`'s table of range forms and `check-config-ranges.py`'s `EXPECTED_FORMS` are two
+   copies of one fact, and withdrawing a configuration key moved both. Where a second copy
+   is unavoidable, make the gate compare them.
+4. **A gate constant is a number too.** Lowering a ratchet is part of the change that
+   improves it; leaving it high hides the next regression under the headroom you just
+   created.
+5. **Never quote a gate's number from anywhere but the gate.** If a comment in a workflow
+   needs a count to explain itself, point at the file that owns it instead of repeating it.
+
 ---
 
 ## Coding Style
