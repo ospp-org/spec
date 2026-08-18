@@ -1,8 +1,8 @@
 # OSPP Known Issues
 
-**Date:** 2026-08-17
-**Specification-document version:** 0.22.0 (release tag `v0.22.0`)
-**Status:** 3 blockers open (all BLE), 19 non-blocking issues open, 8 decisions recorded (one of
+**Date:** 2026-08-18
+**Specification-document version:** 0.23.0 (release tag `v0.23.0`)
+**Status:** 3 blockers open (all BLE), 20 non-blocking issues open, 9 decisions recorded (one of
 them reversing another)
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle and
 the arcs since
@@ -14,10 +14,10 @@ the arcs since
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 19 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) · **[`5016` is required for two conditions and named for one](#open--5016-version_already_installed-is-required-for-two-conditions-and-one-of-them-is-the-opposite-of-what-the-name-says)** · **[UpdateFirmware is both idempotent and `5107`](#open--updatefirmware-is-documented-as-idempotent-and-as-rejected-with-5107-for-the-same-second-command)** · **[no code describes a non-HTTPS firmware URL](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal)** · **[`offeredVersion` vs `attemptedVersion`](#open--the-firmwaredowngradeattempt-securityevent-names-the-offered-version-with-two-different-member-names-and-nothing-can-tell)** |
+| OPEN | 20 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) · **[`5016` is required for two conditions and named for one](#open--5016-version_already_installed-is-required-for-two-conditions-and-one-of-them-is-the-opposite-of-what-the-name-says)** · **[UpdateFirmware is both idempotent and `5107`](#open--updatefirmware-is-documented-as-idempotent-and-as-rejected-with-5107-for-the-same-second-command)** · **[no code describes a non-HTTPS firmware URL](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal)** · **[`offeredVersion` vs `attemptedVersion`](#open--the-firmwaredowngradeattempt-securityevent-names-the-offered-version-with-two-different-member-names-and-nothing-can-tell)**  · **[a station whose hardware changes has no route back into service](#open--a-station-whose-hardware-genuinely-changes-has-no-route-back-into-service-because-the-two-rules-that-guard-topology-point-at-each-other)** |
 | CLOSED | 4 | [Device Management Required vs RECOMMENDED](#closed-0160--the-device-management-profile-was-required-in-chapter-08-and-recommended-not-mandatory-in-its-own-readme) — closed in 0.16.0 in favour of the capability · [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
-| DECIDED | 8 | **[UpdateFirmware to a `Pending` station is `Accepted`, notifications suppressed](#decided-0210--updatefirmware-to-a-pending-station-was-refused-on-a-premise-the-same-chapter-contradicts-and-with-a-response-no-error-code-could-carry)** — **reverses the `0.20.0` row below**: the `Rejected` it mandated needed an `errorCode` no registry entry supplies, and §6.6 already reported the outcome on BootNotification; the discriminator's second clause survives, its reading did not · **[nine gates in `tools/` were reachable from no job](#decided-0201--two-validation-scripts-reported-100-failure-and-no-workflow-ran-them-the-workflows-now-call-the-scripts-and-a-census-guards-the-class)** — the workflows now call the scripts, and `check-tool-callers.py` guards the class · **[the firmware gate is on the INSTALL, not the download](#decided-0200--the-active-session-gate-named-three-stages-it-gates-the-install-and-scheduledat-defers-the-install-with-it)** — and `scheduledAt` defers the install with it; the stall rule scoped rather than `Verified` given a wire value · **[~~UpdateFirmware to a `Pending` station is `Rejected`~~ — REVERSED in `0.21.0`](#decided-0200--updatefirmware-had-no-row-in-the-pending-command-table-it-is-rejected-and-the-discriminator-gained-the-clause-that-says-why)** — kept as the record; the row it added was right, the verdict in it was not · **[a restricted station may renew its own certificate](#decided-0190--one-table-gave-the-same-act-opposite-verdicts-and-a-certificate-renewal-could-not-conclude-in-the-state-the-spec-keeps-open-for-repairs)** — the exception's *reason* restated to cover both members rather than a second name added to a list · [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
-| **Total open** | **22** | |
+| DECIDED | 9 | **[`DiagnosticsUploadUrl` withdrawn — a key nothing reads](#decided-0230--diagnosticsuploadurl-had-no-reachable-consumer-and-is-withdrawn-rather-than-defined)** · **[UpdateFirmware to a `Pending` station is `Accepted`, notifications suppressed](#decided-0210--updatefirmware-to-a-pending-station-was-refused-on-a-premise-the-same-chapter-contradicts-and-with-a-response-no-error-code-could-carry)** — **reverses the `0.20.0` row below**: the `Rejected` it mandated needed an `errorCode` no registry entry supplies, and §6.6 already reported the outcome on BootNotification; the discriminator's second clause survives, its reading did not · **[nine gates in `tools/` were reachable from no job](#decided-0201--two-validation-scripts-reported-100-failure-and-no-workflow-ran-them-the-workflows-now-call-the-scripts-and-a-census-guards-the-class)** — the workflows now call the scripts, and `check-tool-callers.py` guards the class · **[the firmware gate is on the INSTALL, not the download](#decided-0200--the-active-session-gate-named-three-stages-it-gates-the-install-and-scheduledat-defers-the-install-with-it)** — and `scheduledAt` defers the install with it; the stall rule scoped rather than `Verified` given a wire value · **[~~UpdateFirmware to a `Pending` station is `Rejected`~~ — REVERSED in `0.21.0`](#decided-0200--updatefirmware-had-no-row-in-the-pending-command-table-it-is-rejected-and-the-discriminator-gained-the-clause-that-says-why)** — kept as the record; the row it added was right, the verdict in it was not · **[a restricted station may renew its own certificate](#decided-0190--one-table-gave-the-same-act-opposite-verdicts-and-a-certificate-renewal-could-not-conclude-in-the-state-the-spec-keeps-open-for-repairs)** — the exception's *reason* restated to cover both members rather than a second name added to a list · [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
+| **Total open** | **23** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
@@ -349,7 +349,7 @@ its context — the bay, field, threshold, or identifier involved."* The full se
 | File | Value |
 |---|---|
 | `conformance/test-vectors/valid/device-management/firmware-status-notification-full.json` | `"Checksum verification failed after download, expected sha256:a3f7b2c1 but computed sha256:e8d9c0b1"` |
-| `conformance/test-vectors/valid/device-management/diagnostics-notification-full.json` | `"Upload in progress to remote server"` |
+| `conformance/test-vectors/valid/device-management/diagnostics-notification-full.json` | ~~`"Upload in progress to remote server"`~~ — **removed in `0.23.0`** |
 
 *Markdown examples:*
 
@@ -361,6 +361,17 @@ its context — the bay, field, threshold, or identifier involved."* The full se
 
 The first vector settles what the field is being used for: a value containing two runtime SHA-256
 digests cannot be a stable per-code name, and no registry entry could ever supply it.
+
+**Updated `0.23.0` — one of the two carried a second, separate defect, and that one is closed.**
+The diagnostics vector carried its prose on `"status": "Uploading"`, a state that is not a failure
+at all, while `diagnostics-status.md` bound `errorText` to `Failed`. The schema expressed no such
+condition, so the vector shipped as **valid** and nothing could have said otherwise.
+`diagnostics-notification.schema.json` now requires `errorText` on `Failed` and forbids it on the
+other three, with four negative vectors exercising both directions, and the offending vector has
+been reworked. **The naming question above is untouched by that**: `errorText` on this message is
+still per-occurrence prose where §1.3 defines a per-code name, and the same is true of
+`firmware-status-notification`, whose `errorText` remains unconditioned. What closed is the
+conditional violation; what is open is the name.
 
 **The contrast is inside the same family.** `status-notification.schema.json` declares **both**
 `errorCode` and `errorText`, and its vector carries `errorCode: 5008` with
@@ -596,11 +607,11 @@ and the treatment `f872b23` had already applied to nine conformance cases. §1.5
 *"Conditional (required if `capabilities.deviceManagementSupported = true`)"*.
 
 The difficulty recorded when this was opened — that the README governs **nine actions** while
-§1.5 governs **four keys**, so the two might need separate answers — was examined and does
-not survive. The four keys have no protocol surface independent of the actions:
+§1.5 governed **four keys** at the time (three since `0.23.0`), so the two might need separate answers — was examined and does
+not survive. The keys have no protocol surface independent of the actions:
 GetConfiguration and ChangeConfiguration are themselves Device Management actions, so a
 station not declaring the capability can be neither asked for these keys nor told to set
-them. Two of the four, `FirmwareUpdateEnabled` and `DiagnosticsUploadUrl`, are switches for
+them. Two of them at the time, `FirmwareUpdateEnabled` and the since-withdrawn `DiagnosticsUploadUrl`, were switches for
 Device Management actions such a station does not implement and govern nothing without them.
 The only surviving path is the BootNotification `configuration` block, which is Core — and
 §8.3 was extended in the same release to say what a station does with a key it does not
@@ -1623,6 +1634,126 @@ unsettled. A negative vector for the pattern now exists at
 characterisation from `4017`; (2) `1005`, widening its definition to cover pattern and range
 violations, which affects every message; (3) a new firmware-specific code; (4) `1011` retained,
 with its definition widened to cover a URL refused without being attempted.
+
+**Extended `0.23.0` — GetDiagnostics [MSG-018] has the identical hole, and its half was worse.**
+[`get-diagnostics-request.schema.json`](schemas/mqtt/get-diagnostics-request.schema.json)
+constrains `uploadUrl` with the **same** `"pattern": "^https://"`. Two differences make the
+diagnostics side the sharper of the two:
+
+- `get-diagnostics.md` §6 rule 1 was **stronger** than the firmware rule — it named malformed URLs
+  outright (*"If the URL is unreachable **or malformed**, the station **MUST** respond with
+  `Rejected`"*), so the specification mandated a refusal for which it supplied no code. That
+  sentence has been split in `0.23.0`: the unreachable half keeps `1011`, and the malformed half is
+  now stated as open rather than as an obligation a conforming station cannot discharge.
+- [`get-diagnostics-response.schema.json`](schemas/mqtt/get-diagnostics-response.schema.json)
+  requires **both** `errorCode` and `errorText` on every `Rejected`, so unlike firmware there is no
+  shape in which a station can refuse without naming a code. Whatever is decided for firmware binds
+  here too, and the option space is the same four.
+
+The mirror negative vector now exists at
+`conformance/test-vectors/invalid/device-management/get-diagnostics-request-http-url.json`, so the
+schema-level refusal is exercised on both messages. **Neither message has a code.** This is the
+class recorded twice before under a different name — a refusal a registry cannot express — and it
+is now two instances of one question, not two questions.
+
+---
+
+## DECIDED (0.23.0) — `DiagnosticsUploadUrl` had no reachable consumer and is withdrawn rather than defined
+
+**Raised and closed 2026-08-18, in the diagnostics-cycle arc.**
+
+[`08-configuration.md` §6](spec/08-configuration.md#6-device-management-configuration-keys) declared
+`DiagnosticsUploadUrl`, type string, default `""`, `Mutability: Static`, described as *"HTTPS URL
+for diagnostics file upload. **Empty string disables diagnostics upload.**"* Neither half could be
+acted on. `uploadUrl` is `Required: Yes` in
+[`get-diagnostics.md` §3](spec/profiles/device-management/get-diagnostics.md) and in its request
+schema, so no request ever fell back to a configured value; and no processing rule read the key,
+while no error code described *"diagnostics upload is disabled on this station"*.
+
+**Measured before deciding, and this is what decided it.** No implementation consumes it: the
+reference server holds it in its configuration registry and can push it, and reads it nowhere; the
+PHP SDK carries the key name in `ConfigurationKey` and nothing else; the TypeScript SDK and the
+station simulator have no reference to it at all. There was no behaviour to legalise — only a name
+with no reader, which is why it survived four releases without anyone being wrong about it.
+
+**Decided: withdrawn.** The registry is 28 keys, Device Management is 3. Two options are closed by
+that choice and are recorded so they are not rediscovered: making the key a station-side gate (a
+station with `""` refuses GetDiagnostics), and relaxing `uploadUrl` to OPTIONAL so the key becomes
+the default it was described as. Both needed a new registry code for *"diagnostics upload is
+disabled"*, and neither had a consumer asking for one. A third option — keep it as an advisory hint
+and delete only the *"Empty string disables"* sentence — describes what every implementation already
+does, and was rejected because a non-normative key in a normative registry is exactly the shape that
+produced this entry.
+
+**The cost, which is operational rather than editorial.** An unknown key is answered `NotSupported`
+([`change-configuration.md` §6](spec/profiles/device-management/change-configuration.md) rule 5),
+and rule 2 makes the batch atomic: **one `NotSupported` entry discards every other key in the same
+ChangeConfiguration**. So a server that still carries `DiagnosticsUploadUrl` in a push set finds
+that batch wholly ineffective against a `0.23.0` station while the identical batch still applies on
+`0.22.0` — a mixed fleet fails asymmetrically, and silently from the operator's side, because the
+response is a per-key verdict array rather than an error. **Servers MUST remove the key from any
+push set before a `0.23.0` station is in the fleet.** Downstream: the PHP SDK's
+`ConfigurationKey::DIAGNOSTICS_UPLOAD_URL` case is a breaking removal for its consumers, and the
+reference server's configuration registry needs the entry dropped.
+
+---
+
+## OPEN — a station whose hardware genuinely changes has no route back into service, because the two rules that guard topology point at each other
+
+**Raised 2026-08-18, in the diagnostics-cycle arc, from the reprovisioning restanță.**
+
+A bay is physically added to, or removed from, a station. Both ends refuse, and each names the other
+as the remedy:
+
+| Step | Rule | Outcome |
+|---|---|---|
+| The station boots and declares its new topology | [`05-state-machines.md` §1.5](spec/05-state-machines.md#15-topology-at-boot); `3018 TOPOLOGY_MISMATCH` | **`Pending`**. The station answers commands and serves no customers. Its own registry entry says the recovery is: *"If the hardware genuinely changed, **re-provision** the station, which re-creates the bay records."* |
+| The operator re-provisions | [`04-flows.md` §2](spec/04-flows.md), *Error precedence* step 5; `4020 BAY_COUNT_MISMATCH` | **`422`**. The declared `bayNumber` set **MUST** equal the set registered for the station the token is bound to — as a set. The registered set is the **old** one, which is the whole reason the boot failed. |
+
+`3018` sends the operator to provisioning; provisioning compares against the record `3018` is
+complaining about. The loop closes.
+
+**And there is no third door.** [`07-errors.md` §4.4](spec/07-errors.md#44-rest-api-endpoints) lists
+every REST endpoint this specification defines. `POST /api/v1/stations/provision` is the only one
+that touches a station's bay records, and it creates them; **no endpoint adds a bay, removes a bay,
+or edits the registered set.** The station cannot do it either — `3018`'s entry forbids it in terms:
+*"The station **MUST NOT** alter its declaration to match the server."* Correctly so: the
+declaration describes hardware.
+
+So the escape exists only outside the protocol — an operator editing server-side records by some
+means this specification does not define, in an order it does not state. That the order matters is
+itself undocumented: the server-side correction **MUST** precede the re-provision, or step 5
+compares against the stale set and refuses again, and nothing anywhere says so.
+
+**The option space.**
+
+1. **Relax `4020` at re-provisioning.** Treat a re-provision of an already-registered station as
+   authoritative for topology: the declared set replaces the registered set, and `4020` narrows to
+   first provision only. Cost: the check exists to catch a firmware bay table that disagrees with
+   what an operator registered, and this removes it for exactly the case where the two disagree —
+   which is every case it fires on. A typo in a firmware constant would silently rewrite the
+   station's topology, and `3018`'s entry says the whole point is that *"agreeing silently would
+   hide the very hardware change this code exists to surface."*
+2. **Add a server-side topology-correction step before re-provisioning.** A defined operation that
+   sets the registered bay set, after which the existing `4020` comparison passes unchanged. Cost:
+   a new endpoint or a new administrative act this specification would have to define, **and an
+   ordering rule** — correction, then token, then provision. Nothing today documents that ordering,
+   which is the part most likely to be got wrong once, silently, by whoever implements it first.
+3. **Give `4020` a discriminator and a documented recovery.** Keep the refusal but make it
+   actionable: the entry already **MUST** carry `details.declaredBayNumbers` and
+   `details.registeredBayNumbers`, so add a `details.phase`-style member distinguishing *first
+   provision* from *re-provision of a registered station*, and state the operator procedure for the
+   second. Cost: cheapest, and it closes the documentation hole without closing the loop — the
+   operator still needs a mechanism option 2 would define.
+4. **Say the case is out of scope.** A station whose hardware changes is decommissioned and
+   re-commissioned under a new `stationId`. Cost: it is an honest answer, and it discards the
+   station's history — sessions, meter values, receipts — or forces a migration this specification
+   also does not define. Note that transfer and decommissioning are already absent from every
+   document in this repository.
+
+**Recommended: 3 now, 2 next.** 3 is a text change that makes the trap visible to the operator who
+hits it; 2 is the mechanism, and it needs the ordering written down in the same change that
+introduces it.
 
 ---
 

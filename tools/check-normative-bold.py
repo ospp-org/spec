@@ -30,6 +30,9 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
+    (this HEAD) 2026-08-18  v0.23.0   450 unbolded, 1087 bolded spans — the diagnostics
+                                   cycle added a chapter section and two conformance Parts, all
+                                   bolded, and bolded one pre-existing MUST in 03-messages.md
     b35eef6  2026-08-18  v0.22.0   452 unbolded, 1062 bolded spans
     a6770c3  2026-08-17  v0.21.0   452 unbolded
     (earlier)                      456 — superseded, and it outlived its accuracy by
@@ -51,7 +54,7 @@ import re
 import sys
 from collections import Counter
 
-BASELINE = 452
+BASELINE = 450
 
 KEYWORD = re.compile(r'\b(MUST NOT|MUST|SHALL NOT|SHALL)\b')
 FENCE = re.compile(r'```.*?```', re.S)

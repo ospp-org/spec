@@ -1,6 +1,6 @@
 # OSPP Conformance Testing
 
-> **Status:** Draft | **OSPP Version:** 0.22.0
+> **Status:** Draft | **OSPP Version:** 0.23.0
 
 This document defines the conformance testing framework for OSPP implementations.
 Conformance testing validates that a station or server implementation correctly
@@ -73,6 +73,8 @@ level to enable rapid local development and testing.
 | StatusNotification on every bay state change | TC-CORE-001 (Part C) |
 | Invalid bay transition accepted, recorded, session reconciled | TC-CORE-003 |
 | LWT configured at MQTT CONNECT | TC-CORE-001 (Part A) |
+| DataTransfer status values (UnknownVendor / UnknownData) | TC-CORE-004 (Parts A--B) |
+| TriggerMessage, including refusal while restricted | TC-CORE-004 (Parts C--D) |
 
 ### 2.2 Standard Compliance
 

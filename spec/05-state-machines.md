@@ -1,12 +1,14 @@
 # Chapter 05 — State Machines
 
-> **Status:** Draft | **OSPP Version:** 0.22.0
+> **Status:** Draft | **OSPP Version:** 0.23.0
 
-This chapter defines all finite state machines (FSMs) governing OSPP entities — the station, its bays, sessions, reservations, BLE connections and firmware updates. Each FSM specifies the complete set of states, valid transitions, guards, actions, and a Mermaid diagram. A transition not listed for a machine is invalid, and implementations MUST NOT perform one.
+This chapter defines all finite state machines (FSMs) governing OSPP entities — the station, its bays, sessions, reservations, BLE connections, firmware updates and diagnostics uploads. Each FSM specifies the complete set of states, valid transitions, guards, actions, and a Mermaid diagram. A transition not listed for a machine is invalid, and implementations MUST NOT perform one.
 
 **What a party does on *receiving* a report of an invalid transition is stated per machine, not here, because the answer is not the same for all of them.** It turns on who owns the fact being reported. Where the sender is the authority — a station reporting its own hardware — the receiver accepts and records rather than refuses, because refusing does not undo the fact, it only discards the news of it; that is the bay machine, and the rule is [§2.5](#25-invalid-transitions). Where the receiver owns the fact — a station being commanded into a state it cannot be in — the receiver refuses, with an error code. A single chapter-wide "MUST be rejected" collapsed those two into one answer and was the source of a direct contradiction with the rule the reference server actually implements.
 
 The **station** machine ([§1](#1-station-state-machine)) is the outermost: every other machine on a station is scoped inside it, and [§7.1](#71-station----bay----session-coupling) states how.
+
+The diagnostics upload machine is [§8](#8-diagnostics-upload-state-machine) rather than §7, because §7's ordinal and sub-ordinals are cited from other documents and renumbering them to gain an ordering would break those citations.
 
 The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHALL NOT**, **SHOULD**, **SHOULD NOT**, **RECOMMENDED**, **MAY**, and **OPTIONAL** in this document are to be interpreted as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119) and [RFC 8174](https://www.rfc-editor.org/rfc/rfc8174).
 
@@ -839,7 +841,7 @@ that nothing on the wire can ever set.
 
 ## 7. Cross-Machine Interactions
 
-The six state machines defined in this chapter are not isolated; they interact at well-defined synchronization points.
+The seven state machines defined in this chapter are not isolated; they interact at well-defined synchronization points.
 
 ### 7.1 Station -- Bay -- Session Coupling
 
@@ -912,3 +914,174 @@ install sends nothing between `Downloaded` and `Installing`. The server is not b
 must read the wait from what it already holds rather than from the wire: it issued the `scheduledAt`
 itself, and it has the bay states the gate turns on. The stall rule is scoped to match — see
 [`firmware-status.md` §6](profiles/device-management/firmware-status.md) rule 3.
+
+### 7.5 Diagnostics Upload -- Session Constraint
+
+The mirror of [§7.4](#74-firmware-update----bay-constraint), and the answer is the opposite one.
+A diagnostics upload is **not** gated on bay state at any stage:
+[`get-diagnostics.md` §6](profiles/device-management/get-diagnostics.md) rule 4 says the station
+**MUST NOT** interrupt active sessions to collect diagnostics — which is a constraint on *how* it
+collects, not on *when*. Nothing in [§8.3](#83-transition-table) waits for a bay.
+
+The difference from firmware is physical. A firmware install rewrites the partition the station
+boots from and then reboots it, so it cannot coexist with a running session; a diagnostics
+collection reads logs, configuration and session history, and writing an archive to storage takes
+nothing away from a session in progress. Gating diagnostics on idle bays would make the busiest
+station in a fleet the hardest one to diagnose, which inverts the reason the command exists.
+
+What rule 4 does forbid is the station stopping, pausing or degrading a session in order to finish
+faster. If collection cannot proceed without doing that, the station **MUST** fail the collection —
+`Collecting -> Failed` in [§8.3](#83-transition-table) — rather than take the session down for it.
+
+Storage is the one shared resource, and it is already covered: a collection that cannot fit
+alongside what a live session needs is a `Collecting -> Failed` on storage exhaustion, and a
+collection that has not started yet is a `Rejected` carrying `5103 STORAGE_ERROR`.
+
+---
+
+## 8. Diagnostics Upload State Machine
+
+The diagnostics upload state machine governs one execution of GetDiagnostics [MSG-018]: the station
+collects its logs and state into an archive, uploads that archive by HTTP PUT to a URL the command
+supplied, and reports each stage with a DiagnosticsNotification [MSG-019].
+
+**Why this section is last rather than seventh.** [§7](#7-cross-machine-interactions) is cited by
+ordinal from five places in this chapter and its sub-ordinals are anchors other documents resolve
+against; renumbering it to make room here would break those citations to gain an ordering. The
+machine is new in `0.23.0` and takes the next free number.
+
+**Where it comes from.** Not from either SDK — both had one, they disagreed, and neither could cite
+a table. It is derived from the two obligations that already bind a station, and from what the
+station physically does between them:
+
+- [`get-diagnostics.md` §6](profiles/device-management/get-diagnostics.md) rule 2 — *"On `Accepted`,
+  the station **MUST** begin collecting diagnostics and send DiagnosticsNotification events to
+  report progress."* That fixes the entry edge and fixes it to `Collecting`.
+- [`diagnostics-status.md` §5](profiles/device-management/diagnostics-status.md) rule 1 — *"The
+  station **MUST** send a DiagnosticsNotification at each status transition."* That makes every edge
+  below observable except the ones out of a terminal outcome, which report nothing because nothing
+  has changed that a server did not already learn.
+
+Everything else in this section follows from the archive being a file that is built, then sent.
+
+### 8.1 State Diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+
+    Idle --> Collecting : GetDiagnostics [MSG-018] answered Accepted
+
+    Collecting --> Uploading : Archive complete, HTTP PUT begins
+    Collecting --> Failed : Collection error / no data / storage full
+
+    Uploading --> Uploaded : PUT completes successfully
+    Uploading --> Failed : PUT fails after the station's own retries
+
+    Uploaded --> Idle : Archive released, station ready for another request
+    Failed --> Idle : Partial archive discarded, station ready for another request
+```
+
+### 8.2 States (5)
+
+| State | Description |
+|-------|-------------|
+| **Idle** | No diagnostics collection or upload is in progress. This is the state a GetDiagnostics is accepted *from*, and the state `5107 OPERATION_IN_PROGRESS` reports the absence of: a station that cannot tell whether it is `Idle` cannot emit that code correctly. Not reported — the absence of a collection is not an event. |
+| **Collecting** | The station is gathering the files of [`get-diagnostics.md` §5](profiles/device-management/get-diagnostics.md) into a gzip-compressed tar archive. The `progress` field has no meaning here: collection has no denominator the station knows in advance, which is why [`diagnostics-status.md` §5](profiles/device-management/diagnostics-status.md) rule 4 forbids it rather than merely not requiring it. |
+| **Uploading** | The archive is being sent by HTTP PUT to the `uploadUrl` the command supplied. This is the only state with a meaningful `progress`, because the archive's size is known once it exists. The station **MAY** retry the PUT internally without leaving this state; retries are not transitions and are not reported as any other status. |
+| **Uploaded** | The PUT completed and the remote endpoint accepted the archive. The station has discharged the command. Momentary: nothing holds the station here, and the edge out of it is unconditional. |
+| **Failed** | Collection or upload failed. The station discards whatever partial archive exists and resumes normal operation. Momentary in the same sense as `Uploaded`, and **not** terminal — a station that treats it as terminal can run one diagnostics upload and never a second. |
+
+### 8.3 Transition Table
+
+| Trigger | From | To | Condition | Action |
+|---------|------|----|-----------|--------|
+| GetDiagnostics [MSG-018] answered `Accepted` | Idle | Collecting | `uploadUrl` validated, time window coherent, no other diagnostics collection in progress ([`get-diagnostics.md` §6](profiles/device-management/get-diagnostics.md) rules 1--3) | Station responds `Accepted` with `fileName`, sends DiagnosticsNotification `Collecting` |
+| Archive complete | Collecting | Uploading | Every available file of [`get-diagnostics.md` §5](profiles/device-management/get-diagnostics.md) is in the archive and the archive is written | Station opens the HTTP PUT, sends DiagnosticsNotification `Uploading` |
+| Collection error | Collecting | Failed | Storage exhausted or inaccessible, or no diagnostic data exists for the requested window | Station sends DiagnosticsNotification `Failed` with a descriptive `errorText`, discards the partial archive |
+| PUT completes | Uploading | Uploaded | The remote endpoint returned success for the whole body | Station sends DiagnosticsNotification `Uploaded` with `fileName` |
+| PUT fails | Uploading | Failed | The endpoint is unreachable, or returned an error status, after the station's own retries are exhausted | Station sends DiagnosticsNotification `Failed` with a descriptive `errorText` |
+| Archive released | Uploaded | Idle | Unconditional | Station frees the archive. **No notification** — see [§8.4](#84-diagnosticsnotification-mapping) |
+| Partial archive discarded | Failed | Idle | Unconditional | Station frees whatever was written. **No notification** |
+
+**Seven rows, seven edges.** Unlike [§6.3](#63-transition-table), no `(from, to)` pair appears twice
+here, so the row count and the edge count coincide. That they coincide is a property of this table
+and not a general one: a conformance check **MUST** assert the pairs, not the cardinal, because a
+count cannot say which edge moved.
+
+**There is no `Idle -> Failed` edge, and its absence is load-bearing.** A station that cannot start
+answers the command `Rejected` — that is what the six error codes of
+[`get-diagnostics.md` §7](profiles/device-management/get-diagnostics.md) are for — and a `Rejected`
+response leaves the machine in `Idle`, having never entered it. A DiagnosticsNotification `Failed`
+that is the **first** notification of an accepted operation is therefore non-conforming: rule 2
+compels `Collecting` the moment the station answers `Accepted`, so the station has entered
+`Collecting` even if it leaves again microseconds later, and rule 1 compels it to say so. A server
+that accepts a leading `Failed` is accepting a report from a station that skipped a MUST, and — as
+the two SDKs discovered independently — a machine that models the refusal as an edge cannot tell the
+refusal apart from the collapse.
+
+**`Uploaded` is not terminal and neither is `Failed`.** Both return to `Idle`, because the station is
+a station afterwards and diagnostics may be requested of it again. The contrast with
+[§6](#6-firmware-update-state-machine) is deliberate and is not an inconsistency: firmware's
+`Activated` is terminal because the station that comes out of it is running different software and
+its machine starts again from a new `Idle`; a diagnostics upload changes nothing about the station,
+so there is nothing for it to be terminal *to*.
+
+### 8.4 DiagnosticsNotification Mapping
+
+This machine is the **station's**. Every action in [§8.3](#83-transition-table) is something the
+station does. A server mirrors the machine from what it is told, and it is told only what the
+mapping below emits — which is **four** of the five states.
+
+| FSM State | DiagnosticsNotification `status` | Notes |
+|-----------|----------------------------------|-------|
+| **Idle** | -- | Not reported, in either direction. Entering `Idle` from `Uploaded` or `Failed` emits nothing, because the state a server already holds — the outcome — is the whole of the news |
+| Collecting | `Collecting` | Sent once, on the transition. `progress` **MUST** be omitted |
+| Uploading | `Uploading` | Sent on the transition and again at every 10% increment ([`diagnostics-status.md` §5](profiles/device-management/diagnostics-status.md) rule 3). All of them carry `status: "Uploading"` |
+| Uploaded | `Uploaded` | Sent once. `progress` **MUST** be omitted — the upload is not 100% complete, it is over |
+| Failed | `Failed` | Sent once, with `errorText`. `progress` **MUST** be omitted, whatever fraction had been sent |
+
+> **The repeated `Uploading` notifications are one state, not many.** [§8.3](#83-transition-table)
+> has no `Uploading -> Uploading` edge and **MUST NOT** gain one: the progress stream is the station
+> re-reporting a state it has not left. A server that drives this machine by feeding it arriving
+> notifications **MUST** advance on a *change* of `status` and **MUST NOT** treat a second
+> `Uploading` as an invalid transition. This is also why the idempotency rule for
+> DiagnosticsNotification is scoped to a repeated status carrying **no new progress**
+> ([Chapter 03 §6.7](03-messages.md#67-diagnosticsnotification)): read as "ignore duplicate status
+> updates" without that scope, it discards exactly the stream rule 3 exists to produce.
+
+> **`Uploaded -> Idle` and `Failed -> Idle` have no wire trigger, and a server must not wait for
+> one.** Nothing the station sends announces that it is ready again; the readiness follows from the
+> outcome. A server that models these two edges as message-driven holds its record at `Uploaded`
+> forever and refuses the `Collecting` that opens the *next* upload — which is the same single-use
+> failure as treating `Uploaded` as terminal, reached from the opposite direction.
+
+> **And on a restricted station the mapping emits nothing at all.** A `Pending` station answers
+> GetDiagnostics `Accepted` and runs the whole machine with **every** row of this mapping suppressed
+> ([§1.4](#14-the-restricted-states)). Where the *Action* column of [§8.3](#83-transition-table) says
+> the station sends a notification, §1.4 wins — [§7.1](#71-station----bay----session-coupling) fixes
+> that precedence for every machine in this chapter. The substantive effect still completes, because
+> the archive lands at a URL the server chose and the server can look there; only the reporting is
+> suppressed. The stall rule of
+> [`diagnostics-status.md` §5](profiles/device-management/diagnostics-status.md) rule 6 **MUST NOT**
+> be run against such an upload: its anchor is the last notification, and there is none.
+
+### 8.5 What a server records is not this machine
+
+A server holds one row per requested upload, and that row needs a state this machine does not have:
+the interval between dispatching GetDiagnostics and receiving its RESPONSE. Two implementations
+reached for the same name for it — `pending` — and then disagreed about everything downstream,
+because a record of a *request* and a machine of a *station* are not the same object.
+
+The division is fixed here so implementations stop rediscovering it:
+
+| Fact | Where it lives | Why not the other place |
+|------|----------------|-------------------------|
+| Command dispatched, no RESPONSE yet | The server's record | The station has no such state: it has not been asked yet, or it has and has already answered |
+| RESPONSE was `Rejected`, with an `errorCode` | The server's record, as a terminal outcome of the row | The station never left `Idle`; there is no transition to record and no notification is sent |
+| `Collecting` / `Uploading` / `Uploaded` / `Failed` | Both — the station's state, mirrored onto the row from [§8.4](#84-diagnosticsnotification-mapping) | These are the four the wire carries |
+| Ready for another request | The station's `Idle` | The row is closed by its outcome and is not reopened |
+
+A server **MAY** name its record's states as it likes, but it **MUST NOT** publish them as this
+machine's, and a conformance test **MUST NOT** assert a transition of the server's record against
+[§8.3](#83-transition-table).

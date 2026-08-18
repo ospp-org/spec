@@ -1,0 +1,5 @@
+{
+  "status": "Failed",
+  "fileName": "diag_stn_a1b2c3d4e5f6_20260214_20260215.tar.gz",
+  "errorText": "HTTP PUT returned 503 Service Unavailable after 3 retries"
+}

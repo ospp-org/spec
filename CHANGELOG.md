@@ -8,6 +8,143 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.23.0] — 2026-08-18
+
+> **Diagnostics had no state machine, and two SDKs each built one anyway.**
+> `spec/05-state-machines.md` defined six machines and none of them was this one; the diagnostics
+> profile offered a list of ASCII arrows instead. `ospp-sdk-php` read them as a **server record**
+> and got `pending -> collecting | failed`, with `uploaded` and `failed` terminal — **6 edges**.
+> `sdk-ts` read them as a **station** and got `Idle -> Collecting`, `Idle -> Failed` **rejected**,
+> both outcomes returning to `Idle` — **7 edges**. Each suite pins its own answer: PHP asserts
+> `PENDING -> FAILED` is allowed, TypeScript asserts `['Idle','Failed']` is refused. Both green.
+> No CHANGELOG on either side mentions the disagreement, and the TypeScript header states the
+> reason outright — *"Source: implied from DiagnosticsNotification status values"*. It is the only
+> machine in that directory whose source is not a spec section.
+>
+> **The machine was not invented to reconcile them.** It is derived from what a station does
+> between two obligations it already has. `get-diagnostics.md` §6 rule 2 — *"On `Accepted`, the
+> station **MUST** begin collecting"* — fixes the entry edge, and fixes it to `Collecting`, which
+> is why there is no `Idle -> Failed`: a station that cannot start answers `Rejected` and never
+> enters the machine. `diagnostics-status.md` §5 rule 1 — a notification at every transition —
+> makes each edge observable. What remains is a file that is built and then sent: **five states,
+> seven edges**, `Idle` reported by nothing, `Uploaded` and `Failed` both returning to it.
+>
+> **Both SDKs break, in the same place from opposite directions.** PHP's terminal `uploaded` runs
+> one diagnostics upload and jams — the identical defect its own firmware machine closed at
+> `0.20.0` and never carried across. TypeScript has the edge but no trigger for it: nothing on the
+> wire says the station is ready again, so a consumer driving the machine from notifications
+> reaches `Uploaded` and refuses the `Collecting` that opens the next upload. Neither SDK has a
+> bridge from the wire status union to the FSM state union at all, in either direction.
+
+### Added
+
+- **`spec/05-state-machines.md` §8 — Diagnostics Upload State Machine.** Diagram, five states,
+  a seven-row transition table, §8.4 mapping states to `DiagnosticsNotification` values, and §8.5
+  fixing the division between the station's machine and a server's record of a request. Numbered
+  **8** rather than 7 because §7's ordinal and sub-ordinals are cited from five sites; the machine
+  takes the next free number rather than renumbering an identifier.
+- **`spec/05-state-machines.md` §7.5 — Diagnostics Upload -- Session Constraint.** The mirror of
+  §7.4, with the opposite answer: diagnostics is gated on no bay state, and rule 4 forbids
+  interrupting a session rather than waiting for one.
+- **Eleven test vectors.** Seven negatives for the new `progress`/`errorText` conditionals and for
+  the `if`/`then` branches of `get-diagnostics-response` and `set-maintenance-mode-response` —
+  branches **no vector had ever entered**, so both `allOf` blocks could have been deleted with the
+  entire corpus still passing. Plus `get-diagnostics-request-http-url.json`, the mirror of the
+  firmware negative, and valid vectors for the `Uploaded`, `Failed` and `Rejected` shapes.
+- **`TC-CORE-004`** — DataTransfer [MSG-025] and TriggerMessage [MSG-026] were Core-mandatory with
+  no example payload, no entry in `validate-examples.sh`, and no conformance case. Four example
+  payloads added and the gate now covers them.
+- **`TC-DM-005` Parts D--F and `TC-DM-007` Parts F--G** — the field restrictions, `5107`, `5020`,
+  `3002`, `3014`, the `Faulted` source, the all-bays path, idempotent re-emission, and for both
+  cases the restricted-station suppression the firmware twin received at `0.21.0`.
+
+### Changed — breaking
+
+- **`schemas/mqtt/diagnostics-notification.schema.json`** now enforces what the profile said.
+  `progress` is permitted only on `Uploading`; `errorText` is **REQUIRED** on `Failed` and
+  forbidden on the other three. A station emitting `Collecting`/`progress: 0` — which one shipped
+  simulator scenario does — stops being conforming, and the delivered `valid` vector carrying
+  *"Upload in progress to remote server"* on `Uploading` has been reworked.
+- **Two `Idempotency` rows in `03-messages.md`.** DiagnosticsNotification §6.7 and
+  FirmwareStatusNotification §6.5 both read *"duplicate status updates are ignored"*, directly
+  above profiles asking for a progress report at every 10% increment, all carrying one status. A
+  server implementing them literally discards the stream the SHOULD produces. Both are now bounded
+  to a repeat carrying **no new `progress`** — which is what the reference server already did, and
+  nothing recorded that it was the correct choice.
+
+### Removed — breaking
+
+- **`DiagnosticsUploadUrl` is withdrawn.** A `Static` string key, default `""`, described as
+  disabling diagnostics upload — with no processing rule reading it, no error code reporting the
+  disabled state, and `uploadUrl` REQUIRED on every request so nothing ever fell back to it.
+  Measured across the reference server, both SDKs and the station simulator: **no implementation
+  consumes it.** The registry is 28 keys; Device Management is 3.
+  **The cost is operational, not editorial:** an unknown key is `NotSupported`, and
+  `change-configuration.md` §6 rule 2 makes the batch atomic — one `NotSupported` entry discards
+  every other key in the same ChangeConfiguration. A server still pushing this key finds the whole
+  batch ineffective on a `0.23.0` station while it still applies on `0.22.0`. Servers **MUST** drop
+  it from any push set before a `0.23.0` station joins the fleet. `ConfigurationKey::DIAGNOSTICS_UPLOAD_URL`
+  is a breaking removal for PHP SDK consumers.
+
+### Changed
+
+- **Chapter 03's message numbering is now the `MSG-0NN` registry.** `04-flows.md` claimed the two
+  were the same; they agreed for ten rows and were off by one for the seventeen after
+  `SessionEnded`, so GetDiagnostics was *19* against `MSG-018`. `27` named TriggerMessage in one
+  table of Chapter 03 and StationInfo in the next.
+- **`07-errors.md` §4.2, SetMaintenanceMode** now lists `3001`, `3002`, `3005`, `3014`. Its profile
+  mandates all four and uses two of them in a normative table; the registry row named two, and
+  neither `3002` nor `3014` named the action in its *Used By* row.
+- **The archive manifest is one list.** `get-diagnostics.md` §5 gains the `crash/` row that
+  `03-messages.md` and `04-flows.md` already described, and both now refer to it rather than
+  paraphrasing it into a shorter list.
+- **The naming convention holds on every artefact.** `diag_{station_id}_{startDate}_{endDate}` was
+  a **MUST** violated by `03-messages.md` (twice), `TC-DM-005`, and a `valid` vector reading
+  `diag-20260227.tar.gz`. Three further vectors ended in a time rather than a date.
+- **`03-messages.md` §6.8** restated the StatusNotification obligation without the
+  restricted-station derogation that overrides it, unconditionally, in the sentence a station
+  implementer reads first.
+- **Two "consolidated" tables say what they are.** Appendix B claimed *all* timeout values and
+  omitted eight; §5.3 said *"Each MQTT command"* over eleven of fifteen. Both now name what is not
+  in them.
+- **`4010`'s `details.phase` is scoped to the route that can carry it.** The MUST covered
+  SignCertificate [MSG-022], whose response schema is closed with no `details` member — and its
+  absent-discriminator default would have told a station not to regenerate the keypair the renewal
+  consists of. On that transport the phase is `renewal` by transport and needs no discriminator.
+  `3015`'s recommended action is likewise split by transport: `details` exists on REST, and the
+  three MQTT responses that can carry `3015` are closed without it.
+- **`DiagnosticsStatusNotification`** — a message name appearing exactly once in the repository,
+  in the sentence introducing the message that is not called that.
+- **`get-diagnostics.md` §1** no longer points at *"§8 Configuration"*, which in that document is
+  Examples, and records that the key it called the default has been withdrawn.
+- **`get-diagnostics.md` §6 rule 1** mandated `Rejected` for a *malformed* URL and no registry code
+  describes that refusal. The unreachable half keeps `1011`; the malformed half is recorded as open
+  beside the firmware twin rather than left as an obligation no station can discharge.
+
+### Gates
+
+- `tools/check-normative-bold.py` BASELINE **452 → 450**, with its measurement point recorded. The
+  ratchet counts *unbolded* keywords, so the section added here costs nothing and one pre-existing
+  plain `MUST` was bolded on the way past.
+- `tools/check-schema-conditionals.py` unchanged at BASELINE **6**: the diagnostics area
+  contributed **zero** candidates to its denominator before this release, because the gate reads
+  `description` strings inside schemas and none of the seven schemas in this area carried one. It
+  now contributes two, both enforced — 39/33/6 becomes 41/35/6.
+- `tools/validate-examples.sh` gains `data-transfer` and `trigger-message`: 52 checks → 56.
+- `tools/verify-schemas.py`: 318 → 329 vectors, 0 FAIL.
+- `.github/workflows/verify-signatures.yml` no longer quotes `verify-protocol.sh` as failing "from
+  9". It has been **6** since `0.20.2`, and that comment is the third stale baseline this cycle.
+
+### Known issues
+
+- **A station whose hardware genuinely changes has no route back into service.** `3018` holds it
+  `Pending` and names re-provisioning as the recovery; `4020` refuses the re-provision because the
+  registered bay set is the stale one `3018` is complaining about; and no REST endpoint in §4.4
+  adds a bay, removes a bay, or edits the set. Four options recorded, with the ordering rule the
+  second one needs.
+
+---
+
 ## [0.22.0] — 2026-08-18
 
 > **A gate existed for exactly this defect, and the defect walked past it on one word.**

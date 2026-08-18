@@ -100,10 +100,14 @@ EXPECTED_PROFILE_IDS = {'Core', 'Transaction', 'Security', 'OfflineBLE', 'Device
 NUMERIC = re.compile(r'^(\d+)--(\d+)$')
 MAXCHARS = re.compile(r'^max \d+ chars$')
 LITERALS = re.compile(r'^`"[^"]+"`(,\s*`"[^"]+"`)+$')
-NAMED = ('IANA tz', 'valid SEC1 key', 'valid URL')
+NAMED = ('IANA tz', 'valid SEC1 key')
 
-# Declared in §1.6. Recomputed here so the prose cannot rot.
-EXPECTED_FORMS = {'numeric': 15, 'none': 8, 'maxchars': 1, 'literals': 2, 'named': 3}
+# Declared in §1.6. Recomputed here so the prose cannot rot -- which means this constant and
+# that table are two restatements of one fact, and BOTH move when the registry does. Withdrawing
+# `DiagnosticsUploadUrl` in 0.23.0 took the last 'valid URL' cell with it and moved 'named' 3 -> 2;
+# the table was corrected first and this gate stayed red, which is the correct order and the
+# reason the check exists.
+EXPECTED_FORMS = {'numeric': 15, 'none': 8, 'maxchars': 1, 'literals': 2, 'named': 2}
 
 # Registry key -> dedicated wire field, and the schema that bounds that field.
 ALIASES = {

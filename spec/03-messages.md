@@ -1,6 +1,6 @@
 # Chapter 03 — Message Catalog
 
-> **Status:** Draft | **OSPP Version:** 0.22.0
+> **Status:** Draft | **OSPP Version:** 0.23.0
 
 This chapter is the normative reference for **every message** in the OSPP protocol. Each message is documented with its complete payload schema, metadata, and example.
 
@@ -70,7 +70,7 @@ Each message below includes:
 
 ### MQTT Messages (27 actions)
 
-| # | Action | Direction | Type | Category | Timeout |
+| MSG | Action | Direction | Type | Category | Timeout |
 |--:|--------|-----------|------|----------|--------:|
 | 1 | [BootNotification](#11-bootnotification) | Station → Server | REQ/RES | Provisioning | 30s |
 | 2 | [AuthorizeOfflinePass](#21-authorizeofflinepass) | Station → Server | REQ/RES | Auth | 15s |
@@ -82,27 +82,36 @@ Each message below includes:
 | 8 | [Heartbeat](#51-heartbeat) | Station → Server | REQ/RES | Status | 30s |
 | 9 | [StatusNotification](#52-statusnotification) | Station → Server | EVENT | Status | — |
 | 10 | [MeterValues](#53-metervalues) | Station → Server | EVENT | Status | — |
-| 11 | [SessionEnded](#54-sessionended) | Station → Server | EVENT | Status | — |
-| 12 | [ConnectionLost](#55-connectionlost) | Broker → Server | EVENT (LWT) | Status | — |
-| 13 | [SecurityEvent](#56-securityevent) | Station → Server | EVENT | Status | — |
-| 14 | [ChangeConfiguration](#61-changeconfiguration) | Server → Station | REQ/RES | Config | 60s |
-| 15 | [GetConfiguration](#62-getconfiguration) | Server → Station | REQ/RES | Config | 30s |
-| 16 | [Reset](#63-reset) | Server → Station | REQ/RES | Config | 30s |
-| 17 | [UpdateFirmware](#64-updatefirmware) | Server → Station | REQ/RES | Firmware | 300s |
-| 18 | [FirmwareStatusNotification](#65-firmwarestatusnotification) | Station → Server | EVENT | Firmware | — |
-| 19 | [GetDiagnostics](#66-getdiagnostics) | Server → Station | REQ/RES | Config | 300s |
-| 20 | [DiagnosticsNotification](#67-diagnosticsnotification) | Station → Server | EVENT | Config | — |
-| 21 | [SetMaintenanceMode](#68-setmaintenancemode) | Server → Station | REQ/RES | Config | 30s |
-| 22 | [UpdateServiceCatalog](#69-updateservicecatalog) | Server → Station | REQ/RES | Config | 30s |
-| 23 | [SignCertificate](#610-signcertificate) | Station → Server | REQ/RES | Security | 30s |
-| 24 | [CertificateInstall](#611-certificateinstall) | Server → Station | REQ/RES | Security | 30s |
-| 25 | [TriggerCertificateRenewal](#612-triggercertificaterenewal) | Server → Station | REQ/RES | Security | 10s |
-| 26 | [DataTransfer](#613-datatransfer) | Bidirectional | REQ/RES | Core | 30s |
-| 27 | [TriggerMessage](#614-triggermessage) | Server → Station | REQ/RES | Core | 10s |
+| 40 | [SessionEnded](#54-sessionended) | Station → Server | EVENT | Status | — |
+| 11 | [ConnectionLost](#55-connectionlost) | Broker → Server | EVENT (LWT) | Status | — |
+| 12 | [SecurityEvent](#56-securityevent) | Station → Server | EVENT | Status | — |
+| 13 | [ChangeConfiguration](#61-changeconfiguration) | Server → Station | REQ/RES | Config | 60s |
+| 14 | [GetConfiguration](#62-getconfiguration) | Server → Station | REQ/RES | Config | 30s |
+| 15 | [Reset](#63-reset) | Server → Station | REQ/RES | Config | 30s |
+| 16 | [UpdateFirmware](#64-updatefirmware) | Server → Station | REQ/RES | Firmware | 300s |
+| 17 | [FirmwareStatusNotification](#65-firmwarestatusnotification) | Station → Server | EVENT | Firmware | — |
+| 18 | [GetDiagnostics](#66-getdiagnostics) | Server → Station | REQ/RES | Config | 300s |
+| 19 | [DiagnosticsNotification](#67-diagnosticsnotification) | Station → Server | EVENT | Config | — |
+| 20 | [SetMaintenanceMode](#68-setmaintenancemode) | Server → Station | REQ/RES | Config | 30s |
+| 21 | [UpdateServiceCatalog](#69-updateservicecatalog) | Server → Station | REQ/RES | Config | 30s |
+| 22 | [SignCertificate](#610-signcertificate) | Station → Server | REQ/RES | Security | 30s |
+| 23 | [CertificateInstall](#611-certificateinstall) | Server → Station | REQ/RES | Security | 30s |
+| 24 | [TriggerCertificateRenewal](#612-triggercertificaterenewal) | Server → Station | REQ/RES | Security | 10s |
+| 25 | [DataTransfer](#613-datatransfer) | Bidirectional | REQ/RES | Core | 30s |
+| 26 | [TriggerMessage](#614-triggermessage) | Server → Station | REQ/RES | Core | 10s |
+
+> **The first column is the `MSG-0NN` reference, not a row ordinal.** It is what
+> [Chapter 04 §Message References](04-flows.md) resolves and what every `[MSG-XXX]` citation in this
+> specification means. `SessionEnded` is **40** and sits between 10 and 11 because it is grouped by
+> category, not by number: it was registered last and added here where it belongs by topic. Until
+> `0.23.0` this column was a row ordinal that agreed with the registry for the first ten rows and
+> was off by one for the seventeen after them, while Chapter 04 stated the two were the same thing —
+> so `GetDiagnostics` was "19" here and `MSG-018` everywhere else, and the number `27` named
+> TriggerMessage in one table of this chapter and StationInfo in the next.
 
 ### BLE Messages (13 message types)
 
-| # | Message | Direction | Characteristic | Category |
+| MSG | Message | Direction | Characteristic | Category |
 |--:|---------|-----------|----------------|----------|
 | 27 | [StationInfo](#71-stationinfo-fff1) | Station → App | FFF1 (Read) | Offline |
 | 28 | [AvailableServices](#72-availableservices-fff2) | Station → App | FFF2 (Read) | Offline |
@@ -1704,7 +1713,7 @@ Instructs the station to download and install a new firmware version. The statio
 | **Trigger** | Firmware update progress change |
 | **Expected Response** | None (EVENT) |
 | **Timeout** | N/A |
-| **Idempotency** | Yes — duplicate status updates are ignored |
+| **Idempotency** | Bounded — a repeat of the current `status` carrying **no new `progress`** is ignored. A repeat that carries a higher `progress` is a progress report, **not** a duplicate, and **MUST** be applied: [`firmware-status.md` §5](profiles/device-management/firmware-status.md) rule 1 asks for one every 10% and at least every 30s, all of them `Downloading`. Read without that bound this row discards exactly the stream that rule produces |
 | **Message Expiry** | 60 seconds |
 
 Reports firmware update progress. Sent at each stage transition and periodically during download — at every 10% increment and at least every 30 seconds, whichever falls sooner ([firmware-status.md §5](profiles/device-management/firmware-status.md), which is the normative home for both).
@@ -1782,7 +1791,7 @@ Commands the station to collect diagnostic logs and upload them to the specified
 | `errorCode` | integer | Cond. | Error code (when `Rejected`) |
 | `errorText` | string | Cond. | Error description (when `Rejected`) |
 
-The diagnostics archive MUST be a `tar.gz` file containing logs, configuration dump, and any crash reports.
+The diagnostics archive **MUST** be a `tar.gz` file whose contents are the manifest of [`get-diagnostics.md` §5](profiles/device-management/get-diagnostics.md). That table is canonical and is not restated here; restating it as a shorter list is how the three sites that described this archive came to describe three different archives.
 
 #### Example
 
@@ -1801,7 +1810,7 @@ The diagnostics archive MUST be a `tar.gz` file containing logs, configuration d
 ```json
 {
   "status": "Accepted",
-  "fileName": "diag_stn_a1b2c3d4_20260130.tar.gz"
+  "fileName": "diag_stn_a1b2c3d4_20260129_20260130.tar.gz"
 }
 ```
 
@@ -1829,7 +1838,7 @@ The diagnostics archive MUST be a `tar.gz` file containing logs, configuration d
 | **Trigger** | Diagnostics upload progress change |
 | **Expected Response** | None (EVENT) |
 | **Timeout** | N/A |
-| **Idempotency** | Yes — duplicate status updates are ignored |
+| **Idempotency** | Bounded — a repeat of the current `status` carrying **no new `progress`** is ignored. A repeat that carries a higher `progress` is a progress report, **not** a duplicate, and **MUST** be applied: [`diagnostics-status.md` §5](profiles/device-management/diagnostics-status.md) rule 3 asks for one every 10%, all of them `Uploading`. Read without that bound this row discards exactly the stream that rule produces ([Chapter 05 §8.4](05-state-machines.md#84-diagnosticsnotification-mapping)) |
 | **Message Expiry** | 60 seconds |
 
 Reports diagnostics collection and upload progress.
@@ -1839,9 +1848,9 @@ Reports diagnostics collection and upload progress.
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
 | `status` | string | Yes | `"Collecting"`, `"Uploading"`, `"Uploaded"`, or `"Failed"` |
-| `progress` | integer | No | Percentage complete (0-100) |
-| `fileName` | string | Cond. | Archive file name (when `Uploaded`) |
-| `errorText` | string | Cond. | Error description (when `Failed`) |
+| `progress` | integer | Cond. | Percentage complete (0-100). Permitted **only** when `status` is `"Uploading"`; **MUST** be absent otherwise ([`diagnostics-status.md` §5](profiles/device-management/diagnostics-status.md) rule 4) |
+| `fileName` | string | No | Archive file name. Permitted on **any** status — the station knows it from the moment it answers `Accepted` |
+| `errorText` | string | Cond. | Error description. **REQUIRED** when `status` is `"Failed"`; **MUST** be absent otherwise (rule 5) |
 
 #### Example
 
@@ -1855,7 +1864,7 @@ Reports diagnostics collection and upload progress.
 ```json
 {
   "status": "Uploaded",
-  "fileName": "diag_stn_a1b2c3d4_20260130.tar.gz"
+  "fileName": "diag_stn_a1b2c3d4_20260129_20260130.tar.gz"
 }
 ```
 
@@ -1876,7 +1885,7 @@ Reports diagnostics collection and upload progress.
 | **Idempotency** | Yes — enabling maintenance on an already-maintained bay is a no-op |
 | **Message Expiry** | 120 seconds |
 
-Transitions one or all bays to/from `Unavailable` (maintenance) status. The station MUST send a [StatusNotification](#52-statusnotification) for each affected bay.
+Transitions one or all bays to/from `Unavailable` (maintenance) status. The station **MUST** send a [StatusNotification](#52-statusnotification) for each affected bay — **unless it is in a restricted state**, in which case it applies the change and sends nothing, because a restricted station may originate no EVENT ([Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states), [`set-maintenance-mode.md` §5](profiles/device-management/set-maintenance-mode.md) rule 4).
 
 #### REQUEST Payload
 
@@ -3186,7 +3195,7 @@ Error codes referenced in this chapter. For the full catalog, see [Chapter 07 �
 | Code | Text | Used By |
 |------|------|---------|
 | 3001 | `BAY_BUSY` | StartService, ReserveBay, SetMaintenanceMode, BLE StartServiceResponse |
-| 3002 | `BAY_NOT_READY` | StartService, ReserveBay, BLE StartServiceResponse |
+| 3002 | `BAY_NOT_READY` | StartService, ReserveBay, SetMaintenanceMode, BLE StartServiceResponse |
 | 3003 | `SERVICE_UNAVAILABLE` | StartService, BLE StartServiceResponse |
 | 3004 | `INVALID_SERVICE` | StartService, BLE StartServiceResponse |
 | 3005 | `BAY_NOT_FOUND` | StartService, StopService, ReserveBay, CancelReservation, SetMaintenanceMode, BLE StartServiceResponse |
@@ -3198,7 +3207,7 @@ Error codes referenced in this chapter. For the full catalog, see [Chapter 07 �
 | 3011 | `BAY_MAINTENANCE` | StartService, ReserveBay, StopService |
 | 3012 | `RESERVATION_NOT_FOUND` | CancelReservation, StartService |
 | 3013 | `RESERVATION_EXPIRED` | StartService, CancelReservation |
-| 3014 | `BAY_RESERVED` | StartService, ReserveBay |
+| 3014 | `BAY_RESERVED` | StartService, ReserveBay, SetMaintenanceMode |
 | 3015 | `PAYLOAD_INVALID` | ChangeConfiguration, TransactionEvent, UpdateServiceCatalog |
 | 3016 | `ACTIVE_SESSIONS_PRESENT` | Reset |
 | 3017 | `PROGRAM_NOT_DECLARED` | StartService |

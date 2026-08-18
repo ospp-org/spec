@@ -1,6 +1,6 @@
 # Chapter 04 — Protocol Flows
 
-> **Status:** Draft | **OSPP Version:** 0.22.0
+> **Status:** Draft | **OSPP Version:** 0.23.0
 
 This chapter documents every end-to-end protocol flow as a sequence of messages defined in [Chapter 03 — Message Catalog](03-messages.md). Each flow includes preconditions, a Mermaid sequence diagram, numbered happy-path steps, alternative paths, error paths, and postconditions.
 
@@ -23,7 +23,10 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHALL NOT**, **S
 
 ### Message References
 
-Messages are referenced as **[MSG-XXX]** corresponding to the numbering in [Chapter 03](03-messages.md):
+Messages are referenced as **[MSG-XXX]**. The table below is the registry, and the first column of
+both message tables in [Chapter 03](03-messages.md) carries the same numbers — since `0.23.0`, when
+Chapter 03's column was a row ordinal that had drifted one ahead of the registry from `SessionEnded`
+onward while this sentence asserted the two were the same:
 
 | Ref | Message | Ref | Message |
 |-----|---------|-----|---------|
@@ -1662,8 +1665,8 @@ sequenceDiagram
 
 1. **Server** sends **GetDiagnostics REQUEST** [MSG-018] with `uploadUrl` and optional time range
 2. **SSP** accepts, returns the diagnostic archive file name
-3. **SSP** collects logs, configuration dump, and crash reports into a `tar.gz` archive
-4. **SSP** sends **DiagnosticsNotification** [MSG-019] progress events (`Collecting` → `Uploading` → `Uploaded`)
+3. **SSP** collects the files of [`get-diagnostics.md` §5](profiles/device-management/get-diagnostics.md) — logs, configuration dump, hardware status, session history, connectivity stats, and crash reports where the station keeps them — into a `tar.gz` archive. That table is the manifest; this line is an abbreviation of it
+4. **SSP** sends **DiagnosticsNotification** [MSG-019] progress events (`Collecting` → `Uploading` → `Uploaded`), one per state transition of [`05-state-machines.md` §8](05-state-machines.md#8-diagnostics-upload-state-machine), plus a repeat of `Uploading` at every 10% — those repeats are the same state re-reporting itself, not transitions
 5. **SSP** uploads the archive via HTTPS PUT to the `uploadUrl`
 6. On failure, SSP sends `Failed` status with error description
 

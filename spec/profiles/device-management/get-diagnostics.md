@@ -6,7 +6,14 @@ Request the station to collect and upload diagnostic data to a remote URL for tr
 
 ## 1. Overview
 
-GetDiagnostics is a server-initiated command that requests the station to collect and upload diagnostic data to a specified URL. This enables remote troubleshooting without physical station access. The station collects logs, configuration state, hardware status, and session history, packages them into a compressed archive, and uploads it via HTTP PUT to the provided URL. Progress is reported via DiagnosticsNotification events. Default upload URL is configurable via `DiagnosticsUploadUrl` (see §8 Configuration).
+GetDiagnostics is a server-initiated command that requests the station to collect and upload diagnostic data to a specified URL. This enables remote troubleshooting without physical station access. The station collects logs, configuration state, hardware status, and session history, packages them into a compressed archive, and uploads it via HTTP PUT to the provided URL. Progress is reported via DiagnosticsNotification events, and the machine those events report is
+[`05-state-machines.md` §8](../../05-state-machines.md#8-diagnostics-upload-state-machine).
+
+`uploadUrl` is **REQUIRED** on every request (§3), so this command never falls back to a configured
+value. Until `0.23.0` this paragraph called `DiagnosticsUploadUrl` the default upload URL and
+pointed at *"§8 Configuration"* — which reads as a section of this document, whose §8 is Examples.
+That key has been **withdrawn** ([Chapter 08 §6](../../08-configuration.md#6-device-management-configuration-keys)):
+the field it was supposed to default is mandatory, so it never had a path to be read on.
 
 ## 2. Direction and Type
 
@@ -52,12 +59,24 @@ The archive **MUST** contain the following files where available:
 | `hardware/status.json` | Hardware component status (pump, valves, sensors, BLE module). |
 | `sessions/history.json` | Session records for the requested time window. |
 | `network/connectivity.json` | Network connectivity statistics and error counts. |
+| `crash/` | Crash reports, core dumps or fault records the station retains, one file per event. Present only where the station produces them, which is why the manifest is *"where available"*. |
 
 The station **MUST** upload the archive via HTTP PUT to the provided `uploadUrl`. The `Content-Type` header **MUST** be set to `application/gzip`.
 
 ## 6. Processing Rules
 
-1. The station **MUST** validate the `uploadUrl` before responding. If the URL is unreachable or malformed, the station **MUST** respond with `Rejected`.
+1. The station **MUST** validate the `uploadUrl` before responding. If the URL is unreachable, the
+   station **MUST** respond with `Rejected` and error code `1011 URL_UNREACHABLE`.
+
+   **A malformed URL does not reach this rule and has no code of its own.**
+   [`get-diagnostics-request.schema.json`](../../../schemas/mqtt/get-diagnostics-request.schema.json)
+   constrains `uploadUrl` with `"pattern": "^https://"`, so a non-HTTPS URL is schema-invalid and is
+   refused before the station validates anything; and §4's `Rejected` shape requires both `errorCode`
+   and `errorText`, while none of the six codes in §7 describes a malformed URL — `1011` says the
+   station tried to reach it, which a station conforming to the pattern never did. This is the same
+   open question as the firmware twin's, recorded together with it in `KNOWN-ISSUES.md`; the negative
+   vector `invalid/device-management/get-diagnostics-request-http-url.json` pins the schema's
+   refusal, which is the half that *is* settled.
 2. On `Accepted`, the station **MUST** begin collecting diagnostics and send DiagnosticsNotification events to report progress.
 3. If `startTime` is after `endTime`, the station **MUST** respond with `Rejected` and error code `5020 INVALID_TIME_WINDOW`.
 4. The station **MUST NOT** interrupt active sessions to collect diagnostics.
@@ -135,4 +154,5 @@ The station **MUST** upload the archive via HTTP PUT to the provided `uploadUrl`
 - Response: [`get-diagnostics-response.schema.json`](../../../schemas/mqtt/get-diagnostics-response.schema.json)
 - DiagnosticsNotification: [`diagnostics-notification.schema.json`](../../../schemas/mqtt/diagnostics-notification.schema.json)
 - Timestamp: [`timestamp.schema.json`](../../../schemas/common/timestamp.schema.json)
+- State machine: [`05-state-machines.md` §8](../../05-state-machines.md#8-diagnostics-upload-state-machine)
 - Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 1011, 5019--5021, 5103, 5107)

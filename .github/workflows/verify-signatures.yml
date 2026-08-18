@@ -34,11 +34,16 @@ name: Verify Signed Conformance
 #   2. Run locally only on a committed tree. On a dirty one it will rewrite files under
 #      spec/, conformance/ and examples/ and give you no way to tell its edits from yours.
 #
-# tools/verify-protocol.sh is deliberately NOT wired here. It exits 1 on a clean tree from 9
+# tools/verify-protocol.sh is deliberately NOT wired here. It exits 1 on a clean tree from its
 # pre-existing findings and has no baseline mechanism — `exitCode = totalFail > 0` — so wiring
 # it as-is lands a permanently red job, which is the most reliable way to get a gate ignored
 # again. It is the one entry left in check-tool-callers.py's BASELINE, and giving it a ratchet
 # like the four check-*.py scripts have is what would let it join this file.
+#
+# The count is deliberately not repeated here. It is 6 at v0.22.0 and v0.23.0, it was 9 at
+# v0.20.0, and this comment went on saying 9 for two releases after 0.20.1 and 0.20.2 closed
+# three of them. The number, with its measurement point, lives in the script's own header, which
+# is the file a reader has to open anyway.
 
 on:
   push:

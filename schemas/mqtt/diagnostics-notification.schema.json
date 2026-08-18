@@ -14,15 +14,47 @@
     "progress": {
       "type": "integer",
       "minimum": 0,
-      "maximum": 100
+      "maximum": 100,
+      "description": "Upload progress percentage. MUST be absent when status is Collecting, Uploaded, or Failed."
     },
     "fileName": {
       "type": "string",
-      "maxLength": 256
+      "maxLength": 256,
+      "description": "Name of the diagnostics archive. Permitted on any status."
     },
     "errorText": {
       "type": "string",
-      "maxLength": 128
+      "maxLength": 128,
+      "description": "Human-readable error description. REQUIRED when status is Failed, absent otherwise."
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "enum": ["Collecting", "Uploaded", "Failed"] } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": { "progress": false }
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "Failed" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["errorText"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "enum": ["Collecting", "Uploading", "Uploaded"] } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": { "errorText": false }
+      }
+    }
+  ]
 }

@@ -1,6 +1,6 @@
 # Chapter 08 — Configuration
 
-> **Status:** Draft | **OSPP Version:** 0.22.0
+> **Status:** Draft | **OSPP Version:** 0.23.0
 
 This chapter defines the configuration model for OSPP stations, including the key-value store structure, supported data types, access modes, mutability semantics, and the complete registry of standard configuration keys. Configuration is read and written via the [GetConfiguration](03-messages.md#62-getconfiguration) and [ChangeConfiguration](03-messages.md#61-changeconfiguration) messages defined in Chapter 03.
 
@@ -69,14 +69,14 @@ Configuration keys are organized into profiles that align with station capabilit
 | **Transaction** | `Transaction` | MeterValuesInterval, MeterValuesSampleInterval, MaxSessionDurationSeconds, SessionTimeout, ReservationDefaultTTL, DefaultCreditsPerSession | Yes |
 | **Security** | `Security` | CertificateSerialNumber, AuthorizationCacheEnabled, MessageSigningMode, OfflinePassPublicKey, CertificateRenewalThresholdDays, CertificateRenewalEnabled | Yes |
 | **Offline / BLE** | `OfflineBLE` | OfflineModeEnabled, MaxOfflineTransactions, OfflinePassMaxAge, RevocationEpoch | Conditional (required if `capabilities.bleSupported = true`) |
-| **Device Management** | `DeviceManagement` | FirmwareUpdateEnabled, DiagnosticsUploadUrl, LogLevel, AutoRebootEnabled | Conditional (required if `capabilities.deviceManagementSupported = true`) |
+| **Device Management** | `DeviceManagement` | FirmwareUpdateEnabled, LogLevel, AutoRebootEnabled | Conditional (required if `capabilities.deviceManagementSupported = true`) |
 | **Vendor-Specific** | -- | `Vendor_{VendorName}_*` | No |
 
 **The Profile column is a display label; the Profile ID is the normative identifier.** An implementation that exposes a key's profile as a program value — an enum case, a string constant, a database column — **MUST** use the Profile ID exactly as spelled here. The display label carries a space and a slash and does not survive being made an identifier, which is how the two SDKs arrived at three different spellings of two profiles between them with nothing to compare against. `tools/check-config-ranges.py` checks that the two columns stay in step and that §9's labels are drawn from this table; an SDK gate compares its own registry to the Profile ID column.
 
 A station **MUST** support all keys in the required profiles. A station that advertises `capabilities.bleSupported = true` in BootNotification **MUST** additionally support all Offline / BLE keys, and a station that advertises `capabilities.deviceManagementSupported = true` **MUST** additionally support all Device Management keys.
 
-**Why Device Management is conditional and not required.** The four keys have no protocol surface of their own: GetConfiguration and ChangeConfiguration are themselves Device Management actions, so a station that does not declare the capability can be neither asked for these keys nor told to set them. Two of the four — `FirmwareUpdateEnabled` and `DiagnosticsUploadUrl` — are switches for Device Management actions such a station does not implement, and govern nothing without them. Requiring them unconditionally would make a station non-conforming for keys it has no way to carry, and would contradict [`profiles/device-management/README.md`](profiles/device-management/README.md) §1 and §3, which have always made the profile RECOMMENDED and gated its rules on the capability. The one path that survives is the BootNotification `configuration` block (§8.3), which is a Core mechanism; §8.3 states what a station does with a key it does not support.
+**Why Device Management is conditional and not required.** The three keys have no protocol surface of their own: GetConfiguration and ChangeConfiguration are themselves Device Management actions, so a station that does not declare the capability can be neither asked for these keys nor told to set them. One of the three — `FirmwareUpdateEnabled` — is a switch for a Device Management action such a station does not implement, and governs nothing without it. Requiring them unconditionally would make a station non-conforming for keys it has no way to carry, and would contradict [`profiles/device-management/README.md`](profiles/device-management/README.md) §1 and §3, which have always made the profile RECOMMENDED and gated its rules on the capability. The one path that survives is the BootNotification `configuration` block (§8.3), which is a Core mechanism; §8.3 states what a station does with a key it does not support.
 
 ### 1.6 Value Ranges
 
@@ -90,7 +90,7 @@ Every cell takes one of five forms, and no others:
 | `--` | No range constraint beyond the declared type of §1.2. | 8 |
 | `max <n> chars` | Maximum length in UTF-8 characters. | 1 |
 | A list of quoted literals | The complete set of legal values, stated inline. | 2 |
-| A named external constraint | Defined by the key's own Description or by the chapter it cites. | 3 |
+| A named external constraint | Defined by the key's own Description or by the chapter it cites. | 2 |
 
 The counts above are checked by `tools/check-config-ranges.py`, which also verifies that every restatement of a range elsewhere in this specification agrees with the cell here.
 
@@ -192,9 +192,30 @@ These keys are REQUIRED when the station reports `capabilities.bleSupported = tr
 | Key | Type | Default | Access | Mutability | Range | Description |
 |-----|------|---------|:------:|:----------:|-------|-------------|
 | `FirmwareUpdateEnabled` | boolean | `true` | RW | Dynamic | -- | When `true`, the station accepts OTA firmware update commands. When `false`, UpdateFirmware requests are rejected. |
-| `DiagnosticsUploadUrl` | string | `""` | RW | Static | valid URL | HTTPS URL for diagnostics file upload. Empty string disables diagnostics upload. |
 | `LogLevel` | string | `"Info"` | RW | Dynamic | `"Debug"`, `"Info"`, `"Warn"`, `"Error"` | Station logging verbosity. |
 | `AutoRebootEnabled` | boolean | `false` | RW | Dynamic | -- | When `true`, the station automatically reboots on critical errors (error severity `Critical`). When `false`, the station transitions to `Faulted` state and waits for a manual Reset command. |
+
+> **Withdrawn in `0.23.0`: `DiagnosticsUploadUrl`.** It was a `Static` string, default `""`,
+> described as *"HTTPS URL for diagnostics file upload. Empty string disables diagnostics upload."*
+> Neither half was reachable. `uploadUrl` is REQUIRED on every GetDiagnostics
+> ([`get-diagnostics.md` §3](profiles/device-management/get-diagnostics.md)), so no request ever
+> fell back to it; and no processing rule read the key, no error code reported the disabled state,
+> and no implementation consumed it — measured across the reference server, both SDKs and the
+> station simulator. A key nothing reads is a key nothing can be wrong about, which is why it
+> survived four releases.
+>
+> **What this costs a server, stated because it is not obvious.** An unknown key is answered
+> `NotSupported` ([`change-configuration.md` §6](profiles/device-management/change-configuration.md)
+> rule 5), and rule 2 makes the batch **atomic**: one `NotSupported` entry discards **every other
+> key in the same ChangeConfiguration**. A server that still carries `DiagnosticsUploadUrl` in a
+> push set will therefore find that batch wholly ineffective against a station on `0.23.0`, while
+> the identical batch still applies on `0.22.0`. **Servers MUST remove the key from any push set
+> before a station running `0.23.0` is in the fleet.** Reading it back is safe — GetConfiguration
+> reports an unknown key as unknown and applies nothing.
+>
+> Retracting it rather than defining it also closes the two options that would have kept it: making
+> it a station-side gate, or making it the default it was described as. Both needed a new error
+> code for *"diagnostics upload is disabled"*, and neither had a consumer asking for one.
 
 ---
 
@@ -408,8 +429,7 @@ The table adds two columns Sections 2--6 do not carry — the index number and t
 | 24 | `OfflinePassMaxAge` | integer | `3600` | RW | Dynamic | Offline / BLE |
 | 25 | `RevocationEpoch` | integer | `0` | RW | Dynamic | Offline / BLE |
 | 26 | `FirmwareUpdateEnabled` | boolean | `true` | RW | Dynamic | Device Management |
-| 27 | `DiagnosticsUploadUrl` | string | `""` | RW | Static | Device Management |
-| 28 | `LogLevel` | string | `"Info"` | RW | Dynamic | Device Management |
-| 29 | `AutoRebootEnabled` | boolean | `false` | RW | Dynamic | Device Management |
+| 27 | `LogLevel` | string | `"Info"` | RW | Dynamic | Device Management |
+| 28 | `AutoRebootEnabled` | boolean | `false` | RW | Dynamic | Device Management |
 
-**Total: 29 standard configuration keys** (9 Core + 6 Transaction + 6 Security + 4 Offline/BLE + 4 Device Management).
+**Total: 28 standard configuration keys** (9 Core + 6 Transaction + 6 Security + 4 Offline/BLE + 3 Device Management). `DiagnosticsUploadUrl` was withdrawn in `0.23.0` — see the note in [§6](#6-device-management-configuration-keys). The index column is a row number in this derived table and is renumbered with it; it is not an identifier and nothing cites it.

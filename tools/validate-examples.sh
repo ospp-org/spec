@@ -78,7 +78,8 @@ echo "Validating example payloads (binary: $AJV, ${#SCHEMAS[@]} schemas as refs)
 
 for action in boot-notification heartbeat authorize-offline-pass reserve-bay cancel-reservation \
               start-service stop-service transaction-event change-configuration get-configuration \
-              reset update-firmware get-diagnostics set-maintenance-mode update-service-catalog; do
+              reset update-firmware get-diagnostics set-maintenance-mode update-service-catalog \
+              data-transfer trigger-message; do
   for type in request response; do
     check "schemas/mqtt/${action}-${type}.schema.json" "examples/payloads/mqtt/${action}.${type}.json"
   done
