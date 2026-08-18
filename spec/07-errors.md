@@ -1,6 +1,6 @@
 # Chapter 07 — Error Codes & Resilience
 
-> **Status:** Draft | **OSPP Version:** 0.23.0
+> **Status:** Draft | **OSPP Version:** 0.24.0
 
 This chapter defines the complete error taxonomy for the OSPP protocol, including the error code registry, standard error response format, retry policies, circuit breaker patterns, and graceful degradation behavior.
 
@@ -49,7 +49,12 @@ Every error code is assigned a fixed severity level that indicates its impact an
 
 - **3+ Warning** errors of the same code within 5 minutes on the same bay SHOULD escalate to **Error** severity in the next StatusNotification.
 - **3+ Error** events of the same code within 10 minutes on the same bay SHOULD trigger a transition to **Faulted** state (effective **Critical**).
-- A **Critical** error that a **station** detects SHOULD be reported via SecurityEvent [MSG-012], using the `type` its §3 registry entry names — `MacVerificationFailure` for `1012`, `OfflinePassRejected` for `2005`/`2017`, `ServerSignedAuthReplay` for `2018`, `FirmwareIntegrityFailure` for `5112`, `HardwareFault` for `5004`, and so on. There is no blanket `HardwareFault`/`SoftwareFault` rule: SecurityEvent is Station→Server only, so server-detected Critical codes such as `4008 WEBHOOK_SIGNATURE_INVALID` have no SecurityEvent path at all.
+- A **Critical** error that a **station** detects SHOULD be reported via SecurityEvent [MSG-012], using the `type` its §3 registry entry names — `MacVerificationFailure` for `1012`, `OfflinePassRejected` for `2005`/`2017`, `ServerSignedAuthReplay` for `2018`, `FirmwareIntegrityFailure` for `5112`, `HardwareFault` for `5004`, and so on. There is no blanket `HardwareFault`/`SoftwareFault` rule.
+
+- **The SecurityEvent *message* is Station→Server only** — [MSG-012] has no server→station direction, so a server-detected Critical code such as `4008 WEBHOOK_SIGNATURE_INVALID` has no SecurityEvent it could **send**.
+- **A server does nonetheless emit SecurityEvent *records*,** and the Offline profile requires it in four places: [`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 7 (checks #1 and #10 at authorize-time), [`reconciliation.md` §5](profiles/offline/reconciliation.md#5-receipt-signature-verification) rule 4 (invalid receipt signature), [`reconciliation.md` §6.3](profiles/offline/reconciliation.md#63-securityevent-emission) (every applicable gate failure), and [`reconciliation.md` §3](profiles/offline/reconciliation.md#3-deduplication-offlinetxid) rule 3 (`2017` on a mismatched duplicate). These are audit rows the server writes about a **station-presented credential**; they conform to the same `security-event.md` shape and are not transmitted anywhere.
+
+The distinction is direction of **carriage**, not authorship of the record. What still has no path is a Critical condition the server detects about **itself** — `4008` above, and the fraud detection at reconcile recorded as OPEN in [`KNOWN-ISSUES.md`](../KNOWN-ISSUES.md#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident).
 
 ### 1.3 Error Object Fields
 

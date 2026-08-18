@@ -1,6 +1,6 @@
 # Offline Transaction Reconciliation
 
-> **Status:** Draft | **OSPP Version:** 0.23.0
+> **Status:** Draft | **OSPP Version:** 0.24.0
 
 ## 1. Overview
 
@@ -206,15 +206,66 @@ Two reconcile-time anchors connect that model to this profile:
 
 ## 8. Wallet Reconciliation
 
-After a transaction passes fraud scoring, the server settles the user's wallet. **Settlement is settle-once.** A session whose wallet was already debited at authorization time — Partial A always (`04-flows.md` §5b; §6.7), and any Partial-B session that fell back to offline after an authorize-time debit (finding N11) — **MUST NOT** be debited a second time at reconcile. The server distinguishes the two paths by correlating the transaction to a prior authorization **server-side on `sessionId`** (persisted as `reconciled_session_id`), never by issuing a fresh debit keyed on `offlineTxId`.
+After a transaction passes fraud scoring, the server settles the user's wallet. **Settlement is settle-once.** A session whose wallet was already debited at authorization time — Partial A always (`04-flows.md` §5b; §6.7), and any Partial-B session that fell back to offline after an authorize-time debit (finding N11) — **MUST NOT** be debited a second time at reconcile. The server distinguishes the two paths by correlating the transaction to a prior authorization **server-side, on the correlation key its resolved form actually carries**, never by issuing a fresh debit keyed on `offlineTxId` — that identifier is chosen by the station at service start (§3 rule 1) and does not exist when the authorization is issued, so it cannot join the two.
+
+**The correlation key, per form (Normative).**
+
+| Resolved form | Correlation key | Why it joins |
+|---|---|---|
+| **auth-form** (Partial A) | the signed `(authId, sessionId)` pair | Both are server-issued at authorization, both are signed into `receipt.data` and echoed in the envelope (finding Q4), and §6.1 check #2 already binds envelope to signature. |
+| **pass-form** (Full Offline; Partial B, including the offline fallback this rule guards) | the signed `(offlinePassId, passCounter)` pair | `passCounter` **is** the `counter` the station presented at authorize time ([`authorize-offline-pass.md` §3](authorize-offline-pass.md#3-request-payload)), echoed into the signed receipt ([`06-security.md` §6.1.1](../../06-security.md#611-offlinepass-validation--10-checks), counter-model note). §6.1 check #13 already requires the pair be globally unique across the fleet, so it names exactly one authorization and exactly one settlement. |
+
+**`sessionId` is not available on the pass-form and MUST NOT be required there.** The pass-form branch of both [`transaction-event-request.schema.json`](../../../schemas/mqtt/transaction-event-request.schema.json) and [`receipt-data.schema.json`](../../../schemas/common/receipt-data.schema.json) sets `"sessionId": false`, and both close with `additionalProperties: false` — so a Partial-B session that fell back to offline reconciles in a form no `sessionId` can reach, in the envelope or under the signature. An earlier revision of this rule named `sessionId` as the sole key; on the one form the rule was written to guard, no implementation could have satisfied it.
 
 ### 8.1 No prior debit (Full Offline / direct Partial B)
 
-1. The server reads the `creditsCharged` from the transaction event.
-2. The server debits the user's server-side wallet balance by `creditsCharged`.
-3. **Negative balance is allowed.** The server **MUST NOT** reject a debit that would result in a negative balance. This prevents service denial for legitimate users who consumed more credits offline than expected.
-4. The user is notified of the charges upon the next app open or push notification.
-5. If the user's balance goes negative, the server **MUST** trigger a top-up reminder. The user's account **MAY** be restricted from future offline pass issuance until the balance is positive.
+1. **The server recomputes the settled cost. It does not read it off the wire.** Per the
+   **Billing Authority** rule ([`04-flows.md` §6](../../04-flows.md#billing-authority)), the server
+   **MUST** compute the amount from the delivered `durationSeconds` in the signed receipt and the
+   tariff for that receipt's `serviceId`, by the formula in
+   [`03-messages.md` §MSG-007](../../03-messages.md) —
+   `ceil(durationSeconds / 60 × priceCreditsPerMinute)` for `PerMinute` pricing,
+   `priceCreditsFixed` for `Fixed`. The station-reported `creditsCharged` is **advisory**: it is a
+   cross-check and an operator signal, and it **MUST NOT** be the settled amount, whether or not it
+   agrees with the recomputation.
+2. **Which tariff.** The server **MUST** use the tariff in force at the transaction's `endedAt`
+   where it retains a time-indexed catalog history — the `epoch_active_at(t)` construction of §6.6
+   applies unchanged, and needs no wire field for the same reason. Where it does not, the server
+   **MUST** use the tariff currently in force and **MUST** record which basis it used on the
+   transaction record. It **MUST NOT** withhold, defer, or fall back to the station's figure for
+   want of the history: a tariff change inside the offline window moves the amount by a bounded
+   difference that then **shows up as balance and is collectable**, whereas a deferred settlement
+   is a delivered service with no record of what it cost.
+3. The server debits the user's server-side wallet balance by the **recomputed** amount.
+4. **Negative balance is allowed.** The server **MUST NOT** reject a debit that would result in a
+   negative balance. A session already delivered cannot be un-delivered by refusing to record it,
+   and refusing the debit would lose the only record of what was owed.
+5. **A negative balance is a debt, and it restricts service until it is covered.** The server
+   **MUST** trigger a top-up reminder, and **MUST** restrict the account from further offline pass
+   issuance while the balance is below zero. This is not a dispute over the amount — the amount is
+   the server's own recomputation — so it is settled by payment, not by adjudication.
+6. The user is notified of the charges upon the next app open or push notification.
+
+> **Why recomputation is affordable here, and why the offline value is not stale in practice.**
+> The pass carries the user's allowance, and [`offline-pass.md` §6](offline-pass.md#6-lifecycle)
+> step 3a **re-issues it** on every event that can change that allowance — application start, each
+> consumption, each wallet top-up. So for as long as the application has had a network, the figure
+> the station validates against tracks the wallet. What remains is the window in which it has not,
+> and that window is bounded by the pass's own 24-hour validity, and more tightly wherever an
+> operator has lowered `OfflinePassMaxAge` (§8 of the same document; at its default that key is
+> deliberately inert, and the 24-hour bound is the one doing the work).
+>
+> What the window can cost is **not** further offline spending — that is bounded by the pass's own
+> `maxTotalCredits` and lands as balance either way. It is spending through a **second channel**
+> while the application is off-network: a web payment, a second device, an operator adjustment. The
+> residue after all of it is a difference, not an exposure: it lands as negative balance, which
+> rule 5 makes a debt that blocks service rather than a loss that is written off.
+>
+> **The magnitudes here are policy, not protocol.** `maxUses`, `maxCreditsPerTx`, `maxTotalCredits`
+> and `minIntervalSec` are set per operator and appear in no configuration registry. Where this
+> specification quotes figures to size the trade-off, they are the reference implementation's and
+> are **representative, not normative**; a deployment on different numbers has a different bound
+> and should redo the arithmetic rather than inherit it.
 
 ### 8.2 Prior authorization debit (settle-once true-up — Partial A; Partial-B offline fallback)
 
@@ -222,8 +273,8 @@ When the gate resolved the transaction to a prior authorization that was **alrea
 
 1. The server reads the issue-time debit amount (`priorDebit`): the pre-authorized maximum (the signed `creditsAuthorized`) for Partial A; the recorded authorize-time debit for Partial B.
 2. The server recomputes the final cost per the **Billing Authority** rule (`04-flows.md` §6 — actual delivered duration × the tariff in force when the session ran; the station-reported `creditsCharged` is advisory, and the server **MUST** recompute regardless of it). It then applies a **true-up**: it adjusts the wallet by `recomputedCost − priorDebit` **only** — a **refund** when the session cost less than the pre-authorized maximum, an **additional debit** when it cost more. It **MUST NOT** re-debit the full amount. The signed `creditsAuthorized` is **not** a settlement cap: it sets the issue-time pre-debit and (via the duration clamp, `ble-session.md` §3) bounds the authorized *duration*, but settled credits follow the Billing Authority recomputation — a tariff change during the offline window can yield a settled cost **above** `creditsAuthorized`, and the user pays the real delivered cost.
-3. The true-up shares the **same idempotency key** as the authorize-time debit (derived from `sessionId`), so a retried reconcile or a late-arriving duplicate cannot double-apply it. Steps 3–5 of §8.1 (negative balance, notification, top-up) apply to the net adjustment.
-4. The server marks the authorization `reconciled` and records `reconciled_session_id` on the transaction.
+3. The true-up shares the **same idempotency key** as the authorize-time debit, derived from the form's correlation key above — `(authId, sessionId)` for the auth-form, `(offlinePassId, passCounter)` for the pass-form — so a retried reconcile or a late-arriving duplicate cannot double-apply it. Steps 3–5 of §8.1 (negative balance, notification, top-up) apply to the net adjustment.
+4. The server marks the authorization `reconciled` and records the correlation on the transaction: `reconciled_session_id` on the auth-form, where a `sessionId` exists; the resolved authorization's own identifier on the pass-form, where one does not.
 
 > **Forward-guard note (finding N11).** The Partial-B authorize-time-debit path this rule guards is **not yet implemented server-side** (the offline session-creation path is a placeholder at the time of writing), so no double-debit exists today. The rule is specified now so that when that path lands it is built settle-once-correct from the start: the authorize-time debit and the reconcile true-up **MUST** present the same `sessionId`-derived idempotency key. Partial A (§6.7) exercises the rule from its first implementation, since it always debits at issue.
 

@@ -2,9 +2,9 @@
 
 > **Status:** Draft — **mixed maturity, read this before implementing.**
 >
-> This profile spans two transports, and they are not at the same maturity in 0.8.
+> This profile spans two transports, and they are not at the same maturity.
 >
-> | Part | Documents | Status in 0.8 |
+> | Part | Documents | Status |
 > |---|---|---|
 > | Offline credential and reconciliation, over **MQTT** | [`offline-pass.md`](offline-pass.md), [`authorize-offline-pass.md`](authorize-offline-pass.md), [`reconciliation.md`](reconciliation.md) | **Stable** — implemented and exercised against a second implementation |
 > | **BLE** transport, handshake and session | [`ble-transport.md`](ble-transport.md), [`ble-handshake.md`](ble-handshake.md), [`ble-session.md`](ble-session.md) | **EXPERIMENTAL** |
@@ -20,7 +20,7 @@
 > BLE is published for review, **not** for implementation, and may change incompatibly without a
 > MAJOR bump. It is marked rather than repaired because it is implemented nowhere — repairing it
 > would mean deciding against nothing to validate the decisions. **Extended** and **Complete**
-> compliance therefore cannot be claimed against 0.8; **Development** and **Standard** are
+> compliance therefore cannot be claimed while they are EXPERIMENTAL; **Development** and **Standard** are
 > unaffected.
 >
 > Note that B-2 is narrower than it appears: it bites on the BLE path only. On MQTT the station
@@ -65,9 +65,11 @@ This role assignment also aligns with mobile OS power management: iOS and Androi
 
 ## 5. Compliance Requirements
 
-1. A station that declares the Offline / BLE profile in its BootNotification (`capabilities.bleSupported: true`) MUST implement all documents listed above.
+1. A station that declares the Offline / BLE profile in its BootNotification (`capabilities.bleSupported: true` **and** `capabilities.offlineModeSupported: true` — [`profiles/README.md` §4.1](../README.md#41-station-conformance)) **MUST** implement every document listed above **that is not marked EXPERIMENTAL**. Conformance against the three BLE documents becomes claimable when they leave EXPERIMENTAL, and not before.
 
-   > **In 0.8 this claim cannot be made conformantly.** Three of those documents are EXPERIMENTAL and carry blockers B-1, B-2 and B-3, so "implements all documents listed above" has no satisfiable meaning for the BLE half. The rule is stated unchanged because it is the rule the profile will carry once BLE is repaired; it is the *BLE documents* that are provisional in 0.8, not this requirement. A station shipping offline reconciliation over MQTT today is served by [`offline-pass.md`](offline-pass.md), [`authorize-offline-pass.md`](authorize-offline-pass.md) and [`reconciliation.md`](reconciliation.md), all stable, and does not need to declare `bleSupported` to use them.
+   > **Why the rule is scoped rather than stated whole.** Three of the documents above are EXPERIMENTAL and carry blockers B-1, B-2 and B-3, so "implements all documents listed above" has no satisfiable meaning for the BLE half — which leaves a station that has built the stable half with **no conformant declaration to make**. The escape an earlier revision offered here was itself unsound: it said such a station *"does not need to declare `bleSupported`"*, but [§2](#2-connectivity-scenarios) above puts BLE on the phone↔station leg of **all three** offline scenarios — Partial A, Partial B and Full Offline alike — so a station without BLE cannot originate an offline transaction at all. It could only reconcile transactions it had no way to create. Dropping the declaration does not buy conformance; it buys an unreachable profile.
+   >
+   > The honest position is the one the compliance levels already take, and this rule now matches it: **Extended** and **Complete** cannot be claimed while the BLE documents are EXPERIMENTAL, **Development** and **Standard** are unaffected, and the capability declaration stays truthful about the hardware the station actually has.
 2. The station MUST support at least the Full Offline and Partial B connectivity scenarios. Partial A support is RECOMMENDED but MAY be omitted if the station does not store server-signed authorization verification keys.
 3. The station MUST support BLE 4.2 or later; BLE 5.0 is RECOMMENDED. BLE pairing (LESC) is OPTIONAL — channel security is provided at the application layer (ECDH P-256 handshake + StationIdentity certificate + ChaCha20-Poly1305 AEAD; see [06-security.md §6.4/§6.5](../../06-security.md)), not by link-layer pairing.
 4. All BLE handshakes MUST complete within 10 seconds. The station MUST reject handshakes that exceed this timeout.

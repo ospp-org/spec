@@ -8,6 +8,159 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.24.0] — 2026-08-18
+
+> **The offline profile contradicted itself in eight places, and only one of them was a decision.**
+> The other seven were obligations no field, no configuration value, and no actor could satisfy —
+> and the specification had already written the correct analysis next to six of them, in prose,
+> without ever bringing the rule-bearing sentence into line with it.
+>
+> **The one that was a decision is now taken: the server is the billing authority, and §8.1 was the
+> outlier.** `04-flows.md` §6 binds the server as *"the authoritative billing engine for **all**
+> sessions"* and **MUST**-requires it to recompute regardless of the station-reported
+> `creditsCharged`; `reconciliation.md` §8.1 steps 1--2 told it to read that number and debit it,
+> with no normative keyword. §8.2 of the *same section* invokes Billing Authority by name with its
+> own **MUST** — three passages against one step list. §8.1 now recomputes.
+>
+> **What makes that affordable is a mechanism, not an assertion.** The pass carries a wallet
+> snapshot; it is **re-issued** on application start, on each consumption and on each wallet top-up,
+> so while the app has a network the figure tracks the wallet. What remains is a **debt**: a
+> negative balance restricts service until it is covered, and because the amount is the server's own
+> recomputation it is settled by payment rather than adjudication. That also dissolves the
+> historical-tariff objection — the server recomputes with the tariff it holds, and any difference a
+> tariff change introduces surfaces as balance instead of hiding in a number nobody checked.
+>
+> **What the measurement changed.** Two premises did not survive it. The station-side limit checks
+> were read as an off-by-one — `<` in Chapter 06 against "MUST NOT exceed" in the profile, five
+> uses against four — and they are not: measured against the sole implementation of those checks,
+> the two texts are the **same rule under different referents**, one counting prior uses and one
+> counting including the current, and its usage check refuses at exactly `maxUses` authorizations
+> either way. The defect is the unstated referent, and the fix is to name it, not to flip an
+> operator. (What that implementation *does* get wrong is counting the same transaction twice —
+> a separate finding, below.) And the conformance escape at `profiles/offline/README.md` §5 — that a station
+> shipping only the stable MQTT half *"does not need to declare `bleSupported`"* — is closed by
+> that file's own §2: BLE carries the phone↔station leg of **all three** offline scenarios, so a
+> station without it cannot originate an offline transaction, only reconcile ones it had no way to
+> create.
+
+### Changed — breaking
+
+- **`reconciliation.md` §8.1 — the server recomputes the settled cost; it no longer reads it off
+  the wire.** Steps 1--2 debited the station-reported `creditsCharged` verbatim, against a
+  **normative** Billing Authority rule three passages deep that forbids exactly that. The server
+  now computes from the signed `durationSeconds` and the tariff for the receipt's `serviceId` by
+  the `03-messages.md` §MSG-007 formula, covering both `PerMinute` and `Fixed`. `creditsCharged`
+  remains on the wire as a cross-check and an operator signal and **MUST NOT** be the settled
+  amount. **Tariff basis** is stated rather than assumed: the tariff in force at `endedAt` where the
+  server retains a catalog history — `epoch_active_at(t)` from §6.6 applies unchanged and needs no
+  wire field — otherwise the current tariff, with the basis recorded. Settlement **MUST NOT** be
+  withheld for want of the history.
+- **A negative balance is a debt that restricts service.** §8.1 rule 5 was *"**MAY** be restricted
+  from future offline pass issuance"*; it is now a **MUST**, and it blocks service until the balance
+  is covered. `04-flows.md` §6 gained one clause pointing at §8.1 as the home of the offline
+  recomputation, so the *"in force when the session ran"* clause has its fallback stated once rather
+  than restated.
+- **`OfflinePassMaxAge` default `3600` → `86400`, and the key is wired into check #2** rather than
+  mandating a refusal nothing performed. Signed validity and the age threshold are **independent** —
+  validity is the issuer's and fixed at signing, the threshold is a station's refusal an operator may
+  change at any time, and neither caps the other. The one tie is a consistency obligation on the
+  **issuer at issue time**: do not sign a validity longer than the value configured on the stations
+  that will validate the pass. The default is deliberately **inert**: because validity is capped at
+  24 hours, an unexpired pass is by construction younger than 24 hours, so the age bound cannot fire
+  at or above `86400` — an operator arms it by lowering the key. Range unchanged at `300--86400`; a
+  three-day default was considered and rejected, both because it exceeds that range and because a
+  weekend-old pass is refused by **expiry**, not by age.
+
+- **`MaxOfflineTransactions` (Chapter 08 §5) — default `50` → `1000`, range `10--500` →
+  `1000--10000`.** `01-architecture.md` §6.5 makes TransactionEvent a Category-1 message with a
+  **minimum capacity of 1000** and `MUST NOT` discard, and sizes its `MUST` hardware level
+  (512 KB) for exactly that count. The key meant to configure that capacity could not reach it:
+  **the maximum legal value was half the mandated minimum**, and the default was one twentieth of
+  it. No conformant configuration existed. §6.5 now states that it owns the floor and that a
+  configured value **MUST NOT** fall below it, and §6.5's own "90% capacity (900 of 1000 events)"
+  is expressed against the configured capacity instead of restating 1000. **Deployment order — smaller than it first
+  reads, and measured rather than assumed.** The hazard as originally written was that a station at
+  the old default answers `5109` and, ChangeConfiguration being atomic, takes the rest of its batch
+  down with it. Against the reference server that cannot happen, for two independent reasons: its
+  sole ChangeConfiguration construction site builds a hardcoded single-element `keys` array from
+  scalar parameters, so every request it sends is a batch of one; and `MaxOfflineTransactions` has
+  no push path at all — it is a registry declaration reachable only by an operator naming it
+  explicitly. The atomicity hazard is therefore **the specification's, not this deployment's**: the
+  wire schema permits `maxItems: 20`, so a conformant server that batches is exposed to it, and
+  `06-security.md` §6.7 already answers that with a **RECOMMENDED** single-key form for
+  `OfflinePassPublicKey`. Note also what is *not* the reason: the signing path is content-agnostic
+  and constrains no key count.
+- **A station performs nine of the ten OfflinePass checks, not ten** (`offline-pass.md` §4,
+  `06-security.md` §6.1.1). Both documents said *"MUST perform all 10 checks"* while their own
+  prose — sixteen lines above in one, nineteen lines below in the other — already said check #5
+  is unrepresentable in the signed pass and that the list is *"ten checks, nine of which a station
+  can perform"*. `offline-pass.md` §4 now carries a per-actor table: **station nine**
+  (#1--#4, #6--#10), **server eleven** at Partial-B authorize-time. Nothing about BLE is repaired
+  by this; the obligation was stated in stable documents and is corrected there.
+- **Checks #6/#7/#8 now state their counter's referent** in all three copies (`offline-pass.md`
+  §4, `06-security.md` §6.1.1, `authorize-offline-pass.md` §5). Each is stated as an outcome —
+  a pass permits `maxUses` transactions and `maxTotalCredits` credits in total — which is
+  referent-free and is what a conformance case can assert.
+- **`reconciliation.md` §8 — settle-once is keyed on the correlation key each resolved form
+  actually carries.** The rule named `sessionId` as the sole key, and the pass-form branch of both
+  `transaction-event-request.schema.json` and `receipt-data.schema.json` sets `"sessionId": false`
+  with `additionalProperties: false` — so on the one form the rule exists to guard (a Partial-B
+  session that fell back to offline after an authorize-time debit) **no implementation could have
+  satisfied it**. The key is now `(authId, sessionId)` on the auth-form and
+  `(offlinePassId, passCounter)` on the pass-form; the latter is the same app-global counter value
+  presented at authorize-time, signed into the receipt, and already required globally unique by
+  §6.1 check #13.
+- **`profiles/offline/README.md` §5 rule 1 is scoped to the documents that are not EXPERIMENTAL.**
+  A station that has built the stable half had no conformant declaration to make: declaring
+  `bleSupported: true` obliged it to implement three documents the same file calls unimplementable,
+  and the escape offered instead does not exist (see the lede). Conformance against the BLE
+  documents becomes claimable when they leave EXPERIMENTAL — which is the position the compliance
+  levels already took, three paragraphs earlier.
+
+### Added
+
+- **`offline-pass.md` §6 step 3a — pass re-issuance is normative and has a cadence.** Application
+  start, each consumption, each wallet top-up. This is what keeps the wallet snapshot in the pass
+  from going stale, and it is the mechanism the recomputation above rests on. A failed re-issuance
+  is explicitly non-fatal — the app keeps the pass it holds, because refusing to use a valid pass
+  over a network failure denies service for the wrong reason.
+- **`KNOWN-ISSUES.md` — a named defect class: *an obligation no field, no code and no actor can
+  carry*.** Seven instances, counted by reading the record rather than carried from a note; three
+  still open and one a blocker. Two sub-shapes account for all seven: **four** are a mandated
+  refusal with no error code or response field to carry it, **three** are a rule keyed on a value
+  the authoritative schema forbids on the branch where the rule applies. The settle-once repair
+  below is instance 7, and it closed the way the class note now recommends — by finding a value
+  already on the wire that carries the same meaning, so no field and no version of anything had to
+  change.
+
+- **`offline-pass.md` §6 step 5 — one transaction consumes exactly one use.** The authorize-time
+  cumulative count (`authorize-offline-pass.md` §5 check #6) and the reconcile-time fleet-wide
+  cumulative factors (`06-security.md` §7.4) read as two independent obligations, and were built
+  as two independent counters: measured, a `maxUses: 5` pass burns two uses per transaction and
+  sums an authorize-time **estimate** with a reconcile-time **actual** into one `maxTotalCredits`
+  total. They are two views of one counter. `(offlinePassId, passCounter)` — already required
+  globally unique — makes the advance idempotent by construction.
+
+### Fixed
+
+- **`04-flows.md` §10 sequence diagram put the money before the scoring.** Its steps ran
+  *5. Debit user wallet → 6. Run fraud scoring*, while `reconciliation.md` §6 and §8 require the
+  gate and the fraud score to run **before** settlement, and §7.4's automated responses (revoke the
+  pass, block the account) are meaningless after the debit has landed. The diagram now runs
+  dedup → signature → gate → scoring → settlement, and cites the profile section for each step.
+  No implementation followed the diagram.
+- **`07-errors.md` §1.2 said SecurityEvent is "Station→Server only"** as a blanket, in the same
+  release in which the Offline profile requires the **server** to emit one in four places
+  (`authorize-offline-pass.md` §6 rule 7; `reconciliation.md` §3 rule 3, §5 rule 4, §6.3). The
+  sentence now separates direction of **carriage** — [MSG-012] has no server→station direction —
+  from authorship of the audit record. What genuinely has no path is a Critical condition the
+  server detects about *itself*, which stays OPEN.
+- **`profiles/offline/README.md` maturity notes said "in 0.8"** in three places, fifteen minors
+  after 0.8. Restated against the EXPERIMENTAL marker itself, which cannot go stale.
+- **`tools/check-normative-bold.py` ratchet lowered 450 → 446**, and
+  **`tools/verify-protocol.sh`** re-measured, both with their measurement points, per
+  CONTRIBUTING's "No Number Without Its Measurement Point" rule.
+
 ## [0.23.0] — 2026-08-18
 
 > **Diagnostics had no state machine, and two SDKs each built one anyway.**

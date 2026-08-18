@@ -1,6 +1,6 @@
 # Chapter 08 — Configuration
 
-> **Status:** Draft | **OSPP Version:** 0.23.0
+> **Status:** Draft | **OSPP Version:** 0.24.0
 
 This chapter defines the configuration model for OSPP stations, including the key-value store structure, supported data types, access modes, mutability semantics, and the complete registry of standard configuration keys. Configuration is read and written via the [GetConfiguration](03-messages.md#62-getconfiguration) and [ChangeConfiguration](03-messages.md#61-changeconfiguration) messages defined in Chapter 03.
 
@@ -181,8 +181,8 @@ These keys are REQUIRED when the station reports `capabilities.bleSupported = tr
 | Key | Type | Default | Access | Mutability | Range | Description |
 |-----|------|---------|:------:|:----------:|-------|-------------|
 | `OfflineModeEnabled` | boolean | `true` | RW | Dynamic | -- | When `true`, the station accepts offline session authorization via BLE. When `false`, all BLE auth requests are rejected. |
-| `MaxOfflineTransactions` | integer | `50` | RW | Dynamic | 10--500 | Maximum number of offline transactions the station buffers before requiring server reconciliation. |
-| `OfflinePassMaxAge` | integer | `3600` | RW | Dynamic | 300--86400 | Maximum age in seconds for an OfflinePass to be considered valid. Passes older than this value MUST be rejected. |
+| `MaxOfflineTransactions` | integer | `1000` | RW | Dynamic | 1000--10000 | Capacity of the station's TransactionEvent buffer, in events. The **floor is normative and is owned by** [Chapter 01 — Architecture](01-architecture.md), §6.5: TransactionEvent is a Category-1 message with a minimum capacity of 1000 and `MUST NOT` discard, and the §6.5 hardware table sizes its `MUST` storage level (512 KB) for exactly that. A value below the floor cannot satisfy §6.5, which is why the range starts there rather than allowing it; the ceiling bounds the configuration value, not the hardware. Distinct from the pass-carried `constraints.stationMaxOfflineTx` ([`offline-pass.md` §2.2](profiles/offline/offline-pass.md)), which is a per-pass policy limit on starting further offline sessions, not a storage capacity. |
+| `OfflinePassMaxAge` | integer | `86400` | RW | Dynamic | 300--86400 | Maximum age, in seconds, of an OfflinePass this station will accept: a pass whose `now - issuedAt` exceeds it **MUST** be rejected with `2003 OFFLINE_PASS_EXPIRED`. This is one of the two bounds of [`offline-pass.md` §4](profiles/offline/offline-pass.md#4-validation-checks-10) check #2, not a separate check. It is the **bounding mechanism for a stale allowance**: the pass carries a snapshot of the user's wallet, the app re-issues it on every event that can move that wallet ([`offline-pass.md` §6](profiles/offline/offline-pass.md#6-lifecycle) step 3a), and this key bounds the window in which the app has had no network to do so. It is **independent of the pass's signed validity**, which is the issuer's and fixed at signing; the only tie between them is a consistency obligation on the issuer at issue time ([`offline-pass.md` §6](profiles/offline/offline-pass.md#6-lifecycle) step 1) — a server must not sign a validity longer than the value configured on the stations that will validate the pass. **Consequence worth stating: because signed validity is capped at 24 hours, a value at or above `86400` makes this check unreachable** — an unexpired pass is by construction younger than 24 hours, so the expiry bound always fires first. The key tightens staleness only below that. **The default is therefore deliberately inert**: it sits at the legal maximum so that no deployment is tightened by accident, and an operator who wants the bound arms it by lowering the key. That is the intended posture, not an oversight — a control that fires by default would refuse users at the bay for a policy nobody chose. |
 | `RevocationEpoch` | integer | `0` | RW | Dynamic | 0--2147483647 | Global OfflinePass revocation epoch. Incremented by server to batch-revoke all OfflinePasses issued before this epoch. |
 
 ---
@@ -425,8 +425,8 @@ The table adds two columns Sections 2--6 do not carry — the index number and t
 | 20 | `CertificateRenewalThresholdDays` | integer | `30` | RW | Dynamic | Security |
 | 21 | `CertificateRenewalEnabled` | boolean | `true` | RW | Dynamic | Security |
 | 22 | `OfflineModeEnabled` | boolean | `true` | RW | Dynamic | Offline / BLE |
-| 23 | `MaxOfflineTransactions` | integer | `50` | RW | Dynamic | Offline / BLE |
-| 24 | `OfflinePassMaxAge` | integer | `3600` | RW | Dynamic | Offline / BLE |
+| 23 | `MaxOfflineTransactions` | integer | `1000` | RW | Dynamic | Offline / BLE |
+| 24 | `OfflinePassMaxAge` | integer | `86400` | RW | Dynamic | Offline / BLE |
 | 25 | `RevocationEpoch` | integer | `0` | RW | Dynamic | Offline / BLE |
 | 26 | `FirmwareUpdateEnabled` | boolean | `true` | RW | Dynamic | Device Management |
 | 27 | `LogLevel` | string | `"Info"` | RW | Dynamic | Device Management |

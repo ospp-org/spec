@@ -1,6 +1,6 @@
 # Chapter 04 — Protocol Flows
 
-> **Status:** Draft | **OSPP Version:** 0.23.0
+> **Status:** Draft | **OSPP Version:** 0.24.0
 
 This chapter documents every end-to-end protocol flow as a sequence of messages defined in [Chapter 03 — Message Catalog](03-messages.md). Each flow includes preconditions, a Mermaid sequence diagram, numbered happy-path steps, alternative paths, error paths, and postconditions.
 
@@ -1025,7 +1025,7 @@ The **CSMS (server) is the authoritative billing engine** for all sessions. The 
 The following rules are normative:
 
 - The station **MUST NOT** be the source of truth for monetary cost. The `creditsCharged` field reported by the station is **advisory** — it represents the station's estimate based on the service rate active at session start.
-- The server **MUST** recompute final billing using the actual duration and the tariff in force when the session ran, regardless of the station-reported `creditsCharged`. Implementations MAY accept the station value as-is when it matches the server-side recomputation; they MUST NOT accept it blindly when it diverges.
+- The server **MUST** recompute final billing using the actual duration and the tariff in force when the session ran, regardless of the station-reported `creditsCharged`. Implementations **MAY** accept the station value as-is when it matches the server-side recomputation; they **MUST NOT** accept it blindly when it diverges. **This binds the offline path too**, where the session ran with no server present and the duration arrives inside a signed receipt: [`reconciliation.md` §8.1](profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b) states the offline recomputation, including which tariff a server uses when it does not retain a catalog history for the transaction's instant. That is the one place this rule's *"in force when the session ran"* clause needs a stated fallback, and it is stated there rather than restated here.
 - For sessions that end via `StopService` RESPONSE [MSG-006], the server uses the response's `actualDurationSeconds` (and `meterValues` when relevant) as billing input.
 - For sessions that end autonomously via `SessionEnded` EVENT [MSG-040] (timer expiry or hardware fault), the server uses the event's `actualDurationSeconds` as billing input and applies the refund policy described below.
 - Tariff lookup, currency conversion, tax handling, and any operator-specific pricing rules are server-side concerns. Stations remain unaware of the priced amount in user-facing currency.
@@ -1413,12 +1413,12 @@ sequenceDiagram
         Note right of SSP: {offlineTxId, receipt, txCounter}
         Note right of Server: Timeout: 60s
 
-        Server->>Server: 1. Deduplicate by offlineTxId
-        Server->>Server: 2. Verify ECDSA receipt signature
-        Server->>Server: 3. Record txCounter (forensic, no gating)
-        Server->>Server: 4. Validate OfflinePass
-        Server->>Server: 5. Debit user wallet (allow negative balance)
-        Server->>Server: 6. Run fraud scoring
+        Server->>Server: 1. Deduplicate by offlineTxId (recon 3)
+        Server->>Server: 2. Verify ECDSA receipt signature (recon 5)
+        Server->>Server: 3. Record txCounter (forensic, gates nothing - recon 4.2)
+        Server->>Server: 4. Reconcile-time re-validation gate (recon 6)
+        Server->>Server: 5. Run fraud scoring (recon 7)
+        Server->>Server: 6. Settle wallet - negative balance allowed (recon 8)
 
         alt Accepted
             Server-->>SSP: TransactionEvent RESPONSE (Accepted) [MSG-007]

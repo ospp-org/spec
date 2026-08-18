@@ -1,6 +1,6 @@
 # Chapter 06 — Security
 
-> **Status:** Draft | **OSPP Version:** 0.23.0
+> **Status:** Draft | **OSPP Version:** 0.24.0
 
 This chapter defines the complete security model for the OSPP protocol, covering threat analysis, authentication, authorization, cryptographic requirements, message integrity, offline security, anti-abuse mechanisms, and data protection.
 
@@ -1029,24 +1029,28 @@ The OfflinePass is a server-signed credential that authorizes offline service us
 
 ### 6.1.1 OfflinePass Validation — 10 Checks
 
-The station MUST perform all 10 checks when validating an OfflinePass locally (Full Offline scenario). If any check fails, the station MUST reject the pass with the corresponding error code.
+A **station** validating an OfflinePass locally (Full Offline scenario) **MUST** perform every check below that it can evaluate — **nine of the ten**: #1--#4 and #6--#10. Check #5 is not among them, and the exclusion is structural rather than optional: the note under the table records why no station can perform it. A **server** running this list at Partial-B authorize-time evaluates all ten and adds an eleventh ([`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks-11-checks)).
+
+Processing **MUST** stop at the first failure, and the validator **MUST** reject the pass with that check's error code.
 
 > **Implementation note:** Before performing the checks below, implementations SHOULD validate structural integrity first (required fields present, correct types, valid base64 encoding of the signature). Rejecting malformed passes before the expensive ECDSA verification (check #1) mitigates denial-of-service via crafted payloads. Structural validation failures SHOULD use error code `2002 OFFLINE_PASS_INVALID`.
 
 | # | Check | Error Code | Description |
 |:-:|-------|:----------:|-------------|
 | 1 | **ECDSA P-256 signature** | `2002` | Verify signature against the current `OfflinePassPublicKey` (or the internally cached previous key during the grace period; see §6.7) |
-| 2 | **Expiry** | `2003` | `expiresAt` MUST be in the future |
+| 2 | **Temporal bounds** | `2003` | Both, and either failing is this check failing: `expiresAt` **MUST** be in the future, **and** `now - issuedAt` **MUST NOT** exceed the station's `OfflinePassMaxAge` ([Chapter 08 §5](08-configuration.md)). [`offline-pass.md` §4](profiles/offline/offline-pass.md#4-validation-checks-10) states why the age bound sits here rather than as an eleventh check. |
 | 3 | **Revocation epoch** | `2004` | `revocationEpoch` >= station's `RevocationEpoch` configuration value |
 | 4 | **Device binding** | `2002` | `deviceId` MUST match the `deviceId` from the Hello [MSG-029] message |
 | 5 | **Station restriction** | `2006` | **Not locally evaluable — see below.** Station scoping lives in `allowed_station_ids` on the *server's stored pass record*, not in the pass; a station validating offline cannot read it |
-| 6 | **Max uses** | `4002` | Number of transactions using this pass MUST be < `maxUses` |
-| 7 | **Max total credits** | `4002` | Cumulative credits charged MUST be < `maxTotalCredits` |
-| 8 | **Max per-tx credits** | `4004` | Requested service cost MUST be <= `maxCreditsPerTx` |
+| 6 | **Max uses** | `4002` | The transactions **already** counted against this pass **MUST** be fewer than `maxUses`. A pass therefore permits `maxUses` transactions in total. |
+| 7 | **Max total credits** | `4002` | The credits already counted **plus** this transaction's estimated cost **MUST NOT** exceed `maxTotalCredits`. A pass therefore permits `maxTotalCredits` credits in total. |
+| 8 | **Max per-tx credits** | `4004` | This transaction's estimated cost **MUST NOT** exceed `maxCreditsPerTx`. |
 | 9 | **Min interval** | `4003` | Time since last transaction from this pass MUST be >= `minIntervalSec` |
 | 10 | **Counter anti-replay (station-local horizon)** | `2005` | `counter` MUST be strictly greater than `lastSeenCounter` for this pass on this station. See the counter-model note below. |
 
 **Implementation note:** Implementations SHOULD perform structural and temporal checks before cryptographic verification to mitigate denial-of-service. The error code returned SHOULD correspond to the first failed check in the canonical order (1–10).
+
+**Checks #6 and #7 state their counter's referent, and that is the whole content of the rule.** Written as a bare comparison, each admits two readings that differ by one transaction — is the count taken *before* this transaction or *including* it? — and this table said `<` for #6 and #7 while [`offline-pass.md` §4](profiles/offline/offline-pass.md#4-validation-checks-10) and [`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks-11-checks) said "MUST NOT exceed" for the same two, and `<=` for #8 in this very table. Only one of those four statements can be read without knowing the referent. The rows above now fix the referent and state the **outcome** — `maxUses` transactions, `maxTotalCredits` credits — because the outcome is what an implementation is conformance-tested on, and it is the same number under either counter convention once the convention is named. What consumes a use, and why a transaction the server meets twice still consumes one, is [`offline-pass.md` §6](profiles/offline/offline-pass.md#6-lifecycle) step 5.
 
 **Check #5 is not evaluable on this path (KNOWN-ISSUES [B-2](../KNOWN-ISSUES.md#b-2--a-station-scoped-offlinepass-is-unrepresentable-in-the-authoritative-schema)).** Station scoping is held as `allowed_station_ids` on the server's stored pass record, which [`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks-11-checks) check #5 calls out as "not a wire field". [`offline-pass.schema.json`](../schemas/common/offline-pass.schema.json) has no member that can carry it and is `additionalProperties: false` at both levels, so a station validating locally over BLE has nothing to check and no server to ask. The list above is therefore **ten checks, nine of which a station can perform**; the scoping constraint is enforced server-side at authorize-time and at reconcile ([`reconciliation.md` §6.1](profiles/offline/reconciliation.md#61-check-list) check #8).
 

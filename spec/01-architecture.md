@@ -1,6 +1,6 @@
 # Chapter 01 — Architecture
 
-> **Status:** Draft | **OSPP Version:** 0.23.0
+> **Status:** Draft | **OSPP Version:** 0.24.0
 
 This chapter defines the foundational system model upon which all subsequent chapters build: the participants, their communication channels, the hardware model, the identity scheme, the controller topologies, and the layered communication stack.
 
@@ -375,7 +375,7 @@ A station participating in the OSPP protocol MUST fulfill the following core res
 
 ### 6.5 Offline Message Buffering
 
-During connectivity loss (MQTT disconnection), the station MUST implement selective buffering based on message category. Only messages with post-reconnection value are buffered; regenerable messages are discarded. Maximum offline transactions is configurable via `MaxOfflineTransactions` (see §8 Configuration).
+During connectivity loss (MQTT disconnection), the station **MUST** implement selective buffering based on message category. Only messages with post-reconnection value are buffered; regenerable messages are discarded. The TransactionEvent buffer capacity is configurable via `MaxOfflineTransactions` ([Chapter 08 — Configuration](08-configuration.md) §5), and **this section owns its floor**: the configured value **MUST NOT** be below the Category-1 minimum capacity in the table below. The registry range starts there for that reason, and the Hardware Requirements table below sizes the MUST storage level for exactly that minimum.
 
 #### Category 1 — MUST Buffer (Billing & Audit)
 
@@ -385,7 +385,7 @@ During connectivity loss (MQTT disconnection), the station MUST implement select
 | SessionEnded | 1 per session that ended while unable to send | MUST NOT discard | Billing-critical and **not** regenerable, which is what separates it from MeterValues below. It is the sole billing source for a session that terminated autonomously with no StopService to answer, so losing it loses the record of a service already delivered. [Chapter 02 §5.1](02-transport.md) already classifies it as a critical event that never expires and requires its payload be retained for retransmission. |
 | SecurityEvent | 200 events | FIFO (oldest discarded first) | Audit trail for compliance. Recent events are more actionable than older ones. |
 
-When the TransactionEvent buffer reaches 90% capacity (900 of 1000 events), the station SHOULD reject new session requests (StartService → Rejected with error `5111 BUFFER_FULL`) to prevent buffer overflow. The station MUST NOT discard existing TransactionEvent messages under any circumstances. If the buffer reaches 100% capacity despite rejecting new sessions, the station MUST enter degraded mode: continue reporting status via StatusNotification but refuse all new sessions until buffered events are delivered after reconnection.
+When the TransactionEvent buffer reaches 90% of its configured `MaxOfflineTransactions` capacity (900 events at the 1000-event minimum above), the station **SHOULD** reject new session requests (StartService → Rejected with error `5111 BUFFER_FULL`) to prevent buffer overflow. The station MUST NOT discard existing TransactionEvent messages under any circumstances. If the buffer reaches 100% capacity despite rejecting new sessions, the station MUST enter degraded mode: continue reporting status via StatusNotification but refuse all new sessions until buffered events are delivered after reconnection.
 
 #### Category 2 — MAY Discard (Regenerable at Reconnection)
 

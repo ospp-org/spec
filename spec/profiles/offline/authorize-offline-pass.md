@@ -1,6 +1,6 @@
 # AuthorizeOfflinePass
 
-> **Status:** Draft | **OSPP Version:** 0.23.0
+> **Status:** Draft | **OSPP Version:** 0.24.0
 
 ## 1. Overview
 
@@ -47,9 +47,9 @@ The server **MUST** perform all of the following checks in order. Processing **M
 | 3 | **Revocation epoch** -- `revocationEpoch` **MUST** be greater than or equal to the server's current `RevocationEpoch`. | `2004 OFFLINE_EPOCH_REVOKED` |
 | 4 | **Device binding** -- `offlinePass.deviceId` **MUST** match the `deviceId` field in the request. | `2002 OFFLINE_PASS_INVALID` |
 | 5 | **Station allowance** -- the reporting station **MUST** be permitted by the `allowed_station_ids` of the **server's stored pass record** (not a wire field). | `2006 OFFLINE_STATION_MISMATCH` |
-| 6 | **Usage limit** -- the pass's `maxUses` **MUST NOT** have been exceeded (server tracks cumulative uses). | `4002 OFFLINE_LIMIT_EXCEEDED` |
-| 7 | **Total credits limit** -- cumulative credits charged **MUST NOT** exceed `maxTotalCredits`. | `4002 OFFLINE_LIMIT_EXCEEDED` |
-| 8 | **Per-transaction credits** -- the estimated cost for the requested service **MUST NOT** exceed `maxCreditsPerTx`. | `4004 OFFLINE_PER_TX_EXCEEDED` |
+| 6 | **Usage limit** -- the transactions **already** counted against this pass **MUST** be fewer than `maxUses`; a pass permits `maxUses` transactions in total. The server's cumulative count and the reconcile-time fleet-wide count are **one counter, not two** ([`offline-pass.md` §6](offline-pass.md#6-lifecycle) step 5). | `4002 OFFLINE_LIMIT_EXCEEDED` |
+| 7 | **Total credits limit** -- the credits already counted **plus** this transaction's estimated cost **MUST NOT** exceed `maxTotalCredits`; a pass permits `maxTotalCredits` credits in total. | `4002 OFFLINE_LIMIT_EXCEEDED` |
+| 8 | **Per-transaction credits** -- this transaction's estimated cost **MUST NOT** exceed `maxCreditsPerTx`. | `4004 OFFLINE_PER_TX_EXCEEDED` |
 | 9 | **Rate limit** -- elapsed time since last use **MUST** be at least `minIntervalSec` seconds. | `4003 OFFLINE_RATE_LIMITED` |
 | 10 | **Counter replay** -- `counter` **MUST** be strictly greater than the last seen counter for this pass. | `2005 OFFLINE_COUNTER_REPLAY` |
 | 11 | **Org binding** -- the issuing `organization_id` of the **server's stored pass record** **MUST** equal the reporting station's `organization_id`. Applies to ALL passes (scoped and unscoped). | `2015 OFFLINE_ORG_MISMATCH` |

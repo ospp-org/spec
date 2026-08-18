@@ -8,6 +8,12 @@
 # without one is how the previous figure went stale: `9 FAIL / 6 SKIP` was true at
 # v0.20.0 and was still being quoted after 0.20.1 and 0.20.2 had closed three of them.
 #
+#   (this HEAD) 2026-08-18  (unreleased)  6 FAIL, 6 SKIP  (3981 checks, 3969 PASS) — the
+#                                  offline spec-contradiction cycle, re-measured after the two
+#                                  product decisions landed; failure SET diffed entry by entry
+#                                  against d553820 and is identical, the +32 checks are new
+#                                  cross-reference links and all pass
+#   d553820  2026-08-18  v0.23.0   6 FAIL, 6 SKIP  (3949 checks, 3937 PASS)
 #   b35eef6  2026-08-18  v0.22.0   6 FAIL, 6 SKIP  (3862 checks, 3850 PASS)
 #   a6770c3  2026-08-18  v0.21.0   6 FAIL, 6 SKIP  — re-measured from a pristine
 #                                  `git archive`, NOT inherited
