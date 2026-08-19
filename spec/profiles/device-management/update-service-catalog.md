@@ -25,9 +25,9 @@ UpdateServiceCatalog is a server-initiated command that pushes an updated servic
 | Field | Type | Required | Description |
 |--------------------------|---------|----------|-----------------------------------------------|
 | `status` | string | Yes | `Accepted` or `Rejected`. |
-| `previousCatalogVersion` | string | No | The catalog version that was replaced (present when `Accepted`). |
-| `errorCode` | integer | No | OSPP error code (present when `status` is `Rejected`). |
-| `errorText` | string | No | Machine-readable error name (present when `status` is `Rejected`). |
+| `previousCatalogVersion` | string | Cond. | The catalog version that was replaced. **REQUIRED when `status` is `Accepted`** (rule 3 below), absent otherwise. A station that has never held a catalog sends the empty string; the value is non-empty for every replacement. |
+| `errorCode` | integer | Cond. | OSPP error code. **REQUIRED when `status` is `Rejected`**, absent otherwise — enforced by the `if`/`then` in [`update-service-catalog-response.schema.json`](../../../schemas/mqtt/update-service-catalog-response.schema.json). |
+| `errorText` | string | Cond. | Machine-readable error name in UPPER_SNAKE_CASE. **REQUIRED when `status` is `Rejected`**, absent otherwise — same conditional. |
 
 ## 5. Catalog Structure
 
@@ -53,7 +53,7 @@ The station **MUST** reject the catalog if any service entry fails validation.
 2. On `Accepted`, the station **MUST** atomically replace its current catalog with the new one. There **MUST NOT** be a window where a partial catalog is active. The subject of this rule is *tearing* — no observer may see a half-applied swap. Whether a subset may be applied at all is a separate question, answered by rule 8 below, and the answer is no.
 3. The station **MUST** return the `previousCatalogVersion` in the response so the server can track catalog history.
 4. If the `services` array is empty (violating the `minItems: 1` constraint), the station **MUST** respond with `Rejected`.
-5. The station **SHOULD** persist the catalog to non-volatile storage so it survives reboots.
+5. The station **MUST** persist the catalog to non-volatile storage so it survives reboots. This was a `SHOULD` until `0.25.0`, against a `MUST` in [`profiles/device-management/README.md` §4](README.md) and a second in [`03-messages.md` §6.9](../../03-messages.md); one document out of three carried the weaker word, and the two that carry the obligation are the ones a server relies on when it declines to re-push after a station reboot.
 6. Active sessions **MUST NOT** be affected by a catalog update. New pricing takes effect only for sessions started after the catalog is applied.
 7. The response `messageId` **MUST** match the request `messageId`.
 8. If the catalog names a service the station cannot run — a `serviceId` its hardware does not support, or a `bindings` entry naming a `(bayNumber, programNumber)` pair it did not declare at provisioning or at its most recent boot — the station **MUST** respond `Rejected` with error code `5024 UNSUPPORTED_SERVICE` and **MUST** leave the previous catalog in force. It **MUST NOT** apply the remaining entries and report success. The response schema is closed and carries no member naming what was dropped, so a partial application leaves the server tracking a `catalogVersion` for a catalog that exists on no station, with nothing on the wire able to reveal it. A refusal the server can see is worth more than an application it cannot.

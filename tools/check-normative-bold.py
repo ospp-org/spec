@@ -30,6 +30,11 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
+    (this HEAD) 2026-08-19  v0.25.0   439 unbolded, 1129 bolded spans — the divergence-
+                                   adjudication cycle. -2 on +12 bolded spans, and the -2 is this
+                                   release's CONTENT only: the instrument correction that took
+                                   443 to 441 landed in its own commit, on the pristine tree, so
+                                   the two are separable. Read the 441 row below first.
     efe009c  2026-08-18  v0.24.1   441 unbolded, 1117 bolded spans — RE-MEASURED, not inherited.
                                    The gate as shipped reported 443 on this same tree. It was
                                    wrong: BOLD paired `**` over the raw text, so the literal glob
@@ -80,7 +85,7 @@ import re
 import sys
 from collections import Counter
 
-BASELINE = 441
+BASELINE = 439
 
 KEYWORD = re.compile(r'\b(MUST NOT|MUST|SHALL NOT|SHALL)\b')
 FENCE = re.compile(r'```.*?```', re.S)

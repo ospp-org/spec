@@ -1,0 +1,12 @@
+{
+  "catalogVersion": "2026.02.1",
+  "services": [
+    {
+      "serviceId": "svc_basic_wash",
+      "serviceName": "Basic Wash",
+      "pricingType": "PerMinute",
+      "priceCreditsPerMinute": 10,
+      "available": true
+    }
+  ]
+}

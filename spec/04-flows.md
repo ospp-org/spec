@@ -1,6 +1,6 @@
 # Chapter 04 — Protocol Flows
 
-> **Status:** Draft | **OSPP Version:** 0.24.1
+> **Status:** Draft | **OSPP Version:** 0.25.0
 
 This chapter documents every end-to-end protocol flow as a sequence of messages defined in [Chapter 03 — Message Catalog](03-messages.md). Each flow includes preconditions, a Mermaid sequence diagram, numbered happy-path steps, alternative paths, error paths, and postconditions.
 
@@ -1127,7 +1127,7 @@ of by what was delivered.
 
 The refund matrix above is the **pro-rata baseline**. The settlement a session actually receives on a terminal reason is modulated by its **service kind** — a settlement attribute describing *what kind of thing the session delivers*. The kind is **snapshot onto the session at start**, so a later catalog edit never retroactively changes how an in-flight or already-settled session bills. The **server is the sole settlement authority** (see **Billing Authority** above); a station never computes a refund and never reports a kind.
 
-> **The kind is server-side product data and is not carried by the protocol.** It is declared against each service in the **operator's own catalog inside the server** — not in the OSPP catalog pushed to stations by UpdateServiceCatalog [MSG-023], whose [`service-item.schema.json`](../schemas/common/service-item.schema.json) is `additionalProperties: false` and has no such field. A server that tries to publish a kind to a station will be rejected with `5023 INVALID_CATALOG`, and correctly so: no station behaviour depends on the kind, and settlement happens entirely server-side.
+> **The kind is server-side product data and is not carried by the protocol.** It is declared against each service in the **operator's own catalog inside the server** — not in the OSPP catalog pushed to stations by UpdateServiceCatalog [MSG-021], whose [`service-item.schema.json`](../schemas/common/service-item.schema.json) is `additionalProperties: false` and has no such field. A server that tries to publish a kind to a station will be rejected with `5023 INVALID_CATALOG`, and correctly so: no station behaviour depends on the kind, and settlement happens entirely server-side.
 >
 > The consequence is that **this section is not conformance-testable over any OSPP interface**, and that is why no test case exercises it. Nothing observable on the wire distinguishes a `UserDuration` service from a `FixedDuration` one. What is testable is the *server's* settled amount for a given reason, which is what the money-path cases assert.
 

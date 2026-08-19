@@ -1,6 +1,6 @@
 # Chapter 03 — Message Catalog
 
-> **Status:** Draft | **OSPP Version:** 0.24.1
+> **Status:** Draft | **OSPP Version:** 0.25.0
 
 This chapter is the normative reference for **every message** in the OSPP protocol. Each message is documented with its complete payload schema, metadata, and example.
 
@@ -335,7 +335,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
 | **Trigger** | Partial B scenario — station receives an OfflinePass via BLE from a mobile app while the station is online |
 | **Expected Response** | AuthorizeOfflinePass RESPONSE |
 | **Timeout** | 15 seconds |
-| **Idempotency** | Yes — server MUST return the same result for the same `offlinePassId` |
+| **Idempotency** | Yes, on the **`(offlinePassId, counter)`** pair — a retransmission carries the same `counter` and **MUST** get the same answer. **Not** on `offlinePassId` alone, which this row said until `0.25.0` and which the validation checks contradict by construction: a pass legitimately returns `Accepted` and then `4002` once check #6's `maxUses` is reached, and a replayed `counter` returns `2005` where the first use returned `Accepted` ([`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks-11-checks)). |
 | **Message Expiry** | 30 seconds (no [`02-transport.md` §5.1](02-transport.md) category covers this action; Appendix B is the cross-check) |
 
 In the **Partial B** offline scenario (phone offline, station online), the mobile app presents an OfflinePass to the station via BLE. The station forwards it to the server for real-time validation instead of performing local validation.
@@ -1724,7 +1724,7 @@ Reports firmware update progress. Sent at each stage transition and periodically
 |-------|------|:--------:|-------------|
 | `status` | string | Yes | Current stage — see enum below |
 | `firmwareVersion` | string | Yes | Target firmware version being installed |
-| `progress` | integer | No | Percentage complete (0-100), applicable during `Downloading` and `Installing` |
+| `progress` | integer | Cond. | Percentage complete (0-100). Permitted **only** during `Downloading` and `Installing`; **MUST** be absent otherwise ([`firmware-status.md`](profiles/device-management/firmware-status.md) rule 3) |
 | `errorText` | string | Cond. | Error description (when `Failed`) |
 
 **`status` enum values:**

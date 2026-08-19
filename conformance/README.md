@@ -1,6 +1,6 @@
 # OSPP Conformance Testing
 
-> **Status:** Draft | **OSPP Version:** 0.24.1
+> **Status:** Draft | **OSPP Version:** 0.25.0
 
 This document defines the conformance testing framework for OSPP implementations.
 Conformance testing validates that a station or server implementation correctly
@@ -143,7 +143,15 @@ relays auth to server via MQTT).
 | All Extended requirements | TC-CORE-*, TC-TX-*, TC-SEC-*, TC-DM-* |
 | Full offline BLE session | TC-OFF-001 |
 | OfflinePass validation (10 checks) | TC-OFF-002 |
-| Reconciliation | TC-OFF-003 |
+| Reconciliation — server-side processing | TC-OFF-003 |
+| Reconciliation — station upload & recovery | TC-OFF-004 |
+| **Partial B — station-relayed authorization** | **TC-OFF-005** |
+
+> **Two defects in this table, both fixed in `0.25.0`.** It named a mandatory *"Partial B scenario"* for which
+> **no test case existed** — `TC-OFF-005` is that case, and until it was written this compliance level could
+> not be claimed by any station, however conformant. And it listed three `TC-OFF-*` cases where §2.3 above
+> reaches all of them through the `TC-OFF-*` glob, so **Complete** enumerated *fewer* offline cases than the
+> **Extended** level it is defined as a superset of. `TC-OFF-004` is now named.
 
 ## 3. Test Case Structure
 

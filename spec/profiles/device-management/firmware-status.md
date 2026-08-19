@@ -19,8 +19,8 @@ FirmwareStatusNotification is a station-initiated event that reports the progres
 |-------------------|---------|----------|-----------------------------------------------|
 | `status` | string | Yes | Current firmware update status (see section 4). |
 | `firmwareVersion` | string | Yes | Target firmware version being installed (semver format). |
-| `progress` | integer | No | Download or install progress percentage (0--100). |
-| `errorText` | string | No | Human-readable error description (present when `status` is `Failed`). |
+| `progress` | integer | Cond. | Download or install progress percentage (0--100). Permitted **only** when `status` is `Downloading` or `Installing`; **MUST** be absent for every other status (rule 3). |
+| `errorText` | string | Cond. | Human-readable error description. **REQUIRED** when `status` is `Failed` (rule 4); **MUST** be absent for every other status. |
 
 ## 4. Status Values
 
@@ -38,8 +38,8 @@ The station **MUST** send a FirmwareStatusNotification at each status transition
 
 1. **During `Downloading`:** The station **SHOULD** send a notification at every 10% increment of download progress (i.e., at progress values 10, 20, 30, ..., 90, 100), and **SHOULD** send one at least every 30 seconds — whichever falls sooner. The two are a rate and a floor, not alternatives: a fast download crosses 10% marks more often than every 30 seconds and the marks bind; a slow one goes minutes between marks and the floor binds. Without the floor a stalled multi-hour download is indistinguishable from a healthy one until §6 rule 3's five minutes elapse; without the marks a short download reports once and says nothing about its shape.
 2. **During `Installing`:** The station **SHOULD** send a notification at key milestones (25%, 50%, 75%, 100%).
-3. The `progress` field **MUST** be omitted or set to `0` when the status is `Downloaded`, `Installed`, or `Failed`.
-4. On transition to `Failed`, the station **MUST** include a descriptive `errorText`.
+3. The `progress` field is only meaningful while the update is moving. It **MUST** be omitted for `Downloaded`, `Installed`, and `Failed`. Until `0.25.0` this rule read *"omitted or set to `0`"* — **two spellings of the same absence**, where the diagnostics twin ([`diagnostics-status.md`](diagnostics-status.md) rule 4) permits one and has the schema enforce it. A server reading two spellings has to normalise them and a station may pick either, so the pair is a divergence generator with no expressive gain: `0` and absent were never distinguishable in meaning, only in bytes. Now enforced by [`firmware-status-notification.schema.json`](../../../schemas/mqtt/firmware-status-notification.schema.json), not left to prose.
+4. On transition to `Failed`, the station **MUST** include a descriptive `errorText`, and it **MUST NOT** carry `errorText` on any other status. The second half is the one that was missing: the schema neither required the field where the prose demanded it nor forbade it anywhere else, so `errorText` was a free-text slot on a success and the server column it lands in ends up holding two registers of text at once. Both halves are enforced by the schema, as they already were on the diagnostics twin ([`diagnostics-status.md`](diagnostics-status.md) rule 5).
 
 ### 5.1 Expected State Transition Sequence
 

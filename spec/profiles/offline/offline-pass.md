@@ -1,6 +1,6 @@
 # OfflinePass Structure
 
-> **Status:** Draft | **OSPP Version:** 0.24.1
+> **Status:** Draft | **OSPP Version:** 0.25.0
 
 ## 1. Overview
 
@@ -29,14 +29,14 @@ An **OfflinePass** is a server-signed credential that authorizes a user to start
 | `maxTotalCredits` | integer | Yes | Maximum total credits across all sessions (minimum 1). |
 | `maxUses` | integer | Yes | Maximum number of sessions allowed (minimum 1). |
 | `maxCreditsPerTx` | integer | Yes | Maximum credits per single session (minimum 1). |
-| `allowedServiceTypes` | string[] | Yes | Service IDs permitted for offline use (minimum 1). |
+| `allowedServiceTypes` | string[] | **No — withdrawn** | **WITHDRAWN in `0.25.0`.** Accepted and ignored for one transition step, then removed. Servers **MUST NOT** issue it; receivers **MUST NOT** reject on it. No validation check in this specification has ever read it — see [`06-security.md` §6.1.1](../../06-security.md#611-offlinepass-validation--10-checks). |
 
 ### 2.2 constraints Object
 
 | Field | Type | Required | Description |
 |------------------------------|---------|----------|-----------------------------------------------|
 | `minIntervalSec` | integer | Yes | Minimum seconds between consecutive uses (minimum 0). |
-| `stationOfflineWindowHours` | integer | Yes | Maximum hours a station can operate offline (minimum 1). |
+| `stationOfflineWindowHours` | integer | Yes | Maximum hours a station can operate offline (minimum 1). Measured by the station as a **monotonic** delta from its last successful MQTT connection, not as a wall-clock difference — see §4, check #2. |
 | `stationMaxOfflineTx` | integer | Yes | Maximum offline transactions a station accepts before requiring sync (minimum 1). |
 
 ### 2.3 Server-Side Record Fields (not on the wire)
@@ -97,6 +97,40 @@ This is stated as a table because the sentence it replaces — *"the station MUS
 | 8 | **Per-transaction credits** | `4004 OFFLINE_PER_TX_EXCEEDED` | This transaction's estimated cost **MUST NOT** exceed `maxCreditsPerTx`. |
 | 9 | **Rate limit** | `4003 OFFLINE_RATE_LIMITED` | At least `minIntervalSec` seconds **MUST** have elapsed since last use of this pass. |
 | 10 | **Counter anti-replay** | `2005 OFFLINE_COUNTER_REPLAY` | `counter` **MUST** be strictly greater than `lastSeenCounter` for this pass on this station. |
+
+> **Which clock check #2 reads, and what happens when it cannot be trusted.** Both bounds are
+> **wall-clock** comparisons, and the station evaluating them is by definition offline: its only
+> two protocol clock sources — `serverTime` on the BootNotification and Heartbeat responses — arrive
+> only over an established mTLS session ([`01-architecture.md` §7.2](../../01-architecture.md)), and
+> the drift detector that would report the problem, `5106 CLOCK_ERROR`, is defined as *"detected at
+> Heartbeat [MSG-008] time sync"* ([Chapter 07 §3](../../07-errors.md)). Offline, the station has no
+> correction source and no detector. The rules are therefore:
+>
+> 1. The station **MUST** evaluate check #2 against its best available wall clock, and **MUST NOT**
+>    refuse a pass for want of confidence in that clock. A rule that withheld service whenever the
+>    clock was unverified would withhold it for the whole of every outage, which is the one condition
+>    this profile exists to serve.
+> 2. `constraints.stationOfflineWindowHours` is **not** a wall-clock quantity and **MUST NOT** be
+>    evaluated as one. It is an elapsed duration, and the station **MUST** measure it as a
+>    **monotonic** delta from its last successful MQTT connection — the same mechanism
+>    [`heartbeat.md` §6](../core/heartbeat.md#6-clock-synchronization) rule 5 already mandates for
+>    session elapsed time. A monotonic timer is unaffected by the drift and by any correction applied
+>    on reconnection, so this bound stays sound exactly where the wall-clock ones weaken.
+> 3. A station **SHOULD** record, in each receipt it signs while offline, that it was offline — the
+>    `bootReason` and the buffered-event ordering already carry this — so that an operator reviewing a
+>    disputed transaction can see which clock produced its timestamps.
+>
+> **What this does not fix, stated rather than papered over.** The server's backstop for temporal
+> validity is [`reconciliation.md` §6.1](reconciliation.md#61-check-list) check #9, and that check
+> compares the pass's `expiresAt` against the envelope's `endedAt` — a timestamp the **station**
+> produced from the same wall clock. A station running days slow passes check #2 on an expired pass
+> and then reports an `endedAt` that passes check #9, so the backstop is not independent of the fault
+> it backs up. The guards that *are* independent are the ones that read no clock: checks #10-#13 and
+> the cumulative cross-station factors of [`06-security.md` §7.4](../../06-security.md#74-fraud-detection--offline-transactions).
+> Closing the gap properly needs a server-side decision about how far a station timestamp may sit from
+> the server's receipt-processing time before the transaction is held for review, and that decision is
+> recorded in [`KNOWN-ISSUES.md`](../../../KNOWN-ISSUES.md#open--offlinepass-temporal-validity-rides-a-wall-clock-with-no-offline-correction-and-the-servers-backstop-reads-the-same-clock)
+> rather than guessed at here.
 
 > **Why the age bound is part of check #2 and not a check #11.** It is the same question — is this
 > pass temporally valid — with the same error code, and for a **conformant** pass the expiry bound

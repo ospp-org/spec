@@ -1,6 +1,6 @@
 # Chapter 06 — Security
 
-> **Status:** Draft | **OSPP Version:** 0.24.1
+> **Status:** Draft | **OSPP Version:** 0.25.0
 
 This chapter defines the complete security model for the OSPP protocol, covering threat analysis, authentication, authorization, cryptographic requirements, message integrity, offline security, anti-abuse mechanisms, and data protection.
 
@@ -58,7 +58,7 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 **Description:** A malicious user or device attempts to obtain service without payment, or to spend the same credits multiple times (especially in offline mode where real-time balance checks are not possible).
 
 **Countermeasures:**
-- **OfflinePass** (see §6.1) enforces hard limits: `maxUses`, `maxTotalCredits`, `maxCreditsPerTx` — [§6.1.1](#611-offlinepass-validation--10-checks) checks #6, #7 and #8 respectively. (`offlineAllowance.allowedServiceTypes` is carried and signed but read by no check in any of the three gates; it is not a limit this countermeasure can claim — see §6.1.1.)
+- **OfflinePass** (see §6.1) enforces hard limits: `maxUses`, `maxTotalCredits`, `maxCreditsPerTx` — [§6.1.1](#611-offlinepass-validation--10-checks) checks #6, #7 and #8 respectively. (`offlineAllowance.allowedServiceTypes` was carried and signed but read by no check in any of the three gates, and is **withdrawn** as of `0.25.0` — see §6.1.1. It was never a limit this countermeasure could claim.)
 - **Epoch-based revocation** (§6.6) — incrementing the global `RevocationEpoch` invalidates ALL passes issued before that epoch. Constant-time check on station; no CRL distribution required.
 - **ECDSA P-256 signed receipts with txCounter** (§6.2) — stations cryptographically sign every transaction including a monotonic counter. Unsigned or incorrectly signed transactions are flagged as CRITICAL. The counter itself is forensic (§6.3): a discontinuity raises an operator alert on the station and never withholds settlement.
 - **Fraud scoring** (§7.4) — post-reconciliation scoring with automatic response (disable offline, revoke pass, block user).
@@ -989,10 +989,10 @@ The OfflinePass is a server-signed credential that authorizes offline service us
 | `offlineAllowance.maxTotalCredits` | integer | Maximum total credits across all transactions |
 | `offlineAllowance.maxUses` | integer | Maximum number of transactions |
 | `offlineAllowance.maxCreditsPerTx` | integer | Maximum credits per single transaction |
-| `offlineAllowance.allowedServiceTypes` | array | List of permitted service IDs |
+| `offlineAllowance.allowedServiceTypes` | array | **WITHDRAWN (`0.25.0`)** — accepted and ignored for one transition step; no longer `required`, no longer issued, read by no check. See §6.1.1. |
 | `constraints` | object | Operational constraints — see below |
 | `constraints.minIntervalSec` | integer | Minimum seconds between transactions from this pass |
-| `constraints.stationOfflineWindowHours` | integer | Max hours a station can be offline and still accept this pass |
+| `constraints.stationOfflineWindowHours` | integer | Max hours a station can be offline and still accept this pass. A **monotonic** elapsed duration from the last successful MQTT connection, not a wall-clock difference (§6.1.1 check #2). |
 | `constraints.stationMaxOfflineTx` | integer | Max offline transactions a station can accumulate |
 | `signatureAlgorithm` | string | Signature algorithm identifier. MUST be `"ECDSA-P256-SHA256"` for v0.1. |
 | `signature` | string | ECDSA P-256 signature over all fields above (Base64-encoded, RFC 6979 deterministic nonces) |
@@ -1038,7 +1038,7 @@ Processing **MUST** stop at the first failure, and the validator **MUST** reject
 | # | Check | Error Code | Description |
 |:-:|-------|:----------:|-------------|
 | 1 | **ECDSA P-256 signature** | `2002` | Verify signature against the current `OfflinePassPublicKey` (or the internally cached previous key during the grace period; see §6.7) |
-| 2 | **Temporal bounds** | `2003` | Both, and either failing is this check failing: `expiresAt` **MUST** be in the future, **and** `now - issuedAt` **MUST NOT** exceed the station's `OfflinePassMaxAge` ([Chapter 08 §5](08-configuration.md)). [`offline-pass.md` §4](profiles/offline/offline-pass.md#4-validation-checks-10) states why the age bound sits here rather than as an eleventh check. |
+| 2 | **Temporal bounds** | `2003` | Both, and either failing is this check failing: `expiresAt` **MUST** be in the future, **and** `now - issuedAt` **MUST NOT** exceed the station's `OfflinePassMaxAge` ([Chapter 08 §5](08-configuration.md)). Both are **wall-clock** comparisons; the station **MUST** use its best available wall clock and **MUST NOT** refuse for want of confidence in it, and `stationOfflineWindowHours` is a **monotonic** elapsed duration rather than a wall-clock one. [`offline-pass.md` §4](profiles/offline/offline-pass.md#4-validation-checks-10) states the clock model in full, and why the age bound sits here rather than as an eleventh check. |
 | 3 | **Revocation epoch** | `2004` | `revocationEpoch` >= station's `RevocationEpoch` configuration value |
 | 4 | **Device binding** | `2002` | `deviceId` MUST match the `deviceId` from the Hello [MSG-029] message |
 | 5 | **Station restriction** | `2006` | **Not locally evaluable — see below.** Station scoping lives in `allowed_station_ids` on the *server's stored pass record*, not in the pass; a station validating offline cannot read it |
@@ -1054,7 +1054,15 @@ Processing **MUST** stop at the first failure, and the validator **MUST** reject
 
 **Check #5 is not evaluable on this path (KNOWN-ISSUES [B-2](../KNOWN-ISSUES.md#b-2--a-station-scoped-offlinepass-is-unrepresentable-in-the-authoritative-schema)).** Station scoping is held as `allowed_station_ids` on the server's stored pass record, which [`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks-11-checks) check #5 calls out as "not a wire field". [`offline-pass.schema.json`](../schemas/common/offline-pass.schema.json) has no member that can carry it and is `additionalProperties: false` at both levels, so a station validating locally over BLE has nothing to check and no server to ask. The list above is therefore **ten checks, nine of which a station can perform**; the scoping constraint is enforced server-side at authorize-time and at reconcile ([`reconciliation.md` §6.1](profiles/offline/reconciliation.md#61-check-list) check #8).
 
-**Nothing here reads `offlineAllowance.allowedServiceTypes`.** The pass carries the list, the schema requires it and `minItems: 1` keeps it non-empty, and it is covered by the signature — but no check in this list, in the authorize-time eleven, or in the reconcile-time thirteen compares a requested `serviceId` against it. Whether it should be checked is an open decision, not a property this section may be read as providing.
+**`offlineAllowance.allowedServiceTypes` is WITHDRAWN as of `0.25.0`, in two steps, and this is step one.** Nothing reads it: no check in this list, in the authorize-time eleven, or in the reconcile-time thirteen compares a requested `serviceId` against it. It had been carried, signed, and `required` with `minItems: 1` since the profile was written, and the paragraph that stood here observed the gap without ever registering it as a decision — so it read as an open question for as long as nobody asked it.
+
+> **The decision, and why it went this way.** The two live options were to define it completely or to withdraw it, and defining it unilaterally was not available: a server that began enforcing the list would refuse passes that a conformant station of every prior revision accepts, so switching it on is a coordinated fleet change, not a clarification. Nobody has asked for the constraint in the life of the field. A signed member no verifier reads is worse than an absent one — it is a promise the credential appears to make and no party keeps, and an operator scoping a pass to `["svc_basic"]` has every reason to believe a `svc_deluxe` transaction against it is refused somewhere. It is not.
+>
+> **Step one (`0.25.0`, non-breaking).** The member leaves `required` in [`offline-pass.schema.json`](../schemas/common/offline-pass.schema.json) and is retained as **accepted and ignored**. Servers **MUST NOT** issue it in new passes. Stations and servers **MUST** accept a pass that carries it and **MUST NOT** reject on its presence, absence, or contents.
+>
+> **Step two (a later release, breaking).** The member is removed from the schema outright. It is deferred rather than done now because `offlineAllowance` is `additionalProperties: false`: deleting the member in one step would make every pass already in circulation invalid at the next station that validated it. The wait is short by construction — `OfflinePassMaxAge` defaults to `86400`, and §6.1 re-issues the pass on app start, on each consumption and on each top-up — so circulation turns over within a day.
+>
+> **The example payloads and conformance vectors still carry the member, deliberately.** They depict passes issued before the withdrawal, which remain valid and which every receiver **MUST** still accept — that is exactly what step one guarantees. Editing them would also invalidate their ECDSA signatures for no gain: the member is inside the signed body, so removing it from a fixture means re-signing the fixture, and the corpus is vendored byte-identically by both SDKs. They are updated in step two, with the schema, in one pass.
 
 **Counter model — app-global value, station-local horizon (finding N7).** The `counter` carried in `OfflineAuthRequest` is a **single app-global monotonic value per pass**: the app — the sole holder of the pass — increments it on **every** use, regardless of which station the pass is presented to. The phrase "for this pass on this station" in check #10 describes the **offline station's verification horizon, not a per-station scoping of the value**. An offline station can only compare `counter` against what its own NVS has seen (it has no cross-station knowledge), so its anti-replay is necessarily local; because the value is app-global and strictly increasing, it trivially passes each station's local `>` check, and a station seeing this pass for the first time uses `lastSeenCounter = -1` so any value passes. The **cross-station** guarantee — that a cloned pass replayed across multiple stations is caught — is **not** provided by this local check; it is enforced **server-side at reconcile** via global `(offlinePassId, passCounter)` uniqueness ([`profiles/offline/reconciliation.md` §6.1](profiles/offline/reconciliation.md#61-check-list) checks #12/#13). The station **MUST** echo the `counter` it verified into the signed receipt as `passCounter` (§6.2 `receipt_fields`), so the server performs that global check on a value it can cryptographically trust.
 

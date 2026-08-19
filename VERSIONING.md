@@ -153,6 +153,34 @@ implement.
 by design and the difference carries no meaning: `0.9.0` identifies the SDK pair,
 `v0.8.0` identifies the contract.
 
+### The two lines have crossed, and they will not uncross
+
+**As of `0.25.0` the SDK number is ahead of the spec number, and neither is derived from
+the other.** The SDK pair released `0.25.0` pinning `.spec-ref = v0.24.1`; the spec then
+tagged `v0.25.0`, which the SDK pair will take up at `0.26.0`. From here the two numbers
+are permanently offset and the offset is not fixed — it will drift further every time
+either side releases for a reason the other has no part in.
+
+**This is not a defect and there is nothing to reconcile.** It is what "not required to
+match" means once both lines have moved independently for long enough. It is written down
+because it is a **reading** trap rather than a mechanical one: the numbers were close
+enough for long enough that a reader could treat them as corresponding, and a reader who
+does will pair an SDK with the wrong contract and get a green build for it.
+
+**The only source of truth is the marker.** To learn which spec revision an SDK
+implements, read that SDK's `.spec-ref`. Never infer it from the SDK's own version, in
+either direction, and never assume that equal numbers mean a matched pair — `@ospp/protocol
+0.25.0` implements spec `v0.24.1`, not `v0.25.0`, and that is correct.
+
+**Nothing compares them as numbers, and nothing should.** Swept at `v0.25.0`:
+`tools/verify-protocol.sh` checks the spec's own document-version sites against the
+`ospp-version` front-matter in [`spec/README.md`](spec/README.md) and reads no SDK version
+at all; no other gate in `tools/` or `.github/workflows/` reads one. A gate that compared
+the two lines numerically would have to encode an offset that is meaningless and changes
+without notice, so **a comparison of the two version numbers MUST NOT be introduced**; the
+`.spec-ref` byte-identity gate in each SDK is the check that carries this relationship, and
+it is exact rather than ordinal.
+
 See [ADR-001](adr/ADR-001-cross-repo-lockstep-versioning.md), *SDK-pair releases
 against a spec tag*, for what makes such a release complete.
 

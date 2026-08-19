@@ -54,8 +54,7 @@
       "required": [
         "maxTotalCredits",
         "maxUses",
-        "maxCreditsPerTx",
-        "allowedServiceTypes"
+        "maxCreditsPerTx"
       ],
       "properties": {
         "maxTotalCredits": {
@@ -79,7 +78,7 @@
             "$ref": "service-id.schema.json"
           },
           "minItems": 1,
-          "description": "Service types permitted for offline use"
+          "description": "WITHDRAWN in 0.25.0 — retained as an accepted-and-ignored member for one transition step only. No validation gate in this specification reads it: not the station's nine checks (06-security.md 6.1.1), not the authorize-time eleven, not the reconcile-time thirteen. Servers MUST NOT issue it in new passes; stations and servers MUST accept a pass that carries it and MUST NOT reject on its presence, absence or contents. The member is removed outright in a later release, once passes carrying it have left circulation."
         }
       },
       "additionalProperties": false

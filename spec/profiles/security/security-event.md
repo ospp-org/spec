@@ -1,6 +1,6 @@
 # SecurityEvent
 
-> **Status:** Draft | **OSPP Version:** 0.24.1
+> **Status:** Draft | **OSPP Version:** 0.25.0
 
 ## 1. Overview
 
@@ -34,8 +34,8 @@ SecurityEvent is sent by the station to report security-relevant incidents to th
 | `BruteForceAttempt` | Multiple consecutive authentication failures from the same source within a short window. | Warning |
 | `FirmwareIntegrityFailure` | Firmware hash verification failed at boot. The installed firmware does not match the expected checksum. | Critical |
 | `FirmwareDowngradeAttempt` | A firmware update was received with a version older than the currently installed version. Logged regardless of whether `forceDowngrade` was set. | Warning |
-| `HardwareFault` | Critical hardware error reported by the station (pump overcurrent, electrical fault, emergency stop). Generated when a 5xxx Critical error occurs. | Critical |
-| `SoftwareFault` | Critical software error reported by the station (firmware crash, watchdog reset, memory exhaustion). Generated when a 51xx Critical error occurs. | Critical |
+| `HardwareFault` | Critical hardware error reported by the station (pump overcurrent, electrical fault, emergency stop). The **fallback** type for a Critical `5xxx` code that is **not** `51xx` and is named by no row in this table — see the two-step selection in [`07-errors.md` §1.2](../../07-errors.md#12-severity-levels). | Critical |
+| `SoftwareFault` | Critical software error reported by the station (firmware crash, watchdog reset, memory exhaustion — `5111 BUFFER_FULL` is this last one). The **fallback** type for a Critical `51xx` code named by no row in this table. `51xx` is tested **before** the `HardwareFault` row's `5xxx`, because `5xxx` contains it. | Critical |
 | `ClockSkew` | Station clock differs from server time by more than 300 seconds, detected during Heartbeat time synchronization. | Warning |
 
 ## 5. Severity Levels

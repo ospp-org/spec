@@ -83,7 +83,8 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 | 3014 | `BAY_RESERVED` | Warning | Bay is reserved by another user. |
 | 5001 | `PUMP_SYSTEM` | Critical | Actuator malfunction detected during activation. |
 | 5004 | `ELECTRICAL_SYSTEM` | Critical | Power supply fault during activation. |
-| 5111 | `BUFFER_FULL` | Warning | Offline transaction buffer near capacity; station rejects new sessions to prevent data loss. |
+| 5103 | `STORAGE_ERROR` | Error | Non-volatile storage read or write failure — including a failure to persist the pending transaction record before confirming `Accepted` ([`ble-session.md` §3](../offline/ble-session.md) rule 3). |
+| 5111 | `BUFFER_FULL` | Critical | Offline transaction buffer at or above 90% capacity; station rejects new sessions to prevent data loss. |
 
 ## 8. Idempotency
 
@@ -162,4 +163,7 @@ If the `sessionId` matches a completed or failed session, the station **MUST** r
 - Bay ID: [`bay-id.schema.json`](../../../schemas/common/bay-id.schema.json)
 - Service ID: [`service-id.schema.json`](../../../schemas/common/service-id.schema.json)
 - Reservation ID: [`reservation-id.schema.json`](../../../schemas/common/reservation-id.schema.json)
-- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 3001--3014, 3017, 5001, 5004, 5111)
+- Error codes: the StartService row of [Chapter 07 — Error Codes & Resilience §4.2](../../07-errors.md#42-server--station-mqtt-actions) is the
+  authoritative set. §7 above lists the ones this action raises in its own right, with the meaning it gives them; it is a
+  subset and not a second definition. This line previously restated the set as *"3001--3014, 3017, 5001, 5004, 5111"*, which
+  swept in `3007 SESSION_MISMATCH` — a StopService code absent from §7 above — and omitted eight `50xx` codes §4.2 permits.

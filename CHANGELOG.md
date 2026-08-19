@@ -8,6 +8,219 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.25.0] — 2026-08-19
+
+> **MINOR, and breaking.** A station reporting `5111` as a Warning, a station that omits
+> `previousCatalogVersion` from an `Accepted` catalog response, a station that only `SHOULD`-persists
+> its catalog, and a station sized to the old 512 KB buffering figure all stop being conforming.
+> `protocolVersion` stays `0.3.0`; no message, field or registry code is added.
+>
+> **Four reconnaissance reports were adjudicated against the specification rather than against each
+> other, and most of what they carried was already closed.** The offline report's nine enumerated
+> internal contradictions were closed by `0.24.0`; thirteen of the diagnostics report's fifteen were
+> closed by `0.23.0`; three of the four catalog divergences were closed by `0.22.0` and `0.24.0`.
+> Two of the reprovisioning report's findings were **false**: the rollback clock reads 60 s in one
+> document and 5 minutes in another because they time different events, and
+> `05-state-machines.md` §6.5 already does the arithmetic joining them
+> (`BootFailureTimeout 60s + HealthCheckTimeout 120s` + margin); and the receipt-key rotation "gap"
+> is labelled by `06-security.md` §4.3 in terms as *"a stated limitation, not an omission"*. What
+> survived is below, and most of it was found by measuring, not by reading the reports.
+
+### Fixed
+
+- **A Critical station-detected error had three rules naming its SecurityEvent `type`, and eight
+  codes had none.** `07-errors.md` §1.2 said *"There is no blanket `HardwareFault`/`SoftwareFault`
+  rule"* while both `security-event.md` §3 rows asserted one — `HardwareFault` *"Generated when a
+  5xxx Critical error occurs"*, `SoftwareFault` *"when a 51xx Critical error occurs"*. Since `5xxx`
+  **contains** `51xx`, every Critical `51xx` code was answered twice, and `5112` was answered three
+  times: by name, by the `5xxx` row, and by the `51xx` row. Meanwhile the eight Critical codes no
+  §3 row names — `5001`, `5009`, `5018`, `5101`, `5104`, `5105`, `5110`, `5111` — were addressed by
+  a SHOULD with no `type` they could carry. Replaced by an explicit two-step selection: **named
+  first, then `51xx` → `SoftwareFault`, then any other `5xxx` → `HardwareFault`**, with the ranges
+  ordered so they cannot both match. Deleting the blanket rules instead would have left those eight
+  unconstructible, which is the shape this repository has a named class for.
+
+- **`5111 BUFFER_FULL` was Critical in the registry and Warning in the profile, and the difference
+  is on the wire.** `07-errors.md` states Critical twice (§3 and Annex B); `start-service.md` §7
+  said Warning. Severity is not cosmetic here — it decides whether the SHOULD above emits a
+  SecurityEvent at all, and `security-event.md` §4 makes Critical the level at which a server
+  **MUST** raise an immediate operator alert. The profile cell yields to the registry, as `5024`'s
+  did in `0.22.0`.
+
+- **A station that cannot write to storage was told to report a full buffer.** `ble-session.md` §3
+  rule 3 sent a failed persist to `5111 BUFFER_FULL`, whose registry entry is *"buffer is at or
+  near capacity (>= 90%)"* — a capacity condition on a working store. The right code existed:
+  `5103 STORAGE_ERROR`, *"Non-volatile storage (NVS) read or write failure"*. It was simply **not
+  in StartService's permitted set**, so the accurate code was unusable and the inaccurate one was
+  the only one allowed. `5103` is added to the StartService row of §4.2 and rule 3 now names it.
+  No new code, no new field — the class note's own recipe, applied.
+
+- **StartService's permitted codes were stated twice and the two sets disagreed in both
+  directions.** `start-service.md` restated them as *"3001--3014, 3017, 5001, 5004, 5111"*, which
+  swept in `3007 SESSION_MISMATCH` — a StopService code absent from that file's own §7 table — and
+  omitted eight `50xx` codes §4.2 permits. The restatement is replaced by a citation to §4.2, which
+  is the only form that cannot drift.
+
+- **The storage contract budgeted zero bytes for a `MUST NOT discard` stream, and its other two
+  figures were about a third of what the corpus carries.** `01-architecture.md` §6.5's Category-1
+  table gave SessionEnded a Min Capacity of *"1 per session that ended while unable to send"* —
+  which states the emission rule and sizes nothing — and the Hardware Requirements table below it
+  had no SessionEnded line at all. Measured against the `valid` vectors: TransactionEvent 1091 B
+  against an implied 300 B, SecurityEvent 509 B against 200 B, SessionEnded 199 B against nothing.
+  607 B of the 925 B minimal TransactionEvent is the signed `receipt`, which **MUST** be retained
+  byte-identically. SessionEnded's floor is now **1000, the same as TransactionEvent**, because
+  `session-ended.md` rule 1 requires the event for every session terminating without a StopService
+  and no offline session can terminate *with* one — the two streams are co-indexed over an outage.
+  §6.5 now carries the measured per-message figures with their measurement point and the derived
+  totals (~1.6 MB `MUST`, ~3.2 MB `SHOULD`) against levels of 512 KB and 1 MB. **Raising the levels
+  is a bill-of-materials decision and is recorded in `KNOWN-ISSUES.md` with its option space rather
+  than taken here.** SessionEnded is also added to the Reconnection Transmission Order, which had
+  omitted a stream it forbids discarding.
+
+- **OfflinePass validity rides a wall clock the station cannot correct while offline, and the
+  specification had already done that analysis and stopped one field short.** `heartbeat.md` §6
+  rule 5 puts session elapsed time on a monotonic timer, and the note under rule 2 enumerates what
+  does *not* ride the wall clock — billing, anti-replay, the ordering floor. Check #2's `expiresAt`
+  and `OfflinePassMaxAge` bounds were not in that enumeration and do ride it, in the one mode where
+  both clock sources (`serverTime` on BootNotification and Heartbeat) are unreachable and the
+  detector (`5106`, *"detected at Heartbeat time sync"*) cannot fire. Now stated: the station uses
+  its best available wall clock and **MUST NOT** refuse a pass for want of confidence in it — a
+  refusal rule there would withhold service for the whole of every outage, which is the condition
+  the profile exists to serve. And `constraints.stationOfflineWindowHours` is named as a
+  **monotonic** delta from the last successful MQTT connection rather than a wall-clock difference,
+  which closes the enforcement question `ROADMAP.md` had carried open, using the mechanism rule 5
+  already mandates. What is **not** fixed is stated rather than papered over: reconcile check #9
+  compares `expiresAt` against the station-supplied `endedAt`, so the server's backstop reads the
+  same clock as the fault it backs up. Recorded OPEN with its option space.
+
+- **Complete compliance could not be claimed by any station, however conformant.**
+  `conformance/README.md` §2.4 required *"Partial B scenario test cases"* and no such case existed —
+  `grep -rl "Partial B" conformance/` matched the README and nothing else. `TC-OFF-005` is that
+  case. The same table also listed three `TC-OFF-*` cases where §2.3 reaches all of them by glob, so
+  **Complete** enumerated fewer offline cases than the **Extended** level it is a superset of;
+  `TC-OFF-004` is now named.
+
+- **Catalog: three sites disagreed about the response, and one document out of three carried the
+  weaker word.** `update-service-catalog.md` marked `errorCode`/`errorText` Required=**No** while
+  `03-messages.md` said `Cond.` and the schema enforced the conditional — the profile was the lone
+  dissenter, and it is the document firmware is written from. `previousCatalogVersion` was a **MUST**
+  in processing rule 3, Required=**No** in the same file's table, and optional in the schema; the
+  schema now carries the `if Accepted then required` conditional, the table says `Cond.`, and the
+  empty string is named as the legitimate value for a station that has never held a catalog.
+  Catalog NVS persistence was a `SHOULD` here against a `MUST` in `profiles/device-management/README.md`
+  and a second `MUST` in `03-messages.md`; the minority word is raised.
+
+- **`0.24.0`'s settle-once repair landed on the table and not on the sentence, and the sentence is
+  the one an implementer reads.** `reconciliation.md` §8.2's forward-guard note still required the
+  authorize-time debit and the reconcile true-up to present *"the same `sessionId`-derived
+  idempotency key"* — three lines below rule 3, which names `(authId, sessionId)` and
+  `(offlinePassId, passCounter)` per form, and below §8's statement that `sessionId` *"is not
+  available on the pass-form and **MUST NOT** be required there"*. The path that note guards is the
+  Partial-B offline fallback, which reconciles in the **pass-form** — so the surviving sentence was
+  unsatisfiable on the one case it exists for, which is exactly what `0.24.0` closed. It is the same
+  class instance in a second site, and it was found by writing `TC-OFF-005` against the section
+  rather than by re-reading it.
+
+- **AuthorizeOfflinePass declared an idempotency its own validation checks contradict.**
+  `03-messages.md` §2.1 said *"server MUST return the same result for the same `offlinePassId`"*.
+  A pass legitimately returns `Accepted` and later `4002` when check #6's `maxUses` is reached, and
+  a replayed `counter` returns `2005` where the first use returned `Accepted`. Re-keyed to the
+  `(offlinePassId, counter)` pair, which is what a retransmission actually repeats. This is the
+  third idempotency row found saying the opposite of the rules beneath it, after the two `0.23.0`
+  corrected.
+
+- **FirmwareStatusNotification permitted two spellings of the same absence, where its twin permits one.**
+  `firmware-status.md` rule 3 read *"**MUST** be omitted **or set to `0`**"* for `Downloaded`, `Installed`
+  and `Failed`. `0` and absent were never distinguishable in meaning, only in bytes, so the pair is a
+  divergence generator with no expressive gain: a server has to normalise both and a station may pick either.
+  The diagnostics twin permits one spelling and has the schema enforce it. Now the same here — one spelling,
+  three `allOf` branches, and the one `valid` vector carrying `progress: 0` on `Failed` corrected.
+
+- **`errorText` was mandated on FirmwareStatusNotification by prose the schema neither required nor bounded.**
+  Rule 4 demanded it on `Failed`; `firmware-status-notification.schema.json` had no conditional at all, so the
+  field was neither required where the prose demanded it nor forbidden anywhere else — a free-text slot on a
+  success, in the server column that also holds real failure text. Both halves are now enforced, exactly as
+  `0.23.0` had already done on the diagnostics twin. **Neither firmware repair invents a form**: both are the
+  conditions already tightened on the other machine, applied to the mirror that was missed.
+
+- **`04-flows.md` cited UpdateServiceCatalog as `[MSG-023]`**, which is CertificateInstall. The
+  chapter's own registry has it at MSG-021, and every other citation in the file was already
+  correct. (The Chapter 03 numbering defect this resembles was a different one and was fixed in
+  `0.23.0`.)
+
+### Added
+
+- `conformance/test-cases/offline/TC-OFF-005.md` — Partial B, station-relayed authorization.
+- Two negative conformance vectors, each verified to be refused **for the right reason** by a
+  differential — restoring only the missing member flips each to valid:
+  `update-service-catalog-response-accepted-missing-previous.json` (exercises the new `Accepted`
+  conditional) and `update-service-catalog-request-entry-missing-bindings.json`, which is the first
+  vector to prove `bindings` is REQUIRED. The existing negative omitted `services` at top level and
+  so never produced a service entry without `bindings`; the constraint had been asserted as text in
+  both SDKs and as a rejection nowhere.
+
+### Changed
+
+- `conformance/test-vectors/valid/device-management/update-service-catalog-response-minimal.json`
+  gains `"previousCatalogVersion": ""`. It is the one `valid` vector the new conditional would have
+  invalidated; it is given the member rather than demoted to `invalid/`, which would have left the
+  family without its minimal positive case.
+
+### Decided
+
+- **`offlineAllowance.allowedServiceTypes` is withdrawn, in two steps.** A signed member that no check in
+  any of the three gates has ever read. What ruled out defining it was coordination rather than cost: a
+  server that began enforcing the list would refuse passes every conformant station of every prior revision
+  accepts, so switching it on is a fleet change both sides must make together — and nobody asked for the
+  constraint in the life of the field. **Step one, here and non-breaking**: it leaves
+  `offlineAllowance.required`, is retained as accepted-and-ignored, servers **MUST NOT** issue it and
+  receivers **MUST NOT** reject on it. **Step two, later and breaking**: the member is deleted and the corpus
+  re-signed. Two steps because `offlineAllowance` is `additionalProperties: false`, so a one-step deletion
+  would invalidate every pass already in circulation at the next station that validated it — a fleet-wide
+  credential invalidation as the price of removing a field nothing reads. The wait costs nothing:
+  `OfflinePassMaxAge` defaults to `86400` and `0.24.0` re-issues the pass on app start, each consumption and
+  each top-up, so circulation turns over within a day. The measured cost of step two is recorded in
+  `KNOWN-ISSUES.md` so it is not rediscovered — the member is inside the signed body, so nine standalone
+  signed artifacts, twenty markdown-embedded ones across seven documents, and the RFC-anchored BLE key-schedule
+  oracle all move together.
+
+- **Station ownership transfer and decommissioning stay undefined — and §1.3 now says so.**
+  Measured over `spec/` and `schemas/`: *decommission*, *dispose*, *unregister*, *deregister*,
+  *tombstone*, *handover*, *RMA* and *owner* occur **zero** times each, `ownership` once in an
+  unrelated sense, and all ten occurrences of *transfer* are the `DataTransfer` message. Two rows
+  are added to [Out of Scope](spec/00-introduction.md#13-out-of-scope), with a note saying why two
+  rows exist for subjects that were simply absent: every other row there excludes a topic no reader
+  goes looking for, while these are topics a reader *does* go looking for and finds nothing — and a
+  reader who concludes "not written yet" builds something and expects it to interoperate. The
+  reference implementation had already taken this position in its own ADR; the specification had
+  not, and an undocumented agreement between one server and one spec is not a protocol decision.
+  The two options not taken are kept in `KNOWN-ISSUES.md`, because reopening this means choosing
+  between them, and either is a protocol addition rather than a clarification.
+
+### Documented
+
+- **The SDK and specification version lines have crossed, permanently.** The SDK pair released `0.25.0`
+  pinning `.spec-ref = v0.24.1`; this tag is `v0.25.0`, which the pair takes up at `0.26.0`. The two numbers
+  are now offset, the offset is not fixed, and neither is derived from the other.
+  [`VERSIONING.md`](VERSIONING.md#the-two-lines-have-crossed-and-they-will-not-uncross) says so where the
+  question is asked. This is a **reading** trap rather than a mechanical one — the numbers were close enough
+  for long enough that a reader could treat them as corresponding, and one who does pairs an SDK with the
+  wrong contract and gets a green build for it. Swept at this tag: **nothing compares the two lines
+  numerically** — `verify-protocol.sh` checks the spec's own version sites against `spec/README.md`'s
+  front-matter and reads no SDK version, and no other gate in `tools/` or `.github/workflows/` reads one. A
+  comparison **MUST NOT** be introduced; the relationship is carried by each SDK's `.spec-ref` byte-identity
+  gate, which is exact rather than ordinal.
+
+### Recorded, not repaired
+
+Three entries added to `KNOWN-ISSUES.md`, each with its option space: the storage levels against the
+floors they are said to size; the wall-clock backstop; and **`5019 UPLOAD_FAILED`**, an eighth
+instance of the *obligation nothing can carry* class — its condition cannot exist when the coded
+response is sent (§8.3 leaves the machine in `Idle`) and the message that does report it has no
+`errorCode`.
+
+---
+
 ## [0.24.1] — 2026-08-18
 
 > **`0.24.0` raised `MaxOfflineTransactions` past the values its own corpus carries, and nothing

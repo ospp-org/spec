@@ -1,6 +1,6 @@
 # Chapter 07 — Error Codes & Resilience
 
-> **Status:** Draft | **OSPP Version:** 0.24.1
+> **Status:** Draft | **OSPP Version:** 0.25.0
 
 This chapter defines the complete error taxonomy for the OSPP protocol, including the error code registry, standard error response format, retry policies, circuit breaker patterns, and graceful degradation behavior.
 
@@ -49,7 +49,12 @@ Every error code is assigned a fixed severity level that indicates its impact an
 
 - **3+ Warning** errors of the same code within 5 minutes on the same bay SHOULD escalate to **Error** severity in the next StatusNotification.
 - **3+ Error** events of the same code within 10 minutes on the same bay SHOULD trigger a transition to **Faulted** state (effective **Critical**).
-- A **Critical** error that a **station** detects SHOULD be reported via SecurityEvent [MSG-012], using the `type` its §3 registry entry names — `MacVerificationFailure` for `1012`, `OfflinePassRejected` for `2005`/`2017`, `ServerSignedAuthReplay` for `2018`, `FirmwareIntegrityFailure` for `5112`, `HardwareFault` for `5004`, and so on. There is no blanket `HardwareFault`/`SoftwareFault` rule.
+- A **Critical** error that a **station** detects SHOULD be reported via SecurityEvent [MSG-012], and the `type` is chosen in two steps, **named first, then the fallback**:
+
+  1. **If the code is individually named** in the [`security-event.md` §3](profiles/security/security-event.md) registry, that `type` binds: `MacVerificationFailure` for `1012`, `OfflinePassRejected` for `2005`/`2017`, `ServerSignedAuthReplay` for `2018`, `FirmwareIntegrityFailure` for `5112`, `HardwareFault` for `5004`.
+  2. **Otherwise**, a Critical `51xx` code is `SoftwareFault` and any other Critical `5xxx` code is `HardwareFault`. The two ranges are stated as **`51xx` first and `5xxx` otherwise** precisely because `5xxx` contains `51xx`: read as two independent rules they answer every `51xx` Critical code twice.
+
+  The fallback exists because eight Critical codes are named by no §3 row — `5001`, `5009`, `5018`, `5101`, `5104`, `5105`, `5110`, `5111` — and without it the SHOULD above would address them with no `type` they could carry. An earlier revision of this line said *"There is no blanket `HardwareFault`/`SoftwareFault` rule"* while both §3 rows asserted one; that left `5112` with three answers (`FirmwareIntegrityFailure` by name, `HardwareFault` by the `5xxx` row, `SoftwareFault` by the `51xx` row) and the eight above with none.
 
 - **The SecurityEvent *message* is Station→Server only** — [MSG-012] has no server→station direction, so a server-detected Critical code such as `4008 WEBHOOK_SIGNATURE_INVALID` has no SecurityEvent it could **send**.
 - **A server does nonetheless emit SecurityEvent *records*,** and the Offline profile requires it in four places: [`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 7 (checks #1 and #10 at authorize-time), [`reconciliation.md` §5](profiles/offline/reconciliation.md#5-receipt-signature-verification) rule 4 (invalid receipt signature), [`reconciliation.md` §6.3](profiles/offline/reconciliation.md#63-securityevent-emission) (every applicable gate failure), and [`reconciliation.md` §3](profiles/offline/reconciliation.md#3-deduplication-offlinetxid) rule 3 (`2017` on a mismatched duplicate). These are audit rows the server writes about a **station-presented credential**; they conform to the same `security-event.md` shape and are not transmitted anywhere.
@@ -491,7 +496,7 @@ This table maps which error codes can appear in the RESPONSE or rejection of eac
 |--------|---------------------|
 | ReserveBay [MSG-003] | **3001**, **3002**, 3005, 3011, 3012, 3013, 3014, 5000–5009 |
 | CancelReservation [MSG-004] | **3012**, **3013**, 3005 |
-| StartService [MSG-005] | **3001**, **3002**, **3004**, **3009**, **3017**, 3003, 3005, 3006, 3008, 3010, 3011, 3012, 3013, 3014, 5000–5009, 5111 |
+| StartService [MSG-005] | **3001**, **3002**, **3004**, **3009**, **3017**, 3003, 3005, 3006, 3008, 3010, 3011, 3012, 3013, 3014, 5000–5009, **5103**, 5111 |
 | StopService [MSG-006] | **3006**, **3007**, 3005, 3011 |
 | Reset [MSG-015] | **3016**, 5107, 5110 |
 | ChangeConfiguration [MSG-013] | **3015**, 1012, 2008, 5108, 5109 |

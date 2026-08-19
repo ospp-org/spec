@@ -252,7 +252,11 @@ The rule that follows: **when you re-baseline, re-measure the OLD tree with the 
 before writing the new number.** Otherwise an instrument fix and a content change land as one
 figure and neither can be attributed. The worked example is this one: 443 as shipped, **441
 re-measured on a pristine `efe009c` with only the instrument fix applied** — so the instrument
-was worth 2, and whatever a later release's content is worth is separable from it.
+was worth 2, and whatever a release's content is worth is separable from it. `0.25.0` is the
+first release to do this: the instrument correction is its own commit, measured on the pristine
+tree, and the release content then moved 441 to 439. Two numbers, two causes, two commits — a
+reader who asks why the published count fell finds the defect rather than concluding the
+documents shrank.
 
 The rules that follow from it:
 

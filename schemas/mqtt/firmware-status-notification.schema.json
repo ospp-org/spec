@@ -4,12 +4,21 @@
   "title": "FirmwareStatusNotification",
   "description": "Notification from the station reporting firmware update progress.",
   "type": "object",
-  "required": ["status", "firmwareVersion"],
+  "required": [
+    "status",
+    "firmwareVersion"
+  ],
   "additionalProperties": false,
   "properties": {
     "status": {
       "type": "string",
-      "enum": ["Downloading", "Downloaded", "Installing", "Installed", "Failed"]
+      "enum": [
+        "Downloading",
+        "Downloaded",
+        "Installing",
+        "Installed",
+        "Failed"
+      ]
     },
     "firmwareVersion": {
       "type": "string",
@@ -19,11 +28,75 @@
     "progress": {
       "type": "integer",
       "minimum": 0,
-      "maximum": 100
+      "maximum": 100,
+      "description": "Download or install progress percentage. MUST be absent when status is Downloaded, Installed, or Failed (firmware-status.md rule 3)."
     },
     "errorText": {
       "type": "string",
-      "maxLength": 128
+      "maxLength": 128,
+      "description": "Human-readable error description. REQUIRED when status is Failed, absent otherwise (firmware-status.md rule 4)."
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "Downloaded",
+              "Installed",
+              "Failed"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "progress": false
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "Failed"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "errorText"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "Downloading",
+              "Downloaded",
+              "Installing",
+              "Installed"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "errorText": false
+        }
+      }
+    }
+  ]
 }

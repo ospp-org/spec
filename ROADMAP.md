@@ -107,7 +107,7 @@ See [CHANGELOG.md](CHANGELOG.md) `[0.3.0]` entry.
 
 ### Specification Refinements
 
-- **stationOfflineWindowHours enforcement:** Define how the station tracks its own offline duration for OfflinePass validation (e.g., monotonic clock delta from last MQTT disconnect)
+- ~~**stationOfflineWindowHours enforcement**~~ — **answered in `0.25.0`**: the station measures it as a monotonic delta from its last successful MQTT connection, which is the mechanism this item proposed and the one [`heartbeat.md` §6](spec/profiles/core/heartbeat.md#6-clock-synchronization) rule 5 already mandates for session elapsed time. Stated normatively at [`offline-pass.md` §4](spec/profiles/offline/offline-pass.md#4-validation-checks-10) check #2 and on both field definitions.
 - **Reconciliation backpressure:** Specify batch size and flow control for offline TransactionEvent upload on reconnect (e.g., 50 events per batch, server-side acknowledgment before next batch)
 - **Error code 2002 split:** Split `2002 OFFLINE_PASS_INVALID` into separate codes for ECDSA signature failure vs. device binding mismatch for improved machine-readable diagnostics
 

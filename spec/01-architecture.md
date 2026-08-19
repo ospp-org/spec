@@ -1,6 +1,6 @@
 # Chapter 01 — Architecture
 
-> **Status:** Draft | **OSPP Version:** 0.24.1
+> **Status:** Draft | **OSPP Version:** 0.25.0
 
 This chapter defines the foundational system model upon which all subsequent chapters build: the participants, their communication channels, the hardware model, the identity scheme, the controller topologies, and the layered communication stack.
 
@@ -382,7 +382,7 @@ During connectivity loss (MQTT disconnection), the station **MUST** implement se
 | Message | Min Capacity | Discard Policy | Justification |
 |---------|-------------|----------------|---------------|
 | TransactionEvent | 1000 events | MUST NOT discard | Billing-critical. Each offline transaction must be reconciled. 1000 events covers 3+ days at high-traffic stations (300 events/day). |
-| SessionEnded | 1 per session that ended while unable to send | MUST NOT discard | Billing-critical and **not** regenerable, which is what separates it from MeterValues below. It is the sole billing source for a session that terminated autonomously with no StopService to answer, so losing it loses the record of a service already delivered. [Chapter 02 §5.1](02-transport.md) already classifies it as a critical event that never expires and requires its payload be retained for retransmission. |
+| SessionEnded | 1000 events — **the same floor as TransactionEvent, and for the same reason** | MUST NOT discard | Billing-critical and **not** regenerable, which is what separates it from MeterValues below. It is the sole billing source for a session that terminated autonomously with no StopService to answer, so losing it loses the record of a service already delivered. [Chapter 02 §5.1](02-transport.md) already classifies it as a critical event that never expires and requires its payload be retained for retransmission. **The floor is 1000 rather than a per-session count** because [`session-ended.md` §6](profiles/transaction/session-ended.md) rule 1 requires the event for *every* session terminating without a StopService, and while the station is offline **no** session can terminate with one — the server that would send it is unreachable. The two Category-1 streams are therefore co-indexed one-for-one over an outage, not independent. The earlier cell read *"1 per session that ended while unable to send"*, which states the emission rule rather than a capacity, and so sized nothing. |
 | SecurityEvent | 200 events | FIFO (oldest discarded first) | Audit trail for compliance. Recent events are more actionable than older ones. |
 
 When the TransactionEvent buffer reaches 90% of its configured `MaxOfflineTransactions` capacity (900 events at the 1000-event minimum above), the station **SHOULD** reject new session requests (StartService → Rejected with error `5111 BUFFER_FULL`) to prevent buffer overflow. The station MUST NOT discard existing TransactionEvent messages under any circumstances. If the buffer reaches 100% capacity despite rejecting new sessions, the station MUST enter degraded mode: continue reporting status via StatusNotification but refuse all new sessions until buffered events are delivered after reconnection.
@@ -402,12 +402,42 @@ The following messages do not require offline buffering. At reconnection, the st
 
 #### Hardware Requirements
 
-| Level | Storage | Capacity |
-|-------|---------|----------|
-| MUST | 512 KB dedicated to offline message buffering | 1000 TransactionEvents (~300 KB) + 200 SecurityEvents (~40 KB) + 20 KB overhead + 150 KB headroom (~40% safety margin) |
-| SHOULD | 1 MB dedicated to offline message buffering | 2000 TransactionEvents + 500 SecurityEvents. Covers approximately 7 days of high-traffic operation without connectivity. |
+**Per-message sizing figures.** These are the largest **compact-JSON payload** of any vector in the `valid`
+conformance corpus for that message, measured at `efe009c` / `v0.24.1`, rounded up. They exclude the MQTT
+envelope and any framing a station adds. They are stated here so the arithmetic below can be checked rather
+than trusted:
 
-> **Note:** Any controller capable of running MQTT + TLS (minimum ESP32 class with 4 MB flash) has sufficient capacity for the 512 KB MUST requirement without additional hardware cost.
+| Message | Largest `valid` vector | Sizing figure |
+|---|---:|---:|
+| TransactionEvent (offline, pass-form) | 1091 B (`transaction-event-request-full.json`) | **1.2 KB** |
+| SessionEnded | 199 B (`session-ended-event-timer-expired.json`) | **0.25 KB** |
+| SecurityEvent | 509 B (`security-event-server-signed-auth-replay.json`) | **0.6 KB** |
+
+The TransactionEvent figure is dominated by the signed `receipt` — 607 B of the 925 B minimal vector — which
+is the non-repudiation artefact and **MUST** be retained byte-identically for retransmission
+([Chapter 02 §5.3](02-transport.md)). It is not compressible away by a conformant implementation.
+
+| Level | Storage | Capacity it is sized for |
+|-------|---------|----------|
+| MUST | 512 KB dedicated to offline message buffering | **Does not reach the Category-1 floor above.** 1000 TransactionEvents (1.2 MB) + 1000 SessionEnded (250 KB) + 200 SecurityEvents (120 KB) + 20 KB overhead = **~1.6 MB**. |
+| SHOULD | 1 MB dedicated to offline message buffering | 2000 TransactionEvents + 2000 SessionEnded + 500 SecurityEvents = **~3.2 MB**. Intended to cover approximately 7 days of high-traffic operation without connectivity. |
+
+> **OPEN — the two storage levels do not hold the capacities this section mandates, and raising them is a
+> hardware-cost decision this revision does not take.** Until `0.25.0` the `MUST` row read *"1000
+> TransactionEvents (~300 KB) + 200 SecurityEvents (~40 KB) + 20 KB overhead + 150 KB headroom (~40% safety
+> margin)"*. Both per-message figures were about a third of what the corpus carries, and SessionEnded — a
+> Category-1 `MUST NOT discard` stream — had no line at all, so it was budgeted zero. The floors in the
+> Category-1 table are the normative requirement and are unchanged; the storage levels are what a vendor
+> builds to, and the two no longer agree. Changing a mandatory storage level changes the bill of materials of
+> every conformant station, so it is recorded in
+> [`KNOWN-ISSUES.md`](../KNOWN-ISSUES.md#open--the-hardware-storage-levels-do-not-hold-the-category-1-floors-they-are-said-to-size)
+> with its option space rather than decided here. **A vendor sizing new hardware today should build to the
+> derived figures, not to the level rows.**
+>
+> The note this replaces read: *"Any controller capable of running MQTT + TLS (minimum ESP32 class with 4 MB
+> flash) has sufficient capacity for the 512 KB `MUST` requirement without additional hardware cost."* That
+> remains true of 512 KB and is no longer the relevant question: ~1.6 MB is still within a 4 MB part, ~3.2 MB
+> is not, once firmware and its A/B partition are accounted for ([`update-firmware.md` §7](profiles/device-management/update-firmware.md)).
 
 Buffered messages MUST be stored in persistent local storage (survives reboot and power loss).
 
@@ -420,8 +450,15 @@ Upon successful reconnection, the station transmits in the following order:
 1. BootNotification (fresh)
 2. StatusNotification per bay (fresh, current state)
 3. Buffered SecurityEvents (chronological)
-4. Buffered TransactionEvents (chronological)
+4. Buffered TransactionEvents and SessionEnded events (chronological, interleaved by their own timestamps)
 5. Resume Heartbeat at configured interval
+
+> **Why SessionEnded is named in step 4.** It is a Category-1 `MUST NOT discard` message above and was absent
+> from this list, so the one ordering statement a station has for its reconnection flush did not mention a
+> stream it is forbidden to drop. It shares step 4 rather than getting its own because the two are
+> co-indexed — see the SessionEnded row of the Category-1 table — and because
+> [`session-ended.md` §6](profiles/transaction/session-ended.md) rule 6 orders SessionEnded only against the
+> StatusNotification that reports the bay's new state, which step 2 has already sent fresh.
 
 ### 6.6 Meter Reporting
 

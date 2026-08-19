@@ -18,7 +18,8 @@
     },
     "previousCatalogVersion": {
       "type": "string",
-      "maxLength": 32
+      "maxLength": 32,
+      "description": "The catalog version this update replaced. REQUIRED when status is Accepted (update-service-catalog.md processing rule 3); the empty string is the legitimate value for a station that has never held a catalog."
     },
     "errorCode": {
       "type": "integer"
@@ -32,11 +33,37 @@
   "allOf": [
     {
       "if": {
-        "properties": { "status": { "const": "Rejected" } },
-        "required": ["status"]
+        "properties": {
+          "status": {
+            "const": "Rejected"
+          }
+        },
+        "required": [
+          "status"
+        ]
       },
       "then": {
-        "required": ["errorCode", "errorText"]
+        "required": [
+          "errorCode",
+          "errorText"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "Accepted"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "previousCatalogVersion"
+        ]
       }
     }
   ]
