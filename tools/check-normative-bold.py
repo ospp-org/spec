@@ -30,12 +30,19 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-08-18  (unreleased)  443 unbolded — the offline spec-contradiction cycle,
-                                   re-measured after the two product decisions landed
-                                   (reconciliation.md 8.1 recompute + debt, offline-pass.md 6
-                                   step 3a re-issuance, OfflinePassMaxAge into check #2). It read
-                                   446 at the mid-point of the same cycle; the decisions added
-                                   more bolded normative text. Net -7 from d553820.
+    efe009c  2026-08-18  v0.24.1   441 unbolded, 1117 bolded spans — RE-MEASURED, not inherited.
+                                   The gate as shipped reported 443 on this same tree. It was
+                                   wrong: BOLD paired `**` over the raw text, so the literal glob
+                                   `schemas/**` inside backticks in 00-introduction.md's 0.22.0
+                                   history row inverted the phase of every bold span from that
+                                   character to the end of the file, and bolded keywords in the
+                                   tail were counted as unbolded. Wrong since 0.22.0, across three
+                                   releases. Nothing reported it because an over-count is the safe
+                                   direction for a ratchet that only refuses increases — see the
+                                   note under `Exit status`. The row that stood here read
+                                   "(this HEAD) ... (unreleased)" and was never stamped when the
+                                   tag was cut, so it carried neither a sha nor a version nor its
+                                   bolded-span companion.
     d553820  2026-08-18  v0.23.0   450 unbolded, 1088 bolded spans — the diagnostics
                                    cycle added a chapter section and two conformance Parts, all
                                    bolded, and bolded one pre-existing MUST in 03-messages.md.
@@ -55,7 +62,15 @@ is the thing most often misread.
 
 Exit status
 -----------
-0 at or below BASELINE, 1 above. `--list` prints every finding rather than a summary
+0 AT baseline, 1 above it, and **1 below it as well** -- a drop is a change to the number this
+file publishes and must be recorded here, not absorbed silently.
+
+Below-baseline used to return 0, and that asymmetry is what hid this gate's own measurement
+defect for three releases: **a ratchet that only refuses increases cannot report its own
+downward drift.** The reasoning generalises to every threshold that moves in one direction --
+each is blind to the reverse motion, and a threshold seeded from its own instrument's output
+bakes that instrument's error into itself. Of the four gates in `tools/` carrying a numeric
+BASELINE, three were one-directional in exactly this way; all four now refuse both directions. `--list` prints every finding rather than a summary
 per file; `--max N` overrides BASELINE for a one-off check.
 """
 import argparse
@@ -65,7 +80,7 @@ import re
 import sys
 from collections import Counter
 
-BASELINE = 443
+BASELINE = 441
 
 KEYWORD = re.compile(r'\b(MUST NOT|MUST|SHALL NOT|SHALL)\b')
 FENCE = re.compile(r'```.*?```', re.S)
@@ -78,9 +93,21 @@ INTRO_ENUMERATION = ('spec/00-introduction.md', 120)
 
 def scan(path):
     text = open(path, encoding='utf-8').read()
-    spans_bold = [(m.start(1), m.end(1)) for m in BOLD.finditer(text)]
     spans_code = [(m.start(), m.end()) for m in FENCE.finditer(text)]
     spans_tick = [(m.start(), m.end()) for m in TICK.finditer(text)]
+    # Pair ** over a copy with code spans blanked, NOT over the raw text. A `**` inside
+    # backticks is a glob, not a bold marker -- `schemas/**` is the live example -- and BOLD
+    # is a sequential non-greedy pairing, so a single literal marker inverts the phase of every
+    # span after it for the rest of the file. That is what it did: `schemas/**` entered
+    # 00-introduction.md's 0.22.0 history row, and from that character to the end of the file
+    # every bolded keyword was read as unbolded. The count was wrong in the safe direction --
+    # too high -- which is why a ratchet that only refuses increases never reported it.
+    # Blanking preserves offsets, so every span index below still refers to the real text.
+    masked = list(text)
+    for a, b in spans_code + spans_tick:
+        for i in range(a, b):
+            masked[i] = ' '
+    spans_bold = [(m.start(1), m.end(1)) for m in BOLD.finditer(''.join(masked))]
     lines = text.split('\n')
     out = []
     for m in KEYWORD.finditer(text):
@@ -140,6 +167,7 @@ def main():
     if len(findings) < ceiling:
         print(f'\nBelow baseline ({len(findings)} < {ceiling}). Lower BASELINE in this file '
               f'so the improvement cannot silently regress.')
+        return 1
     return 0
 
 

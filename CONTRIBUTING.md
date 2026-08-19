@@ -215,9 +215,44 @@ releases:
 | `tools/check-normative-bold.py` header | 456 unbolded | 452 | across two releases |
 | `tools/verify-protocol.sh` header | 9 FAIL | 6 | `0.20.1` and `0.20.2` closed three |
 | `.github/workflows/verify-signatures.yml` | *"exits 1 ... from 9 pre-existing findings"* | 6 | the same two releases, in a third file |
+| `tools/check-normative-bold.py` **gate output** | 443 unbolded | 441 | `0.22.0` to `0.24.1`, three releases |
 
 The third one survived the pass that fixed the first two, because that pass corrected the
 two numbers it knew about rather than sweeping for the class.
+
+**The fourth is a different sub-kind and is worth separating.** The first three are a *stale*
+number: correct when written, copied forward after the thing moved. The fourth was never
+correct — the **instrument** was wrong. `check-normative-bold.py` paired `**` markers over the
+raw document, and a `**` inside backticks is a glob rather than a bold marker, so the literal
+`schemas/**` in `00-introduction.md`'s `0.22.0` history row inverted the phase of every bold
+span from that character to the end of the file. Bolded keywords in the tail were counted as
+unbolded.
+
+Two things kept it invisible, and both are design choices worth knowing you have made:
+
+1. **A ratchet that only refuses increases cannot report its own downward drift.** An over-count
+   is the safe direction, so the gate stayed green on a number two too high for three releases.
+   Only a re-derivation can find it, and nothing was asking for one.
+2. **The measurement point had no version.** The row read *"(this HEAD) ... (unreleased)"* and
+   was never stamped when `v0.24.1` was cut, so it carried no sha, no version and no
+   bolded-span companion — and a reader had nothing to re-run it against.
+
+**The first point is not about this gate.** Any threshold that moves in one direction is blind to
+the reverse motion, and a threshold seeded from its own instrument's output bakes that
+instrument's error into itself — the error becomes the baseline and then the baseline certifies
+the error. Swept: `tools/` holds **four** gates with a numeric `BASELINE`, and **three** of them
+returned `0` below it — `check-normative-bold.py`, `check-schema-conditionals.py` and
+`check-tool-callers.py`. Only `check-config-ranges.py` already refused both directions. All four
+now do. Each was verified by raising its own baseline past its measured value and confirming a
+non-zero exit, with the copy placed inside `tools/` so `__file__` still resolves the repo root —
+run from `/tmp` the scripts `chdir` to `/`, find nothing, and exit non-zero for the wrong reason,
+which reads exactly like the refusal you were trying to prove.
+
+The rule that follows: **when you re-baseline, re-measure the OLD tree with the NEW instrument
+before writing the new number.** Otherwise an instrument fix and a content change land as one
+figure and neither can be attributed. The worked example is this one: 443 as shipped, **441
+re-measured on a pristine `efe009c` with only the instrument fix applied** — so the instrument
+was worth 2, and whatever a later release's content is worth is separable from it.
 
 The rules that follow from it:
 

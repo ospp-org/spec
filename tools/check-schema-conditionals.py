@@ -182,6 +182,7 @@ def main():
     if len(findings) < BASELINE:
         print(f'\nBelow baseline ({len(findings)} < {BASELINE}). Lower BASELINE in this file '
               f'so the improvement cannot silently regress.')
+        return 1
     return 0
 
 

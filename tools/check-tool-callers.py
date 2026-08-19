@@ -198,6 +198,7 @@ def main():
     if len(unreached) < BASELINE:
         print(f'\nBelow baseline ({len(unreached)} < {BASELINE}). Lower BASELINE in this file so '
               f'the improvement cannot silently regress.')
+        return 1
     return 0
 
 
