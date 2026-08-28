@@ -1,6 +1,6 @@
 # Chapter 05 — State Machines
 
-> **Status:** Draft | **OSPP Version:** 0.25.0
+> **Status:** Draft | **OSPP Version:** 0.26.0
 
 This chapter defines all finite state machines (FSMs) governing OSPP entities — the station, its bays, sessions, reservations, BLE connections, firmware updates and diagnostics uploads. Each FSM specifies the complete set of states, valid transitions, guards, actions, and a Mermaid diagram. A transition not listed for a machine is invalid, and implementations MUST NOT perform one.
 
@@ -182,7 +182,13 @@ This is the session-scope twin of the bay rule below: reachable, unreported, and
 
 ### 1.5 Topology at Boot
 
-The station re-declares its physical topology in every BootNotification: `bays[]`, one entry per bay, each carrying `bayNumber` and that bay's `programNumbers` ([Chapter 01 — Architecture §4.2](01-architecture.md)). The server compares that declaration, as a set in both directions, against the topology recorded for the station at provisioning.
+The station re-declares its physical topology in every BootNotification: `bays[]`, one entry per bay, each carrying `bayNumber` and that bay's `programNumbers` ([Chapter 01 — Architecture §4.2](01-architecture.md)). The server compares that declaration, as a set in both directions, against the station's **in-service topology**.
+
+**The in-service topology is the referent for every topology comparison in this specification** — this one and the `4020` comparison at provisioning ([Chapter 04 §2](04-flows.md), *Error precedence* step 5). It is the set of bays the server currently records for the station, **excluding any bay the operator has taken out of service**. Provisioning creates that record; it does not freeze it.
+
+Taking a bay out of service is an act on the server's own record, and this specification does not define the mechanism: [Chapter 07 §4.4](07-errors.md#44-rest-api-endpoints) lists every REST endpoint defined here and none of them adds or removes a bay. It does define the **effect**, because the effect is what the two comparisons read: a bay that is out of service is absent from the compared set on the server's side, and a station that no longer has that bay is therefore a **match**, not a mismatch.
+
+**This is stated because the alternative reading is unshippable.** Read as *every bay ever registered*, a station that has one bay physically removed declares a set that can never again equal the server's, so it is `3018` and `Pending` on every boot for ever — and by [§1.4](#14-the-restricted-states) a `Pending` station **MUST** refuse StartService and ReserveBay with `3002` on every transport. One retired bay would stop the whole station selling, with no operator act able to clear it. The comparison is not weakened by naming its referent: it still fires on exactly the disagreement it exists to catch, and the reverse direction is deliberately **not** relaxed — a station that still declares a bay the operator took out of service disagrees with the operator about its own hardware, which is a real mismatch a person **MUST** settle.
 
 1. **Match → `Accepted`.** The station proceeds to `Operational`.
 2. **Mismatch → `Pending`, with `3018 TOPOLOGY_MISMATCH`.** Never `Rejected`: `Pending` keeps the command channel open so an operator can repair the disagreement, and `Rejected` would close the only channel through which it could be repaired. The response **MUST** carry a `details` object naming what the server expected and what arrived.

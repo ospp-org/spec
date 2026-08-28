@@ -30,11 +30,31 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-08-19  v0.25.0   439 unbolded, 1129 bolded spans — the divergence-
-                                   adjudication cycle. -2 on +12 bolded spans, and the -2 is this
-                                   release's CONTENT only: the instrument correction that took
-                                   443 to 441 landed in its own commit, on the pristine tree, so
-                                   the two are separable. Read the 441 row below first.
+    (this HEAD) 2026-08-28  v0.26.0   439 unbolded, 1156 bolded spans — the station-refusal
+                                   adjudication cycle. Unbolded is UNCHANGED, and that is a
+                                   measured result rather than an untouched one: the finding set
+                                   was diffed entry by entry against a `git archive` of 573bf6b
+                                   and is identical once line numbers are stripped, so every
+                                   document this release edits added no unbolded keyword and
+                                   removed none. +17 bolded spans, all of them new text.
+    573bf6b  2026-08-19  v0.25.0   439 unbolded, 1139 bolded spans — the divergence-adjudication
+                                   cycle. -2 on +22 bolded spans, and the -2 is that release's
+                                   CONTENT only: the instrument correction that took 443 to 441
+                                   landed in its own commit, on the pristine tree, so the two are
+                                   separable. Read the 441 row below first.
+                                   CORRECTED 2026-08-28. This row read "(this HEAD) ... 1129
+                                   ... +12" until then. Both were wrong, from one cause: the
+                                   companion was never re-derived. Running the shipped instrument
+                                   over a pristine `git archive` of this very commit gives 1139,
+                                   and 1117 -> 1139 is +22. The gated number (439) was right; its
+                                   ungated companion was ten low, and the delta computed from it
+                                   inherited the error. That is the THIRD time in this header —
+                                   after 456-vs-452 and 1087-vs-1088 — and the second time it was
+                                   the bolded-span companion specifically, which is the number
+                                   nothing gates. The row also never got its sha: it was still
+                                   labelled "(this HEAD)" after v0.25.0 was cut, which is the
+                                   other half of the same rule and the same omission the 441 row
+                                   below already records against ITS predecessor.
     efe009c  2026-08-18  v0.24.1   441 unbolded, 1117 bolded spans — RE-MEASURED, not inherited.
                                    The gate as shipped reported 443 on this same tree. It was
                                    wrong: BOLD paired `**` over the raw text, so the literal glob

@@ -1,9 +1,11 @@
 # OSPP Known Issues
 
-**Date:** 2026-08-19
-**Specification-document version:** 0.25.0 (release tag `v0.25.0`)
-**Status:** 3 blockers open (all BLE), 24 non-blocking issues open, 13 decisions recorded (one of
-them reversing another), and one named defect **class** with eight instances
+**Date:** 2026-08-28
+**Specification-document version:** 0.26.0 (release tag `v0.26.0`)
+**Status:** 3 blockers open (all BLE), 28 non-blocking issues open, 17 decisions recorded (one of
+them reversing another), and one named defect **class** with ten instances. **The counts are
+re-derived from the headings on every release, never incremented** — the previous revision read 24
+open against 25 `## OPEN` headings, which is how a summary drifts from the file it summarises.
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle and
 the arcs since
 
@@ -14,11 +16,11 @@ the arcs since
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 24 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · **[no gate range-checks a config value inside an example payload](#open--no-gate-range-checks-a-configuration-value-that-sits-inside-an-example-payload)** · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) · **[`5016` is required for two conditions and named for one](#open--5016-version_already_installed-is-required-for-two-conditions-and-one-of-them-is-the-opposite-of-what-the-name-says)** · **[UpdateFirmware is both idempotent and `5107`](#open--updatefirmware-is-documented-as-idempotent-and-as-rejected-with-5107-for-the-same-second-command)** · **[no code describes a non-HTTPS firmware URL](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal)** · **[`offeredVersion` vs `attemptedVersion`](#open--the-firmwaredowngradeattempt-securityevent-names-the-offered-version-with-two-different-member-names-and-nothing-can-tell)**  · **[a station whose hardware changes has no route back into service](#open--a-station-whose-hardware-genuinely-changes-has-no-route-back-into-service-because-the-two-rules-that-guard-topology-point-at-each-other)** · **[the hardware storage levels do not hold the Category-1 floors](#open--the-hardware-storage-levels-do-not-hold-the-category-1-floors-they-are-said-to-size)** · **[OfflinePass validity rides an uncorrected wall clock, and the backstop reads the same clock](#open--offlinepass-temporal-validity-rides-a-wall-clock-with-no-offline-correction-and-the-servers-backstop-reads-the-same-clock)** · **[`5019` has no carrier on either side](#open--5019-upload_failed-names-a-condition-that-cannot-exist-when-its-response-is-sent-and-its-real-carrier-has-no-code-field)**   |
+| OPEN | 28 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · **[no gate range-checks a config value inside an example payload](#open--no-gate-range-checks-a-configuration-value-that-sits-inside-an-example-payload)** · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) · **[`5016` is required for two conditions and named for one](#open--5016-version_already_installed-is-required-for-two-conditions-and-one-of-them-is-the-opposite-of-what-the-name-says)** · **[UpdateFirmware is both idempotent and `5107`](#open--updatefirmware-is-documented-as-idempotent-and-as-rejected-with-5107-for-the-same-second-command)** · **[no code describes a non-HTTPS firmware URL](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal)** · **[`offeredVersion` vs `attemptedVersion`](#open--the-firmwaredowngradeattempt-securityevent-names-the-offered-version-with-two-different-member-names-and-nothing-can-tell)**  · **[a station whose hardware changes has no route back into service](#open--a-station-whose-hardware-genuinely-changes-has-no-route-back-into-service-because-the-two-rules-that-guard-topology-point-at-each-other)** · **[the hardware storage levels do not hold the Category-1 floors](#open--the-hardware-storage-levels-do-not-hold-the-category-1-floors-they-are-said-to-size)** · **[OfflinePass validity rides an uncorrected wall clock, and the backstop reads the same clock](#open--offlinepass-temporal-validity-rides-a-wall-clock-with-no-offline-correction-and-the-servers-backstop-reads-the-same-clock)** · **[`5019` has no carrier on either side](#open--5019-upload_failed-names-a-condition-that-cannot-exist-when-its-response-is-sent-and-its-real-carrier-has-no-code-field)**   |
 | CLOSED | 4 | [Device Management Required vs RECOMMENDED](#closed-0160--the-device-management-profile-was-required-in-chapter-08-and-recommended-not-mandatory-in-its-own-readme) — closed in 0.16.0 in favour of the capability · [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
-| **CLASS** | 8 | **[an obligation no field, no code and no actor can carry](#class--an-obligation-no-field-no-code-and-no-actor-can-carry)** — an index of the eight instances; 4 still open, 1 a blocker |
-| DECIDED | 13 | **[`allowedServiceTypes` withdrawn in two steps](#decided-0250--offlineallowanceallowedservicetypes-is-withdrawn-in-two-steps-because-nobody-ever-asked-for-the-constraint)** · **[ownership transfer and decommissioning stay undefined, and §1.3 now says so](#decided-0250--station-ownership-transfer-and-decommissioning-stay-undefined-and-the-specification-now-says-so)** · **[the server is the billing authority on the offline path too](#decided-0240--the-server-is-the-billing-authority-on-the-offline-path-too-and-81-was-the-outlier)** · **[`OfflinePassMaxAge` kept, wired into check #2, defaulted to inert](#decided-0240--offlinepassmaxage-is-kept-wired-into-check-2-and-defaulted-to-inert)** · **[`DiagnosticsUploadUrl` withdrawn — a key nothing reads](#decided-0230--diagnosticsuploadurl-had-no-reachable-consumer-and-is-withdrawn-rather-than-defined)** · **[UpdateFirmware to a `Pending` station is `Accepted`, notifications suppressed](#decided-0210--updatefirmware-to-a-pending-station-was-refused-on-a-premise-the-same-chapter-contradicts-and-with-a-response-no-error-code-could-carry)** — **reverses the `0.20.0` row below**: the `Rejected` it mandated needed an `errorCode` no registry entry supplies, and §6.6 already reported the outcome on BootNotification; the discriminator's second clause survives, its reading did not · **[nine gates in `tools/` were reachable from no job](#decided-0201--two-validation-scripts-reported-100-failure-and-no-workflow-ran-them-the-workflows-now-call-the-scripts-and-a-census-guards-the-class)** — the workflows now call the scripts, and `check-tool-callers.py` guards the class · **[the firmware gate is on the INSTALL, not the download](#decided-0200--the-active-session-gate-named-three-stages-it-gates-the-install-and-scheduledat-defers-the-install-with-it)** — and `scheduledAt` defers the install with it; the stall rule scoped rather than `Verified` given a wire value · **[~~UpdateFirmware to a `Pending` station is `Rejected`~~ — REVERSED in `0.21.0`](#decided-0200--updatefirmware-had-no-row-in-the-pending-command-table-it-is-rejected-and-the-discriminator-gained-the-clause-that-says-why)** — kept as the record; the row it added was right, the verdict in it was not · **[a restricted station may renew its own certificate](#decided-0190--one-table-gave-the-same-act-opposite-verdicts-and-a-certificate-renewal-could-not-conclude-in-the-state-the-spec-keeps-open-for-repairs)** — the exception's *reason* restated to cover both members rather than a second name added to a list · [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
-| **Total open** | **27** | |
+| **CLASS** | 10 | **[an obligation no field, no code and no actor can carry](#class--an-obligation-no-field-no-code-and-no-actor-can-carry)** — an index of the ten instances; 4 still open, 1 a blocker |
+| DECIDED | 17 | **[`allowedServiceTypes` withdrawn in two steps](#decided-0250--offlineallowanceallowedservicetypes-is-withdrawn-in-two-steps-because-nobody-ever-asked-for-the-constraint)** · **[ownership transfer and decommissioning stay undefined, and §1.3 now says so](#decided-0250--station-ownership-transfer-and-decommissioning-stay-undefined-and-the-specification-now-says-so)** · **[the server is the billing authority on the offline path too](#decided-0240--the-server-is-the-billing-authority-on-the-offline-path-too-and-81-was-the-outlier)** · **[`OfflinePassMaxAge` kept, wired into check #2, defaulted to inert](#decided-0240--offlinepassmaxage-is-kept-wired-into-check-2-and-defaulted-to-inert)** · **[`DiagnosticsUploadUrl` withdrawn — a key nothing reads](#decided-0230--diagnosticsuploadurl-had-no-reachable-consumer-and-is-withdrawn-rather-than-defined)** · **[UpdateFirmware to a `Pending` station is `Accepted`, notifications suppressed](#decided-0210--updatefirmware-to-a-pending-station-was-refused-on-a-premise-the-same-chapter-contradicts-and-with-a-response-no-error-code-could-carry)** — **reverses the `0.20.0` row below**: the `Rejected` it mandated needed an `errorCode` no registry entry supplies, and §6.6 already reported the outcome on BootNotification; the discriminator's second clause survives, its reading did not · **[nine gates in `tools/` were reachable from no job](#decided-0201--two-validation-scripts-reported-100-failure-and-no-workflow-ran-them-the-workflows-now-call-the-scripts-and-a-census-guards-the-class)** — the workflows now call the scripts, and `check-tool-callers.py` guards the class · **[the firmware gate is on the INSTALL, not the download](#decided-0200--the-active-session-gate-named-three-stages-it-gates-the-install-and-scheduledat-defers-the-install-with-it)** — and `scheduledAt` defers the install with it; the stall rule scoped rather than `Verified` given a wire value · **[~~UpdateFirmware to a `Pending` station is `Rejected`~~ — REVERSED in `0.21.0`](#decided-0200--updatefirmware-had-no-row-in-the-pending-command-table-it-is-rejected-and-the-discriminator-gained-the-clause-that-says-why)** — kept as the record; the row it added was right, the verdict in it was not · **[a restricted station may renew its own certificate](#decided-0190--one-table-gave-the-same-act-opposite-verdicts-and-a-certificate-renewal-could-not-conclude-in-the-state-the-spec-keeps-open-for-repairs)** — the exception's *reason* restated to cover both members rather than a second name added to a list · [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
+| **Total open** | **31** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
@@ -184,6 +186,176 @@ Fixing this means choosing whether BLE carries the full Error Object under MTU p
 already concedes truncation of `errorDescription` — or a deliberate subset, and then applying one
 answer to all three schemas plus the profile prose that mirrors them
 ([`ble-session.md`:29-33](spec/profiles/offline/ble-session.md) and `:146-147`).
+
+---
+
+## OPEN — A DECISION TO MAKE: nothing requires anyone to check revocation, so a revoked certificate is refused only where someone switched checking on
+
+**Raised 2026-08-28, from the boot-path sweep that corrected `04-flows.md`'s Boot `Rejected` causes.
+This is the sharpest of the absences that sweep surfaced, and the only one with a live operational
+consequence. It is written as a decision with its option space rather than as a defect, because
+every axis below is a real choice and the specification has not made any of them.**
+
+### What is written today, measured
+
+| Site | What it says | Force |
+|---|---|---|
+| [`02-transport.md` §1.3](spec/02-transport.md#13-tls-12-floor-13-recommended) | *"The broker **MUST** verify the station's client certificate against the OSPP CA trust chain."* | **MUST** — and it is about the **chain**, not revocation |
+| [`06-security.md` §4.4](spec/06-security.md#44-certificate-requirements) | *"CRL Distribution Points \| **REQUIRED** (URL to CRL published by Station CA)"* · *"Authority Info Access \| RECOMMENDED (OCSP responder URL)"* | REQUIRED — of the **certificate's contents**. A pointer nothing is obliged to follow |
+| [`06-security.md` §4.2](spec/06-security.md#42-pki-architecture) | *"**Revocation** \| CRL published by Station CA (checked by MQTT broker). OCSP RECOMMENDED."* | a **table cell** in an architecture summary — indicative mood, no keyword |
+| `06-security.md` §2 threat rows T04/T10 | *"compromised certificates are revoked and rejected by the broker"* | **threat-model prose**, describing a mitigation as though it were in force |
+| [`06-security.md` §4.7.1](spec/06-security.md#471-automatic-renewal) step 8 | the station validates *"the certificate chain, CN match, key usage, and validity period"* | the station-side checklist — **revocation is not in it** |
+| [`07-errors.md` §3.1](spec/07-errors.md#31-transport-errors-1xxx) `1004` | *"X.509 certificate is expired, **revoked**, self-signed, or has an invalid chain"* | the code exists, and its Server action is *"reject the connection"* |
+
+**Not one normative keyword anywhere in `spec/` obliges any party to check revocation.** The
+certificate is REQUIRED to carry the CRL's address; nobody is required to read it. `1004` names the
+condition and prescribes the refusal, and nothing makes the refusal reachable.
+
+**The vocabulary a revocation policy would be written in is absent entirely.** Measured over
+`spec/`, `schemas/` and `conformance/`, whole-repo: `nextUpdate` **0**, `soft-fail` **0**,
+`hard-fail` **0**, `fail-open` **0**, `stapl`(ing) **0**. (`fail-closed` returns 8, all of them the
+message-signing rules of §5.7 and the restricted-state table — none about certificates.) So this is
+not a rule stated loosely; there is no rule.
+
+### Why it matters, and it is not hypothetical
+
+Revocation is the **only** mechanism this specification has for a compromised station identity
+before its certificate expires — up to **one year** ([§4.2](spec/06-security.md#42-pki-architecture)),
+and §6.6's revocation **epoch** is explicitly OfflinePass-only and *"avoiding the complexity of
+Certificate Revocation Lists"*, so it does not substitute. T10 (Certificate Compromise, **Critical**)
+lists *"§4.3 CRL/OCSP"* as its mitigation. **A mitigation nothing is obliged to perform is not a
+mitigation**, and the threat rows read as though it were in force.
+
+**Reported by the reference deployment, 2026-08-28: revocation checking is OFF in production**, and
+is being carried as a deploy precondition rather than as a protocol obligation. That is exactly the
+outcome the text above permits — a conforming deployment, with the check off, and no clause it
+violates. It is recorded here as the operator's report, not as something this repository measured.
+
+### The option space — three axes, and they are independent
+
+**Axis 1 — the obligation.** Who **MUST** check, and is it a MUST or a SHOULD?
+
+- **1a. Broker MUST check.** The natural home: the broker already terminates mTLS and already has a
+  chain-verification MUST one clause away. Cost: it is a deployment capability, not a protocol
+  message — the spec would be mandating a broker configuration it cannot observe or test over the
+  wire, and no conformance case could exercise it.
+- **1b. Broker SHOULD check, and a deployment MUST state whether it does.** Weaker on the wire,
+  stronger on honesty: it makes the answer discoverable instead of assumed, which is what the
+  threat rows currently get wrong.
+- **1c. Leave it to deployment, and repair the prose.** No new obligation; instead T04/T10 and the
+  §4.2 cell stop asserting a mitigation is in force, and say it is deployment-conditional. Cheapest,
+  and the only option that costs nothing to implement — but it converts a security control into a
+  documented gap.
+
+**Axis 2 — freshness of the list.** A CRL with no bound is a CRL that can be a year old.
+
+- **2a. A `nextUpdate` bound** — the list **MUST** be refreshed before its own `nextUpdate`, which
+  is the standard mechanism and needs no new field.
+- **2b. A named maximum age** as a configuration key, in the manner of the other §§2--6 keys, so the
+  bound is inspectable and the existing range gates can check it.
+- **2c. OCSP instead**, which moves freshness from a schedule to a round trip and adds an
+  availability dependency on the responder at every connection.
+- Note that **2 is meaningless without 1**: a freshness rule binds a check nobody is required to
+  perform.
+
+**Axis 3 — behaviour when the list cannot be fetched.** This is the axis with the security
+consequence, and the one most often left implicit.
+
+- **3a. Fail-open** (accept the connection when the CRL is unreachable). Keeps a fleet online
+  through a CA outage; means an attacker who can partition the checker from the CRL has revoked
+  revocation.
+- **3b. Fail-closed** (refuse). Correct against that attack; a CA or network outage becomes a
+  fleet-wide disconnection, and for a fleet of stations there is no operator at the site to
+  intervene.
+- **3c. Fail-open with a bounded grace, then closed** — the middle, and the only one that needs a
+  number written down. It also needs a home for the alert, since silently degrading is how 3a
+  happens by accident.
+
+**Whichever way axis 3 goes, it MUST be written.** The current silence is not fail-open by choice;
+it is fail-open by omission, and two conforming implementations may differ on it without either
+being wrong.
+
+### What this entry does not decide
+
+Nothing. Axis 1 is the one that gates the other two, and it is a product decision about what this
+specification is willing to require of a deployment it cannot observe. **It does not block
+anything today** — no operation is impossible, and the reference deployment ships with the check off
+— which is precisely why it has stayed unwritten for the whole life of the document.
+
+---
+
+## OPEN — the conformance harness is two directories and a zero-byte placeholder, so nobody outside this project can run conformance
+
+**Raised 2026-08-28. Named separately from the other absences because it is the one a second
+implementor meets first, and it is the difference between a specification and a specification with
+a compliance claim.**
+
+Measured at this HEAD:
+
+| What exists | Count |
+|---|---:|
+| Conformance test cases, `conformance/test-cases/**/TC-*.md` | **34** |
+| Files under `conformance/harness/` | **2** |
+| Bytes under `conformance/harness/` | **0** |
+
+The two files are `conformance/harness/runner/.gitkeep` and
+`conformance/harness/server-simulator/.gitkeep`. `conformance/README.md` says so itself — the
+harness is *"planned for future releases; the `harness/` directory contains placeholder
+structure."*
+
+**So the 34 cases are 34 manual procedures and no automated verdict.** A second implementor can read
+what conformance means and cannot execute it, cannot regression-test against it, and cannot produce
+evidence of it that anyone else can re-run. Every compliance statement about this protocol currently
+rests on one team running one implementation by hand.
+
+**This is not the same shape as the other open items in this file.** The rest are defects in what the
+specification *says*; this is an absence in what it *ships*. It is also the one that compounds: each
+release adds cases to a corpus nothing executes, so the gap between what is specified and what is
+demonstrable widens on every cycle rather than holding still.
+
+**Not scoped here, and deliberately so.** A runner is a project, not a repair, and the shape of it —
+whether it drives a real broker, a simulator, or both; whether the server simulator is part of this
+repository or vendored — is a decision this entry exists to force rather than to make. Recording it
+is the point: it has been *"placeholder structure"* across every release this file covers, and
+nothing in the repository was asking about it.
+
+---
+
+## OPEN — three absences with no urgency, recorded together so they stop being rediscovered
+
+**Raised 2026-08-28, from the same sweep. None of them blocks anything, none of them has a
+workaround that is wrong, and each has now been found more than once from scratch — which is the
+reason they are written down rather than the reason they are ranked.**
+
+**1 — Maintenance mode has no expiry, no maximum duration, and no automatic exit.** The only defined
+way out is a person remembering: [`07-errors.md` §3.3](spec/07-errors.md#33-session--bay-errors-3xxx)
+`3014`'s action reads *"Operator: clear maintenance mode when work is done"*, and
+`profiles/device-management/set-maintenance-mode.md` contains **zero** occurrences of *duration*,
+*expiry*, *timeout* or *auto-clear*. A station left in maintenance is out of service indefinitely
+and nothing in the protocol notices. The repair, if taken, is a bounded duration with a defined
+expiry behaviour — which is a normative decision about whether the station or the server owns the
+clock.
+
+**2 — There is no configuration revision identifier.** Measured over `spec/` and `schemas/`:
+`configVersion` **0**, `configRevision` **0**, `lastKnownGood` **0**, *"last known good"* **0**.
+Neither side can name which generation of configuration a station is holding, so *"is this station
+configured correctly"* is answerable only by reading every key back one at a time and comparing.
+The service catalog has `catalogVersion` and configuration has no counterpart — the asymmetry is the
+tell. Related but distinct from the config-corruption question: a station recovers a corrupt key to
+its **documented default**, never to a last-known-good, because no such concept exists.
+
+**3 — A diagnostics collection cannot be cancelled.** There is no message, no action and no state
+transition by which a server abandons a collection it started: `cancel` appears **0** times in
+`profiles/device-management/get-diagnostics.md` and **0** times in
+[`05-state-machines.md` §8](spec/05-state-machines.md), whose machine has no operator-initiated exit
+from `Collecting` or `Uploading`. Device Management defines nine actions and, unlike reservations,
+no counterpart to `CancelReservation`. A collection that hangs is waited out.
+
+**Why these three together.** Each is a missing *capability* rather than a contradiction, so none
+produces a wrong answer today — a reader is never misled, only unserved. That makes them the
+cheapest class to defer and the easiest to rediscover, and rediscovering one costs the same
+measurement each time. They are ranked below the revocation decision above because none of them has
+a security consequence and none of them is currently masked by prose claiming otherwise.
 
 ---
 
@@ -479,6 +651,222 @@ becomes of sessions, receipts and retained signing keys across the boundary — 
 does not say by whom after a transfer. **Either is a protocol addition, not a clarification**, so it needs a
 MINOR at least, and the `NotProvisioned` edge in (2) is breaking for both SDK state machines.
 
+> **UPDATE 2026-08-28 — the decision was made and two sentences did not hear about it.** Declaring a
+> subject out of scope is a re-keying like any other, and the same rule applies: sweep every sentence
+> that restates the thing, not only the section that defines it. Two survived in `04-flows.md`, both
+> on the boot path, and both told a reader that a decommissioned station is a live wire condition:
+>
+> - `§2 A1 — Rejected` named *"station decommissioned"* as a **common cause** of a Boot `Rejected`,
+>   alongside *"certificate revoked"*. Neither has a code in the set [§4.1](spec/07-errors.md#41-station--server-mqtt-actions)
+>   assigns to BootNotification, so a reader who believed the sentence went looking for one and found
+>   nothing.
+> - the reconnect error table answered a Boot `Rejected` with *"SSP may have been decommissioned —
+>   **await intervention**"* — the opposite of `CORE-011`, which is unlimited retry.
+>
+> **The revoked half was wrong on its own ground, independently of this decision.** A revoked
+> certificate is refused at the **connection**, as `1004 CERTIFICATE_ERROR` — the code names *revoked*
+> in its own row, and its recovery forbids entering provisioning mode or discarding credentials. A
+> station refused there never sends a BootNotification, so it cannot receive the response this line
+> was describing, and the two recoveries are not interchangeable. Both sites are corrected in
+> `0.26.0`. **This is the same shape as instance 7 in the class below** — *"a second site survived
+> that repair"* — which is now the third time this file has recorded it.
+>
+> **Not corrected, because it is not this decision's to make:** whether anything is required to
+> *check* revocation, and with what freshness. `02-transport.md` §1.3 **MUST**s the broker to verify
+> the chain; nothing states a revocation-check obligation, a CRL freshness bound, or soft-fail versus
+> hard-fail. That is a real gap and a product decision, and it is not made by tidying a flow table.
+
+---
+
+## DECIDED (0.26.0) — nine sites required the server to emit a SecurityEvent, and the profile admitted no such thing
+
+**Raised and decided 2026-08-28, adjudicating the station-refusal asks carried up from the reference
+server.** This is instance **9** of the class below, and the first of its third sub-shape.
+
+`profiles/security/security-event.md` described one thing, in every sentence it had. §1: *"sent by
+the station"*. §2: *"**Direction:** Station to Server"*. §6 rule 1: *"The **station MUST** generate
+a SecurityEvent for every security-relevant incident"*. §6 rule 3: the `timestamp` *"**MUST** reflect
+the time the incident was detected **on the station**"*. §6 rule 7: the server stores all
+*"**received**"* events. §8.2's worked example carries `"source": "Station"`.
+
+**Nine normative sites require the server to emit one**, and none of them could be satisfied by an
+implementation that read only the profile:
+
+| Where | What it requires |
+|---|---|
+| `profiles/offline/authorize-offline-pass.md` §6 rule 7 | *"The server **MUST** log a SecurityEvent"* on authorize-time check #1 and check #10 — with (d) the `timestamp` **MUST** be *"when the validation failure was detected **by the server**"*, which is rule 3 inverted |
+| `profiles/offline/reconciliation.md` §3 | the different-data `offlineTxId` collision **MUST** emit one |
+| `profiles/offline/reconciliation.md` §6.3 | *every* applicable gate failure **MUST** emit one, *"at the gate-rejection point"*, with (d) the same server-side timestamp |
+| `profiles/offline/reconciliation.md` §6.7 | the auth-form `(authId, sessionId)` replay reject **MUST** emit one |
+| `07-errors.md` §3.2 — `2014`, `2015`, `2016`, `2017`, `2018` | five *Recommended Action* cells reading *"Server: log SecurityEvent [MSG-012]"* |
+
+**And §6.4 of reconciliation leans its whole argument on it.** That section is the one that decides
+the offline profile carries no `errorCode`: it says the failing gate *"remains identifiable, by two
+routes"*, the second being the SecurityEvent that §6.3 *"already **MUST** emit"*. If that emission
+is not something the server may perform, the second route does not exist and §6.4's reasoning fails
+with it. The unconstructible rule was load-bearing for a decision that had already been taken.
+
+**The profile had already contradicted itself, in one row, and nobody had read the two together.**
+§4's `ServerSignedAuthReplay` entry ends *"The station rejects it at the handshake; **the server
+logs this type at the next reconciliation**"* — a server-logged SecurityEvent, stated in the same
+document whose §2 says the direction is Station to Server.
+
+**What the implementations do, measured before deciding anything.** The reference server
+(`csms-server`, HEAD `db1f89fd`) emits these as **audit rows and nothing else**:
+`TransactionEventHandler` calls them *"the server-originated `OfflinePassRejected` SecurityEvent"*
+in its own comments, dispatches an internal event, and `SecurityAuditLogger` does one
+`INSERT INTO security_events`. Nothing is published to MQTT — there is no topic for it and no
+station reads it. At authorize time it emits on exactly two checks, which is rule 7 obeyed
+literally; at reconcile time it emits on every gate failure, which is §6.3 obeyed literally. **Both
+readings are implemented, in the same server, because both rules are right and each is bounded by
+its own gate.** The specification simply never said either of those things.
+
+**Decision: scope the profile, change nothing on the wire.** `security-event.md` gains §2.1, naming
+two origins — the station-originated wire EVENT, and a server-originated **audit record that is
+never published**, which a server **MUST NOT** send to a station. Both validate against the one
+existing schema, so nothing is added to the wire, no enum moves, no SDK re-vendors. Rules 1–6 are
+scoped to the station form; rules 2 and 3 get their server-form counterparts stated where they
+apply; rule 7 is widened to say the server's own records go in the same append-only log, under the
+same retention, so an operator does not have to know which side detected an incident in order to
+find it. `authorize-offline-pass.md` rule 7 keeps its prohibition and gains its scope — *at
+authorize time* — with the reason the two gates differ written down: at authorize time a policy
+refusal is a live decision a person can act on, at reconcile time it means money already moved and
+the audit row is the only account that will exist.
+
+**Why this and not the alternative.** The alternative was to delete the nine obligations and let the
+server keep no record. That fails the only test that matters here: a fleet operator investigating a
+forged settlement would have nothing to look at, and `reconciliation.md` §6.4 — which is the reason
+the offline responses carry no `errorCode` — would lose the route it names. The obligations were
+right. Only the document that defines their vehicle was silent.
+
+---
+
+## DECIDED (0.26.0) — Heartbeat listed four error codes its response cannot carry, and its own profile already said none of them arrive there
+
+**Raised and decided 2026-08-28, from the reference server's station-refusal asks, where it is the
+sharpest of the four: a REQUEST whose RESPONSE cannot say no.**
+
+`heartbeat-response.schema.json` is `{serverTime}`, REQUIRED, `additionalProperties: false`. No
+`errorCode`, no `errorText`, and — unlike the offline pair, which can at least answer `Rejected` —
+no `status` either, so a Heartbeat rejection is not merely uncoded but **inexpressible**. §2.1 has
+said so since the seven-schema table was written. §4.1 nonetheless listed `1005`, `1010`, `5106`
+and `6001` under a heading reading *"which error codes can appear in the RESPONSE"*, and
+`03-messages.md` §5.1 repeated the same four under a subheading reading *"Error Responses"*.
+
+**The resolution was not a schema change, because none of the four was ever a response value.**
+Each was checked against its own registry row and against `profiles/core/heartbeat.md` §8, which
+gives all four conditions with their real behaviours and does not describe a single one as arriving
+in a response:
+
+| Code | What it actually is | Where it lives |
+|---|---|---|
+| `1010 MESSAGE_TIMEOUT` | raised by the **station** when no response arrives — a response carrying it would disprove it | Appendix B's timeout table, on the Heartbeat row already |
+| `5106 CLOCK_ERROR` | a **station-side** clock condition, diagnosed *from* a successful response | `03-messages.md` §5.1: log it, and **SHOULD** send SecurityEvent `ClockSkew` |
+| `1005 INVALID_MESSAGE_FORMAT` | a malformed REQUEST; its own *Recommended Action* is *"Log the malformed message"*, not *respond* | `02-transport.md` §11 |
+| `6001 SERVER_INTERNAL_ERROR` | the only one a station could act on — and its recovery, *retry with backoff*, is what a station already does when a Heartbeat goes unanswered | nothing is lost by the silence |
+
+So §4.1's Heartbeat row now reads *(none — a Heartbeat is never answered with an error)*, with the
+four dispositions written out beneath it, and `03-messages.md` §5.1's *Error Responses* subheading
+now answers **There are none**. The chapter is being reconciled to its profile, not decided against
+it.
+
+**Widening the schema was considered and rejected, on the rule that a repair must not block.**
+An optional `errorCode` is backward-compatible for an emitter and **not** for a receiver: every
+response schema is closed, so a station validating against an older vendored copy drops the widened
+response as malformed — and a station that drops Heartbeat responses concludes it has lost the
+server. That exact failure has already been measured once, on the offline pair, where serialising
+the computed codes made a conforming station discard the whole reject and the refusal reached
+nobody. A repair that breaks the healthy path is worse than the gap it closes.
+
+---
+
+## DECIDED (0.26.0) — a program-set drift at provisioning was sent to a code that cannot see programs
+
+**Raised by the reference server and carried in its `KNOWN-ISSUES.md` as *"to report upstream to
+`ospp/spec`; worked around here, not fixed here"*. Adjudicated 2026-08-28.** Instance **10** of the
+class below, sub-shape one.
+
+`04-flows.md`'s *Descriptive drift* rule divided the provisioning body in two and sent the whole of
+the second half to one code:
+
+> The **structural** members of `bays` — the `bayNumber` set and each bay's `programNumber` set —
+> are **not** descriptive: they are the topology itself, and drift in them is a mismatch, **rejected
+> at step 5 of *Error precedence* with `4020 BAY_COUNT_MISMATCH`**.
+
+**Step 5 cannot see programs, and `4020` cannot say them.** Step 5 compares *"the set of `bayNumber`
+values"* and nothing else. `4020`'s registry entry is scoped to that set in its own words and
+**MUST** carry `details.declaredBayNumbers` and `details.registeredBayNumbers` — two members with no
+program counterpart, and the entry additionally forbids carrying counts as the only content, so
+there is nowhere to put a program set even informally. And the registry has no `MODEL_MISMATCH`, no
+`UNKNOWN_MODEL`, nothing that means *"the program set you declared is not the one recorded"*.
+
+**Decision: move the refusal, do not add a code.** The refusal already exists one step later, in a
+better place. `3018 TOPOLOGY_MISMATCH` compares bay numbers **and** program ordinals
+([`05-state-machines.md` §1.5](spec/05-state-machines.md#15-topology-at-boot)) and lands on
+`Pending`, which keeps the command channel open for the repair. So the sentence is scoped to the
+`bayNumber` half, a server **MUST NOT** refuse a provision on a program-set drift, and the program
+half is named as first-boot business.
+
+**Nothing is weakened by that, and the alternative is worse.** A `4020` at provisioning leaves the
+station **without a certificate**: it breaks commissioning to punish a data disagreement, and the
+station then cannot be reached to correct it. `3018` refuses the same disagreement from a state the
+operator can act on. Adding a provisioning-time program code would have bought the earlier refusal
+at the cost of the recovery — and would have been a registry addition and an SDK re-vendor for a
+condition already caught.
+
+**Still open, and deliberately not taken here.** What the server does with a program set that
+drifted on a *replay* — replace the records, keep the originals, or record the divergence and do
+neither — is not stated by this specification, and the reference server has chosen to record it and
+let the first boot decide. That is a reasonable reading of silence, not a reading this document
+licences, and it is the next thing to settle in this area.
+
+---
+
+## DECIDED (0.26.0) — the topology comparison never named its referent, and the literal reading made one retired bay stop a station selling
+
+**Raised and decided 2026-08-28. This half-closes [the loop below](#open--a-station-whose-hardware-genuinely-changes-has-no-route-back-into-service-because-the-two-rules-that-guard-topology-point-at-each-other)** — read that entry first; it is where the option
+space was written out, and this is option **2**, arriving from the implementation rather than from
+the endpoint that entry expected.
+
+Three sites compared a station's declared `bays[]` against a set they each named differently and
+none of them defined:
+
+| Site | What it said the referent was |
+|---|---|
+| `05-state-machines.md` §1.5 | *"the topology recorded for the station **at provisioning**"* |
+| `04-flows.md` §2 step 5 | *"the set of bay numbers **registered** for the station the token is bound to"* |
+| `07-errors.md` `4020` | *"the bays **registered** for the station"* / *"the **registered set**"* |
+
+plus `3018`'s own row, `04-flows.md` A2a, and `boot-notification.md` §6.1 — which additionally
+asserted *"Re-provisioning is what changes a station's topology"*, a sentence step 5 makes false in
+every case where the hardware actually changed.
+
+**A retired bay is still a registered bay.** Under the literal reading, a station that has one bay
+physically removed declares a set that can never again equal the server's: `3018` and `Pending` on
+every boot, for ever. And since §1.4 makes a `Pending` station refuse StartService and ReserveBay
+with `3002` on **every** transport, that is not cosmetic — retiring one bay stops the whole station
+selling, with no operator act able to clear it.
+
+**Measured first.** The reference server compares against `bays WHERE retired_at IS NULL` at both
+sites — `CertificateManager` for `4020` and `BootTopologyComparator` for `3018` — and says so at
+the site: *"Retirement without this line is unshippable."* It keeps the reverse direction exact: a
+station still declaring a bay the operator took out of service is still a mismatch. So the reading
+that works was already built, and only the specification was ambiguous about which of the two
+readings it meant.
+
+**Decision: name the referent once and let the other sites cite it.** `05-state-machines.md` §1.5
+defines the **in-service topology** — the bays the server currently records for the station, less
+any the operator has taken out of service — and the five other sites point at it. The mechanism for
+taking a bay out of service is **deliberately still undefined**: §4.4 lists every REST endpoint this
+specification has and none of them adds or removes a bay. What is now defined is the **effect**,
+which is the only part the two comparisons read.
+
+**This is not a relaxation.** `4020` and `3018` still fire on exactly the disagreement they exist to
+catch; they now have a referent instead of an implied one, and the direction that catches a lying
+firmware is untouched. What changes is that a station whose operator has already corrected the
+server-side record now boots clean — which is the escape the loop entry below said existed only
+outside the protocol.
+
 ---
 
 ## CLASS — an obligation no field, no code and no actor can carry
@@ -509,12 +897,23 @@ the rule against the artefact that would have to carry it.
 | 6 | A `StatusNotification` rejection | `StatusNotification.conf` defines no fields, so the response cannot carry one | CHANGELOG — closed |
 | 7 | **Settle-once correlated on `sessionId`** | the **pass-form** branch of both `transaction-event-request.schema.json` and `receipt-data.schema.json` sets `"sessionId": false`, closed by `additionalProperties: false` — and the pass-form is the only form the rule's Partial-B fallback case can arrive in | **closed 0.24.0** — re-keyed per form to `(authId, sessionId)` and `(offlinePassId, passCounter)`. **A second site survived that repair** and was closed in `0.25.0`: §8.2's forward-guard note still said `sessionId`-derived, and it is the only normative sentence an implementer of the unbuilt path reads. Re-keying a rule means sweeping every sentence that restates its key, not only the table that defines it. |
 | 8 | **`5019 UPLOAD_FAILED`** | its condition cannot exist when the GetDiagnostics RESPONSE is sent (the machine is still in `Idle`), and the message that *does* report it — DiagnosticsNotification `Failed` — has `status`, `progress`, `fileName`, `errorText` and `additionalProperties: false`, so no `errorCode` | [OPEN](#open--5019-upload_failed-names-a-condition-that-cannot-exist-when-its-response-is-sent-and-its-real-carrier-has-no-code-field) |
+| 9 | **The server emitting a SecurityEvent** — required at nine sites (`OfflinePassRejected` at eight, `ServerSignedAuthReplay` at `2018`) | the **actor**: `security-event.md` said *"sent by the station"*, *"Direction: Station to Server"*, and gave every processing rule to the station, so the message admitted no server-originated form at all | [DECIDED 0.26.0](#decided-0260--nine-sites-required-the-server-to-emit-a-securityevent-and-the-profile-admitted-no-such-thing) — closed by scoping |
+| 10 | A **`programNumber`-set** drift at provisioning, asserted to be *"rejected at step 5 … with `4020`"* | step 5 compares `bayNumber` values only; `4020` **MUST** carry `details.declaredBayNumbers`/`registeredBayNumbers`, which have no program counterpart; and no registry code describes a program-set mismatch | [DECIDED 0.26.0](#decided-0260--a-program-set-drift-at-provisioning-was-sent-to-a-code-that-cannot-see-programs) — closed by moving the refusal, not by adding a code |
 
-**Eight instances is what the written record supports**, counted by reading CHANGELOG and this file
-rather than carried from a note; **four** are still open and one is a blocker. The two sub-shapes
-still account for all of them: **five** are a mandated refusal or report with no error code and no
-response field to carry it (2, 4, 5, 6, 8), and **three** are a rule keyed on a value the
-authoritative schema forbids on the branch where the rule applies (1, 3, 7).
+**Ten instances is what the written record supports**, counted by reading CHANGELOG and this file
+rather than carried from a note; **four** are still open and one is a blocker. There are **three**
+sub-shapes: **six** are a mandated refusal or report with no error code and no response field to
+carry it (2, 4, 5, 6, 8, 10); **three** are a rule keyed on a value the authoritative schema forbids
+on the branch where the rule applies (1, 3, 7); and **one** is a rule addressed to an actor the
+artefact does not admit (9).
+
+**The third sub-shape was named in this heading from the day it was written and had no instance
+until now** — *"no field, no code **and no actor**"* — which is worth saying plainly, because a
+category with no members reads as a completed enumeration rather than as an empty slot. It stayed
+empty because it is the hardest of the three to see: the field and the code sub-shapes are found by
+reading a rule against a schema, and a schema check can be automated. The actor sub-shape is found
+only by reading a rule against the *prose* of the artefact it names — and the prose in this case was
+in a different file, four directory levels away, and said nothing false about itself.
 
 Instance 8 is the first where the carrier fails on **two independent grounds** — the condition is
 unobservable at the moment the coded response is sent, *and* the message that can observe it carries
@@ -1336,6 +1735,23 @@ exactly that. A new server-originated `SecurityEvent` type and its emit rule are
 fix; the reason it has not been written is that every existing `SecurityEvent` type is
 station-originated, and adding a server-originated one is a change to what the message means, not
 just to its enum.
+
+> **UPDATE 2026-08-28 — the blocker named in the paragraph above was false when it was written, and
+> is now gone.** *"Every existing `SecurityEvent` type is station-originated"* was not true: nine
+> normative sites already required the **server** to emit an `OfflinePassRejected`, and `2018`'s
+> registry row already required it to log a `ServerSignedAuthReplay` — the second of which
+> `security-event.md` §4 said in its own event-type table. The obstacle this entry cited as the
+> reason for not proceeding had already been crossed twice without anyone noticing, which is why it
+> is now [instance 9 of the unconstructible class](#decided-0260--nine-sites-required-the-server-to-emit-a-securityevent-and-the-profile-admitted-no-such-thing)
+> and closed there: `security-event.md` §2.1 now defines the server-originated form.
+>
+> **This does not make `FraudDetected` free, and it is still not taken here.** What it costs is now
+> stated correctly rather than overstated. It is **not** *"a change to what the message means"* — the
+> meaning is settled. It is an addition to the `type` enum of
+> `security-event.schema.json`, which both origins share, so a value added for the server is a value
+> a station may also emit; that is a schema change and an SDK re-vendor, and it needs the emit rule
+> and the station-side semantics decided together. Cheaper than this entry claimed, still a
+> decision, and still out of scope for the cycle that corrected the premise.
 
 ---
 
@@ -2184,6 +2600,26 @@ compares against the stale set and refuses again, and nothing anywhere says so.
 **Recommended: 3 now, 2 next.** 3 is a text change that makes the trap visible to the operator who
 hits it; 2 is the mechanism, and it needs the ordering written down in the same change that
 introduces it.
+
+> **UPDATE 2026-08-28 — half closed, by option 2 arriving from the implementation rather than from
+> an endpoint.** See
+> [DECIDED (0.26.0)](#decided-0260--the-topology-comparison-never-named-its-referent-and-the-literal-reading-made-one-retired-bay-stop-a-station-selling).
+> The reference server built the server-side topology correction this entry's option 2 described —
+> a bay leaves service by being retired, never by being deleted — and scoped **both** comparisons to
+> the bays in service. `05-state-machines.md` §1.5 now defines that referent as the **in-service
+> topology** and the other five sites cite it.
+>
+> **What that closes.** The loop itself. The operator corrects the server-side record; the next boot
+> compares against the corrected set and matches; `3018` clears without a re-provision, so step 5's
+> `4020` is never reached and the two rules stop pointing at each other. The ordering worry in
+> option 2 — *correction, then token, then provision* — dissolves with it, because the correction
+> alone is now sufficient and no token is spent.
+>
+> **What stays open, and why this entry is not marked DECIDED.** The **mechanism** is still
+> undefined: §4.4 lists every REST endpoint this specification has, and none of them adds a bay,
+> removes one, or takes one out of service. An implementation still has to invent that surface, and
+> two implementations will invent different ones. The escape is no longer *outside the protocol* —
+> its effect is normative now — but the act that triggers it still is.
 
 ---
 

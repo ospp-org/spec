@@ -8,6 +8,164 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.26.0] — 2026-08-28
+
+> **MINOR, non-breaking on the wire.** No message, field, schema, enum value or registry code is
+> added, removed or retyped; `protocolVersion` stays `0.3.0`; no SDK re-vendor is required. What
+> moves is normative prose, and it moves in the direction of what implementations already do.
+>
+> **Six obligations were adjudicated that no implementation could have satisfied as written, and
+> every one of them was repaired without widening a schema.** The rule applied throughout: a repair
+> must not make a legitimate operation impossible. Widening a closed response schema was available
+> in three of the six cases and was rejected in all three — every response schema is
+> `additionalProperties: false`, so an added member is backward-compatible for the emitter and
+> *not* for a receiver validating against an older vendored copy, and that exact failure has already
+> been measured once, on the offline pair, where serialising the computed codes made a conforming
+> station discard the whole rejection.
+
+### Fixed
+
+- **Nine normative sites required the server to emit a SecurityEvent, and the SecurityEvent profile
+  admitted no such thing.** `security-event.md` said *"sent by the station"*, *"**Direction:**
+  Station to Server"*, gave every processing rule to the station, and timestamped the record *"on
+  the station"*. Against that: `authorize-offline-pass.md` §6 rule 7, `reconciliation.md` §3, §6.3
+  and §6.7, and the *Recommended Action* cells of `2014`, `2015`, `2016`, `2017` and `2018` all
+  require the **server** to emit one — two of them with an explicitly server-side timestamp, which
+  is rule 3 inverted. `reconciliation.md` §6.4 leans its entire argument on that emission: it is the
+  second of the *"two routes"* by which a failing gate stays identifiable, and it is the reason the
+  offline profile carries no `errorCode`. **An unconstructible rule was load-bearing for a decision
+  already taken.** The profile had also already contradicted itself in one row — §4's
+  `ServerSignedAuthReplay` entry ends *"the server logs this type at the next reconciliation"*.
+  Resolved by **scoping, not by adding**: new §2.1 names two origins — the station-originated wire
+  EVENT, and a **server-originated audit record that is never published** and which a server
+  **MUST NOT** send to a station. Both validate against the one existing schema. Rules 1–6 are
+  scoped to the station form, rules 2 and 3 gain their server-form counterparts, and rule 7 is
+  widened so both land in one append-only log under one retention. `authorize-offline-pass.md`
+  rule 7 keeps its prohibition and gains the scope it always needed — *at authorize time* — with the
+  reason the two gates differ written down.
+- **Heartbeat listed four error codes on a RESPONSE that cannot carry any of them, and its own
+  profile already said none of them arrive there.** `heartbeat-response.schema.json` is
+  `{serverTime}`, closed — no `errorCode`, no `errorText`, and unlike the offline pair no `status`
+  either, so a Heartbeat rejection is not merely uncoded but inexpressible. §2.1 had said so for
+  releases while §4.1 listed `1005`, `1010`, `5106` and `6001` under a heading reading *"can appear
+  in the RESPONSE"*, and `03-messages.md` §5.1 repeated them under *"Error Responses"*. Checked
+  one by one against their own registry rows: `1010` is raised by the **station** when no response
+  arrives, so a response carrying it would disprove it; `5106` is a station-side clock condition
+  diagnosed *from* a successful response; `1005`'s own action is *"Log the malformed message"*, not
+  *respond*; and `6001`'s recovery — retry with backoff — is what a station does anyway when a
+  Heartbeat goes unanswered. **Not one was ever a response value.** §4.1's row now reads *(none)*
+  with the four dispositions beneath it, `03-messages.md` §5.1 answers *"There are none"*, and both
+  are reconciled to `heartbeat.md` §8, which had the true behaviours all along.
+- **The topology comparison never named its referent, and the literal reading made one retired bay
+  stop a station selling.** Six sites compared a station's declared `bays[]` against *"the topology
+  recorded at provisioning"* or *"the registered set"* — a set that still contains bays the operator
+  has taken out of service. Read that way, a station with one bay physically removed is `3018` and
+  `Pending` on every boot for ever, and §1.4 makes a `Pending` station refuse StartService and
+  ReserveBay with `3002` on **every** transport: retiring one bay stops the whole station selling,
+  with no operator act able to clear it. `05-state-machines.md` §1.5 now defines the **in-service
+  topology** once — the bays the server currently records, less any taken out of service — and
+  `04-flows.md` step 5, `04-flows.md` A2a, `07-errors.md` `3018` and `4020`, and
+  `boot-notification.md` §6.1 cite it. The comparison is not relaxed: it fires on exactly the
+  disagreement it exists to catch, and a station still declaring a bay the operator retired is still
+  a mismatch. `boot-notification.md` §6.1 also loses the sentence *"Re-provisioning is what changes
+  a station's topology"*, which step 5 makes false in every case where hardware actually changed.
+- **A `programNumber`-set drift at provisioning was sent to a code that cannot see programs.**
+  `04-flows.md`'s *Descriptive drift* rule declared both structural halves of `bays` *"rejected at
+  step 5 … with `4020`"*. Step 5 compares `bayNumber` values only; `4020` **MUST** carry
+  `details.declaredBayNumbers`/`registeredBayNumbers`, which have no program counterpart; and no
+  code in the registry describes a program-set mismatch. The refusal is **moved, not invented**: a
+  server **MUST NOT** refuse a provision on a program-set drift, and `3018` — whose comparison is
+  over bay numbers **and** program ordinals — catches it at first boot, on a `Pending` that keeps
+  the repair channel open. Refusing at provisioning would leave the station without a certificate.
+- **`1006 UNKNOWN_ACTION` prescribed one action for two paths.** Its *Recommended Action* read
+  *"Respond with REJECTED"*, flat — while `02-transport.md` §11 has said for releases that an action
+  **unknown to the protocol** has no RESPONSE schema to reply on and is logged and discarded. That
+  is a §1.4 breach inside §1.4's own chapter: a code reachable from two paths whose correct action
+  differs, stating one. Both branches are now in the entry, with the note that no `details`
+  discriminator is needed because a receiver always knows which path it is on.
+- **`2015 OFFLINE_ORG_MISMATCH` was missing from AuthorizeOfflinePass's §4.1 row**, which its own
+  profile has carried since check #11 was written.
+- **`0.25.0` declared decommissioning out of scope and two sentences did not hear about it.**
+  `04-flows.md` §2 still named *"station decommissioned"* a **common cause** of a Boot `Rejected`,
+  and its reconnect error table still answered one with *"SSP may have been decommissioned — await
+  intervention"*, the opposite of `CORE-011`'s unlimited retry. The third cause that line named,
+  *"certificate revoked"*, was wrong on its own ground: a revoked certificate is refused at the
+  **connection** as `1004 CERTIFICATE_ERROR`, whose recovery forbids entering provisioning mode, and
+  a station refused there never sends a BootNotification at all. Neither cause has a code in the set
+  §4.1 assigns to this message. Declaring a subject out of scope is a re-keying, and the same sweep
+  rule applies to it.
+
+### Changed
+
+- **`07-errors.md` §4.1's two offline rows are marked *recorded, not transmitted***, pointing at
+  `reconciliation.md` §6.4 and at the statement `authorize-offline-pass.md` §7 gains in this
+  release — the *recorded, not transmitted* paragraph its reconcile-time twin has had since
+  `0.24.0`. The asymmetry meant a reader of the authorize-time profile met a full Error Codes table
+  for a response that carries none, with nothing saying so.
+- **`ROADMAP.md`'s *Seven MQTT response schemas* entry** no longer carries the Heartbeat position
+  alone: it points at the normative statements instead. A ROADMAP is not where an implementer looks
+  for a rule, and that bullet had been the only place the position was written down.
+- **`tools/README.md`'s precision table had three numbers with no measurement point**, unchanged for
+  fourteen releases while all three corpora grew: `check-schema-conditionals` read *"33 claims, 5
+  flagged"* against a gate printing **44 / 6**; `check-config-defaults` *"37 sites"* against **40**;
+  `check-config-ranges` *"16 sites"* against **18**. The table now carries two dated columns — the
+  `v0.12.0` adjudication, kept because it is still true of the tree it was performed on, and today's
+  gate output, which is re-runnable. Re-adjudicating is a separate act from re-running, and merging
+  the two columns is what produced the drift.
+- **`conformance/test-vectors/README.md` sent contributors to a schema that does not exist.** It
+  named `schemas/mqtt/mqtt-envelope.schema.json` as where the envelope is validated; the file is at
+  `schemas/common/`. Now a working relative link.
+- **`tools/check-normative-bold.py`'s v0.25.0 measurement point is corrected and stamped.** The row
+  read *"(this HEAD) … 439 unbolded, 1129 bolded spans … +12"*. Re-derived by running the shipped
+  instrument over a pristine `git archive` of `573bf6b`: **1139**, so `1117 → 1139` is **+22**. The
+  gated number was right; its ungated companion was ten low and the delta computed from it inherited
+  the error. Third occurrence in that header, second on the bolded-span companion specifically. The
+  row also never received its sha when `v0.25.0` was cut.
+
+### Note
+
+- **`KNOWN-ISSUES.md`'s `FraudDetected` entry rested on a false premise**, now corrected in place:
+  *"every existing `SecurityEvent` type is station-originated"* was not true when written — the
+  obstacle it cited as the reason for not proceeding had already been crossed at nine sites. What
+  `FraudDetected` actually costs is now stated correctly (a shared-enum addition and an SDK
+  re-vendor, not a change to what the message means), and it is still not taken.
+- **The unconstructible-obligation class reaches ten instances, and its third sub-shape — named in
+  its own heading from the day it was written — gets its first member.** *"No field, no code **and
+  no actor**"*: the actor leg stayed empty for eight instances because the other two are found by
+  reading a rule against a schema, which can be automated, while the actor leg is found only by
+  reading a rule against the prose of the artefact it names.
+- **Three absences are recorded as decisions to take, and one of them matters now.** **Nothing in
+  `spec/` obliges any party to check certificate revocation.** The certificate is REQUIRED to carry
+  its CRL Distribution Point and nobody is required to follow it; `02-transport.md` §1.3 **MUST**s
+  the broker to verify the *chain*; the two threat rows and the §4.2 architecture cell describe
+  broker-side revocation as though it were in force, in indicative mood with no keyword; and the
+  station's own §4.7.1 validation checklist does not include it. `1004` names the condition and
+  prescribes the refusal, and nothing makes that refusal reachable. The policy vocabulary is absent
+  entirely — `nextUpdate`, `soft-fail`, `hard-fail`, `fail-open` and `stapling` return **0** across
+  `spec/`, `schemas/` and `conformance/`. Revocation is the only mechanism this specification has
+  against a compromised identity before a certificate expires — up to a year — since §6.6's epoch is
+  OfflinePass-only and says so. Filed with its option space on three independent axes: the
+  obligation, the freshness bound, and fail-open versus fail-closed when the list is unreachable.
+  **No decision is taken here.**
+- **The conformance harness is named as its own item.** 34 test cases; `conformance/harness/`
+  contains two files totalling **zero bytes**, both `.gitkeep`. Every compliance claim about this
+  protocol currently rests on one team running one implementation by hand, and the gap widens on
+  every release that adds cases to a corpus nothing executes.
+- **Maintenance expiry, a configuration revision identifier, and diagnostics cancellation** are
+  recorded together, without urgency: each is a missing capability rather than a contradiction, so
+  none misleads a reader today, which is exactly why each had been rediscovered from scratch more
+  than once.
+- **`KNOWN-ISSUES.md`'s counts are now re-derived from its own headings rather than incremented.**
+  The previous revision read *24 open* against **25** `## OPEN` headings.
+- **The station-hardware-change loop is half closed.** Its option 2 arrived from the reference
+  implementation rather than from a new endpoint: the operator corrects the server-side record, the
+  next boot compares against the corrected in-service set and matches, `3018` clears without a
+  re-provision, and step 5's `4020` is never reached. The **mechanism** stays undefined — §4.4 lists
+  every REST endpoint this specification has and none of them adds, removes or retires a bay — so
+  that entry stays OPEN.
+
+---
+
 ## [0.25.0] — 2026-08-19
 
 > **MINOR, and breaking.** A station reporting `5111` as a Warning, a station that omits

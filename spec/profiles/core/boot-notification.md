@@ -141,7 +141,9 @@ It can fail in exactly one way: the station declared one topology at provisionin
 
 There is **no first-boot exemption**, and deliberately so. An exemption would have the server record whatever the first boot happened to say, which makes the provisioning declaration decorative and turns the one boot where a commissioning error is cheapest to catch into the one boot that cannot catch it. A station whose two declarations disagree has a firmware fault or a commissioning fault; both are worth the same held state at boot 1 as at boot 100, and `Pending` is a held state an operator can act on.
 
-The server **MUST NOT** create, extend or trim bay records from a BootNotification, on a first boot or any other. Re-provisioning is what changes a station's topology.
+The server **MUST NOT** create, extend or trim bay records from a BootNotification, on a first boot or any other. The declaration is evidence, never an instruction.
+
+**What does change the record is an operator act on the server side, and it is not re-provisioning.** Re-provisioning cannot do it: [Flows §2](../../04-flows.md) *Error precedence* step 5 refuses with `4020` any provision whose declared set differs from the one the server holds, which is every case where the hardware has actually changed. The operator changes the server-side record — adding a bay, or taking one out of service — and the next boot then compares against the corrected **in-service topology** ([Chapter 05 §1.5](../../05-state-machines.md#15-topology-at-boot)) and matches. This specification defines that referent and the effect of a bay being out of service; it does not define the mechanism, and no endpoint in [Chapter 07 §4.4](../../07-errors.md#44-rest-api-endpoints) provides one.
 
 ## 7. Examples
 

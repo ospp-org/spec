@@ -1,6 +1,6 @@
 # Chapter 03 — Message Catalog
 
-> **Status:** Draft | **OSPP Version:** 0.25.0
+> **Status:** Draft | **OSPP Version:** 0.26.0
 
 This chapter is the normative reference for **every message** in the OSPP protocol. Each message is documented with its complete payload schema, metadata, and example.
 
@@ -966,12 +966,9 @@ The Heartbeat REQUEST payload is **empty**:
 
 #### Error Responses
 
-| Error Code | Condition |
-|------------|-----------|
-| `1005` | `INVALID_MESSAGE_FORMAT` — request is not valid JSON or missing required fields |
-| `1010` | `MESSAGE_TIMEOUT` — no response received within timeout window |
-| `5106` | `CLOCK_ERROR` — clock drift exceeds acceptable threshold |
-| `6001` | `SERVER_INTERNAL_ERROR` — server encountered an unexpected error |
+**There are none.** The RESPONSE payload above is the whole payload: `heartbeat-response.schema.json` is `{serverTime}`, REQUIRED, `additionalProperties: false`, with no `errorCode`, no `errorText` and no `status`, so a Heartbeat rejection is not expressible and **MUST NOT** be attempted ([Chapter 07 §2.1](07-errors.md#21-mqtt-error-response) and [§4.1](07-errors.md#41-station--server-mqtt-actions)).
+
+This table listed `1005`, `1010`, `5106` and `6001` until `0.26.0`, under a heading that says *responses*. None of the four was ever carried in one, each is raised and handled elsewhere, and [Chapter 07 §4.1](07-errors.md#41-station--server-mqtt-actions) states where. The conditions themselves still occur — a station still detects clock drift, a server still fails internally — and the recoveries are unchanged; what is corrected is the claim that any of them arrives on this message.
 
 **Clock synchronization:** The station **MUST** compare `serverTime` from the Heartbeat RESPONSE against its local clock, and **SHOULD** correct the clock when the absolute drift exceeds **2 seconds** — [`profiles/core/heartbeat.md` §6](profiles/core/heartbeat.md#6-clock-synchronization) is the normative statement. Maximum acceptable clock skew is **300 seconds** (5 minutes); above that the station **MUST** log error `5106 CLOCK_ERROR` and **SHOULD** send a SecurityEvent [MSG-012] with `type: ClockSkew` and `severity: Warning`.
 

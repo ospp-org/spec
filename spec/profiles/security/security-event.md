@@ -1,6 +1,6 @@
 # SecurityEvent
 
-> **Status:** Draft | **OSPP Version:** 0.25.0
+> **Status:** Draft | **OSPP Version:** 0.26.0
 
 ## 1. Overview
 
@@ -10,6 +10,28 @@ SecurityEvent is sent by the station to report security-relevant incidents to th
 
 - **Direction:** Station to Server
 - **Type:** EVENT (fire-and-forget; no response expected)
+
+### 2.1 Two origins, one payload shape
+
+**A SecurityEvent has two origins, and only one of them is a message.** The distinction is stated here because this document previously described only the first while five registry entries and four processing rules elsewhere in the specification required the second, and an implementer reading this section alone would conclude that those rules address an actor that cannot perform them.
+
+**Station-originated — the wire EVENT.** The station detects the incident and publishes it. This is the direction above, it is the only direction that exists on the wire, and rules 1 through 6 of [§6](#6-processing-rules) bind it.
+
+**Server-originated — an audit record, never a message.** The server detects the incident itself, while processing something a station sent, and writes the same payload shape directly into the append-only log of [§6](#6-processing-rules) rule 7. It is **NOT** published: there is no Server → Station SecurityEvent, [`07-errors.md` §4.1](../../07-errors.md#41-station--server-mqtt-actions) lists MSG-012 as Station → Server only, and the station has nothing to do with the record. A server **MUST NOT** publish a SecurityEvent to a station.
+
+Both forms validate against [`security-event.schema.json`](../../../schemas/mqtt/security-event.schema.json) — the shape is one shape, which is why the server-originated form needs no schema of its own and adds nothing to the wire. Two rules are scoped rather than shared, and each is stated where it applies: the `timestamp` of a server-originated record is when the **server** detected the incident (rule 3 binds the station-originated form), and its `eventId` is derived deterministically from the originating REQUEST's `messageId` rather than assigned at detection (rule 2 binds the station-originated form), so that one REQUEST that fails one check yields one audit row however many times it is retransmitted.
+
+**Where the server-originated form is required.** Every site is an offline-credential rejection, and each states its own `eventId` derivation and `details` set:
+
+| Site | Trigger |
+|---|---|
+| [`authorize-offline-pass.md` §6](../offline/authorize-offline-pass.md) rule 7 | authorize-time check #1 (signature) and check #10 (counter replay) — **and no other authorize-time outcome** |
+| [`reconciliation.md` §3](../offline/reconciliation.md#3-deduplication-offlinetxid) | a second submission under a known `offlineTxId` whose signed `receipt.data` differs |
+| [`reconciliation.md` §6.3](../offline/reconciliation.md#63-securityevent-emission) | every applicable reconcile-time gate failure |
+| [`reconciliation.md` §6.7](../offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4) | the auth-form `(authId, sessionId)` replay reject |
+| [`07-errors.md` §3.2](../../07-errors.md#32-authentication--authorization-errors-2xxx), codes `2014`, `2015`, `2016`, `2017`, `2018` | the *Recommended Action* cell of each, which reads *"Server: log SecurityEvent"* |
+
+`OfflinePassRejected` and `ServerSignedAuthReplay` are therefore the two types that occur in both forms. [§4](#4-event-types)'s row for `ServerSignedAuthReplay` already said so — *"the server logs this type at the next reconciliation"* — and was the only place in this document that did.
 
 ## 3. Payload Fields
 
@@ -49,13 +71,15 @@ SecurityEvent is sent by the station to report security-relevant incidents to th
 
 ## 6. Processing Rules
 
+**Rules 1 through 6 bind the station-originated form** ([§2.1](#21-two-origins-one-payload-shape)); rule 7 binds the server and covers both forms.
+
 1. The station **MUST** generate a SecurityEvent for every security-relevant incident, including but not limited to the event types listed in section 4.
 2. The station **MUST** assign a unique `eventId` to each event using the format `sec_` followed by at least 8 hexadecimal characters. The `eventId` **MUST** be assigned at the moment the incident is detected and **MUST** remain stable across every subsequent transmission of the same logical incident, including QoS 1 retransmissions and buffered replays after a connectivity-loss window (see rule 5). Re-using the same `eventId` for retried emissions of the same incident is the basis on which the server's dedup-by-`eventId` contract (`profiles/security/README.md` §3) operates; assigning a fresh `eventId` per transmission attempt **MUST NOT** occur and would constitute a protocol-level dedup-defeat.
-3. The `timestamp` **MUST** reflect the time the incident was detected on the station, not the time the message is sent.
+3. The `timestamp` **MUST** reflect the time the incident was detected on the station, not the time the message is sent. On a server-originated record it **MUST** reflect the time the server detected the incident, not the time the station sent whatever the server was processing ([§2.1](#21-two-origins-one-payload-shape)).
 4. The `details` object **SHOULD** include all context relevant to the incident. For `MacVerificationFailure`, this **SHOULD** include the `messageId`, `action`, and the expected vs. received MAC values. For `OfflinePassRejected`, this **SHOULD** include the `offlinePassId` and the validation check that failed.
 5. SecurityEvent is fire-and-forget -- the server does not send a response. If MQTT delivery is delayed (e.g., station is temporarily disconnected), the station **SHOULD** buffer the event for transmission upon reconnection.
 6. The station **MUST NOT** suppress or aggregate Critical events. Warning and Info events **MAY** be batched if the station is generating a high volume (more than 10 per minute), but each individual event **MUST** still be delivered.
-7. The server **MUST** store all received SecurityEvents in an append-only audit log that is not modifiable by station operators.
+7. The server **MUST** store all received SecurityEvents in an append-only audit log that is not modifiable by station operators, and **MUST** store its own server-originated records ([§2.1](#21-two-origins-one-payload-shape)) in that same log. One log, one retention schedule ([§5](#5-severity-levels)), one query surface: an operator investigating an incident **MUST NOT** have to know which side detected it in order to find it.
 
 ## 7. Error Handling
 

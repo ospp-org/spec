@@ -59,12 +59,21 @@ python3 tools/check-config-ranges.py         # the Range column, §9 vs §§2--6
 They exist because most of that class is *not* mechanically checkable — a claim in prose is not
 machine-comparable to anything. These four are the exceptions, and each is narrow on purpose:
 
-| Check | Why it works | Measured precision |
-|---|---|---|
-| `check-config-defaults` | Both sides are structured — Chapter 08 is a `(key, default, range)` table, a restatement is a key name with a number near it | 37 sites, 3 flagged, **3 real** |
-| `check-schema-conditionals` | Both sides are in one JSON file — the `description` and the `if`/`then` that should back it | 33 claims, 5 flagged, **5 real** |
-| `check-normative-bold` | Pure typography — a capitalised keyword outside a `**…**` span | exact, no inference |
-| `check-config-ranges` | Same structure argument as `check-config-defaults`, one column over — a range restatement is a key name with `<lo>--<hi>` near it, and `--` is as strong a signal as the word "default" | 16 sites, 4 flagged, **4 real**; plus 2 schema-bound comparisons, both real |
+> **Both number columns carry their measurement point, and the two are different measurements.**
+> *Precision* is an adjudication — someone read every flag and decided whether it was real — and it
+> was done once, at `c8e59ec`, 2026-08-11, `v0.12.0`. *Today* is what the gate prints on a clean
+> tree at `v0.26.0`, 2026-08-28, and it is re-runnable in one command. The precision figures were
+> written without a measurement point and stood unchanged for fourteen releases while every one of
+> the three corpora grew underneath them; they are kept, dated, because an adjudication does not
+> stop being true of the tree it was performed on. Re-adjudicating is a separate act from re-running
+> — do not merge the two columns.
+
+| Check | Why it works | Precision, adjudicated at `v0.12.0` | Today, `v0.26.0` |
+|---|---|---|---|
+| `check-config-defaults` | Both sides are structured — Chapter 08 is a `(key, default, range)` table, a restatement is a key name with a number near it | 37 sites, 3 flagged, **3 real** | 25 keys with a default, 40 restated sites, **0 disagreeing** |
+| `check-schema-conditionals` | Both sides are in one JSON file — the `description` and the `if`/`then` that should back it | 33 claims, 5 flagged, **5 real** | 44 claims, 38 backed, **6 not backed** (= `BASELINE`) |
+| `check-normative-bold` | Pure typography — a capitalised keyword outside a `**…**` span | exact, no inference | 439 unbolded, 1156 bolded spans (= `BASELINE`) |
+| `check-config-ranges` | Same structure argument as `check-config-defaults`, one column over — a range restatement is a key name with `<lo>--<hi>` near it, and `--` is as strong a signal as the word "default" | 16 sites, 4 flagged, **4 real**; plus 2 schema-bound comparisons, both real | 18 restated-range sites, 2 wire-field aliases, **1 finding** (= `BASELINE`) |
 
 `check-config-ranges` also does what no other check does: it compares **the registry against its own
 summary**. Chapter 08 states the key table twice — §§2--6 with Range and Description, §9 with an

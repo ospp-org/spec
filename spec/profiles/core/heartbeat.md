@@ -99,4 +99,4 @@ The Heartbeat request has an **empty payload** (`{}`). The station identity is d
 - Request: [`heartbeat-request.schema.json`](../../../schemas/mqtt/heartbeat-request.schema.json)
 - Response: [`heartbeat-response.schema.json`](../../../schemas/mqtt/heartbeat-response.schema.json)
 - Timestamp: [`timestamp.schema.json`](../../../schemas/common/timestamp.schema.json)
-- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 1005, 1010, 5106, 6001)
+- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 1005, 1010, 5106, 6001 — the conditions of [§8](#8-error-handling); none of them is carried in a Heartbeat RESPONSE, which is `serverTime` and nothing else)

@@ -1,6 +1,6 @@
 # Test Vectors
 
-> **Status:** Draft | **OSPP Version:** 0.25.0
+> **Status:** Draft | **OSPP Version:** 0.26.0
 
 Machine-readable test vectors for validating OSPP JSON Schema compliance.
 
@@ -78,7 +78,7 @@ Implementers **SHOULD** integrate test vector validation into their CI pipeline:
 ### Envelope vs Payload
 
 Test vectors contain **payload-only** JSON (not the full MQTT envelope). The envelope
-structure is validated separately via `schemas/mqtt/mqtt-envelope.schema.json`.
+structure is validated separately via [`schemas/common/mqtt-envelope.schema.json`](../../schemas/common/mqtt-envelope.schema.json).
 
 ## 3. Contributing Test Vectors
 

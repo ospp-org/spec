@@ -1,6 +1,6 @@
 ---
 status: Draft
-ospp-version: 0.25.0
+ospp-version: 0.26.0
 ---
 
 # OSPP Specification — Reading Guide
@@ -14,7 +14,7 @@ ospp-version: 0.25.0
 | Field | Value |
 |-------|-------|
 | Status | Draft |
-| OSPP Version | 0.25.0 |
+| OSPP Version | 0.26.0 |
 | Last Updated | 2026-07-28 |
 
 > **Not all of this specification is at the same maturity.** The MQTT station↔server surface,
