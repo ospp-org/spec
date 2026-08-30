@@ -1,6 +1,6 @@
 # Chapter 02 — Transport
 
-> **Status:** Draft | **OSPP Version:** 0.26.0
+> **Status:** Draft | **OSPP Version:** 0.27.0
 
 OSPP defines three transport layers for communication between participants. Each transport serves a distinct channel with its own security model, reliability guarantees, and failure modes.
 
@@ -75,6 +75,7 @@ The connection MUST use **mutual TLS (mTLS)**:
 - The **station** presents an X.509 client certificate signed by the OSPP Station CA.
 - The **broker** presents a server certificate signed by a trusted public or private CA.
 - The broker MUST verify the station's client certificate against the OSPP CA trust chain.
+- The broker **MUST** also establish that the station's client certificate has not been revoked, and refuse the connection if it has. The freshness bounds it holds the revocation information to, what it does when that information cannot be obtained, and how a deployment is held to a clause no message can carry are in [Chapter 06 — Security §2.1.1](06-security.md#211-revocation-checking), which is authoritative.
 
 Certificate requirements are defined in [Chapter 06 — Security](06-security.md).
 
@@ -106,6 +107,7 @@ Station                                              Broker
 | TLS handshake fails, no certificate at fault (cipher suite or protocol version) | Station MUST log error `1003` (`TLS_HANDSHAKE_FAILED`), retry with backoff |
 | TLS handshake fails because a certificate was rejected — revoked, self-signed, or an invalid chain | Station **MUST** log error `1004` (`CERTIFICATE_ERROR`) with the matching `details.cause`, keep its credentials, stay off the broker, alert operator. **Not `1003`** — [07-errors §3.1](07-errors.md#31-transport-errors-1xxx) gives `1004` precedence over `1003` for every failure a certificate caused |
 | Certificate expired | Station MUST log error `1004` (`CERTIFICATE_ERROR`) with `details.cause: expired`, alert operator |
+| The broker cannot establish the certificate's revocation status, and its grace has expired | The broker completes the handshake and refuses the **MQTT CONNECT** with a non-zero CONNACK reason code (`0x87 Not Authorized` RECOMMENDED); the station takes the generic non-zero-CONNACK row below and retries with backoff. **Not `1004`** — nothing is wrong with this station's certificate, and `1004`'s non-expired branches would take the fleet off the broker and leave it there ([Chapter 06 §2.1.1](06-security.md#211-revocation-checking)) |
 | CONNACK with non-zero reason code | Station MUST log the reason code, retry with backoff |
 | CONNACK `0x86` (Bad Username or Password) | Likely mTLS misconfiguration — station MUST NOT retry without operator intervention |
 
@@ -144,7 +146,7 @@ The `v1` segment in the topic path is a **namespace identifier**, NOT the protoc
 - The protocol version is carried inside the message envelope via the `protocolVersion` field (see [Chapter 03 — Messages](03-messages.md)) and checked at boot by **exact match** against the set the server supports ([VERSIONING.md](../VERSIONING.md)). "Negotiation" here means that check and its `1007` outcome; the two peers do not converge on a version, and a shared MAJOR implies nothing.
 - The topic namespace `v1` MUST remain `v1` for every OSPP protocol version, regardless of that version's MAJOR component. The two numbers are unrelated: the namespace identifies the topic layout, the envelope field identifies the message contract.
 - A new topic namespace (e.g., `v2`) would only be introduced for a fundamental transport-level change — a different topic shape or a different addressing scheme — not for any change the envelope's `protocolVersion` can express.
-- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.26.0*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.3.0`): the two version numbers evolve separately and need not match.
+- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.27.0*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.3.0`): the two version numbers evolve separately and need not match.
 
 ### 2.3 Server Subscription Patterns
 
@@ -479,7 +481,17 @@ Any MQTT 5.0 compliant broker MAY be used. The broker MUST support:
 - Message Expiry Interval
 - Shared Subscriptions (for multi-server deployments)
 - Per-client ACL based on certificate CN
+- Certificate **revocation** checking on the presented client certificate — against the CRL its CRL Distribution Points extension names, or by OCSP ([Chapter 06 — Security §2.1.1](06-security.md#211-revocation-checking))
 - Last Will and Testament with Will Delay Interval
+
+> **The revocation capability is a setting, not code — and its default is off.** A deployment satisfies
+> [§2.1.1](06-security.md#211-revocation-checking) by configuring the broker it already runs: point it at a
+> revocation source, set the two bounds that clause names, and route the grace-entry alert. Nothing has to be
+> written. That is also why the clause had to be stated at all — the reference deployment reported, on
+> 2026-08-28, that revocation checking was **off in production** and was being carried as a deploy precondition
+> rather than as a protocol obligation, which the text until `0.27.0` permitted. That is recorded as the
+> operator's report, not as something this specification measured. **Switching it on is the whole of the
+> server-side work**, and a deployment that has not done it does not conform, whatever else it passes.
 
 > **Informative — Tested brokers:** EMQX 5.x, HiveMQ 4.x, Mosquitto 2.x, VerneMQ 2.x. Any MQTT 5.0 compliant broker meeting the requirements above is suitable.
 

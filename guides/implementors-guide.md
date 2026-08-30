@@ -2,7 +2,7 @@
 
 > **For:** Developers building OSPP-compatible stations, servers, or user agents
 > **Level:** Practical guide, not formal spec. Read this first, then the spec chapters.
-> **Spec Version:** 0.26.0
+> **Spec Version:** 0.27.0
 
 ---
 
@@ -593,6 +593,8 @@ OSPP supports in-protocol certificate renewal so stations can obtain new TLS cer
 | Certificate chain invalid | Respond `Rejected` to CertificateInstall, continue using current cert |
 | Cannot generate keypair | Reject TriggerCertificateRenewal with `4014 KEYPAIR_GENERATION_FAILED`, log SecurityEvent (`HardwareFault`) |
 | Certificate expired (too late) | Enter offline-only mode (BLE). Recovery via server-triggered renewal or re-provisioning |
+| Certificate revoked | The broker refuses the handshake. Log `1004` with `details.cause: revoked`, keep your credentials, stay off the broker, alert the operator. Do **not** re-provision yourself |
+| Broker refuses at CONNACK (non-zero reason code) | Not a certificate fault of yours — one cause is a broker that cannot check revocation and whose grace has expired. Log the reason code and retry with backoff |
 
 See `spec/06-security.md` §4.7 and `spec/profiles/security/certificate-renewal.md` for the full specification.
 
@@ -1056,6 +1058,7 @@ Test the error scenarios in `/examples/error-scenarios/`:
 
 - [ ] TLS 1.2 floor — does your station reject TLS versions below 1.2 (1.0/1.1)?
 - [ ] mTLS — does the broker reject a station with an invalid certificate?
+- [ ] Revocation — does the broker reject a station whose certificate is on the CRL? And when the list goes stale, does it alert on entering the grace period and refuse once the grace expires? (`spec/06-security.md` §2.1.1)
 - [ ] HMAC verification — does your station reject a message with a bad `mac`?
 - [ ] Replay protection — does your deduplication catch a replayed `messageId`?
 - [ ] OfflinePass validation — do all 10 checks work? Test each failure mode individually.
@@ -1153,6 +1156,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** MQTT 5.0 protocol (NOT 3.1.1)
 - [ ] **[MUST]** TLS 1.2+ mandatory (TLS below 1.2 forbidden; TLS 1.3 recommended)
 - [ ] **[MUST]** mTLS — station presents X.509 client certificate
+- [ ] **[MUST]** Broker checks certificate **revocation** (CRL or OCSP), bounds the information's freshness, alerts on entering grace and refuses after it — `spec/06-security.md` §2.1.1. Verified by declaration in the conformance report, not by a test case
 - [ ] **[MUST]** Client ID = `stn_{station_id}` matching certificate CN
 - [ ] **[MUST]** QoS 1 for all messages
 - [ ] **[MUST]** Retain = false for all messages
@@ -1322,4 +1326,4 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 
 ---
 
-*This guide covers OSPP 0.26.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*
+*This guide covers OSPP 0.27.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*

@@ -8,6 +8,168 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.27.0] — 2026-08-30
+
+> **MINOR, non-breaking on the wire, and breaking for a conformance claim.** No message, field,
+> schema, enum value or Chapter 08 configuration key is added, removed or retyped; `protocolVersion`
+> stays `0.3.0`; no SDK re-vendor is required. What changes is that a deployment which passed every
+> test yesterday can fail conformance today, on a clause no test can reach. That combination has one
+> precedent — `0.9.0`, which made station certificate validation fail-closed with no wire change —
+> and it is the shape a security obligation takes when the observable behaviour was already
+> permitted.
+>
+> **One principle came out of this cycle and is worth naming, because it decided the design and
+> will decide others: a protective mechanism that refuses down the wrong path becomes the very
+> outage it was preventing.** The grace period exists so that a revocation-list outage does not
+> disconnect a fleet with nobody on site. Routing its expiry through `1004` — the obvious code, the
+> one that already names *revoked* — would have turned away stations holding valid certificates onto
+> a `recoverable: false` branch that says *stay off the broker and alert the operator*, so the fleet
+> would have gone off and **stayed** off until someone visited every site. The control would have
+> produced a worse failure than the one it was built to avoid, and it would have looked correct in
+> every review, because the wrong path is the path the vocabulary already had a word for. Choosing
+> *where* a refusal lands is part of specifying the refusal, not an implementation detail beneath it.
+
+### Added
+
+- **The broker MUST check certificate revocation, and the decision is written on all three axes the
+  option space named.** `KNOWN-ISSUES.md` had carried this since `0.26.0` as *a decision to make*,
+  measured and unresolved: the certificate was REQUIRED to carry the CRL's address
+  ([`06-security.md` §4.4](spec/06-security.md#44-certificate-requirements)) and **not one normative
+  keyword anywhere in `spec/` obliged any party to read it**. The vocabulary a revocation policy
+  would be written in was absent entirely — `nextUpdate` **0**, `soft-fail` **0**, `hard-fail` **0**,
+  `fail-open` **0**, `stapl` **0**, measured whole-repo over `spec/`, `schemas/` and `conformance/`.
+  Revocation is the only mechanism this specification has against a compromised station identity
+  before that identity expires, which is **up to a year**; the epoch of §6.6 is OfflinePass-only and
+  explicitly avoids certificate revocation lists, and a renewal issues a new certificate without
+  withdrawing the old one. A mitigation nothing is obliged to perform is not a mitigation, and two
+  threat-model rows described this one as though it were in force. New
+  [`06-security.md` §2.1.1](spec/06-security.md#211-revocation-checking) states the obligation one
+  bullet below the chain-verification MUST it belongs beside, and extends it to whichever party
+  terminates the station's client certificate — the broker and the REST fallback both, because a
+  control one leg of the fleet can route around is not a control.
+- **Freshness is bounded twice, and the earlier bound governs.** The revocation information must be
+  current by its own `nextUpdate` *and* by a configured maximum age. Either alone is defeatable: a
+  CA free to publish a `nextUpdate` a year out has bounded nothing, and a maximum age alone would
+  ignore an issuer saying its own list is superseded. A list with no `nextUpdate` — the field is
+  OPTIONAL in RFC 5280 — is stale on issue. **Nothing is added to the wire**: `thisUpdate` and
+  `nextUpdate` are fields of an X.509 artefact the certificate already points at. OCSP remains
+  available as a stronger alternative and meets both bounds by construction.
+- **A stale or unobtainable list buys one alerted hour, and then the door shuts.** The broker MAY go
+  on accepting connections for at most `CertificateRevocationGraceSeconds` from the instant the
+  information went stale, MUST refuse afterwards, and **MUST alert on entering the grace, not on its
+  expiry** — an alert at expiry carries nothing the refusal does not, since by then the fleet is
+  already being turned away. Unbounded permissiveness would mean that whoever partitions the checker
+  from the list has revoked revocation; unbounded strictness would disconnect a fleet with nobody on
+  site. **The grace value is derived from numbers this document already publishes**: above the band
+  it treats as ordinary transient unavailability (`ReconnectBackoffMax`, `ConnectionLostGracePeriod`,
+  ceilings 3600 s and 600 s) and well below §4.7.4's own *"Alerts operator after 24 hours"* for an
+  unreachable CA — **3600 s**, with `86400` as the freshness default, so the worst case from a
+  revocation being published to a revoked certificate being refused is **25 hours** and the operator
+  has been told twice, by two independent paths, before the first station is turned away.
+- **Two settings, named and ranged, and deliberately outside the Chapter 08 registry.**
+  `CertificateRevocationMaxAgeSeconds` (`86400`, `3600--604800`) and
+  `CertificateRevocationGraceSeconds` (`3600`, `0--86400`) are broker configuration. §1.1 defines
+  that registry as the *station's* key-value store and §1.5 makes every key of a required profile a
+  station obligation; neither setting is held by a station or carried by any message, so registering
+  them would oblige every station to implement a key it cannot act on — the unconstructible-obligation
+  shape this revision series exists to close. Chapter 08 §4 says so where a reader will look, and
+  `tools/check-config-ranges.py` **check F** now enforces the boundary rather than asserting it.
+- **The clause is verified by declaration, and says so.** No OSPP message reveals whether the broker
+  consulted a revocation source, and no conformance case can distinguish a broker that checks from
+  one that does not until a certificate is actually revoked. A deployment claiming Standard
+  compliance or above MUST state its revocation posture in its conformance report
+  ([`conformance/README.md` §5](conformance/README.md#5-reporting-format)). A report omitting it is
+  incomplete; a deployment answering *disabled* is not conforming — it may say so, which is the
+  point of requiring the answer, but saying so is not a waiver.
+- Glossary entries for **CRL** and **OCSP**, which a document opening *"normative definitions for all
+  terms"* had never carried, and which now name a MUST.
+
+### Fixed
+
+- **The two refusals are not one refusal — a protective mechanism that refuses down the wrong path
+  becomes the very outage it was preventing.** A revoked certificate is refused at the TLS handshake and the
+  station's existing `1004` recovery is right for it. A **grace-expiry** refusal turns away stations
+  whose certificates are valid, on a transient condition — and `1004`'s non-expired branches are
+  `recoverable: false` and say *stay off the broker and alert the operator*, so a CRL outage would
+  take the fleet off and **leave** it off, needing an operator at every site: worse than the
+  fleet-wide disconnection the grace exists to prevent, caused by the mechanism meant to prevent it.
+  That refusal therefore completes the handshake and refuses at the **MQTT CONNECT** with a non-zero
+  CONNACK reason code (`0x87 Not Authorized` RECOMMENDED), which the station already answers with
+  retry-with-backoff, so the fleet returns by itself when the list does. Completing the handshake
+  grants a revoked station nothing — no session, no subscription, no topic access. **No fifth
+  `details.cause` is defined**: the four members name what is wrong with the *certificate*, and this
+  is a property of the broker, with no carrier since the refusal precedes any OSPP message.
+- **§7.5's *"BootNotification from revoked certificate"* row was wrong twice over.** The refusal
+  happens at the handshake, so a revoked station never sends a BootNotification —
+  [`04-flows.md`](spec/04-flows.md) already said exactly that — and no code in the BootNotification
+  set could say why if it did. Replaced by the two rows the mechanism actually has.
+- **`04-flows.md`'s revoked-certificate note cited the chain MUST**, because until now that was the
+  nearest thing to cite. It cites the revocation obligation.
+- **§4.2's *Trust distribution* enumerated how every trust artefact reaches its holder and omitted
+  the one that has to keep arriving after provisioning.** The Station CA's revocation list is the
+  only artefact in that list travelling to the **broker** rather than the station, which is what the
+  freshness bounds exist to hold it to. The CA table's Station CA row now says it publishes that
+  list.
+- **`security-event.md`'s `CertificateError` row omitted `revoked`** while `03-messages.md`'s enum
+  table included it — one condition, two vocabularies, and the one that dropped a member was the
+  profile.
+- **`TC-SEC-002` now says what its Part E proves and what it does not.** Part E exercises a *test*
+  broker the harness configured: passing it shows that a broker configured to check does refuse and
+  that the station classifies the refusal correctly, and shows nothing about the broker a deployment
+  runs. Part B's certificate-attribute enumeration omits revocation for a reason that is now stated —
+  revocation is a property of the issuer's list, not of the bytes presented.
+- **§4.7.1 step 8's omission stays an omission and now says why.** The station there is validating a
+  certificate it has just been *issued*, minutes old and by construction not revoked; a fetch would
+  put a network dependency inside the recovery path for an expiring credential.
+- **`check-config-ranges.py` could never flag a range with a zero lower bound.** Found by RED-testing
+  the new check F: the derived-by-a-shared-factor excuse was guarded by `lo and hi` on the *outer*
+  test, so instead of denying the excuse a zero endpoint skipped the comparison entirely.
+  `RevocationEpoch` (`0--2147483647`) had never been comparable either. The guard now scopes to the
+  excuse alone; the tree was already clean under the widened check.
+- **Two errors inside the `0.26.0` `KNOWN-ISSUES` entry itself**, both present at writing rather than
+  drifted: the §4.3 Revocation cell was attributed to §4.2 (three times in the entry, once in this
+  changelog's `0.26.0` section, which is left as the historical record it is — the document being
+  audited was right, T10's row cited §4.3), and a sentence quoted from **T04 only** was attributed to
+  *"T04/T10"*. The entry's `fail-closed` measurement also read *"none about certificates"* where the
+  supportable claim is *none about revocation*: one of the eight sites is the `0.9.0` history row on
+  station certificate validation.
+
+### Gates
+
+- `check-normative-bold.py` **439 unbolded, unchanged and measured so** — the finding set was diffed
+  entry by entry against a `git archive` of a clean `8ce4ee7` and is identical once line numbers are
+  stripped. One entry appeared mid-cycle, a bare `MUST` used as a noun, and was reworded rather than
+  bolded, because bolding a reference to an obligation dresses it as one.
+- **The bolded-span companion was wrong, and this time the instrument was.** It paired `**` over the
+  raw file while the finding scan paired over the masked copy — so the phase-inversion the scan's own
+  comment records as fixed was still live in the number printed beside it. Four literal `**` inside
+  backticks exist under `spec/` (`schemas/**` and an escaped table row in `00-introduction.md`,
+  `sess_a1b2****` and `use****@example.com` in `06-security.md`'s redaction rules) and they cost the
+  count 8. Re-measured on a `git archive` of `8ce4ee7` with the corrected instrument, `0.26.0` reads
+  **1161**, not the 1156 it shipped; this release reads **1182**, so the delta is **+21**, all new
+  text. **The gated number is unaffected** — 439 under both instruments on both trees — which is
+  exactly why nothing caught it: nothing gates the companion. That is the fourth time this number has
+  been wrong and the third time it was this companion specifically; the first three were
+  transcription, this one was the instrument.
+- `check-config-ranges.py` at `BASELINE = 1`, with check F added (2 broker settings, 2 numeric
+  ranges) and RED-tested per sub-check. `check-config-defaults.py` 0 disagreeing, restated-default
+  sites **40 → 42**. `check-schema-conditionals.py` unchanged at `BASELINE = 6`.
+  `check-tool-callers.py` and `verify-test-nonces.mjs` unchanged.
+- `verify-protocol.sh` **4129/4141**, failure set diffed entry by entry against `8ce4ee7` and
+  identical — the same 6 (four BLE test-vector-coverage gaps, two BLE schema/spec field mismatches)
+  and the same 6 skips. All 86 schemas compile; 56/56 example payloads validate; `markdownlint` is
+  clean under the CI invocation on this tree and on `8ce4ee7`.
+- **The signed conformance corpus was NOT verified in this cycle.** `tools/verify-all-signatures.sh`
+  was not run. The four crypto oracles that were run — `verify-canonical-form.mjs`,
+  `verify-mqtt-mac.mjs`, `verify-ble-crypto.mjs`, `verify-test-nonces.mjs` — are all green and are
+  **not a substitute for it**: they re-derive the canonical form, the MQTT MAC, the BLE key schedule
+  and the handshake nonces, and none of them checks a signature over a payload in the corpus. This
+  release changes no payload, no schema and no signed field, so the exposure is believed to be nil —
+  but *believed* is the operative word, and it is recorded here rather than left to be assumed from
+  a green summary. Anyone cutting from this tag should run that gate before relying on the corpus.
+
+---
+
 ## [0.26.0] — 2026-08-28
 
 > **MINOR, non-breaking on the wire.** No message, field, schema, enum value or registry code is

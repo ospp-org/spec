@@ -49,6 +49,15 @@ Verify that the station presents a valid X.509 client certificate during the TLS
 12. Verify the certificate's `notBefore` <= current time <= `notAfter`.
 13. Verify the certificate's key usage includes `clientAuth`.
 
+> **Part B omits revocation, and Part E does not prove the revocation obligation.** Steps 10--13 read properties of
+> the certificate presented; revocation is a property of the issuer's list, not of those bytes, so it cannot be
+> among them. Part E below exercises the outcome — but against a **test** broker this harness configured. Passing it
+> establishes that a broker configured to check does refuse, and that the station classifies the refusal correctly.
+> It establishes nothing about the broker a deployment actually runs. That is not a hole in this case: no OSPP
+> message carries the fact, which is exactly why [`06-security.md` §2.1.1](../../../spec/06-security.md#211-revocation-checking)
+> is verified by the revocation posture a deployment states in its conformance report
+> ([conformance/README.md §5](../../README.md#5-reporting-format)) rather than by a test case.
+
 ### Part C — Expired Certificate Rejection
 
 14. Provision the station with the expired certificate.

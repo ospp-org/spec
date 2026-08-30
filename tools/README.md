@@ -62,18 +62,18 @@ machine-comparable to anything. These four are the exceptions, and each is narro
 > **Both number columns carry their measurement point, and the two are different measurements.**
 > *Precision* is an adjudication — someone read every flag and decided whether it was real — and it
 > was done once, at `c8e59ec`, 2026-08-11, `v0.12.0`. *Today* is what the gate prints on a clean
-> tree at `v0.26.0`, 2026-08-28, and it is re-runnable in one command. The precision figures were
+> tree at `v0.27.0`, 2026-08-30, and it is re-runnable in one command. The precision figures were
 > written without a measurement point and stood unchanged for fourteen releases while every one of
 > the three corpora grew underneath them; they are kept, dated, because an adjudication does not
 > stop being true of the tree it was performed on. Re-adjudicating is a separate act from re-running
 > — do not merge the two columns.
 
-| Check | Why it works | Precision, adjudicated at `v0.12.0` | Today, `v0.26.0` |
+| Check | Why it works | Precision, adjudicated at `v0.12.0` | Today, `v0.27.0` |
 |---|---|---|---|
-| `check-config-defaults` | Both sides are structured — Chapter 08 is a `(key, default, range)` table, a restatement is a key name with a number near it | 37 sites, 3 flagged, **3 real** | 25 keys with a default, 40 restated sites, **0 disagreeing** |
+| `check-config-defaults` | Both sides are structured — Chapter 08 is a `(key, default, range)` table, a restatement is a key name with a number near it | 37 sites, 3 flagged, **3 real** | 25 keys with a default, 42 restated sites, **0 disagreeing** |
 | `check-schema-conditionals` | Both sides are in one JSON file — the `description` and the `if`/`then` that should back it | 33 claims, 5 flagged, **5 real** | 44 claims, 38 backed, **6 not backed** (= `BASELINE`) |
-| `check-normative-bold` | Pure typography — a capitalised keyword outside a `**…**` span | exact, no inference | 439 unbolded, 1156 bolded spans (= `BASELINE`) |
-| `check-config-ranges` | Same structure argument as `check-config-defaults`, one column over — a range restatement is a key name with `<lo>--<hi>` near it, and `--` is as strong a signal as the word "default" | 16 sites, 4 flagged, **4 real**; plus 2 schema-bound comparisons, both real | 18 restated-range sites, 2 wire-field aliases, **1 finding** (= `BASELINE`) |
+| `check-normative-bold` | Pure typography — a capitalised keyword outside a `**…**` span | exact, no inference | 439 unbolded (= `BASELINE`), 1182 bolded spans — companion **instrument** corrected at `v0.27.0`; it paired `**` over the raw file while the finding scan paired over the masked copy, so four literal `**` inside backticks cost it 8. `v0.26.0` re-reads **1161**, not the 1156 it shipped. The gated number is unaffected on either tree |
+| `check-config-ranges` | Same structure argument as `check-config-defaults`, one column over — a range restatement is a key name with `<lo>--<hi>` near it, and `--` is as strong a signal as the word "default" | 16 sites, 4 flagged, **4 real**; plus 2 schema-bound comparisons, both real | 18 restated-range sites, 2 wire-field aliases, 2 broker settings, **1 finding** (= `BASELINE`) |
 
 `check-config-ranges` also does what no other check does: it compares **the registry against its own
 summary**. Chapter 08 states the key table twice — §§2--6 with Range and Description, §9 with an
@@ -82,6 +82,8 @@ existed each read only one (`check-config-defaults` and the PHP SDK's `check-con
 read §§2--6; `verify-protocol.sh` Categories 4 and 6 parse §9). That split is why §9 could carry
 `Device Mgmt` against §1.5's `Device Management` without anything noticing, and why neither SDK
 matched the spec on the profile label — there was no single spelling to match.
+
+It also carries the one boundary that is otherwise only prose. `06-security.md` §2.1.1 states two **broker** settings — the bounds on certificate-revocation checking — in the registry's own form and deliberately outside the registry, because no station holds them and §1.5 would make any registry key a station obligation. Check F holds their Range cells to §1.6's five forms, feeds them into the restatement comparison, and **fails if either name ever appears in Chapter 08**. It was RED-tested per sub-check, and one of those REDs did not fire: the derived-by-a-shared-factor excuse was guarded by `lo and hi` on the *outer* test, so any range with a zero lower bound was skipped entirely rather than merely denied the excuse — `RevocationEpoch` (`0--2147483647`) had never been comparable either. The guard now scopes to the excuse alone.
 
 Its limit is `ALIASES`, which is hand-maintained. A dedicated wire field mirroring a registry key
 is invisible to check D until somebody adds the pair, and there is no mechanical signal for "these

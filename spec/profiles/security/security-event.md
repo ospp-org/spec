@@ -1,6 +1,6 @@
 # SecurityEvent
 
-> **Status:** Draft | **OSPP Version:** 0.26.0
+> **Status:** Draft | **OSPP Version:** 0.27.0
 
 ## 1. Overview
 
@@ -48,7 +48,7 @@ Both forms validate against [`security-event.schema.json`](../../../schemas/mqtt
 | Type | Description | Typical Severity |
 |-------------------------------|---------------------------------------------------------------|------------------|
 | `MacVerificationFailure` | HMAC-SHA256 message authentication code did not match. Indicates message tampering or key mismatch. | Critical |
-| `CertificateError` | TLS certificate validation failed (expired, untrusted CA, CN mismatch). | Critical |
+| `CertificateError` | TLS certificate validation failed (expired, **revoked**, untrusted CA, CN mismatch). | Critical |
 | `UnauthorizedAccess` | An entity attempted an action without the required RBAC role or permission. | Warning |
 | `OfflinePassRejected` | An OfflinePass failed validation (bad signature, expired, revoked, replayed). | Warning |
 | `ServerSignedAuthReplay` | A ServerSignedAuth (Partial A) authorization was presented whose signed `appNonce` claim did not match the current handshake's `Hello.appNonce` — a replay of a captured authorization (error `2018 SERVER_AUTH_NONCE_MISMATCH`; `ble-handshake.md` §4.2.2 check #2). The station rejects it at the handshake; the server logs this type at the next reconciliation. | Critical |

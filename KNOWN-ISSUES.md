@@ -1,8 +1,8 @@
 # OSPP Known Issues
 
-**Date:** 2026-08-28
-**Specification-document version:** 0.26.0 (release tag `v0.26.0`)
-**Status:** 3 blockers open (all BLE), 28 non-blocking issues open, 17 decisions recorded (one of
+**Date:** 2026-08-30
+**Specification-document version:** 0.27.0 (release tag `v0.27.0`)
+**Status:** 3 blockers open (all BLE), 27 non-blocking issues open, 18 decisions recorded (one of
 them reversing another), and one named defect **class** with ten instances. **The counts are
 re-derived from the headings on every release, never incremented** — the previous revision read 24
 open against 25 `## OPEN` headings, which is how a summary drifts from the file it summarises.
@@ -16,11 +16,11 @@ the arcs since
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 28 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · **[no gate range-checks a config value inside an example payload](#open--no-gate-range-checks-a-configuration-value-that-sits-inside-an-example-payload)** · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) · **[`5016` is required for two conditions and named for one](#open--5016-version_already_installed-is-required-for-two-conditions-and-one-of-them-is-the-opposite-of-what-the-name-says)** · **[UpdateFirmware is both idempotent and `5107`](#open--updatefirmware-is-documented-as-idempotent-and-as-rejected-with-5107-for-the-same-second-command)** · **[no code describes a non-HTTPS firmware URL](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal)** · **[`offeredVersion` vs `attemptedVersion`](#open--the-firmwaredowngradeattempt-securityevent-names-the-offered-version-with-two-different-member-names-and-nothing-can-tell)**  · **[a station whose hardware changes has no route back into service](#open--a-station-whose-hardware-genuinely-changes-has-no-route-back-into-service-because-the-two-rules-that-guard-topology-point-at-each-other)** · **[the hardware storage levels do not hold the Category-1 floors](#open--the-hardware-storage-levels-do-not-hold-the-category-1-floors-they-are-said-to-size)** · **[OfflinePass validity rides an uncorrected wall clock, and the backstop reads the same clock](#open--offlinepass-temporal-validity-rides-a-wall-clock-with-no-offline-correction-and-the-servers-backstop-reads-the-same-clock)** · **[`5019` has no carrier on either side](#open--5019-upload_failed-names-a-condition-that-cannot-exist-when-its-response-is-sent-and-its-real-carrier-has-no-code-field)**   |
+| OPEN | 27 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · **[no gate range-checks a config value inside an example payload](#open--no-gate-range-checks-a-configuration-value-that-sits-inside-an-example-payload)** · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) · **[`5016` is required for two conditions and named for one](#open--5016-version_already_installed-is-required-for-two-conditions-and-one-of-them-is-the-opposite-of-what-the-name-says)** · **[UpdateFirmware is both idempotent and `5107`](#open--updatefirmware-is-documented-as-idempotent-and-as-rejected-with-5107-for-the-same-second-command)** · **[no code describes a non-HTTPS firmware URL](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal)** · **[`offeredVersion` vs `attemptedVersion`](#open--the-firmwaredowngradeattempt-securityevent-names-the-offered-version-with-two-different-member-names-and-nothing-can-tell)**  · **[a station whose hardware changes has no route back into service](#open--a-station-whose-hardware-genuinely-changes-has-no-route-back-into-service-because-the-two-rules-that-guard-topology-point-at-each-other)** · **[the hardware storage levels do not hold the Category-1 floors](#open--the-hardware-storage-levels-do-not-hold-the-category-1-floors-they-are-said-to-size)** · **[OfflinePass validity rides an uncorrected wall clock, and the backstop reads the same clock](#open--offlinepass-temporal-validity-rides-a-wall-clock-with-no-offline-correction-and-the-servers-backstop-reads-the-same-clock)** · **[`5019` has no carrier on either side](#open--5019-upload_failed-names-a-condition-that-cannot-exist-when-its-response-is-sent-and-its-real-carrier-has-no-code-field)**   |
 | CLOSED | 4 | [Device Management Required vs RECOMMENDED](#closed-0160--the-device-management-profile-was-required-in-chapter-08-and-recommended-not-mandatory-in-its-own-readme) — closed in 0.16.0 in favour of the capability · [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
 | **CLASS** | 10 | **[an obligation no field, no code and no actor can carry](#class--an-obligation-no-field-no-code-and-no-actor-can-carry)** — an index of the ten instances; 4 still open, 1 a blocker |
-| DECIDED | 17 | **[`allowedServiceTypes` withdrawn in two steps](#decided-0250--offlineallowanceallowedservicetypes-is-withdrawn-in-two-steps-because-nobody-ever-asked-for-the-constraint)** · **[ownership transfer and decommissioning stay undefined, and §1.3 now says so](#decided-0250--station-ownership-transfer-and-decommissioning-stay-undefined-and-the-specification-now-says-so)** · **[the server is the billing authority on the offline path too](#decided-0240--the-server-is-the-billing-authority-on-the-offline-path-too-and-81-was-the-outlier)** · **[`OfflinePassMaxAge` kept, wired into check #2, defaulted to inert](#decided-0240--offlinepassmaxage-is-kept-wired-into-check-2-and-defaulted-to-inert)** · **[`DiagnosticsUploadUrl` withdrawn — a key nothing reads](#decided-0230--diagnosticsuploadurl-had-no-reachable-consumer-and-is-withdrawn-rather-than-defined)** · **[UpdateFirmware to a `Pending` station is `Accepted`, notifications suppressed](#decided-0210--updatefirmware-to-a-pending-station-was-refused-on-a-premise-the-same-chapter-contradicts-and-with-a-response-no-error-code-could-carry)** — **reverses the `0.20.0` row below**: the `Rejected` it mandated needed an `errorCode` no registry entry supplies, and §6.6 already reported the outcome on BootNotification; the discriminator's second clause survives, its reading did not · **[nine gates in `tools/` were reachable from no job](#decided-0201--two-validation-scripts-reported-100-failure-and-no-workflow-ran-them-the-workflows-now-call-the-scripts-and-a-census-guards-the-class)** — the workflows now call the scripts, and `check-tool-callers.py` guards the class · **[the firmware gate is on the INSTALL, not the download](#decided-0200--the-active-session-gate-named-three-stages-it-gates-the-install-and-scheduledat-defers-the-install-with-it)** — and `scheduledAt` defers the install with it; the stall rule scoped rather than `Verified` given a wire value · **[~~UpdateFirmware to a `Pending` station is `Rejected`~~ — REVERSED in `0.21.0`](#decided-0200--updatefirmware-had-no-row-in-the-pending-command-table-it-is-rejected-and-the-discriminator-gained-the-clause-that-says-why)** — kept as the record; the row it added was right, the verdict in it was not · **[a restricted station may renew its own certificate](#decided-0190--one-table-gave-the-same-act-opposite-verdicts-and-a-certificate-renewal-could-not-conclude-in-the-state-the-spec-keeps-open-for-repairs)** — the exception's *reason* restated to cover both members rather than a second name added to a list · [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
-| **Total open** | **31** | |
+| DECIDED | 18 | **[the broker MUST check revocation, the list is bounded twice, and a stale list buys one alerted hour](#decided-0270--the-broker-must-check-revocation-the-list-is-bounded-twice-and-a-list-that-goes-stale-buys-one-alerted-hour-before-the-door-shuts)** — axis 1a + 2a&2b + 3c; verified by declaration because no message can carry it, and the two bounds are broker settings deliberately outside the Chapter 08 registry · **[`allowedServiceTypes` withdrawn in two steps](#decided-0250--offlineallowanceallowedservicetypes-is-withdrawn-in-two-steps-because-nobody-ever-asked-for-the-constraint)** · **[ownership transfer and decommissioning stay undefined, and §1.3 now says so](#decided-0250--station-ownership-transfer-and-decommissioning-stay-undefined-and-the-specification-now-says-so)** · **[the server is the billing authority on the offline path too](#decided-0240--the-server-is-the-billing-authority-on-the-offline-path-too-and-81-was-the-outlier)** · **[`OfflinePassMaxAge` kept, wired into check #2, defaulted to inert](#decided-0240--offlinepassmaxage-is-kept-wired-into-check-2-and-defaulted-to-inert)** · **[`DiagnosticsUploadUrl` withdrawn — a key nothing reads](#decided-0230--diagnosticsuploadurl-had-no-reachable-consumer-and-is-withdrawn-rather-than-defined)** · **[UpdateFirmware to a `Pending` station is `Accepted`, notifications suppressed](#decided-0210--updatefirmware-to-a-pending-station-was-refused-on-a-premise-the-same-chapter-contradicts-and-with-a-response-no-error-code-could-carry)** — **reverses the `0.20.0` row below**: the `Rejected` it mandated needed an `errorCode` no registry entry supplies, and §6.6 already reported the outcome on BootNotification; the discriminator's second clause survives, its reading did not · **[nine gates in `tools/` were reachable from no job](#decided-0201--two-validation-scripts-reported-100-failure-and-no-workflow-ran-them-the-workflows-now-call-the-scripts-and-a-census-guards-the-class)** — the workflows now call the scripts, and `check-tool-callers.py` guards the class · **[the firmware gate is on the INSTALL, not the download](#decided-0200--the-active-session-gate-named-three-stages-it-gates-the-install-and-scheduledat-defers-the-install-with-it)** — and `scheduledAt` defers the install with it; the stall rule scoped rather than `Verified` given a wire value · **[~~UpdateFirmware to a `Pending` station is `Rejected`~~ — REVERSED in `0.21.0`](#decided-0200--updatefirmware-had-no-row-in-the-pending-command-table-it-is-rejected-and-the-discriminator-gained-the-clause-that-says-why)** — kept as the record; the row it added was right, the verdict in it was not · **[a restricted station may renew its own certificate](#decided-0190--one-table-gave-the-same-act-opposite-verdicts-and-a-certificate-renewal-could-not-conclude-in-the-state-the-spec-keeps-open-for-repairs)** — the exception's *reason* restated to cover both members rather than a second name added to a list · [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
+| **Total open** | **30** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
@@ -189,98 +189,186 @@ answer to all three schemas plus the profile prose that mirrors them
 
 ---
 
-## OPEN — A DECISION TO MAKE: nothing requires anyone to check revocation, so a revoked certificate is refused only where someone switched checking on
+## DECIDED (0.27.0) — the broker MUST check revocation, the list is bounded twice, and a list that goes stale buys one alerted hour before the door shuts
 
-**Raised 2026-08-28, from the boot-path sweep that corrected `04-flows.md`'s Boot `Rejected` causes.
-This is the sharpest of the absences that sweep surfaced, and the only one with a live operational
-consequence. It is written as a decision with its option space rather than as a defect, because
-every axis below is a real choice and the specification has not made any of them.**
+**Raised 2026-08-28 from the boot-path sweep that corrected `04-flows.md`'s Boot `Rejected` causes,
+and written then as a decision with its option space rather than as a defect, because every axis was
+a real choice and the specification had made none of them. Decided 2026-08-30. It now makes all
+three, and the entry is kept in full — the measurement is what makes the decision auditable.**
 
-### What is written today, measured
+### What was written before this decision, measured at `8ce4ee7`
 
-| Site | What it says | Force |
+| Site | What it said | Force |
 |---|---|---|
-| [`02-transport.md` §1.3](spec/02-transport.md#13-tls-12-floor-13-recommended) | *"The broker **MUST** verify the station's client certificate against the OSPP CA trust chain."* | **MUST** — and it is about the **chain**, not revocation |
-| [`06-security.md` §4.4](spec/06-security.md#44-certificate-requirements) | *"CRL Distribution Points \| **REQUIRED** (URL to CRL published by Station CA)"* · *"Authority Info Access \| RECOMMENDED (OCSP responder URL)"* | REQUIRED — of the **certificate's contents**. A pointer nothing is obliged to follow |
-| [`06-security.md` §4.2](spec/06-security.md#42-pki-architecture) | *"**Revocation** \| CRL published by Station CA (checked by MQTT broker). OCSP RECOMMENDED."* | a **table cell** in an architecture summary — indicative mood, no keyword |
-| `06-security.md` §2 threat rows T04/T10 | *"compromised certificates are revoked and rejected by the broker"* | **threat-model prose**, describing a mitigation as though it were in force |
-| [`06-security.md` §4.7.1](spec/06-security.md#471-automatic-renewal) step 8 | the station validates *"the certificate chain, CN match, key usage, and validity period"* | the station-side checklist — **revocation is not in it** |
-| [`07-errors.md` §3.1](spec/07-errors.md#31-transport-errors-1xxx) `1004` | *"X.509 certificate is expired, **revoked**, self-signed, or has an invalid chain"* | the code exists, and its Server action is *"reject the connection"* |
+| [`02-transport.md` §1.3](spec/02-transport.md#13-tls-12-floor-13-recommended) | *"The broker MUST verify the station's client certificate against the OSPP CA trust chain."* | MUST — and it is about the **chain**, not revocation |
+| [`06-security.md` §4.4](spec/06-security.md#44-certificate-requirements) | *"CRL Distribution Points \| REQUIRED (URL to CRL published by Station CA)"* · *"Authority Info Access \| RECOMMENDED (OCSP responder URL)"* | REQUIRED — of the **certificate's contents**. A pointer nothing was obliged to follow |
+| [`06-security.md` §4.3](spec/06-security.md#43-key-management-lifecycle), *Station mTLS Client Key Pair* | *"**Revocation** \| CRL published by Station CA (checked by MQTT broker). OCSP RECOMMENDED."* | a **table cell** in a lifecycle summary — indicative mood, no keyword |
+| `06-security.md` T04 | *"compromised certificates are revoked and rejected by the broker"* | **threat-model prose**, describing a mitigation as though it were in force |
+| `06-security.md` T10 | *"compromised certificates are revoked; the broker rejects connections from revoked certificates"* | the same, differently worded; T10's summary **row** was the only one citing a section for it |
+| [`06-security.md` §4.7.1](spec/06-security.md#471-automatic-renewal) step 8 | the station validates *"the certificate chain, CN match, key usage, and validity period"* | the station-side checklist — **revocation was not in it** |
+| [`07-errors.md` §3.1](spec/07-errors.md#31-transport-errors-1xxx) `1004` | *"X.509 certificate is expired, **revoked**, self-signed, or has an invalid chain"* | the code existed, its Server action was *"reject the connection"*, and nothing made the refusal reachable |
 
-**Not one normative keyword anywhere in `spec/` obliges any party to check revocation.** The
-certificate is REQUIRED to carry the CRL's address; nobody is required to read it. `1004` names the
-condition and prescribes the refusal, and nothing makes the refusal reachable.
+**Not one normative keyword anywhere in `spec/` obliged any party to check revocation.** The
+certificate was REQUIRED to carry the CRL's address; nobody was required to read it. `1004` named
+the condition and prescribed the refusal, and nothing made the refusal reachable.
 
-**The vocabulary a revocation policy would be written in is absent entirely.** Measured over
+**The vocabulary a revocation policy would be written in was absent entirely.** Measured over
 `spec/`, `schemas/` and `conformance/`, whole-repo: `nextUpdate` **0**, `soft-fail` **0**,
-`hard-fail` **0**, `fail-open` **0**, `stapl`(ing) **0**. (`fail-closed` returns 8, all of them the
-message-signing rules of §5.7 and the restricted-state table — none about certificates.) So this is
-not a rule stated loosely; there is no rule.
+`hard-fail` **0**, `fail-open` **0**, `stapl`(ing) **0**. `fail-closed` returned 8 — six of them
+anchor links to §5.7's message-signing rules, one the `0.9.0` history row about *station certificate
+validation* being fail-closed, one the BLE relay residual of §6.5.2. **None about revocation**;
+the entry as first written said *"none about certificates"*, which was one site too strong.
 
-### Why it matters, and it is not hypothetical
+**Why it mattered, and it was not hypothetical.** Revocation is the only mechanism this
+specification has for a compromised station identity before its certificate expires — up to **one
+year** ([§4.2](spec/06-security.md#42-pki-architecture)) — and §6.6's revocation **epoch** is
+explicitly OfflinePass-only and *"avoiding the complexity of Certificate Revocation Lists"*, so it
+does not substitute. T10 (Certificate Compromise, **Critical**) listed *"§4.3 CRL/OCSP"* as its
+mitigation. **A mitigation nothing is obliged to perform is not a mitigation**, and the threat rows
+read as though it were in force.
 
-Revocation is the **only** mechanism this specification has for a compromised station identity
-before its certificate expires — up to **one year** ([§4.2](spec/06-security.md#42-pki-architecture)),
-and §6.6's revocation **epoch** is explicitly OfflinePass-only and *"avoiding the complexity of
-Certificate Revocation Lists"*, so it does not substitute. T10 (Certificate Compromise, **Critical**)
-lists *"§4.3 CRL/OCSP"* as its mitigation. **A mitigation nothing is obliged to perform is not a
-mitigation**, and the threat rows read as though it were in force.
+**Reported by the reference deployment, 2026-08-28: revocation checking was OFF in production**,
+carried as a deploy precondition rather than as a protocol obligation. That was exactly the outcome
+the text permitted — a conforming deployment, with the check off, and no clause it violated.
+Recorded as the operator's report, not as something this repository measured.
 
-**Reported by the reference deployment, 2026-08-28: revocation checking is OFF in production**, and
-is being carried as a deploy precondition rather than as a protocol obligation. That is exactly the
-outcome the text above permits — a conforming deployment, with the check off, and no clause it
-violates. It is recorded here as the operator's report, not as something this repository measured.
+### The decision, axis by axis
 
-### The option space — three axes, and they are independent
+**Axis 1 — option 1a. The broker MUST check.** [`06-security.md` §2.1](spec/06-security.md#21-station--server--mutual-tls-mtls)
+gains the obligation one bullet below the chain-verification MUST it belongs beside, and the whole
+of it is stated in the new [§2.1.1](spec/06-security.md#211-revocation-checking). The obligation
+runs to whichever party terminates the station's client certificate — the MQTT broker, and equally
+the Station REST fallback endpoint, because a control one leg of the fleet can route around is not
+a control.
 
-**Axis 1 — the obligation.** Who **MUST** check, and is it a MUST or a SHOULD?
+**Axis 2 — options 2a *and* 2b, together, because either alone is defeatable.** The revocation
+information must be current by **its own `nextUpdate`** (2a) *and* by a configured
+`CertificateRevocationMaxAgeSeconds` (2b), and the earlier of the two governs. 2a alone is written
+by the party being checked: a CA free to publish a `nextUpdate` a year out has bounded nothing. 2b
+alone would ignore an issuer that says its own list is already superseded. OCSP remains available
+as a stronger alternative and satisfies both bounds by construction; option 2c was not taken as the
+*only* mechanism, because it makes every connection depend on a responder's availability.
 
-- **1a. Broker MUST check.** The natural home: the broker already terminates mTLS and already has a
-  chain-verification MUST one clause away. Cost: it is a deployment capability, not a protocol
-  message — the spec would be mandating a broker configuration it cannot observe or test over the
-  wire, and no conformance case could exercise it.
-- **1b. Broker SHOULD check, and a deployment MUST state whether it does.** Weaker on the wire,
-  stronger on honesty: it makes the answer discoverable instead of assumed, which is what the
-  threat rows currently get wrong.
-- **1c. Leave it to deployment, and repair the prose.** No new obligation; instead T04/T10 and the
-  §4.2 cell stop asserting a mitigation is in force, and say it is deployment-conditional. Cheapest,
-  and the only option that costs nothing to implement — but it converts a security control into a
-  documented gap.
+**Axis 3 — option 3c. Permissive with a bounded grace, then restrictive, with the alert at the
+START of the grace and not its end.** The alert placement is the part the option space named as
+needing a home and did not resolve: an alert at expiry carries nothing the refusal does not, since
+by then the fleet is already being turned away. What is scarce is the knowledge that the broker is
+accepting connections it has not been able to check — which is known the moment the grace begins.
 
-**Axis 2 — freshness of the list.** A CRL with no bound is a CRL that can be a year old.
+**Axis 3 also forced a second decision the option space had not seen: the two refusals cannot be
+the same refusal.** A revoked certificate is refused at the TLS handshake, and the station's
+existing `1004` recovery — keep credentials, stay off the broker, alert the operator — is right for
+it. Applying that to a *grace-expiry* refusal would be a defect with the shape of a repair: those
+stations have valid certificates, the condition is transient, and `1004`'s non-expired branches are
+`recoverable: false`, so a CRL outage would take the fleet off the broker and **leave it off**,
+needing an operator at every site. That is worse than the fleet-wide disconnection the grace exists
+to prevent, caused by the mechanism meant to prevent it. A grace-expiry refusal therefore completes
+the handshake and refuses at the **MQTT CONNECT** with a non-zero CONNACK reason code
+(`0x87 Not Authorized` RECOMMENDED), which the station already answers with retry-with-backoff — so
+the fleet returns by itself when the list does. Completing the handshake grants a revoked station
+nothing: no session, no subscription, no topic access. **No fifth `details.cause` is defined**; the
+four members name what is wrong with the *certificate*, and this is a property of the broker.
 
-- **2a. A `nextUpdate` bound** — the list **MUST** be refreshed before its own `nextUpdate`, which
-  is the standard mechanism and needs no new field.
-- **2b. A named maximum age** as a configuration key, in the manner of the other §§2--6 keys, so the
-  bound is inspectable and the existing range gates can check it.
-- **2c. OCSP instead**, which moves freshness from a schedule to a round trip and adds an
-  availability dependency on the responder at every connection.
-- Note that **2 is meaningless without 1**: a freshness rule binds a check nobody is required to
-  perform.
+### Deriving the grace, since the option space said only that it "needs a number written down"
 
-**Axis 3 — behaviour when the list cannot be fetched.** This is the axis with the security
-consequence, and the one most often left implicit.
+Both bounds are numbers this document already publishes.
 
-- **3a. Fail-open** (accept the connection when the CRL is unreachable). Keeps a fleet online
-  through a CA outage; means an attacker who can partition the checker from the CRL has revoked
-  revocation.
-- **3b. Fail-closed** (refuse). Correct against that attack; a CA or network outage becomes a
-  fleet-wide disconnection, and for a fleet of stations there is no operator at the site to
-  intervene.
-- **3c. Fail-open with a bounded grace, then closed** — the middle, and the only one that needs a
-  number written down. It also needs a home for the alert, since silently degrading is how 3a
-  happens by accident.
+- **Floor.** The intervals the specification already treats as *briefly unavailable and nothing is
+  wrong* are `ReconnectBackoffMax` (default 30 s, ceiling 3600) and `ConnectionLostGracePeriod`
+  (default 300 s, ceiling 600). A grace inside that band converts an ordinary blip in list
+  distribution into a fleet-wide refusal, and — because every refused station reconnects on a
+  backoff capped by the first of those — into a reconnect storm against the broker already failing
+  to fetch.
+- **Ceiling.** [§4.7.4](spec/06-security.md#474-failure-handling) already fixes this document's
+  patience for an unreachable CA: *"Alerts operator after 24 hours."* A grace of 86400 s would
+  expire no earlier than the moment the document first concedes a full day may have passed
+  unnoticed. That is not a control; it is the absence of one, with a timer.
+- **Chosen: 3600 s**, six times the largest ordinary-transient ceiling and one twenty-fourth of the
+  unreachable-CA alert threshold. With the 86400 s freshness default, the worst case from a
+  revocation being published to a revoked certificate being refused is **25 hours** — on the far
+  side of §4.7.4's alert, so an operator has been told twice, by two independent paths, before the
+  first station is turned away. The range is `0--86400`: `0` is refuse-immediately (axis 3b as a
+  deliberate deployment choice), and the ceiling is §4.7.4's threshold.
 
-**Whichever way axis 3 goes, it MUST be written.** The current silence is not fail-open by choice;
-it is fail-open by omission, and two conforming implementations may differ on it without either
-being wrong.
+### The objection 1a carries, and how it is answered
 
-### What this entry does not decide
+The option space named it: *"it is a deployment capability, not a protocol message — the spec would
+be mandating a broker configuration it cannot observe or test over the wire, and no conformance case
+could exercise it."* That is true and is not worked around. **The clause is verified by declaration
+rather than by test case.** A deployment claiming Standard compliance or above **MUST** state its
+revocation posture in its conformance report ([`conformance/README.md` §5](conformance/README.md#5-reporting-format)):
+enabled or not, the mechanism, both configured bounds, and where the grace-entry alert is delivered.
+A report omitting it is incomplete; a deployment answering *disabled* is **not conforming** — it may
+say so, which is the point of requiring the answer, but saying so is not a waiver. This is the
+weakest verification the specification uses anywhere, and it is used because the alternative was not
+a stronger check but no statement at all.
 
-Nothing. Axis 1 is the one that gates the other two, and it is a product decision about what this
-specification is willing to require of a deployment it cannot observe. **It does not block
-anything today** — no operation is impossible, and the reference deployment ships with the check off
-— which is precisely why it has stayed unwritten for the whole life of the document.
+The two settings are **not** Chapter 08 registry keys: §1.1 defines that registry as the *station's*
+key-value store and §1.5 makes every key of a required profile a station obligation, while neither
+setting is held by a station or carried by any message. They are named, typed, defaulted and ranged
+in the registry's own form all the same, and `tools/check-config-ranges.py` gained a **check F** that
+holds their Range cells to §1.6's five forms, feeds them into the restatement comparison, and fails
+if either name ever appears in Chapter 08. RED-testing check F surfaced a pre-existing blind spot in
+check C: the derived-by-a-shared-factor excuse was guarded by `lo and hi` on the *outer* test, so any
+range with a zero lower bound was skipped entirely — `RevocationEpoch` (`0--2147483647`) had never
+been comparable either. Fixed with the same commit; the tree was already clean under the widened
+check.
+
+### Two corrections inside this entry itself
+
+Both were errors at writing time, not drift — the tree has not moved since the entry was committed
+in `8ce4ee7`:
+
+1. **The Revocation cell was attributed to `06-security.md` §4.2.** It is at `06-security.md:444`,
+   under `#### Station mTLS Client Key Pair (ECDSA P-256)`, which sits inside **§4.3 Key Management
+   Lifecycle** — §4.2 (PKI Architecture) ends at line 432. The same mis-citation appeared three
+   times in this entry and once in `CHANGELOG.md`'s `0.26.0` section, which is left as the historical
+   record it is. Corrected here. Note the document being audited was right: T10's summary row cited
+   §4.3.
+2. **One quoted sentence was attributed to "T04/T10".** *"compromised certificates are revoked and
+   rejected by the broker"* is **T04 only**; T10's wording differs, and the two are `### T04` /
+   `### T10` sub-sections under `## 1. Threat Model`, not "§2". Both rows are now shown separately
+   above, and both have been re-keyed.
+
+### What was swept
+
+Every sentence that asserted the mitigation, not only the section that defines it: T04 and T10's
+countermeasure bullets and both summary rows; the §4.3 Revocation cell; both §4.4 extension rows;
+§4.2's CA table and its *Trust distribution* list, which enumerated how every trust artefact reaches
+its holder and omitted the one artefact that has to keep arriving after provisioning; §7.5's
+*Automated Security Responses*, whose *"BootNotification from revoked certificate"* row was wrong
+twice over — the refusal happens at the handshake, so a revoked station never sends one, which
+`04-flows.md` already said; §6.7.1's contrast case, which now cites an obligation instead of a table
+cell; `04-flows.md`'s revoked-certificate note, which had cited the **chain** MUST because it was the
+nearest thing to cite; `02-transport.md` §1.3 and its error-scenario table, and §7.1's broker
+minimum-capability list; `security-event.md`'s `CertificateError` row, which omitted `revoked` while
+`03-messages.md` included it; Appendix A's Server checklist; the glossary, which had no entry for
+CRL or OCSP; the implementor's guide's conformance and security-testing checklists; and
+`TC-SEC-002`, whose Part B enumeration omits revocation and whose Part E proves less than it looks
+like it proves — both now said out loud.
+
+§4.7.1 step 8 is the one omission that stays an omission, and it now says why: the station is
+validating a certificate it has just been **issued**, minutes old and by construction not revoked,
+and a fetch there would put a network dependency inside the recovery path for an expiring credential.
+
+### What this decision does NOT decide
+
+- **The station is given no revocation obligation, in either direction.** It is not required to
+  check the **broker's** server certificate for revocation. A station has no network before its
+  first connection, an embedded TLS stack on a cellular link is the worst place for a
+  fetch-before-connect dependency, and §4.4's REQUIRED distribution point is an extension of the
+  *station's* certificate, not the broker's. The residual is real: a revoked **broker** certificate
+  is refused by nothing in this specification. It is recorded here rather than closed.
+- **No conformance case can be written for §2.1.1**, and none is claimed. `TC-SEC-002` Part E
+  exercises a harness broker; the deployment's broker is reached only by the declaration.
+- **Nothing is decided for the other three revocation surfaces**, each of which keeps its own
+  answer: the OfflinePass epoch (§6.6), the BLE StationIdentity certificate (§6.5.2, revoked only by
+  expiry, best-effort), and the server signing key (§6.7, for which this specification defines no
+  revocation mechanism at all). §2.1.1 names all three so a reader stops looking.
+- **The CRL's own distribution is not specified** — who serves it, on what cadence, behind what
+  availability. §2.1.1 bounds what a broker may *rely on*, which is the half that decides whether a
+  revoked certificate is refused; the publication half is a PKI operations question and stays out of
+  scope with the rest of the deployment topology ([`01-architecture.md` §8](spec/01-architecture.md)).
 
 ---
 

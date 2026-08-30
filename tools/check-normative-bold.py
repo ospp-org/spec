@@ -30,13 +30,43 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-08-28  v0.26.0   439 unbolded, 1156 bolded spans — the station-refusal
+    (this HEAD) 2026-08-30  v0.27.0   439 unbolded, 1182 bolded spans — the revocation-decision
+                                   cycle. Unbolded is UNCHANGED, and measured so: the finding set
+                                   was diffed entry by entry against a run on a clean 8ce4ee7 and is
+                                   IDENTICAL once line numbers are stripped. One entry appeared
+                                   mid-cycle — a bare `MUST` used as a noun in 04-flows.md ("the
+                                   chain MUST was the nearest thing to cite") — and was REWORDED
+                                   rather than bolded, because bolding a reference to an obligation
+                                   dresses it as one. +21 bolded spans, all of them new text.
+                                   INSTRUMENT CORRECTED with this release, and the correction is
+                                   why the companion below moved without any document changing:
+                                   `bolded` paired `**` over the RAW file while scan() paired over
+                                   the masked copy, so the phase-inversion the note in scan()
+                                   records as fixed was still live in the number printed beside it.
+                                   Four literal `**` inside backticks exist in spec/ — `schemas/**`
+                                   and an escaped table row in 00-introduction.md, `sess_a1b2****`
+                                   and `use****@example.com` in 06-security.md's redaction rules —
+                                   and they cost the companion 8. The gated number was never
+                                   affected: 439 is identical under both instruments on both trees.
+                                   That is the FOURTH time this companion has been wrong, and the
+                                   third time it was this companion specifically. The first three
+                                   were transcription; this one was the instrument.
+    8ce4ee7  2026-08-28  v0.26.0   439 unbolded, 1161 bolded spans — the station-refusal
                                    adjudication cycle. Unbolded is UNCHANGED, and that is a
                                    measured result rather than an untouched one: the finding set
                                    was diffed entry by entry against a `git archive` of 573bf6b
                                    and is identical once line numbers are stripped, so every
                                    document this release edits added no unbolded keyword and
-                                   removed none. +17 bolded spans, all of them new text.
+                                   removed none.
+                                   COMPANION CORRECTED 2026-08-30. This row read "1156 ... +17"
+                                   until then, which is what the instrument SHIPPED at this commit
+                                   prints on this commit's own tree — a faithful reading of a
+                                   broken instrument. Re-measured on a `git archive` of 8ce4ee7
+                                   with the corrected instrument: 1161. The rows below are left at
+                                   their shipped readings and are NOT re-derived here; each is a
+                                   record of what its release measured, and re-deriving the whole
+                                   column would need a run per commit and is a separate act. Read
+                                   any delta across this line as instrument-crossing.
     573bf6b  2026-08-19  v0.25.0   439 unbolded, 1139 bolded spans — the divergence-adjudication
                                    cycle. -2 on +22 bolded spans, and the -2 is that release's
                                    CONTENT only: the instrument correction that took 443 to 441
@@ -116,10 +146,27 @@ LEVEL_CELL = re.compile(r'\|\s*(MUST NOT|MUST|SHALL NOT|SHALL)\s*\|')
 INTRO_ENUMERATION = ('spec/00-introduction.md', 120)
 
 
+def mask(text, spans_code, spans_tick):
+    """`text` with fenced and backticked spans blanked to spaces, offsets preserved.
+
+    Both the finding scan and the bolded-span companion pair `**` over THIS, never over the
+    raw text. See the note in scan().
+    """
+    out = list(text)
+    for a, b in spans_code + spans_tick:
+        for i in range(a, b):
+            out[i] = ' '
+    return ''.join(out)
+
+
+def spans(text):
+    return ([(m.start(), m.end()) for m in FENCE.finditer(text)],
+            [(m.start(), m.end()) for m in TICK.finditer(text)])
+
+
 def scan(path):
     text = open(path, encoding='utf-8').read()
-    spans_code = [(m.start(), m.end()) for m in FENCE.finditer(text)]
-    spans_tick = [(m.start(), m.end()) for m in TICK.finditer(text)]
+    spans_code, spans_tick = spans(text)
     # Pair ** over a copy with code spans blanked, NOT over the raw text. A `**` inside
     # backticks is a glob, not a bold marker -- `schemas/**` is the live example -- and BOLD
     # is a sequential non-greedy pairing, so a single literal marker inverts the phase of every
@@ -128,11 +175,8 @@ def scan(path):
     # every bolded keyword was read as unbolded. The count was wrong in the safe direction --
     # too high -- which is why a ratchet that only refuses increases never reported it.
     # Blanking preserves offsets, so every span index below still refers to the real text.
-    masked = list(text)
-    for a, b in spans_code + spans_tick:
-        for i in range(a, b):
-            masked[i] = ' '
-    spans_bold = [(m.start(1), m.end(1)) for m in BOLD.finditer(''.join(masked))]
+    spans_bold = [(m.start(1), m.end(1))
+                  for m in BOLD.finditer(mask(text, spans_code, spans_tick))]
     lines = text.split('\n')
     out = []
     for m in KEYWORD.finditer(text):
@@ -170,8 +214,21 @@ def main():
                  'otherwise pass vacuously.')
 
     findings = [f for p in files for f in scan(p)]
-    bolded = sum(len([m for m in BOLD.finditer(open(p, encoding='utf-8').read())
-                      if KEYWORD.search(m.group(1))]) for p in files)
+    # The companion pairs over the SAME masked text as scan(). It did not, until 0.27.0:
+    # it read the raw file, so every literal `**` inside backticks inverted the pairing phase
+    # for the rest of that file -- the exact defect the note in scan() records as fixed, still
+    # live in the number beside it. Four such literals exist in spec/ (`schemas/**` and an
+    # escaped table row in 00-introduction.md, `sess_a1b2****` and `use****@example.com` in
+    # 06-security.md's redaction rules), and they cost the companion 8. Nothing gates this
+    # number, which is why it survived being wrong through four releases; it is quoted in
+    # tools/README.md and in the measurement points above, and a delta computed from a wrong
+    # value inherits the error -- which has now happened four times.
+    bolded = 0
+    for p in files:
+        text = open(p, encoding='utf-8').read()
+        for m in BOLD.finditer(mask(text, *spans(text))):
+            if KEYWORD.search(m.group(1)):
+                bolded += 1
     ceiling = args.max if args.max is not None else BASELINE
 
     print(f'unbolded normative keywords in spec/ : {len(findings)}  (baseline {ceiling})')

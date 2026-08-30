@@ -53,11 +53,28 @@ E. **The profile identifier.** §1.5 carries a display label and a normative Pro
    column exists because `Offline / BLE` does not survive being made an enum case, and each
    SDK invented its own answer.
 
+F. **The broker settings of `06-security.md` §2.1.1, and the boundary they sit on.** Two
+   quantities bound the broker's certificate-revocation checking, and neither is a Chapter 08
+   key: no station holds one, no message carries one, and registering them would oblige every
+   station to implement a key it cannot act on. They are still named, typed, defaulted and
+   ranged in the registry's own form, so this check holds their Range cells to the same five
+   forms of §1.6, feeds them into check C so a restatement of either range elsewhere in the
+   tree is compared against the definition, and -- the part that guards the boundary itself --
+   fails if either name ever turns up in the Chapter 08 registry or its §9 summary. Without
+   that last one the separation is prose, and prose is what a future editor "tidies".
+
+   The table is deliberately FIVE columns where a registry row is seven, so `SECTION_ROW`
+   cannot absorb it into §§2--6 by accident. That is a property nothing else would notice
+   breaking, which is why F3 exists rather than a comment.
+
 ALIASES is hand-maintained and that is this check's real limit: a new dedicated field
 mirroring a registry key is invisible to check D until somebody adds the pair. There is no
 mechanical signal for "these two names denote one quantity" -- the spec asserts it in prose
 (`08-configuration.md` §1.6, `03-messages.md` §5.1's precedence rule, `05-state-machines.md`
 §2's transition table) and nothing marks it up. Both pairs were found by reading.
+
+Check F adds no baseline: it was green on the tree that introduced it, and its three sub-checks
+were RED-tested one at a time.
 
 BASELINE is the count of known-open findings. It is not an allowlist: every finding is
 printed on every run. Lower it as they are closed; a run finding more than BASELINE fails,
@@ -96,6 +113,16 @@ PROFILE_SECTION = re.compile(r'^###\s+1\.5\b')
 SECTION_END = re.compile(r'^(###\s|---\s*$|##\s)')
 PROFILE_ROW = re.compile(r'^\|\s*\*{0,2}([A-Za-z /-]+?)\*{0,2}\s*\|\s*`?([A-Za-z]+|--)`?\s*\|')
 EXPECTED_PROFILE_IDS = {'Core', 'Transaction', 'Security', 'OfflineBLE', 'DeviceManagement'}
+
+# 06-security.md §2.1.1 states two BROKER settings, in the registry's form but not in the
+# registry (§2.1.1, *Why the two settings are not Chapter 08 configuration keys*). Parsed only
+# inside that section: its table is | Setting | Type | Default | Range | Description |, five
+# columns against a registry row's seven.
+BROKER_DOC = 'spec/06-security.md'
+BROKER_SECTION = re.compile(r'^####\s+2\.1\.1\b')
+BROKER_END = re.compile(r'^###\s')
+BROKER_ROW = re.compile(
+    r'^\|\s*`([A-Za-z][A-Za-z0-9_]*)`\s*\|\s*(\w+)\s*\|([^|]*)\|([^|]*)\|([^|]*)\|\s*$')
 
 NUMERIC = re.compile(r'^(\d+)--(\d+)$')
 MAXCHARS = re.compile(r'^max \d+ chars$')
@@ -171,6 +198,30 @@ def load(root):
     return sections, summary
 
 
+def load_broker(root):
+    """The §2.1.1 broker settings: {name: (line, range_cell)}."""
+    path = os.path.join(root, BROKER_DOC)
+    if not os.path.exists(path):
+        sys.exit(f'{BROKER_DOC} not found -- check F would otherwise pass vacuously.')
+    out, inside = {}, False
+    for lineno, line in enumerate(open(path, encoding='utf-8'), 1):
+        line = line.rstrip('\n')
+        if BROKER_SECTION.match(line):
+            inside = True
+            continue
+        if inside and BROKER_END.match(line):
+            break
+        if not inside:
+            continue
+        m = BROKER_ROW.match(line)
+        if m and m.group(1) not in ('Setting',):
+            out[m.group(1)] = (lineno, m.group(4).strip())
+    if not out:
+        sys.exit(f'{BROKER_DOC} §2.1.1 yielded zero broker settings -- the section or its '
+                 f'table changed. Refusing to report success for zero work.')
+    return out
+
+
 def schema_bounds(root, path, field):
     import json
     full = os.path.join(root, path)
@@ -187,6 +238,7 @@ def main():
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     os.chdir(root)
     sections, summary = load(root)
+    broker = load_broker(root)
     findings = []
 
     # --- A. §9 against §§2--6 -------------------------------------------------
@@ -229,6 +281,26 @@ def main():
                for k, r in sections.items() if NUMERIC.match(r['range'])}
     numeric = {k: (int(lo), int(hi)) for k, (lo, hi) in numeric.items()}
 
+    # --- F. The §2.1.1 broker settings ------------------------------------------
+    broker_numeric, broker_lines = {}, set()
+    for name, (lineno, cell) in sorted(broker.items()):
+        broker_lines.add(lineno)
+        form = classify(cell)
+        if form is None:
+            findings.append(('F', BROKER_DOC, lineno,
+                             f'{name}: Range cell {cell!r} matches none of the five forms '
+                             f'§1.6 of Chapter 08 declares'))
+        elif form == 'numeric':
+            lo, hi = NUMERIC.match(cell).groups()
+            broker_numeric[name] = (int(lo), int(hi))
+        if name in sections or name in summary:
+            findings.append(('F', REGISTRY, sections.get(name, summary.get(name))['line'],
+                             f'{name} is a §2.1.1 broker setting and has appeared in the '
+                             f'Chapter 08 registry. No station holds it and no message '
+                             f'carries it; §1.5 would make it a station obligation'))
+
+    numeric = dict(numeric)
+    numeric.update(broker_numeric)
     names = {k: k for k in numeric}
     for key, (field, _) in ALIASES.items():
         if key in numeric:
@@ -240,6 +312,8 @@ def main():
         for lineno, line in enumerate(open(path, encoding='utf-8').read().split('\n'), 1):
             if path == REGISTRY and line.lstrip().startswith('|'):
                 continue  # the registry stating itself is not a restatement
+            if path == BROKER_DOC and lineno in broker_lines:
+                continue  # §2.1.1 defining its own settings is not a restatement
             if HISTORY_ROW.match(line.lstrip()):
                 continue  # a release note quoting a disagreement is not committing one
             for name, key in names.items():
@@ -260,13 +334,25 @@ def main():
                         # 3.5 x heartbeat. Requiring the SAME factor on both ends is what
                         # keeps this from excusing a real drift: a restatement that moves
                         # one endpoint only has no single factor and is still reported.
-                        if got != (lo, hi) and lo and hi:
-                            if got[0] * hi == got[1] * lo:
+                        if got != (lo, hi):
+                            # The derived-by-one-factor excuse needs BOTH endpoints
+                            # non-zero: with lo == 0 the low end has no factor, and
+                            # `got[0] * hi == got[1] * lo` degenerates to "got[0] is 0",
+                            # which would excuse EVERY `0--n` restatement of a `0--m`
+                            # range. This guard used to be `and lo and hi` on the outer
+                            # test, which skipped the comparison entirely instead --
+                            # so a zero-floor range could not be flagged at all, and
+                            # `RevocationEpoch` (0--2147483647) and the §2.1.1 grace
+                            # (0--86400) were both invisible to check C. Found by
+                            # RED-testing check F: the injected drift did not fail.
+                            if lo and hi and got[0] * hi == got[1] * lo:
                                 derived += 1
                                 continue
+                            where = ('§2.1.1 broker setting' if key in broker_numeric
+                                     else f'registry key {key}')
                             findings.append((
                                 'C', path, lineno,
-                                f'{name} (registry key {key}, range {lo}--{hi}) appears '
+                                f'{name} ({where}, range {lo}--{hi}) appears '
                                 f'beside the range {got[0]}--{got[1]}, which disagrees. '
                                 f'The pair may be restated or derived; the check reports '
                                 f'proximity, and the reader decides which'))
@@ -325,7 +411,8 @@ def main():
     print(f'registry rows (§§2--6)        : {len(sections)}')
     print(f'summary rows (§9)             : {len(summary)}')
     print(f'shared cells compared         : {shared}')
-    print(f'numeric-range keys            : {len(numeric)}')
+    print(f'numeric-range keys            : {len(numeric) - len(broker_numeric)}')
+    print(f'broker settings (§2.1.1)      : {len(broker)}  ({len(broker_numeric)} with a numeric range)')
     print(f'restated-range sites          : {restated}  ({derived} derived by a shared factor)')
     print(f'profile rows (§1.5)           : {len(prof_rows)}')
     print(f'wire-field aliases checked    : {len(ALIASES)}')

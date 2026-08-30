@@ -1,6 +1,6 @@
 # Chapter 08 — Configuration
 
-> **Status:** Draft | **OSPP Version:** 0.26.0
+> **Status:** Draft | **OSPP Version:** 0.27.0
 
 This chapter defines the configuration model for OSPP stations, including the key-value store structure, supported data types, access modes, mutability semantics, and the complete registry of standard configuration keys. Configuration is read and written via the [GetConfiguration](03-messages.md#62-getconfiguration) and [ChangeConfiguration](03-messages.md#61-changeconfiguration) messages defined in Chapter 03.
 
@@ -171,6 +171,18 @@ Two such pairs exist. `HeartbeatIntervalSeconds` with `heartbeatIntervalSec` **a
 | `OfflinePassPublicKey` | string | -- | W | Dynamic | valid SEC1 key | Server's ECDSA P-256 public key for OfflinePass signature verification (uncompressed or compressed SEC1 format). Updated via ChangeConfiguration during key rotation. Stations MUST accept passes signed by the current key, and the immediately previous key **for the grace period only** — the window is bounded by [Chapter 06 — Security](06-security.md), §6.7 step 4, which is its only statement; after it expires the station **MUST** discard the cached previous key. |
 | `CertificateRenewalThresholdDays` | integer | `30` | RW | Dynamic | 7--90 | Days before certificate expiry to initiate automatic renewal. The station checks daily and starts the SignCertificate flow when within this threshold. See [Chapter 06 — Security](06-security.md), §4.7. |
 | `CertificateRenewalEnabled` | boolean | `true` | RW | Dynamic | -- | Master switch for automatic certificate renewal. When `false`, the station does not initiate renewal automatically but still responds to server-triggered renewal (TriggerCertificateRenewal [MSG-024]). |
+
+> **Two revocation settings are named with a range and deliberately kept out of this registry.**
+> `CertificateRevocationMaxAgeSeconds` and `CertificateRevocationGraceSeconds` bound the broker's
+> certificate-revocation checking, which became an obligation in `0.27.0`
+> ([Chapter 06 — Security §2.1.1](06-security.md#211-revocation-checking)). They are named, typed, defaulted and
+> ranged in the form these tables use, so two deployments can be compared on them — and they are **not** keys of
+> this registry. §1.1 defines it as the *station's* key-value store and §1.5 makes every key of a required profile
+> a station conformance obligation, while neither setting is held by a station, carried by any OSPP message, or
+> answerable to GetConfiguration: a station asked for one could only answer `NotSupported`. Registering them would
+> oblige every station to implement a key it cannot act on. The same reasoning is already recorded for the
+> station-side grace period of [Chapter 06 §6.7](06-security.md#67-server-signing-key-rotation-ecdsa-p-256)
+> step 3, which is likewise stated with a value and deliberately absent from here.
 
 ---
 

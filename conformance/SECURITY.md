@@ -1,6 +1,6 @@
 # Conformance Security Notes
 
-> **Status:** Draft | **OSPP Version:** 0.26.0
+> **Status:** Draft | **OSPP Version:** 0.27.0
 
 Security considerations for setting up and running OSPP conformance tests.
 
@@ -33,6 +33,14 @@ Security considerations for setting up and running OSPP conformance tests.
 - The test network **MUST** support TLS 1.2 and TLS 1.3 for MQTT connections (the floor is TLS 1.2; TLS-1.3-capable stations negotiate 1.3).
 - For mTLS tests (`TC-SEC-002`), the test harness **MUST** be able to present
   valid, expired, self-signed, and revoked certificates.
+- The test network **MUST** provide a revocation source the test broker can consult — a CRL
+  the test CA publishes, or an OCSP responder — and the harness **MUST** be able to update it
+  and to make it unreachable. `TC-SEC-002` Part E already assumes the first (*"Ensure the
+  broker's CRL or OCSP responder is updated to reflect the revocation"*) and this section had
+  never listed it; the second is what makes the stale-and-unobtainable behaviour of
+  [`06-security.md` §2.1.1](../spec/06-security.md#211-revocation-checking) reachable at all.
+  Neither is a substitute for the revocation posture a deployment declares in its report —
+  this is a harness broker, not the deployment's.
 - Network simulation capabilities (latency injection, packet loss, disconnection)
   are **RECOMMENDED** for resilience testing.
 - DNS resolution for the test broker **SHOULD** be controlled (e.g., via

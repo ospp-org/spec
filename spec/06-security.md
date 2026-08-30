@@ -1,6 +1,6 @@
 # Chapter 06 — Security
 
-> **Status:** Draft | **OSPP Version:** 0.26.0
+> **Status:** Draft | **OSPP Version:** 0.27.0
 
 This chapter defines the complete security model for the OSPP protocol, covering threat analysis, authentication, authorization, cryptographic requirements, message integrity, offline security, anti-abuse mechanisms, and data protection.
 
@@ -21,13 +21,13 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 | T01 | [Replay Attack](#t01---replay-attack) | Duplicate service activation or credit deduction | High | §5.3 HMAC with messageId, §6.3 monotonic counter |
 | T02 | [Man-in-the-Middle](#t02---man-in-the-middle) | Eavesdrop or modify station commands | Critical | §2.1 mTLS (TLS 1.2+), §5 HMAC-SHA256 |
 | T03 | [Credit Fraud / Double-Spend](#t03---credit-fraud--double-spend) | Unauthorized service without payment | Critical | §6.1 OfflinePass limits, §6.2 signed receipts with txCounter, §6.6 epoch revocation, §7.4 fraud scoring |
-| T04 | [Unauthorized Station Access](#t04---unauthorized-station-access) | Rogue station impersonation or topic hijacking | Critical | §2.1 mTLS + CN-based ACL, §4.2 PKI |
+| T04 | [Unauthorized Station Access](#t04---unauthorized-station-access) | Rogue station impersonation or topic hijacking | Critical | §2.1 mTLS + CN-based ACL, §2.1.1 revocation checking, §4.2 PKI |
 | T05 | [Session Hijacking](#t05---session-hijacking) | Take over another user's session | High | §2.2 JWT short-lived, §2.3 session token UUID, §5 HMAC |
 | T06 | [Offline Abuse](#t06---offline-abuse) | Exploit offline mode for unlimited free services | High | §6.1-§6.6 OfflinePass constraints, §7.4 fraud detection |
 | T07 | [Payment Fraud](#t07---payment-fraud) | Bypass payment via forged webhooks or repeated attempts | High | §2.5 HMAC-SHA512 webhook, §7.3 anti-abuse layers |
 | T08 | [Firmware Tampering](#t08---firmware-tampering) | Install malicious firmware to bypass security | Critical | §4.6 firmware code-signing, §4.5 secure storage, A/B rollback, SecurityEvent [MSG-012] |
 | T09 | [Physical Tampering](#t09---physical-tampering) | Access internal components, extract keys | Critical | §4.5 secure element, tamper detection, SecurityEvent [MSG-012] |
-| T10 | [Certificate Compromise](#t10---certificate-compromise) | Impersonate a station after private key extraction | Critical | §4.3 CRL/OCSP, on-device key generation, §4.5 secure storage |
+| T10 | [Certificate Compromise](#t10---certificate-compromise) | Impersonate a station after private key extraction | Critical | §2.1.1 broker revocation checking, §4.3 CRL/OCSP, on-device key generation, §4.5 secure storage |
 | T11 | [Webhook Spoofing](#t11---webhook-spoofing) | Forge payment confirmations | High | §2.5 HMAC-SHA512 + IP whitelist + timing-safe comparison |
 | T12 | [BLE Eavesdropping](#t12---ble-eavesdropping) | Intercept offline pass or session data over-the-air | Medium | §6.5.3 application-layer AEAD (ChaCha20-Poly1305) over an ECDH-authenticated channel, §6.5.2 StationIdentity verification |
 | T13 | [Denial of Service](#t13---denial-of-service) | Station becomes unresponsive to legitimate users | High | §7.1 rate limiting, BLE connection throttling, MQTT message rate cap |
@@ -70,7 +70,7 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 **Countermeasures:**
 - **mTLS with CN-based ACL** — the broker verifies the station's X.509 certificate and enforces that CN = `stn_{station_id}`. A station can ONLY subscribe to its own `to-station` topic and publish to its own `to-server` topic.
 - **Private keys generated on-device** (§4.5) — TLS and ECDSA private keys never leave the station. Even the provisioning server never sees the private key.
-- **CRL/OCSP revocation** — compromised certificates are revoked and rejected by the broker.
+- **Revocation checking at the broker** — the broker **MUST** establish that the presented certificate has not been revoked, and **MUST** refuse the connection if it has ([§2.1.1](#211-revocation-checking)). Until `0.27.0` this row asserted the outcome and no clause anywhere required it.
 
 ### T05 - Session Hijacking
 
@@ -127,7 +127,7 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 
 **Countermeasures:**
 - **On-device key generation** — private keys are generated on the station's secure element and never transmitted.
-- **CRL/OCSP revocation** — compromised certificates are revoked; the broker rejects connections from revoked certificates.
+- **CRL/OCSP revocation** — the Station CA revokes the compromised certificate, and the broker **MUST** check and refuse it ([§2.1.1](#211-revocation-checking)). That obligation is new in `0.27.0`. Before it this row described a mitigation nothing required anyone to perform, and the reference deployment ran with checking switched off — which was conforming. Because no OSPP message exposes whether the check happened, a deployment states its posture in its conformance report rather than proving it on the wire; the residual is a deployment that declares the check disabled, which is now **non-conforming** and visible rather than assumed.
 - **Certificate renewal alerts** — background job alerts when a certificate is within 30 days of expiry.
 
 ### T11 - Webhook Spoofing
@@ -191,6 +191,7 @@ OSPP uses **channel-specific authentication** — each communication channel has
 **Requirements:**
 - The station MUST present a valid X.509 client certificate signed by the OSPP Station CA.
 - The broker MUST verify the station certificate against the OSPP trust chain (Root CA → Station CA → Station Cert).
+- **The broker MUST also check that the station certificate has not been revoked.** Chain validity is not sufficient on its own: a certificate whose private key has been extracted still chains correctly until it expires, which is up to a year (§4.2). [§2.1.1](#211-revocation-checking) states the obligation, the freshness bounds it is held to, what the broker does when revocation status cannot be established, and how a deployment is held to a clause no message can carry.
 - The station MUST verify the broker's server certificate. If the provisioning response includes `brokerRootCa`, the station MUST use it as the trust anchor for this verification; otherwise, the station MAY use its system trust store.
 - **Server identity verification — the station MUST check the name, not only the chain.** After the chain validates, the station **MUST** verify that the presented certificate actually identifies the host it meant to reach, per [RFC 9525](https://www.rfc-editor.org/rfc/rfc9525): it **MUST** match the reference identity against the certificate's `subjectAltName` extension — a `dNSName` entry for a hostname, an `iPAddress` entry for an IP literal — and **MUST NOT** fall back to the Subject Common Name. The reference identity is the host the station was configured with: `mqttConfig.brokerHost` from the provisioning response for the MQTT leg, and the host of the provisioning endpoint URL for the HTTPS leg. A wildcard `dNSName` matches at most one label, and only the leftmost. **On mismatch the station MUST refuse**, exactly as for a chain failure.
 
@@ -214,6 +215,77 @@ OSPP uses **channel-specific authentication** — each communication channel has
 The TLS 1.2 suites are ECDHE-ECDSA with AEAD-GCM only, matching the ECDSA P-256 server certificate. CBC-mode, RSA-key-exchange, and 3DES suites MUST NOT be offered or accepted. (`TLS_CHACHA20_POLY1305_SHA256` is dropped from the offered set under the TLS-1.2-floor hardening.)
 
 **Key exchange groups:** X25519 (preferred), secp256r1.
+
+#### 2.1.1 Revocation Checking
+
+**The obligation.** After the chain validates, the broker **MUST** establish whether the station certificate it has just accepted has been revoked, and **MUST NOT** complete the connection if it has. The obligation runs to whichever party terminates the station's client certificate — the MQTT broker, and equally the endpoint answering the Station REST fallback named in the *Applies to* row above. A control one leg of the fleet can route around is not a control.
+
+It is stated here, beside chain verification, because it is the same act: the same certificate, the same moment, the same party. Stated anywhere else it reads as a property of the PKI rather than as an obligation on someone, which is what it had been until `0.27.0` — [§4.4](#44-certificate-requirements) makes the CRL Distribution Points extension REQUIRED on every station certificate, so the address was always there, and no clause anywhere obliged a single party to read it.
+
+**Why a MUST.** Revocation is the only mechanism this specification has against a compromised station identity before that identity expires, and a station certificate is valid for up to **one year** ([§4.2](#42-pki-architecture)). Nothing substitutes for it. [§6.6](#66-epoch-based-revocation)'s revocation **epoch** invalidates OfflinePasses and explicitly avoids certificate revocation lists; it touches no certificate. [§4.7.2](#472-server-triggered-renewal) can trigger a *renewal*, which issues a new certificate and does not withdraw the old one. [§4.7.6](#476-certificate-multiplicity) bounds how many certificates are simultaneously valid but ends none of them early. Absent this clause, an extracted private key is usable against a conforming broker for the remainder of a one-year validity period.
+
+**Freshness — two bounds, and the earlier governs.** Revocation information the broker relies on **MUST** satisfy both:
+
+1. **Its own expiry.** For a CRL, the current time **MUST** be earlier than the list's `nextUpdate` ([RFC 5280 §5.1.2.5](https://www.rfc-editor.org/rfc/rfc5280#section-5.1.2.5)). That field is OPTIONAL in RFC 5280; a list that omits it is stale on issue and **MUST NOT** be relied on at all.
+2. **A configured maximum age.** The list's age — the interval from its `thisUpdate` ([RFC 5280 §5.1.2.4](https://www.rfc-editor.org/rfc/rfc5280#section-5.1.2.4)) to now — **MUST NOT** exceed `CertificateRevocationMaxAgeSeconds`.
+
+The second exists because the first is written by the party being checked. A CA is free to publish a `nextUpdate` a year out, and a bound chosen by the issuer is not a bound on the issuer. Two independent bounds cost nothing and cannot both be widened by one party.
+
+A broker **MAY** satisfy this obligation by OCSP where the certificate carries an Authority Information Access extension ([§4.4](#44-certificate-requirements), RECOMMENDED). A responder round trip is strictly fresher than any list, so it satisfies both bounds by construction; the failure behaviour below then applies to an unreachable responder exactly as it applies to an unobtainable list.
+
+**Nothing here is added to the wire.** `thisUpdate` and `nextUpdate` are fields of an X.509 artefact the certificate already points at. Both settings below are broker configuration. No OSPP message, schema, enum value or Chapter 08 configuration key is added, removed or retyped by this clause.
+
+**When revocation status cannot be established — bounded grace, then refuse.** Let **T** be the instant the broker's revocation information ceased to satisfy the two bounds above — the earlier of its `nextUpdate` and its maximum age — or, where the broker holds none at all, the instant it first failed to obtain any.
+
+- From **T** the broker **MAY** go on accepting station connections for at most `CertificateRevocationGraceSeconds`. It is not obliged to: refusing from **T** is conforming, and setting the value to `0` makes that the configured behaviour.
+- After that interval the broker **MUST** refuse every station connection until it again holds revocation information satisfying both bounds.
+- The broker **MUST** raise an operator alert **on entering grace at T** — not on its expiry.
+
+**Why the alert is at the start.** An alert at expiry carries nothing the refusal does not: by then every station is being turned away and the operator will hear it from the fleet. What is scarce is the knowledge that the broker is *accepting connections it has not been able to check*, and that is known at **T**. Alerting there is also what keeps this from becoming permissive-forever by accident — a degradation nobody is told about is indistinguishable, in an operations log, from a control that was never switched on.
+
+The alert is an operator alert, out of band. It is **not** a SecurityEvent [MSG-012]: that message is station-originated on the wire and server-originated only as a never-published audit record ([`security-event.md` §2.1](profiles/security/security-event.md#21-two-origins-one-payload-shape)), its type list contains nothing for this condition, and the broker is neither party. This is the same shape [§4.7.4](#474-failure-handling) already uses for an unreachable CA and [§6.7.1](#671-two-postures--scheduled-rotation-and-compromise-response) for a compromise declaration.
+
+**How the broker refuses, and it is not the same refusal in both cases.** The two conditions have different causes and different correct recoveries, and answering them alike would be a defect:
+
+| Condition | Broker | Station observes | Station behaviour |
+|---|---|---|---|
+| The certificate **is** revoked | Refuse the TLS handshake | A certificate was rejected | `1004 CERTIFICATE_ERROR` with `details.cause: "revoked"` — keep credentials, stay off the broker, alert the operator ([Chapter 02 §1.3](02-transport.md#13-tls-12-floor-13-recommended), [Chapter 07 §3.1](07-errors.md#31-transport-errors-1xxx)) |
+| Revocation status **cannot be established** and the grace has expired | Complete the TLS handshake, then refuse the MQTT CONNECT with a non-zero CONNACK reason code — `0x87 Not Authorized` is **RECOMMENDED** | A CONNACK carrying a non-zero reason code | Log the reason code and retry with backoff ([Chapter 02 §1.3](02-transport.md#13-tls-12-floor-13-recommended)) |
+
+Completing the handshake on the second row grants nothing — no MQTT session, no subscription, no topic access — so a revoked station gains nothing it would not have had if the handshake had been refused. What it buys is the whole reason the row is written separately. The stations refused in that case have done nothing wrong; their certificates may be impeccable, and the condition is transient by construction. Refusing them at TLS would classify them as `1004`, whose non-expired branches are `recoverable: false` and instruct the station to **stay off the broker and alert the operator** — so a CRL outage would take the fleet off and *leave* it off, needing an operator at each site to bring it back. That is a worse outcome than the fleet-wide disconnection the grace period exists to prevent, produced by the mechanism meant to prevent it. Refusing at CONNACK puts those stations on the reconnect-with-backoff path instead, and the fleet returns by itself when the list does.
+
+**No fifth `details.cause` is defined, and that is deliberate.** `1004`'s discriminator is closed at four members — `expired`, `revoked`, `invalid-chain`, `self-signed` — and every one names something wrong with **the certificate**. *The broker could not establish revocation status* is not a property of the certificate presented; it is a property of the broker. It also has no carrier: the second row refuses before any OSPP message exists in either direction. A fifth member would widen a set for a condition no receiver could act on differently.
+
+**The two settings.** Both are **broker configuration**, supplied by the deployment.
+
+| Setting | Type | Default | Range | Description |
+|---------|------|---------|-------|-------------|
+| `CertificateRevocationMaxAgeSeconds` | integer | `86400` | 3600--604800 | Maximum age of the revocation information the broker relies on, in seconds, measured from its `thisUpdate`. Applies in addition to the information's own expiry; the earlier of the two governs. |
+| `CertificateRevocationGraceSeconds` | integer | `3600` | 0--86400 | How long, in seconds, the broker may go on accepting station connections after **T**. `0` refuses from **T**. The operator alert is raised when this interval begins, never when it ends. |
+
+**Deriving the grace period.** The default is not a round number chosen for looking like one. Both of its bounds are numbers this document already publishes.
+
+*Floor — below it the control causes the outage it exists to survive.* The intervals this specification already treats as *briefly unavailable and nothing is wrong* are `ReconnectBackoffMax` (default 30 s) and `ConnectionLostGracePeriod` (default 300 s), whose configured ceilings are 3600 s and 600 s respectively ([Chapter 08 §2](08-configuration.md#2-core-configuration-keys)). A grace inside that band turns an ordinary blip in list distribution into a fleet-wide refusal — and, because every refused station then reconnects on a backoff capped by the first of those keys, into a reconnect storm against the broker that is already failing to fetch. The grace has to sit above that band.
+
+*Ceiling — above it the document has already conceded that nobody noticed.* [§4.7.4](#474-failure-handling) fixes this specification's own patience for a certificate authority that cannot be reached: *"CA Unreachable: … Alerts operator after 24 hours."* A grace of 86400 s would expire no earlier than the moment the document first admits an unreachable CA may have gone unnoticed for a full day. A bypass window that long is not a control; it is the absence of one, with a timer on it.
+
+*The value.* **3600 s** — six times the largest ordinary-transient ceiling the document publishes, and one twenty-fourth of its own unreachable-CA alert threshold. Taken with the 86400 s freshness default, the worst case from a revocation being published to a revoked certificate being refused is **25 hours**: an operator has been told twice, by two independent paths, before the first station is turned away. The range `0--86400` lets a deployment choose either end deliberately — `0` is refuse-immediately, and the ceiling is §4.7.4's threshold — and not exceed the point at which the number stops meaning anything.
+
+**How a deployment is held to this clause.** It is a deployment capability, not a wire behaviour. No OSPP message reveals whether the broker consulted a revocation source, no field carries the answer, and a conformance case run against a well-behaved station cannot tell a broker that checks from one that does not: the observable outcome is identical until a certificate is actually revoked, which no harness can arrange against a production CA. **This clause is therefore verified by declaration, not by test case.**
+
+A deployment claiming **Standard** compliance or above ([conformance/README.md §2.2](../conformance/README.md#22-standard-compliance)) **MUST** state, in its conformance report ([conformance/README.md §5](../conformance/README.md#5-reporting-format)):
+
+- whether revocation checking is enabled, and by which mechanism — CRL or OCSP;
+- the configured maximum age, and the configured grace, as seconds;
+- where the grace-entry alert is delivered.
+
+A report that omits them is incomplete, and a deployment that answers *disabled* to the first is **not conforming**. It may say so — that is the point of requiring the answer — but saying so is not a waiver. This is the weakest verification this specification uses anywhere. It is used because the alternative is not a stronger check but no statement at all, which is what the previous revision had, and which is how a mitigation came to be listed in the threat model with nothing requiring anyone to perform it.
+
+**Why the two settings are not Chapter 08 configuration keys.** [Chapter 08 §1.1](08-configuration.md#11-key-value-structure) defines that registry as *the station's* key-value store, read with GetConfiguration and written with ChangeConfiguration, and [§1.5](08-configuration.md#15-profile-grouping) makes every key of a required profile a **station** conformance obligation. Both settings belong to the broker: no station holds either, no OSPP message carries either, and a station asked for one could answer only `NotSupported`. Registering them would oblige every station to implement a key it cannot act on — the exact shape of unconstructible obligation this revision series exists to close. [§6.7](#67-server-signing-key-rotation-ecdsa-p-256) step 3 records the same reasoning and the same conclusion for the station-side grace period there.
+
+They are named, typed, defaulted and ranged all the same, in the form Chapter 08 §§2--6 use, so that two deployments can be compared on them and so that `tools/check-config-ranges.py` holds their Range cells to the five forms [Chapter 08 §1.6](08-configuration.md#16-value-ranges) declares, compares any restatement of them elsewhere in the tree against this table, and refuses if either name ever appears in the station registry. A number written down without a range is a number nobody can disagree with out loud.
+
+**What this clause is not about.** It places no obligation on the **station**, in either direction. It does not require a station to check the revocation status of the **broker's** server certificate, which the station verifies for chain and name under §2.1 and nothing more: a station has no network before its first connection, an embedded TLS stack on a cellular link is the worst possible place to put a fetch-before-connect dependency, and §4.4's REQUIRED distribution point is an extension of the *station's* certificate, not the broker's. That residual is recorded in [KNOWN-ISSUES](../KNOWN-ISSUES.md). Nor does it govern the station receipt-signing key ([§4.3](#43-key-management-lifecycle), which has no revocation at all), the OfflinePass epoch ([§6.6](#66-epoch-based-revocation)), the BLE StationIdentity certificate ([§6.5.2](#652-stationidentity-certificate), revoked only by expiry) or the server signing key ([§6.7](#67-server-signing-key-rotation-ecdsa-p-256), for which this specification defines no revocation mechanism at all).
 
 ### 2.2 User ↔ Server — JWT (Mobile App)
 
@@ -419,7 +491,7 @@ Server Signing Key (ECDSA P-256, server-side HSM)
 | CA Level | Algorithm | Validity | Storage | Purpose |
 |----------|-----------|:--------:|---------|---------|
 | Root CA | ECDSA P-384 | 20 years | Air-gapped HSM | Signs Station CA only |
-| Station CA | ECDSA P-256 | 5 years | Online HSM | Signs station certificates |
+| Station CA | ECDSA P-256 | 5 years | Online HSM | Signs station certificates, and publishes the revocation list whose address every one of them carries (§4.4, [§2.1.1](#211-revocation-checking)) |
 | Station Cert | ECDSA P-256 | 1 year | Station secure element | mTLS authentication **only** — the receipt-signing key is a separate, uncertified key pair (§4.3) |
 | Server Signing Key | ECDSA P-256 | Annual rotation | Server HSM / Vault | OfflinePass + ServerSignedAuth signing |
 
@@ -428,6 +500,7 @@ Server Signing Key (ECDSA P-256, server-side HSM)
 - Station CA public certificate is distributed during provisioning.
 - Station certificates are issued during provisioning ([Flow §2](04-flows.md#2-station-provisioning)).
 - Server signing public key is distributed via provisioning and ChangeConfiguration [MSG-013].
+- The Station CA's **revocation list** is published at the address every station certificate carries in its CRL Distribution Points extension (§4.4), and is fetched by whichever party terminates that certificate. It is the only artefact in this list that travels to the **broker** rather than to the station, and the only one that has to keep arriving after provisioning — which is what [§2.1.1](#211-revocation-checking)'s freshness bounds hold it to.
 - Broker server CA trust anchor is delivered via the provisioning response `brokerRootCa` field when the broker uses a private CA hierarchy. When that field is absent the broker uses a publicly-trusted CA hierarchy and the station's anchor is its system trust store. This is a **summary of §2.1**, which states the requirement normatively and is authoritative: the system trust store is a fallback for the **anchor** only, and it does **not** relax anything else — a station that cannot validate **MUST refuse** (§2.1), and chain validity alone is never sufficient, because the station **MUST** also verify the certificate's identity against the host it meant to reach (§2.1, *Server identity verification*).
 
 ### 4.3 Key Management Lifecycle
@@ -441,7 +514,7 @@ Server Signing Key (ECDSA P-256, server-side HSM)
 | **Storage** | Secure element, TPM, or encrypted NVS (non-extractable where the hardware supports it) |
 | **Lifetime** | Bound to the certificate issued over it; how many may be valid simultaneously is bounded by §4.7.6 |
 | **Renewal** | Station generates new CSR; server signs via Station CA. Background alert when cert < 30 days to expiry. |
-| **Revocation** | CRL published by Station CA (checked by MQTT broker). OCSP RECOMMENDED. |
+| **Revocation** | CRL published by Station CA. The broker **MUST** check it before completing the connection, under the freshness bounds and bounded grace of [§2.1.1](#211-revocation-checking). A broker **MAY** use OCSP instead where the certificate carries an Authority Information Access extension. |
 | **Rotation** | Annual (1-year certificate validity) |
 
 #### HMAC Session Key (per-boot)
@@ -545,8 +618,8 @@ Station certificates MUST comply with:
 | Key Usage | digitalSignature |
 | Extended Key Usage | clientAuth |
 | Subject Alternative Name | OPTIONAL (DNS name or IP of station) |
-| CRL Distribution Points | REQUIRED (URL to CRL published by Station CA) |
-| Authority Info Access | RECOMMENDED (OCSP responder URL) |
+| CRL Distribution Points | REQUIRED (URL to CRL published by Station CA). As of `0.27.0` the address has an obliged reader — [§2.1.1](#211-revocation-checking). |
+| Authority Info Access | RECOMMENDED (OCSP responder URL). Where present, a broker **MAY** satisfy [§2.1.1](#211-revocation-checking) by OCSP instead of by a list. |
 
 If a TLS certificate expires during an active MQTT session, the TLS connection will terminate at the next renegotiation or keepalive. The station treats this as a standard connection loss and follows the reconnection procedure in [Chapter 02 — Transport](02-transport.md), §4.4.
 
@@ -581,6 +654,8 @@ The station **SHOULD** initiate certificate renewal automatically when the curre
 9. Station installs the certificate to its secure element, TPM, or encrypted NVS
 10. Station updates the `CertificateSerialNumber` configuration key
 11. On the next TLS reconnection, the station uses the new certificate
+
+> **Revocation is deliberately absent from step 8, and its absence is the rule rather than a gap in it.** The obligation of [§2.1.1](#211-revocation-checking) runs to the party that *terminates* a station's client certificate, on the certificate the station **presents**. Step 8 is the station checking a certificate it has just been **issued** — minutes old, and by construction not yet revoked. Requiring a fetch here would put a network dependency inside the recovery path for an expiring credential, which is the one path that has to work when the station's standing is already degraded.
 
 #### 4.7.2 Server-Triggered Renewal
 
@@ -1461,7 +1536,7 @@ Both postures use the same key generation, the same ChangeConfiguration [MSG-013
 
 **Certificate escalation is the sharpest consequence, and the station rollout does not bound it.** Because StationIdentity issuance reuses the OfflinePass signing path, a holder of the compromised key can mint a StationIdentity for a station that **does not exist**. The BLE gate of [§6.5.2](#652-stationidentity-certificate) stops a fake or unprovisioned station only because such a station cannot produce a certificate that verifies under the server key — with the key, it can. The attacker then completes the handshake as a station of the organization, and the app, having verified exactly what it was told to verify, transmits a genuine OfflinePass into it. A compromised server signing key therefore does not merely permit *forged* passes to be accepted at stations; it permits **harvesting real ones** from any app whose trusted set still contains the key. Updating every station closes the forgery half and leaves this half open.
 
-**Why the gate exists here and nowhere else.** Step 5 is the only revocation in OSPP conditioned on fleet confirmation, and the asymmetry is deliberate rather than accidental. A station certificate is revoked by CRL and the broker rejects the connection ([§4.3](#43-key-management-lifecycle)), with no confirmation step. An OfflinePass is revoked by incrementing the epoch — immediately, with offline stations picking the new value up at their next boot ([§6.6](#66-epoch-based-revocation)): the same trust chain as this section, an incident trigger, and no gate. A StationIdentity certificate is revoked only by expiry, which [§6.5.2](#652-stationidentity-certificate) calls best-effort. The gate is defensible for the scheduled posture and only there: an annual rotation faces no adversary, so deferring revocation costs nothing and avoids taking a working station offline for no reason. Under compromise it has no defence — the adversary already holds the key, and the gate would defer only the destruction of a copy whose destruction changes nothing.
+**Why the gate exists here and nowhere else.** Step 5 is the only revocation in OSPP conditioned on fleet confirmation, and the asymmetry is deliberate rather than accidental. A station certificate is revoked by CRL, and since `0.27.0` the broker **MUST** check and reject the connection ([§2.1.1](#211-revocation-checking)), with no confirmation step. An OfflinePass is revoked by incrementing the epoch — immediately, with offline stations picking the new value up at their next boot ([§6.6](#66-epoch-based-revocation)): the same trust chain as this section, an incident trigger, and no gate. A StationIdentity certificate is revoked only by expiry, which [§6.5.2](#652-stationidentity-certificate) calls best-effort. The gate is defensible for the scheduled posture and only there: an annual rotation faces no adversary, so deferring revocation costs nothing and avoids taking a working station offline for no reason. Under compromise it has no defence — the adversary already holds the key, and the gate would defer only the destruction of a copy whose destruction changes nothing.
 
 ---
 
@@ -1540,7 +1615,8 @@ During reconciliation ([Flow §10](04-flows.md#10-offline--online-reconciliation
 |---------|----------|
 | 3+ MAC failures from same station in 60s | Flag station as potentially compromised |
 | Certificate approaching expiry (< 30 days) | Background alert to operator |
-| BootNotification from revoked certificate | Reject with `1004 CERTIFICATE_ERROR` |
+| Connection attempt with a revoked certificate | Refuse the connection; the station records `1004 CERTIFICATE_ERROR` with `details.cause: "revoked"` ([§2.1.1](#211-revocation-checking)). **Not a BootNotification trigger** — the refusal happens at the handshake, so a revoked station never sends one, and no code in the BootNotification set could say why if it did ([Chapter 04 — Flows §1](04-flows.md#1-station-boot--registration)) |
+| Revocation information stale or unobtainable | Alert the operator on **entering** the grace period; refuse every station connection once it expires ([§2.1.1](#211-revocation-checking)) |
 | Repeated OFFLINE_COUNTER_REPLAY from same device | Revoke that device's OfflinePass |
 | FirmwareIntegrityFailure SecurityEvent [MSG-012] | Alert operator, quarantine station |
 | FirmwareDowngradeAttempt SecurityEvent [MSG-012] | Log event, alert operator if `forceDowngrade` was not set |
@@ -1669,6 +1745,8 @@ Diagnostic uploads via GetDiagnostics [MSG-018] **MUST** apply the same redactio
 
 - [ ] TLS 1.2+ for all external connections (TLS 1.3 RECOMMENDED)
 - [ ] mTLS verification for station connections (CN extraction for ACL)
+- [ ] Revocation checking on every station certificate the broker — or the REST fallback endpoint — terminates: refuse a revoked certificate; hold the revocation information to its own expiry **and** to `CertificateRevocationMaxAgeSeconds`; when it is stale or unobtainable, alert on entering grace and refuse after `CertificateRevocationGraceSeconds` (§2.1.1)
+- [ ] The conformance report states the revocation posture — enabled or not, the mechanism, both configured values, and where the grace-entry alert is delivered (§2.1.1)
 - [ ] JWT ES256 signing with key rotation
 - [ ] Refresh token one-time-use enforcement
 - [ ] ECDSA P-256 key generation and rotation for OfflinePass signing

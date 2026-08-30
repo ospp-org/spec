@@ -1,6 +1,6 @@
 # Glossary
 
-> **Status:** Draft | **OSPP Version:** 0.26.0
+> **Status:** Draft | **OSPP Version:** 0.27.0
 
 This glossary provides normative definitions for all terms used throughout the OSPP
 specification. Where a definition involves a requirement, normative language
@@ -108,6 +108,14 @@ specification. Where a definition involves a requirement, normative language
   ECDSA P-384 for stronger trust anchor security. All software-based signing
   operations **MUST** use deterministic nonces per RFC 6979.
   See [Chapter 06, Section 4](06-security.md).
+
+**CRL (Certificate Revocation List)**
+: The list of certificates an issuing CA has withdrawn before their expiry. Every OSPP station
+  certificate carries the address of the Station CA's list in its CRL Distribution Points extension,
+  which is REQUIRED ([Chapter 06 §4.4](06-security.md#44-certificate-requirements)), and whichever party
+  terminates that certificate **MUST** read it, under a freshness bound and a bounded grace
+  ([Chapter 06 §2.1.1](06-security.md#211-revocation-checking)). Distinct from **Epoch Revocation**,
+  which invalidates OfflinePasses and touches no certificate.
 
 **Envelope**
 : The top-level JSON structure wrapping every OSPP MQTT message. An envelope contains
@@ -226,6 +234,13 @@ specification. Where a definition involves a requirement, normative language
   client certificate. See [Chapter 06 §2.1](06-security.md#21-station--server--mutual-tls-mtls).
 
 ## O
+
+**OCSP (Online Certificate Status Protocol)**
+: A per-certificate revocation query, answered by a responder named in the certificate's Authority
+  Information Access extension, which a broker **MAY** use instead of a **CRL** to satisfy
+  [Chapter 06 §2.1.1](06-security.md#211-revocation-checking). A responder round trip is fresher than
+  any list and meets that clause's freshness bounds by construction; an unreachable responder is
+  treated exactly as an unobtainable list.
 
 **Offline Pass**
 : A digitally signed authorization token that allows a station to start a session

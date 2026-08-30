@@ -1,6 +1,6 @@
 # OSPP Conformance Testing
 
-> **Status:** Draft | **OSPP Version:** 0.26.0
+> **Status:** Draft | **OSPP Version:** 0.27.0
 
 This document defines the conformance testing framework for OSPP implementations.
 Conformance testing validates that a station or server implementation correctly
@@ -92,6 +92,7 @@ HMAC-SHA256).
 | Early stop with refund | TC-TX-003 |
 | HMAC signature verification | TC-SEC-001 |
 | mTLS certificate validation | TC-SEC-002 |
+| Certificate revocation checking at the broker | **Declared, not tested** — [`06-security.md` §2.1.1](../spec/06-security.md#211-revocation-checking) |
 
 > **`TC-SEC-002` step 33 and the experimental BLE surface.** The step requires a station holding
 > an expired certificate to enter "offline-only BLE mode", following the `expired` branch of the
@@ -215,6 +216,16 @@ Conformance reports **SHOULD** include:
 | Test Results | Per-test pass/fail/skip with notes |
 | Environment | Broker, OS, hardware, network conditions |
 | Tester | Organization or individual running tests |
+| Revocation posture | Whether the broker checks certificate revocation, by which mechanism, the two configured bounds, and where the grace-entry alert is delivered — **REQUIRED at Standard and above**, see below |
+
+**One row of that table is not a SHOULD.** [`06-security.md` §2.1.1](../spec/06-security.md#211-revocation-checking)
+makes the broker's certificate-revocation check a **MUST**, and it is a deployment capability no OSPP message
+exposes: no field carries the answer, and a case run against a well-behaved station cannot tell a broker that checks
+from one that does not. That clause therefore discharges its verification onto this report. A deployment claiming
+**Standard** compliance or above **MUST** state its revocation posture here — enabled or not, the mechanism (CRL or
+OCSP), the configured `CertificateRevocationMaxAgeSeconds` and `CertificateRevocationGraceSeconds`, and where the
+grace-entry alert is delivered. A report omitting it is incomplete, and a deployment answering *disabled* is not
+conforming — it may say so, which is the whole point of requiring the answer, but saying so is not a waiver.
 
 ## 6. Test Case Index
 
