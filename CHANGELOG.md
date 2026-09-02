@@ -8,6 +8,76 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.28.0] — 2026-09-02
+
+> **MINOR, and it adds no normative text at all.** No message, field, schema, enum value or
+> Chapter 08 key is added, removed or retyped; `protocolVersion` stays `0.3.0`; the 86 schemas and
+> the 334 valid/invalid vectors are byte-identical to `0.27.0`. What changes is that the
+> conformance corpus can now answer a question it had been asking implementers for four releases.
+>
+> **The finding, in one sentence: this specification asked for a test it could not itself pass.**
+> `TC-SEC-001` §50-51 instructs an implementer to *"alter one byte of the `mac` value"* and prove
+> the message is refused; `TC-SEC-004` §34, `TC-OFF-002` §122 and `TC-OFF-005` §220 ask the same of
+> four other surfaces. No machine-readable vector existed for any of them, and no gate checked one:
+> `tools/verify-all-signatures.sh` named **only** `conformance/test-vectors/valid/**` paths, and
+> `tools/verify-ble-crypto.mjs` had no tamper branch. Every artefact in this repository proved that
+> a **good** signature verifies. Nothing proved that a **bad** one is refused — not here, and by
+> extension not in either SDK, both of which vendor this corpus and gate on it.
+>
+> **Why the vectors could not go where the other negatives live.** A tampered message *satisfies*
+> its JSON Schema — that is precisely what makes it a cryptographic test rather than a structural
+> one. Every vector under `invalid/` is schema-invalid by construction, and `tools/verify-schemas.py`
+> exists to assert that everything there **fails** validation, so a tamper vector placed among them
+> would turn a correct gate red for being correct. They belong beside `mqtt-mac.json`, in `crypto/`,
+> with the other vector whose truth is arithmetic rather than structural.
+
+### Added
+
+- **`conformance/test-vectors/crypto/tamper-rejection.json`** — 12 vectors across **8** crypto
+  surfaces: station receipt, OfflinePass, `sessionProof`, ServerSignedAuth, StationIdentity
+  certificate, firmware image, `sessionKeyConfirmation`, and the §5.4 message MAC. Each is
+  **structurally valid and cryptographically wrong**, and each carries a **portable** form — the
+  exact bytes the signature covers, the signature, and the key inline — so a consumer needs no
+  OSPP-specific derivation to use it. Six canonicalisation rules restated downstream would be six
+  more chances to get one wrong.
+- **Three mutation classes, and all three are load-bearing.** `BODY` moves the message and leaves
+  the signature byte-identical, proving the signature binds to **content** — including
+  `creditsCharged` raised by one, and a `stationCert.expiresAt` pushed out by a year, which is
+  forging a longer-lived identity. `SIG` flips **exactly one bit** of the DER `s` scalar with the
+  framing intact, proving the signature is **checked** and not merely parsed — a mutation that broke
+  DER framing would be refused by the parser and would prove nothing. `KEY` moves nothing and offers
+  a different published test key, proving binding to an **identity** rather than to any valid
+  signature.
+- **`tools/verify-tamper-rejection.mjs`** — the caller, 89 checks. A vector nothing recomputes is a
+  claim, not a check. Four assertions per vector, and the first is what makes the rest mean
+  anything: the **untampered base must verify**, because otherwise a mistyped path, a missing key or
+  a renamed vector all produce *"verification failed"* and score as a pass. Then the refusal itself;
+  then that the mutation is exactly what the vector claims; then that the tampered document **still
+  satisfies its JSON Schema**, which is what separates this corpus from `invalid/`. The portable form
+  is re-checked by a **second method** — raw `ecdsaVerify` / `createHmac` rather than the file-based
+  verifier — because that is the form the SDKs consume.
+- **`tools/generate-tamper-vectors.mjs`** — deterministic, no randomness, every mutation a stated
+  rule over a committed base, so the corpus reproduces byte for byte from this repository alone.
+  `--check` re-derives and diffs without writing, and is wired into the gate: a base vector
+  re-signed without regenerating the tamper cases goes **red** rather than quietly meaning something
+  else.
+
+### Changed
+
+- **`tools/verify-all-signatures.sh`** gains a *Tamper rejection* section, so the negative direction
+  is gated by the same job that has always gated the positive one. It was proven red in three
+  directions before landing: un-tamper a signature and the refusal check fires; point a base at a
+  missing key and the anti-vacuity check fires; make a tampered document schema-invalid and the
+  structural check fires.
+
+### Not changed
+
+- `schemas/` — **zero bytes**. `protocolVersion` stays `0.3.0`. No SDK re-vendor of schemas is
+  required, and every byte-identity gate in every consuming tree stays green across this release.
+- `conformance/test-vectors/valid/` and `invalid/` — **zero bytes**, 163 and 171 respectively.
+
+---
+
 ## [0.27.0] — 2026-08-30
 
 > **MINOR, non-breaking on the wire, and breaking for a conformance claim.** No message, field,
