@@ -107,6 +107,42 @@ else
 fi
 
 # -----------------------------------------------------------------------------
+# 1c. Tamper rejection — the NEGATIVE direction.
+#
+#     Everything above this point proves that valid things verify. Every path named
+#     in section 1 is under conformance/test-vectors/valid/**, and verify-ble-crypto
+#     has no tamper branch, so until this section existed the corpus could show that
+#     a good signature passes and could not show that a bad one is refused — while
+#     TC-SEC-001.md:50-51, TC-SEC-004.md:34, TC-OFF-002.md:122 and TC-OFF-005.md:220
+#     each ask an implementer to prove exactly that. We asked for a test we could
+#     not pass ourselves.
+#
+#     The verifier carries its own anti-vacuity: for every case it first asserts the
+#     UNTAMPERED base verifies, because a refusal that cannot be told apart from a
+#     broken path is not evidence.
+# -----------------------------------------------------------------------------
+
+section "Tamper rejection (structurally valid, cryptographically wrong)"
+
+if node tools/verify-tamper-rejection.mjs >/tmp/vas-tamper 2>&1; then
+  ok "$(tail -1 /tmp/vas-tamper)"
+else
+  err "Tamper rejection FAILED — a tampered message verified, or a base stopped verifying:"
+  sed 's/^/      /' /tmp/vas-tamper
+fi
+
+# The corpus is generated, so it can drift from the bases it was cut from. --check
+# re-derives and diffs without writing; it goes red when a base vector is re-signed
+# and the tamper cases were not regenerated, which is the one way these vectors can
+# quietly stop meaning what they say.
+if node tools/generate-tamper-vectors.mjs --check >/tmp/vas-tamper-gen 2>&1; then
+  ok "$(tail -1 /tmp/vas-tamper-gen)"
+else
+  err "Tamper corpus is stale relative to its base vectors:"
+  sed 's/^/      /' /tmp/vas-tamper-gen
+fi
+
+# -----------------------------------------------------------------------------
 # 2. Inline spec .md examples — sign-inline-md re-run must be a no-op
 # -----------------------------------------------------------------------------
 

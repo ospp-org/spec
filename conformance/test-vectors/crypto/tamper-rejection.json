@@ -1,0 +1,627 @@
+{
+  "_comment": "Cryptographic TAMPER-REJECTION vectors. Each document below is STRUCTURALLY VALID — it satisfies its JSON Schema — and CRYPTOGRAPHICALLY WRONG. That is what separates this file from everything under invalid/, where every vector fails schema validation and all three vector gates assert only that SOMETHING failed. Verification of each document here MUST be refused. Regenerate with `node tools/generate-tamper-vectors.mjs`; check with `node tools/verify-tamper-rejection.mjs`.",
+  "_why": "conformance/test-cases/security/TC-SEC-001.md:50-51, TC-SEC-004.md:34, and conformance/test-cases/offline/TC-OFF-002.md:122, TC-OFF-005.md:220 each instruct an implementer to prove a tampered message is rejected. Before this file, no machine-readable vector and no gate existed for any of them: tools/verify-all-signatures.sh names only conformance/test-vectors/valid/** paths, and tools/verify-ble-crypto.mjs has no tamper branch. The corpus asked for a test it could not itself pass.",
+  "_classes": {
+    "BODY": "the message changes, the signature stays well-formed — proves the signature is bound to CONTENT",
+    "SIG": "the signature changes, the message stays byte-identical — proves the signature is CHECKED, not merely present",
+    "KEY": "nothing is tampered; a different published test key is offered — proves binding to an IDENTITY"
+  },
+  "specRef": "06-security.md §5.4, §6.5",
+  "generatedBy": "tools/generate-tamper-vectors.mjs",
+  "count": 12,
+  "vectors": [
+    {
+      "id": "receipt-body-credits-raised",
+      "surface": "receipt",
+      "class": "BODY",
+      "base": "conformance/test-vectors/valid/offline/receipt-full.json",
+      "key": "conformance/test-keys/station-test-pub.pem",
+      "baseKey": "conformance/test-keys/station-test-pub.pem",
+      "what": "creditsCharged raised 200 → 201 inside the signed body; signature untouched",
+      "mutation": "body.creditsCharged 200 → 201",
+      "mutatedPointer": "receipt/data",
+      "was": "200",
+      "now": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiY3JlZGl0c0NoYXJnZWQiOjIwMSwiZGV2aWNlSWQiOiJkZXZfZTRkM2MyYjEiLCJkdXJhdGlvblNlY29uZHMiOjkwMCwiZW5kZWRBdCI6IjIwMjYtMDItMTVUMTQ6NDU6MDAuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6MTIwMCwiZW5lcmd5V2giOjM1MDAsImxpcXVpZE1sIjo0NTYwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19lNGQzYzJiMWEwZjllOGQ3Iiwib2ZmbGluZVR4SWQiOiJvdHhfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwYXNzQ291bnRlciI6NTksInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xNVQxNDozMDowMC4wMDBaIiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfZTRkM2MyYjFhMGY5ZThkN2M2YjVhNDkzODI3MWU0ZDMifQ==",
+      "schema": "schemas/ble/receipt.schema.json",
+      "portable": {
+        "algorithm": "ECDSA-P256-SHA256",
+        "key": "conformance/test-keys/station-test-pub.pem",
+        "base": {
+          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiY3JlZGl0c0NoYXJnZWQiOjIwMCwiZGV2aWNlSWQiOiJkZXZfZTRkM2MyYjEiLCJkdXJhdGlvblNlY29uZHMiOjkwMCwiZW5kZWRBdCI6IjIwMjYtMDItMTVUMTQ6NDU6MDAuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6MTIwMCwiZW5lcmd5V2giOjM1MDAsImxpcXVpZE1sIjo0NTYwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19lNGQzYzJiMWEwZjllOGQ3Iiwib2ZmbGluZVR4SWQiOiJvdHhfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwYXNzQ291bnRlciI6NTksInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xNVQxNDozMDowMC4wMDBaIiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfZTRkM2MyYjFhMGY5ZThkN2M2YjVhNDkzODI3MWU0ZDMifQ==",
+          "signature": "MEQCIG+7iPvobm1DkL8VYZcFh1CsucoZbLZlNSrLc5CXCYvvAiAGExxQI1gW243YAzGF4G+9q3sbN0zJkqly/Cjv+oR0oQ==",
+          "key": "conformance/test-keys/station-test-pub.pem",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDt9+jMxZqDWv7r5TjeCFCsSRFOoK\nYKGn76DpptnXeBNFvrg8sNFA8lbsoVWKQQNp525SinXw6NrhBfeg5OmC7g==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": true
+        },
+        "tampered": {
+          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiY3JlZGl0c0NoYXJnZWQiOjIwMSwiZGV2aWNlSWQiOiJkZXZfZTRkM2MyYjEiLCJkdXJhdGlvblNlY29uZHMiOjkwMCwiZW5kZWRBdCI6IjIwMjYtMDItMTVUMTQ6NDU6MDAuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6MTIwMCwiZW5lcmd5V2giOjM1MDAsImxpcXVpZE1sIjo0NTYwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19lNGQzYzJiMWEwZjllOGQ3Iiwib2ZmbGluZVR4SWQiOiJvdHhfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwYXNzQ291bnRlciI6NTksInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xNVQxNDozMDowMC4wMDBaIiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfZTRkM2MyYjFhMGY5ZThkN2M2YjVhNDkzODI3MWU0ZDMifQ==",
+          "signature": "MEQCIG+7iPvobm1DkL8VYZcFh1CsucoZbLZlNSrLc5CXCYvvAiAGExxQI1gW243YAzGF4G+9q3sbN0zJkqly/Cjv+oR0oQ==",
+          "key": "conformance/test-keys/station-test-pub.pem",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDt9+jMxZqDWv7r5TjeCFCsSRFOoK\nYKGn76DpptnXeBNFvrg8sNFA8lbsoVWKQQNp525SinXw6NrhBfeg5OmC7g==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": false
+        }
+      },
+      "document": {
+        "offlineTxId": "otx_e4d3c2b1a0f9e8d7c6b5",
+        "offlinePassId": "opass_e4d3c2b1a0f9e8d7",
+        "passCounter": 59,
+        "userId": "sub_e4d3c2b1a0f9e8d7c6b5a4938271e4d3",
+        "deviceId": "dev_e4d3c2b1",
+        "bayId": "bay_f6e5d4c3b2a10987",
+        "serviceId": "svc_premium",
+        "startedAt": "2026-02-15T14:30:00.000Z",
+        "endedAt": "2026-02-15T14:45:00.000Z",
+        "durationSeconds": 900,
+        "creditsCharged": 200,
+        "meterValues": {
+          "liquidMl": 45600,
+          "consumableMl": 1200,
+          "energyWh": 3500
+        },
+        "receipt": {
+          "data": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiY3JlZGl0c0NoYXJnZWQiOjIwMSwiZGV2aWNlSWQiOiJkZXZfZTRkM2MyYjEiLCJkdXJhdGlvblNlY29uZHMiOjkwMCwiZW5kZWRBdCI6IjIwMjYtMDItMTVUMTQ6NDU6MDAuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6MTIwMCwiZW5lcmd5V2giOjM1MDAsImxpcXVpZE1sIjo0NTYwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19lNGQzYzJiMWEwZjllOGQ3Iiwib2ZmbGluZVR4SWQiOiJvdHhfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwYXNzQ291bnRlciI6NTksInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xNVQxNDozMDowMC4wMDBaIiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfZTRkM2MyYjFhMGY5ZThkN2M2YjVhNDkzODI3MWU0ZDMifQ==",
+          "signature": "MEQCIG+7iPvobm1DkL8VYZcFh1CsucoZbLZlNSrLc5CXCYvvAiAGExxQI1gW243YAzGF4G+9q3sbN0zJkqly/Cjv+oR0oQ==",
+          "signatureAlgorithm": "ECDSA-P256-SHA256"
+        },
+        "txCounter": 8
+      }
+    },
+    {
+      "id": "receipt-signature-bitflip",
+      "surface": "receipt",
+      "class": "SIG",
+      "base": "conformance/test-vectors/valid/offline/receipt-full.json",
+      "key": "conformance/test-keys/station-test-pub.pem",
+      "baseKey": "conformance/test-keys/station-test-pub.pem",
+      "what": "low bit of the final octet of the DER `s` scalar flipped; DER framing intact",
+      "mutation": "signature[-1] ^= 0x01",
+      "mutatedPointer": "receipt/signature",
+      "was": "MEQCIG+7iPvobm1DkL8VYZcFh1CsucoZbLZlNSrLc5CXCYvvAiAGExxQI1gW243YAzGF4G+9q3sbN0zJkqly/Cjv+oR0oQ==",
+      "now": "MEQCIG+7iPvobm1DkL8VYZcFh1CsucoZbLZlNSrLc5CXCYvvAiAGExxQI1gW243YAzGF4G+9q3sbN0zJkqly/Cjv+oR0oA==",
+      "schema": "schemas/ble/receipt.schema.json",
+      "portable": {
+        "algorithm": "ECDSA-P256-SHA256",
+        "key": "conformance/test-keys/station-test-pub.pem",
+        "base": {
+          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiY3JlZGl0c0NoYXJnZWQiOjIwMCwiZGV2aWNlSWQiOiJkZXZfZTRkM2MyYjEiLCJkdXJhdGlvblNlY29uZHMiOjkwMCwiZW5kZWRBdCI6IjIwMjYtMDItMTVUMTQ6NDU6MDAuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6MTIwMCwiZW5lcmd5V2giOjM1MDAsImxpcXVpZE1sIjo0NTYwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19lNGQzYzJiMWEwZjllOGQ3Iiwib2ZmbGluZVR4SWQiOiJvdHhfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwYXNzQ291bnRlciI6NTksInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xNVQxNDozMDowMC4wMDBaIiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfZTRkM2MyYjFhMGY5ZThkN2M2YjVhNDkzODI3MWU0ZDMifQ==",
+          "signature": "MEQCIG+7iPvobm1DkL8VYZcFh1CsucoZbLZlNSrLc5CXCYvvAiAGExxQI1gW243YAzGF4G+9q3sbN0zJkqly/Cjv+oR0oQ==",
+          "key": "conformance/test-keys/station-test-pub.pem",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDt9+jMxZqDWv7r5TjeCFCsSRFOoK\nYKGn76DpptnXeBNFvrg8sNFA8lbsoVWKQQNp525SinXw6NrhBfeg5OmC7g==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": true
+        },
+        "tampered": {
+          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiY3JlZGl0c0NoYXJnZWQiOjIwMCwiZGV2aWNlSWQiOiJkZXZfZTRkM2MyYjEiLCJkdXJhdGlvblNlY29uZHMiOjkwMCwiZW5kZWRBdCI6IjIwMjYtMDItMTVUMTQ6NDU6MDAuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6MTIwMCwiZW5lcmd5V2giOjM1MDAsImxpcXVpZE1sIjo0NTYwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19lNGQzYzJiMWEwZjllOGQ3Iiwib2ZmbGluZVR4SWQiOiJvdHhfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwYXNzQ291bnRlciI6NTksInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xNVQxNDozMDowMC4wMDBaIiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfZTRkM2MyYjFhMGY5ZThkN2M2YjVhNDkzODI3MWU0ZDMifQ==",
+          "signature": "MEQCIG+7iPvobm1DkL8VYZcFh1CsucoZbLZlNSrLc5CXCYvvAiAGExxQI1gW243YAzGF4G+9q3sbN0zJkqly/Cjv+oR0oA==",
+          "key": "conformance/test-keys/station-test-pub.pem",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDt9+jMxZqDWv7r5TjeCFCsSRFOoK\nYKGn76DpptnXeBNFvrg8sNFA8lbsoVWKQQNp525SinXw6NrhBfeg5OmC7g==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": false
+        }
+      },
+      "document": {
+        "offlineTxId": "otx_e4d3c2b1a0f9e8d7c6b5",
+        "offlinePassId": "opass_e4d3c2b1a0f9e8d7",
+        "passCounter": 59,
+        "userId": "sub_e4d3c2b1a0f9e8d7c6b5a4938271e4d3",
+        "deviceId": "dev_e4d3c2b1",
+        "bayId": "bay_f6e5d4c3b2a10987",
+        "serviceId": "svc_premium",
+        "startedAt": "2026-02-15T14:30:00.000Z",
+        "endedAt": "2026-02-15T14:45:00.000Z",
+        "durationSeconds": 900,
+        "creditsCharged": 200,
+        "meterValues": {
+          "liquidMl": 45600,
+          "consumableMl": 1200,
+          "energyWh": 3500
+        },
+        "receipt": {
+          "data": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiY3JlZGl0c0NoYXJnZWQiOjIwMCwiZGV2aWNlSWQiOiJkZXZfZTRkM2MyYjEiLCJkdXJhdGlvblNlY29uZHMiOjkwMCwiZW5kZWRBdCI6IjIwMjYtMDItMTVUMTQ6NDU6MDAuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6MTIwMCwiZW5lcmd5V2giOjM1MDAsImxpcXVpZE1sIjo0NTYwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19lNGQzYzJiMWEwZjllOGQ3Iiwib2ZmbGluZVR4SWQiOiJvdHhfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwYXNzQ291bnRlciI6NTksInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xNVQxNDozMDowMC4wMDBaIiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfZTRkM2MyYjFhMGY5ZThkN2M2YjVhNDkzODI3MWU0ZDMifQ==",
+          "signature": "MEQCIG+7iPvobm1DkL8VYZcFh1CsucoZbLZlNSrLc5CXCYvvAiAGExxQI1gW243YAzGF4G+9q3sbN0zJkqly/Cjv+oR0oA==",
+          "signatureAlgorithm": "ECDSA-P256-SHA256"
+        },
+        "txCounter": 8
+      }
+    },
+    {
+      "id": "receipt-verified-with-server-key",
+      "surface": "receipt",
+      "class": "KEY",
+      "base": "conformance/test-vectors/valid/offline/receipt-full.json",
+      "key": "conformance/test-keys/server-test-pub.pem",
+      "baseKey": "conformance/test-keys/station-test-pub.pem",
+      "what": "pristine station receipt offered to the SERVER key — identity binding, not integrity",
+      "mutation": "no mutation; wrong key",
+      "mutatedPointer": null,
+      "was": null,
+      "now": null,
+      "schema": "schemas/ble/receipt.schema.json",
+      "portable": {
+        "algorithm": "ECDSA-P256-SHA256",
+        "key": "conformance/test-keys/server-test-pub.pem",
+        "base": {
+          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiY3JlZGl0c0NoYXJnZWQiOjIwMCwiZGV2aWNlSWQiOiJkZXZfZTRkM2MyYjEiLCJkdXJhdGlvblNlY29uZHMiOjkwMCwiZW5kZWRBdCI6IjIwMjYtMDItMTVUMTQ6NDU6MDAuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6MTIwMCwiZW5lcmd5V2giOjM1MDAsImxpcXVpZE1sIjo0NTYwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19lNGQzYzJiMWEwZjllOGQ3Iiwib2ZmbGluZVR4SWQiOiJvdHhfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwYXNzQ291bnRlciI6NTksInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xNVQxNDozMDowMC4wMDBaIiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfZTRkM2MyYjFhMGY5ZThkN2M2YjVhNDkzODI3MWU0ZDMifQ==",
+          "signature": "MEQCIG+7iPvobm1DkL8VYZcFh1CsucoZbLZlNSrLc5CXCYvvAiAGExxQI1gW243YAzGF4G+9q3sbN0zJkqly/Cjv+oR0oQ==",
+          "key": "conformance/test-keys/station-test-pub.pem",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDt9+jMxZqDWv7r5TjeCFCsSRFOoK\nYKGn76DpptnXeBNFvrg8sNFA8lbsoVWKQQNp525SinXw6NrhBfeg5OmC7g==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": true
+        },
+        "tampered": {
+          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiY3JlZGl0c0NoYXJnZWQiOjIwMCwiZGV2aWNlSWQiOiJkZXZfZTRkM2MyYjEiLCJkdXJhdGlvblNlY29uZHMiOjkwMCwiZW5kZWRBdCI6IjIwMjYtMDItMTVUMTQ6NDU6MDAuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6MTIwMCwiZW5lcmd5V2giOjM1MDAsImxpcXVpZE1sIjo0NTYwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19lNGQzYzJiMWEwZjllOGQ3Iiwib2ZmbGluZVR4SWQiOiJvdHhfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwYXNzQ291bnRlciI6NTksInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xNVQxNDozMDowMC4wMDBaIiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfZTRkM2MyYjFhMGY5ZThkN2M2YjVhNDkzODI3MWU0ZDMifQ==",
+          "signature": "MEQCIG+7iPvobm1DkL8VYZcFh1CsucoZbLZlNSrLc5CXCYvvAiAGExxQI1gW243YAzGF4G+9q3sbN0zJkqly/Cjv+oR0oQ==",
+          "key": "conformance/test-keys/server-test-pub.pem",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/Hd\ngUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": false
+        }
+      },
+      "document": {
+        "offlineTxId": "otx_e4d3c2b1a0f9e8d7c6b5",
+        "offlinePassId": "opass_e4d3c2b1a0f9e8d7",
+        "passCounter": 59,
+        "userId": "sub_e4d3c2b1a0f9e8d7c6b5a4938271e4d3",
+        "deviceId": "dev_e4d3c2b1",
+        "bayId": "bay_f6e5d4c3b2a10987",
+        "serviceId": "svc_premium",
+        "startedAt": "2026-02-15T14:30:00.000Z",
+        "endedAt": "2026-02-15T14:45:00.000Z",
+        "durationSeconds": 900,
+        "creditsCharged": 200,
+        "meterValues": {
+          "liquidMl": 45600,
+          "consumableMl": 1200,
+          "energyWh": 3500
+        },
+        "receipt": {
+          "data": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiY3JlZGl0c0NoYXJnZWQiOjIwMCwiZGV2aWNlSWQiOiJkZXZfZTRkM2MyYjEiLCJkdXJhdGlvblNlY29uZHMiOjkwMCwiZW5kZWRBdCI6IjIwMjYtMDItMTVUMTQ6NDU6MDAuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6MTIwMCwiZW5lcmd5V2giOjM1MDAsImxpcXVpZE1sIjo0NTYwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19lNGQzYzJiMWEwZjllOGQ3Iiwib2ZmbGluZVR4SWQiOiJvdHhfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwYXNzQ291bnRlciI6NTksInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xNVQxNDozMDowMC4wMDBaIiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfZTRkM2MyYjFhMGY5ZThkN2M2YjVhNDkzODI3MWU0ZDMifQ==",
+          "signature": "MEQCIG+7iPvobm1DkL8VYZcFh1CsucoZbLZlNSrLc5CXCYvvAiAGExxQI1gW243YAzGF4G+9q3sbN0zJkqly/Cjv+oR0oQ==",
+          "signatureAlgorithm": "ECDSA-P256-SHA256"
+        },
+        "txCounter": 8
+      }
+    },
+    {
+      "id": "offlinepass-signature-bitflip",
+      "surface": "offlinePass",
+      "class": "SIG",
+      "base": "conformance/test-vectors/valid/offline/offline-auth-request-full.json",
+      "key": "conformance/test-keys/server-test-pub.pem",
+      "baseKey": "conformance/test-keys/server-test-pub.pem",
+      "what": "OfflinePass signature s-scalar bit flipped",
+      "mutation": "signature[-1] ^= 0x01",
+      "mutatedPointer": "offlinePass/signature",
+      "was": "MEUCIQCnEHKHHsez+291Vw16fp5axR7XFEMSi3pBqRwSi+rhMQIgLSX3qEp8AJMnB85SsS8FsKR1O1wLQUqxXVm/thb74Yg=",
+      "now": "MEUCIQCnEHKHHsez+291Vw16fp5axR7XFEMSi3pBqRwSi+rhMQIgLSX3qEp8AJMnB85SsS8FsKR1O1wLQUqxXVm/thb74Yk=",
+      "schema": "schemas/ble/offline-auth-request.schema.json",
+      "portable": {
+        "algorithm": "ECDSA-P256-SHA256",
+        "key": "conformance/test-keys/server-test-pub.pem",
+        "base": {
+          "signedBytesBase64": "eyJjb25zdHJhaW50cyI6eyJtaW5JbnRlcnZhbFNlYyI6NjAsInN0YXRpb25NYXhPZmZsaW5lVHgiOjIwMCwic3RhdGlvbk9mZmxpbmVXaW5kb3dIb3VycyI6NzJ9LCJkZXZpY2VJZCI6ImQ3ZThmOWEwYjFjMmQzZTRmNWE2YjdjOGQ5ZTBmMWEyIiwiZXhwaXJlc0F0IjoiMjAyNi0wMi0xM1QxNDozMDowMC4wMDBaIiwiaXNzdWVkQXQiOiIyMDI2LTAyLTEyVDE0OjMwOjAwLjAwMFoiLCJvZmZsaW5lQWxsb3dhbmNlIjp7ImFsbG93ZWRTZXJ2aWNlVHlwZXMiOlsic3ZjX2Jhc2ljIiwic3ZjX3ByZW1pdW0iLCJzdmNfYXV4aWxpYXJ5Il0sIm1heENyZWRpdHNQZXJUeCI6NTAwLCJtYXhUb3RhbENyZWRpdHMiOjIwMDAsIm1heFVzZXMiOjIwfSwicGFzc0lkIjoib3Bhc3NfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwb2xpY3lWZXJzaW9uIjozLCJyZXZvY2F0aW9uRXBvY2giOjIsInN1YiI6InN1Yl9wcmVtaXVtVXNlcjQyWHlaIn0=",
+          "signature": "MEUCIQCnEHKHHsez+291Vw16fp5axR7XFEMSi3pBqRwSi+rhMQIgLSX3qEp8AJMnB85SsS8FsKR1O1wLQUqxXVm/thb74Yg=",
+          "key": "conformance/test-keys/server-test-pub.pem",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/Hd\ngUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": true
+        },
+        "tampered": {
+          "signedBytesBase64": "eyJjb25zdHJhaW50cyI6eyJtaW5JbnRlcnZhbFNlYyI6NjAsInN0YXRpb25NYXhPZmZsaW5lVHgiOjIwMCwic3RhdGlvbk9mZmxpbmVXaW5kb3dIb3VycyI6NzJ9LCJkZXZpY2VJZCI6ImQ3ZThmOWEwYjFjMmQzZTRmNWE2YjdjOGQ5ZTBmMWEyIiwiZXhwaXJlc0F0IjoiMjAyNi0wMi0xM1QxNDozMDowMC4wMDBaIiwiaXNzdWVkQXQiOiIyMDI2LTAyLTEyVDE0OjMwOjAwLjAwMFoiLCJvZmZsaW5lQWxsb3dhbmNlIjp7ImFsbG93ZWRTZXJ2aWNlVHlwZXMiOlsic3ZjX2Jhc2ljIiwic3ZjX3ByZW1pdW0iLCJzdmNfYXV4aWxpYXJ5Il0sIm1heENyZWRpdHNQZXJUeCI6NTAwLCJtYXhUb3RhbENyZWRpdHMiOjIwMDAsIm1heFVzZXMiOjIwfSwicGFzc0lkIjoib3Bhc3NfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwb2xpY3lWZXJzaW9uIjozLCJyZXZvY2F0aW9uRXBvY2giOjIsInN1YiI6InN1Yl9wcmVtaXVtVXNlcjQyWHlaIn0=",
+          "signature": "MEUCIQCnEHKHHsez+291Vw16fp5axR7XFEMSi3pBqRwSi+rhMQIgLSX3qEp8AJMnB85SsS8FsKR1O1wLQUqxXVm/thb74Yk=",
+          "key": "conformance/test-keys/server-test-pub.pem",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/Hd\ngUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": false
+        }
+      },
+      "document": {
+        "type": "OfflineAuthRequest",
+        "offlinePass": {
+          "passId": "opass_e4d3c2b1a0f9e8d7c6b5",
+          "sub": "sub_premiumUser42XyZ",
+          "deviceId": "d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2",
+          "issuedAt": "2026-02-12T14:30:00.000Z",
+          "expiresAt": "2026-02-13T14:30:00.000Z",
+          "policyVersion": 3,
+          "revocationEpoch": 2,
+          "offlineAllowance": {
+            "maxTotalCredits": 2000,
+            "maxUses": 20,
+            "maxCreditsPerTx": 500,
+            "allowedServiceTypes": [
+              "svc_basic",
+              "svc_premium",
+              "svc_auxiliary"
+            ]
+          },
+          "constraints": {
+            "minIntervalSec": 60,
+            "stationOfflineWindowHours": 72,
+            "stationMaxOfflineTx": 200
+          },
+          "signatureAlgorithm": "ECDSA-P256-SHA256",
+          "signature": "MEUCIQCnEHKHHsez+291Vw16fp5axR7XFEMSi3pBqRwSi+rhMQIgLSX3qEp8AJMnB85SsS8FsKR1O1wLQUqxXVm/thb74Yk="
+        },
+        "counter": 7,
+        "sessionProof": "Z2CslLwYw8mNTbU2MPkHX4Ijy3oK5+5u+pWl8ycC0QY="
+      }
+    },
+    {
+      "id": "sessionproof-bitflip",
+      "surface": "sessionProof",
+      "class": "SIG",
+      "base": "conformance/test-vectors/valid/offline/offline-auth-request-full.json",
+      "key": "conformance/test-keys/session-test-key.bin",
+      "baseKey": "conformance/test-keys/session-test-key.bin",
+      "mode": "session-proof",
+      "what": "sessionProof HMAC last byte flipped — the same envelope carries TWO signatures, and this is the other one",
+      "mutation": "sessionProof[-1] ^= 0x01",
+      "mutatedPointer": "sessionProof",
+      "was": "Z2CslLwYw8mNTbU2MPkHX4Ijy3oK5+5u+pWl8ycC0QY=",
+      "now": "Z2CslLwYw8mNTbU2MPkHX4Ijy3oK5+5u+pWl8ycC0Qc=",
+      "schema": "schemas/ble/offline-auth-request.schema.json",
+      "portable": {
+        "algorithm": "HMAC-SHA256",
+        "key": "conformance/test-keys/session-test-key.bin",
+        "base": {
+          "signedBytesBase64": "ABJPZmZsaW5lQXV0aFJlcXVlc3QAGm9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDdjNmI1AAE3",
+          "signature": "Z2CslLwYw8mNTbU2MPkHX4Ijy3oK5+5u+pWl8ycC0QY=",
+          "key": "conformance/test-keys/session-test-key.bin",
+          "keyMaterial": "DqfuZ1/ifr6MNimF64sZ1o2E42GQmvx0Hql83vZh4NM=",
+          "mustVerify": true
+        },
+        "tampered": {
+          "signedBytesBase64": "ABJPZmZsaW5lQXV0aFJlcXVlc3QAGm9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDdjNmI1AAE3",
+          "signature": "Z2CslLwYw8mNTbU2MPkHX4Ijy3oK5+5u+pWl8ycC0Qc=",
+          "key": "conformance/test-keys/session-test-key.bin",
+          "keyMaterial": "DqfuZ1/ifr6MNimF64sZ1o2E42GQmvx0Hql83vZh4NM=",
+          "mustVerify": false
+        }
+      },
+      "document": {
+        "type": "OfflineAuthRequest",
+        "offlinePass": {
+          "passId": "opass_e4d3c2b1a0f9e8d7c6b5",
+          "sub": "sub_premiumUser42XyZ",
+          "deviceId": "d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2",
+          "issuedAt": "2026-02-12T14:30:00.000Z",
+          "expiresAt": "2026-02-13T14:30:00.000Z",
+          "policyVersion": 3,
+          "revocationEpoch": 2,
+          "offlineAllowance": {
+            "maxTotalCredits": 2000,
+            "maxUses": 20,
+            "maxCreditsPerTx": 500,
+            "allowedServiceTypes": [
+              "svc_basic",
+              "svc_premium",
+              "svc_auxiliary"
+            ]
+          },
+          "constraints": {
+            "minIntervalSec": 60,
+            "stationOfflineWindowHours": 72,
+            "stationMaxOfflineTx": 200
+          },
+          "signatureAlgorithm": "ECDSA-P256-SHA256",
+          "signature": "MEUCIQCnEHKHHsez+291Vw16fp5axR7XFEMSi3pBqRwSi+rhMQIgLSX3qEp8AJMnB85SsS8FsKR1O1wLQUqxXVm/thb74Yg="
+        },
+        "counter": 7,
+        "sessionProof": "Z2CslLwYw8mNTbU2MPkHX4Ijy3oK5+5u+pWl8ycC0Qc="
+      }
+    },
+    {
+      "id": "serversignedauth-body-credits-raised",
+      "surface": "serverSignedAuth",
+      "class": "BODY",
+      "base": "conformance/test-vectors/valid/offline/server-signed-auth-full.json",
+      "key": "conformance/test-keys/server-test-pub.pem",
+      "baseKey": "conformance/test-keys/server-test-pub.pem",
+      "what": "creditsAuthorized raised 200 → 400 inside the signed authorization body",
+      "mutation": "body.creditsAuthorized 200 → 400",
+      "mutatedPointer": "signedAuthorization/data",
+      "was": "200",
+      "now": "eyJhcHBOb25jZSI6Ik5Cblo1N3p2eVczUXNrS2oxWnlxYktDKzAwTFhYMzV6TXQ3OCt1R3dDTjQ9IiwiYXV0aElkIjoiYXV0aF8yZTdiODg4ZjdiYmMiLCJiYXlJZCI6ImJheV84NmQxY2RjYTlhNjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6NDAwLCJkZXZpY2VJZCI6ImRldl9kNWQyZWZhY2JiNDAxMTM1IiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfZjFlMmQzYzRiNWE2ZjdlOGQ5YzAiLCJzdGF0aW9uSWQiOiJzdG5fZjY1NDVjMTkiLCJzdWIiOiJzdWJfNmI3ZmQyNGU2MzM4NmRlMyJ9",
+      "schema": "schemas/ble/server-signed-auth.schema.json",
+      "portable": {
+        "algorithm": "ECDSA-P256-SHA256",
+        "key": "conformance/test-keys/server-test-pub.pem",
+        "base": {
+          "signedBytesBase64": "eyJhcHBOb25jZSI6Ik5Cblo1N3p2eVczUXNrS2oxWnlxYktDKzAwTFhYMzV6TXQ3OCt1R3dDTjQ9IiwiYXV0aElkIjoiYXV0aF8yZTdiODg4ZjdiYmMiLCJiYXlJZCI6ImJheV84NmQxY2RjYTlhNjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9kNWQyZWZhY2JiNDAxMTM1IiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfZjFlMmQzYzRiNWE2ZjdlOGQ5YzAiLCJzdGF0aW9uSWQiOiJzdG5fZjY1NDVjMTkiLCJzdWIiOiJzdWJfNmI3ZmQyNGU2MzM4NmRlMyJ9",
+          "signature": "MEQCIF/LitwxL21QUpnorhbSdAVPyf+niNE1isy2hkos4Rk4AiBkCMCXxJoKibKPwxOFc7BBWhoiyA6L7nO38ByllP3AUw==",
+          "key": "conformance/test-keys/server-test-pub.pem",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/Hd\ngUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": true
+        },
+        "tampered": {
+          "signedBytesBase64": "eyJhcHBOb25jZSI6Ik5Cblo1N3p2eVczUXNrS2oxWnlxYktDKzAwTFhYMzV6TXQ3OCt1R3dDTjQ9IiwiYXV0aElkIjoiYXV0aF8yZTdiODg4ZjdiYmMiLCJiYXlJZCI6ImJheV84NmQxY2RjYTlhNjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6NDAwLCJkZXZpY2VJZCI6ImRldl9kNWQyZWZhY2JiNDAxMTM1IiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfZjFlMmQzYzRiNWE2ZjdlOGQ5YzAiLCJzdGF0aW9uSWQiOiJzdG5fZjY1NDVjMTkiLCJzdWIiOiJzdWJfNmI3ZmQyNGU2MzM4NmRlMyJ9",
+          "signature": "MEQCIF/LitwxL21QUpnorhbSdAVPyf+niNE1isy2hkos4Rk4AiBkCMCXxJoKibKPwxOFc7BBWhoiyA6L7nO38ByllP3AUw==",
+          "key": "conformance/test-keys/server-test-pub.pem",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/Hd\ngUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": false
+        }
+      },
+      "document": {
+        "type": "ServerSignedAuth",
+        "signedAuthorization": {
+          "data": "eyJhcHBOb25jZSI6Ik5Cblo1N3p2eVczUXNrS2oxWnlxYktDKzAwTFhYMzV6TXQ3OCt1R3dDTjQ9IiwiYXV0aElkIjoiYXV0aF8yZTdiODg4ZjdiYmMiLCJiYXlJZCI6ImJheV84NmQxY2RjYTlhNjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6NDAwLCJkZXZpY2VJZCI6ImRldl9kNWQyZWZhY2JiNDAxMTM1IiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfZjFlMmQzYzRiNWE2ZjdlOGQ5YzAiLCJzdGF0aW9uSWQiOiJzdG5fZjY1NDVjMTkiLCJzdWIiOiJzdWJfNmI3ZmQyNGU2MzM4NmRlMyJ9",
+          "signature": "MEQCIF/LitwxL21QUpnorhbSdAVPyf+niNE1isy2hkos4Rk4AiBkCMCXxJoKibKPwxOFc7BBWhoiyA6L7nO38ByllP3AUw==",
+          "signatureAlgorithm": "ECDSA-P256-SHA256"
+        },
+        "sessionId": "sess_f1e2d3c4b5a6f7e8d9c0"
+      }
+    },
+    {
+      "id": "serversignedauth-signature-bitflip",
+      "surface": "serverSignedAuth",
+      "class": "SIG",
+      "base": "conformance/test-vectors/valid/offline/server-signed-auth-full.json",
+      "key": "conformance/test-keys/server-test-pub.pem",
+      "baseKey": "conformance/test-keys/server-test-pub.pem",
+      "what": "signedAuthorization signature s-scalar bit flipped",
+      "mutation": "signature[-1] ^= 0x01",
+      "mutatedPointer": "signedAuthorization/signature",
+      "was": "MEQCIF/LitwxL21QUpnorhbSdAVPyf+niNE1isy2hkos4Rk4AiBkCMCXxJoKibKPwxOFc7BBWhoiyA6L7nO38ByllP3AUw==",
+      "now": "MEQCIF/LitwxL21QUpnorhbSdAVPyf+niNE1isy2hkos4Rk4AiBkCMCXxJoKibKPwxOFc7BBWhoiyA6L7nO38ByllP3AUg==",
+      "schema": "schemas/ble/server-signed-auth.schema.json",
+      "portable": {
+        "algorithm": "ECDSA-P256-SHA256",
+        "key": "conformance/test-keys/server-test-pub.pem",
+        "base": {
+          "signedBytesBase64": "eyJhcHBOb25jZSI6Ik5Cblo1N3p2eVczUXNrS2oxWnlxYktDKzAwTFhYMzV6TXQ3OCt1R3dDTjQ9IiwiYXV0aElkIjoiYXV0aF8yZTdiODg4ZjdiYmMiLCJiYXlJZCI6ImJheV84NmQxY2RjYTlhNjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9kNWQyZWZhY2JiNDAxMTM1IiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfZjFlMmQzYzRiNWE2ZjdlOGQ5YzAiLCJzdGF0aW9uSWQiOiJzdG5fZjY1NDVjMTkiLCJzdWIiOiJzdWJfNmI3ZmQyNGU2MzM4NmRlMyJ9",
+          "signature": "MEQCIF/LitwxL21QUpnorhbSdAVPyf+niNE1isy2hkos4Rk4AiBkCMCXxJoKibKPwxOFc7BBWhoiyA6L7nO38ByllP3AUw==",
+          "key": "conformance/test-keys/server-test-pub.pem",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/Hd\ngUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": true
+        },
+        "tampered": {
+          "signedBytesBase64": "eyJhcHBOb25jZSI6Ik5Cblo1N3p2eVczUXNrS2oxWnlxYktDKzAwTFhYMzV6TXQ3OCt1R3dDTjQ9IiwiYXV0aElkIjoiYXV0aF8yZTdiODg4ZjdiYmMiLCJiYXlJZCI6ImJheV84NmQxY2RjYTlhNjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9kNWQyZWZhY2JiNDAxMTM1IiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfZjFlMmQzYzRiNWE2ZjdlOGQ5YzAiLCJzdGF0aW9uSWQiOiJzdG5fZjY1NDVjMTkiLCJzdWIiOiJzdWJfNmI3ZmQyNGU2MzM4NmRlMyJ9",
+          "signature": "MEQCIF/LitwxL21QUpnorhbSdAVPyf+niNE1isy2hkos4Rk4AiBkCMCXxJoKibKPwxOFc7BBWhoiyA6L7nO38ByllP3AUg==",
+          "key": "conformance/test-keys/server-test-pub.pem",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/Hd\ngUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": false
+        }
+      },
+      "document": {
+        "type": "ServerSignedAuth",
+        "signedAuthorization": {
+          "data": "eyJhcHBOb25jZSI6Ik5Cblo1N3p2eVczUXNrS2oxWnlxYktDKzAwTFhYMzV6TXQ3OCt1R3dDTjQ9IiwiYXV0aElkIjoiYXV0aF8yZTdiODg4ZjdiYmMiLCJiYXlJZCI6ImJheV84NmQxY2RjYTlhNjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9kNWQyZWZhY2JiNDAxMTM1IiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfZjFlMmQzYzRiNWE2ZjdlOGQ5YzAiLCJzdGF0aW9uSWQiOiJzdG5fZjY1NDVjMTkiLCJzdWIiOiJzdWJfNmI3ZmQyNGU2MzM4NmRlMyJ9",
+          "signature": "MEQCIF/LitwxL21QUpnorhbSdAVPyf+niNE1isy2hkos4Rk4AiBkCMCXxJoKibKPwxOFc7BBWhoiyA6L7nO38ByllP3AUg==",
+          "signatureAlgorithm": "ECDSA-P256-SHA256"
+        },
+        "sessionId": "sess_f1e2d3c4b5a6f7e8d9c0"
+      }
+    },
+    {
+      "id": "stationidentity-expiry-extended",
+      "surface": "stationIdentity",
+      "class": "BODY",
+      "base": "conformance/test-vectors/valid/offline/challenge-full.json",
+      "key": "conformance/test-keys/server-test-pub.pem",
+      "baseKey": "conformance/test-keys/server-test-pub.pem",
+      "what": "stationCert.expiresAt pushed out by a year — forging a longer-lived identity, the attack the field exists to stop",
+      "mutation": "expiresAt 2026-03-15T10:00:00.000Z → 2027-03-15T10:00:00.000Z",
+      "mutatedPointer": "stationCert/expiresAt",
+      "was": "2026-03-15T10:00:00.000Z",
+      "now": "2027-03-15T10:00:00.000Z",
+      "schema": "schemas/ble/challenge.schema.json",
+      "portable": {
+        "algorithm": "ECDSA-P256-SHA256",
+        "key": "conformance/test-keys/server-test-pub.pem",
+        "base": {
+          "signedBytesBase64": "eyJleHBpcmVzQXQiOiIyMDI2LTAzLTE1VDEwOjAwOjAwLjAwMFoiLCJpc3N1ZWRBdCI6IjIwMjYtMDItMTNUMTA6MDA6MDAuMDAwWiIsIm9yZ2FuaXphdGlvbklkIjoib3JnX2YxMDcxNzQwNDc2NGRmNjIiLCJzdGF0aW9uSWQiOiJzdG5fYjY4ZWMxNTMzMGM2Iiwic3RhdGlvblB1YktleSI6IkE0dU5pdUw1NEppYUhUdTc0TFZ5Z25XTlRvcnpERjJVMnBCWmFXMDg1SEQ5In0=",
+          "signature": "MEUCIQCnquT+s/g6e11zNBzgR7UhmK4f42FQVrIuTLwQGIZMEgIgTIYCZFRfqmQy9Gv4p9216oxT31UEBF43CiIO/TCTEcU=",
+          "key": "conformance/test-keys/server-test-pub.pem",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/Hd\ngUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": true
+        },
+        "tampered": {
+          "signedBytesBase64": "eyJleHBpcmVzQXQiOiIyMDI3LTAzLTE1VDEwOjAwOjAwLjAwMFoiLCJpc3N1ZWRBdCI6IjIwMjYtMDItMTNUMTA6MDA6MDAuMDAwWiIsIm9yZ2FuaXphdGlvbklkIjoib3JnX2YxMDcxNzQwNDc2NGRmNjIiLCJzdGF0aW9uSWQiOiJzdG5fYjY4ZWMxNTMzMGM2Iiwic3RhdGlvblB1YktleSI6IkE0dU5pdUw1NEppYUhUdTc0TFZ5Z25XTlRvcnpERjJVMnBCWmFXMDg1SEQ5In0=",
+          "signature": "MEUCIQCnquT+s/g6e11zNBzgR7UhmK4f42FQVrIuTLwQGIZMEgIgTIYCZFRfqmQy9Gv4p9216oxT31UEBF43CiIO/TCTEcU=",
+          "key": "conformance/test-keys/server-test-pub.pem",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/Hd\ngUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": false
+        }
+      },
+      "document": {
+        "type": "Challenge",
+        "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
+        "stationConnectivity": "Offline",
+        "stationCert": {
+          "stationId": "stn_b68ec15330c6",
+          "organizationId": "org_f10717404764df62",
+          "stationPubKey": "A4uNiuL54JiaHTu74LVygnWNTorzDF2U2pBZaW085HD9",
+          "issuedAt": "2026-02-13T10:00:00.000Z",
+          "expiresAt": "2027-03-15T10:00:00.000Z",
+          "signatureAlgorithm": "ECDSA-P256-SHA256",
+          "signature": "MEUCIQCnquT+s/g6e11zNBzgR7UhmK4f42FQVrIuTLwQGIZMEgIgTIYCZFRfqmQy9Gv4p9216oxT31UEBF43CiIO/TCTEcU="
+        },
+        "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
+        "availableServices": [
+          {
+            "bayId": "bay_a1b2c3d4e5f6",
+            "serviceId": "svc_basic",
+            "available": true
+          },
+          {
+            "bayId": "bay_a1b2c3d4e5f6",
+            "serviceId": "svc_premium",
+            "available": false
+          },
+          {
+            "bayId": "bay_f6e5d4c3b2a1",
+            "serviceId": "svc_auxiliary",
+            "available": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "stationidentity-signature-bitflip",
+      "surface": "stationIdentity",
+      "class": "SIG",
+      "base": "conformance/test-vectors/valid/offline/challenge-full.json",
+      "key": "conformance/test-keys/server-test-pub.pem",
+      "baseKey": "conformance/test-keys/server-test-pub.pem",
+      "what": "stationCert signature s-scalar bit flipped",
+      "mutation": "signature[-1] ^= 0x01",
+      "mutatedPointer": "stationCert/signature",
+      "was": "MEUCIQCnquT+s/g6e11zNBzgR7UhmK4f42FQVrIuTLwQGIZMEgIgTIYCZFRfqmQy9Gv4p9216oxT31UEBF43CiIO/TCTEcU=",
+      "now": "MEUCIQCnquT+s/g6e11zNBzgR7UhmK4f42FQVrIuTLwQGIZMEgIgTIYCZFRfqmQy9Gv4p9216oxT31UEBF43CiIO/TCTEcQ=",
+      "schema": "schemas/ble/challenge.schema.json",
+      "portable": {
+        "algorithm": "ECDSA-P256-SHA256",
+        "key": "conformance/test-keys/server-test-pub.pem",
+        "base": {
+          "signedBytesBase64": "eyJleHBpcmVzQXQiOiIyMDI2LTAzLTE1VDEwOjAwOjAwLjAwMFoiLCJpc3N1ZWRBdCI6IjIwMjYtMDItMTNUMTA6MDA6MDAuMDAwWiIsIm9yZ2FuaXphdGlvbklkIjoib3JnX2YxMDcxNzQwNDc2NGRmNjIiLCJzdGF0aW9uSWQiOiJzdG5fYjY4ZWMxNTMzMGM2Iiwic3RhdGlvblB1YktleSI6IkE0dU5pdUw1NEppYUhUdTc0TFZ5Z25XTlRvcnpERjJVMnBCWmFXMDg1SEQ5In0=",
+          "signature": "MEUCIQCnquT+s/g6e11zNBzgR7UhmK4f42FQVrIuTLwQGIZMEgIgTIYCZFRfqmQy9Gv4p9216oxT31UEBF43CiIO/TCTEcU=",
+          "key": "conformance/test-keys/server-test-pub.pem",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/Hd\ngUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": true
+        },
+        "tampered": {
+          "signedBytesBase64": "eyJleHBpcmVzQXQiOiIyMDI2LTAzLTE1VDEwOjAwOjAwLjAwMFoiLCJpc3N1ZWRBdCI6IjIwMjYtMDItMTNUMTA6MDA6MDAuMDAwWiIsIm9yZ2FuaXphdGlvbklkIjoib3JnX2YxMDcxNzQwNDc2NGRmNjIiLCJzdGF0aW9uSWQiOiJzdG5fYjY4ZWMxNTMzMGM2Iiwic3RhdGlvblB1YktleSI6IkE0dU5pdUw1NEppYUhUdTc0TFZ5Z25XTlRvcnpERjJVMnBCWmFXMDg1SEQ5In0=",
+          "signature": "MEUCIQCnquT+s/g6e11zNBzgR7UhmK4f42FQVrIuTLwQGIZMEgIgTIYCZFRfqmQy9Gv4p9216oxT31UEBF43CiIO/TCTEcQ=",
+          "key": "conformance/test-keys/server-test-pub.pem",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/Hd\ngUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": false
+        }
+      },
+      "document": {
+        "type": "Challenge",
+        "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
+        "stationConnectivity": "Offline",
+        "stationCert": {
+          "stationId": "stn_b68ec15330c6",
+          "organizationId": "org_f10717404764df62",
+          "stationPubKey": "A4uNiuL54JiaHTu74LVygnWNTorzDF2U2pBZaW085HD9",
+          "issuedAt": "2026-02-13T10:00:00.000Z",
+          "expiresAt": "2026-03-15T10:00:00.000Z",
+          "signatureAlgorithm": "ECDSA-P256-SHA256",
+          "signature": "MEUCIQCnquT+s/g6e11zNBzgR7UhmK4f42FQVrIuTLwQGIZMEgIgTIYCZFRfqmQy9Gv4p9216oxT31UEBF43CiIO/TCTEcQ="
+        },
+        "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
+        "availableServices": [
+          {
+            "bayId": "bay_a1b2c3d4e5f6",
+            "serviceId": "svc_basic",
+            "available": true
+          },
+          {
+            "bayId": "bay_a1b2c3d4e5f6",
+            "serviceId": "svc_premium",
+            "available": false
+          },
+          {
+            "bayId": "bay_f6e5d4c3b2a1",
+            "serviceId": "svc_auxiliary",
+            "available": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "firmware-signature-bitflip",
+      "surface": "firmware",
+      "class": "SIG",
+      "base": "conformance/test-vectors/valid/device-management/update-firmware-request-full.json",
+      "key": "conformance/test-keys/firmware-test-pub.pem",
+      "baseKey": "conformance/test-keys/firmware-test-pub.pem",
+      "what": "firmware image signature s-scalar bit flipped — OSPP ships pointers, so this signature is the only thing standing between a station and an unauthenticated image",
+      "mutation": "signature[-1] ^= 0x01",
+      "mutatedPointer": "signature",
+      "was": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtg==",
+      "now": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtw==",
+      "schema": "schemas/mqtt/update-firmware-request.schema.json",
+      "portable": {
+        "algorithm": "ECDSA-P256-SHA256",
+        "key": "conformance/test-keys/firmware-test-pub.pem",
+        "base": {
+          "signedBytesBase64": "IyBPU1BQIHN5bnRoZXRpYyB0ZXN0IGZpcm13YXJlIHBheWxvYWQgKG5vdCBib290YWJsZSkKAAAAAAAAAAAAAA==",
+          "signature": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtg==",
+          "key": "conformance/test-keys/firmware-test-pub.pem",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAESz8S803ICDCV+ZqvxBpmNv3/tE2f\nfJA9nH++tXWSXEvmnK/T1FuQTODr4VyGTvrvbS3Tqxe5WWhhI5M/9tX6fA==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": true
+        },
+        "tampered": {
+          "signedBytesBase64": "IyBPU1BQIHN5bnRoZXRpYyB0ZXN0IGZpcm13YXJlIHBheWxvYWQgKG5vdCBib290YWJsZSkKAAAAAAAAAAAAAA==",
+          "signature": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtw==",
+          "key": "conformance/test-keys/firmware-test-pub.pem",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAESz8S803ICDCV+ZqvxBpmNv3/tE2f\nfJA9nH++tXWSXEvmnK/T1FuQTODr4VyGTvrvbS3Tqxe5WWhhI5M/9tX6fA==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": false
+        }
+      },
+      "document": {
+        "firmwareUrl": "https://firmware.acmecorp.com/ssp/releases/v3.0.1/firmware.bin",
+        "firmwareVersion": "3.0.1",
+        "checksum": "sha256:928de7ea35ba13fd64dfdec744051a7af9142a06bab3404a8bc548b5761644b0",
+        "signature": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtw==",
+        "forceDowngrade": true,
+        "scheduledAt": "2026-03-15T02:00:00.000Z"
+      }
+    },
+    {
+      "id": "sessionkeyconfirmation-bitflip",
+      "surface": "sessionKeyConfirmation",
+      "class": "SIG",
+      "base": "conformance/test-vectors/valid/offline/auth-response-minimal.json",
+      "key": "conformance/test-keys/session-test-key.bin",
+      "baseKey": "conformance/test-keys/session-test-key.bin",
+      "what": "AuthResponse sessionKeyConfirmation HMAC last byte flipped",
+      "mutation": "sessionKeyConfirmation[-1] ^= 0x01",
+      "mutatedPointer": "sessionKeyConfirmation",
+      "was": "uo31nIXlLPNLPc8rCOeJWYwbDh/ycVRE692174J5jp0=",
+      "now": "uo31nIXlLPNLPc8rCOeJWYwbDh/ycVRE692174J5jpw=",
+      "schema": "schemas/ble/auth-response.schema.json",
+      "portable": {
+        "algorithm": "HMAC-SHA256",
+        "key": "conformance/test-keys/session-test-key.bin",
+        "base": {
+          "signedBytesBase64": "QXV0aFJlc3BvbnNlX09L",
+          "signature": "uo31nIXlLPNLPc8rCOeJWYwbDh/ycVRE692174J5jp0=",
+          "key": "conformance/test-keys/session-test-key.bin",
+          "keyMaterial": "DqfuZ1/ifr6MNimF64sZ1o2E42GQmvx0Hql83vZh4NM=",
+          "mustVerify": true
+        },
+        "tampered": {
+          "signedBytesBase64": "QXV0aFJlc3BvbnNlX09L",
+          "signature": "uo31nIXlLPNLPc8rCOeJWYwbDh/ycVRE692174J5jpw=",
+          "key": "conformance/test-keys/session-test-key.bin",
+          "keyMaterial": "DqfuZ1/ifr6MNimF64sZ1o2E42GQmvx0Hql83vZh4NM=",
+          "mustVerify": false
+        }
+      },
+      "document": {
+        "type": "AuthResponse",
+        "result": "Accepted",
+        "sessionKeyConfirmation": "uo31nIXlLPNLPc8rCOeJWYwbDh/ycVRE692174J5jpw="
+      }
+    },
+    {
+      "id": "mqtt-mac-bitflip",
+      "surface": "mqttMessageMac",
+      "class": "SIG",
+      "base": "conformance/test-vectors/crypto/mqtt-mac.json",
+      "key": "inline: mqtt-mac.json .key.sessionKeyBase64",
+      "what": "the §5.4 message MAC with its last byte flipped — literally \"alter one byte of the `mac` value\" (TC-SEC-001.md:50-51)",
+      "mutatedPointer": "mac",
+      "was": "erTp0jMKlFrA76eJfDpMoZ+3tr1ZwGvvvuooJWSREB0=",
+      "now": "erTp0jMKlFrA76eJfDpMoZ+3tr1ZwGvvvuooJWSREBw=",
+      "schema": null,
+      "portable": {
+        "algorithm": "HMAC-SHA256",
+        "key": "inline",
+        "keyInlineBase64": "kjuwUlnPuzB2HxUtWllrorGRuA9erfK13kUWevzBuig=",
+        "base": {
+          "signedBytesBase64": "eyJhY3Rpb24iOiJTdGFydFNlcnZpY2UiLCJtZXNzYWdlSWQiOiJjbWRfNTUwZTg0MDAiLCJtZXNzYWdlVHlwZSI6IlJlcXVlc3QiLCJwYXlsb2FkIjp7ImJheUlkIjoiYmF5X2MxZDJlM2Y0YTViNiIsImR1cmF0aW9uU2Vjb25kcyI6MzAwLCJwcm9ncmFtTnVtYmVyIjoxLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic2Vzc2lvbklkIjoic2Vzc19hMWIyYzNkNCIsInNlc3Npb25Tb3VyY2UiOiJNb2JpbGVBcHAifSwicHJvdG9jb2xWZXJzaW9uIjoiMC4zLjAiLCJzb3VyY2UiOiJTZXJ2ZXIiLCJ0aW1lc3RhbXAiOiIyMDI2LTAxLTMwVDEyOjAwOjAwLjAwMFoifQ==",
+          "signature": "erTp0jMKlFrA76eJfDpMoZ+3tr1ZwGvvvuooJWSREB0=",
+          "key": "inline",
+          "keyMaterial": "kjuwUlnPuzB2HxUtWllrorGRuA9erfK13kUWevzBuig=",
+          "mustVerify": true
+        },
+        "tampered": {
+          "signedBytesBase64": "eyJhY3Rpb24iOiJTdGFydFNlcnZpY2UiLCJtZXNzYWdlSWQiOiJjbWRfNTUwZTg0MDAiLCJtZXNzYWdlVHlwZSI6IlJlcXVlc3QiLCJwYXlsb2FkIjp7ImJheUlkIjoiYmF5X2MxZDJlM2Y0YTViNiIsImR1cmF0aW9uU2Vjb25kcyI6MzAwLCJwcm9ncmFtTnVtYmVyIjoxLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic2Vzc2lvbklkIjoic2Vzc19hMWIyYzNkNCIsInNlc3Npb25Tb3VyY2UiOiJNb2JpbGVBcHAifSwicHJvdG9jb2xWZXJzaW9uIjoiMC4zLjAiLCJzb3VyY2UiOiJTZXJ2ZXIiLCJ0aW1lc3RhbXAiOiIyMDI2LTAxLTMwVDEyOjAwOjAwLjAwMFoifQ==",
+          "signature": "erTp0jMKlFrA76eJfDpMoZ+3tr1ZwGvvvuooJWSREBw=",
+          "key": "inline",
+          "keyMaterial": "kjuwUlnPuzB2HxUtWllrorGRuA9erfK13kUWevzBuig=",
+          "mustVerify": false
+        }
+      }
+    }
+  ]
+}
