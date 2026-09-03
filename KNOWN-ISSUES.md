@@ -1,8 +1,8 @@
 # OSPP Known Issues
 
-**Date:** 2026-08-30
-**Specification-document version:** 0.27.0 (release tag `v0.27.0`)
-**Status:** 3 blockers open (all BLE), 27 non-blocking issues open, 18 decisions recorded (one of
+**Date:** 2026-09-03
+**Specification-document version:** 0.28.0 (release tag `v0.28.0`)
+**Status:** 3 blockers open (all BLE), 27 non-blocking issues open, **19** decisions recorded (one of
 them reversing another), and one named defect **class** with ten instances. **The counts are
 re-derived from the headings on every release, never incremented** — the previous revision read 24
 open against 25 `## OPEN` headings, which is how a summary drifts from the file it summarises.
@@ -19,7 +19,7 @@ the arcs since
 | OPEN | 27 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · **[no gate range-checks a config value inside an example payload](#open--no-gate-range-checks-a-configuration-value-that-sits-inside-an-example-payload)** · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) · **[`5016` is required for two conditions and named for one](#open--5016-version_already_installed-is-required-for-two-conditions-and-one-of-them-is-the-opposite-of-what-the-name-says)** · **[UpdateFirmware is both idempotent and `5107`](#open--updatefirmware-is-documented-as-idempotent-and-as-rejected-with-5107-for-the-same-second-command)** · **[no code describes a non-HTTPS firmware URL](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal)** · **[`offeredVersion` vs `attemptedVersion`](#open--the-firmwaredowngradeattempt-securityevent-names-the-offered-version-with-two-different-member-names-and-nothing-can-tell)**  · **[a station whose hardware changes has no route back into service](#open--a-station-whose-hardware-genuinely-changes-has-no-route-back-into-service-because-the-two-rules-that-guard-topology-point-at-each-other)** · **[the hardware storage levels do not hold the Category-1 floors](#open--the-hardware-storage-levels-do-not-hold-the-category-1-floors-they-are-said-to-size)** · **[OfflinePass validity rides an uncorrected wall clock, and the backstop reads the same clock](#open--offlinepass-temporal-validity-rides-a-wall-clock-with-no-offline-correction-and-the-servers-backstop-reads-the-same-clock)** · **[`5019` has no carrier on either side](#open--5019-upload_failed-names-a-condition-that-cannot-exist-when-its-response-is-sent-and-its-real-carrier-has-no-code-field)**   |
 | CLOSED | 4 | [Device Management Required vs RECOMMENDED](#closed-0160--the-device-management-profile-was-required-in-chapter-08-and-recommended-not-mandatory-in-its-own-readme) — closed in 0.16.0 in favour of the capability · [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
 | **CLASS** | 10 | **[an obligation no field, no code and no actor can carry](#class--an-obligation-no-field-no-code-and-no-actor-can-carry)** — an index of the ten instances; 4 still open, 1 a blocker |
-| DECIDED | 18 | **[the broker MUST check revocation, the list is bounded twice, and a stale list buys one alerted hour](#decided-0270--the-broker-must-check-revocation-the-list-is-bounded-twice-and-a-list-that-goes-stale-buys-one-alerted-hour-before-the-door-shuts)** — axis 1a + 2a&2b + 3c; verified by declaration because no message can carry it, and the two bounds are broker settings deliberately outside the Chapter 08 registry · **[`allowedServiceTypes` withdrawn in two steps](#decided-0250--offlineallowanceallowedservicetypes-is-withdrawn-in-two-steps-because-nobody-ever-asked-for-the-constraint)** · **[ownership transfer and decommissioning stay undefined, and §1.3 now says so](#decided-0250--station-ownership-transfer-and-decommissioning-stay-undefined-and-the-specification-now-says-so)** · **[the server is the billing authority on the offline path too](#decided-0240--the-server-is-the-billing-authority-on-the-offline-path-too-and-81-was-the-outlier)** · **[`OfflinePassMaxAge` kept, wired into check #2, defaulted to inert](#decided-0240--offlinepassmaxage-is-kept-wired-into-check-2-and-defaulted-to-inert)** · **[`DiagnosticsUploadUrl` withdrawn — a key nothing reads](#decided-0230--diagnosticsuploadurl-had-no-reachable-consumer-and-is-withdrawn-rather-than-defined)** · **[UpdateFirmware to a `Pending` station is `Accepted`, notifications suppressed](#decided-0210--updatefirmware-to-a-pending-station-was-refused-on-a-premise-the-same-chapter-contradicts-and-with-a-response-no-error-code-could-carry)** — **reverses the `0.20.0` row below**: the `Rejected` it mandated needed an `errorCode` no registry entry supplies, and §6.6 already reported the outcome on BootNotification; the discriminator's second clause survives, its reading did not · **[nine gates in `tools/` were reachable from no job](#decided-0201--two-validation-scripts-reported-100-failure-and-no-workflow-ran-them-the-workflows-now-call-the-scripts-and-a-census-guards-the-class)** — the workflows now call the scripts, and `check-tool-callers.py` guards the class · **[the firmware gate is on the INSTALL, not the download](#decided-0200--the-active-session-gate-named-three-stages-it-gates-the-install-and-scheduledat-defers-the-install-with-it)** — and `scheduledAt` defers the install with it; the stall rule scoped rather than `Verified` given a wire value · **[~~UpdateFirmware to a `Pending` station is `Rejected`~~ — REVERSED in `0.21.0`](#decided-0200--updatefirmware-had-no-row-in-the-pending-command-table-it-is-rejected-and-the-discriminator-gained-the-clause-that-says-why)** — kept as the record; the row it added was right, the verdict in it was not · **[a restricted station may renew its own certificate](#decided-0190--one-table-gave-the-same-act-opposite-verdicts-and-a-certificate-renewal-could-not-conclude-in-the-state-the-spec-keeps-open-for-repairs)** — the exception's *reason* restated to cover both members rather than a second name added to a list · [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
+| DECIDED | 19 | **[§10.1 required receivers to ignore unknown fields, and every schema forbids it](#decided-unreleased--02-transportmd-101-required-receivers-to-ignore-unknown-fields-and-every-schema-in-this-repository-forbids-it)** — 73 of 73 object schemas are closed, and three decisions already taken (§2.1's known gap, exact-match negotiation, the `0.26.0` triple refusal) rest on receivers *not* ignoring; prose only, zero schema bytes · **[the broker MUST check revocation, the list is bounded twice, and a stale list buys one alerted hour](#decided-0270--the-broker-must-check-revocation-the-list-is-bounded-twice-and-a-list-that-goes-stale-buys-one-alerted-hour-before-the-door-shuts)** — axis 1a + 2a&2b + 3c; verified by declaration because no message can carry it, and the two bounds are broker settings deliberately outside the Chapter 08 registry · **[`allowedServiceTypes` withdrawn in two steps](#decided-0250--offlineallowanceallowedservicetypes-is-withdrawn-in-two-steps-because-nobody-ever-asked-for-the-constraint)** · **[ownership transfer and decommissioning stay undefined, and §1.3 now says so](#decided-0250--station-ownership-transfer-and-decommissioning-stay-undefined-and-the-specification-now-says-so)** · **[the server is the billing authority on the offline path too](#decided-0240--the-server-is-the-billing-authority-on-the-offline-path-too-and-81-was-the-outlier)** · **[`OfflinePassMaxAge` kept, wired into check #2, defaulted to inert](#decided-0240--offlinepassmaxage-is-kept-wired-into-check-2-and-defaulted-to-inert)** · **[`DiagnosticsUploadUrl` withdrawn — a key nothing reads](#decided-0230--diagnosticsuploadurl-had-no-reachable-consumer-and-is-withdrawn-rather-than-defined)** · **[UpdateFirmware to a `Pending` station is `Accepted`, notifications suppressed](#decided-0210--updatefirmware-to-a-pending-station-was-refused-on-a-premise-the-same-chapter-contradicts-and-with-a-response-no-error-code-could-carry)** — **reverses the `0.20.0` row below**: the `Rejected` it mandated needed an `errorCode` no registry entry supplies, and §6.6 already reported the outcome on BootNotification; the discriminator's second clause survives, its reading did not · **[nine gates in `tools/` were reachable from no job](#decided-0201--two-validation-scripts-reported-100-failure-and-no-workflow-ran-them-the-workflows-now-call-the-scripts-and-a-census-guards-the-class)** — the workflows now call the scripts, and `check-tool-callers.py` guards the class · **[the firmware gate is on the INSTALL, not the download](#decided-0200--the-active-session-gate-named-three-stages-it-gates-the-install-and-scheduledat-defers-the-install-with-it)** — and `scheduledAt` defers the install with it; the stall rule scoped rather than `Verified` given a wire value · **[~~UpdateFirmware to a `Pending` station is `Rejected`~~ — REVERSED in `0.21.0`](#decided-0200--updatefirmware-had-no-row-in-the-pending-command-table-it-is-rejected-and-the-discriminator-gained-the-clause-that-says-why)** — kept as the record; the row it added was right, the verdict in it was not · **[a restricted station may renew its own certificate](#decided-0190--one-table-gave-the-same-act-opposite-verdicts-and-a-certificate-renewal-could-not-conclude-in-the-state-the-spec-keeps-open-for-repairs)** — the exception's *reason* restated to cover both members rather than a second name added to a list · [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
 | **Total open** | **30** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
@@ -188,6 +188,43 @@ answer to all three schemas plus the profile prose that mirrors them
 ([`ble-session.md`:29-33](spec/profiles/offline/ble-session.md) and `:146-147`).
 
 ---
+
+## DECIDED (unreleased) — `02-transport.md` §10.1 required receivers to ignore unknown fields, and every schema in this repository forbids it
+
+`02-transport.md` §10.1's *JSON Encoding Rules* table carried one row from the beginning:
+
+> `| Unknown fields | Receivers MUST ignore unknown fields (forward compatibility) |`
+
+**No conforming implementation could have obeyed it.** Measured over `schemas/`: **73 of 73** object
+schemas declare `additionalProperties: false` — 47 under `mqtt/`, 15 under `ble/`, 9 under `common/`,
+the envelope, and the provisioning pair. The 13 that do not are scalar type definitions with no
+members for the keyword to govern, so the closure is total rather than merely widespread. A receiver
+that validates against the shipped bytes refuses a member its copy does not carry; a receiver that
+ignores unknown members is not validating. The intersection of the two obligations was empty.
+
+**This was not a dormant contradiction — three decisions already taken rest on the half the table
+denied.** That is what moved it from *inconsistency* to *defect*:
+
+| Site | What it says | What it needs to be true |
+|---|---|---|
+| `07-errors.md` §2.1 | on seven closed response schemas *"an `errorCode` cannot be placed on the wire at all"*, recorded as a **known gap** needing a schema change and an SDK re-vendor | a receiver refuses an unknown member |
+| `VERSIONING.md`, *Negotiation is exact match* | a `0.4.0` station's `SessionEnded` carries a `reason` a `0.3.0` server does not know, and *"The server rejects it on validation"* — the worked example the whole exact-match rule is argued from | a receiver refuses an unknown member |
+| `CHANGELOG.md` `[0.26.0]` | widening a closed response schema was available three times and refused all three, because an added member *"is backward-compatible for the emitter and not for a receiver validating against an older vendored copy"* — a failure **already measured once**, on the offline pair | a receiver refuses an unknown member |
+
+Three sites depend on receivers *not* ignoring unknown fields; one table row required that they do.
+The row was the outlier and the row was the defect.
+
+**Fixed in the prose, and deliberately without forbidding anything.** The replacement states that a
+receiver **MAY** validate; that one which does not **SHOULD** ignore members it does not recognise,
+as a robustness recommendation rather than a guarantee an emitter may rely on; that adding an
+OPTIONAL member stays **MINOR** and removing or renaming one stays **MAJOR**; and that what makes an
+addition safe is exact-match negotiation refusing the pairing at boot, not the parser. A repair that
+made adding a field illegal would have been worse than the ambiguity — the rule this repository
+applied throughout `0.26.0` — so it does not.
+
+**Zero bytes moved under `schemas/`.** No message, field, enum value or Chapter 08 key changes; the
+86 schemas and the 334 vectors are byte-identical, and no SDK re-vendor of schemas is required. What
+changed is that the specification stopped promising a tolerance its own artefacts refuse.
 
 ## DECIDED (0.27.0) — the broker MUST check revocation, the list is bounded twice, and a list that goes stale buys one alerted hour before the door shuts
 
@@ -1346,15 +1383,16 @@ rather than being absorbed into a repair pass.
 
 ## OPEN — `StationIdentityCertificate` is named as a ChangeConfiguration key but is not in the Chapter 08 registry
 
-`06-security.md:1290` defines how the BLE StationIdentity certificate reaches the station:
+`06-security.md` §6.5.2, *Issuance, delivery, and rotation*, defines how the BLE StationIdentity
+certificate reaches the station:
 
 > "**Delivery to the station.** Provisioning response, and thereafter ChangeConfiguration [MSG-013]
 > (key `StationIdentityCertificate`) for re-issuance — mirroring `OfflinePassPublicKey`
 > distribution (§6.7)."
 
-and `provisioning-response.schema.json:82` repeats it for the `stationIdentity` field. But
+and `provisioning-response.schema.json` repeats it in the `stationIdentity` description. But
 `StationIdentityCertificate` does not appear anywhere in `08-configuration.md`, whose §2–§6
-tables are the registry of standard keys — 29 of them, and this is not one.
+tables are the registry of standard keys — **28** of them, and this is not one.
 
 `08-configuration.md:47` then decides the outcome:
 
@@ -1364,18 +1402,33 @@ tables are the registry of standard keys — 29 of them, and this is not one.
 
 So a **conforming** station **MUST** reject the re-issuance write, and the rotation path §6.5.2
 depends on cannot complete. The certificate still arrives at first provisioning, so the defect is
-confined to re-issuance — which is exactly the path `:1291` says the server relies on, since
+confined to re-issuance — which is exactly the path §6.5.2 says the server relies on, since
 `expiresAt` "SHOULD be short" and "the server re-issues before expiry".
 
-**Not fixed here** because closing it means authoring a registry row, and every column is a
-decision rather than a transcription: access mode (`W` would mirror `OfflinePassPublicKey`, which
-is write-only so GetConfiguration cannot leak credential material), mutability, whether the key
-is required only for BLE stations, and what a station does with the previous certificate during
-the overlap window `:1209` describes. Recording it rather than inventing those.
+**One column is no longer a decision: the value fits.** The obvious objection to minting this
+key is that a configuration value is a `string`, bounded at **500 characters** by
+`08-configuration.md` §1.2 and by `maxLength: 500` on `change-configuration-request.schema.json`'s
+`keys[].value` — and a certificate does not fit in 500. **Measured, this one does.** A StationIdentity
+is not X.509; it is the JSON object of §6.5.2 (`stationId`, `organizationId`, `stationPubKey`,
+`issuedAt`, `expiresAt`, `signatureAlgorithm`, `signature`), and the signed instance carried in
+`conformance/test-vectors/crypto/ble-handshake-keyschedule.json` — the same bytes as
+`examples/payloads/ble/challenge.json` and both `challenge-*` vectors — serialises compact to
+**364 characters**. That is 136 under the bound, and the margin survives the widest identifiers the
+patterns admit: `organizationId` there is `org_f10717404764df62` where §6.5.2 gives `org_<uuid>`,
+worth about 20 more. For contrast, the artefacts this specification *does* size as certificates are
+bounded an order of magnitude higher — `clientCert` at 8192, `CertificateInstall.certificate` at
+16384 — so the 500-character ceiling is a real constraint that this particular artefact happens to
+clear, not one that was never tested.
+
+**Still not fixed here** because the remaining columns are decisions rather than transcriptions:
+access mode (`W` would mirror `OfflinePassPublicKey`, which is write-only so GetConfiguration
+cannot leak credential material), mutability, whether the key is required only for BLE stations,
+and what a station does with the previous certificate during the overlap window §6.5.2 describes.
+Recording those rather than inventing them.
 
 Found by a sweep of the Chapter 08 key table for keys whose delivery channel does not exist. That
-sweep also confirms the table is otherwise sound: 29 keys, counts agreeing across
-`README.md:182`, `08-configuration.md:407` and the §1.5 profile grouping; the three keys with no
+sweep also confirms the table is otherwise sound: **28** keys, counts agreeing across
+`08-configuration.md` §9's summary and the §1.5 profile grouping; the three keys with no
 default (`FirmwareVersion`, `CertificateSerialNumber`, `OfflinePassPublicKey`) each have a
 working source; and no key encodes `stationId` or any other certificate-bound identity, so no
 configuration write can alter what the client certificate binds.

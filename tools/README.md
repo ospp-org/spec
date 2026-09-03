@@ -20,7 +20,19 @@ bash tools/verify-protocol.sh
 python3 tools/verify-schemas.py
 ```
 
-`verify-protocol.sh` checks spec consistency (messages, schemas, error codes, config keys, state machines, diagrams, test vectors). `verify-schemas.py` validates all test vectors against their JSON schemas.
+`verify-protocol.sh` checks spec consistency (messages, schemas, error codes, config keys, state machines, diagrams, test vectors) across twenty categories and ~4180 checks. `verify-schemas.py` validates all test vectors against their JSON schemas.
+
+> **`verify-protocol.sh` is a ratchet too, as of 2026-09-03, and it is finally wired.** It had no
+> baseline constant for twenty releases — `exitCode = totalFail > 0` — so it was permanently red on
+> a clean tree and no workflow ran it, which made it the single entry in `check-tool-callers.py`'s
+> BASELINE. It now exits **0 at** its baseline, **1 above**, **1 below** (lower the constant), and
+> **2 on a vacuous run** that inspected fewer than 3000 things, and
+> [`.github/workflows/verify-protocol.yml`](../.github/workflows/verify-protocol.yml) is the caller.
+> Baseline at that measurement point: **6 FAIL, 6 SKIP** over 4180 checks — the same six the
+> script's own header has recorded since `v0.21.0`. What the unwired years cost, measured rather
+> than supposed: Category 18 held **three** live findings at `v0.28.0`, because that release moved
+> `spec/README.md` and all 22 chapter headers and left `guides/implementors-guide.md` (twice) and
+> `KNOWN-ISSUES.md` at `0.27.0`. Nothing reported them.
 
 ### Crypto vectors
 
@@ -72,7 +84,7 @@ machine-comparable to anything. These four are the exceptions, and each is narro
 |---|---|---|---|
 | `check-config-defaults` | Both sides are structured — Chapter 08 is a `(key, default, range)` table, a restatement is a key name with a number near it | 37 sites, 3 flagged, **3 real** | 25 keys with a default, 42 restated sites, **0 disagreeing** |
 | `check-schema-conditionals` | Both sides are in one JSON file — the `description` and the `if`/`then` that should back it | 33 claims, 5 flagged, **5 real** | 44 claims, 38 backed, **6 not backed** (= `BASELINE`) |
-| `check-normative-bold` | Pure typography — a capitalised keyword outside a `**…**` span | exact, no inference | 439 unbolded (= `BASELINE`), **1183** bolded spans at `v0.28.0` — RE-DERIVED by running the instrument, not incremented from the previous line. `v0.28.0` bolded exactly one keyword (a `MUST` in the 00-introduction revision row the release added), and the ratchet is what caught it at 440: the fix a raised BASELINE would have hidden. Companion **instrument** corrected at `v0.27.0`; it paired `**` over the raw file while the finding scan paired over the masked copy, so four literal `**` inside backticks cost it 8. `v0.26.0` re-reads **1161**, not the 1156 it shipped. The gated number is unaffected on either tree |
+| `check-normative-bold` | Pure typography — a capitalised keyword outside a `**…**` span | exact, no inference | **438** unbolded (= `BASELINE`, lowered from 439 on 2026-09-03), **1183** bolded spans at `v0.28.0` — RE-DERIVED by running the instrument, not incremented from the previous line. `v0.28.0` bolded exactly one keyword (a `MUST` in the 00-introduction revision row the release added), and the ratchet is what caught it at 440: the fix a raised BASELINE would have hidden. Companion **instrument** corrected at `v0.27.0`; it paired `**` over the raw file while the finding scan paired over the masked copy, so four literal `**` inside backticks cost it 8. `v0.26.0` re-reads **1161**, not the 1156 it shipped. The gated number is unaffected on either tree |
 | `check-config-ranges` | Same structure argument as `check-config-defaults`, one column over — a range restatement is a key name with `<lo>--<hi>` near it, and `--` is as strong a signal as the word "default" | 16 sites, 4 flagged, **4 real**; plus 2 schema-bound comparisons, both real | 18 restated-range sites, 2 wire-field aliases, 2 broker settings, **1 finding** (= `BASELINE`) |
 
 `check-config-ranges` also does what no other check does: it compares **the registry against its own

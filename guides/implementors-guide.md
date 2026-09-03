@@ -2,7 +2,7 @@
 
 > **For:** Developers building OSPP-compatible stations, servers, or user agents
 > **Level:** Practical guide, not formal spec. Read this first, then the spec chapters.
-> **Spec Version:** 0.27.0
+> **Spec Version:** 0.28.0
 
 ---
 
@@ -378,7 +378,7 @@ If MQTT drops during an active session:
 
 1. **Do NOT stop the hardware.** The service continues.
 2. Switch to BLE-available mode (accept offline sessions)
-3. Buffer the **MUST-buffer** categories — TransactionEvent (min 1000, **never** discard), SessionEnded (one per session that ended while you could not send, **never** discard — it is the sole billing source for a session that ended with no StopService to answer), SecurityEvent (200, FIFO). StatusNotification and MeterValues are **regenerable and MAY be discarded**; do not spend the buffer on them. Minimum dedicated storage is **512 KB**, not 64 KB. At 90% of the TransactionEvent buffer, reject new StartService with `5111 BUFFER_FULL` ([`01-architecture.md` §6.5](../spec/01-architecture.md))
+3. Buffer the **MUST-buffer** categories — TransactionEvent (min 1000, **never** discard), SessionEnded (one per session that ended while you could not send, **never** discard — it is the sole billing source for a session that ended with no StopService to answer), SecurityEvent (200, FIFO). StatusNotification and MeterValues are **regenerable and MAY be discarded**; do not spend the buffer on them. The `MUST` storage level is **512 KB** — and **it does not hold the categories in this bullet.** [`01-architecture.md` §6.5](../spec/01-architecture.md) derives what they cost: 1000 TransactionEvents (1.2 MB) + 1000 SessionEnded (250 KB) + 200 SecurityEvents (120 KB) + overhead = **~1.6 MB**, and §6.5 records the gap between the two as OPEN because raising a mandatory storage level changes the bill of materials of every station. **Size new hardware to the derived figure, not to the 512 KB level row.** At 90% of the TransactionEvent buffer, reject new StartService with `5111 BUFFER_FULL`; at 100%, enter degraded mode and refuse all new sessions (§6.5)
 4. Attempt reconnection with exponential backoff: 1s → 2s → 4s → 8s → 16s → 30s max, with 30% jitter
 5. On reconnect: Full boot sequence (BootNotification, StatusNotification per bay)
 6. Flush buffered messages after boot completes
@@ -1168,7 +1168,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** Message deduplication (1000+ IDs or 1 hour window)
 - [ ] **[MUST]** Exponential backoff with jitter for reconnection (1s → 30s max)
 - [ ] **[MUST]** Continue active sessions during MQTT disconnect (do NOT stop hardware)
-- [ ] **[MUST]** Buffer TransactionEvent (1000, never discard), SessionEnded (never discard) and SecurityEvent (200, FIFO) during disconnect — **512 KB** dedicated storage minimum; StatusNotification and MeterValues MAY be discarded
+- [ ] **[MUST]** Buffer TransactionEvent (1000, never discard), SessionEnded (never discard) and SecurityEvent (200, FIFO) during disconnect; StatusNotification and MeterValues MAY be discarded. **512 KB** is the `MUST` storage level and does **not** hold that buffer — [`01-architecture.md` §6.5](../spec/01-architecture.md) derives **~1.6 MB** and flags the gap as OPEN; build to the derived figure
 - [ ] **[MUST]** Message expiry intervals set per action category
 - [ ] **[MUST]** 0-RTT TLS resumption NOT used
 - [ ] **[SHOULD]** Max Packet Size = 65,536 bytes
@@ -1326,4 +1326,4 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 
 ---
 
-*This guide covers OSPP 0.27.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*
+*This guide covers OSPP 0.28.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*

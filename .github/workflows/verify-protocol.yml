@@ -1,0 +1,87 @@
+name: Verify Protocol Consistency
+
+# The caller tools/verify-protocol.sh never had.
+#
+# It was the last entry in tools/check-tool-callers.py's BASELINE: twenty categories and
+# ~4180 checks over messages, schemas, error codes, config keys, state machines, diagrams,
+# identifier patterns, cross-reference links and document versions, reachable from no job.
+# The reason was recorded in verify-signatures.yml rather than fixed — the script had no
+# baseline mechanism (`exitCode = totalFail > 0`), so wiring it as-is landed a permanently
+# red job, which is the most reliable way to get a gate ignored a second time.
+#
+# It now has one, in the same shape as the four check-*.py drift scripts: every finding is
+# printed on every run, the count may fall and must not rise, falling is also a failure so
+# the constant gets lowered rather than the improvement silently regressing, and a run that
+# inspected too little refuses to return a verdict at all.
+#
+# What this was missing while nothing ran it, measured rather than supposed: Category 18
+# had three live findings at v0.28.0. The release moved spec/README.md's front-matter and
+# all 22 chapter headers and left guides/implementors-guide.md (header and closing line)
+# and KNOWN-ISSUES.md at 0.27.0. A stale version on the guide is the document an integrator
+# reads first telling them which revision they are implementing.
+#
+# Categories 19 and 20 are ALSO run by verify-signatures.yml, directly rather than through
+# this script. That duplication is deliberate and is kept: this job is a ratchet that can sit
+# at a non-zero baseline, and the crypto oracles must fail at zero. A finding of theirs must
+# not be absorbable into this file's constant.
+#
+# Paths are deliberately broad, because the categories are: Category 9 walks every
+# cross-reference link in the markdown, Category 12 pairs schemas against test vectors, and
+# Category 18 reads version markers out of four trees.
+
+on:
+  push:
+    paths:
+      - '**/*.md'
+      - 'schemas/**'
+      - 'conformance/**'
+      - 'examples/**'
+      - 'diagrams/**'
+      - 'tools/verify-protocol.sh'
+      - 'tools/verify-schemas.py'
+      - '.github/workflows/verify-protocol.yml'
+  pull_request:
+    paths:
+      - '**/*.md'
+      - 'schemas/**'
+      - 'conformance/**'
+      - 'examples/**'
+      - 'diagrams/**'
+      - 'tools/verify-protocol.sh'
+      - 'tools/verify-schemas.py'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # The script guards on `require('ajv')` and exits 1 with an instruction if it is
+      # absent, so this install is load-bearing rather than incidental. Installed into the
+      # checkout because the script resolves ajv from its own working directory — unlike
+      # validate-schemas.sh, which reads AJV_BIN and can be pointed outside.
+      - name: Install ajv
+        run: npm install --no-save ajv@8 ajv-formats@3
+
+      # Category 8 re-runs the vector validation that validate-test-vectors.yml gates
+      # independently. Kept, because Category 8 reports 6 SKIP where verify-schemas.py
+      # reports 0 — the two disagree about discovery, and the SKIP ratchet in this script
+      # is the only thing watching that disagreement not widen.
+      - name: Twenty consistency categories, against the recorded baseline
+        run: bash tools/verify-protocol.sh
+
+      # The report is the failure SET, and the set is what a re-measurement diffs against —
+      # a total tells you a count changed, not which entry. Kept on every run, including
+      # green ones, because the baseline entries are printed there too.
+      - name: Upload verification report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-report
+          path: verification-report.md
+          if-no-files-found: error

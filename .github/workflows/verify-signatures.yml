@@ -17,8 +17,9 @@ name: Verify Signed Conformance
 #   * handshake nonce derivation and cross-document uniqueness
 #   * the residual-placeholder scan over every signature / HMAC field
 #   * a verify-schemas.py regression pass
-#   * the canonical-form oracle and the MQTT MAC vectors, which reach CI by no other route:
-#     tools/verify-protocol.sh is their only other caller and it is not wired (see below)
+#   * the canonical-form oracle and the MQTT MAC vectors. verify-protocol.sh runs these as its
+#     categories 19 and 20 and is now wired too, so this is no longer their only route — it is
+#     the only route that fails at ZERO rather than at a baseline (see below)
 #
 # ─── This job MUTATES the working tree, on purpose ───────────────────────────────────────────
 #
@@ -34,11 +35,15 @@ name: Verify Signed Conformance
 #   2. Run locally only on a committed tree. On a dirty one it will rewrite files under
 #      spec/, conformance/ and examples/ and give you no way to tell its edits from yours.
 #
-# tools/verify-protocol.sh is deliberately NOT wired here. It exits 1 on a clean tree from its
-# pre-existing findings and has no baseline mechanism — `exitCode = totalFail > 0` — so wiring
-# it as-is lands a permanently red job, which is the most reliable way to get a gate ignored
-# again. It is the one entry left in check-tool-callers.py's BASELINE, and giving it a ratchet
-# like the four check-*.py scripts have is what would let it join this file.
+# tools/verify-protocol.sh is now wired — in its OWN job, .github/workflows/verify-protocol.yml,
+# not here. This comment used to say it was deliberately unwired: it exited 1 on a clean tree from
+# its pre-existing findings and had no baseline mechanism (`exitCode = totalFail > 0`), so wiring
+# it as-is landed a permanently red job, and it was the one entry left in check-tool-callers.py's
+# BASELINE. It has the ratchet now, and that BASELINE is 0.
+#
+# It stays out of THIS file on purpose. This job must fail at zero — a tampered signature that
+# verifies is not a finding to be carried at a baseline — and a ratchet that can sit at 6 must
+# never be the thing deciding whether a crypto failure is new.
 #
 # The count is deliberately not repeated here. It is 6 at v0.22.0 and v0.23.0, it was 9 at
 # v0.20.0, and this comment went on saying 9 for two releases after 0.20.1 and 0.20.2 closed
@@ -92,9 +97,11 @@ jobs:
       - name: Signed conformance corpus (vectors, crypto oracle, signer idempotency, nonces)
         run: bash tools/verify-all-signatures.sh
 
-      # Reached by no other job. verify-protocol.sh runs both as its categories 19 and 20, and
-      # verify-protocol.sh is not wired — so without these two steps the canonical-form oracle
-      # and the MQTT MAC vectors are verified by nothing.
+      # Duplicated with verify-protocol.sh's categories 19 and 20 ON PURPOSE, now that it is
+      # wired. That script is a ratchet sitting at a baseline of 6; these two must fail at zero.
+      # A crypto oracle whose finding could be absorbed into someone else's constant is not a
+      # crypto oracle. The cost of the duplication is ~30 seconds; the cost of removing it is
+      # that a broken canonical form becomes a number in a header.
       - name: Canonical form oracle
         run: node tools/verify-canonical-form.mjs
 

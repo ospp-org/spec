@@ -865,9 +865,48 @@ All OSPP transports use **JSON** as the serialization format.
 | Character encoding | UTF-8 (MUST) |
 | Whitespace | Compact format — no unnecessary whitespace (SHOULD for MQTT, MUST for BLE) |
 | Null fields | Absent fields are treated as null. Implementations SHOULD omit null-valued optional fields. |
-| Unknown fields | Receivers MUST ignore unknown fields (forward compatibility) |
+| Unknown fields | The message schemas are **closed**. Forward compatibility is delivered by version negotiation, not by field tolerance — see *Unknown fields* below. |
 | Numeric precision | Integer values only for credits, durations, and timestamps. No floating point. |
 | String encoding | JSON string escaping per [RFC 8259](https://www.rfc-editor.org/rfc/rfc8259) |
+
+**Unknown fields, and where forward compatibility actually comes from.**
+
+This row used to read `Receivers MUST ignore unknown fields (forward compatibility)`, and **no conforming
+implementation could have obeyed it.** Every object schema under `schemas/` declares
+`additionalProperties: false` — **73 of 73**, counting the message schemas, the BLE schemas, the envelope and
+the provisioning pair; the thirteen that do not are scalar type definitions with no members for the keyword to
+govern. Those bytes are vendored into both SDKs and gated there byte-for-byte, so a receiver that validates
+refuses a member its copy of the schema does not carry, and a receiver that ignores unknown members is not
+validating. The two obligations had an empty intersection, and three decisions already taken in this
+specification rest on the second one rather than on this row:
+
+- [`07-errors.md` §2.1](../spec/07-errors.md#21-mqtt-error-response) states that on seven closed response
+  schemas *"an `errorCode` cannot be placed on the wire at all"*, and records it as a **known gap** requiring
+  a schema change and an SDK re-vendor — not as something a tolerant receiver absorbs.
+- [`VERSIONING.md`](../VERSIONING.md)'s case for exact-match negotiation is a `0.4.0` station whose
+  `SessionEnded` carries a `reason` value a `0.3.0` server's schema does not know: *"The server rejects it on
+  validation."* The rule exists **because** receivers do not ignore what they do not know.
+- Widening a closed response schema was available three times in `0.26.0` and was refused all three times, on
+  the ground that an added member *"is backward-compatible for the emitter and not for a receiver validating
+  against an older vendored copy"* — a failure measured once already, on the offline pair.
+
+The rule that replaces it:
+
+- A receiver **MAY** validate an incoming payload against the schema for its action. This specification
+  neither requires validation nor forbids it, and a receiver that validates is conforming.
+- A receiver that does **not** validate **SHOULD** ignore members it does not recognise rather than fail on
+  them. That is a robustness recommendation for one implementation choice; it is **not** a guarantee an
+  emitter may rely on, and it never was.
+- Adding an OPTIONAL member to a message stays a **MINOR** change ([`VERSIONING.md`](../VERSIONING.md)).
+  Removing or renaming one stays **MAJOR**. Nothing here forbids adding a field.
+- What makes the addition safe is the negotiation, not the parser. Negotiation is **exact match**: a station
+  that emits the new member declares the version carrying it, and boot pairs it only with a server whose
+  supported set contains that version. A version pairing that cannot carry the member is refused at boot,
+  where refusing is cheap and visible, rather than at settlement, where it is neither.
+
+**Forward compatibility is therefore a property of the negotiation, not of the receiver's tolerance.** An
+implementation that needs a field to reach a peer which does not know it needs a new protocol version, not a
+lenient parser.
 
 ### 10.2 Maximum Payload Size
 

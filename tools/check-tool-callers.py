@@ -76,7 +76,13 @@ import sys
 
 # Unreached gates that are known and not yet wired. Lower it as they are wired; a run that finds
 # more than this fails.
-BASELINE = 1
+#
+# 2026-09-03: 1 -> 0. The last entry was verify-protocol.sh, and the reason it stayed unwired was
+# recorded rather than fixed: it had no baseline mechanism, so wiring it landed a permanently red
+# job. It has a ratchet now, and .github/workflows/verify-protocol.yml is the caller. Every gate
+# in tools/ is reachable from some job, and a new one added without a caller fails on its first
+# run rather than joining a list.
+BASELINE = 0
 
 # Files under tools/ that are not gates. The value is why — a reason a later reader can disagree
 # with, rather than a name they have to take on trust.

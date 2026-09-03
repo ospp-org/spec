@@ -8,6 +8,159 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [Unreleased]
+
+> **MINOR, non-breaking on the wire, and `schemas/` moves zero bytes.** No message, field, schema,
+> enum value or Chapter 08 key is added, removed or retyped; `protocolVersion` stays `0.3.0`; the 86
+> schemas and the 334 valid/invalid vectors are byte-identical to `0.28.0`, so no SDK re-vendor of
+> schemas is required. What moves is one normative rule, one guide figure, and the wiring of a gate.
+>
+> **The finding, in one sentence: this specification required receivers to ignore unknown fields
+> while every schema it ships forbids them from doing so — and three decisions already taken depend
+> on the half the rule denied.** `02-transport.md` §10.1 carried
+> `Receivers MUST ignore unknown fields (forward compatibility)`. Measured over `schemas/`: **73 of
+> 73** object schemas declare `additionalProperties: false`. Against that row stand `07-errors.md`
+> §2.1 (*"an `errorCode` cannot be placed on the wire at all"*, recorded as a known gap needing a
+> schema change), `VERSIONING.md`'s exact-match argument (whose worked example is a server that
+> *"rejects it on validation"*), and this file's own `[0.26.0]` refusal to widen a closed schema
+> three times over, *"not [backward-compatible] for a receiver validating against an older vendored
+> copy"*. Three sites need receivers to refuse; one table row required them to accept. The row was
+> the outlier.
+>
+> **And the release before this one shipped three stale version markers that a gate in this
+> repository caught and no job ran.** `tools/verify-protocol.sh` — twenty categories, 4180 checks —
+> had no baseline constant, so `exitCode = totalFail > 0` made it permanently red on a clean tree,
+> and it was wired into nothing. It was the single entry in `check-tool-callers.py`'s BASELINE, and
+> the reason had been *recorded* in `verify-signatures.yml` rather than fixed. Its Category 18 had
+> been holding three live findings since `v0.28.0` was cut.
+
+### Fixed
+
+- **`02-transport.md` §10.1 — the unknown-fields row.** Replaced with the rule the corpus actually
+  implements, and **deliberately without forbidding anything**: a receiver **MAY** validate; one
+  that does not **SHOULD** ignore members it does not recognise, as a robustness recommendation
+  rather than a guarantee an emitter may rely on; adding an OPTIONAL member stays **MINOR** and
+  removing or renaming one stays **MAJOR**; and what makes an addition safe is exact-match
+  negotiation refusing the pairing at boot, not the parser. A repair that made adding a field
+  illegal would have been worse than the ambiguity. Recorded in
+  [KNOWN-ISSUES](KNOWN-ISSUES.md) as DECIDED, with the three dependent sites named.
+- **Three document-version sites the `0.28.0` release did not cascade.**
+  `guides/implementors-guide.md` at both of its sites — the `**Spec Version:**` header and the
+  closing *"This guide covers OSPP …"* line — and `KNOWN-ISSUES.md`'s
+  `**Specification-document version:**`, all still reading `0.27.0` against a `spec/README.md`
+  front-matter of `0.28.0`. A stale version on the implementor's guide tells the one reader who
+  starts there which revision they are implementing, and tells them wrong.
+- **`guides/implementors-guide.md` taught 512 KB as sufficient buffering, at both of its sites.**
+  §2.7 and the §7 conformance checklist each gave the `MUST` storage level as the minimum without
+  the derivation, while `01-architecture.md` §6.5 has said since `0.25.0` that the level **does not
+  reach the Category-1 floor** — 1000 TransactionEvents + 1000 SessionEnded + 200 SecurityEvents +
+  overhead is **~1.6 MB** — and records the gap as OPEN precisely because raising a mandatory
+  storage level changes the bill of materials of every station. The guide is the document read
+  *before* the hardware order, so it is the one place the smaller figure is most expensive. **The
+  figure is not silently raised** — that would decide the BOM question §6.5 leaves open. Both sites
+  now carry the derivation and §6.5's own instruction to build to it. The §2.7 site also gained the
+  100% rule (degraded mode) beside the 90% `5111 BUFFER_FULL` rule it already had.
+- **`conformance/test-vectors/crypto/canonical-form.json` cited a line range that had moved.**
+  `specSection` read *"06-security.md §4.8.1 (lines 677-688)"*; §4.8.1 begins at `:770` today and
+  677–688 now lands inside §4.7.3 *Emergency Renewal*, so a reader following the citation arrives at
+  certificate-renewal urgency. Repointed to sections without line numbers, matching its sibling
+  `ble-handshake-keyschedule.json` — a line number in a citation is a number nothing updates.
+- **`KNOWN-ISSUES.md` gave the Chapter 08 registry as 29 keys, twice.** It is **28**, stated at
+  `08-configuration.md` §9 and independently measured by `check-config-ranges.py`, which reads §§2--6
+  and §9 separately and reports 28 for both. Three stale line citations in the same entry replaced
+  with section references.
+
+### Changed
+
+- **`tools/verify-protocol.sh` gains a ratchet, and a caller.** Exits **0** at its baseline, **1**
+  above it, **1** below it (lower the constant, so an improvement cannot silently regress), and **2**
+  on a vacuous run — fewer than 3000 checks or a missing category refuses to return a verdict at all,
+  because a discovery bug that finds no files otherwise reports 0 FAIL and scores as a pass. That is
+  a failure mode this repository has produced twice: a markdownlint invocation that linted zero files
+  and exited 0, and a vector validator whose SKIPs hid a mapping gap. A SKIP baseline rides alongside
+  the FAIL one, because a SKIP is a check that did not happen and `SKIP(c, reason)` discards the
+  reason.
+  **Baseline: 6 FAIL, 6 SKIP over 4180 checks** — the same six the script's header has recorded since
+  `v0.21.0`. On a clean `a421d6f0` it measured **9**; the failure set diffs against that tree as
+  exactly the three version markers removed and **no other entry changed**.
+- **`.github/workflows/verify-protocol.yml`** is the caller it never had, in its own job.
+  Categories 19 and 20 stay duplicated in `verify-signatures.yml` **on purpose**: this job is a
+  ratchet that sits at a non-zero baseline, and a crypto oracle whose finding could be absorbed into
+  someone else's constant is not a crypto oracle.
+- **`tools/check-tool-callers.py` BASELINE 1 → 0.** Every gate in `tools/` is now reachable from some
+  job — 17 of 17 — and a new one added without a caller fails on its first run rather than joining a
+  list. `verify-signatures.yml`'s comment explaining why `verify-protocol.sh` stayed unwired is
+  corrected rather than deleted; so are its two "reached by no other job" notes.
+- **`tools/check-normative-bold.py` BASELINE 439 → 438.** Both numbers **re-derived by running the
+  instrument**, neither incremented. The finding set diffs against a clean `a421d6f0` as exactly one
+  entry leaving — §10.1's own row — and **none arriving**. The replacement text quotes that row in
+  backticks rather than bolding it: bolding a reference to an obligation dresses it as one, which is
+  the call `v0.27.0` recorded for a `MUST` used as a noun. The companion re-reads **1183** on both
+  trees, so `v0.28.0`'s `+1` is `v0.28.0`'s and nothing here; the fifth chance to get that companion
+  wrong was not taken.
+
+### Measured and NOT changed
+
+Recorded so they are not rediscovered. Each was raised downstream against this repository by a reader
+who had not opened it, and each was measured here before being answered.
+
+- **`recommendedAction` is in the registry for 118 of 118 codes, not 12.** The `12` is the arm count
+  of a *downstream SDK's* `recommendedAction()` accessor, not a property of `07-errors.md` §3, whose
+  every row carries a *Recommended Action* cell — measured, **zero empty**. §1.4 already settles the
+  follow-on question too: where a cell addresses more than one party, *"the emitted value **MUST**
+  preserve the part addressed to the receiver and **MAY** carry the rest"*, and 54 of the 118 cells
+  do address more than one. Nothing is owed here; the gap is a transcription gap in a consumer.
+  §1.4's own *"a registry cell **MUST** fit the wire bound"* is checked — Category 5 measures all 118
+  against Appendix C's `maxLength: 500` — and the largest is `6008` at **483**, so the rule holds with
+  17 characters to spare and, as of this release, in a gate something runs.
+- **`1007 PROTOCOL_VERSION_MISMATCH` is boot-scoped, in 41 sites across 15 files, without exception.**
+  §4.1 lists it on BootNotification alone, §4.2 does not list it at all, and its implicit set is
+  `1005`/`2007`/`6001`. A receiver emitting it on post-boot traffic is not exercising a broader
+  reachability this chapter grants. **What is genuinely absent** is any statement of what a receiver
+  does when a *post-boot* message carries a `protocolVersion` other than the negotiated one —
+  `VERSIONING.md` does not raise the case — and that is left open rather than answered here, because
+  the two candidate answers differ on whether a billable EVENT is dropped.
+- **§4.4's nine endpoints are literal paths, and the question of whether they are "roles" is already
+  settled.** §2.4 *Scope* makes an endpoint in scope when this specification fixes *"its path"*, adds
+  that *"mention is not definition"*, and states that a server **MAY** expose other HTTP APIs which
+  are *"not bound by the Error Object, the registry, or this section"*. A deployment serving a
+  different path for the same function is serving an endpoint this specification does not define, and
+  is conforming. All nine rows, `POST /me/offline-txs` included, are defined outside §4.4 as well.
+- **The receipt's pricing basis is signed already, under other names.** `receipt-data.schema.json`
+  carries no price, rate or tariff — and `reconciliation.md` §8.1 rule 1 requires the server to
+  **recompute** from the signed `durationSeconds` and the tariff for the signed `serviceId`, making
+  the station's `creditsCharged` *"advisory … a cross-check and an operator signal"* that **MUST NOT**
+  be the settled amount. Rule 2 states outright that the tariff-in-force construction *"needs no wire
+  field for the same reason"*.
+- **`stationMaxOfflineTx` needs no maximum for the reason it was asked for.**
+  `08-configuration.md` §5 states it is *"a per-pass policy limit on starting further offline
+  sessions, **not** a storage capacity"*, and `01-architecture.md` §6.5 already composes the two from
+  the other side: at 90% of `MaxOfflineTransactions` the station **SHOULD** refuse new sessions with
+  `5111 BUFFER_FULL`, at 100% it **MUST** enter degraded mode, and it **MUST NOT** discard buffered
+  events under any circumstances. A pass authorising more than the station can buffer does not
+  overrun it.
+- **The five response schemas that cannot carry a refusal are seven, and §2.1 already names all
+  seven** — with how a rejection is signalled on each, and the sentence *"This is a **known gap, not
+  a permission**"*. `get-configuration-response` is the live residue (*"declares no `status`; a
+  rejection is not expressible"*), and it is on the ROADMAP as such.
+
+### Not changed
+
+- `schemas/` — **zero bytes**. `protocolVersion` stays `0.3.0`. Every byte-identity gate in every
+  consuming tree stays green across this release.
+- `conformance/test-vectors/valid/` and `invalid/` — **zero bytes**, 163 and 171 respectively. The
+  only `conformance/` edit is one `specSection` metadata string under `crypto/`.
+- **The release cascade is not performed here, and this entry is `[Unreleased]` for that reason.**
+  `spec/README.md`'s front-matter and the 22 chapter headers still read `0.28.0`, so the newest
+  **released** `## [X.Y.Z]` heading must stay `0.28.0` too — Category 18 compares the two and fails
+  when they diverge, which is how this very entry was caught while it was headed `[0.29.0]`. Cutting
+  the release means, in one commit: stamp this heading with the number, add the §6 *Document
+  History* row in `00-introduction.md`, and move all 25 document-version sites together. As of this
+  release `verify-protocol.yml` fails the build if any of the three is missed — which is exactly
+  what `0.28.0` did miss, three times over, with nothing running to say so.
+
+---
+
 ## [0.28.0] — 2026-09-02
 
 > **MINOR, and it adds no normative text at all.** No message, field, schema, enum value or

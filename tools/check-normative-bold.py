@@ -30,7 +30,22 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-08-30  v0.27.0   439 unbolded, 1182 bolded spans — the revocation-decision
+    (this HEAD) 2026-09-03  (unreleased)  438 unbolded, 1183 bolded spans — the spec-cascade
+                                   cycle. BOTH numbers RE-DERIVED by running the instrument on this
+                                   tree, neither incremented from the line below. Unbolded falls by
+                                   exactly one and the finding set was diffed entry by entry against
+                                   a clean a421d6f0: one entry LEFT (02-transport.md's §10.1 row,
+                                   `Receivers MUST ignore unknown fields`, deleted with the row) and
+                                   NONE arrived. The replacement text quotes that old row, and the
+                                   quotation is in BACKTICKS rather than bolded — bolding a reference
+                                   to an obligation dresses it as one, which is the same call the
+                                   v0.27.0 line below records for a `MUST` used as a noun. BASELINE
+                                   lowered 439 -> 438 so the improvement cannot silently regress.
+                                   The companion re-reads 1183 on a clean a421d6f0 as well, so the
+                                   +1 over v0.27.0's 1182 is v0.28.0's single new bolded MUST and
+                                   nothing this cycle added; the fifth chance to get this companion
+                                   wrong was not taken.
+    8ce4ee7  2026-08-30  v0.27.0   439 unbolded, 1182 bolded spans — the revocation-decision
                                    cycle. Unbolded is UNCHANGED, and measured so: the finding set
                                    was diffed entry by entry against a run on a clean 8ce4ee7 and is
                                    IDENTICAL once line numbers are stripped. One entry appeared
@@ -135,7 +150,7 @@ import re
 import sys
 from collections import Counter
 
-BASELINE = 439
+BASELINE = 438
 
 KEYWORD = re.compile(r'\b(MUST NOT|MUST|SHALL NOT|SHALL)\b')
 FENCE = re.compile(r'```.*?```', re.S)

@@ -1,7 +1,7 @@
 {
   "_comment": "OSPP Canonical Form vectors for spec/06-security.md §4.8.1. Each vector gives a JSON input and the EXACT canonical string it must produce. The canonical values are the ORACLE: they were recomputed from the rule text in a third language, with a hand-written escaper cross-checked against an independent JSON encoder, and NOT taken from either SDK's output — a vector generated from an implementation can only prove that implementation agrees with itself. Six of these separate defects that both reference SDKs shipped: key-order-is-utf8-bytes-not-utf16, integer-like-keys-are-not-numerically-ordered, line-and-paragraph-separators-are-literal, separators-are-literal-in-keys-too, del-is-not-escaped, start-service-params-vendor-keys. Re-check: node tools/verify-canonical-form.mjs (also Category 20 of tools/verify-protocol.sh).",
   "specRef": "0.13.0",
-  "specSection": "06-security.md §4.8.1 (lines 677-688)",
+  "specSection": "06-security.md §4.8.1 (Algorithm), §4.8.2 (worked example)",
   "vectors": [
     {
       "name": "worked-example",

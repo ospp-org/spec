@@ -2,12 +2,29 @@
 # OSPP Protocol Verification Script
 # Runs all consistency checks and produces verification-report.md
 #
-# MEASURED BASELINE — this script has NO baseline constant and exits 1 on a clean tree,
-# so the only way to read its output is to diff the failure SET against a known point.
-# Record every re-measurement here, with its commit and date, because a count carried
-# without one is how the previous figure went stale: `9 FAIL / 6 SKIP` was true at
-# v0.20.0 and was still being quoted after 0.20.1 and 0.20.2 had closed three of them.
+# MEASURED BASELINE — this script now HAS a baseline constant (`BASELINE`, at the foot of
+# the node block) and exits 0 at it, 1 above it, 1 below it, and 2 on a vacuous run. Until
+# then it had none, exited 1 on a clean tree, and was therefore wired into no job at all —
+# the single entry in check-tool-callers.py's BASELINE. Record every re-measurement here,
+# with its commit and date, because a count carried without one is how the previous figure
+# went stale: `9 FAIL / 6 SKIP` was true at v0.20.0 and was still being quoted after 0.20.1
+# and 0.20.2 had closed three of them.
 #
+#   (this HEAD) 2026-09-03  (unreleased)  6 FAIL, 6 SKIP  (4180 checks, 4168 PASS) — the
+#                                  spec-cascade cycle. Ratchet added and the script WIRED into
+#                                  CI (.github/workflows/verify-protocol.yml). Measured on a
+#                                  clean tree at a421d6f0 it was 9 FAIL: the three extra were
+#                                  Category 18 catching document-version sites the v0.28.0
+#                                  release left at 0.27.0 — guides/implementors-guide.md twice
+#                                  (header and closing line) and KNOWN-ISSUES.md once. Nothing
+#                                  reported them, because nothing ran this file. Fixed here, so
+#                                  the failure SET diffs against a421d6f0 as exactly those three
+#                                  entries removed and NO other change; the remaining 6 are the
+#                                  same six below, unmoved. +4 checks are the two new
+#                                  version-marker comparisons plus two cross-reference links.
+#   a421d6f0 2026-09-02  v0.28.0   9 FAIL, 6 SKIP  (4176 checks, 4161 PASS) — measured, not
+#                                  inherited; the +3 over the line below are the release's own
+#                                  uncascaded version markers, not new defects.
 #   (this HEAD) 2026-08-18  (unreleased)  6 FAIL, 6 SKIP  (3981 checks, 3969 PASS) — the
 #                                  offline spec-contradiction cycle, re-measured after the two
 #                                  product decisions landed; failure SET diffed entry by entry
@@ -2231,6 +2248,71 @@ fs.writeFileSync(path.join(ROOT, 'verification-report.md'), output.join('\n'));
 log('');
 log('Report saved to verification-report.md');
 
-process.exitCode = totalFail > 0 ? 1 : 0;
+// ==================== RATCHET ====================
+//
+// This script had no baseline for twenty releases, so `exitCode = totalFail > 0` made it
+// permanently red on a clean tree, and a permanently red gate is one no job will run. That
+// is exactly what happened: it was the single entry in check-tool-callers.py's BASELINE,
+// unreachable from any workflow, while its twenty categories checked 4176 things nobody saw.
+//
+// The cost was not hypothetical. Category 18 caught three stale document-version sites the
+// v0.28.0 release left behind — guides/implementors-guide.md twice and KNOWN-ISSUES.md once,
+// all still reading 0.27.0 — and nothing reported them, because nothing ran this file.
+//
+// Same shape as the four check-*.py drift scripts: every finding is printed on every run,
+// the count may fall and must not rise, and falling is also a failure so the constant gets
+// lowered rather than the improvement silently regressing.
+//
+// MEASURED BASELINE — see the header of this file for the full history and the rule that a
+// count without a measurement point goes stale. Re-measure by running this script on a clean
+// tree and diffing the failure SET entry by entry, never by trusting the total.
+const BASELINE = 6;       // FAIL, at the measurement point in this file's header
+const SKIP_BASELINE = 6;  // SKIP, all Category 8 BLE schema-resolution noise
+
+// Anti-vacuity. A discovery bug that finds no files reports 0 FAIL and would score as a pass,
+// which is the failure mode this repository has already produced twice — a markdownlint
+// invocation that linted zero files and exited 0, and a vector validator whose SKIPs hid a
+// mapping gap. A floor well under the current 4176 catches a collapse without going brittle
+// on ordinary corpus growth.
+const MIN_CHECKS = 3000;
+const EXPECT_CATS = catOrder.length;
+const ranCats = catOrder.filter(id => cats[id]).length;
+
+log('');
+if (totalChecks < MIN_CHECKS || ranCats < EXPECT_CATS) {
+  log('## VACUOUS RUN — refusing to report a verdict');
+  log('');
+  log('- checks performed: ' + totalChecks + ' (floor ' + MIN_CHECKS + ')');
+  log('- categories that ran: ' + ranCats + ' of ' + EXPECT_CATS);
+  log('');
+  log('A run that inspected nothing cannot say the protocol is consistent. Check that this');
+  log('script is running from the repository root and that the corpus directories exist.');
+  process.exitCode = 2;
+} else if (totalFail > BASELINE) {
+  log('## ' + (totalFail - BASELINE) + ' NEW FAILURE(S) — above the baseline of ' + BASELINE);
+  log('');
+  log('Diff the failure list above against the baseline set recorded in this file\'s header,');
+  log('entry by entry. Fix the new entries, or — if a finding is genuinely resolved as a');
+  log('decision rather than a repair — record it there with its measurement point.');
+  process.exitCode = 1;
+} else if (totalFail < BASELINE) {
+  log('## BELOW BASELINE — ' + totalFail + ' FAIL against a baseline of ' + BASELINE);
+  log('');
+  log('Lower BASELINE in this file so the improvement cannot silently regress, and record');
+  log('the new measurement point in the header.');
+  process.exitCode = 1;
+} else if (totalSkip > SKIP_BASELINE) {
+  log('## SKIP COUNT ROSE — ' + totalSkip + ' against a baseline of ' + SKIP_BASELINE);
+  log('');
+  log('A SKIP is a check that did not happen. SKIP(c, reason) discards the reason, so a');
+  log('rising count is a discovery gap that reports itself as neither pass nor failure.');
+  process.exitCode = 1;
+} else {
+  log('## AT BASELINE — ' + totalFail + ' FAIL, ' + totalSkip + ' SKIP, ' + totalChecks + ' checks');
+  log('');
+  log('The open findings are the baseline set recorded in this file\'s header. They are');
+  log('printed in full above on every run; none of them is suppressed.');
+  process.exitCode = 0;
+}
 
 VERIFY_SCRIPT
