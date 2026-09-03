@@ -64,7 +64,7 @@ The station **MUST** reject the catalog if any service entry fails validation.
 |------------|-------------------------------|----------|-----------------------------------------------|
 | `3015` | `PAYLOAD_INVALID` | Error | A payload-level value that is wrong in itself — an empty `catalogVersion`, for instance. [Chapter 07 §3.3](../../07-errors.md) narrows this code to a value that could never be valid, so it does not reach a service **entry**: an entry that fails validation, a missing or conflicting price included, is `5023` by rule 1 above. |
 | `5023` | `INVALID_CATALOG` | Error | Any service entry failed validation — a missing required field, an invalid pricing type, no price for the declared `pricingType`, or the other type's price present — or the catalog as a whole is inconsistent, a duplicate `serviceId` being the case that arises. |
-| `5024` | `UNSUPPORTED_SERVICE` | Error | The catalog names a service the station cannot run, or binds one to a `(bayNumber, programNumber)` pair it never declared. The whole catalog is refused — see rule 8. |
+| `5024` | `UNSUPPORTED_SERVICE` | Error | The catalog names a service the station cannot run, or binds one to a `(bayNumber, programNumber)` pair it never declared. The whole catalog is refused — see rule 8. **Not `5023`:** that is rule 1's code for an entry that failed *validation*, and such an entry passes validation — what it fails is a fact only the station holds. Exercised by [`TC-DM-008`](../../../conformance/test-cases/device-management/TC-DM-008.md) Part E. |
 | `5025` | `CATALOG_TOO_LARGE` | Error | The catalog exceeds the station's storage or processing capacity. |
 | `5103` | `STORAGE_ERROR` | Error | Insufficient or inaccessible storage for persisting the catalog. |
 

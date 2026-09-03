@@ -6,7 +6,7 @@ Device Management Profile
 
 ## Purpose
 
-Verify that the station correctly handles UpdateServiceCatalog including successful catalog replacement with `previousCatalogVersion` returned, rejection of an entry missing a required field with `5023 INVALID_CATALOG`, rejection of a catalog whose entries are each well-formed but collide with `5023 INVALID_CATALOG`, and idempotent catalog updates.
+Verify that the station correctly handles UpdateServiceCatalog including successful catalog replacement with `previousCatalogVersion` returned, rejection of an entry missing a required field with `5023 INVALID_CATALOG`, rejection of a catalog whose entries are each well-formed but collide with `5023 INVALID_CATALOG`, idempotent catalog updates, and rejection of a catalog binding to a `(bayNumber, programNumber)` the station never declared with `5024 UNSUPPORTED_SERVICE`, leaving the previous catalog wholly in force.
 
 > **Both refusals carry `5023`, and that is not a duplicated step.** They exercise different
 > station logic — per-entry validation in Part B, cross-entry uniqueness in Part D — and a
@@ -21,7 +21,8 @@ Verify that the station correctly handles UpdateServiceCatalog including success
 
 - `spec/profiles/device-management/update-service-catalog.md` — UpdateServiceCatalog behavior
 - `spec/03-messages.md` §6.9 — UpdateServiceCatalog payload (timeout 30s)
-- `spec/07-errors.md` §3.5 — Error code 5023 `INVALID_CATALOG`; §3.3 — 3015 `PAYLOAD_INVALID` and its narrowed scope
+- `spec/07-errors.md` §3.5 — Error codes 5023 `INVALID_CATALOG` and 5024 `UNSUPPORTED_SERVICE`; §3.3 — 3015 `PAYLOAD_INVALID` and its narrowed scope
+- `spec/profiles/device-management/update-service-catalog.md` §6 rule 8 — the all-or-nothing refusal Part E exercises
 - `schemas/mqtt/update-service-catalog-response.schema.json`
 
 ## Preconditions
@@ -246,6 +247,64 @@ Verify that the station correctly handles UpdateServiceCatalog including success
     ```
 14. Verify the station still uses the previous valid catalog (`"2026-01-30-01"`).
 
+### Part E — Binding to a `(bayNumber, programNumber)` the Station Never Declared (5024)
+
+> **This part exercises rule 8, and nothing else in this corpus does.** Rule 8 is a MUST-level
+> refusal, and `5024 UNSUPPORTED_SERVICE` appeared **zero** times across the whole `conformance/`
+> tree before this part existed — against `5023` at 13, `3018` at 5 and `3001` at 9, so the absence
+> was of a *case*, not of a search. Parts A–D above bind every entry to `(bay 1, program 1|2|3)`,
+> all of them declared, so none of them reaches rule 8 at all.
+>
+> **It is semantically decidable, not schema-detectable, so it needs a behavioural case rather than
+> a vector under `invalid/`.** The payload below is perfectly well-formed: `bindings` accepts any
+> `(bayNumber, programNumber)` in range, and only the station knows which pairs it declared. A
+> validator cannot tell this catalog from a legal one, which is exactly why the refusal has to be
+> observed on the wire.
+
+15. Confirm the station's declared topology from the BootNotification of the preconditions: bay 1
+    with programs 1, 2 and 3. Program **9** on bay 1 was declared at neither provisioning nor the
+    most recent boot, and bay **2** does not exist on this station.
+16. Send UpdateServiceCatalog whose entries are each individually valid — every required field
+    present, pricing consistent, `serviceId`s distinct, so **rule 1 does not reach it** — but whose
+    second entry binds to an ordinal the station never declared:
+    ```json
+    {
+      "catalogVersion": "2026-01-30-04",
+      "services": [
+        { "serviceId": "svc_eco", "serviceName": "Eco Program", "pricingType": "PerMinute", "priceCreditsPerMinute": 10, "priceLocalPerMinute": 50, "available": true, "bindings": [{ "bayNumber": 1, "programNumber": 1 }] },
+        { "serviceId": "svc_phantom", "serviceName": "Phantom Program", "pricingType": "Fixed", "priceCreditsFixed": 20, "priceLocalFixed": 100, "available": true, "bindings": [{ "bayNumber": 1, "programNumber": 9 }] }
+      ]
+    }
+    ```
+17. Verify UpdateServiceCatalog response within 30 seconds:
+    ```json
+    { "status": "Rejected", "errorCode": 5024, "errorText": "UNSUPPORTED_SERVICE" }
+    ```
+    Not `5023`. `5023` is rule 1 — an entry that failed *validation* — and this entry passes
+    validation; what it fails is a fact only the station holds.
+18. **Verify the previous catalog remains in force, entirely.** Send GetConfiguration or start a
+    session against `svc_deluxe` from Part A and verify it is still recognised, then verify
+    `svc_phantom` is **not** recognised — a StartService naming it is refused with
+    `3004 INVALID_SERVICE`.
+19. **Verify no entry was partially applied.** `svc_eco`'s first entry in step 16 is valid on its
+    own and differs from nothing, so a station applying "the entries it could" would accept it
+    silently. Re-read the catalog version: it **MUST** still be `"2026-01-30-01"` and **MUST NOT**
+    be `"2026-01-30-04"`. This is the half of rule 8 no schema can check — the response is closed
+    and carries no member naming what was dropped, so a partial application leaves the server
+    tracking a `catalogVersion` for a catalog that exists on no station, with nothing on the wire
+    able to reveal it.
+20. Repeat step 16 with the offending binding on a bay rather than a program —
+    `{ "bayNumber": 2, "programNumber": 1 }` — and verify the same response. Rule 8 names both
+    halves of the pair, and a station that checks only the program ordinal passes step 17 and fails
+    here.
+
+> **`5025 CATALOG_TOO_LARGE` is still at zero coverage, and is deliberately not added here.** Of the
+> three codes [`07-errors.md` §4.2](../../../spec/07-errors.md#42-server--station-mqtt-actions)
+> assigns to this action, two had no conformance case at all; this part closes one. `5025` is left
+> open because its threshold is the *station's* storage or processing capacity and no bound in this
+> specification fixes it — `services` carries `minItems: 1` and no `maxItems` — so a portable case
+> would have to invent a number the protocol does not state.
+
 ## Expected Results
 
 1. Valid catalog update returns `Accepted` with `previousCatalogVersion`.
@@ -253,7 +312,11 @@ Verify that the station correctly handles UpdateServiceCatalog including success
 3. An entry missing a required field returns `Rejected` with `5023 INVALID_CATALOG`.
 4. A catalog with a duplicate `serviceId` returns `Rejected` with `5023 INVALID_CATALOG`.
 5. Same `catalogVersion` is handled idempotently.
-6. All responses arrive within the 30-second timeout.
+6. A `bindings` entry naming a `(bayNumber, programNumber)` the station never declared returns
+   `Rejected` with `5024 UNSUPPORTED_SERVICE`, on either half of the pair.
+7. After a `5024` refusal the previous catalog is still in force **in full** — the catalog version
+   is unchanged and no entry from the refused catalog was applied.
+8. All responses arrive within the 30-second timeout.
 
 ## Failure Criteria
 
@@ -262,4 +325,11 @@ Verify that the station correctly handles UpdateServiceCatalog including success
 3. An entry missing a required field is accepted, or is refused with a code other than `5023`.
 4. A catalog with a duplicate `serviceId` is accepted, or is refused with a code other than `5023`.
 5. Station does not recognize services from the new catalog.
-6. UpdateServiceCatalog response exceeds the 30-second timeout.
+6. A catalog binding to an undeclared `(bayNumber, programNumber)` is accepted, or is refused with a
+   code other than `5024` — `5023` in particular, which is rule 1's code for an entry that failed
+   validation, and this entry does not.
+7. The station applies the valid entries of a catalog refused under rule 8 and reports the refusal
+   anyway, or advances its `catalogVersion` on a refusal. Either leaves the server holding a
+   catalog version that exists on no station.
+8. The station checks the program ordinal but not the bay number, so step 20 is accepted.
+9. UpdateServiceCatalog response exceeds the 30-second timeout.

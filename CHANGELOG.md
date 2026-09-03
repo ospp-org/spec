@@ -70,6 +70,31 @@ as described in [VERSIONING.md](VERSIONING.md).
   and §9 separately and reports 28 for both. Three stale line citations in the same entry replaced
   with section references.
 
+### Added
+
+- **`TC-DM-008` Part E — the first conformance case for `5024 UNSUPPORTED_SERVICE`.**
+  `update-service-catalog.md` rule 8 is a MUST-level refusal: a catalog naming a `serviceId` the
+  station cannot run, or a `bindings` entry naming a `(bayNumber, programNumber)` it never declared,
+  **MUST** be answered `Rejected` with `5024` and the previous catalog **MUST** be left in force.
+  Measured across the whole corpus, `5024` appeared **0** times in `conformance/` — against `5023`
+  at 13, `3001` at 9, `3015` at 6 and `3018` at 5, so it was an absence of *case*, not of search.
+  `TC-DM-008` was already the only case that mentions UpdateServiceCatalog at all, and all four of
+  its parts bind to `(bay 1, program 1|2|3)` — every one declared — so none of them reached rule 8.
+  Part E binds an otherwise-valid entry to program 9 on bay 1, then repeats it on bay 2, because a
+  station that checks the program ordinal and not the bay number passes the first and fails the
+  second. It asserts the refusal **and** the two things no schema can check: that the previous
+  catalog is still in force in full, and that the `catalogVersion` did **not** advance — a partial
+  application leaves the server tracking a version that exists on no station, and the closed
+  response has no member able to reveal it. The case is behavioural rather than a vector under
+  `invalid/` on purpose: the payload is perfectly schema-valid, and only the station knows which
+  ordinals it declared.
+  **`5025 CATALOG_TOO_LARGE` stays at zero, and deliberately.** Its threshold is the station's own
+  capacity and no bound here fixes it — `services` carries `minItems: 1` and no `maxItems` — so a
+  portable case would have to invent a number the protocol does not state. Said out loud in both the
+  case and the profile rather than left to be rediscovered.
+- **`update-service-catalog.md` §7's `5024` row** now says why the code is not `5023` and points at
+  the case that exercises it.
+
 ### Changed
 
 - **`tools/verify-protocol.sh` gains a ratchet, and a caller.** Exits **0** at its baseline, **1**
