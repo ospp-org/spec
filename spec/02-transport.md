@@ -148,6 +148,40 @@ The `v1` segment in the topic path is a **namespace identifier**, NOT the protoc
 - A new topic namespace (e.g., `v2`) would only be introduced for a fundamental transport-level change — a different topic shape or a different addressing scheme — not for any change the envelope's `protocolVersion` can express.
 - The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.28.0*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.3.0`): the two version numbers evolve separately and need not match.
 
+**Negotiation happens once, at boot. A later mismatch is not re-negotiated, and is not refused.**
+
+Every message carries `protocolVersion` in its envelope, so a receiver *can* compare every message
+against the value negotiated at boot. It **MUST NOT** act on the comparison by refusing:
+
+1. A receiver **MUST** process a message whose `protocolVersion` differs from the negotiated value
+   on its merits, exactly as if it matched. Payload validation is unaffected — a message that fails
+   its own schema is still `1005`.
+2. A receiver **MUST NOT** refuse a message on account of its `protocolVersion` outside a
+   BootNotification response, and **MUST NOT** emit `1007 PROTOCOL_VERSION_MISMATCH` there. That
+   code is reachable only from BootNotification ([Chapter 07 §3.1](07-errors.md#31-transport-errors-1xxx)),
+   and this rule is why it stays so.
+3. A receiver **MUST** record the discrepancy — both versions, the `messageId`, and the peer — and
+   **SHOULD** raise an operator alert. It carries **no error code and no distinct wire status**,
+   the same disposition [Chapter 07 §3.1](07-errors.md#31-transport-errors-1xxx)'s `1005` row gives
+   the counter-discontinuous offline transaction, and for the same reason: the record is worth
+   keeping and the refusal is not.
+4. The condition is repaired at the **next boot**, where negotiation is defined and cheap.
+
+**Why a receiver must not refuse here, stated because the opposite reads as the careful choice.**
+A station's `protocolVersion` is fixed by its firmware, and changing firmware restarts it;
+[CORE-001](profiles/core/README.md) then makes BootNotification the first message of the new MQTT
+session. A version that genuinely moved therefore re-negotiates **by construction**, and a mismatch
+on a live session is a station malfunction rather than an unannounced upgrade — a condition an
+operator fixes, not one a peer can fix by rejecting traffic.
+
+The cost of refusing is **asymmetric, and the expensive half is silent.** For a REQUEST the refusal
+has somewhere to go: a RESPONSE carrying a code. For an **EVENT** there is none, so a receiver that
+refuses can only discard — and `SessionEnded` and `TransactionEvent` are the sole billing sources
+for a session that ended with no StopService to answer ([Chapter 01 §6.5](01-architecture.md)). A
+delivered session would go unbilled, permanently, over a metadata disagreement about a field that
+changed nothing in the payload. **A refusal that lands on the wrong path becomes the failure it was
+meant to prevent.**
+
 ### 2.3 Server Subscription Patterns
 
 The server subscribes to messages from all stations using an MQTT wildcard:
@@ -945,6 +979,7 @@ All timestamps MUST use **ISO 8601** format with **millisecond precision** and *
 | Invalid JSON received | MQTT / BLE | JSON parse error | Log `1005` and discard. No reply is possible: the `messageId` cannot be read, and [07-errors §2.1](07-errors.md#21-mqtt-error-response) requires a RESPONSE to echo it. MAY be reported as an unsolicited EVENT ([07-errors §2.2](07-errors.md#22-mqtt-error-event)) |
 | Unknown action | MQTT / BLE | Action not recognized | If the action is known to the protocol but unsupported here, reply `status: "Rejected"` with `1006` on that action's RESPONSE (§2.1). If the action is unknown to the protocol, no RESPONSE schema exists — log `1006` and discard. MAY be reported as an unsolicited EVENT (§2.2) |
 | Protocol version mismatch | MQTT | Declared `protocolVersion` not in the server's supported set (exact match) | Log `1007`, record `supportedVersions`, stay in the `Rejected` restricted state and keep retrying BootNotification at `retryInterval` per [CORE-011](profiles/core/README.md) — the station cannot deliver service, but it MUST NOT stop retrying |
+| Protocol version mismatch **after** an accepted boot | MQTT | Envelope `protocolVersion` differs from the value negotiated at boot | **Accept and process the message.** Do **not** refuse it and do **not** emit `1007` — that code is boot-only. Record both versions, the `messageId` and the peer; alert the operator; carry no error code and no distinct wire status. Repaired at the next boot ([§2.2](#22-topic-namespace-versioning)) |
 | BLE scan timeout | BLE | No advertisement found in 30s | Return to IDLE, show error to user |
 | BLE connection drops | BLE | GATT disconnect event | Service continues on timer; receipt retained |
 | BLE fragment timeout | BLE | 5s without next fragment | Discard buffered fragments |

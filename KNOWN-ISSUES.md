@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-03
 **Specification-document version:** 0.28.0 (release tag `v0.28.0`)
-**Status:** 3 blockers open (all BLE), 27 non-blocking issues open, **19** decisions recorded (one of
+**Status:** 3 blockers open (all BLE), **29** non-blocking issues open, **19** decisions recorded (one of
 them reversing another), and one named defect **class** with ten instances. **The counts are
 re-derived from the headings on every release, never incremented** — the previous revision read 24
 open against 25 `## OPEN` headings, which is how a summary drifts from the file it summarises.
@@ -16,7 +16,7 @@ the arcs since
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 27 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · **[no gate range-checks a config value inside an example payload](#open--no-gate-range-checks-a-configuration-value-that-sits-inside-an-example-payload)** · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) · **[`5016` is required for two conditions and named for one](#open--5016-version_already_installed-is-required-for-two-conditions-and-one-of-them-is-the-opposite-of-what-the-name-says)** · **[UpdateFirmware is both idempotent and `5107`](#open--updatefirmware-is-documented-as-idempotent-and-as-rejected-with-5107-for-the-same-second-command)** · **[no code describes a non-HTTPS firmware URL](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal)** · **[`offeredVersion` vs `attemptedVersion`](#open--the-firmwaredowngradeattempt-securityevent-names-the-offered-version-with-two-different-member-names-and-nothing-can-tell)**  · **[a station whose hardware changes has no route back into service](#open--a-station-whose-hardware-genuinely-changes-has-no-route-back-into-service-because-the-two-rules-that-guard-topology-point-at-each-other)** · **[the hardware storage levels do not hold the Category-1 floors](#open--the-hardware-storage-levels-do-not-hold-the-category-1-floors-they-are-said-to-size)** · **[OfflinePass validity rides an uncorrected wall clock, and the backstop reads the same clock](#open--offlinepass-temporal-validity-rides-a-wall-clock-with-no-offline-correction-and-the-servers-backstop-reads-the-same-clock)** · **[`5019` has no carrier on either side](#open--5019-upload_failed-names-a-condition-that-cannot-exist-when-its-response-is-sent-and-its-real-carrier-has-no-code-field)**   |
+| OPEN | 29 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · **[no gate range-checks a config value inside an example payload](#open--no-gate-range-checks-a-configuration-value-that-sits-inside-an-example-payload)** · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) · **[`5016` is required for two conditions and named for one](#open--5016-version_already_installed-is-required-for-two-conditions-and-one-of-them-is-the-opposite-of-what-the-name-says)** · **[UpdateFirmware is both idempotent and `5107`](#open--updatefirmware-is-documented-as-idempotent-and-as-rejected-with-5107-for-the-same-second-command)** · **[no code describes a non-HTTPS firmware URL](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal)** · **[`offeredVersion` vs `attemptedVersion`](#open--the-firmwaredowngradeattempt-securityevent-names-the-offered-version-with-two-different-member-names-and-nothing-can-tell)**  · **[a station whose hardware changes has no route back into service](#open--a-station-whose-hardware-genuinely-changes-has-no-route-back-into-service-because-the-two-rules-that-guard-topology-point-at-each-other)** · **[the hardware storage levels do not hold the Category-1 floors](#open--the-hardware-storage-levels-do-not-hold-the-category-1-floors-they-are-said-to-size)** · **[OfflinePass validity rides an uncorrected wall clock, and the backstop reads the same clock](#open--offlinepass-temporal-validity-rides-a-wall-clock-with-no-offline-correction-and-the-servers-backstop-reads-the-same-clock)** · **[`5019` has no carrier on either side](#open--5019-upload_failed-names-a-condition-that-cannot-exist-when-its-response-is-sent-and-its-real-carrier-has-no-code-field)** · **[the anti-downgrade guard compares a LABEL nothing binds to the bytes](#open--the-anti-downgrade-guard-compares-a-label-and-nothing-in-the-protocol-binds-that-label-to-the-bytes-it-names)** · **[the firmware signing certificate rotates annually and no message can deliver it](#open--the-firmware-signing-certificate-is-stated-to-rotate-annually-and-no-message-can-deliver-the-new-one)**   |
 | CLOSED | 4 | [Device Management Required vs RECOMMENDED](#closed-0160--the-device-management-profile-was-required-in-chapter-08-and-recommended-not-mandatory-in-its-own-readme) — closed in 0.16.0 in favour of the capability · [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
 | **CLASS** | 10 | **[an obligation no field, no code and no actor can carry](#class--an-obligation-no-field-no-code-and-no-actor-can-carry)** — an index of the ten instances; 4 still open, 1 a blocker |
 | DECIDED | 19 | **[§10.1 required receivers to ignore unknown fields, and every schema forbids it](#decided-unreleased--02-transportmd-101-required-receivers-to-ignore-unknown-fields-and-every-schema-in-this-repository-forbids-it)** — 73 of 73 object schemas are closed, and three decisions already taken (§2.1's known gap, exact-match negotiation, the `0.26.0` triple refusal) rest on receivers *not* ignoring; prose only, zero schema bytes · **[the broker MUST check revocation, the list is bounded twice, and a stale list buys one alerted hour](#decided-0270--the-broker-must-check-revocation-the-list-is-bounded-twice-and-a-list-that-goes-stale-buys-one-alerted-hour-before-the-door-shuts)** — axis 1a + 2a&2b + 3c; verified by declaration because no message can carry it, and the two bounds are broker settings deliberately outside the Chapter 08 registry · **[`allowedServiceTypes` withdrawn in two steps](#decided-0250--offlineallowanceallowedservicetypes-is-withdrawn-in-two-steps-because-nobody-ever-asked-for-the-constraint)** · **[ownership transfer and decommissioning stay undefined, and §1.3 now says so](#decided-0250--station-ownership-transfer-and-decommissioning-stay-undefined-and-the-specification-now-says-so)** · **[the server is the billing authority on the offline path too](#decided-0240--the-server-is-the-billing-authority-on-the-offline-path-too-and-81-was-the-outlier)** · **[`OfflinePassMaxAge` kept, wired into check #2, defaulted to inert](#decided-0240--offlinepassmaxage-is-kept-wired-into-check-2-and-defaulted-to-inert)** · **[`DiagnosticsUploadUrl` withdrawn — a key nothing reads](#decided-0230--diagnosticsuploadurl-had-no-reachable-consumer-and-is-withdrawn-rather-than-defined)** · **[UpdateFirmware to a `Pending` station is `Accepted`, notifications suppressed](#decided-0210--updatefirmware-to-a-pending-station-was-refused-on-a-premise-the-same-chapter-contradicts-and-with-a-response-no-error-code-could-carry)** — **reverses the `0.20.0` row below**: the `Rejected` it mandated needed an `errorCode` no registry entry supplies, and §6.6 already reported the outcome on BootNotification; the discriminator's second clause survives, its reading did not · **[nine gates in `tools/` were reachable from no job](#decided-0201--two-validation-scripts-reported-100-failure-and-no-workflow-ran-them-the-workflows-now-call-the-scripts-and-a-census-guards-the-class)** — the workflows now call the scripts, and `check-tool-callers.py` guards the class · **[the firmware gate is on the INSTALL, not the download](#decided-0200--the-active-session-gate-named-three-stages-it-gates-the-install-and-scheduledat-defers-the-install-with-it)** — and `scheduledAt` defers the install with it; the stall rule scoped rather than `Verified` given a wire value · **[~~UpdateFirmware to a `Pending` station is `Rejected`~~ — REVERSED in `0.21.0`](#decided-0200--updatefirmware-had-no-row-in-the-pending-command-table-it-is-rejected-and-the-discriminator-gained-the-clause-that-says-why)** — kept as the record; the row it added was right, the verdict in it was not · **[a restricted station may renew its own certificate](#decided-0190--one-table-gave-the-same-act-opposite-verdicts-and-a-certificate-renewal-could-not-conclude-in-the-state-the-spec-keeps-open-for-repairs)** — the exception's *reason* restated to cover both members rather than a second name added to a list · [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
@@ -2547,6 +2547,77 @@ server correlating the two has only a timestamp to do it with.
    optional (non-bold) in §4.2's UpdateFirmware row, which understates a **MUST**.
 3. **Keep `5016` for both and say so explicitly.** Cheapest of all and the worst: it leaves a code
    whose name is false half the time, which is the condition this entry records.
+
+---
+
+## OPEN — the anti-downgrade guard compares a LABEL, and nothing in the protocol binds that label to the bytes it names
+
+`06-security.md` §4.6 requires the `signature` on UpdateFirmware [MSG-016] to be *"the Base64-encoded
+ECDSA P-256 signature of the **firmware image**"*, and `update-firmware-request.schema.json` types it
+the same way — *"ECDSA P-256 signature of firmware image"*. The signature therefore covers the
+**bytes**. §4.6.1's anti-downgrade guard compares something else entirely: *"the offered
+`firmwareVersion` is older than the currently installed version"* — a **string**, carried beside the
+bytes in the same closed request, and covered by nothing.
+
+**Nothing binds the two.** Measured across `schemas/`, `spec/`, `conformance/` and `guides/`:
+`artifactId` **0**, `artifact_id` **0**, `manifestDigest` **0** — no member ties an image to an
+identity that survives being re-labelled, and no rule states that a `(firmwareVersion, checksum)`
+pair is immutable once published. `update-firmware-request` is closed over exactly six properties.
+
+**The consequence is that the guard can be walked past without breaking anything it checks.** Take
+a genuinely signed image — an old one, with a vulnerability since fixed — and offer it under a
+`firmwareVersion` higher than the station's current one. The signature verifies, because it is over
+the bytes and the bytes are unaltered. The checksum verifies, for the same reason. §4.6.1's
+comparison passes, because it compares the label it was handed. `forceDowngrade` is never needed and
+never set, so the `FirmwareDowngradeAttempt` SecurityEvent §4.6.1 relies on is never raised — the
+station does not believe it is downgrading. Every check the specification defines returns *pass*,
+and the station installs older firmware than it was running.
+
+**This is not a request for a new field, and the fix is not obviously one.** The version string could
+be brought under the signature; the pair could be declared immutable with a stated consequence for
+re-use; the guard could compare digests it has seen rather than labels. Each is a different change
+with a different cost, and picking one is a decision rather than a transcription — which is why this
+is recorded rather than taken. What is **not** available is leaving the guard keyed on the label
+while calling it protection.
+
+*Related but distinct:* [`5016` is required for two conditions](#open--5016-version_already_installed-is-required-for-two-conditions-and-one-of-them-is-the-opposite-of-what-the-name-says)
+concerns which code the refusal carries; this entry concerns whether the refusal fires at all.
+
+---
+
+## OPEN — the firmware signing certificate is stated to rotate annually, and no message can deliver the new one
+
+`06-security.md` §4.6 gives the trust chain as *"Operator / Manufacturer Root CA └── Firmware Signing
+Certificate (ECDSA P-256, **annual rotation**) └── Signs each firmware image"*, and says the station
+*"validates the firmware signature against a **pre-provisioned** Firmware Signing Certificate (or its
+CA) stored in the station's secure element or encrypted NVS."*
+
+**Pre-provisioned is the only delivery this specification defines.** Measured:
+
+| Candidate carrier | Why it cannot |
+|---|---|
+| `update-firmware-request.schema.json` | closed over `firmwareUrl`, `firmwareVersion`, `checksum`, `signature`, `forceDowngrade`, `scheduledAt` — no certificate member, and no chain member |
+| `CertificateInstall [MSG-023]` | `certificateType` is `enum: ["StationCertificate", "MQTTClientCertificate"]`. There is no firmware value, and the enum is closed |
+| `ChangeConfiguration [MSG-013]` | Chapter 08 §§2--6 register 28 keys and none of them holds a firmware signing certificate; §1.3 then makes a station **MUST** answer `NotSupported` to an unrecognised key |
+| the firmware image itself | circular where the leaf is the anchor: the image carrying the new certificate is signed by that certificate |
+
+`conformance/test-firmware/README.md` states the same posture from the other side — *"signed offline
+by the manufacturer's operational PKI, with the public certificate **pre-provisioned** to the
+station's secure element"* — so the corpus agrees that no in-field route exists.
+
+**Contrast makes the omission visible rather than incidental.** The station's *own* mTLS certificate
+has a full renewal profile (§4.7, `certificate-renewal.md`, `SignCertificate [MSG-022]`,
+`CertificateInstall [MSG-023]`, `TriggerCertificateRenewal [MSG-024]`). `OfflinePassPublicKey`
+rotates through a registered Chapter 08 key with a defined grace period (§6.7). The firmware signing
+authority — the one credential that gates what **code** a station will run — states a rotation
+cadence and defines no mechanism at all.
+
+**Where the anchor sits decides how bad this is, and the specification says "or its CA", which does
+not decide it.** Anchored at the Root CA, annual leaf rotation is survivable provided the leaf
+reaches the station, and nothing carries it. Anchored at the leaf, the rotation is unperformable and
+the station stops accepting firmware when the pre-provisioned certificate expires — including the
+firmware that would have fixed it. Naming the anchor is the cheaper half of this and could be done on
+its own.
 
 ---
 

@@ -65,6 +65,34 @@ as described in [VERSIONING.md](VERSIONING.md).
   677–688 now lands inside §4.7.3 *Emergency Renewal*, so a reader following the citation arrives at
   certificate-renewal urgency. Repointed to sections without line numbers, matching its sibling
   `ble-handshake-keyschedule.json` — a line number in a citation is a number nothing updates.
+- **A post-boot `protocolVersion` mismatch had no rule, and the absent rule was expensive in one
+  direction only.** Negotiation is exact match at boot; nothing said what a receiver does when a
+  *later* message carries a different value, so refusing was as readable as accepting.
+  `02-transport.md` §2.2 now states the rule and §11 carries the scenario row: the receiver **MUST**
+  process the message on its merits, **MUST NOT** refuse it for the version, **MUST NOT** emit
+  `1007` outside a BootNotification response, **MUST** record the discrepancy, and **SHOULD** alert
+  the operator — no error code, no distinct wire status, exactly the disposition `1005`'s row gives
+  the counter-discontinuous offline transaction. `1007` stays boot-bound, where 41 sites across 15
+  files already scope it. **Why accepting is not the lax choice:** `protocolVersion` is fixed by
+  firmware and changing firmware restarts the station, after which CORE-001 makes BootNotification
+  the first message — so a version that genuinely moved re-negotiates by construction, and a
+  mismatch on a live session is a station malfunction. Refusing is asymmetric: a REQUEST has a
+  RESPONSE to carry the code, an **EVENT** has none, so a refusing receiver can only discard — and
+  `SessionEnded` and `TransactionEvent` are the sole billing sources for a session that ended with
+  no StopService to answer. A delivered session would go permanently unbilled over a metadata
+  disagreement that changed nothing in the payload.
+- **`3003 SERVICE_UNAVAILABLE` read as a bay-level condition, and the ordinal that discriminates it
+  was already on the wire.** The row's causes — hardware absent, disabled, out of consumable — are
+  routinely true of **one program ordinal** rather than of the bay, and that ordinal is what
+  separates a nozzle refilled tomorrow from a dead bay. **No new code was minted and no schema byte
+  moved**, because every transport already carries it: `start-service-response.programNumber` is
+  **REQUIRED when `status` is `Rejected`**, `ble/start-service-response` carries the same echo, and
+  on REST the ordinal travels as `details.programNumber` in the open `details` member. The row now
+  says so, distinguishes itself from `3017` (which is the ordinal naming *nothing*; this code
+  presupposes it **is** declared), and states explicitly that the entry **does not branch** — the
+  recovery is identical whichever cause holds, so `details` stays OPTIONAL per §1.3 and §1.4's
+  branching obligation is not engaged. Recommended Action re-measured at **407** of Appendix C's
+  500.
 - **`KNOWN-ISSUES.md` gave the Chapter 08 registry as 29 keys, twice.** It is **28**, stated at
   `08-configuration.md` §9 and independently measured by `check-config-ranges.py`, which reads §§2--6
   and §9 separately and reports 28 for both. Three stale line citations in the same entry replaced
@@ -94,6 +122,26 @@ as described in [VERSIONING.md](VERSIONING.md).
   case and the profile rather than left to be rediscovered.
 - **`update-service-catalog.md` §7's `5024` row** now says why the code is not `5023` and points at
   the case that exercises it.
+
+### Recorded as OPEN, not taken
+
+- **The anti-downgrade guard compares a label nothing binds to the bytes.** §4.6 signs *the firmware
+  image*; §4.6.1 compares *the offered `firmwareVersion` string*, which the signature does not cover
+  and which `artifactId` / `manifestDigest` — **0 occurrences each, repo-wide** — do not tie to
+  anything. A genuinely signed old image offered under a higher version number passes the signature
+  check, the checksum check and the downgrade check, never sets `forceDowngrade`, and therefore never
+  raises the `FirmwareDowngradeAttempt` SecurityEvent the guard leans on. Recorded rather than fixed
+  because the three available repairs — signing the version string, declaring the pair immutable,
+  comparing digests instead of labels — differ in cost and one has to be chosen.
+- **The firmware signing certificate is stated to rotate annually and no message can deliver the new
+  one.** `update-firmware-request` is closed with no certificate member; `CertificateInstall`'s
+  `certificateType` enum is `StationCertificate | MQTTClientCertificate`, closed; Chapter 08 registers
+  no key for it and §1.3 makes an unrecognised key a `NotSupported`; the image itself is circular
+  where the leaf is the anchor. §4.6 says *"pre-provisioned … (or its CA)"*, and **which of the two
+  is the anchor decides whether this is survivable** — naming it is the cheaper half and could be
+  done alone. The contrast is what makes it an omission rather than a choice: the station's own mTLS
+  certificate has a four-message renewal profile, and `OfflinePassPublicKey` has a registered key with
+  a grace period.
 
 ### Changed
 
@@ -164,6 +212,15 @@ who had not opened it, and each was measured here before being answered.
   `5111 BUFFER_FULL`, at 100% it **MUST** enter degraded mode, and it **MUST NOT** discard buffered
   events under any circumstances. A pass authorising more than the station can buffer does not
   overrun it.
+- **A FirmwareStatusNotification is correlated by construction, so the missing `updateId` is not a
+  protocol gap.** `updateId` is **0 occurrences** repo-wide and the notification carries no reference
+  to the UpdateFirmware that caused it — but `02-transport.md` §5 serialises commands (*"MUST queue
+  it (max 10 pending commands) or reject with `5107 OPERATION_IN_PROGRESS`"*) and
+  `update-firmware.md` §7 restates `5107` for exactly this action, so **one update is in flight at a
+  time and the protocol enforces it with a code that already exists**. A receiver that cannot
+  attribute a notification is not observing an absent field; it is not using the serialisation the
+  protocol guarantees. The two firmware items that *are* real are recorded as OPEN above, and
+  neither is a field.
 - **The five response schemas that cannot carry a refusal are seven, and §2.1 already names all
   seven** — with how a rejection is signalled on each, and the sentence *"This is a **known gap, not
   a permission**"*. `get-configuration-response` is the live residue (*"declares no `status`; a
