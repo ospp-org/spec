@@ -1,6 +1,6 @@
 # Chapter 08 — Configuration
 
-> **Status:** Draft | **OSPP Version:** 0.30.0
+> **Status:** Draft | **OSPP Version:** 0.31.0
 
 This chapter defines the configuration model for OSPP stations, including the key-value store structure, supported data types, access modes, mutability semantics, and the complete registry of standard configuration keys. Configuration is read and written via the [GetConfiguration](03-messages.md#62-getconfiguration) and [ChangeConfiguration](03-messages.md#61-changeconfiguration) messages defined in Chapter 03.
 
@@ -123,41 +123,47 @@ Two such pairs exist. `HeartbeatIntervalSeconds` with `heartbeatIntervalSec` **a
 | `MeterValuesInterval` | integer | `60` | RW | Dynamic | 10--3600 | Interval in seconds between MeterValues event reports during an active session. |
 | `MeterValuesSampleInterval` | integer | `10` | RW | Dynamic | 1--60 | Sensor sampling interval in seconds. Controls how frequently the station reads hardware sensors. Aggregated values are reported to the server at `MeterValuesInterval`. |
 | `MaxSessionDurationSeconds` | integer | `900` | RW | Dynamic | 60--3600 | Maximum session duration in seconds. The station MUST auto-stop the service when this limit is reached. |
-| `SessionTimeout` | integer | `120` | RW | Dynamic | 30--600 | Idle session timeout in seconds. If no user interaction occurs within this window after session start, the station MAY stop the service. |
+| `SessionTimeout` | integer | `120` | RW | Dynamic | 30--600 | Idle session timeout in seconds. If no user interaction occurs within this window after session start, the station **MAY** stop the service, reporting `reason: "Inactivity"` on the SessionEnded EVENT. **MeterValues do not reset the timer** — see the note below. |
 | `ReservationDefaultTTL` | integer | `300` | RW | Dynamic | 60--1800 | Reservation time-to-live in seconds. Expired reservations are automatically cancelled. |
 | `DefaultCreditsPerSession` | integer | `100` | RW | Dynamic | 1--10000 | Default credit authorization amount in minor currency units when no explicit amount is provided. |
 
-> **`SessionTimeout` is not fully specified, and this note is the specification of that fact.**
-> The key is retained because deployed configurations carry it, but three gaps stand between it
-> and an implementable obligation. They are recorded here rather than closed, because closing the
-> first one is a wire change nobody has asked for.
+> **`SessionTimeout` was not fully specified. At `0.31.0` all three gaps are closed, and this note
+> records how — because one of them was closed by a wire change and the other two by deciding which
+> of two statements governs.**
 >
-> 1. **A station that acts on it cannot say so.** The row above permits stopping an idle session,
->    and [`session-ended.md` §6](profiles/transaction/session-ended.md) requires a SessionEnded for
->    every session terminating without a StopService. The `reason` enum is closed at six members —
->    `TimerExpired`, `Fault`, `Local`, `LocalOutOfCredit`, `Deauthorized`, `OperatorStopped` — and
->    none of them is an inactivity timeout. So the one event that would report the stop has no
->    value to report it with, and the station is left choosing between an inaccurate `reason` and
->    a silent termination. Widening the enum is a coordinated wire change and has deliberately
->    **not** been made.
-> 2. **The two statements of the rule use different triggers, and the transition one of them names
->    does not exist.** This registry says *no user interaction*; [`05-state-machines.md`
->    §3.4](05-state-machines.md) says *no MeterValues or user interaction*. On a metered bay those
->    are different conditions, and which one governs decides whether the timer ever runs. Worse,
->    §3.4 states the outcome as a transition to `Stopping` — but §3.3, the session transition table,
->    carries no inactivity row among its fifteen triggers, and neither the §3.1 diagram nor
->    `diagrams/state-machine-session.mmd` has such an edge. The only transitions into `Stopping` are
->    a StopService and the duration timer.
-> 3. **Under the MeterValues-counting reading the mechanism breaks in both directions, at legal
->    settings.** At the **default pair** — `MeterValuesInterval` `60`, `SessionTimeout` `120` —
->    a MeterValues always arrives inside the window, so the timeout can never fire and the feature
->    is inert as shipped. At the **legal extreme** — `MeterValuesInterval` `3600` against
->    `SessionTimeout` `600`, both inside their published ranges — no MeterValues can arrive inside
->    the window, so every session still running at 600 s is stopped as idle while it is being
->    delivered normally. The registry admits both pairs and warns against neither.
+> 1. **A station that acts on it can now say so. CLOSED by a wire change.** The `reason` enum was
+>    closed at six — `TimerExpired`, `Fault`, `Local`, `LocalOutOfCredit`, `Deauthorized`,
+>    `OperatorStopped` — and none of them was an inactivity timeout, so the one event required to
+>    report the stop ([`session-ended.md` §6](profiles/transaction/session-ended.md)) had no value to
+>    report it with, and the station was left choosing between an inaccurate `reason` and a silent
+>    termination. **`Inactivity` is the seventh member.** It bills pro-rata on delivered duration —
+>    the customer received service and then stopped engaging with it, which is the same shape as
+>    `Local` and is settled the same way ([`04-flows.md` §6](04-flows.md)). This is the enum widening
+>    the previous revision of this note declined to make, and it is made deliberately: an obligation
+>    with no legal value to satisfy it is not an unimplemented rule, it is an unimplementable one.
+> 2. **The two statements used different triggers. CLOSED without a wire change, because one of them
+>    already governed.** This registry says *no user interaction*;
+>    [`05-state-machines.md` §3.4](05-state-machines.md) said *no MeterValues or user interaction*.
+>    That table's own closing sentence has always said the registry governs where the two disagree,
+>    so this was never a genuine disagreement — only an unswept restatement, and §3.4 is now swept.
+>    **The trigger is user interaction. MeterValues do not reset the timer**: they are the station's
+>    own telemetry, emitted on a timer whether or not a customer is present, so counting them made
+>    the timer measure the station rather than the user. §3.3 also carried **no inactivity row** among
+>    its triggers while §3.4 named a transition to `Stopping`; that row now exists, and the table has
+>    sixteen triggers rather than fifteen.
+> 3. **The both-directions breakage was a consequence of gap 2 and disappears with it.** Under the
+>    MeterValues-counting reading the mechanism failed at *legal* settings in both directions: at the
+>    **default pair** (`MeterValuesInterval` `60`, `SessionTimeout` `120`) a MeterValues always
+>    arrived inside the window, so the timeout could never fire and the feature was inert as shipped;
+>    at the **legal extreme** (`3600` against `600`, both inside their published ranges) no MeterValues
+>    could arrive inside the window, so every session still running at 600 s was stopped as idle while
+>    being delivered normally. Once MeterValues do not reset the timer, neither pair interacts with it
+>    at all and no range needs narrowing. **No configuration value changed to close this.**
 >
-> Until these are resolved, treat the behaviour as implementation-defined: a server cannot infer
-> from the protocol that a session ended because this timer elapsed.
+> **The behaviour is no longer implementation-defined.** This note previously closed *"treat the
+> behaviour as implementation-defined: a server cannot infer from the protocol that a session ended
+> because this timer elapsed"* — which was accurate and is now false: `reason: "Inactivity"` is
+> exactly that inference, carried on the wire.
 
 ---
 

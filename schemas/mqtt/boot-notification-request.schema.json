@@ -84,7 +84,7 @@
         "ErrorRecovery",
         "Reconnect"
       ],
-      "description": "Reason the station sent this BootNotification. SEVEN of the eight name an actual boot; `Reconnect` names the case where NONE occurred — the firmware never restarted, only the MQTT session is new. OSPP requires a BootNotification after every connection including reconnections, so without `Reconnect` a station that merely re-dialled had to pick a value it knew to be false, and a server reading it could not tell whether the station's volatile state survived. It matters because the answer decides whether a live session is kept or terminated. `RemoteReset` means the server asked for this return via Reset [MSG-015], distinguishing a commanded reboot from a spontaneous one. `ManualReset` is a human acting at the station; `ScheduledReset` is the station's own scheduled restart. No member denotes a credential wipe: OSPP has no remote factory reset (Reset profile §5.1). `uptimeSeconds` is the cross-check, and the two MUST agree: a `Reconnect` carries the uptime the station already had, and a station claiming `PowerOn` with a large uptime is detectably lying."
+      "description": "Reason the station sent this BootNotification. SEVEN of the eight name an actual boot; `Reconnect` names the case where NONE occurred — the firmware never restarted. It covers TWO such cases: a re-dialled MQTT session, and a BootNotification the server asked for by TriggerMessage [MSG-016], where nothing restarted and the session is not new either. Its definition was narrowed to the first case until 0.31.0, which left a triggered Boot with no truthful member at all — the same bind `Reconnect` was invented to end. The enum is NOT widened: the member already meant *no boot occurred*, and that is exactly what a triggered Boot reports. OSPP requires a BootNotification after every connection including reconnections, so without `Reconnect` a station that merely re-dialled had to pick a value it knew to be false, and a server reading it could not tell whether the station's volatile state survived. It matters because the answer decides whether a live session is kept or terminated. `RemoteReset` means the server asked for this return via Reset [MSG-015], distinguishing a commanded reboot from a spontaneous one. `ManualReset` is a human acting at the station; `ScheduledReset` is the station's own scheduled restart. No member denotes a credential wipe: OSPP has no remote factory reset (Reset profile §5.1). `uptimeSeconds` is the cross-check, and the two MUST agree: a `Reconnect` carries the uptime the station already had, and a station claiming `PowerOn` with a large uptime is detectably lying."
     },
     "capabilities": {
       "type": "object",
@@ -139,6 +139,14 @@
         }
       },
       "description": "Current network connection details."
+    },
+    "messageSigningMode": {
+      "type": "string",
+      "enum": [
+        "All",
+        "None"
+      ],
+      "description": "The MessageSigningMode the station is CURRENTLY operating in, as loaded from NVS at this boot. OPTIONAL: a station that omits it says nothing, which is what every station said before 0.31.0. It is deliberately NOT a member of `capabilities` -- that object is feature flags, four booleans, describing what the station supports; this is configuration state, describing what it is doing. It rides THIS message because BootNotification REQUEST is one of the three structural exemptions from message signing (06-security.md 5.6), and so the only message that still arrives when the station and the server disagree about the mode. Every other channel that could report the mode -- GetConfiguration included -- is among the 44 signed types, so a station that has failed closed cannot use any of them. Without this field that state is not merely undiagnosed, it is inexpressible."
     }
   }
 }

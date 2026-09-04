@@ -146,7 +146,7 @@
           "minimum": 10,
           "maximum": 65535,
           "default": 30,
-          "description": "MQTT 5.0 Keep Alive interval the station MUST use on CONNECT. AUTHORITATIVE: where this field is present the advertised value governs, and the broker's 1.5x disconnect multiplier follows it. Chapter 02 — Transport §1.2's 30 seconds is the value to use when this field is ABSENT, not a ceiling on what may be advertised — Keep Alive carries no cryptographic binding and constrained cellular deployments legitimately need a different one."
+          "description": "MQTT Keep Alive interval in seconds. REQUIRED — this member is in `mqttConfig.required`, so it is never absent from a valid provisioning response, and a response omitting it is malformed rather than defaulted. Chapter 02 — Transport §1.2's 30 seconds is the value a station uses BEFORE it has a provisioning response at all, not a fallback for one that omits this field. Where the response is present the advertised value governs, and the broker's 1.5x disconnect multiplier follows it. This description said §1.2's value was 'the value to use when this field is ABSENT' until 0.31.0, contradicting the `required` array three lines above it."
         },
         "cleanStart": {
           "type": "boolean",

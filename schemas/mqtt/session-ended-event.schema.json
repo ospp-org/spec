@@ -27,9 +27,10 @@
         "Local",
         "LocalOutOfCredit",
         "Deauthorized",
-        "OperatorStopped"
+        "OperatorStopped",
+        "Inactivity"
       ],
-      "description": "Why the session ended autonomously. TimerExpired: durationSeconds elapsed. Fault: hardware fault detected. Local: user manually stopped at the station (e.g., physical Stop button). LocalOutOfCredit: offline credit pool exhausted mid-session. Deauthorized: offline pass revoked mid-session via RevocationEpoch bump. OperatorStopped: an operator ended the session deliberately -- a forced Reset, or a station disable -- and the customer IS billed for what they received, which is what distinguishes it from every other value here that mandates zero. See spec/03-messages.md 5.4 for full descriptions and spec/04-flows.md 6 for refund policy per reason."
+      "description": "Why the session ended autonomously. TimerExpired: durationSeconds elapsed. Fault: hardware fault detected. Local: user manually stopped at the station (e.g., physical Stop button). LocalOutOfCredit: offline credit pool exhausted mid-session. Deauthorized: offline pass revoked mid-session via RevocationEpoch bump. Inactivity: the SessionTimeout idle timer elapsed -- no user interaction within the window (MeterValues are the station's own telemetry and do NOT reset it; see 08-configuration.md SessionTimeout). Added in 0.31.0: the enum was closed at six and none of them was true of an idle stop, so the one event that reports it had no value to report it with. OperatorStopped: an operator ended the session deliberately -- a forced Reset, or a station disable -- and the customer IS billed for what they received, which is what distinguishes it from every other value here that mandates zero. See spec/03-messages.md 5.4 for full descriptions and spec/04-flows.md 6 for refund policy per reason."
     },
     "actualDurationSeconds": {
       "type": "integer",
@@ -60,12 +61,12 @@
     "seqNo": {
       "type": "integer",
       "minimum": 0,
-      "description": "Optional per-session monotonic counter, continuing the session's MeterValues sequence \u2014 the next value after the last MeterValues emitted, not a repeat of it. See spec/02-transport.md \u00a73.2."
+      "description": "Optional per-session monotonic counter, continuing the session's MeterValues sequence — the next value after the last MeterValues emitted, not a repeat of it. See spec/02-transport.md §3.2."
     },
     "finalSeqNo": {
       "type": "integer",
       "minimum": 0,
-      "description": "Optional canonical session-final marker \u2014 the highest seqNo emitted for this session. Servers MUST discard any MeterValues with seqNo > finalSeqNo received after this SessionEnded event for the same sessionId. See spec/02-transport.md \u00a73.2."
+      "description": "Optional canonical session-final marker — the highest seqNo emitted for this session. Servers MUST discard any MeterValues with seqNo > finalSeqNo received after this SessionEnded event for the same sessionId. See spec/02-transport.md §3.2."
     }
   }
 }

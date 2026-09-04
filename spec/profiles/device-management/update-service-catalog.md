@@ -58,6 +58,32 @@ The station **MUST** reject the catalog if any service entry fails validation.
 7. The response `messageId` **MUST** match the request `messageId`.
 8. If the catalog names a service the station cannot run — a `serviceId` its hardware does not support, or a `bindings` entry naming a `(bayNumber, programNumber)` pair it did not declare at provisioning or at its most recent boot — the station **MUST** respond `Rejected` with error code `5024 UNSUPPORTED_SERVICE` and **MUST** leave the previous catalog in force. It **MUST NOT** apply the remaining entries and report success. The response schema is closed and carries no member naming what was dropped, so a partial application leaves the server tracking a `catalogVersion` for a catalog that exists on no station, with nothing on the wire able to reveal it. A refusal the server can see is worth more than an application it cannot.
 
+**Sizing, which is the server's obligation and not the station's problem to guess.** `services` has
+`minItems: 1` and no `maxItems`, so nothing in the schema bounds a catalog. That is deliberate at
+`0.31.0` and the bound is stated here instead, on the **emitter**, because the emitter is the only
+party that can honour it:
+
+9. A server **MUST NOT** publish an UpdateServiceCatalog whose serialized payload exceeds the **64 KB**
+   MQTT Maximum Packet Size ([Chapter 02 §1.2](../../02-transport.md#12-connection-parameters)), and
+   **SHOULD** stay well inside it. A station **MAY** refuse an oversized catalog with
+   `5025 CATALOG_TOO_LARGE`, and needs no capability negotiation to do so.
+
+**The arithmetic, so a station can size its receive buffer from published bounds rather than from a
+promise.** Every service entry is already bounded by
+[`service-item.schema.json`](../../../schemas/common/service-item.schema.json): `serviceName` at 128
+characters, `bindings` at 64 entries, and each binding's ordinals at 64 and 32. A worst-case entry
+admitted by those bounds serialises to roughly **2.5 KB**, so 64 KB holds about **25** of them;
+entries at the size the conformance corpus actually carries (largest **206 B**, mean **181 B**) fit
+about **318**. A station that provisions for 64 KB is correct under every legal catalog, which is the
+figure it already has to provision for anyway, since it is the packet ceiling for every message.
+
+**Why no `maxItems`.** A schema bound would have to pick one of those two numbers. Picking 25 forbids
+catalogs that are legal, useful and in service; picking 318 permits a payload that cannot be
+delivered. The transport ceiling is the real constraint, it already exists, and it binds the party
+that can measure the payload before sending it. `5025`'s Recommended Action told servers to *"check
+station capabilities for maximum catalog size"* until `0.30.0` — a field that has never existed — and
+now names this ceiling.
+
 ## 7. Error Codes
 
 | Error Code | Error Text | Severity | Description |

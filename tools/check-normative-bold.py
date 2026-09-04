@@ -30,7 +30,20 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-09-04  (unreleased)  434 unbolded, 1225 bolded spans — the integrator's
+    (this HEAD) 2026-09-04  (unreleased)  434 unbolded, 1238 bolded spans — the seven schema-byte
+                                   gaps adjudicated. Unbolded is UNCHANGED, and that is a MEASURED
+                                   result rather than an untouched one: the finding set was diffed
+                                   entry by entry against a `git archive` of f1edaa6 and is
+                                   IDENTICAL once line numbers are stripped — 434 entries both
+                                   sides, ZERO arrived, ZERO left — across a release that edited
+                                   three schemas and eleven documents. BASELINE unchanged at 434.
+                                   One entry did arrive mid-cycle and was repaired rather than
+                                   absorbed: `**These causes ... servers **MUST** carry ...**`
+                                   nested one bold span inside another, so the `**` pairing put the
+                                   keyword OUTSIDE a span. The instrument was right and the prose
+                                   was wrong; nesting bold is the one way to write `**MUST**` and
+                                   still be counted unbolded.
+    f1edaa6  2026-09-04  v0.30.0   434 unbolded, 1225 bolded spans — the integrator's
                                    blocking set. BOTH numbers RE-DERIVED on this tree; neither is
                                    incremented from the row below. Unbolded falls by FOUR and the
                                    finding set was diffed entry by entry against a `git archive` of

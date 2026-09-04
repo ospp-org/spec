@@ -48,7 +48,8 @@ The authoritative field list is [Chapter 03 §5.4](../../03-messages.md#54-sessi
 | `Local` | Pro-rated; unused pre-authorization refunded. |
 | `LocalOutOfCredit` | **Zero.** |
 | `Deauthorized` | **Zero.** |
-| `OperatorStopped` | Pro-rated — the only reason here that bills a non-zero amount for a session the station did not run to completion. |
+| `Inactivity` | Pro-rated on delivered duration. The customer received service and then stopped engaging with it; that is the same shape as `Local`, and it is billed the same way. |
+| `OperatorStopped` | Pro-rated — one of two reasons here that bill a non-zero amount for a session the station did not run to completion. |
 
 The **Billing** column above is the `UserDuration` case — the pro-rata baseline. It is **not** the whole settlement rule: under *Settlement by Service Kind* ([Chapter 04 §6](../../04-flows.md)), a `FixedDuration` or `MultiUnit` session settles all-or-nothing, which changes the `Local`, `Fault` and `OperatorStopped` rows. That section governs where this table is read as unconditional.
 

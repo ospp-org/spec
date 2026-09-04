@@ -1,6 +1,6 @@
 # Chapter 06 — Security
 
-> **Status:** Draft | **OSPP Version:** 0.30.0
+> **Status:** Draft | **OSPP Version:** 0.31.0
 
 This chapter defines the complete security model for the OSPP protocol, covering threat analysis, authentication, authorization, cryptographic requirements, message integrity, offline security, anti-abuse mechanisms, and data protection.
 
@@ -966,6 +966,40 @@ No message carries a MAC. TLS provides the only integrity protection, and there 
 The signing path and the verification path **MUST** both fail closed. Neither peer may substitute an unsigned message for a signed one, and neither may accept an unverified message in place of a verified one.
 
 Everything in this section applies **while `MessageSigningMode` is `All`** — that is, in every production deployment. Under `None` no message carries a MAC and none is expected, so none of these conditions can arise; that mode is development and test only ([§5.6](#56-message-signing-classification)).
+
+#### The mode mismatch, and the one message that can still report it
+
+**A station and a server that disagree about `MessageSigningMode` are both behaving correctly and
+neither can tell the other.** The key is **Static** — it takes effect at the next reboot — so the
+disagreement begins at a boot and persists until someone changes a configuration neither side can
+successfully exchange. The station rejects every message it receives for a missing or unverifiable
+`mac` and refuses to send unsigned; the server does the same in the other direction. Both fail
+closed, which is correct, and the result is a station that is connected, conformant and **mute**.
+
+**Every channel that could carry the diagnosis is closed by the condition it would diagnose.**
+`MessageSigningMode` is Chapter 08 registry key #18 and is readable with GetConfiguration [MSG-020]
+— but GetConfiguration is one of the **44 signed message types of the 47**, so it is refused for the
+same reason everything else is. The three [structural exemptions](#56-message-signing-classification)
+are the only messages that survive, and two of them cannot help: the BootNotification **RESPONSE**
+arrives after the server has already decided, and ConnectionLost is the broker's Last Will, which the
+station does not compose.
+
+**That leaves the BootNotification REQUEST, and it now carries the answer.** A station **SHOULD**
+send the OPTIONAL top-level `messageSigningMode` on every BootNotification, reporting the mode it has
+just booted into, and a server that receives one **MUST** compare it against the mode it holds for
+that station. On a mismatch the server **MUST** log it and **MUST** treat the station as
+unreachable-by-signed-message rather than as faulty — the station is not broken and retrying will not
+help — and the repair is an operator changing one side, out of band, exactly as for the trust anchors
+of [§7.2 of Chapter 01](01-architecture.md).
+
+**Why the field is OPTIONAL and what that costs.** Making it REQUIRED would invalidate every
+BootNotification a currently-deployed station sends, which trades a diagnostic for an outage. The
+price of OPTIONAL is that **silence is ambiguous**: a boot without the field is either a station
+that predates `0.31.0` or one that chose not to send it, and a server cannot distinguish them. A
+server **MUST NOT** infer a mode from its absence. The field makes the state *expressible*, which is
+the whole of what was missing — before `0.31.0` a fail-closed station had no way to say so on any
+message the protocol would still accept from it, and that is a member of the defect class indexed in
+[KNOWN-ISSUES](../KNOWN-ISSUES.md), not an ordinary gap.
 
 #### Receiving
 

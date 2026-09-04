@@ -1,6 +1,6 @@
 # Chapter 03 — Message Catalog
 
-> **Status:** Draft | **OSPP Version:** 0.30.0
+> **Status:** Draft | **OSPP Version:** 0.31.0
 
 This chapter is the normative reference for **every message** in the OSPP protocol. Each message is documented with its complete payload schema, metadata, and example.
 
@@ -197,7 +197,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
 | `ManualReset` | A human acting at the station |
 | `ScheduledReset` | The station's own scheduled restart |
 | `ErrorRecovery` | Automatic recovery from an error state — the firmware **did** restart |
-| `Reconnect` | **No boot occurred.** The firmware never restarted; only the MQTT session is new. See below |
+| `Reconnect` | **No boot occurred.** The firmware never restarted. Covers **two** cases: a re-dialled MQTT session, and a BootNotification requested by TriggerMessage [MSG-016], where the session is not new either. See below |
 
 #### RESPONSE Payload
 
@@ -1207,6 +1207,7 @@ This message is NOT sent when the session is stopped by a server-initiated StopS
 | `Local` | User manually stopped the session at the station (e.g., physical Stop button on the bay, station UI). Distinguishes operator-initiated termination at the station from a server-routed StopService. |
 | `LocalOutOfCredit` | Offline credit pool exhausted mid-session — `OfflinePass.maxTotalCredits` would be exceeded by the next meter reading or by elapsed time, forcing the station to stop. Session MUST be billed at zero (no valid credits available). |
 | `Deauthorized` | Offline pass revoked while the session was active — typically a `RevocationEpoch` bump propagated through ChangeConfiguration that invalidates the pass under which the session was authorized. Session MUST be billed at zero. |
+| `Inactivity` | The `SessionTimeout` idle timer elapsed: **no user interaction** within the window ([Chapter 08 §3](08-configuration.md#3-transaction-configuration-keys)). MeterValues are the station's own telemetry and **do not** reset it. Added in `0.31.0` — the enum was closed at six, none of them was true of an idle stop, and the one event required to report the stop therefore had no value to report it with. |
 | `OperatorStopped` | An operator ended the session deliberately: a Reset carrying `force: true`, or a station disable. The session is stopped, metered and reported exactly as an operator-initiated stop, and the customer **MUST** be billed for what they received — this is the only value in this enum that bills a non-zero amount for a session the station did not run to completion. It exists because there was nothing to report a forced stop with. `Deauthorized` was the nearest member and mandates billing at **zero**, so reusing it would have delivered a wash and charged nothing for it, every time an operator forced a reset. |
 
 > **Version note, and the case that decided version negotiation.** The `reason` enum was extended from `["TimerExpired", "Fault"]` to add `Local`, `LocalOutOfCredit`, and `Deauthorized`. A server built against the narrower enum rejects a SessionEnded carrying one of the new values on schema validation — and SessionEnded is the sole billing source when no StopService command was issued, so that rejection loses a delivered session's money silently. Mixed-version deployment is **not** supported, and this is precisely why boot negotiation is **exact match** and not "same MAJOR" ([VERSIONING.md](../VERSIONING.md)): both versions here share MAJOR `0`, so a MAJOR gate would have accepted the pairing at boot and surfaced the incompatibility at settlement instead. Exact match refuses it at boot, where refusing is cheap and visible.

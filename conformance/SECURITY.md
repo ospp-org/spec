@@ -1,6 +1,6 @@
 # Conformance Security Notes
 
-> **Status:** Draft | **OSPP Version:** 0.30.0
+> **Status:** Draft | **OSPP Version:** 0.31.0
 
 Security considerations for setting up and running OSPP conformance tests.
 

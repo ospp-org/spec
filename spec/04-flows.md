@@ -1,6 +1,6 @@
 # Chapter 04 — Protocol Flows
 
-> **Status:** Draft | **OSPP Version:** 0.30.0
+> **Status:** Draft | **OSPP Version:** 0.31.0
 
 This chapter documents every end-to-end protocol flow as a sequence of messages defined in [Chapter 03 — Message Catalog](03-messages.md). Each flow includes preconditions, a Mermaid sequence diagram, numbered happy-path steps, alternative paths, error paths, and postconditions.
 
@@ -1150,9 +1150,10 @@ For `UserDuration`, settlement is exactly the reason-keyed matrix above. `FixedD
 | `Local` — voluntary stop mid-service | Pro-rata on delivered time | **Full charge** — a preset the user started is consumed |
 | `Fault` — hardware fault mid-service | Pro-rata (full refund if less than `faultFullRefundThreshold` delivered) | **Full refund** — a service the station broke delivered nothing of value |
 | `LocalOutOfCredit` / `Deauthorized` | Full refund (`creditsCharged` MUST be `0`) | **Full refund** (same) |
+| `Inactivity` — idle timer elapsed mid-service | Pro-rata on delivered time | **Full charge** — a preset the user started is consumed |
 | `OperatorStopped` — operator ended it mid-service | Pro-rata on delivered time | **Full charge** — a preset the user started is consumed |
 
-Only the `Local`, `Fault` and `OperatorStopped` rows diverge; `TimerExpired` (full charge) and `LocalOutOfCredit` / `Deauthorized` (full refund) are already kind-invariant. An all-or-nothing override is always the pre-authorized amount **in full** or **`0`** — never a partial amount.
+Only the `Local`, `Inactivity`, `Fault` and `OperatorStopped` rows diverge; `TimerExpired` (full charge) and `LocalOutOfCredit` / `Deauthorized` (full refund) are already kind-invariant. An all-or-nothing override is always the pre-authorized amount **in full** or **`0`** — never a partial amount.
 
 **Delivery outcome (`MultiUnit`).** A `MultiUnit` session additionally records what physically happened — `Dispensed` on a clean `TimerExpired`, `Missed` on a `Fault`. When the physical outcome is genuinely ambiguous from control-plane signals alone (e.g. a mid-pulse voluntary stop) it is left unrecorded rather than guessed; settlement never depends on it (it stays derived from the kind). A jam the firmware does not itself detect runs the timer to expiry and is therefore billed as delivered; the corrective path is an operator-issued refund, not an automatic one.
 

@@ -8,6 +8,100 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.31.0] — 2026-09-04
+
+> **MINOR, non-breaking on the wire — and the first release in six that moves bytes under
+> `schemas/`.** Three schema files change; `protocolVersion` stays `0.3.0`; **zero of the 334
+> schema-mapped conformance vectors break**, measured before the edit and confirmed after. Both SDKs
+> must re-vendor and re-tag, and the server pin follows. That cascade is reported here, not performed.
+>
+> **The seven gaps whose only repair was a schema byte were adjudicated one at a time, and four of
+> the seven did not need one after all.** A boot generation was answered with prose, because the
+> value is already derivable and the server already derives it. A missing `bootReason` was answered
+> by widening a *definition* — `Reconnect` already meant *no boot occurred*, and only its second
+> clause excluded a Boot the server asked for. A catalog ceiling was answered with a normative
+> obligation on the **emitter**, which is the only party that can measure a payload before sending
+> it. And a physical-stop confirmation was declined outright, because the reporting route was built
+> last release and the remaining half is the shape this project has now refused five times.
+>
+> **Two beliefs about what a schema change costs were false, and both were corrected before anything
+> was edited.** *"The 334 vectors become invalid if it touches the envelope"* — **zero** of them
+> carry an MQTT envelope; they are payload-only, and the vector-to-schema mapping never targets
+> `schemas/common/`. *"No job diffs the vector corpus"* — **both SDKs now run a byte-identity gate
+> over it**, so a corpus change is loud rather than silent. The entry in this repository asserting
+> otherwise had been true when written and false for several releases, which nothing here could have
+> noticed: it is a claim about gates that live in two other repositories.
+
+### Added
+
+- **`Inactivity`, the seventh `SessionEnded` `reason`.** The enum was closed at six and none of them
+  was true of an idle stop, so the one event required to report it had no value to report it with and
+  the station was left choosing between an inaccurate `reason` and a silent termination. Billed
+  pro-rata on delivered duration — the customer received service and stopped engaging with it, the
+  same shape as `Local`. **This closes all three gaps of the `SessionTimeout` note, not one.** The
+  trigger disagreement (*no user interaction* against *no MeterValues or user interaction*) is
+  resolved by the registry that already governed; §3.3 gains the transition row §3.4 had been naming
+  into a table that did not have it; and the note's third gap — the mechanism failing at **legal**
+  settings in both directions, inert at the default pair and stopping live sessions at the legal
+  extreme — **dissolves** once MeterValues no longer reset the timer. No range was narrowed.
+- **`messageSigningMode`, OPTIONAL and top-level on BootNotification REQUEST.** A station and server
+  that disagree about the mode are both behaving correctly and neither can tell the other: every
+  channel that could carry the diagnosis is closed by the condition it would diagnose, GetConfiguration
+  included, because that is one of the 44 signed types of 47. BootNotification REQUEST is one of the
+  three structural exemptions and therefore the only message that still arrives. **Deliberately not a
+  fifth member of `capabilities`** — that object is feature flags describing what a station *supports*,
+  four booleans; this is configuration state describing what it is *doing*. OPTIONAL, so no deployed
+  station is invalidated, at the price — stated in the field's own description — that **silence is
+  ambiguous** and a server **MUST NOT** infer a mode from its absence.
+- **`details.cause` on `3003`,** following the pattern `1004` established for one condition with
+  several recoveries. `station-reported`, `disabled`, `consumable`; absent means `station-reported`.
+  **No code is added.** On the wire to and from a station `3003` has always meant exactly one thing;
+  the ambiguity is on the server's REST surface, where one action answers it both for a program the
+  station reported dead and for a tenant-lifecycle refusal, and a second registry entry would assert
+  a distinction the station does not make.
+
+### Changed
+
+- **`Reconnect` now covers both cases of *no boot occurred*.** TriggerMessage can ask a station for a
+  BootNotification — and it is one of only two triggers a **restricted** station may accept, so it is
+  the designed operator escape from `Pending`. Nothing restarts. Seven members named a boot that did
+  not happen and `Reconnect` said *only the MQTT session is new*, which is not true either, leaving a
+  triggered Boot with no truthful member at all: precisely the bind `Reconnect` was invented to end,
+  reappearing one case over. **The enum is not widened** — both SDKs' `!== RECONNECT` helper stays
+  true, and the behaviour it selects, keeping the live session, is the correct one.
+- **The `bootReason`/`uptimeSeconds` cross-check becomes a server MUST.** A server **MUST NOT** act on
+  a `bootReason` its uptime contradicts, and on a contradiction **MUST** take the real-boot branch and
+  settle the session it was holding. The claim is refused, not the message: a station cannot repair
+  this by retrying, and closing the channel would strand it. **Written as a limit rather than a
+  repair** — it catches a station contradicting *itself*, and a station reporting a coherent falsehood
+  remains undetectable. That is what a persisted boot generation would buy and it is not bought here.
+- **`UpdateServiceCatalog` gains a normative ceiling on the emitter, and no `maxItems`.** A server
+  **MUST NOT** publish a catalog exceeding the 64 KB packet ceiling that already exists. A schema
+  bound would have to pick a number: the item is already bounded (`serviceName` 128, `bindings` 64),
+  so the worst case admitted is ~2.5 KB and 64 KB holds about **25**, while entries at the size the
+  corpus actually carries — largest **206 B** — fit about **318**. Picking 25 forbids catalogs that
+  are legal and in service; picking 318 permits one that cannot be delivered.
+
+### Fixed
+
+- **`provisioning-response.schema.json`'s `keepAliveSeconds` description contradicted its own
+  `required` array**, calling Chapter 02's 30 seconds *"the value to use when this field is ABSENT"*
+  about a member that is never absent from a valid response. Deferred one release for a stated reason
+  — a description edit changes no validation and still moves bytes — and taken now at nil marginal
+  cost because `schemas/` was open anyway. 0 vectors, no validation change.
+- **The `## OPEN` entry claiming neither SDK diffs the vendored vector corpus** is closed: both now do.
+
+### Declined, with the reason recorded
+
+- **A shape for `SecurityEvent.details`.** The field is open, the prose specifying its content already
+  exists and is unenforced, and a fourth restatement changes nothing three have not. It carries the
+  largest vector radius in the set — **17** — and the enforcement is not worth them this cycle.
+- **A physical-stop confirmation on `stop-service-response`.** A new member on a closed RESPONSE is
+  the shape refused four times before. The reporting route was built at `0.30.0` through two messages
+  that already exist; settlement still runs on the self-reported duration, and that is the residue.
+
+---
+
 ## [0.30.0] — 2026-09-04
 
 > **MINOR, non-breaking on the wire, and `schemas/` moves zero bytes — for the fifth release running.**
