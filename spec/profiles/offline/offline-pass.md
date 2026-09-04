@@ -1,6 +1,6 @@
 # OfflinePass Structure
 
-> **Status:** Draft | **OSPP Version:** 0.29.0
+> **Status:** Draft | **OSPP Version:** 0.30.0
 
 ## 1. Overview
 
@@ -38,6 +38,16 @@ An **OfflinePass** is a server-signed credential that authorizes a user to start
 | `minIntervalSec` | integer | Yes | Minimum seconds between consecutive uses (minimum 0). |
 | `stationOfflineWindowHours` | integer | Yes | Maximum hours a station can operate offline (minimum 1). Measured by the station as a **monotonic** delta from its last successful MQTT connection, not as a wall-clock difference — see §4, check #2. |
 | `stationMaxOfflineTx` | integer | Yes | Maximum offline transactions a station accepts before requiring sync (minimum 1). |
+
+**Upper bounds, and what happens when a pass asks for more than a station can give.** Every field in §2.1 and §2.2 stated a *minimum* and no *maximum* until 0.30.0, so a pass could be signed authorising more offline transactions than any conformant station is able to buffer — a contradiction between two obligations of this same specification, and one no station could resolve locally. The rule is precedence, not a new number:
+
+- **The station's own configuration bounds the pass, never the other way round.** For each constraint the station **MUST** enforce the **lower** of the pass value and its own configured limit, and **MUST NOT** raise a local limit because a pass asked it to. A pass is an authorisation, not a reconfiguration.
+- `stationMaxOfflineTx` **MUST NOT** exceed the station's `MaxOfflineTransactions` ([`08-configuration.md` §5](../../08-configuration.md)); above it the pass authorises transactions the station is separately forbidden to discard and has no room to hold. An issuer that does not know the station's value **SHOULD** issue at the normative floor, **1000**.
+- `stationOfflineWindowHours` **MUST NOT** exceed **24**, and a larger value is inert rather than useful: a pass's signed validity is itself capped at 24 hours from `issuedAt` (§1), so a station offline longer than that holds only expired passes.
+- `minIntervalSec` **MUST NOT** exceed **86400**, the same 24-hour bound, for the same reason.
+- `maxTotalCredits`, `maxUses` and `maxCreditsPerTx` are **issuer policy** and this specification sets no ceiling on them. That is deliberate — a protocol maximum on money would be a limit on the operator's business rather than on the wire — but it is stated rather than left silent, because the absence otherwise reads as an oversight of the same kind as the three above.
+
+None of this changes [`offline-pass.schema.json`](../../../schemas/common/offline-pass.schema.json): the bounds are normative prose enforced at issuance and re-checked at validation, exactly as the 24-hour validity cap already is. Writing them into the schema instead would bind receivers that vendored an older copy to a different verdict on the same pass.
 
 ### 2.3 Server-Side Record Fields (not on the wire)
 
@@ -146,7 +156,7 @@ This is stated as a table because the sentence it replaces — *"the station MUS
 
 The epoch-based revocation mechanism provides a lightweight way to invalidate all outstanding OfflinePasses without distributing a Certificate Revocation List (CRL):
 
-1. The server maintains a global integer `RevocationEpoch`, starting at 0.
+1. The server maintains an integer `RevocationEpoch` **per tenant**, starting at 0 ([Chapter 06 §6.6](../../06-security.md#66-epoch-based-revocation) — a single shared counter makes one tenant's revocation a platform-wide outage). A station belongs to one tenant and holds one value.
 2. When the server issues an OfflinePass, it embeds the current `RevocationEpoch` in the pass's `revocationEpoch` field.
 3. To revoke all outstanding passes, the server increments `RevocationEpoch` by 1 and pushes the new value to all connected stations via ChangeConfiguration.
 4. Stations store the latest `RevocationEpoch` in non-volatile memory. During validation check #3, any pass with `revocationEpoch` less than the station's stored epoch is rejected with `2004 OFFLINE_EPOCH_REVOKED`.
@@ -227,7 +237,7 @@ The OfflinePass provides the following security guarantees:
 | **Non-transferable** | `deviceId` binding | The pass is bound to a specific device. A different device presenting the same pass will fail validation check #4. |
 | **Non-forgeable** | ECDSA P-256 signature | The pass is cryptographically signed by the server. Modifying any field invalidates the signature (check #1). |
 | **Time-limited** | `expiresAt` | The pass has a maximum validity of 24 hours. After expiry, it is rejected (check #2). |
-| **Revocable** | `revocationEpoch` | All passes can be batch-revoked by incrementing the global epoch (check #3). |
+| **Revocable** | `revocationEpoch` | A tenant's passes can all be batch-revoked by incrementing that tenant's epoch (check #3). |
 | **Usage-limited** | `maxUses`, `maxTotalCredits` | The pass limits the total number of sessions and credits that can be consumed (checks #6, #7). |
 | **Rate-limited** | `minIntervalSec` | Prevents rapid consecutive use that could indicate abuse (check #9). |
 | **Station-scoped** | Station ID validation | When the **pass record's** `allowed_station_ids` (§2.3 — server-side, not a wire field) is non-empty, the pass is only valid at the listed stations. Enforced at authorize-time per `authorize-offline-pass.md` §5 check #5 AND at reconcile-time per `reconciliation.md` §6 check #8. Both read the server record; a station validating offline cannot (§2.3). |

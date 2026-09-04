@@ -1,6 +1,6 @@
 # Chapter 05 — State Machines
 
-> **Status:** Draft | **OSPP Version:** 0.29.0
+> **Status:** Draft | **OSPP Version:** 0.30.0
 
 This chapter defines all finite state machines (FSMs) governing OSPP entities — the station, its bays, sessions, reservations, BLE connections, firmware updates and diagnostics uploads. Each FSM specifies the complete set of states, valid transitions, guards, actions, and a Mermaid diagram. A transition not listed for a machine is invalid, and implementations MUST NOT perform one.
 
@@ -324,6 +324,7 @@ This is the canonical table. Nothing else in this specification restates it.
 | StatusNotification (fault) | Unknown | Faulted | Station | Bay hardware fails self-test | Station sends StatusNotification with `errorCode` |
 | StatusNotification (maintenance) | Unknown | Unavailable | Station | Bay was in maintenance before reboot | Station sends StatusNotification with `status: "Unavailable"` |
 | StatusNotification (session resumed) | Unknown | Occupied | Station | The station rebooted while a session on this bay was `Active`, and recovered it from non-volatile storage per [§3.5 rule 2](#35-per-session-sequence-number-seqno-and-crash-resilience) | Station sends StatusNotification with `status: "Occupied"` and resumes MeterValues at `persisted_seqNo + 1` |
+| StatusNotification (reservation resumed) | Unknown | Reserved | Station | The station rebooted while this bay held a reservation in `Confirmed` state, and recovered it from non-volatile storage. The station **MUST** persist a confirmed reservation (`reservationId`, `bayId`, `expirationTime`) durably when it accepts it, for exactly this reason | Station sends StatusNotification with `status: "Reserved"` and resumes the expiry timer against the persisted `expirationTime`; if the persisted `expirationTime` has already passed, it releases the bay and reports `Available` |
 | StatusNotification (wind-down resumed) | Unknown | Finishing | Station | The station rebooted while a session on this bay was `Stopping`, recovered it per §3.5 rule 2, and the hardware wind-down has still to complete | Station sends StatusNotification with `status: "Finishing"`, then completes the wind-down |
 | ReserveBay [MSG-003] accepted | Available | Reserved | Station | Bay has no active session and no **existing** reservation — where *existing* means a reservation in `Confirmed` state. A retained record of a terminal reservation (`Expired`, `Cancelled`, or consumed) is **not** an existing reservation: it does not hold the bay, but it does bind its `reservationId` against reuse ([`reserve-bay.md` §5.1](profiles/transaction/reserve-bay.md) rules 9 and §5.2) | Station starts reservation expiry timer, sends StatusNotification |
 | StartService [MSG-005] accepted (no reservation) | Available | Occupied | Station | Bay has no reservation conflict; hardware activates successfully | Station activates hardware, starts session timer, sends StatusNotification |
@@ -339,15 +340,15 @@ This is the canonical table. Nothing else in this specification restates it.
 | SetMaintenanceMode OFF [MSG-020] | Unavailable | Available | Station | Operator completes maintenance | Station sends StatusNotification |
 | LWT / connection lost | Available, Reserved, Occupied, Finishing, Faulted, Unavailable | Unknown | **Server** | Broker publishes ConnectionLost [MSG-011], or the heartbeat times out ([CORE-007](profiles/core/README.md)) | Server marks the bay `Unknown` and **MUST NOT** offer it for sale. No message carries this transition and the station does not perform it: the station's own bays keep the states its hardware is in. The server leaves `Unknown` on the next accepted StatusNotification, not on being told about it |
 
-**Counts, because implementers have got these wrong in both directions.** Twenty `Station` rows by
-distinct `(from, to)` pair, and six `Server` rows — twenty-six in all. The `Station` twenty are the
+**Counts, because implementers have got these wrong in both directions.** Twenty-one `Station` rows by
+distinct `(from, to)` pair, and six `Server` rows — twenty-seven in all. The `Station` twenty-one are the
 complete set a station may effect and therefore the complete set a StatusNotification [MSG-009] may
 report; a station needs no others and **MUST NOT** implement the `Server` six. A server implements
-all twenty-six. Multi-source rows expand to one pair per source, and two pairs have two triggers
+all twenty-seven. Multi-source rows expand to one pair per source, and two pairs have two triggers
 each (`Reserved → Available`, `Occupied → Finishing`), so the row count and the pair count are
 deliberately not equal.
 
-**`Unknown` has five exits, not three.** A station that reboots mid-session **MUST** resume that
+**`Unknown` has six exits, not three.** A station that reboots mid-session **MUST** resume that
 session ([§3.5 rule 2](#35-per-session-sequence-number-seqno-and-crash-resilience)) — the reboot may
 be a watchdog, a power cycle or a crash, none of which the server chose or can refuse. A commanded
 Reset cannot reach this state (it is refused with `3016`, or settles the session first —
@@ -358,7 +359,16 @@ that follows, the bay is physically `Occupied`, and every bay owes a post-boot r
 determinate-idle exits, that station had no truthful report to send: `Available` would free a bay
 running a paid session and invite the server to sell it twice, `Faulted` would be a lie, and
 silence would breach CORE-004. `Occupied` and `Finishing` are the two states a resumed session can
-leave a bay in, and they are the two added.
+leave a bay in, and they were the first two added.
+
+**The sixth is `Reserved`, added at 0.30.0, and it was missing for the same reason and with a
+price attached.** A reservation is paid for. A station that reboots while a bay is `Reserved` had,
+until then, no exit that said so: `Available` hands the reserved bay to the next caller and the
+holder arrives to find it sold, while `Faulted` and `Unavailable` are both untrue. The reboot is
+uncommanded, so nothing gates it — the same argument that added the session exits — and every bay
+still owes its post-boot report. The wire needed nothing new: `Reserved` is already a member of the
+closed `bay-status` enum. What was missing was the transition and the obligation to persist the
+reservation that makes it reportable.
 
 The `Server` rows are the reason `Unknown` exists and the reason it is not on the wire. They are
 the server's inference about a station it can no longer hear — see [§2.2](#22-states-7) and
@@ -526,7 +536,11 @@ and it governs where this table disagrees with it.
 
 ### 3.5 Per-Session Sequence Number (seqNo) and Crash Resilience
 
-For stations that emit the optional per-session `seqNo` field on session-scoped EVENTs (MeterValues, SessionEnded — see [`02-transport.md §3.2`](02-transport.md)), the following rules apply to the Session FSM:
+Rules **2, 3 and 4 apply to every station.** They govern session recovery, orphaning and `sessionId` reuse across a reboot, and none of them depends on `seqNo`. Rules **1 and 5** apply additionally to stations that emit the optional per-session `seqNo` field on session-scoped EVENTs (MeterValues, SessionEnded — see [`02-transport.md §3.2`](02-transport.md)).
+
+The whole section was scoped to the optional field until 0.30.0, and that left [§2.3](#23-transition-table)'s *session resumed* transition — an unconditional **MUST** — resting on a mechanism a conformant station need not implement at all. A station emitting no `seqNo` was simultaneously required to resume and exempt from the rule telling it how.
+
+The rules apply to the Session FSM as follows:
 
 1. **Persistence before publish.** Before publishing a session-scoped EVENT carrying `seqNo`, the station MUST persist the new `seqNo` value (alongside the corresponding `sessionId`) to non-volatile storage. The persistence write MUST complete before the MQTT publish call returns to the application layer. This guarantees that the station does not "forget" an emitted value across a power loss.
 2. **Resume on reboot during Active or Stopping state.** If the station reboots while a session is in `Active` or `Stopping` state and the prior persisted state is recoverable, the station MUST resume the session with the same `sessionId` and the next `seqNo` equal to `(persisted_seqNo + 1)`. The first MeterValues emitted post-reboot uses this resumed counter.

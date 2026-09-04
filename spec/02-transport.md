@@ -1,6 +1,6 @@
 # Chapter 02 — Transport
 
-> **Status:** Draft | **OSPP Version:** 0.29.0
+> **Status:** Draft | **OSPP Version:** 0.30.0
 
 OSPP defines three transport layers for communication between participants. Each transport serves a distinct channel with its own security model, reliability guarantees, and failure modes.
 
@@ -146,7 +146,7 @@ The `v1` segment in the topic path is a **namespace identifier**, NOT the protoc
 - The protocol version is carried inside the message envelope via the `protocolVersion` field (see [Chapter 03 — Messages](03-messages.md)) and checked at boot by **exact match** against the set the server supports ([VERSIONING.md](../VERSIONING.md)). "Negotiation" here means that check and its `1007` outcome; the two peers do not converge on a version, and a shared MAJOR implies nothing.
 - The topic namespace `v1` MUST remain `v1` for every OSPP protocol version, regardless of that version's MAJOR component. The two numbers are unrelated: the namespace identifies the topic layout, the envelope field identifies the message contract.
 - A new topic namespace (e.g., `v2`) would only be introduced for a fundamental transport-level change — a different topic shape or a different addressing scheme — not for any change the envelope's `protocolVersion` can express.
-- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.29.0*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.3.0`): the two version numbers evolve separately and need not match.
+- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.30.0*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.3.0`): the two version numbers evolve separately and need not match.
 
 **Negotiation happens once, at boot. A later mismatch is not re-negotiated, and is not refused.**
 
@@ -422,13 +422,15 @@ OSPP uses MQTT 5.0 **Message Expiry Interval** to prevent stale commands from be
 | Category | Actions | Station Max Age | MQTT Expiry Interval |
 |----------|---------|-----------------|----------------------|
 | **Session commands** | StartService, StopService, ReserveBay, CancelReservation | 30s | 30s |
-| **Management commands** | Reset, ChangeConfiguration, GetConfiguration, SetMaintenanceMode, UpdateServiceCatalog | 60s | 120s |
+| **Management commands** | Reset, ChangeConfiguration, GetConfiguration, SetMaintenanceMode, UpdateServiceCatalog, **TriggerMessage**, **DataTransfer** | 60s | 120s |
 | **Long-running commands** | UpdateFirmware, GetDiagnostics | 300s | 600s |
 | **Certificate renewal** | SignCertificate, CertificateInstall, TriggerCertificateRenewal | 30s | 60s |
 | **Periodic reporting** | MeterValues | 60s | 120s |
 | **Critical events** | BootNotification, TransactionEvent, SessionEnded, SecurityEvent, ConnectionLost (LWT) | — | **Never expires** |
 
 > **Note:** UpdateServiceCatalog overrides the management-command default with a 60-second MQTT Expiry (see [Chapter 03](03-messages.md), Appendix B).
+
+> **TriggerMessage and DataTransfer were in no row of this table until 0.30.0.** `TriggerMessage` occurred **zero** times in the whole of this chapter while occurring 91 times elsewhere in the specification, so the one table that tells a publisher what expiry to set said nothing about either action, and a publisher had to invent a value or set none. They are classified as management commands because that is what they are — a command the station acts on and answers, neither long-running nor a never-expire event. `TriggerMessage` carries its own tighter obligation on the *station* side ([`trigger-message.md` §5](profiles/core/trigger-message.md) rule 1 — the triggered message within 5 s); that is a response deadline, not a delivery window, and the two are set independently.
 
 **Station Max Age** is the maximum age of a message the station will accept. If a message's timestamp is older than `now - maxAge`, the station MUST discard it and SHOULD log a warning.
 

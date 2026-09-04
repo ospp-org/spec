@@ -59,7 +59,9 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 6. The station **MUST** validate that `programNumber` was **declared for that bay** at provisioning. If it was not, the station **MUST** respond with `3017 PROGRAM_NOT_DECLARED`, echoing the refused ordinal, and **MUST NOT** activate any hardware. It **MUST NOT** substitute a neighbouring ordinal or clamp to the highest declared one — that charges for one thing and delivers another.
 7. The station **MUST** validate that the requested service is physically available on the specified bay. If not, it **MUST** respond with `3003 SERVICE_UNAVAILABLE`. This is availability, not existence: the program **is** declared, it is merely not deliverable right now.
 8. The station **MUST** validate that `durationSeconds` is positive and does not exceed `MaxSessionDurationSeconds`. If zero or negative, respond with `3008 DURATION_INVALID`. If exceeding the maximum, respond with `3010 MAX_DURATION_EXCEEDED`.
-9. Upon accepting the request, the station **MUST** attempt to physically activate the hardware (pump, valve, motor). If hardware fails to start within the activation timeout, the station **MUST** respond with `3009 HARDWARE_ACTIVATION_FAILED` and transition the bay to `Faulted`.
+9. Upon accepting the request, and **before energising anything**, the station **MUST** durably record the command — at minimum the envelope `messageId`, the `sessionId`, the `bayId` and the `programNumber` — to non-volatile storage. If it cannot, it **MUST** refuse with `5103 STORAGE_ERROR` and **MUST NOT** activate. This is the MQTT twin of the BLE obligation in [`ble-session.md` §1](../offline/ble-session.md) rule 3, and it is what makes a mid-activation power loss recoverable: on the next boot an uncompleted record is the anchor that tells the station whether the command already ran, so it neither re-executes it (dispensing twice against one authorisation) nor loses it. **A station that energises first has no way to answer that question, and the protocol offers it no other source.**
+
+    It **MUST** then attempt to physically activate the hardware (pump, valve, motor). **The activation timeout is bounded by the response deadline and is not a free parameter:** the server waits **10 seconds** for the StartService RESPONSE ([`03-messages.md` §2](../../03-messages.md), [`05-state-machines.md` §3.4](../../05-state-machines.md)), so the station's activation timeout **MUST NOT** exceed it, and **SHOULD** be short enough to leave time to compose the answer — **5 seconds** is the RECOMMENDED default. If hardware fails to start within it, the station **MUST** respond with `3009 HARDWARE_ACTIVATION_FAILED` and transition the bay to `Faulted`. The phrase *"the activation timeout"* named no value at all until 0.30.0: it occurred three times in this specification and in no registry, so every vendor picked one, and the server refunds in full on the outcome.
 10. On success, the station **MUST** respond with `status: "Accepted"` and transition the bay to `Occupied` state.
 11. If a `reservationId` is present and matches an active reservation, the station **MUST** consume the reservation upon successful activation.
 
@@ -69,13 +71,13 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 |:----:|---------------------------|:--------:|-----------------------------------------------|
 | 3001 | `BAY_BUSY` | Warning | Bay is currently occupied by another session. |
 | 3002 | `BAY_NOT_READY` | Warning | Bay is not in `Available` state. |
-| 3003 | `SERVICE_UNAVAILABLE` | Warning | Service not available on this bay (hardware absent or consumables depleted). |
+| 3003 | `SERVICE_UNAVAILABLE` | Warning | The service is declared on this bay and is not deliverable right now (delivering hardware faulted, disabled by configuration, or consumables depleted). Availability, not existence — rule 7 above. |
 | 3004 | `INVALID_SERVICE` | Error | `serviceId` not found in the station's service catalog. |
 | 3017 | `PROGRAM_NOT_DECLARED` | Error | `programNumber` was never declared for the target bay. Fail closed — reject, never accept and do nothing. |
 | 3005 | `BAY_NOT_FOUND` | Error | `bayId` does not match any bay on this station. |
 | 3006 | `SESSION_NOT_FOUND` | Error | The `sessionId` names a session that has already completed or failed. |
 | 3008 | `DURATION_INVALID` | Error | `durationSeconds` is zero, negative, or below the service minimum. |
-| 3009 | `HARDWARE_ACTIVATION_FAILED` | Error | Hardware failed to start within the activation timeout. |
+| 3009 | `HARDWARE_ACTIVATION_FAILED` | Error | Hardware failed to start within the activation timeout — at most the 10 s response deadline, 5 s RECOMMENDED (rule 9). |
 | 3010 | `MAX_DURATION_EXCEEDED` | Warning | `durationSeconds` exceeds `MaxSessionDurationSeconds`. |
 | 3011 | `BAY_MAINTENANCE` | Warning | Bay is in maintenance mode. |
 | 3012 | `RESERVATION_NOT_FOUND` | Error | The provided `reservationId` does not match any active reservation. |

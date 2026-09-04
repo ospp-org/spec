@@ -2,7 +2,7 @@
 
 > **For:** Developers building OSPP-compatible stations, servers, or user agents
 > **Level:** Practical guide, not formal spec. Read this first, then the spec chapters.
-> **Spec Version:** 0.29.0
+> **Spec Version:** 0.30.0
 
 ---
 
@@ -544,7 +544,7 @@ When you receive an UpdateFirmware REQUEST:
 4. Verify the SHA-256 checksum before installing
 5. Verify the ECDSA P-256 firmware signature against the trusted Firmware Signing Certificate (see `spec/06-security.md` §4.6). If signature verification fails, reject the update and report `5112 FIRMWARE_SIGNATURE_INVALID`
 6. Compare the offered `firmwareVersion` against the currently installed version. If the offered version is older and `forceDowngrade` is not `true`, reject with `5016 VERSION_ALREADY_INSTALLED` and log a `FirmwareDowngradeAttempt` SecurityEvent (see `spec/06-security.md` §4.6.1)
-7. Use A/B partitioning if possible — write to inactive partition, boot into it, and if the new firmware fails to send BootNotification within 5 minutes, auto-rollback to the previous partition
+7. **A/B partitioning is not optional — the station MUST maintain two firmware partitions** ([`update-firmware.md` §7](../spec/profiles/device-management/update-firmware.md)). Write to the inactive partition, mark it the boot target, reboot into it, and keep the previous partition as the rollback target. This is the anti-brick requirement and it is the one step here a station cannot recover from having skipped: a single-partition station that installs a bad image has overwritten the only image it had, and §8's closing paragraph is explicit that an unrecoverable station needs physical service. §8 makes rollback **MUST** as well, on three conditions the station evaluates **locally** — it fails to boot the new partition within **60 seconds**, it boots but fails its self-diagnostic health check within **120 seconds** of boot, or a Reset returns it to the last known-good partition — after which it **MUST** send a BootNotification carrying the rolled-back `firmwareVersion` and `bootReason: "ErrorRecovery"`. **The five minutes below is the *server's* stall timer, not a station trigger**; a station that waits for it before rolling back has already missed both of its own deadlines
 8. If firmware installation fails AND rollback also fails, station enters `Faulted` state, emits SecurityEvent `FirmwareIntegrityFailure` (Critical), and requires manual intervention via physical access
 
 > This value accounts for boot sequence (~60s), local health check (~120s), and network reconnection margin (~120s).
@@ -849,7 +849,7 @@ The model deliberately does **not** score deterministic security-property violat
 
 To invalidate all outstanding OfflinePasses:
 
-1. Increment the global `RevocationEpoch` value in your database
+1. Increment the `RevocationEpoch` value **for that tenant** in your database — never a single shared counter. One shared counter makes any tenant's revocation revoke every tenant's passes, which is a platform-wide outage reachable from an ordinary tenant permission ([`06-security.md` §6.6](../spec/06-security.md#66-epoch-based-revocation))
 2. Push the new epoch to all online stations via `ChangeConfiguration` (keys: `[{key: "RevocationEpoch", value: "new_value"}]`)
 3. Stations will reject any OfflinePass with `revocationEpoch < new_epoch`
 4. When users reconnect, their app requests a fresh OfflinePass (with the new epoch)
@@ -1161,7 +1161,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** QoS 1 for all messages
 - [ ] **[MUST]** Retain = false for all messages
 - [ ] **[MUST]** Clean Start = false with Session Expiry = 3600s
-- [ ] **[MUST]** Keep Alive = `mqttConfig.keepAliveSeconds` from the provisioning response, defaulting to 30s when absent
+- [ ] **[MUST]** Keep Alive = `mqttConfig.keepAliveSeconds` from the provisioning response. It is a REQUIRED member — 30s is the value you use **before** you have a provisioning response, not a fallback for one that omits it. A response missing any `mqttConfig` member is malformed; refuse it rather than defaulting
 - [ ] **[MUST]** Will Delay Interval = 10s for LWT
 - [ ] **[MUST]** LWT configured at CONNECT time (ConnectionLost message)
 - [ ] **[MUST]** Two topics: `ospp/v1/stations/{id}/to-server` and `ospp/v1/stations/{id}/to-station`
@@ -1326,4 +1326,4 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 
 ---
 
-*This guide covers OSPP 0.29.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*
+*This guide covers OSPP 0.30.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*

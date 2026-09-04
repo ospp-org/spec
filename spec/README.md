@@ -1,6 +1,6 @@
 ---
 status: Draft
-ospp-version: 0.29.0
+ospp-version: 0.30.0
 ---
 
 # OSPP Specification — Reading Guide
@@ -14,8 +14,8 @@ ospp-version: 0.29.0
 | Field | Value |
 |-------|-------|
 | Status | Draft |
-| OSPP Version | 0.29.0 |
-| Last Updated | 2026-07-28 |
+| OSPP Version | 0.30.0 |
+| Last Updated | 2026-09-04 |
 
 > **Not all of this specification is at the same maturity.** The MQTT station↔server surface,
 > HTTPS provisioning, and offline reconciliation are **stable** — implemented and exercised

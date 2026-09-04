@@ -153,13 +153,28 @@ implement.
 by design and the difference carries no meaning: `0.9.0` identifies the SDK pair,
 `v0.8.0` identifies the contract.
 
-### The two lines have crossed, and they will not uncross
+### The two lines are not comparable, in either direction, at any distance
 
-**As of `0.25.0` the SDK number is ahead of the spec number, and neither is derived from
-the other.** The SDK pair released `0.25.0` pinning `.spec-ref = v0.24.1`; the spec then
-tagged `v0.25.0`, which the SDK pair will take up at `0.26.0`. From here the two numbers
-are permanently offset and the offset is not fixed — it will drift further every time
-either side releases for a reason the other has no part in.
+**Neither number is derived from the other, and the gap between them has no sign you may
+rely on.** Measured tag by tag, identically in both SDK repositories:
+
+| SDK tag | its `.spec-ref` | the gap |
+|---|---|---|
+| `v0.24.1` | `v0.24.1` | none |
+| `v0.25.0` | `v0.24.1` | SDK number ahead |
+| `v0.26.0` | `v0.25.0` | SDK number ahead |
+| `v0.27.0` | `v0.27.0` | **none again** |
+| `v0.28.0` | `v0.29.0` | **SDK number behind** |
+
+**This section asserted the opposite for four releases and was wrong twice.** It read *"the
+SDK number is ahead of the spec number"* and *"permanently offset … it will drift further"*,
+under a heading that said the lines *"will not uncross"*. They uncrossed at `v0.27.0` and
+re-crossed the other way at `v0.28.0`, where the SDK pair pins a spec tag **above** its own
+number. The claim was written once, in the `0.25.0` release, and never re-measured — which
+is the same failure this document warns readers against, committed by the document.
+
+**What is durable is the sentence below, and it survived both falsifications precisely
+because it names no direction.**
 
 **This is not a defect and there is nothing to reconcile.** It is what "not required to
 match" means once both lines have moved independently for long enough. It is written down

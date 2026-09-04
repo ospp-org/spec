@@ -46,7 +46,7 @@ This case does that.
 - `spec/06-security.md` §6.5.2 — the StationIdentity certificate and the static BLE ECDH key it binds
 - `spec/06-security.md` §4.8 — OSPP Canonical Form, over which the StationIdentity signature is computed
 - `spec/01-architecture.md` §3.2 — `bayId` values are server-assigned
-- `spec/01-architecture.md` §4.2 — maximum 255 bays per controller
+- `spec/01-architecture.md` §4.2 — maximum **64** bays per controller (`MUST NOT exceed 64`; the schemas agree — `maxItems: 64` in `provisioning-response`, both boot-notification schemas. This line read `255` from the initial commit until 0.30.0, four tags after the ceiling moved)
 - `profiles/core/README.md` CORE-004 and `profiles/core/status-notification.md` §7 — the station must
   emit `(bayId, bayNumber)` together, which is why the mapping must be established here
 - `schemas/provisioning-response.schema.json`, `schemas/provisioning-request.schema.json`

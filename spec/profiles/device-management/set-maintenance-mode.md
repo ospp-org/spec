@@ -39,6 +39,16 @@ SetMaintenanceMode is a server-initiated command that enables or disables mainte
 6. When `enabled` is `false`, the bay **MUST** transition from `Unavailable` to `Available`.
 7. If the bay is already in the requested state (e.g., already in maintenance and `enabled` is `true`), the station **MUST** respond with `Accepted` (idempotent).
 8. The response `messageId` **MUST** match the request `messageId`.
+9. **The maintenance state is durable.** On accepting `enabled: true` the station **MUST** persist
+   the maintenance flag for each affected bay to non-volatile storage, and on boot it **MUST**
+   restore it before its post-boot StatusNotification. Without this, [`05-state-machines.md`
+   §2.3](../../05-state-machines.md#23-transition-table)'s `Unknown → Unavailable` row is
+   unreachable: its condition is *"bay was in maintenance before reboot"*, and a station that did
+   not persist the flag cannot know that. It passes its self-test, takes the `Unknown → Available`
+   exit instead, and the server puts back on sale a bay a technician is working inside. **This is
+   a safety obligation, not a convenience**, and it was stated nowhere until 0.30.0 — §6 said only
+   that the reason is *"stored internally for diagnostics"*, which is not the flag and not a
+   persistence requirement.
 
 ## 6. Bay State Transitions
 

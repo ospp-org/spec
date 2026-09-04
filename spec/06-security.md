@@ -1,6 +1,6 @@
 # Chapter 06 — Security
 
-> **Status:** Draft | **OSPP Version:** 0.29.0
+> **Status:** Draft | **OSPP Version:** 0.30.0
 
 This chapter defines the complete security model for the OSPP protocol, covering threat analysis, authentication, authorization, cryptographic requirements, message integrity, offline security, anti-abuse mechanisms, and data protection.
 
@@ -59,7 +59,7 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 
 **Countermeasures:**
 - **OfflinePass** (see §6.1) enforces hard limits: `maxUses`, `maxTotalCredits`, `maxCreditsPerTx` — [§6.1.1](#611-offlinepass-validation--10-checks) checks #6, #7 and #8 respectively. (`offlineAllowance.allowedServiceTypes` was carried and signed but read by no check in any of the three gates, and is **withdrawn** as of `0.25.0` — see §6.1.1. It was never a limit this countermeasure could claim.)
-- **Epoch-based revocation** (§6.6) — incrementing the global `RevocationEpoch` invalidates ALL passes issued before that epoch. Constant-time check on station; no CRL distribution required.
+- **Epoch-based revocation** (§6.6) — incrementing a tenant's `RevocationEpoch` invalidates all of **that tenant's** passes issued before that epoch. Constant-time check on station; no CRL distribution required.
 - **ECDSA P-256 signed receipts with txCounter** (§6.2) — stations cryptographically sign every transaction including a monotonic counter. Unsigned or incorrectly signed transactions are flagged as CRITICAL. The counter itself is forensic (§6.3): a discontinuity raises an operator alert on the station and never withholds settlement.
 - **Fraud scoring** (§7.4) — post-reconciliation scoring with automatic response (disable offline, revoke pass, block user).
 
@@ -1465,27 +1465,29 @@ frame     = { "n": <counter>, "ct": base64(sealed) }
 
 ### 6.6 Epoch-Based Revocation
 
-OSPP uses a global **revocation epoch** for batch OfflinePass invalidation, avoiding the complexity of Certificate Revocation Lists:
+OSPP uses a per-tenant **revocation epoch** for batch OfflinePass invalidation, avoiding the complexity of Certificate Revocation Lists:
 
 | Property | Value |
 |----------|-------|
-| **Mechanism** | Global monotonically increasing integer |
+| **Mechanism** | Monotonically increasing integer, scoped to one tenant |
 | **Storage** | Station: `RevocationEpoch` configuration key. Server: database. |
 | **Distribution** | Pushed to stations via ChangeConfiguration [MSG-013] or BootNotification RESPONSE [MSG-001] |
 | **Validation** | OfflinePass `revocationEpoch` MUST be >= station's `RevocationEpoch` |
 
+**The epoch is scoped to one tenant, and the scope is normative.** A server **MUST** hold a separate `RevocationEpoch` per tenant and **MUST NOT** let one tenant's bump reach another tenant's stations. A single shared counter is not a simplification of this design, it is a **platform-wide denial of service reachable from an ordinary tenant-level permission**: one operator revoking their own passes would invalidate every pass on the platform. This paragraph exists because the word *"global"* stood at **nine** sites until 0.30.0 — five in this section, plus the Chapter 08 registry entry, two in [`offline-pass.md`](profiles/offline/offline-pass.md) and one in the implementor's guide — while the reference implementation had been per-tenant since it repaired exactly that hole, so a second server built literally to any of them would have reproduced it. **The station is unaffected and nothing changes on the wire**: a station belongs to one tenant, holds one `RevocationEpoch`, and the constant-time check below is unchanged.
+
 **Workflow:**
 1. Security incident occurs (e.g., compromised user account, mass fraud)
-2. Server increments the global `RevocationEpoch`
-3. Server pushes new epoch to all online stations via ChangeConfiguration [MSG-013] (`key: "RevocationEpoch"`)
+2. Server increments that tenant's `RevocationEpoch`
+3. Server pushes the new epoch to **that tenant's** online stations via ChangeConfiguration [MSG-013] (`key: "RevocationEpoch"`), and to no others
 4. Offline stations receive the new epoch on next BootNotification [MSG-001]
-5. All OfflinePasses issued before the new epoch are now invalid
+5. All of **that tenant's** OfflinePasses issued before the new epoch are now invalid; other tenants' passes are untouched
 6. Users must re-arm their OfflinePass (which will include the new epoch)
 
 **Advantages over CRL:**
 - Constant-time check on station (`pass.epoch >= station.epoch`)
 - No list to distribute or search
-- Single integer covers all users
+- Single integer covers all of one tenant's users
 - Works without network connectivity
 
 ### 6.7 Server Signing Key Rotation (ECDSA P-256)

@@ -8,6 +8,181 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.30.0] — 2026-09-04
+
+> **MINOR, non-breaking on the wire, and `schemas/` moves zero bytes — for the fifth release running.**
+> No message, field, schema, enum value or wire constraint is added, removed or retyped; the 86 schemas
+> and the 334 vectors are byte-identical to `0.29.0`, so no SDK re-vendor of schemas is required and
+> `protocolVersion` stays `0.3.0`. **One Chapter 08 registry key is added** — `StationIdentityCertificate`,
+> #29 — which costs no schema byte, because no schema names a configuration key.
+>
+> **This release is the firmware integrator's blocking set, and the headline is that eight normative
+> contradictions were live at once — every one of them a place where he would have built on one of two
+> statements with no way to know which.** Not one needed a schema widened. In four of the eight the schema
+> was already the correct side and already permitted the repaired behaviour; the tie was broken by
+> measuring the reference server, both SDKs, the simulator and the conformance corpus rather than by
+> preferring the stricter text.
+>
+> **Two of the eight had a price attached that the text did not show.** The implementor's guide — the one
+> document read before the hardware order — reduced an **anti-brick MUST** to *"use A/B partitioning if
+> possible"*, and had done so since the initial commit; both texts were original and neither had ever been
+> edited. And `06-security.md` described a **live security mechanism falsely**: it called the
+> `RevocationEpoch` *"global"*, which is a platform-wide denial of service reachable from an ordinary
+> tenant permission, and which the reference implementation had already repaired. The word stood at
+> **nine** sites, not the three that were reported — including the Chapter 08 registry entry and the guide.
+>
+> **Seven backlog items did not survive measurement**, five of them decisively. `messageId` already carries
+> the command-correlation the protocol was said to lack, and Chapter 07 §5.3 says so in terms. The
+> "circular boot clock" line *is* the bootstrap path — a required row of the §7.2 pre-boot manifest. The
+> `RetryLater` backoff is fixed at 5 s / 300 s in three places, two of which state that the missing field
+> is deliberate. A ledger self-contradiction reported against `MessageSigningMode` does not exist: every
+> string quoted for it returns zero. And **a lost `SessionEnded` is not lost revenue** — three server
+> mechanisms recover it and all three bill; the real exposure is an *overcharge*, which is an
+> implementation defect and not a missing acknowledgement on the wire.
+
+### Fixed — the eight contradictions
+
+- **`update-firmware.md` §7 vs the implementor's guide, on A/B partitioning.** The guide said *"use A/B
+  partitioning **if possible**"* against a **MUST** to maintain two firmware partitions, and gave a
+  rollback trigger — a five-minute BootNotification stall — that is not among §8's three conditions and is
+  in fact the *server's* stall timer. The guide now states the MUST, the three station-local rollback
+  conditions (60 s boot failure, 120 s health-check failure, Reset), and the `ErrorRecovery` BootNotification
+  that follows a rollback. **The guide is the side that changed**: it declares itself non-normative on its
+  own line 4, and no implementation supports the weak variant.
+- **`04-flows.md` step 7 — `sessionKey` was conditional in prose and unconditional everywhere else.** The
+  parenthetical *"(if message signing is enabled)"* was the last survivor of a repair that had swept every
+  other site. The schema requires `sessionKey` on every `Accepted` and `Pending`; the server sets it on both
+  arms with no signing-mode branch; both SDKs type it non-optional; `boot-notification.md` §5 makes a keyless
+  `Accepted` **malformed** precisely to forbid the silent unsigned downgrade this reading invited.
+- **`1005` on the boot path — respond or drop.** Chapter 07 put `1005` on BootNotification's response at
+  four sites; `boot-notification.md` said *"Server drops the message. Station does not receive a response."*
+  The two describe **different failures and neither said so**. A message whose **payload** is invalid has a
+  readable envelope, so the action and `messageId` are known and a `Rejected` response is both possible and
+  schema-required — which is what the reference server sends and what a conformance scenario asserts with a
+  15-second timeout. A message whose **envelope** cannot be parsed is discarded, but is not a BootNotification
+  failure at all, because nothing identifies it as one.
+- **`1005` "Do NOT retry" vs CORE-011 "retry indefinitely".** `1007` and `2001` each carry the CORE-011
+  reconciliation clause twice; `1005` carried it **zero** times, while §5.2 of the same chapter sets boot
+  retry to unlimited. A firmware author implementing the registry literally **bricks the station**: it stops
+  booting, and a station that is not booted accepts no commands, so the update that would repair the
+  malformed field can never be delivered. The row now carries the carve-out its two siblings already had.
+- **`transaction/README.md` — the duplicate-ReserveBay summary was never swept.** Rule 7's idempotent repeat
+  landed at `0.14.0` and updated four sibling files; the one-line restatement in the same directory was not
+  in that commit and has never been edited since the initial commit.
+- **`08-configuration.md` — the third storage site, and the one still asserting the disproven claim.** The
+  `MaxOfflineTransactions` entry said the §6.5 hardware table *"sizes its `MUST` storage level (512 KB) for
+  exactly that"* floor. §6.5 has derived **~1.6 MB** and called the level insufficient since `0.25.0`, and
+  the guide was repaired at `0.29.0`. **The figure is still not raised** — that decides the bill-of-materials
+  question §6.5 deliberately leaves open — but the registry no longer teaches that it holds.
+- **`06-security.md` §6.6 — the revocation epoch is per-tenant, and now says so at all nine sites.** A new
+  normative paragraph states the scope as a **MUST**, with the reason: a single shared counter makes one
+  tenant's revocation revoke every tenant's passes. **Nothing changes on the wire** — a station belongs to
+  one tenant, holds one value, and the constant-time check is untouched.
+- **`3003` opened with an existence formulation, in two documents.** *"Hardware not present"* in the registry
+  and *"hardware absent"* in the profile that draws the distinction, twelve lines under the sentence that
+  forbids the reading. The non-existence case has its own code, `3019 SERVICE_NOT_BOUND`.
+
+### Fixed — obligations with no bearer
+
+- **`3009`'s "activation timeout" named no value.** It occurred three times in the specification and in no
+  registry, so every vendor chose one — while the server refunds 100% on the outcome. It is now bounded by
+  the 10-second StartService response deadline that already exists, with **5 s RECOMMENDED**.
+- **Nothing required a station to record a command durably before energising.** §3.5 was scoped to an
+  *optional* `seqNo`, and the only persist-before-effect rule was a **SHOULD** on the BLE path alone.
+  `start-service.md` rule 9 now requires the `messageId`/`sessionId`/`bayId`/`programNumber` record before
+  activation, refusing with `5103` if it cannot be written; the BLE twin is raised to **MUST**. This is a
+  flash-layout decision and it is the difference between a mid-activation power loss that is recoverable and
+  one that dispenses twice.
+- **A rebooted bay could not report a reservation, and a rebooted maintenance bay went back on sale.**
+  `Unknown` gains a sixth exit, `Unknown → Reserved`, with the obligation to persist a confirmed reservation
+  — `Reserved` was already a legal member of the closed `bay-status` enum, so the wire needed nothing. And
+  `set-maintenance-mode.md` gains rule 9: the maintenance flag **MUST** be durable, without which §2.3's
+  `Unknown → Unavailable` row is unreachable and the station takes the `Available` exit instead, putting a
+  bay with a technician inside it back on sale.
+- **§3.5 rules 2–4 are de-scoped from the optional `seqNo`.** §2.3's *session resumed* transition is an
+  unconditional **MUST** that rested on a mechanism a conformant station need not implement, so a station
+  emitting no `seqNo` was simultaneously required to resume and exempt from the rule saying how.
+- **Configuration had no ordering between applying a Dynamic key and persisting the batch.** §8.4 now
+  requires write-then-swap and the discarding of an incomplete batch on boot. The worked example in this
+  very chapter is `OfflinePassPublicKey` + `RevocationEpoch`, both Dynamic: half-applied, the station pairs a
+  new key with an old epoch and **cannot detect it**, because the pass schema is closed and carries no key
+  identifier — and the default it falls back to is `RevocationEpoch: 0`, the most permissive value there is.
+- **An unconfirmed hardware stop had to answer `Accepted` and could say nothing.** Rule 9's bare **SHOULD**
+  becomes a **MUST** with its carriage pinned to two messages that already exist: a `HardwareFault`
+  SecurityEvent whose open `details` object **MUST** carry the `sessionId` and `bayId`, and a `Faulted`
+  StatusNotification. The settling response still cannot carry it; that half is recorded, not invented.
+- **The factory-enrolment manifest has no `bayId` and cannot have one.** `bayId` values are server-minted and
+  the provisioning response is their only carrier, so **completing provisioning is required on every
+  pattern** — manufacturing-time enrolment supplies the pre-boot rows, it does not replace the call. A
+  station that skips it cannot satisfy CORE-004.
+- **`5106` for an unusable clock at boot.** §7.2's MUST-refuse covered the two trust-policy rows and said
+  nothing for the time row, so the one row whose circularity the specification names had no stated outcome.
+- **The offline-pass ceilings had minima and no maxima.** A pass could be signed authorising more offline
+  transactions than any conformant station may buffer — two obligations of this specification in
+  contradiction, unresolvable locally. The rule is precedence, not a new number: the station's configuration
+  bounds the pass and never the reverse, `stationMaxOfflineTx` **MUST NOT** exceed `MaxOfflineTransactions`,
+  and the two time bounds are capped at the 24 hours the pass's own validity already caps. The money
+  ceilings are stated to be issuer policy rather than left silent.
+- **`5025 CATALOG_TOO_LARGE` told servers to read a field that has never existed** — *"check station
+  capabilities for maximum catalog size"*, against a `capabilities` object of four booleans closed to a
+  fifth. It now names the 64 KB packet ceiling.
+- **`3003` mapped to no HTTP status, and three implementations had filled the silence three ways** — the
+  server to `503` (flagging its own arm as wrong in a comment), one SDK to `503`, the other to `500` by
+  falling through. It joins `409`, with `3001`, `3014` and `3019`: it is a fact about the addressed bay, not
+  about the server answering.
+- **`TriggerMessage` and `DataTransfer` were in no row of the expiry table.** `TriggerMessage` occurs zero
+  times in the whole of Chapter 02 and 91 times elsewhere, so a publisher had no expiry to set for either.
+- **§6.5's storage arithmetic covered the three Category-1 buffers and nothing else.** A sizing table now
+  names the five further obligations a station must hold — the 24-hour retention horizon, the deduplication
+  set, the 29 configuration keys, the per-session records, the retained previous signing key — plus the two
+  firmware partitions, which is the term that decides the part.
+- **`mqttConfig` fallbacks that could never fire.** Five prose clauses granted a pre-configured fallback
+  *"if absent"* for members the schema makes REQUIRED under `additionalProperties: false`. Unreachable
+  against a valid response, and harmful against an invalid one: connecting to a locally-held broker address
+  because the server's answer did not parse is the outcome a provisioning step exists to prevent.
+
+### Fixed — the tools he verifies himself with
+
+- **`canonical-form.mjs` cited lines 677–688 for §4.8.1, which is at 781.** A uniform +106 drift, so the
+  citations were right once and then silently pointed at the certificate-expiry table — a citation that is
+  wrong but still resolves is worse than one that dangles. All fifteen now cite **section and step**, which
+  cannot drift.
+- **And it named the installed SDK as `0.5.4` when it was `0.13.0`** — identical to the declared `^0.13.0`,
+  which made the recorded remedy (*"bring the installed dependency in line with the declared one"*) a
+  **no-op** against a version that still carried both canonicalization defects. Four releases of pointing the
+  fix at the wrong axis. The pin is now `^0.28.0`; **re-measured on the bump, signatures are green and the
+  signer produces zero drift across all 20 signed documents**, which is the evidence that the previously
+  *measured* exposure was genuinely zero rather than merely unobserved.
+- **`TC-SEC-007` cited a 255-bay ceiling** that has read 64 across four tags, in the conformance case a
+  vendor executes.
+- **`VERSIONING.md` asserted the SDK number is *"permanently offset, SDK ahead"* under a heading saying the
+  two lines *"will not uncross"*.** Measured tag by tag: they uncrossed at `v0.27.0` and re-crossed the other
+  way at `v0.28.0`, where the SDK pair pins a spec tag **above** its own number. Written once at `0.25.0` and
+  never re-measured. The durable sentence — *read the `.spec-ref`* — survived both falsifications precisely
+  because it names no direction.
+- **`CHANGELOG.md` has a complete `## [0.18.0]` section and no such tag**, and — the direction nobody had
+  reported — **`v0.5.1` and `v0.5.2` are real tags with no section at all**, which is the worse way round for
+  anyone choosing a revision. Found by diffing 47 tags against 46 release headings; 45 are in both.
+
+### Added
+
+- **Chapter 08 key #29, `StationIdentityCertificate`.** It was named as a valid ChangeConfiguration key at
+  two normative sites and was absent from the registry, so §8.2 rule 3 obliged a **conforming** station to
+  answer `NotSupported` — and, the batch being atomic, to apply nothing else in the request. The
+  specification mandated a rotation every conformant implementation had to refuse. Registered `W` / Dynamic /
+  Security, with all four previously-open columns decided and the measurement that the value fits (364
+  characters against a 500 bound).
+- **`KNOWN-ISSUES.md` gains a fourth sub-shape of the named defect class, and five instances** — a rule that
+  requires a truthful value from a **closed enumeration in which no legal value is true**. It is the sub-shape
+  no gate in this repository can see: the payload validates, the value is a legal member, the vector passes,
+  and the only thing wrong is that the member is not true of what happened. The class index is now fifteen
+  instances, nine open.
+- **Seven gaps whose only repair is a schema byte are recorded with their option space rather than taken** —
+  a ninth `bootReason`, a seventh session `reason`, a boot generation, a fifth capability key, a shape for
+  `SecurityEvent.details`, `maxItems` on the catalog, and a physical-stop confirmation.
+
+---
+
 ## [0.29.0] — 2026-09-04
 
 > **MINOR, non-breaking on the wire, and `schemas/` moves zero bytes.** No message, field, schema,
@@ -1910,6 +2085,16 @@ unsolicited"*, *"may originate no EVENT"*, *"any REQUEST other than BootNotifica
   sufficient here.
 
 ## [0.18.0] — 2026-08-14
+
+> **NEVER TAGGED. There is no `v0.18.0` on the remote, and anchoring to one fails.** The tag list
+> runs `v0.17.0`, `v0.17.1`, `v0.19.0` — this section describes work that shipped inside `v0.19.0`.
+> Recorded rather than back-tagged: minting a tag now would place a release object dated after the
+> one that already contains its content. Read this section as part of `v0.19.0`.
+>
+> **The mismatch runs the other way too.** `v0.5.1` and `v0.5.2` are real tags with **no section in
+> this file at all**, which is the worse direction for anyone choosing a revision: a release the
+> changelog never describes. Both directions were found by diffing the 47 tags against this file's
+> 46 release headings — 45 appear in both.
 
 > **Two of the three contradictions `0.17.1` recorded are decided, and both were decided against
 > the duplication rather than in favour of one copy.** In each case the specification said a thing

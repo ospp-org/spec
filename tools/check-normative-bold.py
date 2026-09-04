@@ -30,7 +30,33 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-09-03  (unreleased)  438 unbolded, 1183 bolded spans — the spec-cascade
+    (this HEAD) 2026-09-04  (unreleased)  434 unbolded, 1225 bolded spans — the integrator's
+                                   blocking set. BOTH numbers RE-DERIVED on this tree; neither is
+                                   incremented from the row below. Unbolded falls by FOUR and the
+                                   finding set was diffed entry by entry against a `git archive` of
+                                   472f843: exactly four entries LEFT — three `mqttConfig` fallback
+                                   bullets in 04-flows.md (one of which carried two keywords) and
+                                   the duplicate-ReserveBay bullet in the transaction README — and
+                                   **NONE arrived**, across roughly twenty-five edited files. That
+                                   zero is the measurement worth keeping: every normative keyword
+                                   this cycle added is bolded. BASELINE lowered 438 -> 434.
+    472f843  2026-09-04  v0.29.0   438 unbolded, 1189 bolded spans — STAMPED RETROSPECTIVELY at
+                                   0.30.0. The row below stood as "(this HEAD) ... (unreleased)"
+                                   after v0.29.0 was cut, so it carried neither a sha nor a version,
+                                   and its companion was measured on a421d6f0 rather than on the
+                                   commit that was actually tagged: the release commit itself added
+                                   six bolded spans, so 1183 was SIX LOW against v0.29.0. That is
+                                   the FIFTH time this companion has been wrong, and the second time
+                                   the cause was an unstamped row rather than a bad reading — the
+                                   same omission this header already records against the v0.25.0 and
+                                   v0.24.1 rows. The gated number was right: 438 is identical on
+                                   the pre-tag tree and on 472f843. A row that is never stamped does
+                                   not merely lack a label; it goes on describing a tree nobody
+                                   tagged. Measured for the record while stamping this: a421d6f
+                                   (v0.28.0) reads **439 unbolded, 1183 bolded** — so the row below
+                                   is the 0.29.0 cycle's pre-tag HEAD, where unbolded had already
+                                   fallen to 438 while the companion still matched v0.28.0.
+    (0.29.0 pre-tag) 2026-09-03    438 unbolded, 1183 bolded spans — the spec-cascade
                                    cycle. BOTH numbers RE-DERIVED by running the instrument on this
                                    tree, neither incremented from the line below. Unbolded falls by
                                    exactly one and the finding set was diffed entry by entry against
@@ -150,7 +176,7 @@ import re
 import sys
 from collections import Counter
 
-BASELINE = 438
+BASELINE = 434
 
 KEYWORD = re.compile(r'\b(MUST NOT|MUST|SHALL NOT|SHALL)\b')
 FENCE = re.compile(r'```.*?```', re.S)

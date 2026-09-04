@@ -1,6 +1,6 @@
 # Chapter 04 — Protocol Flows
 
-> **Status:** Draft | **OSPP Version:** 0.29.0
+> **Status:** Draft | **OSPP Version:** 0.30.0
 
 This chapter documents every end-to-end protocol flow as a sequence of messages defined in [Chapter 03 — Message Catalog](03-messages.md). Each flow includes preconditions, a Mermaid sequence diagram, numbered happy-path steps, alternative paths, error paths, and postconditions.
 
@@ -153,7 +153,7 @@ sequenceDiagram
 4. Broker authenticates the client certificate, returns CONNACK success
 5. SSP subscribes to `ospp/v1/stations/{station_id}/to-station` with QoS 1
 6. SSP sends **BootNotification REQUEST** [MSG-001] with station identity, firmware version, capabilities, and `pendingOfflineTransactions` count
-7. Server validates the station, returns **BootNotification RESPONSE** [MSG-001] with `status: "Accepted"`, `serverTime`, `heartbeatIntervalSec`, optional `configuration` overrides, and `sessionKey` (if message signing is enabled)
+7. Server validates the station, returns **BootNotification RESPONSE** [MSG-001] with `status: "Accepted"`, `serverTime`, `heartbeatIntervalSec`, optional `configuration` overrides, and `sessionKey` — which is **REQUIRED on every `Accepted` and every `Pending`**, unconditionally. It is not conditional on `MessageSigningMode`: that is station configuration rather than a field of this message, so the condition was never expressible in the schema, and under `None` the key is simply unused ([`boot-notification-response.schema.json`](../schemas/mqtt/boot-notification-response.schema.json), and [`boot-notification.md` §5](profiles/core/boot-notification.md), which makes a keyless `Accepted` **malformed**)
 8. SSP synchronizes its clock to `serverTime`, applies any configuration overrides, stores the HMAC session key
 9. SSP sends one **StatusNotification EVENT** [MSG-009] per bay, reporting `bayNumber`, `status`, and every `programs[]` entry with its availability — programs, because a service is server-minted and at first boot the station has been told none
 10. SSP starts the heartbeat timer at `heartbeatIntervalSec` seconds
@@ -271,11 +271,12 @@ sequenceDiagram
 
 ### Consumption Requirements
 
-- The station MUST use `mqttConfig.brokerUri` from the provisioning response as the MQTT connection target on every connect attempt. If the field is absent, the station MAY use a pre-configured fallback URL.
-- Other `mqttConfig` fields follow the same MUST/MAY pattern: when present in the provisioning response, the station MUST honor them (`brokerHost`, `brokerPort`, `tlsVersion`, `qosLevel`, `cleanStart`, `mqttVersion`, `clientIdTemplate`, `topicPrefix`, `keepAliveSeconds`); when absent, the station MAY use pre-configured defaults.
+- The station **MUST** use `mqttConfig.brokerUri` from the provisioning response as the MQTT connection target on every connect attempt.
+- **`mqttConfig` and all eleven of its members are REQUIRED, so "absent" is not a case a conforming response can present.** [`provisioning-response.schema.json`](../schemas/provisioning-response.schema.json) lists `mqttConfig` in its top-level `required` array and requires `brokerHost`, `brokerPort`, `brokerUri`, `clientIdTemplate`, `topicPrefix`, `qosLevel`, `keepAliveSeconds`, `cleanStart`, `sessionExpirySeconds`, `tlsVersion` and `mqttVersion` within it, with `additionalProperties: false` and no conditional that relaxes any of them. A response missing one is **malformed**: the station **MUST** refuse it and **MUST NOT** substitute a pre-configured value. This section granted a fallback at five sites until 0.30.0, and each was unreachable against a valid response and harmful against an invalid one — silently connecting to a locally-held broker address because the server's answer did not parse is the one behaviour a provisioning step exists to prevent.
+- Every other `mqttConfig` field is honoured on the same terms — the station **MUST** use the advertised value. [Chapter 02 §1.2](02-transport.md#12-connection-parameters)'s table is what a station uses **before it has a provisioning response at all**, which is a different situation from a field being absent from one it has.
 - Two of those fields were also fixed by [Chapter 02 — Transport §1.2](02-transport.md#12-connection-parameters), which left a station holding two MUSTs and no rule for choosing. Each now has **one** authority:
   - **`clientIdTemplate` — Transport governs.** The value is `{stationId}` and the schema pins it there. The Client ID is not a tunable: the broker enforces topic ACLs on the certificate CN ([Chapter 06 §3.3](06-security.md)), so a Client ID that is anything other than the `stationId` is a Client ID whose ACL does not match its own topics. A server **MUST NOT** advertise another value, and a station that receives one **MUST** use `{stationId}` regardless.
-  - **`keepAliveSeconds` — the provisioning response governs.** Transport's `30` is the value to use **when the field is absent**, not a ceiling on what may be advertised. Keep Alive is a liveness parameter with no cryptographic binding, and deployments on constrained cellular links legitimately need a different one; the broker's 1.5× disconnect multiplier follows whatever value is in force.
+  - **`keepAliveSeconds` — the provisioning response governs.** Transport's `30` is the pre-provisioning default, not a ceiling on what may be advertised, and not a fallback for an absent member — the member is REQUIRED. Keep Alive is a liveness parameter with no cryptographic binding, and deployments on constrained cellular links legitimately need a different one; the broker's 1.5× disconnect multiplier follows whatever value is in force.
 
 ### Error Paths
 

@@ -48,13 +48,13 @@ node tools/verify-ble-crypto.mjs     # BLE key schedule against its RFC anchors
 
 ### One implementation of the canonical form, and why it is not the SDK's
 
-[`canonical-form.mjs`](canonical-form.mjs) is the single place these tools implement `06-security.md` §4.8.1. Every step cites the rule and line it comes from, so it can be checked against the text without opening another repository.
+[`canonical-form.mjs`](canonical-form.mjs) is the single place these tools implement `06-security.md` §4.8.1. Every step cites the rule it comes from **by section and step**, so it can be checked against the text without opening another repository. It cited line numbers until 0.30.0, by which point 106 lines had been inserted above §4.8.1 and the range pointed at the certificate-expiry table instead.
 
 It deliberately does **not** `import { canonicalize } from '@ospp/protocol'`. A conformance gate that canonicalizes with the SDK verifies the SDK against the SDK's own implementation: it passes whatever the SDK does, including whatever it does wrong. This repository has produced that shape twice before — a gate that compared the two SDKs to each other rather than to the registry, and a suite that defended the wrong value for `5004`.
 
 Re-implementing is the point; re-implementing *per tool* is not. Before 0.13.0 `verify-mqtt-mac.mjs` carried its own copy, and it was wrong in exactly the way both SDKs had just been repaired for.
 
-> **Still outstanding:** `sign-inline-md.mjs`, `sign-example.mjs`, `verify-example-signatures.mjs`, `verify-ble-crypto.mjs` and `generate-ble-vectors.mjs` do import `canonicalize` from `@ospp/protocol`, and the installed copy is **0.5.4** while `package.json` declares `^0.13.0`. Measured exposure is currently zero — no signed payload in the tree has keys whose UTF-8 and UTF-16 orderings differ, and none has integer-like keys — which is why moving that chain is tracked in KNOWN-ISSUES rather than done here.
+> **Still outstanding:** `sign-inline-md.mjs`, `sign-example.mjs`, `verify-example-signatures.mjs`, `verify-ble-crypto.mjs` and `generate-ble-vectors.mjs` do import `canonicalize` from `@ospp/protocol`, so they do not use the implementation written from the text. **The dependency half is closed at 0.30.0:** this note said the installed copy was `0.5.4` when it was `0.13.0` — identical to the declared `^0.13.0`, so the recorded remedy was a no-op — and the pin is now `^0.28.0`, whose canonicalizer sorts by UTF-8 bytes. Re-measured on the bump: signatures green, zero signer drift. Re-pointing the five tools at [`canonical-form.mjs`](canonical-form.mjs) is still tracked in KNOWN-ISSUES.
 
 ## Drift checks
 

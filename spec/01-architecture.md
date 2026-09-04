@@ -1,6 +1,6 @@
 # Chapter 01 — Architecture
 
-> **Status:** Draft | **OSPP Version:** 0.29.0
+> **Status:** Draft | **OSPP Version:** 0.30.0
 
 This chapter defines the foundational system model upon which all subsequent chapters build: the participants, their communication channels, the hardware model, the identity scheme, the controller topologies, and the layered communication stack.
 
@@ -439,6 +439,26 @@ is the non-repudiation artefact and **MUST** be retained byte-identically for re
 > remains true of 512 KB and is no longer the relevant question: ~1.6 MB is still within a 4 MB part, ~3.2 MB
 > is not, once firmware and its A/B partition are accounted for ([`update-firmware.md` §7](profiles/device-management/update-firmware.md)).
 
+**The derivation above covers the three Category-1 buffers and nothing else, and a vendor sizing a part needs the
+whole product.** Rate x retention x count x bytes was never taken across every obligation in this specification
+that requires a station to keep something. The Category-1 arithmetic is the largest term, not the only one; the
+rest were unbudgeted until 0.30.0, so a part sized to ~1.6 MB of *buffer* still has no line for the store the
+buffer sits in.
+
+| Also retained, and by whose rule | Sized by |
+|---|---|
+| Cached StopService RESPONSE, cached SessionEnded and the terminal record, per session, for the **24-hour OSPP Session Retention Horizon** ([Chapter 02 §5.3](02-transport.md)) | sessions per station per day x one record each. The horizon's own text calls this *"one record per completed session"* and quantifies it no further |
+| The deduplication set: at least **1000** `messageId` values or one hour, whichever is larger ([Chapter 02 §3.3](02-transport.md)) | 1000 x the 64-character `messageId` bound, plus index |
+| Configuration: all 29 registry keys, persisted after every successful write ([Chapter 08 §8.4](08-configuration.md)) | bounded by §1.2's 500-character value ceiling |
+| The persisted `seqNo` per live session, and the command record rule 9 of [`start-service.md`](profiles/transaction/start-service.md) requires **before** energising | one record per bay |
+| The **previous** `OfflinePassPublicKey`, retained for the rotation grace window ([Chapter 06 §6.7](06-security.md)) | one key |
+| Firmware: two partitions, because A/B is a **MUST** ([`update-firmware.md` §7](profiles/device-management/update-firmware.md)) | 2 x image size — the term that decides the part, and the one the 4 MB note below turns on |
+
+**None of these is large beside 1.6 MB, and that is the point of listing them**: the shortfall recorded above is
+not the only thing between the level rows and a working part, and a vendor who budgets the buffer exactly has
+budgeted nothing for the five obligations under it. This table is a sizing aid; the normative floors remain the
+Category-1 table and the storage levels, unchanged.
+
 Buffered messages MUST be stored in persistent local storage (survives reboot and power loss).
 
 **BLE offline session persistence:** The station **SHOULD** persist offline session state (ServiceStatus updates, elapsed time, meter readings) to non-volatile storage after each ServiceStatus update. On unexpected restart, the station **SHOULD** recover partial session data and include it in the next TransactionEvent reconciliation with `bootReason: ErrorRecovery`.
@@ -510,7 +530,9 @@ Before first boot, the station must be configured with network and security cred
 | HTTPS trust policy | What validates that server's TLS certificate on that call: an explicit trust anchor (PEM), or an explicit instruction to use the station's system trust store. The response's `brokerRootCa` cannot serve here — it arrives *in* the response to the very call it would have to validate, and it anchors the **broker**, not the provisioning server ([Chapter 06 — Security §2.1](06-security.md)) |
 | Initial time source | A clock good enough to evaluate certificate validity periods **before** Boot. Both OSPP clock sources — `serverTime` in the BootNotification and Heartbeat responses — arrive only once an mTLS session exists, while TLS 1.2+ on the HTTPS call *and* on the MQTT connection requires checking `notBefore`/`notAfter` first ([Chapter 02 — Transport §1.3, §9.1](02-transport.md)) |
 
-The last three rows are **required on every pattern**, and the runtime path of §7.1's *Runtime alternative* note cannot proceed without them: a field-installed station holds no certificate yet, so its first act is an HTTPS call it must be able to address, validate and date. What is deliberately left open is only the **transport** of these values — the same latitude §7.1 already takes for `stationId`. The methods table above is the menu; this table is the manifest. A deployment MUST supply every row by some means, and MAY choose which. That obligation runs to the deployment; the station carries its own. A station that cannot satisfy either trust-policy row — no anchor obtainable, or a presented chain that does not validate against the anchor it has — **MUST refuse** the corresponding call or connection rather than proceed unverified ([Chapter 06 — Security §2.1](06-security.md#21-station--server--mutual-tls-mtls)).
+The last three rows are **required on every pattern**, and the runtime path of §7.1's *Runtime alternative* note cannot proceed without them: a field-installed station holds no certificate yet, so its first act is an HTTPS call it must be able to address, validate and date. What is deliberately left open is only the **transport** of these values — the same latitude §7.1 already takes for `stationId`. The methods table above is the menu; this table is the manifest. A deployment MUST supply every row by some means, and MAY choose which. That obligation runs to the deployment; the station carries its own. A station that cannot satisfy either trust-policy row — no anchor obtainable, or a presented chain that does not validate against the anchor it has — **MUST refuse** the corresponding call or connection rather than proceed unverified ([Chapter 06 — Security §2.1](06-security.md#21-station--server--mutual-tls-mtls)). **The same applies to the time row**, which had no such statement until 0.30.0: a station whose clock is unusable cannot evaluate `notBefore`/`notAfter`, so it **MUST NOT** proceed with either the HTTPS call or the MQTT connection, and **MUST** report `5106 CLOCK_ERROR` by whatever local means it has. The circularity that row describes is real and is discharged here, out of band, exactly as `stationId` and the two trust policies are — but *naming* a circularity is not the same as saying what a station does when the row is unmet, and only the trust rows had said it.
+
+> **What this manifest cannot carry, and what follows from that.** Bay identity is **not** in it and cannot be: `bayId` values are minted by the server, and the only artefact that pairs a `bayId` with the `bayNumber` a station knows about itself is the [provisioning response](../schemas/provisioning-response.schema.json). No BootNotification response carries bays. So **completing `POST /api/v1/stations/provision` is required on every pattern, manufacturing-time enrolment included** — that pattern supplies the *pre-boot* rows above, it does not replace provisioning. A station that skips it holds no `bayId` and therefore cannot satisfy [CORE-004](profiles/core/README.md), whose StatusNotification requires `bayId` on every bay immediately after `Accepted`. §7.1's *Runtime alternative* note reads as though the two patterns were alternatives all the way through; they diverge only on where the **certificate** comes from, and they converge again here.
 
 > **Rows 3 and 4 read for the manufacturing pattern.** *TLS credentials* and the parenthetical on `stationId` presume a certificate that already exists, which is true at manufacturing time and not at field installation — there the certificate is what the provisioning call returns. The requirement each row states still holds on both patterns; only the phrasing is written around §7.1.
 
