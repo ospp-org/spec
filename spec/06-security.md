@@ -1,6 +1,6 @@
 # Chapter 06 — Security
 
-> **Status:** Draft | **OSPP Version:** 0.28.0
+> **Status:** Draft | **OSPP Version:** 0.29.0
 
 This chapter defines the complete security model for the OSPP protocol, covering threat analysis, authentication, authorization, cryptographic requirements, message integrity, offline security, anti-abuse mechanisms, and data protection.
 
@@ -750,6 +750,17 @@ Operator / Manufacturer Root CA
 ```
 
 The station validates the firmware signature against a pre-provisioned Firmware Signing Certificate (or its CA) stored in the station's secure element or encrypted NVS.
+
+**Which of the two is the trust anchor is a deployment choice, and this specification does not make it — but the two branches do not cost the same, and an implementer choosing between them is entitled to know that before the certificate is burned into a secure element.** Both are permitted; the consequence differs:
+
+| Anchor | Annual rotation of the leaf | What a deployment must plan for |
+|---|---|---|
+| **The leaf certificate itself** | **Unperformable in-band.** No message defined here carries a firmware signing certificate: `update-firmware-request` is closed over six properties with no certificate member, `CertificateInstall`'s `certificateType` admits only `StationCertificate` and `MQTTClientCertificate`, and [Chapter 08](08-configuration.md) registers no key for one. Delivering the replacement inside a firmware image is circular — that image is signed by the certificate being replaced. | An out-of-band replacement path, and a certificate lifetime that outlives the fleet's service interval. When the pre-provisioned certificate expires, the station stops accepting firmware — including the firmware that would have repaired it. |
+| **The issuing CA** | Performable in principle: the leaf may rotate while the anchor holds. | A route for the **new leaf** to reach the station, which this specification also does not define — the image would have to carry it, and nothing states that it does or how a station would locate it. |
+
+The conformance corpus exercises the first branch and provides no material for the second: `conformance/test-keys/` holds `firmware-test-pub.pem`, a bare P-256 public key rather than a certificate, and no CA certificate or chain for firmware exists anywhere in this repository. Thirteen sites across the specification, the guide and the conformance cases name *the Firmware Signing Certificate* as what a signature is verified against; two — this line and [`update-firmware.md` §5](profiles/device-management/update-firmware.md) rule 4 — add *or its CA*. A station that holds neither **MUST** treat the binary as untrusted, which both of those sites already state.
+
+**The rotation cadence above is a statement of practice, not a mechanism.** Nothing in this specification performs it. It is recorded in [`KNOWN-ISSUES.md`](../KNOWN-ISSUES.md) rather than resolved here, because closing it means either defining a delivery message or naming one anchor and forbidding the other, and both are decisions with a cost outside this section.
 
 The UpdateFirmware [MSG-016] message **MUST** include a `signature` field containing the Base64-encoded ECDSA P-256 signature of the firmware image. If the signature is invalid, the station **MUST** reject the update with error `5112 FIRMWARE_SIGNATURE_INVALID` and send a `FirmwareIntegrityFailure` SecurityEvent [MSG-012].
 

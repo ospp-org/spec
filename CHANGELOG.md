@@ -8,7 +8,7 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
-## [Unreleased]
+## [0.29.0] — 2026-09-04
 
 > **MINOR, non-breaking on the wire, and `schemas/` moves zero bytes.** No message, field, schema,
 > enum value or Chapter 08 key is added, removed or retyped; `protocolVersion` stays `0.3.0`; the 86
@@ -125,23 +125,36 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ### Recorded as OPEN, not taken
 
-- **The anti-downgrade guard compares a label nothing binds to the bytes.** §4.6 signs *the firmware
-  image*; §4.6.1 compares *the offered `firmwareVersion` string*, which the signature does not cover
-  and which `artifactId` / `manifestDigest` — **0 occurrences each, repo-wide** — do not tie to
-  anything. A genuinely signed old image offered under a higher version number passes the signature
-  check, the checksum check and the downgrade check, never sets `forceDowngrade`, and therefore never
-  raises the `FirmwareDowngradeAttempt` SecurityEvent the guard leans on. Recorded rather than fixed
-  because the three available repairs — signing the version string, declaring the pair immutable,
-  comparing digests instead of labels — differ in cost and one has to be chosen.
+- **The anti-downgrade guard verifies one artefact and decides on another, and no field is missing.**
+  §4.6 signs *the firmware image*; §4.6.1 compares *the offered `firmwareVersion` string*, which the
+  signature does not cover. A genuinely signed old image offered under a higher version number passes
+  the signature check, the checksum check and the downgrade check, never sets `forceDowngrade`, and
+  therefore never raises the `FirmwareDowngradeAttempt` SecurityEvent the guard leans on. **It is a
+  verification defect rather than a schema gap**, and that decides where the repair goes: at the
+  moment §4.6.1 runs, the station is holding the binary it has just authenticated, and it discards it
+  to compare a string the requester supplied. `artifactId` would only add a second unsigned string
+  from the same party — which is why `artifactId` / `manifestDigest` being **0 occurrences each,
+  repo-wide** is not the finding. At least one repair therefore needs **no wire change at all**: take
+  the version from the authenticated binary rather than from the request. Recorded rather than taken
+  because that option requires this specification to say a firmware binary carries a readable
+  version, which it does not currently say, and the two alternatives — signing the version string,
+  declaring a `(version, digest)` pair immutable — change what the signature covers or need the
+  consequence of re-use stated.
 - **The firmware signing certificate is stated to rotate annually and no message can deliver the new
   one.** `update-firmware-request` is closed with no certificate member; `CertificateInstall`'s
   `certificateType` enum is `StationCertificate | MQTTClientCertificate`, closed; Chapter 08 registers
   no key for it and §1.3 makes an unrecognised key a `NotSupported`; the image itself is circular
-  where the leaf is the anchor. §4.6 says *"pre-provisioned … (or its CA)"*, and **which of the two
-  is the anchor decides whether this is survivable** — naming it is the cheaper half and could be
-  done alone. The contrast is what makes it an omission rather than a choice: the station's own mTLS
-  certificate has a four-message renewal profile, and `OfflinePassPublicKey` has a registered key with
-  a grace period.
+  where the leaf is the anchor. **Naming the anchor turned out not to be decision-free**, so §4.6
+  states both branches with their costs instead: 13 sites name *the Firmware Signing Certificate* and
+  2 add *or its CA*, and the corpus exercises only the first — `conformance/test-keys/` holds a bare
+  P-256 public key and no firmware CA or chain exists anywhere here. That shows which branch is
+  tested; it does not license forbidding the other, which would make a CA-anchored deployment
+  non-conforming without notice. **Both branches end at the same missing thing** — a message that
+  carries a firmware signing certificate — so §4.6 now says so in a table, and the choice is made
+  with its cost visible rather than discovered after the certificate is burned into a secure element.
+  The contrast is what makes it an omission rather than a choice: the station's own mTLS certificate
+  has a four-message renewal profile, and `OfflinePassPublicKey` has a registered key with a grace
+  period.
 
 ### Changed
 

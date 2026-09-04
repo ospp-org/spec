@@ -1,6 +1,6 @@
 # Chapter 05 — State Machines
 
-> **Status:** Draft | **OSPP Version:** 0.28.0
+> **Status:** Draft | **OSPP Version:** 0.29.0
 
 This chapter defines all finite state machines (FSMs) governing OSPP entities — the station, its bays, sessions, reservations, BLE connections, firmware updates and diagnostics uploads. Each FSM specifies the complete set of states, valid transitions, guards, actions, and a Mermaid diagram. A transition not listed for a machine is invalid, and implementations MUST NOT perform one.
 
