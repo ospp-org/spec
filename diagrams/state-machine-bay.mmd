@@ -5,8 +5,8 @@
 %% This diagram DEPICTS the canonical transition table at 05-state-machines.md §2.3;
 %% it does not define it. Where the two disagree the table governs, and the diagram
 %% is the defect. The table's "Effected by" column is rendered here as the split
-%% below: everything above the divider is a Station transition (20), the six edges
-%% into Unknown are the Server's inference (6). 26 in all.
+%% below: everything above the divider is a Station transition (21), the six edges
+%% into Unknown are the Server's inference (6). 27 in all.
 
 stateDiagram-v2
     [*] --> Unknown : Power on / reboot
@@ -14,6 +14,7 @@ stateDiagram-v2
     Unknown --> Available : StatusNotification (healthy)
     Unknown --> Faulted : StatusNotification (fault detected)
     Unknown --> Unavailable : StatusNotification (maintenance mode)
+    Unknown --> Reserved : StatusNotification<br/>(reservation resumed after reboot)
     Unknown --> Occupied : StatusNotification<br/>(session resumed after reboot)
     Unknown --> Finishing : StatusNotification<br/>(wind-down resumed after reboot)
 

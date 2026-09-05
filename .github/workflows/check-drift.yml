@@ -60,6 +60,17 @@ jobs:
       - name: Normative keywords not bolded
         run: python3 tools/check-normative-bold.py
 
+      # 3003 SERVICE_UNAVAILABLE carried both "this is a branching entry ... servers MUST
+      # carry details.cause" and "This entry does not branch, and details stays OPTIONAL
+      # for it" in ONE cell, from v0.31.0 to v0.32.0. The second was the older sentence:
+      # it stood at v0.29.0 and v0.30.0 and the v0.31.0 edit that added the obligation did
+      # not remove it. Two releases shipped a row that answered its own question both
+      # ways, on a code that rides StartServiceResponse. The SDK error-registry gates read
+      # code, name, severity and recoverable -- never the Description prose, which is
+      # where the obligation lives, so neither could have seen it.
+      - name: A registry cell engaging and disengaging §1.4 at once
+        run: python3 tools/check-registry-self-consistency.py
+
       # Reads schemas/ as well as the markdown: check D compares a registry range against
       # the JSON Schema bounds of the wire field carrying the same quantity, so a schema
       # edit alone can move this result. That is why 'schemas/**' is in the triggers above.

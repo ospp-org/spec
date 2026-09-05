@@ -8,6 +8,136 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.33.0] — 2026-09-05
+
+> **MINOR, non-breaking, prose and one registry row.** **Zero** files under `schemas/` change and
+> **zero** of the 334 existing conformance vectors move; three vectors are **added**. The registry
+> goes **118 → 119**, which is the whole of the SDK cascade: `errorCode` is `{"type": "integer"}` on
+> every schema that carries one, so a new code costs **no schema byte**.
+>
+> **Every defect here was created by a repair.** `0.32.0` shipped a `MUST` whose message its own
+> schema rejects; `0.31.0` left a registry cell answering its own question both ways; `0.30.0`
+> repaired one of two sites and left the other; and a rollback rule invented a trigger no other
+> document has. Four releases in a row closed a gap and opened a smaller one inside it. That is the
+> finding, not the four items.
+
+### Fixed — `start-service.md` rule 12 mandated a message the schema refuses
+
+- **The measurement.** Rule 12, added at `0.32.0`, requires *"a StatusNotification [MSG-009]
+  reporting the bay `Faulted`"* and names no `errorCode`. `status-notification.schema.json` carries
+  `if status == "Faulted" then required: ["errorCode", "errorText"]`; [CORE-012](spec/profiles/core/README.md)
+  says the same as a **MUST**. Built exactly as the rule mandated and run through a production
+  validator with four controls: a corpus vector **VALID**, garbage **INVALID**, **the rule 12
+  message INVALID**, the same message with a code **VALID** — so the cause is the absent code and
+  nothing else. A conformant station's report was discarded whole, `sessionId` included, and that
+  `sessionId` is what the rule calls *"the whole of its value"*.
+- **Why no existing code was usable, measured over all 34 in the range.** Every member of `5xxx`
+  names something the station **observed** — a pump, a sensor, a write failure, a watchdog. Rule
+  12's condition is that it observed **nothing**: the pre-effect record survived and the delivery's
+  outcome did not. `5000 HARDWARE_GENERIC` asserts an unclassified hardware *error*, which is a
+  guess, and [`status-notification.md` §6.1](spec/profiles/core/status-notification.md) rule 3
+  states the principle that forbids it — *report without guessing a cause* — while confining that
+  licence to program level. **So a code was missing, not a list.**
+- **Added `5113 OUTCOME_INDETERMINATE`** (Warning, not recoverable). It is the one member of the
+  range that asserts **no fault was detected**, and it is the bay-level answer to the case §6.1 rule
+  3 already licenced at program level. Registry **118 → 119** in both tables of `07-errors.md`.
+- **The twin had half the same gap, and that is why it was checked.** `stop-service.md` rule 9 names
+  `5001`/`5007` — but on the **SecurityEvent** only; its StatusNotification bullet named no code
+  either. It was satisfiable there, because a station whose deactivation failed *has* a true code to
+  pick, so the bullet was under-specified rather than impossible. It now says the StatusNotification
+  carries the same code as the SecurityEvent.
+- **Rule 12 cited the wrong transition.** It pointed at *Hardware error detected*, which starts from
+  a **running** bay; rule 12 fires on a boot, so the bay is leaving `Unknown` and the *StatusNotification
+  (fault)* row governs. That row's condition (*"Bay hardware fails self-test"*) is widened to name
+  the indeterminate case, and no row is added — the transition count is asserted in nine places and
+  a new row would have moved all of them.
+- **And the *Hardware error detected* row narrowed the code to `(5001-5009)`**, which neither
+  CORE-012 nor §6.0 rule 1 says: a bay downed by `5103 STORAGE_ERROR` satisfied both of them and
+  violated that cell. Widened to the range.
+
+### Fixed — the `3003` cell engaged and disengaged §1.4 at once, for two releases
+
+- `3003 SERVICE_UNAVAILABLE` carried both *"this is a **branching entry** per §1.4, and servers
+  **MUST** carry `details.cause`"* and *"**This entry does not branch, and `details` stays OPTIONAL
+  for it** … §1.4's branching obligation is not engaged."* Dated across tags: the second sentence
+  stood **unchanged at `v0.29.0` and `v0.30.0`**, and the `v0.31.0` edit that added the obligation
+  did not remove it. `3003` rides `StartServiceResponse`, so a station answering `Rejected` could
+  not tell whether `details.cause` was required of it.
+- **The branching half survives**, because the recommendedAction beside it gives three different
+  recoveries, which is what branching means. The retracted sentence is kept as a quotation.
+- **`tools/check-registry-self-consistency.py` is added and wired into `check-drift.yml`.** It reads
+  a **use**, not a mention — quoted spans are stripped before matching, so the cell can record what
+  it retracted — and it fails loudly on zero parsed rows rather than passing vacuously. Controls: the
+  sentence planted **unquoted** is caught; restored is green; a broken row matcher exits `2`.
+  Nothing could have caught this before: both SDKs' error-registry gates read code, name, severity
+  and recoverable, never the Description prose, which is where the obligation lives.
+
+### Fixed — the anti-brick rollback trigger had two owners, across three sites
+
+- `05-state-machines.md` §6.5 rule 1 and its Firmware FSM row made a **5-minute hardware watchdog on
+  a missing BootNotification** the bootloader's rollback trigger. `update-firmware.md` §8 — the
+  normative source — has only ever had two automatic conditions, both **local**: boot failure within
+  **60 s**, health-check failure within **120 s**.
+- **The old wording made a network symptom a firmware trigger.** A station that boots perfectly and
+  cannot reach the broker sends no BootNotification; under it, the bootloader was obliged to revert a
+  good image, on every outage. The five minutes was never the station's — it is the **server's**
+  stall timer in [`firmware-status.md` §6](spec/profiles/device-management/firmware-status.md) rule
+  3, measured from the last FirmwareStatusNotification, whose remedies are re-issuing UpdateFirmware
+  or a Reset.
+- **The third site was a conformance procedure.** `TC-DM-004` failure criterion 4 scored rollback at
+  *"within 5 minutes"* of a failed health check, where §8 says 120 seconds — it would have failed a
+  conformant station for the three minutes between the two deadlines.
+
+### Fixed — `1005` at boot: the Station FSM said the opposite of the profile
+
+- `05-state-machines.md` §1's transition table said *"`1005` is **not** among them: an unparseable
+  request gets no response at all, and the station leaves `Booting` by timeout instead."*
+  `boot-notification.md` §6 was repaired at `0.30.0` to say the server responds `Rejected` carrying
+  `errorCode`, `errorText` and `retryInterval`, and records that the old text stood *"until 0.30.0"*.
+  **The release credited with the repair fixed one of the two sites**, and the one it missed is the
+  state machine a firmware author implements.
+- The distinction is **envelope versus payload**, and it is now stated in the cell: a BootNotification
+  whose payload fails validation is still correlatable and is answered; one whose envelope cannot be
+  parsed is not a BootNotification at all. Swept: `1005` on Heartbeat, TriggerMessage and
+  DataTransfer legitimately drops — their responses are closed and cannot carry a code — so those
+  three are correct and untouched.
+- A vector for a `1005` boot rejection is added; there was none.
+
+### Fixed — `Unknown → Reserved` was normative and drawn nowhere
+
+- `0.30.0` added the row and the station-side **MUST** to persist a confirmed reservation. The
+  canonical table has said **21 `Station` / 6 `Server` / 27** since; **nine** restatements said
+  20/5/26, including all three mermaid depictions, the implementor's guide's MUST checklist, and
+  `status-notification.md`. Re-derived mechanically from the table by distinct `(from, to)` pair:
+  **21 / 6 / 27**, and `Unknown` has six exits.
+- The `Unknown --> Reserved` edge is added to all three diagrams; every live count now reads 21/6/27.
+  The `0.11.0` changelog row keeps *"20 … five exits"*: it is a record of what `0.11.0` did.
+- **Both SDKs still refuse the transition** and the reference server delegates to them. That is the
+  cascade this release opens, and it is theirs to close.
+
+### Changed — `VERSIONING.md` and `ADR-001` asserted the SDKs always share a version
+
+- They did until `ospp-sdk-php` `v0.30.0`, which ships the `2008` `401 → 403` correction that
+  `sdk-ts` did not need — its registry already answered `403`. Both documents now name the
+  independent-tag case, which ADR-001's own scope rule already permitted twenty lines above the
+  sentence that denied it. **The invariant that survives is `.spec-ref`**, which both SDKs pin and
+  each SDK's byte-identity gate enforces.
+
+### Fixed — a conformance vector whose code contradicted its own text
+
+- `security-event-hardware-fault.json` carried `errorCode: 5003 CONSUMABLE_SYSTEM` under
+  `"Pump overcurrent detected on bay 3"`. `5001 PUMP_SYSTEM` is that description. Copied as a model
+  — which is what a vector is for — it taught the wrong code.
+
+### Verification
+
+- **10/10 gates green**, including the new one. `verify-protocol.sh`: **AT BASELINE — 6 FAIL, 6 SKIP,
+  4296 checks** (4265 before; the additions are checked too). Vectors **337/337**, 0 SKIP.
+- `check-normative-bold` **falls to 433** from 434 and BASELINE follows it down — §6.5 rule 1's
+  *"the bootloader MUST revert"* was plain while the rule beside it was bolded.
+- File modes checked before commit: `core.fileMode` is `false` here, and all **6** `tools/check-*.py`
+  are indexed `100644`, the new gate included.
+
 ## [0.32.0] — 2026-09-05
 
 > **MINOR, non-breaking, and prose only.** **Zero** files under `schemas/` change; **zero** of the

@@ -2,7 +2,7 @@
 
 > **For:** Developers building OSPP-compatible stations, servers, or user agents
 > **Level:** Practical guide, not formal spec. Read this first, then the spec chapters.
-> **Spec Version:** 0.32.0
+> **Spec Version:** 0.33.0
 
 ---
 
@@ -332,7 +332,7 @@ not reproduce it** — it was reproduced in several places once, the copies drif
 shipped different tables. Read it there. Two things about it decide how much work you have:
 
 **You implement 20 of the 26 rows, not all of them.** The table's *Effected by* column marks each
-transition `Station` or `Server`. The 20 `Station` rows are yours: they are the transitions your
+transition `Station` or `Server`. The 21 `Station` rows are yours: they are the transitions your
 hardware performs and therefore exactly the transitions your StatusNotification reports. The 6
 `Server` rows are every state → `Unknown` on connection loss — that is the server *guessing* about
 you because it stopped hearing from you. **Do not implement them.** Your bays do not change state
@@ -1214,7 +1214,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** Heartbeat at server-specified `heartbeatIntervalSec`
 - [ ] **[MUST]** Compare Heartbeat RESPONSE `serverTime` against the local clock on every heartbeat
 - [ ] **[SHOULD]** Correct the clock when that drift exceeds 2 seconds (**[MUST]** log `5106 CLOCK_ERROR` above 5 minutes)
-- [ ] **[MUST]** Bay state machine: the 20 `Station` rows of [`05-state-machines.md` §2.3](../spec/05-state-machines.md#23-transition-table) — all of them, and none of the 6 `Server` rows
+- [ ] **[MUST]** Bay state machine: the 21 `Station` rows of [`05-state-machines.md` §2.3](../spec/05-state-machines.md#23-transition-table) — all of them, and none of the 6 `Server` rows. **`Unknown → Reserved` is one of them**: a station that rebooted holding a `Confirmed` reservation reports `Reserved`, and every count that said 20 was written before that row existed
 - [ ] **[MUST NOT]** Implement any transition into `Unknown` — those are the server's inference, not yours (§2.6)
 - [ ] **[MUST NOT]** Report `Unknown` in `status` or `previousStatus` — it is your power-on state, not a wire value (§2.6)
 - [ ] **[MUST]** Omit `previousStatus` on the post-boot report
@@ -1326,4 +1326,4 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 
 ---
 
-*This guide covers OSPP 0.32.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*
+*This guide covers OSPP 0.33.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*

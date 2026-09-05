@@ -142,6 +142,7 @@ stateDiagram-v2
     Unknown --> Available : StatusNotification (healthy)
     Unknown --> Faulted : StatusNotification (fault detected)
     Unknown --> Unavailable : StatusNotification (maintenance mode)
+    Unknown --> Reserved : StatusNotification<br/>(reservation resumed after reboot)
     Unknown --> Occupied : StatusNotification<br/>(session resumed after reboot)
     Unknown --> Finishing : StatusNotification<br/>(wind-down resumed after reboot)
 

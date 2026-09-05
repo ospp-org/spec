@@ -1,0 +1,13 @@
+{
+  "eventId": "sec_a1b2c3d4e5f60009",
+  "type": "HardwareFault",
+  "severity": "Warning",
+  "timestamp": "2026-09-05T09:12:44.000Z",
+  "details": {
+    "sessionId": "sess_c3d4e5f6a7b8c9d0",
+    "bayId": "bay_a1b2c3d4e5f6",
+    "programNumber": 1,
+    "errorCode": 5113,
+    "errorDescription": "Power was lost between the pre-effect record and any completion record; what the bay delivered is unknown"
+  }
+}

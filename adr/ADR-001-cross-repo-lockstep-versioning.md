@@ -104,7 +104,18 @@ already exists. `0.9.0` is such a release: `ospp-sdk-php` and `sdk-ts` both go t
 This is consistent with the scope rule above rather than an exception to it. What
 lockstep guarantees is that a version number means the same thing wherever it
 appears; the pair satisfies that by being **identical to each other**, which is what
-a consumer of the two SDKs needs in order to tell which pair is coherent. The spec's
+a consumer of the two SDKs needs in order to tell which pair is coherent.
+
+**Where only one SDK has something to ship, the pair is not cut, and this is the scope
+rule above rather than an exception to it.** A specification decision can move one
+library's answer while the other was already giving it — `0.32.0` settled
+`2008 ACTION_NOT_PERMITTED` at `403`, which `ospp-sdk-php` shipped as `v0.30.0` and
+`sdk-ts` had answered since before the question was decidable. The sibling then has no
+diff but a version string. Publishing it would satisfy the numbering and tell a consumer
+nothing, so it is not published, and the completeness list below is read as governing a
+release **both** SDKs are making. The invariant that survives either way is `.spec-ref`:
+both pin the same spec tag, and each SDK's byte-identity gate enforces it on every push,
+which is the only half of this ADR anything mechanical checks. The spec's
 version answers a different question — which revision of the contract the pair
 implements — and `.spec-ref` is where that is recorded and CI-enforced.
 

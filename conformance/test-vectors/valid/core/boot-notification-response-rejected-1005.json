@@ -1,0 +1,8 @@
+{
+  "status": "Rejected",
+  "serverTime": "2026-03-01T10:00:00.000Z",
+  "heartbeatIntervalSec": 30,
+  "retryInterval": 60,
+  "errorCode": 1005,
+  "errorText": "INVALID_MESSAGE_FORMAT"
+}

@@ -187,7 +187,7 @@ so the download succeeds and the checksum matches, and the signature is the only
 1. FirmwareStatusNotification does not follow the expected progression.
 2. Station does not reboot after successful firmware installation.
 3. BootNotification after update does not reflect the new firmware version.
-4. Station does not auto-rollback within 5 minutes when the new firmware fails health check.
+4. Station does not auto-rollback within **120 seconds** of boot when the new firmware fails its self-diagnostic health check, or within **60 seconds** when it fails to boot the new partition at all ([`update-firmware.md` §8](../../../spec/profiles/device-management/update-firmware.md)). This criterion read *"within 5 minutes"* until 0.33.0 — a figure that is the server's stall timer, not a station trigger — and would have scored a conformant station as failing for the 3 minutes between the two deadlines.
 5. Station accepts an HTTP (non-HTTPS) firmware URL.
 6. Station installs firmware with an invalid ECDSA P-256 signature.
 7. Station reports `Downloaded` for a binary whose signature did not verify. This is the criterion that separates a station which verifies the signature from one which verifies only the checksum, and it fails **before** any installation is attempted — a station caught here would have been caught by criterion 6 only if it also went on to install.

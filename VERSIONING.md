@@ -136,8 +136,19 @@ This document versions the **specification**. The two SDKs — `ospp-sdk-php`
 own version line and are **not** required to match the number on the spec tag they
 implement.
 
-- The two SDKs release **at the same version as each other**. A consumer pairs them,
-  so an identical number is what tells them which pair is coherent.
+- The two SDKs release **at the same version as each other whenever both have something
+  to ship**. A consumer pairs them, so an identical number is what tells them which pair
+  is coherent. **The exception is a release only one of them needs**, and it is not a
+  loophole — it is the case [ADR-001](adr/ADR-001-cross-repo-lockstep-versioning.md)
+  already permits under *"The SDKs MAY tag and release independently"*. It arises when a
+  specification decision moves one library's answer and the other was already giving it:
+  `ospp-sdk-php` `v0.30.0` is the first, moving `2008 ACTION_NOT_PERMITTED` from `401` to
+  `403` where `sdk-ts` had answered `403` all along. Tagging the sibling to keep the
+  numbers level would publish a version whose entire diff is a version string, which tells
+  a consumer nothing and costs a real release. **What still binds in that case is
+  `.spec-ref`**: both SDKs read `v0.32.0`, and that is the pairing CI enforces. Read the
+  numbers as *at most one apart, with the higher one carrying the fix* — never as a
+  guarantee that a given number exists on both.
 - Each SDK records the spec revision it implements in its own **`.spec-ref`** file,
   which names a spec tag and is enforced by that SDK's CI: the gate clones the spec
   at that tag and requires the vendored schemas to be byte-identical to it. A

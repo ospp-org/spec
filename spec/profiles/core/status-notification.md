@@ -60,7 +60,7 @@ section states is what is local to *this message*: which half of the table it ca
 `previousStatus` is present, and what accompanies a fault.
 
 1. **This message carries the `Station` rows and only those.** §2.3 marks each transition with the
-   party that effects it. The twenty `Station` rows are exactly the transitions a station
+   party that effects it. The twenty-one `Station` rows are exactly the transitions a station
    performs and therefore exactly the transitions this EVENT reports. The six `Server` rows — every
    state to `Unknown`, on connection loss — are the server's own inference; no message carries them,
    this one included, and a station **MUST NOT** implement them. What a server does with a
@@ -92,6 +92,8 @@ A bay can be perfectly healthy and still have one program it cannot run — a co
 1. When a program is reported `available: false`, the station **SHOULD** include `programs[].errorCode` and `programs[].errorText` naming why. It **MUST NOT** include either when `available` is `true`.
 2. Program-level codes come from the same 5xxx registry as bay-level codes, with the same 9000--9999 vendor range and the same unknown-code fallback (rule 5 above).
 3. Program-level reporting is **OPTIONAL** and does not extend [CORE-012](README.md), which mandates `errorCode`/`errorText` only when the **bay** transitions to `Faulted`. A station that cannot attribute a fault to a cause reports the unavailability without a code rather than guessing one.
+
+   **At bay level there is no such escape, and since 0.33.0 there is no need for one.** CORE-012 is unconditional and the schema enforces it (`if status == Faulted then required: [errorCode, errorText]`), so a bay entering `Faulted` always carries a code. The case this rule licences at program level — the station knows something is wrong and cannot say what — is answered at bay level by `5113 OUTCOME_INDETERMINATE`, which names *not having observed* rather than guessing a fault. Before it existed, [`start-service.md` §6](../transaction/start-service.md) rule 12 mandated a `Faulted` report and named no code, and every candidate in the range asserted something the station had not seen; the message that rule required did not validate.
 4. The two levels are independent and both may be present. A bay-level code describes the bay; a program-level code describes one program on it. A fault that takes out every program is a **bay** fault and belongs at bay level with `status: "Faulted"` — reporting it as 32 identical program-level codes is conforming but useless.
 
 ## 7. Processing Rules

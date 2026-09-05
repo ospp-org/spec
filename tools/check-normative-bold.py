@@ -30,7 +30,13 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-09-05  (unreleased)  434 unbolded, 1252 bolded spans — the two unbreakable
+    (this HEAD) 2026-09-05  (unreleased)  433 unbolded, 1253 bolded spans — the eight §1.I entries.
+                                   Unbolded FALLS BY ONE and BASELINE follows it down to 433. The one
+                                   that left is `05-state-machines.md` §6.5 rule 1, whose *"the
+                                   bootloader MUST revert"* was plain while the rule beside it was
+                                   bolded; rewriting the rule to name `update-firmware.md` §8's two
+                                   local conditions bolded it. Both numbers RE-DERIVED on this tree.
+    (superseded) 2026-09-05  (unreleased)  434 unbolded, 1252 bolded spans — the two unbreakable
                                    rules. Unbolded is UNCHANGED at 434 across six edited documents
                                    and roughly 90 added lines of normative prose; bolded spans rise
                                    by FOURTEEN, which is the whole of the change. Both numbers were
@@ -203,7 +209,7 @@ import re
 import sys
 from collections import Counter
 
-BASELINE = 434
+BASELINE = 433
 
 KEYWORD = re.compile(r'\b(MUST NOT|MUST|SHALL NOT|SHALL)\b')
 FENCE = re.compile(r'```.*?```', re.S)

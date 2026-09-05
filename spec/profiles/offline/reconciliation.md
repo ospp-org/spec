@@ -1,6 +1,6 @@
 # Offline Transaction Reconciliation
 
-> **Status:** Draft | **OSPP Version:** 0.32.0
+> **Status:** Draft | **OSPP Version:** 0.33.0
 
 ## 1. Overview
 
