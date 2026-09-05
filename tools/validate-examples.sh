@@ -23,25 +23,8 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-# $AJV_BIN wins, so CI can point at an install made OUTSIDE the checkout. That is deliberate:
-# this repo's package.json depends on @ospp/protocol, and a version cascade once pinned it to a
-# version npm had never carried, after which `npm install ajv` failed ETARGET before a single
-# payload was checked. A gate must not be able to die of a dependency it never loads.
-AJV="${AJV_BIN:-}"
-if [ -z "$AJV" ]; then
-  if [ -x node_modules/.bin/ajv ]; then AJV=node_modules/.bin/ajv
-  elif command -v ajv >/dev/null 2>&1; then AJV=$(command -v ajv)
-  fi
-fi
-if [ -z "$AJV" ] || ! "$AJV" help >/dev/null 2>&1; then
-  echo "FATAL: no working ajv-cli binary." >&2
-  echo "  Tried: \$AJV_BIN, ./node_modules/.bin/ajv, ajv on PATH." >&2
-  echo "  Note that \`npx ajv\` does NOT work here — npm resolves it to the ajv *library*," >&2
-  echo "  which has no bin, and the local copy shadows any global ajv-cli." >&2
-  echo "  Install with:  npm install --no-save --prefix /tmp/ajv ajv-cli@5 ajv-formats@3" >&2
-  echo "  then:          AJV_BIN=/tmp/ajv/node_modules/.bin/ajv ./tools/validate-examples.sh" >&2
-  exit 2
-fi
+# ajv-cli resolution lives in one file for both gates; see tools/_ajv-resolve.sh.
+. tools/_ajv-resolve.sh   # cwd is the repo root by the cd above, in every invocation
 
 # Every schema, at any depth, as a ref — schemas/common alone left ble/challenge.schema.json
 # unable to resolve ble/station-identity.schema.json.

@@ -8,6 +8,146 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.32.0] — 2026-09-05
+
+> **MINOR, non-breaking, and prose only.** **Zero** files under `schemas/` change; **zero** of the
+> 334 schema-mapped conformance vectors move; `protocolVersion` stays `0.3.0`. **No SDK re-vendor is
+> required** — the cascade `0.31.0` reported does not repeat. One line moves in `ospp-sdk-php`, and
+> it moves because the specification can now decide it.
+>
+> **Both defects in this release are the same defect: a rule that nothing could have violated.** One
+> was a licence granted so broadly it refused nobody; the other was a partition with no arm for the
+> case that actually happens. Neither was found by a gate, and neither could have been: the payload
+> validates, the value is legal, and the only thing wrong is that no artefact could say so.
+
+### Changed — `2008` was listed under two statuses, and the licence permitting it could not be broken
+
+- **The measurement first.** `07-errors.md` §2.4's status table carries **31 code–status pairs over
+  30 distinct codes**, and `2008 ACTION_NOT_PERMITTED` was **the only code appearing twice** — under
+  `401` and under `403`. It has been there in **all 49 tags** of this repository, from
+  `v0.1.0-draft.1` on 2026-03-02 to `v0.31.0`. Nothing introduced it and no release repaired it.
+- **Why no release repaired it.** §4.4 says the table *"is illustrative and assigns no code a fixed
+  status"* and that one code *"can honestly appear with more than one status"*. So the duplicate row
+  broke no rule, **deleting it would have changed nothing normative**, and both reference SDKs —
+  which had each chosen, and chosen differently, `ospp-sdk-php` `401` and `sdk-ts` `403` — were
+  **both conformant**. Following the specification perfectly produced two incompatible libraries.
+- **Two sentences changed, and the row fell out of them.** §4.4's second obligation, *the HTTP status
+  **MUST** be the one that is true*, already existed but sat under the heading *What a server does
+  outside the list*, so it governed only the statuses the table does **not** name — leaving the ones
+  it does name governed by an illustration and nothing else. It is now **un-scoped** to the whole
+  in-scope REST surface. **This invents no rule; it removes a fence from one that was already
+  there.** And the multi-status licence gains its condition: a code listed under more than one
+  status **MUST** have a registry entry naming the discriminator, and a code whose entry describes
+  one condition **MUST NOT** appear twice. The licence is unchanged for any code genuinely reachable
+  in two states — it keeps both rows and gains the sentence saying which is which.
+- **`2008` therefore leaves the `401` row as a consequence, not as a correction.** Its entry names
+  one condition — *the authenticated entity does not have the required RBAC role or permission* —
+  and authentication having succeeded is what `403` means, while the `401` row's own description is
+  *authentication failed or expired*, which is `2009`, `2010` and `2019`. There was no second state
+  to select. **Had there been one, the repair would have been the missing sentence, not a deletion.**
+- **What this does not settle, stated so it is not read as settled.** `2001 STATION_NOT_REGISTERED`
+  (php `422`, ts `401`) is the other two-sided disagreement and stays open: it is named by **no row**
+  of that table, which is the `3003` shape rather than this one. **88 of the 118 registry codes are
+  named by no row at all.** The new rule constrains how the table may speak, not how much it says.
+- **Cost: `0` of 86 schemas carry an HTTP status, `0` of 334 vectors reference one.** The divergence
+  between the two SDK registries was also re-derived while costing this and the figure recorded in
+  `KNOWN-ISSUES.md` was stale on both halves — it read *51 of 114* and is **42 of 118** before this
+  release's SDK repair and **41** after, re-derived on both sides of the change. **40 of them are
+  `ospp-sdk-php` falling through to its documented `default => 500`, which is a different
+  shape from a disagreement**: one library answering and one declining to, not two implementers
+  reading one sentence two ways. Only **two** codes were the latter, and after this release only
+  **one** is: `2001`.
+
+### Added — the third arm of the reboot partition, at zero schema bytes
+
+- **`start-service.md` §6 rule 9 mandated a durable record before anything is energised and named
+  its reader in the same breath** — *on the next boot an uncompleted record is the anchor that tells
+  the station whether the command already ran*. **Nothing said what the station does when the anchor
+  answers *maybe*.** The record was required, its reader was named, and the reading was unspecified.
+- **`05-state-machines.md` §3.5 partitioned the reboot on whether the prior state is *recoverable*** —
+  rule 2 resumes, rule 3 orphans — and the mid-activation power loss is in **neither arm**: the
+  record survives, so nothing was lost; the delivery it describes stopped, so there is nothing to
+  resume. A station following the text took rule 2 and asserted `Occupied` for a bay doing nothing.
+- **`start-service.md` rule 12 and §3.5 rule 6** add the arm. The station **MUST** report through the
+  two messages that already exist: a SecurityEvent [MSG-012] `HardwareFault` whose open `details`
+  carries the `sessionId`, `bayId` and `programNumber`, and a StatusNotification [MSG-009] reporting
+  the bay `Faulted`. **This is verbatim the pattern `stop-service.md` rule 9 was given at `0.30.0`**
+  for the mirror-image condition, and deliberately the same two messages, because it is one failure
+  seen from two ends — **settlement running on a figure nobody measured.** There the station reports
+  a duration it did not observe; here `connection-lost.md` §6 has the server settle on *estimated
+  time delivered*. The report does not change the closure, which the server's timer performs either
+  way; it changes **what is known about the closing figure**, and the station held the only fact
+  that could supply it.
+
+### Fixed — a live contradiction, and a word with two meanings
+
+- **`session-ended.md` rule 1 and `05-state-machines.md` §3.5 rule 3 were two `MUST`s pointing
+  opposite ways.** Rule 1 required a SessionEnded for *every* session terminating without a
+  StopService; rule 3 forbids emitting further events for an orphaned `sessionId`, and an orphaned
+  session terminates without a StopService. Only the unsatisfiable half was stated in the profile.
+  Rule 1 now excludes both reboot cases — **the removal of a demand nothing could meet**, since the
+  orphaning station no longer holds the `sessionId`, `actualDurationSeconds` or `creditsCharged` the
+  schema requires, and the indeterminate station measured neither of the latter two.
+- **`orphaned` named two unrelated conditions.** In §3.5 rule 3 it is a station that lost the record;
+  in `08-configuration.md` and `connection-lost.md` it described a *server*-side session held open
+  after connection loss and closed by `ConnectionLostGracePeriod`. Those are a timer with a defined
+  terminal action; the station-side one has no timer, no message and no terminal action. Reading the
+  grace period as the remedy for rule 3 was available and wrong. **The two server-side sites no
+  longer use the word**, and rule 3 now says it holds the only definition.
+
+### Refused, with their costs
+
+- **A new `SessionEnded.reason` member.** The obvious remedy, and **a settlement decision wearing a
+  schema costume**: every existing `reason` carries a row in `04-flows.md` §6's refund matrix **and**
+  a row in the service-kind table below it, so a new value rules on who is billed when nobody knows
+  what was delivered — with no measurement available to ground the ruling. The schema cost is real
+  but is not the reason: one file, and `0` of its 6 vectors would break, an added member being a
+  widening (precedent: `0.31.0` added two members to this same enum and broke `0` of 334).
+  **Recorded because it nearly went unseen:** the negative vector
+  `session-ended-event-invalid-reason.json` asserts rejection using `"UserStopped"`, so a member
+  taking that name **would make a test that must fail start passing**. The demand was withdrawn
+  instead of the enum widened — a **fourth remedy** for the closed-enumeration sub-shape, which had
+  recorded three.
+- **A queryable terminal session state.** Refused on the measurement: **OSPP has no session-status
+  representation to add one to.** `0` of 86 schemas define one; `completed` and `failed` appear only
+  as prose, in three files; `GET /sessions/{id}` is in scope at §4.4 for its **error codes only**,
+  with no response body defined anywhere. This is not *add a member* but *introduce a concept the
+  protocol does not have*, and it is refused on the same ground instance 14 of the named class was
+  declined at `0.31.0`.
+
+### Tooling
+
+- **The spec's own tooling pin was a minor behind both published SDKs and could not have caught up.**
+  `package.json` carried `@ospp/protocol: ^0.28.0`, and on a `0.x` range that caret resolves
+  `>=0.28.0 <0.29.0` — so the `0.29.0` both SDKs published on 2026-09-04 was unreachable by
+  construction, not merely un-run. Now `^0.29.0`, resolving `0.29.0`.
+- **Two gates did not exist locally, and the second was found only by running the first.** With no
+  `ajv-cli` resolvable, `validate-schemas.sh` and `validate-examples.sh` each printed the two
+  commands a developer should run and exited `2` — so both ran in CI and nowhere else, and a gate
+  that cannot be run before pushing reports its findings after the decision it should have informed.
+  Both now resolve through **`tools/_ajv-resolve.sh`**, which bootstraps an `ajv-cli` **out of
+  tree**, cached, and fails only if that install fails. It is one file rather than two copies
+  because this repository has already paid for the other shape: `validate-schemas.sh` was once a
+  divergent second copy of its own CI job, and the copy CI did not run rotted until it reported 86
+  failures out of 86. The out-of-tree placement is preserved deliberately, for the reason the
+  workflow's own comment gives — installing into the checkout makes these gates read
+  `package.json`, whose single dependency they never load and whose pin once killed one with
+  `ETARGET` before a schema was compiled. `$AJV_BIN` still wins, so CI's path is untouched.
+  Measured after, both having never run here before: **86 schemas all compile**, and
+  **56 example payloads, 56 PASS, 0 FAIL**.
+- **`check-normative-bold.py`'s measurement points recorded a commit sha that nothing checked, and
+  two of the ten were wrong.** Each row states a count, a date, a version and the sha it was
+  measured on; the rows insist the counts are re-derived and never inherited, and the shas were
+  inherited every time — `v0.27.0` carried `v0.26.0`'s sha, `v0.23.0` carried one belonging to no
+  tag, and a third was written the same way during this release, by copying the row below, before
+  the check existed to catch it. **A claim nothing can contradict is the defect this whole release
+  is about**, so the rows are now derived against their tags on every run: silent where git or the
+  tags are unavailable, red on a sha a resolvable tag refutes. Proved by mutation — a planted sha
+  is reported by tag with both values and exits 1. Measured after: **10 of 10 stamped rows resolve
+  and agree.**
+
+---
+
 ## [0.31.0] — 2026-09-04
 
 > **MINOR, non-breaking on the wire — and the first release in six that moves bytes under

@@ -57,7 +57,7 @@ The normative descriptions of each value, and the reasoning behind `OperatorStop
 
 ## 5. Processing Rules
 
-1. The station **MUST** emit SessionEnded for every session that terminates without a StopService command, and **MUST NOT** emit it for one that terminates with one.
+1. The station **MUST** emit SessionEnded for every session that terminates without a StopService command, and **MUST NOT** emit it for one that terminates with one. **Two reboot cases are excluded, and the exclusion is not new licence — it is the removal of a demand nothing could meet.** A session the station has orphaned ([`05-state-machines.md` §3.5](../../05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rule 3) and one whose outcome is indeterminate (rule 6) both terminate without a StopService, and this rule as written required an event for each. Neither can carry one: the orphaning station no longer holds the `sessionId`, `actualDurationSeconds` or `creditsCharged` the schema **requires**, and the indeterminate station holds the `sessionId` but measured neither of the other two and has no true `reason` to give. **The conflict with rule 3 predates 0.32.0 and was a live contradiction**, since rule 3 says in terms that the station **MUST NOT** emit further events for an orphaned `sessionId` — two obligations pointing opposite ways, of which only the unsatisfiable one was stated here. In both cases the server settles on its own timer ([`connection-lost.md` §5](../core/connection-lost.md)); in the indeterminate case a SecurityEvent says the closing figure is unmeasured ([`start-service.md` §6](start-service.md) rule 12).
 2. The station **MUST** compute `actualDurationSeconds` from a monotonic timer, not the wall clock ([`heartbeat.md` §6](../core/heartbeat.md#6-clock-synchronization) rule 5).
 3. If the station cannot transmit — offline, or in a restricted state ([Chapter 05 §1.4](../../05-state-machines.md#14-the-restricted-states)) — it **MUST** buffer the event and **MUST NOT** discard it, and **MUST** retain the original payload so a retransmission after a long outage carries the terminal values rather than recomputed ones ([`02-transport.md` §5.3](../../02-transport.md)).
 4. The server **MUST** deduplicate by `sessionId`: a repeated SessionEnded for a session already settled **MUST** be ignored, not settled twice.
@@ -66,7 +66,7 @@ The normative descriptions of each value, and the reasoning behind `OperatorStop
 
 ## 6. Compliance
 
-SessionEnded is REQUIRED at **Standard** compliance and above, on the same terms as the rest of this profile ([README §4.1](README.md#41-mandatory-implementation)). A station is conformant on this action when it emits the event for every autonomous termination and for no server-initiated one, and buffers an undeliverable one without discarding it (rules 1 and 3). A server is conformant when it settles at most once per `sessionId` and bills from its own tariff (rules 4 and 5).
+SessionEnded is REQUIRED at **Standard** compliance and above, on the same terms as the rest of this profile ([README §4.1](README.md#41-mandatory-implementation)). A station is conformant on this action when it emits the event for every autonomous termination it can describe — rule 1's two reboot exclusions apart — and for no server-initiated one, and buffers an undeliverable one without discarding it (rules 1 and 3). A server is conformant when it settles at most once per `sessionId` and bills from its own tariff (rules 4 and 5).
 
 ## 7. Example
 

@@ -1,6 +1,6 @@
 # Chapter 07 — Error Codes & Resilience
 
-> **Status:** Draft | **OSPP Version:** 0.31.0
+> **Status:** Draft | **OSPP Version:** 0.32.0
 
 This chapter defines the complete error taxonomy for the OSPP protocol, including the error code registry, standard error response format, retry policies, circuit breaker patterns, and graceful degradation behavior.
 
@@ -249,7 +249,7 @@ A server implementing OSPP **MAY** expose other HTTP APIs alongside that surface
 | HTTP Status | Typical Error Codes | Description |
 |:-----------:|---------------------|-------------|
 | 400 | 1005, 3015, 4010, 4017, 6004 | Bad request — invalid format or payload |
-| 401 | 2008, 2009, 2010, 2019 | Unauthorized — authentication failed or expired |
+| 401 | 2009, 2010, 2019 | Unauthorized — authentication failed or expired |
 | 402 | 4001 | Payment required — insufficient balance |
 | 403 | 2008 | Forbidden — action not permitted for this role |
 | 404 | 3005, 3006, 3012 | Not found — resource does not exist |
@@ -263,6 +263,10 @@ A server implementing OSPP **MAY** expose other HTTP APIs alongside that surface
 > **There is no `503` row, and `3003 SERVICE_UNAVAILABLE` belongs in `409`.** The name misleads: `3003` says a declared service is not deliverable *on that bay right now* — a fact about the addressed resource, not about the server answering. `503` asserts the server itself is unavailable, which would be false and would invite a caller to retry the whole endpoint rather than pick another bay. It therefore joins `3001 BAY_BUSY`, `3014 BAY_RESERVED` and `3019 SERVICE_NOT_BOUND`, which are the same shape.
 >
 > **This is stated because the silence had already been filled three different ways.** `3003` appeared in no row of this table until 0.30.0, and the three implementations that had to answer anyway do not agree: the reference server maps it to `503` (and flags its own arm as wrong in a code comment), one SDK maps it to `503`, and the other has no arm for it at all and falls through to `500`. A caller branching on the status for retry or alerting gets a different answer per library. **A registry that declines to state a mapping does not avoid one — it delegates it, once per implementation.**
+>
+> **`2008 ACTION_NOT_PERMITTED` left the `401` row in 0.32.0, and it left as a consequence rather than as a correction.** The rule it fell to is the multi-status condition in [§4.4](#44-rest-api-endpoints), not an opinion about this table: a code listed under two statuses **MUST** have a registry entry naming the condition that selects between them, and `2008`'s entry names one condition, not two — *the authenticated entity does not have the required RBAC role or permission*. Authentication having succeeded is what that entry asserts and what `403` means, while this table's own `401` description is *authentication failed or expired*, which is `2009`, `2010` and `2019`. There was no second state to select, so the second row was **unselectable, not merely redundant** — and had it been selectable, the repair would have been the sentence saying which is which, not the deletion.
+>
+> **Measured before the edit, across all 31 code–status pairs this table carries: `2008` was the only one of its thirty codes to appear twice.** It had already been delegated, and both answers are still in circulation — the two reference SDKs each chose, and chose differently: `ospp-sdk-php` `401`, `sdk-ts` `403`. Both satisfied this table as written, so **neither could be shown wrong by anything**, which is the cost of an unfalsifiable rule stated in full rather than a rule left unstated. Only one endpoint in [§4.4](#44-rest-api-endpoints)'s table can reach the code over REST — `POST /sessions/offline-auth`, the single row there that names `403` at all — so the divergence was concentrated on one path and invisible on every other. **It is as old as the document**: the two rows were measured across every tag this repository carries, and `2008` sat under both in **all 49**, from `v0.1.0-draft.1` on 2026-03-02 to `v0.31.0`. Nothing introduced it and no release repaired it, because there was no rule it broke.
 
 ---
 
@@ -603,7 +607,12 @@ answering one of them is **not** thereby non-conforming.
    `errorCode` is REQUIRED on every error of an in-scope endpoint is not relaxed here — an
    unmodelled *status* never licenses an unmodelled *body*.
 2. The HTTP status **MUST** be the one that is true. A server **MUST NOT** downgrade an accurate
-   status to one that appears in the list above.
+   status to one that appears in the list above. **The first sentence is not confined to this
+   case.** Truthfulness governs the whole in-scope REST surface, the listed statuses included: the
+   list bounds what this specification *models*, never what a server is permitted to *assert*. It
+   is written here because this is where a server arrives when the list has no answer, and until
+   0.32.0 that placement was read as its scope — which left every status the list *does* name
+   governed by an illustration and by nothing else.
 
 **The status is not a property of the code.** [§2.4](#24-rest-api-error-response)'s mapping table
 is headed *Typical Error Codes* and groups codes by the status they are usually seen with; it is
@@ -611,6 +620,21 @@ illustrative and assigns no code a fixed status. Nothing in [§3](#3-error-code-
 an HTTP status column. A code and a status answer different questions — *what failed* and *how
 the client should treat this response* — and one code can honestly appear with more than one
 status where the same fault is reachable in states the client must treat differently.
+
+**That licence is conditional, and as of 0.32.0 the condition is checkable.** Where
+[§2.4](#24-rest-api-error-response)'s table lists a code under more than one status, that code's
+registry entry in [§3](#3-error-code-registry) **MUST** name the condition that selects between
+them. A code whose entry describes a single condition has a single true status and **MUST NOT**
+appear in more than one row. Nothing else about the licence changes: a code that genuinely is
+reachable in two states the client must treat differently keeps both rows, and gains the sentence
+that says which is which.
+
+**The clause is added because without it the licence could not be violated by anything** — a
+permission to differ, granted to every code, refused to none, and answering the caller's question
+in neither direction. An unfalsifiable rule does not avoid the decision; it delegates it, once per
+implementation, which is precisely what the `3003` note in [§2.4](#24-rest-api-error-response)
+records one step earlier, where the silence was total rather than doubled. The two failures are the
+same failure: a registry that will not say.
 
 `6007 SERVICE_DEGRADED` is the worked example, and the reason this paragraph exists. When
 provisioning cannot proceed because crypto material is temporarily unreadable, the condition is

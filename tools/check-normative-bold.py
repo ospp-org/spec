@@ -30,7 +30,21 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-09-04  (unreleased)  434 unbolded, 1238 bolded spans — the seven schema-byte
+    (this HEAD) 2026-09-05  (unreleased)  434 unbolded, 1252 bolded spans — the two unbreakable
+                                   rules. Unbolded is UNCHANGED at 434 across six edited documents
+                                   and roughly 90 added lines of normative prose; bolded spans rise
+                                   by FOURTEEN, which is the whole of the change. Both numbers were
+                                   RE-DERIVED on this tree, not incremented — the companion figure
+                                   has been quoted wrong five times and is measured every release
+                                   for that reason. BASELINE unchanged at 434.
+                                   **One nested-bold defect was written and caught before commit**,
+                                   the same failure the row below records: `**... either way **MUST**
+                                   be reported.**` put the keyword OUTSIDE a span because `**`
+                                   pairing is positional. It was found by a scan for keyword spans
+                                   preceded by an odd number of `**` on the line — which is the
+                                   cheap general test, and is worth keeping: the instrument reports
+                                   the keyword as unbolded and the author reads the source as bold.
+    aff5d86  2026-09-04  v0.31.0   434 unbolded, 1238 bolded spans — the seven schema-byte
                                    gaps adjudicated. Unbolded is UNCHANGED, and that is a MEASURED
                                    result rather than an untouched one: the finding set was diffed
                                    entry by entry against a `git archive` of f1edaa6 and is
@@ -84,7 +98,7 @@ Measurement points, so the number is never quoted without one:
                                    +1 over v0.27.0's 1182 is v0.28.0's single new bolded MUST and
                                    nothing this cycle added; the fifth chance to get this companion
                                    wrong was not taken.
-    8ce4ee7  2026-08-30  v0.27.0   439 unbolded, 1182 bolded spans — the revocation-decision
+    64bc8fe  2026-08-30  v0.27.0   439 unbolded, 1182 bolded spans — the revocation-decision
                                    cycle. Unbolded is UNCHANGED, and measured so: the finding set
                                    was diffed entry by entry against a run on a clean 8ce4ee7 and is
                                    IDENTICAL once line numbers are stripped. One entry appeared
@@ -152,7 +166,7 @@ Measurement points, so the number is never quoted without one:
                                    "(this HEAD) ... (unreleased)" and was never stamped when the
                                    tag was cut, so it carried neither a sha nor a version nor its
                                    bolded-span companion.
-    d553820  2026-08-18  v0.23.0   450 unbolded, 1088 bolded spans — the diagnostics
+    6ec660e  2026-08-18  v0.23.0   450 unbolded, 1088 bolded spans — the diagnostics
                                    cycle added a chapter section and two conformance Parts, all
                                    bolded, and bolded one pre-existing MUST in 03-messages.md.
                                    NOTE: this row said 1087 until it was re-run from a pristine
@@ -253,6 +267,52 @@ def scan(path):
     return out
 
 
+def check_measurement_shas():
+    """Verify each stamped measurement point against the tag it names.
+
+    A measurement row records a number, a date, a version and the commit it was taken on. The
+    first three are checkable by a reader; the sha was checkable by nobody, and so it was wrong.
+    Derived at 0.32.0 rather than read: of ten stamped rows, TWO named the wrong commit —
+    `v0.27.0` carried `v0.26.0`'s sha and `v0.23.0` carried a sha belonging to no tag — and a
+    third was about to be written the same way, by copying the row below. All three came from the
+    same motion: stamping a row by looking at its neighbour.
+
+    That is the shape this whole file exists to refuse — a claim nothing can contradict. The rows
+    say the numbers are re-derived and never inherited; the shas were inherited, every time, and
+    the prose above them could not have revealed it. Now they are derived too.
+
+    Silent when git or the tags are unavailable (a shallow clone, an export), because absence of
+    a tag is not evidence of a wrong sha. It fails only on a sha that a resolvable tag refutes.
+    """
+    import subprocess
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    rows = re.findall(r'^\s+([0-9a-f]{7})\s+\d{4}-\d\d-\d\d\s+(v[0-9][0-9.]*)\s',
+                      open(__file__, encoding='utf-8').read(), re.M)
+    bad, checked = [], 0
+    for sha, tag in rows:
+        try:
+            r = subprocess.run(['git', '-C', root, 'rev-parse', '--short', tag + '^{commit}'],
+                               capture_output=True, text=True, timeout=20)
+        except Exception:
+            return 0
+        real = r.stdout.strip()
+        if r.returncode != 0 or not real:
+            continue
+        checked += 1
+        if real != sha:
+            bad.append((tag, sha, real))
+    if not checked:
+        return 0
+    print(f'measurement points with a resolvable tag : {checked} of {len(rows)} stamped rows')
+    for tag, sha, real in bad:
+        print(f'  WRONG SHA  {tag}: this file says {sha}, the tag is {real}')
+    if bad:
+        print(f'\n{len(bad)} measurement point(s) name a commit that is not the tag. Correct the '
+              f'row: a measurement is only as good as the tree it was taken on.')
+        return 1
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--list', action='store_true', help='print every finding')
@@ -304,7 +364,8 @@ def main():
         print(f'\nBelow baseline ({len(findings)} < {ceiling}). Lower BASELINE in this file '
               f'so the improvement cannot silently regress.')
         return 1
-    return 0
+    print()
+    return check_measurement_shas()
 
 
 if __name__ == '__main__':

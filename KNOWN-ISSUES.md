@@ -1,9 +1,9 @@
 # OSPP Known Issues
 
-**Date:** 2026-09-03
-**Specification-document version:** 0.31.0 (release tag `v0.31.0`)
-**Status:** 3 blockers open (all BLE), **27** non-blocking issues open, **22** decisions recorded (one of
-them reversing another), and one named defect **class** with **fifteen** instances, **six** still open. **The counts are
+**Date:** 2026-09-05
+**Specification-document version:** 0.32.0 (release tag `v0.32.0`)
+**Status:** 3 blockers open (all BLE), **27** non-blocking issues open, **24** decisions recorded (one of
+them reversing another), and one named defect **class** with **sixteen** instances, **five** still open. **The counts are
 re-derived from the headings on every release, never incremented** — the previous revision read 24
 open against 25 `## OPEN` headings, which is how a summary drifts from the file it summarises.
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle and
@@ -16,10 +16,10 @@ the arcs since
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 27 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · **[no gate range-checks a config value inside an example payload](#open--no-gate-range-checks-a-configuration-value-that-sits-inside-an-example-payload)** · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[the SDKs guard vendored schemas but not vendored vectors](#open--the-sdks-byte-guard-the-vendored-schemas-and-guard-the-vendored-vector-corpus-with-nothing)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) · **[`5016` is required for two conditions and named for one](#open--5016-version_already_installed-is-required-for-two-conditions-and-one-of-them-is-the-opposite-of-what-the-name-says)** · **[UpdateFirmware is both idempotent and `5107`](#open--updatefirmware-is-documented-as-idempotent-and-as-rejected-with-5107-for-the-same-second-command)** · **[no code describes a non-HTTPS firmware URL](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal)** · **[`offeredVersion` vs `attemptedVersion`](#open--the-firmwaredowngradeattempt-securityevent-names-the-offered-version-with-two-different-member-names-and-nothing-can-tell)**  · **[a station whose hardware changes has no route back into service](#open--a-station-whose-hardware-genuinely-changes-has-no-route-back-into-service-because-the-two-rules-that-guard-topology-point-at-each-other)** · **[the hardware storage levels do not hold the Category-1 floors](#open--the-hardware-storage-levels-do-not-hold-the-category-1-floors-they-are-said-to-size)** · **[OfflinePass validity rides an uncorrected wall clock, and the backstop reads the same clock](#open--offlinepass-temporal-validity-rides-a-wall-clock-with-no-offline-correction-and-the-servers-backstop-reads-the-same-clock)** · **[`5019` has no carrier on either side](#open--5019-upload_failed-names-a-condition-that-cannot-exist-when-its-response-is-sent-and-its-real-carrier-has-no-code-field)** · **[the anti-downgrade guard verifies one artefact and decides on another](#open--the-anti-downgrade-guard-verifies-one-artefact-and-decides-on-another-and-no-field-is-missing)** · **[the firmware signing certificate rotates annually and no message can deliver it](#open--the-firmware-signing-certificate-is-stated-to-rotate-annually-and-no-message-can-deliver-the-new-one)**   |
+| OPEN | 27 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · **[no gate range-checks a config value inside an example payload](#open--no-gate-range-checks-a-configuration-value-that-sits-inside-an-example-payload)** · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) · **[`5016` is required for two conditions and named for one](#open--5016-version_already_installed-is-required-for-two-conditions-and-one-of-them-is-the-opposite-of-what-the-name-says)** · **[UpdateFirmware is both idempotent and `5107`](#open--updatefirmware-is-documented-as-idempotent-and-as-rejected-with-5107-for-the-same-second-command)** · **[no code describes a non-HTTPS firmware URL](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal)** · **[`offeredVersion` vs `attemptedVersion`](#open--the-firmwaredowngradeattempt-securityevent-names-the-offered-version-with-two-different-member-names-and-nothing-can-tell)**  · **[a station whose hardware changes has no route back into service](#open--a-station-whose-hardware-genuinely-changes-has-no-route-back-into-service-because-the-two-rules-that-guard-topology-point-at-each-other)** · **[the hardware storage levels do not hold the Category-1 floors](#open--the-hardware-storage-levels-do-not-hold-the-category-1-floors-they-are-said-to-size)** · **[OfflinePass validity rides an uncorrected wall clock, and the backstop reads the same clock](#open--offlinepass-temporal-validity-rides-a-wall-clock-with-no-offline-correction-and-the-servers-backstop-reads-the-same-clock)** · **[`5019` has no carrier on either side](#open--5019-upload_failed-names-a-condition-that-cannot-exist-when-its-response-is-sent-and-its-real-carrier-has-no-code-field)** · **[the anti-downgrade guard verifies one artefact and decides on another](#open--the-anti-downgrade-guard-verifies-one-artefact-and-decides-on-another-and-no-field-is-missing)** · **[the firmware signing certificate rotates annually and no message can deliver it](#open--the-firmware-signing-certificate-is-stated-to-rotate-annually-and-no-message-can-deliver-the-new-one)**   |
 | CLOSED | 7 | [Device Management Required vs RECOMMENDED](#closed-0160--the-device-management-profile-was-required-in-chapter-08-and-recommended-not-mandatory-in-its-own-readme) — closed in 0.16.0 in favour of the capability · [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
-| **CLASS** | 15 | **[an obligation no field, no code and no actor can carry](#class--an-obligation-no-field-no-code-and-no-actor-can-carry)** — an index of the fifteen instances; **6** still open, 1 a blocker. The fourth sub-shape, named at 0.30.0 — a closed enumeration in which no legal value is true — had all **three** of its instances closed at 0.31.0, and only one of the three needed the enum widened |
-| DECIDED | 22 | **[§10.1 required receivers to ignore unknown fields, and every schema forbids it](#decided-0290--02-transportmd-101-required-receivers-to-ignore-unknown-fields-and-every-schema-in-this-repository-forbids-it)** — 73 of 73 object schemas are closed, and three decisions already taken (§2.1's known gap, exact-match negotiation, the `0.26.0` triple refusal) rest on receivers *not* ignoring; prose only, zero schema bytes · **[the broker MUST check revocation, the list is bounded twice, and a stale list buys one alerted hour](#decided-0270--the-broker-must-check-revocation-the-list-is-bounded-twice-and-a-list-that-goes-stale-buys-one-alerted-hour-before-the-door-shuts)** — axis 1a + 2a&2b + 3c; verified by declaration because no message can carry it, and the two bounds are broker settings deliberately outside the Chapter 08 registry · **[`allowedServiceTypes` withdrawn in two steps](#decided-0250--offlineallowanceallowedservicetypes-is-withdrawn-in-two-steps-because-nobody-ever-asked-for-the-constraint)** · **[ownership transfer and decommissioning stay undefined, and §1.3 now says so](#decided-0250--station-ownership-transfer-and-decommissioning-stay-undefined-and-the-specification-now-says-so)** · **[the server is the billing authority on the offline path too](#decided-0240--the-server-is-the-billing-authority-on-the-offline-path-too-and-81-was-the-outlier)** · **[`OfflinePassMaxAge` kept, wired into check #2, defaulted to inert](#decided-0240--offlinepassmaxage-is-kept-wired-into-check-2-and-defaulted-to-inert)** · **[`DiagnosticsUploadUrl` withdrawn — a key nothing reads](#decided-0230--diagnosticsuploadurl-had-no-reachable-consumer-and-is-withdrawn-rather-than-defined)** · **[UpdateFirmware to a `Pending` station is `Accepted`, notifications suppressed](#decided-0210--updatefirmware-to-a-pending-station-was-refused-on-a-premise-the-same-chapter-contradicts-and-with-a-response-no-error-code-could-carry)** — **reverses the `0.20.0` row below**: the `Rejected` it mandated needed an `errorCode` no registry entry supplies, and §6.6 already reported the outcome on BootNotification; the discriminator's second clause survives, its reading did not · **[nine gates in `tools/` were reachable from no job](#decided-0201--two-validation-scripts-reported-100-failure-and-no-workflow-ran-them-the-workflows-now-call-the-scripts-and-a-census-guards-the-class)** — the workflows now call the scripts, and `check-tool-callers.py` guards the class · **[the firmware gate is on the INSTALL, not the download](#decided-0200--the-active-session-gate-named-three-stages-it-gates-the-install-and-scheduledat-defers-the-install-with-it)** — and `scheduledAt` defers the install with it; the stall rule scoped rather than `Verified` given a wire value · **[~~UpdateFirmware to a `Pending` station is `Rejected`~~ — REVERSED in `0.21.0`](#decided-0200--updatefirmware-had-no-row-in-the-pending-command-table-it-is-rejected-and-the-discriminator-gained-the-clause-that-says-why)** — kept as the record; the row it added was right, the verdict in it was not · **[a restricted station may renew its own certificate](#decided-0190--one-table-gave-the-same-act-opposite-verdicts-and-a-certificate-renewal-could-not-conclude-in-the-state-the-spec-keeps-open-for-repairs)** — the exception's *reason* restated to cover both members rather than a second name added to a list · [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
+| **CLASS** | 16 | **[an obligation no field, no code and no actor can carry](#class--an-obligation-no-field-no-code-and-no-actor-can-carry)** — an index of the sixteen instances; **5** still open, 1 a blocker. `0.32.0` closed instances 15 and 16, the same defect on the two halves of one session, and supplied the **fourth remedy** the class had not recorded: withdraw the demand. The fourth sub-shape, named at 0.30.0 — a closed enumeration in which no legal value is true — still holds **three** instances, all closed at 0.31.0 |
+| DECIDED | 24 | **[`2008` was listed under two statuses and the licence permitting it could not be broken](#decided-0320--2008-was-listed-under-two-statuses-and-the-licence-that-permitted-it-could-not-be-broken)** — §4.4's truthfulness obligation un-scoped and the multi-status licence given a checkable condition; the row fell out as a consequence; prose only, zero schema bytes · **[a start that energised and a boot that cannot say what happened](#decided-0320--a-start-that-energised-a-boot-that-cannot-say-what-happened-and-the-two-remedies-that-were-refused)** — the third arm of the §3.5 partition, reported through two messages that already exist; a new `SessionEnded.reason` and a queryable session state both refused with their costs · **[§10.1 required receivers to ignore unknown fields, and every schema forbids it](#decided-0290--02-transportmd-101-required-receivers-to-ignore-unknown-fields-and-every-schema-in-this-repository-forbids-it)** — 73 of 73 object schemas are closed, and three decisions already taken (§2.1's known gap, exact-match negotiation, the `0.26.0` triple refusal) rest on receivers *not* ignoring; prose only, zero schema bytes · **[the broker MUST check revocation, the list is bounded twice, and a stale list buys one alerted hour](#decided-0270--the-broker-must-check-revocation-the-list-is-bounded-twice-and-a-list-that-goes-stale-buys-one-alerted-hour-before-the-door-shuts)** — axis 1a + 2a&2b + 3c; verified by declaration because no message can carry it, and the two bounds are broker settings deliberately outside the Chapter 08 registry · **[`allowedServiceTypes` withdrawn in two steps](#decided-0250--offlineallowanceallowedservicetypes-is-withdrawn-in-two-steps-because-nobody-ever-asked-for-the-constraint)** · **[ownership transfer and decommissioning stay undefined, and §1.3 now says so](#decided-0250--station-ownership-transfer-and-decommissioning-stay-undefined-and-the-specification-now-says-so)** · **[the server is the billing authority on the offline path too](#decided-0240--the-server-is-the-billing-authority-on-the-offline-path-too-and-81-was-the-outlier)** · **[`OfflinePassMaxAge` kept, wired into check #2, defaulted to inert](#decided-0240--offlinepassmaxage-is-kept-wired-into-check-2-and-defaulted-to-inert)** · **[`DiagnosticsUploadUrl` withdrawn — a key nothing reads](#decided-0230--diagnosticsuploadurl-had-no-reachable-consumer-and-is-withdrawn-rather-than-defined)** · **[UpdateFirmware to a `Pending` station is `Accepted`, notifications suppressed](#decided-0210--updatefirmware-to-a-pending-station-was-refused-on-a-premise-the-same-chapter-contradicts-and-with-a-response-no-error-code-could-carry)** — **reverses the `0.20.0` row below**: the `Rejected` it mandated needed an `errorCode` no registry entry supplies, and §6.6 already reported the outcome on BootNotification; the discriminator's second clause survives, its reading did not · **[nine gates in `tools/` were reachable from no job](#decided-0201--two-validation-scripts-reported-100-failure-and-no-workflow-ran-them-the-workflows-now-call-the-scripts-and-a-census-guards-the-class)** — the workflows now call the scripts, and `check-tool-callers.py` guards the class · **[the firmware gate is on the INSTALL, not the download](#decided-0200--the-active-session-gate-named-three-stages-it-gates-the-install-and-scheduledat-defers-the-install-with-it)** — and `scheduledAt` defers the install with it; the stall rule scoped rather than `Verified` given a wire value · **[~~UpdateFirmware to a `Pending` station is `Rejected`~~ — REVERSED in `0.21.0`](#decided-0200--updatefirmware-had-no-row-in-the-pending-command-table-it-is-rejected-and-the-discriminator-gained-the-clause-that-says-why)** — kept as the record; the row it added was right, the verdict in it was not · **[a restricted station may renew its own certificate](#decided-0190--one-table-gave-the-same-act-opposite-verdicts-and-a-certificate-renewal-could-not-conclude-in-the-state-the-spec-keeps-open-for-repairs)** — the exception's *reason* restated to cover both members rather than a second name added to a list · [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
 | **Total open** | **30** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
@@ -186,6 +186,108 @@ Fixing this means choosing whether BLE carries the full Error Object under MTU p
 already concedes truncation of `errorDescription` — or a deliberate subset, and then applying one
 answer to all three schemas plus the profile prose that mirrors them
 ([`ble-session.md`:29-33](spec/profiles/offline/ble-session.md) and `:146-147`).
+
+---
+
+## DECIDED (0.32.0) — 2008 was listed under two statuses, and the licence that permitted it could not be broken
+
+**The defect was not the duplicate row. It was that no artefact could have refused it.**
+`07-errors.md` §2.4's status table listed `2008 ACTION_NOT_PERMITTED` under both `401` and `403`.
+Measured across all 31 code–status pairs the table carries: **30 distinct codes, and `2008` the only
+one appearing twice.** Measured across every tag in this repository: **all 49**, from
+`v0.1.0-draft.1` on 2026-03-02 to `v0.31.0`. Nothing introduced it and no release repaired it,
+because there was no rule it broke — §4.4 says in terms that the table *"is illustrative and assigns
+no code a fixed status"*, and that one code *"can honestly appear with more than one status"*.
+
+**So deleting the row would have changed nothing normative**, and that is why it was not the repair.
+An illustration cannot be violated. Both reference SDKs had chosen — `ospp-sdk-php` `401`, `sdk-ts`
+`403` — and **both were conformant**, which is the whole finding: following the specification
+perfectly produced two incompatible libraries, and no conformance test could have addressed either.
+
+**Two sentences were changed, and the row fell out of them.**
+
+1. **§4.4's second obligation was un-scoped.** *"The HTTP status **MUST** be the one that is true"*
+   already existed, under the heading *What a server does outside the list* — so it governed only the
+   statuses the table does **not** name, leaving the ones it does name governed by an illustration
+   and by nothing else. Truthfulness now governs the whole in-scope REST surface. **This invents no
+   rule; it removes a fence from one that was already there.**
+2. **The multi-status licence gained its condition.** Where the table lists a code under more than
+   one status, that code's registry entry **MUST** name the condition that selects between them; a
+   code whose entry describes one condition has one true status and **MUST NOT** appear twice. The
+   licence is unchanged for any code that genuinely is reachable in two states — it keeps both rows
+   and gains the sentence saying which is which.
+
+`2008`'s entry names one condition — *the authenticated entity does not have the required RBAC role
+or permission* — and authentication having succeeded is what `403` means, while the `401` row's own
+description is *authentication failed or expired*, which is `2009`, `2010` and `2019`. **There was no
+second state to select, so the row was unselectable rather than redundant**, and it fell as a
+consequence. Had it been selectable, the repair would have been the missing sentence, not a deletion.
+
+**Cost, measured before the edit and confirmed after: zero.** No schema carries an HTTP status —
+`0` of 86 — nothing in §3 has a status column, and **0 of the 334 conformance vectors** reference
+one. One line moves in `ospp-sdk-php` (`ACTION_NOT_PERMITTED` from the `401` arm to the `403` arm),
+which is the first time either accessor has been decidable against the specification rather than
+against the other library.
+
+**What this does not settle.** `2001 STATION_NOT_REGISTERED` (php `422`, ts `401`) is the other
+two-sided disagreement and remains open: it is named by no row of the table, which is the `3003`
+shape, not this one. **88 of the 118 registry codes are named by no row at all.** The rule added here
+constrains how the table may speak, not how much it says.
+
+---
+
+## DECIDED (0.32.0) — a start that energised, a boot that cannot say what happened, and the two remedies that were refused
+
+**`start-service.md` rule 9 mandates a durable record before anything is energised and names its
+consumer in the same breath** — *on the next boot an uncompleted record is the anchor that tells the
+station whether the command already ran*. **Nothing said what the station does when the anchor
+answers *maybe*.** The record was required, its reader was named, and the reading was unspecified.
+
+`05-state-machines.md` §3.5 partitions the reboot on whether the prior state is **recoverable**:
+rule 2 resumes, rule 3 orphans. The mid-activation power loss is in neither arm — the record
+survives, so nothing was lost; the delivery it describes stopped, so there is nothing to resume.
+A station following the text took rule 2 and asserted `Occupied` for a bay that was doing nothing.
+
+**Built (0.32.0): the third arm, in prose, at zero schema bytes.** `start-service.md` gains rule 12
+and §3.5 gains rule 6: the station **MUST** report through the two messages that already exist — a
+SecurityEvent [MSG-012] `HardwareFault` whose open `details` carries the `sessionId`, `bayId` and
+`programNumber`, and a StatusNotification [MSG-009] reporting the bay `Faulted`. **This is verbatim
+the pattern `stop-service.md` rule 9 was given at 0.30.0** for the mirror-image condition, and
+deliberately the same two messages: the failure is one failure seen from two ends — **settlement runs
+on a figure nobody measured.** There the station reports a duration it did not observe; here
+`connection-lost.md` §6 has the server settle on *estimated time delivered*. What the report adds is
+not the closure, which the server's timer was always going to perform, but **the closing figure's
+quality** — and the station held the one fact that could supply it.
+
+**A live contradiction was closed on the way past.** `session-ended.md` rule 1 required a SessionEnded
+for *every* session terminating without a StopService, while §3.5 rule 3 forbids emitting further
+events for an orphaned `sessionId`. Both are **MUST**s and they point opposite ways; only the
+unsatisfiable one was stated in the profile. Rule 1 now excludes both reboot cases, and the exclusion
+is the removal of a demand nothing could meet: the orphaning station no longer holds the `sessionId`,
+`actualDurationSeconds` or `creditsCharged` the schema requires, and the indeterminate station
+measured neither of the latter two.
+
+**REFUSED (a): a new `SessionEnded.reason` member.** It is the obvious remedy and it is a settlement
+decision wearing a schema costume. Every existing `reason` has a row in `04-flows.md` §6's refund
+matrix **and** a row in the service-kind table below it, so a new value is not a wire question but a
+ruling on who is billed when nobody knows what was delivered — with no measurement available to
+ground it. The schema cost is real but not the reason: one file, and 0 of its 6 vectors would break,
+since an added member is a widening (precedent: `0.31.0` added `Inactivity` and `OperatorStopped` to
+this same enum and broke 0 of 334). **The trap is worth recording**: the negative vector
+`session-ended-event-invalid-reason.json` asserts rejection using `"UserStopped"`, so a member taking
+that name would make a test that must fail start passing. The demand was withdrawn instead of the
+enum widened — **a fourth remedy for the closed-enumeration sub-shape**, which had recorded three.
+
+**REFUSED (b): a queryable terminal state, and here is the measurement that refuses it.** The request
+was for a state an operator or server could interrogate — *this session's outcome is indeterminate*.
+**OSPP has no session-status representation of any kind to add it to.** Measured: **0 of 86 schemas**
+define one; the words `completed` and `failed` appear only as prose, in three files
+(`connection-lost.md`, `07-errors.md`, `04-flows.md`); `GET /sessions/{id}` is in scope at §4.4 for
+its **error codes only**, with no response body defined anywhere. This is therefore not *add a
+member* but *introduce a concept the protocol does not have*, and it is refused on the same ground
+instance 14 of the class below was declined at `0.31.0`: the prose exists, the open `details` object
+carries the fact, and the cost is a new normative surface. **Recorded here with its cost rather than
+left as a rule nothing implements.**
 
 ---
 
@@ -1121,20 +1223,32 @@ the rule against the artefact that would have to carry it.
 | 12 | A session ended by **inactivity** reporting its reason | the **enum member**: `reason` is closed at 6 and none is inactivity. The chapter states the gap about itself — *"`SessionTimeout` is not fully specified, and this note is the specification of that fact"* — and declines the widening in the same breath | **CLOSED 0.31.0** — `Inactivity` added; the enum is widened, and the §8 note's other two gaps closed with it |
 | 13 | A station **blocked fail-closed on a signing-mode mismatch** saying so | the **enum member**, and then the actor: `capabilities` carries 4 booleans under `additionalProperties: false` at both levels, so a fifth is forbidden — and the mode *is* readable by GetConfiguration, which is itself a signed message, so the only channel that can read it is the channel the mismatch closes | **CLOSED 0.31.0** — OPTIONAL top-level `messageSigningMode` on the one message a fail-closed station can still send |
 | 14 | A **SecurityEvent that can be triaged** | no **shape**: `details` is REQUIRED and typed `{"type":"object","additionalProperties":true}`, so `{}` satisfies the requirement. The cost is already recorded in this file — `FirmwareDowngradeAttempt` names the offered version under two different member names and nothing can tell | **OPEN — declined 0.31.0.** The field is open, the prose exists, a fourth restatement changes nothing, and enforcement costs the largest vector radius in the set (17) |
-| 15 | A stop **answered `Accepted` that did not physically stop** | no **field**: `stop-service-response` has `status` closed at `Accepted`/`Rejected`, `errorCode` required only on `Rejected`, and `additionalProperties: false` — the accepting arm has nowhere to say it. Settlement then runs on the self-reported duration | **partially discharged 0.30.0** — rule 9 is now a **MUST** to report through a `HardwareFault` SecurityEvent carrying the `sessionId` and a `Faulted` StatusNotification, both of which exist today. The settling response still cannot carry it |
+| 15 | A stop **answered `Accepted` that did not physically stop** | no **field**: `stop-service-response` has `status` closed at `Accepted`/`Rejected`, `errorCode` required only on `Rejected`, and `additionalProperties: false` — the accepting arm has nowhere to say it. Settlement then runs on the self-reported duration | **closed 0.32.0** — discharged in two steps. `0.30.0` made rule 9 a **MUST** to report through a `HardwareFault` SecurityEvent carrying the `sessionId` and a `Faulted` StatusNotification, both of which existed already. The residue recorded here — *the settling response still cannot carry it* — is **refused** at `0.32.0` on a measurement, not left open: carrying it needs a session-status representation, and **0 of 86 schemas** define one. See instance 16, which is this defect on the activation path and was closed the same way |
+| 16 | **A start that energised, whose outcome the next boot cannot determine** | no **field**, then no **arm**: `start-service.md` rule 9 mandates the pre-effect record and names its reader, and `05-state-machines.md` §3.5 partitioned the reboot on *recoverable* — an arm for a lost record and an arm for a resumable one, and none for a record that survives describing a delivery that does not. The terminal event cannot carry it either: `session-ended-event` **requires** `actualDurationSeconds` and `creditsCharged`, which were never measured, and its seven-value `reason` has nothing true | **CLOSED 0.32.0** — reported through the two messages that already exist (`start-service.md` rule 12, §3.5 rule 6), the mirror of instance 15. Both stronger remedies refused with their costs |
 
-**Fifteen instances is what the written record supports**, counted by reading CHANGELOG and this file
-rather than carried from a note; **six** are still open and one is a blocker — `0.31.0` closed three
-(11, 12, 13), and **only one of the three needed the enum widened**. There are now **four**
-sub-shapes: **eight** are a mandated refusal or report with no error code and no response field to
-carry it (2, 4, 5, 6, 8, 10, 14, 15); **three** are a rule keyed on a value the authoritative schema
-forbids on the branch where the rule applies (1, 3, 7); **one** is a rule addressed to an actor the
-artefact does not admit (9); and **three** are a rule that requires a truthful value from a **closed
-enumeration in which no legal value is true** (11, 12, 13) — all three closed at `0.31.0`, and the
-way they closed is worth keeping: **one needed a new member (12), one needed only its existing
-member's definition widened (11), and one needed a new field on the one message the condition does
-not silence (13).** A sub-shape named by the artefact that cannot carry the value does not imply a
-single remedy.
+**Sixteen instances is what the written record supports**, counted by reading CHANGELOG and this file
+rather than carried from a note; **five** are still open and one is a blocker — `0.31.0` closed three
+(11, 12, 13) and `0.32.0` closed two (15, 16). The sub-shapes are still **four**, re-derived on the
+table above rather than incremented: **nine** are a mandated refusal or report with no error code and
+no response field to carry it (2, 4, 5, 6, 8, 10, 14, 15, 16); **three** are a rule keyed on a value
+the authoritative schema forbids on the branch where the rule applies (1, 3, 7); **one** is a rule
+addressed to an actor the artefact does not admit (9); and **three** are a rule that requires a
+truthful value from a **closed enumeration in which no legal value is true** (11, 12, 13).
+The four sum: 9 + 3 + 1 + 3 = 16.
+
+**The remedies are now four, and the fourth arrived at 0.32.0.** `0.31.0` closed its three
+enum-shaped instances three different ways — a new member (12), an existing member's definition
+widened (11), a new field on the one message the condition does not silence (13). `0.32.0` supplies
+the fourth and it is the one that adds nothing: **withdraw the demand.** Instance 16 could have taken
+a new `SessionEnded.reason`; instead the rule requiring the event was scoped, because the value the
+enum could not supply was one nobody had measured. A sub-shape named by the artefact that cannot
+carry the value implies no single remedy, and **the cheapest remedy is sometimes to stop asking**.
+
+**Instances 15 and 16 are the same defect on the two halves of one session**, which is why they
+closed together and by the same route: a start that energised and cannot say what it delivered, and a
+stop answered `Accepted` that did not stop. Both were found by reading a rule against the message
+that would have to carry its report; neither was visible to any gate. **The second was easier to see
+because the first had already been named** — which is the argument for this index existing.
 
 **The fourth sub-shape was added at 0.30.0 and it is the one a schema check cannot see at all.** The
 first two are found by reading a rule against a schema, and a schema check can be automated. The
@@ -1250,19 +1364,47 @@ unchanged; only the counts moved:
 | `severity`, `recoverable` | identical — 0 diffs |
 | category *partition* | identical — 15 / 20 / 20 / 20 / 34 / 9 (was 15 / 20 / 17 / 20 / 34 / 8 at 114) |
 | category *label* | **differs**: `5xxx` is `station` (PHP `OsppErrorCode.php`) vs `Hardware` (TS `OsppErrorCode.ts`) — still divergent at the 2026-08-12 re-measurement |
-| `httpStatus` | **51 of 114 disagree** |
+| `httpStatus` | **41 of 118 disagree** — re-derived 2026-09-05; **42** before this release's SDK repair, see below |
 
-The 51 split into three kinds, and only the third is a disagreement about fact:
+**Re-measured at 0.32.0 by dumping both registries and joining them, and the figure in this table
+moved twice.** It read *51 of 114*: the denominator was two registry growths stale, and the
+numerator was 51 when written and is **42** now, because `0.9.0` and the releases after it kept
+adding PHP arms. Both halves are re-derived here — 118 codes each, identical code sets and
+identical names — not carried. **42** disagreements before this release, **41** after: the `2008`
+repair below moved one, and re-derivation after the change confirmed it moved exactly one.
 
-1. **PHP has no arm, TS invented one** (~49 codes). PHP falls to `default => 500`; TS asserts a
-   specific status. TS's own registry docblock concedes these are *"sensible defaults derived by
-   category/semantics (SDK extension)"*. TS emits `410`, `413`, `501`, `507` — statuses PHP never
-   produces for any code.
-2. **Both chose, and chose differently** — `2001 STATION_NOT_REGISTERED` php=`422` ts=`401`;
-   `2008 ACTION_NOT_PERMITTED` php=`401` ts=`403`.
-3. **The spec itself is dual** — §2.4's table lists `2008` under **both** `401` and `403`, so no
-   single value is correct for it. This is the case that shows the accessor's shape is wrong, not
-   just its contents: a function from code to status cannot represent a code with two statuses.
+The 42 split into two kinds, and **only two codes were a disagreement about fact:**
+
+1. **A default standing in for an answer — 40 of the 42, and now 40 of the 41. This is a different
+   shape from a disagreement.** PHP has no arm and falls to its documented `default => 500`; TS asserts a
+   specific status. Nobody chose `500` for `1014 MESSAGE_TOO_LARGE` or `5017 INSUFFICIENT_STORAGE`
+   — a fall-through produced it, and a fall-through is not a second opinion. It is **one library
+   answering and one declining to**, which is why counting all 42 as *divergence* overstates the
+   conflict by a factor of twenty: there is no case here where two implementers read the same
+   sentence and disagreed. TS's own registry docblock concedes its 40 are *"sensible defaults
+   derived by category/semantics (SDK extension)"*, and it emits `410`, `413`, `501` and `507` —
+   statuses PHP never produces for any code. **The remedy differs accordingly**: a disagreement is
+   settled by deciding, a fall-through by removing the accessor or by declaring every value, which
+   is what the open question below actually asks.
+2. **Both chose, and chose differently — exactly 2 of 118**: `2001 STATION_NOT_REGISTERED`
+   php=`422` ts=`401`, and `2008 ACTION_NOT_PERMITTED` php=`401` ts=`403`. **After this release
+   there is exactly one**, `2001`. Re-derived after the SDK edit, not predicted.
+
+**`2008` is settled at 0.32.0 and `2001` is not, and the difference is instructive.** `2008` was
+the one code of the thirty §2.4's table names that appeared under two statuses — measured across
+all 31 code–status pairs — and it is now decided against `401` by [the multi-status
+rule](#decided-0320--2008-was-listed-under-two-statuses-and-the-licence-that-permitted-it-could-not-be-broken).
+`2001` is a different defect and remains open here: it is named by **no row of that table at all**,
+which is the `3003` shape — a silence, filled twice. Those two are not the whole of it either.
+**88 of the 118 registry codes are named by no row**, so the table decides 30 and delegates 88; the
+0.32.0 rule constrains how it may *speak*, not how much it says.
+
+**The accessor's shape was also wrong, and that argument is now spent.** Until 0.32.0 `2008` showed
+that no function from code to status could be correct, because one code carried two. It no longer
+carries two. The shape argument survives on `§4.4`'s licence rather than on this instance: a code
+that *is* reachable in two states the client must treat differently keeps both rows, and such a code
+still cannot be represented by a total function. What has changed is that there is currently no such
+code, so the objection is now to a permitted future rather than to the present contents.
 
 **Nothing consumes either accessor for a decision.** Checked at the time of writing:
 `ts-station-simulator` references neither `httpStatus` nor `OSPP_ERROR_REGISTRY`. `csms-server`
@@ -1282,7 +1424,8 @@ is small, and it is small **now**.
    inferred?** Both defects have the same shape: a value derived by rule — arithmetic on the range
    for `category`, a `match` default for `httpStatus` — rather than stated per code and reviewed.
    A declared registry makes a wrong value a visible edit; a derived one makes it invisible until
-   enumerated, which is how 51 disagreements accumulated unnoticed across two published SDKs.
+   enumerated, which is how these accumulated unnoticed across two published SDKs — and why the
+   count in the table above had to be re-derived twice rather than read.
 
 **Superseded instruction, recorded so it is not re-attempted.** An earlier arc (C2) directed that
 PHP's `httpStatus()` return `null` instead of defaulting to `500`, with the return type widened so
@@ -1295,7 +1438,9 @@ total function from code to status, merely with a hole in it. `0.9.0` ships `htt
 **What 0.9.0 did change**, and deliberately: four PHP codes that fell to the `500` default now
 answer as TS already did — `4008`→`401`, `3002`→`409`, `3007`→`409`, `6007`→`503`. Each is cited
 to §4.4's endpoint table, and `6007`→`503` matches the `MUST` that §4.4 states outright. This
-reduced the divergence from 55 codes to 51; it does not resolve the finding.
+reduced the divergence from 55 codes to 51 at the time. Re-derived at 0.32.0 the figure is **42**,
+so the same repair has continued since; it does not resolve the finding, because 40 of the 42 are
+still a `500` default standing in for an answer.
 
 ---
 
@@ -2232,7 +2377,6 @@ nothing replaces it, because the reader that needs bay identity is already readi
 > against restating it has to reach the numbers as well as the rows.
 >
 > Conformance: **TC-CORE-003** (new, the server under test), **TC-DM-007 Part E**, two vectors.
-
 
 **Raised 2026-07-30, by the arc that took `Unknown` off the wire. Recorded rather than fixed:
 reconciling them is not a text edit. The two tables differ because they are describing two

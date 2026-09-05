@@ -1,6 +1,6 @@
 # Chapter 08 — Configuration
 
-> **Status:** Draft | **OSPP Version:** 0.31.0
+> **Status:** Draft | **OSPP Version:** 0.32.0
 
 This chapter defines the configuration model for OSPP stations, including the key-value store structure, supported data types, access modes, mutability semantics, and the complete registry of standard configuration keys. Configuration is read and written via the [GetConfiguration](03-messages.md#62-getconfiguration) and [ChangeConfiguration](03-messages.md#61-changeconfiguration) messages defined in Chapter 03.
 
@@ -112,7 +112,7 @@ Two such pairs exist. `HeartbeatIntervalSeconds` with `heartbeatIntervalSec` **a
 | `ProtocolVersion` | string | `"0.3.0"` | R | Static | -- | OSPP protocol version supported by the station. ReadOnly; the station firmware determines this value. |
 | `FirmwareVersion` | string | -- | R | Static | -- | Current firmware version in semver format (e.g., `"1.2.3"`). ReadOnly; updated only via firmware update. |
 | `BootRetryInterval` | integer | `30` | RW | Dynamic | 10--600 | Retry interval in seconds when BootNotification is rejected or pending. |
-| `ConnectionLostGracePeriod` | integer | `300` | RW | Dynamic | 60--600 | Duration in seconds to wait before terminating orphaned sessions after MQTT connection loss. |
+| `ConnectionLostGracePeriod` | integer | `300` | RW | Dynamic | 60--600 | Duration in seconds the server waits, after MQTT connection loss, before closing a session whose station has not returned. Server-side only; not the station-side `orphaned` of [`05-state-machines.md` §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rule 3. |
 
 ---
 

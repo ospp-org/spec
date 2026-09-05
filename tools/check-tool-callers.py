@@ -87,6 +87,11 @@ BASELINE = 0
 # Files under tools/ that are not gates. The value is why — a reason a later reader can disagree
 # with, rather than a name they have to take on trust.
 EXCLUSIONS = {
+    '_ajv-resolve.sh':
+        'module, not an entry point — the single ajv-cli resolver, sourced by '
+        'validate-schemas.sh and validate-examples.sh. Running it alone sets a variable and '
+        'exits. It is one file because both gates carried the same twenty lines, and a second '
+        'copy of a resolver is exactly how validate-schemas.sh rotted the first time.',
     'canonical-form.mjs':
         'module, not an entry point — the single canonical-form implementation, imported by '
         'verify-canonical-form.mjs and verify-mqtt-mac.mjs. Running it would do nothing.',
