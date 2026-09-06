@@ -1,9 +1,9 @@
 # BLE Handshake Protocol
 
-> **Status: EXPERIMENTAL** | **OSPP Version:** 0.33.0
+> **Status: EXPERIMENTAL** | **OSPP Version:** 0.33.1
 >
 > Published for review, **not** for implementation. May change incompatibly without a MAJOR
-> bump. See [Release status](../../../README.md#ble-is-experimental-in-08) and the three
+> bump. See [Release status](../../../README.md#ble-is-experimental) and the three
 > blockers in [KNOWN-ISSUES](../../../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-three-defects).
 >
 > Two bear directly on this document: the `AuthResponse` rejection shape is blocker

@@ -8,6 +8,87 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.33.1] — 2026-09-06
+
+> **PATCH, non-normative.** **Zero** files under `schemas/` change, **zero** of the 334 conformance
+> vectors move, and no obligation is added, removed or reworded. Everything here is a number or a
+> roster this specification states **about itself** — and every one of them is now DERIVED by a gate
+> rather than typed.
+
+### Fixed — the normative chapter contradicted its own registry, by one
+
+- **`07-errors.md` §1.1 said `Total: 118 standard error codes` while §3 of the same chapter lists
+  119.** The missing member is `5113 OUTCOME_INDETERMINATE`, added the day before in `0.33.0` for a
+  rule that could not otherwise be satisfied. **The arithmetic that produced the 118 was stale in the
+  same table**: the `5000–5999` row said **34** against **35** rows in §3.5 — that cell is where the
+  error came from, and no audit had named it. Four further copies stood in `README.md` (×3) and
+  `guides/implementors-guide.md`. A firmware author sizing an error table from the chapter was short
+  exactly the code he needs to report an outcome he did not observe.
+- **`README.md`'s chapter-05 summary named six state machines where `05-state-machines.md` defines
+  seven.** The one it dropped is **Diagnostics Upload**, which sits at §8 — *after* §7 *Cross-Machine
+  Interactions*, out of sequence — and which is one of the six both SDKs actually gate, while **BLE
+  Connection**, which the summary does name, is the one they do not. Someone scoping FSM work from
+  the summary never learned the enforced machine existed.
+- **Eleven release-status claims still said `0.8`, at `0.33.0`.** Not three: `README.md` ×3,
+  `spec/README.md`, `conformance/README.md`, `KNOWN-ISSUES.md`, and `TC-OFF-001` / `-002` / `-005`
+  ×2 each. This is the table an integrator reads to decide **which surfaces are claimable**.
+- **A heading is a URL, and this one carried a version.** `### BLE is experimental in 0.8` was the
+  anchor target of **11 links across 10 files**; renaming it to match the release would have broken
+  every one, and only the four under `spec/` are seen by `verify-protocol.sh`. The heading is now
+  **`### BLE is experimental`** — version-free by construction — and the version it speaks of lives
+  in the sentence beneath it, where the new gate checks it.
+- **One pre-existing broken anchor.** `CHANGELOG.md` pointed at
+  `VERSIONING.md#the-two-lines-have-crossed-and-they-will-not-uncross`; that heading was renamed to
+  *The two lines are not comparable, in either direction, at any distance* and the reference was
+  never repointed. Nothing could see it: the CI link job runs lychee, which does not verify
+  fragments, and `verify-protocol.sh`'s cross-reference category reads only `spec/`.
+
+### Added — `tools/check-doc-claims.py`, wired into `check-drift.yml`
+
+This repository had **seven** drift gates and **none on the numbers its own documents state about
+themselves**, which is the whole reason the four defects above were possible. Correcting `118` to
+`119` by hand would rot identically — a previous cycle did exactly that to a different number and
+said so — so this is a derivation, not an edit. Four claims:
+
+1. **The registry count**, per range and in total, derived from the rows of §3 and compared against
+   §1.1's restatement table and every live prose copy.
+2. **The state-machine roster**, derived from the `## N. <Name> State Machine` headings, compared
+   with `README.md`'s summary **in both directions**. One-way was tried first and is a false green:
+   renaming a heading drops the machine from the derivation, the summary still lists it, and the
+   comparison passes on a shrunken set. Measured — the one-way version passed that mutation.
+3. **The release-version claim**, by phrase, **repo-wide**. Section-scoped was tried first and is
+   also a false green: it read `README.md`'s Release-status section and reported three sites when
+   twelve were stale.
+4. **Every anchor into a local heading resolves** — 864 of them. This is the claim that would have
+   caught the broken `VERSIONING.md` link, and the one that catches a renamed heading in any file,
+   not only under `spec/`.
+
+**It reads a USE, not a mention**, on the same principle as `check-registry-self-consistency.py`:
+the content of every code span is removed before links are matched, so `CONTRIBUTING.md` can
+document the link *form* as `` `[§N](#section)` `` without that being read as a broken link.
+`CHANGELOG.md`, `ROADMAP.md` and `KNOWN-ISSUES.md` are excluded from the **count** claim by document
+ROLE — `102 error codes` under `## v0.1.0 (Delivered)` is correct as history and would be destroyed
+by being made current — and only `CHANGELOG.md` is excluded from the **version** claim, because each
+of its entries speaks for the release it heads. The corpus is enumerated from `git ls-files`, not a
+directory walk: `verification-report.md` is a generated, gitignored artefact sitting in the tree, and
+a walk reads it as corpus.
+
+**Ten controls, run before this was believed.** Four plant a stale number, a renamed machine, a
+phantom machine and a stale version and each is caught on the right line; two are negative — the
+same stale number planted in a record document, and a link written inside a code span — and both stay
+green; one mangles the registry parser and gets **exit 2**, instrument-broken, rather than a vacuous
+pass; and the two that matter most are the mutations that the first two designs survived.
+
+### Unchanged, measured rather than assumed
+
+- **29 version sites moved to `0.33.1`** — exactly the count `VERSIONING.md` states, derived by
+  replacing the eight header FORMS it names and counting the hits.
+- `verify-protocol.sh`: **AT BASELINE — 6 FAIL, 6 SKIP, 4296 checks**, identical to `v0.33.0`.
+- `check-normative-bold.py`: **433 unbolded, at baseline**; no normative prose moved.
+- All seven pre-existing drift gates: exit 0.
+
+---
+
 ## [0.33.0] — 2026-09-05
 
 > **MINOR, non-breaking, prose and one registry row.** **Zero** files under `schemas/` change and
@@ -1379,7 +1460,7 @@ who had not opened it, and each was measured here before being answered.
 - **The SDK and specification version lines have crossed, permanently.** The SDK pair released `0.25.0`
   pinning `.spec-ref = v0.24.1`; this tag is `v0.25.0`, which the pair takes up at `0.26.0`. The two numbers
   are now offset, the offset is not fixed, and neither is derived from the other.
-  [`VERSIONING.md`](VERSIONING.md#the-two-lines-have-crossed-and-they-will-not-uncross) says so where the
+  [`VERSIONING.md`](VERSIONING.md#the-two-lines-are-not-comparable-in-either-direction-at-any-distance) says so where the
   question is asked. This is a **reading** trap rather than a mechanical one — the numbers were close enough
   for long enough that a reader could treat them as corresponding, and one who does pairs an SDK with the
   wrong contract and gets a green build for it. Swept at this tag: **nothing compares the two lines

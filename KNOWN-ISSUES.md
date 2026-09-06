@@ -1,7 +1,7 @@
 # OSPP Known Issues
 
 **Date:** 2026-09-05
-**Specification-document version:** 0.33.0 (release tag `v0.33.0`)
+**Specification-document version:** 0.33.1 (release tag `v0.33.1`)
 **Status:** 3 blockers open (all BLE), **27** non-blocking issues open, **24** decisions recorded (one of
 them reversing another), and one named defect **class** with **sixteen** instances, **five** still open. **The counts are
 re-derived from the headings on every release, never incremented** — the previous revision read 24
@@ -23,7 +23,7 @@ the arcs since
 | **Total open** | **30** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
-EXPERIMENTAL in 0.8** — see [BLE release status](README.md#ble-is-experimental-in-08). They do
+EXPERIMENTAL in 0.33** — see [BLE release status](README.md#ble-is-experimental). They do
 not affect the MQTT surface, offline reconciliation, or provisioning, all of which are
 implemented and exercised against a second implementation.
 
@@ -119,7 +119,7 @@ The following 30 issues were resolved in the backlog batch fix.
 ## BLOCKER — the BLE surface is not implementable as written (three defects)
 
 **Raised 2026-07-28, scoping the 0.8.0 tag. These are the reason the BLE artefacts are marked
-EXPERIMENTAL — see [BLE release status](README.md#ble-is-experimental-in-08). Recorded, not
+EXPERIMENTAL — see [BLE release status](README.md#ble-is-experimental). Recorded, not
 repaired: each fix is a design decision, and BLE is implemented nowhere — the server rejects the
 BLE key at provisioning, no `StationIdentity` is issued, and no second implementation exercises
 the transport. Designing against nothing is what produced the sequencing layer this cycle

@@ -1,6 +1,6 @@
 # Chapter 04 — Protocol Flows
 
-> **Status:** Draft | **OSPP Version:** 0.33.0
+> **Status:** Draft | **OSPP Version:** 0.33.1
 
 This chapter documents every end-to-end protocol flow as a sequence of messages defined in [Chapter 03 — Message Catalog](03-messages.md). Each flow includes preconditions, a Mermaid sequence diagram, numbered happy-path steps, alternative paths, error paths, and postconditions.
 

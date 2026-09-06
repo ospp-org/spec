@@ -30,7 +30,15 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-09-05  (unreleased)  433 unbolded, 1253 bolded spans — the eight §1.I entries.
+    (this HEAD) 2026-09-06  (unreleased)  433 unbolded, 1255 bolded spans — the restated counts and
+                                   rosters. Unbolded is UNCHANGED and at BASELINE: 0.33.1 moves no
+                                   normative prose at all, only numbers this document states about
+                                   itself. Both numbers RE-DERIVED on this tree — and the bolded
+                                   figure below reads 1253 where the v0.33.0 tree measures 1255, so
+                                   that one was not re-derived after its last edit. It is recorded
+                                   here rather than corrected in place: it is a measurement point,
+                                   and a measurement point is not rewritten after the fact.
+    (superseded) 2026-09-05  (unreleased)  433 unbolded, 1253 bolded spans — the eight §1.I entries.
                                    Unbolded FALLS BY ONE and BASELINE follows it down to 433. The one
                                    that left is `05-state-machines.md` §6.5 rule 1, whose *"the
                                    bootloader MUST revert"* was plain while the rule beside it was

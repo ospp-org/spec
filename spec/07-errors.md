@@ -1,6 +1,6 @@
 # Chapter 07 — Error Codes & Resilience
 
-> **Status:** Draft | **OSPP Version:** 0.33.0
+> **Status:** Draft | **OSPP Version:** 0.33.1
 
 This chapter defines the complete error taxonomy for the OSPP protocol, including the error code registry, standard error response format, retry policies, circuit breaker patterns, and graceful degradation behavior.
 
@@ -22,7 +22,7 @@ Error codes are organized into six functional categories. Each category occupies
 | 2000–2999 | **Authentication & Authorization Errors** | Protocol | 20 | Identity verification, credential validation, and access control |
 | 3000–3999 | **Session & Bay Errors** | Application | 20 | Bay state, session lifecycle, reservation, and service errors |
 | 4000–4999 | **Payment & Credit Errors** | Application | 20 | Wallet balance, payment processing, refunds, offline credit limits, and certificate and provisioning management |
-| 5000–5999 | **Station Hardware & Software Errors** | Application | 34 | Physical hardware faults and embedded software errors |
+| 5000–5999 | **Station Hardware & Software Errors** | Application | 35 | Physical hardware faults and embedded software errors |
 | 6000–6999 | **Server Errors** | Application | 9 | Server-side processing, timeouts, and infrastructure errors |
 | 9000–9999 | **Vendor-Specific** | Vendor | — | Reserved for vendor-defined error codes |
 
@@ -32,7 +32,7 @@ Error codes are organized into six functional categories. Each category occupies
 - **Application tier** (3000–6999): Errors related to business logic, state violations, hardware conditions, and server-side processing. These errors indicate that the message was received and understood, but the requested operation could not be completed. Application-tier errors are handled by the application layer.
 - **Vendor tier** (9000–9999): Reserved for implementation-specific error codes. Vendors **MUST** document their vendor error codes separately.
 
-**Total: 118 standard error codes.**
+**Total: 119 standard error codes.**
 
 ### 1.2 Severity Levels
 

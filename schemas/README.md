@@ -1,6 +1,6 @@
 # OSPP JSON Schemas
 
-> **OSPP Version:** 0.33.0 | **JSON Schema Draft:** 2020-12
+> **OSPP Version:** 0.33.1 | **JSON Schema Draft:** 2020-12
 >
 > **The 15 schemas under [`ble/`](ble/) are EXPERIMENTAL artefacts** — published for review, not
 > for implementation, and subject to incompatible change without a MAJOR bump. Three of them are
@@ -8,7 +8,7 @@
 > `auth-response`, `start-service-response` and `stop-service-response` define rejections three
 > different ways, none matching [Chapter 07 §2.3](../spec/07-errors.md), and
 > `stop-service-response` cannot express a rejection at all. See
-> [Release status](../README.md#ble-is-experimental-in-08).
+> [Release status](../README.md#ble-is-experimental).
 >
 > `common/offline-pass.schema.json` is stable for the MQTT path but cannot express the
 > station-scoping constraint the BLE path requires — blocker

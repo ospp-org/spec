@@ -85,6 +85,17 @@ jobs:
       - name: Handshake nonces are derived from their labels and unique per document
         run: node tools/verify-test-nonces.mjs
 
+      # The counts and rosters the documents state about THEMSELVES had no gate at all,
+      # and that is how 07-errors.md -- the normative chapter -- came to say "Total: 118
+      # standard error codes" while §3 of the same chapter listed 119. Four more copies of
+      # 118 sat in README.md and the implementors guide, and §1.1's own range table said
+      # 5xxx=34 against 35 rows. Every number here is DERIVED from the artefact it
+      # describes; correcting one by hand rots identically, which is the whole finding.
+      # The state-machine roster is compared in BOTH directions -- a one-way check goes
+      # silently weaker when a heading is renamed.
+      - name: Restated counts and rosters vs the artefacts they describe
+        run: python3 tools/check-doc-claims.py
+
       # The check with no signal of its own. A gate that verifies the wrong thing still emits a
       # verdict; a gate nothing starts emits nothing at all, so it can only be found by
       # subtracting the set of callers from the set of tools. On the run that introduced this,

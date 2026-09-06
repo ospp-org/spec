@@ -1,6 +1,6 @@
 # Chapter 02 — Transport
 
-> **Status:** Draft | **OSPP Version:** 0.33.0
+> **Status:** Draft | **OSPP Version:** 0.33.1
 
 OSPP defines three transport layers for communication between participants. Each transport serves a distinct channel with its own security model, reliability guarantees, and failure modes.
 
@@ -146,7 +146,7 @@ The `v1` segment in the topic path is a **namespace identifier**, NOT the protoc
 - The protocol version is carried inside the message envelope via the `protocolVersion` field (see [Chapter 03 — Messages](03-messages.md)) and checked at boot by **exact match** against the set the server supports ([VERSIONING.md](../VERSIONING.md)). "Negotiation" here means that check and its `1007` outcome; the two peers do not converge on a version, and a shared MAJOR implies nothing.
 - The topic namespace `v1` MUST remain `v1` for every OSPP protocol version, regardless of that version's MAJOR component. The two numbers are unrelated: the namespace identifies the topic layout, the envelope field identifies the message contract.
 - A new topic namespace (e.g., `v2`) would only be introduced for a fundamental transport-level change — a different topic shape or a different addressing scheme — not for any change the envelope's `protocolVersion` can express.
-- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.33.0*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.3.0`): the two version numbers evolve separately and need not match.
+- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.33.1*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.3.0`): the two version numbers evolve separately and need not match.
 
 **Negotiation happens once, at boot. A later mismatch is not re-negotiated, and is not refused.**
 
@@ -563,7 +563,7 @@ The broker distributes incoming station messages across all server instances in 
 
 > **EXPERIMENTAL — this entire section.** Published for review, **not** for implementation; it
 > may change incompatibly without a MAJOR bump. See
-> [Release status](../README.md#ble-is-experimental-in-08) and the three blockers in
+> [Release status](../README.md#ble-is-experimental) and the three blockers in
 > [KNOWN-ISSUES](../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-three-defects).
 >
 > **[§8.6](#86-fragmentation-protocol) below is one half of blocker

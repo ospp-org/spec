@@ -1,9 +1,9 @@
 # BLE Session Lifecycle
 
-> **Status: EXPERIMENTAL** | **OSPP Version:** 0.33.0
+> **Status: EXPERIMENTAL** | **OSPP Version:** 0.33.1
 >
 > Published for review, **not** for implementation. May change incompatibly without a MAJOR
-> bump. See [Release status](../../../README.md#ble-is-experimental-in-08).
+> bump. See [Release status](../../../README.md#ble-is-experimental).
 >
 > **This document is the visible half of blocker
 > [B-3](../../../KNOWN-ISSUES.md#b-3--the-three-ble-response-schemas-disagree-with-each-other-and-with-chapter-07).**

@@ -1,6 +1,6 @@
 # OSPP Conformance Testing
 
-> **Status:** Draft | **OSPP Version:** 0.33.0
+> **Status:** Draft | **OSPP Version:** 0.33.1
 
 This document defines the conformance testing framework for OSPP implementations.
 Conformance testing validates that a station or server implementation correctly
@@ -28,11 +28,11 @@ before claiming conformance.
 
 ## 2. Compliance Levels
 
-> **Extended and Complete cannot be claimed against 0.8.**
+> **Extended and Complete cannot be claimed against 0.33.**
 >
 > Both levels require the Offline / BLE profile, whose BLE half is **EXPERIMENTAL** in this
 > revision and carries three blockers that make it unimplementable as written — see
-> [Release status](../README.md#ble-is-experimental-in-08) and
+> [Release status](../README.md#ble-is-experimental) and
 > [KNOWN-ISSUES](../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-three-defects).
 > `TC-OFF-001` and `TC-OFF-002` exercise that surface and are experimental artefacts with it;
 > `TC-OFF-002` check 5 is directly blocked, since it instructs the tester to construct a pass the

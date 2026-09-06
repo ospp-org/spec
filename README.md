@@ -1,6 +1,6 @@
 # OSPP — Open Self-Service Point Protocol
 
-![Version: 0.33.0](https://img.shields.io/badge/version-0.33.0-blue)
+![Version: 0.33.1](https://img.shields.io/badge/version-0.33.1-blue)
 ![Status: Draft](https://img.shields.io/badge/status-draft-orange)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 ![Messages: 40](https://img.shields.io/badge/messages-40-green)
@@ -19,14 +19,14 @@
 
 Not every part of this specification is at the same maturity. Read this before implementing.
 
-| Surface | Status in 0.8 | Basis |
+| Surface | Status in 0.33 | Basis |
 |---|---|---|
 | MQTT station↔server (Core, Transaction, Security, Device Management) | **Stable** | Implemented by a server and exercised by an independent station implementation |
 | HTTPS provisioning (`POST /api/v1/stations/provision`) | **Stable** | Implemented; error vocabulary and precedence chain covered by conformance cases |
 | Offline reconciliation, OfflinePass lifecycle, AuthorizeOfflinePass | **Stable** | Implemented and exercised over MQTT |
 | **BLE transport, handshake and session** | **EXPERIMENTAL** | See below |
 
-### BLE is experimental in 0.8
+### BLE is experimental
 
 The BLE surface — [`ble-transport.md`](spec/profiles/offline/ble-transport.md),
 [`ble-handshake.md`](spec/profiles/offline/ble-handshake.md),
@@ -57,7 +57,7 @@ sequencing layer this cycle removed. They will be repaired against a real implem
 
 **Consequence for conformance.** The **Extended** and **Complete** compliance levels require the
 Offline / BLE profile, whose BLE half is experimental. **Neither level can be claimed against
-0.8.** **Development** and **Standard** are unaffected and remain claimable — see
+0.33.** **Development** and **Standard** are unaffected and remain claimable — see
 [Compliance Levels](conformance/README.md#2-compliance-levels).
 
 ---
@@ -68,7 +68,7 @@ OSPP is an **open, vendor-neutral communication protocol** for self-service stat
 
 Think of it as **OCPP for self-service industries**. Where OCPP standardized EV charger-to-server communication, OSPP does the same for any station that delivers a time-bounded service through a physical bay. The protocol supports **online operation** (MQTT 5.0 over TLS 1.2+, TLS 1.3 recommended), **offline operation** (BLE 4.2+ GATT with cryptographically signed passes), and **four hybrid connectivity scenarios** — ensuring service continuity even when internet is unavailable.
 
-OSPP covers **40 messages** (27 MQTT + 13 BLE), **86 JSON Schemas**, **118 error codes**, **5 compliance profiles**, and a complete security model with mTLS, selective HMAC-SHA256 message signing, ECDSA P-256 offline authorization and receipt signing, and ECDSA P-384 root CA. It does NOT cover server-to-app REST APIs, payment gateway integration, business logic, or hardware internals — those are implementation-specific.
+OSPP covers **40 messages** (27 MQTT + 13 BLE), **86 JSON Schemas**, **119 error codes**, **5 compliance profiles**, and a complete security model with mTLS, selective HMAC-SHA256 message signing, ECDSA P-256 offline authorization and receipt signing, and ECDSA P-384 root CA. It does NOT cover server-to-app REST APIs, payment gateway integration, business logic, or hardware internals — those are implementation-specific.
 
 ---
 
@@ -176,9 +176,9 @@ npx ajv-cli validate \
 | [02](spec/02-transport.md) | Transport | MQTT 5.0, TLS 1.2+, topic structure, QoS, BLE GATT, reconnection | Draft |
 | [03](spec/03-messages.md) | Message Catalog | JSON envelope, messageType, correlation, timestamps; all 40 messages — fields, types, constraints, directions | Draft |
 | [04](spec/04-flows.md) | Protocol Flows | 15 end-to-end flows with sequence diagrams and step-by-step detail | Draft |
-| [05](spec/05-state-machines.md) | State Machines | Station, Bay, Session, Reservation, BLE Connection, Firmware Update FSMs | Draft |
+| [05](spec/05-state-machines.md) | State Machines | Station, Bay, Session, Reservation, BLE Connection, Firmware Update, Diagnostics Upload FSMs | Draft |
 | [06](spec/06-security.md) | Security | Threat model, mTLS, HMAC-SHA256, PKI, OfflinePass, receipts, fraud scoring | Draft |
-| [07](spec/07-errors.md) | Error Codes | 118 codes (6 categories), retry policies, circuit breaker, graceful degradation | Draft |
+| [07](spec/07-errors.md) | Error Codes | 119 codes (6 categories), retry policies, circuit breaker, graceful degradation | Draft |
 | [08](spec/08-configuration.md) | Configuration | 29 standard configuration keys, data types, access modes | Draft |
 | [--](spec/glossary.md) | Glossary | Terms and definitions | Draft |
 
@@ -370,7 +370,7 @@ ospp/
 │   ├── 04-flows.md              Chapter 04: Protocol Flows (15 flows)
 │   ├── 05-state-machines.md     Chapter 05: State Machines
 │   ├── 06-security.md           Chapter 06: Security Model
-│   ├── 07-errors.md             Chapter 07: Error Codes (118 codes)
+│   ├── 07-errors.md             Chapter 07: Error Codes (119 codes)
 │   ├── 08-configuration.md      Chapter 08: Configuration Keys
 │   ├── glossary.md              Glossary of terms
 │   └── profiles/                Profile specifications

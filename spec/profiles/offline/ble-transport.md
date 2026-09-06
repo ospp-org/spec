@@ -1,9 +1,9 @@
 # BLE Transport
 
-> **Status: EXPERIMENTAL** | **OSPP Version:** 0.33.0
+> **Status: EXPERIMENTAL** | **OSPP Version:** 0.33.1
 >
 > Published for review, **not** for implementation. May change incompatibly without a MAJOR
-> bump. See [Release status](../../../README.md#ble-is-experimental-in-08).
+> bump. See [Release status](../../../README.md#ble-is-experimental).
 >
 > **§11 of this document is blocker [B-1](../../../KNOWN-ISSUES.md#b-1--two-incompatible-fragmentation-protocols-are-simultaneously-normative).**
 > [Chapter 02 §8.6](../../02-transport.md) defines a *different*, incompatible fragmentation
