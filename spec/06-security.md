@@ -1,6 +1,6 @@
 # Chapter 06 — Security
 
-> **Status:** Draft | **OSPP Version:** 0.33.1
+> **Status:** Draft | **OSPP Version:** 0.34.0
 
 This chapter defines the complete security model for the OSPP protocol, covering threat analysis, authentication, authorization, cryptographic requirements, message integrity, offline security, anti-abuse mechanisms, and data protection.
 
@@ -837,16 +837,13 @@ A future OSPP version MAY adopt RFC 8785 strictly if message vocabulary is exten
 
 **Everything on the wire is signed.** Every MQTT message MUST carry an HMAC-SHA256 message authentication code in the `mac` envelope field, except the three that structurally cannot — see [§5.6](#56-message-signing-classification). This provides **defense-in-depth**: message integrity independent of TLS.
 
-The `MessageSigningMode` configuration key selects between that and no signing at all. Two modes are defined:
+**There is no mode, and no configuration key selects one.** Signing is unconditional: the only messages that may travel without a `mac` are the three [structural exemptions](#56-message-signing-classification), and those are exempt because of *when they happen*, never because of a choice anyone made.
 
-| Mode | Behavior | Use Case |
-|------|----------|----------|
-| `All` **(default)** | HMAC on every MQTT message except the three structural exemptions (§5.6) | Every deployment |
-| `None` | No HMAC — TLS-only integrity | Development and test harnesses only |
+`MessageSigningMode` — Chapter 08 registry key #18, with values `All` and `None` — is **withdrawn**. It was the last survivor of a design in which signing was selective, and the middle mode `Critical` had already been removed on the same reasoning: with everything signed it selected nothing.
 
-`None` exists so that a test suite can exercise the message layer without a key-management fixture, and for no other reason. It **MUST NOT** be used in production, and a deployment running it has no defence against a publish-capable adversary (§5.6).
+**Why a mode is worse than no mode, and this is measured rather than argued.** `None` existed so a test suite could exercise the message layer without a key-management fixture. The reference implementation took that offer: five of its six suites ran with signing off, and in that state a station that signed correctly and one that forged were *the same event* — the verifier answered "skipped" before it read the `mac` at all. A switch that turns a security control off is eventually found in the on-position nowhere and the off-position everywhere, and the deployment that most needs the control is the least likely to have set it.
 
-The middle mode, `Critical`, is **removed** rather than deprecated. With everything signed it selected nothing, and the protocol is unreleased, so there is no installed base a compatibility window would serve. Both values are **PascalCase** — `"All"`, `"None"` — as every enumeration in OSPP is ([Chapter 00 §Conventions](00-introduction.md)); lowercase spellings that appeared in three places were drift, not an alternative form, and a receiver **MUST NOT** accept them.
+A station that does not sign is therefore not in a different *mode*; it is **non-conforming**, and every non-exempt message it sends is refused with `1013 MAC_MISSING`.
 
 > **Why signing is not selective, and what replaced the criterion that made it so.**
 >
@@ -867,7 +864,7 @@ The middle mode, `Critical`, is **removed** rather than deprecated. With everyth
 
 1. Station sends BootNotification REQUEST [MSG-001] (exempt from signing — no key yet)
 2. Server generates a cryptographically random 32-byte key
-3. Server includes `sessionKey` (Base64-encoded) in the BootNotification RESPONSE [MSG-001]. This is **unconditional on every `Accepted` and every `Pending` response** — not conditional on `MessageSigningMode`, which is station configuration and therefore unreachable from this message's schema. `Pending` is included because a `Pending` station answers signed commands ([Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states)); without a key that channel could not exist. Under `None` the key is issued and unused.
+3. Server includes `sessionKey` (Base64-encoded) in the BootNotification RESPONSE [MSG-001]. This is **unconditional on every `Accepted` and every `Pending` response**. `Pending` is included because a `Pending` station answers signed commands ([Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states)); without a key that channel could not exist.
 4. The session key is protected in transit by TLS 1.2+ encryption
 5. Both sides store the key in volatile memory for the duration of the MQTT session, and discard it when that session ends
 
@@ -965,41 +962,41 @@ No message carries a MAC. TLS provides the only integrity protection, and there 
 
 The signing path and the verification path **MUST** both fail closed. Neither peer may substitute an unsigned message for a signed one, and neither may accept an unverified message in place of a verified one.
 
-Everything in this section applies **while `MessageSigningMode` is `All`** — that is, in every production deployment. Under `None` no message carries a MAC and none is expected, so none of these conditions can arise; that mode is development and test only ([§5.6](#56-message-signing-classification)).
+Everything in this section applies **always**. There is no mode under which a MAC is not expected: the three [structural exemptions](#56-message-signing-classification) are decided by `(action, messageType)` and by nothing else.
 
-#### The mode mismatch, and the one message that can still report it
+#### A station that does not sign, and the one message that can still report it
 
-**A station and a server that disagree about `MessageSigningMode` are both behaving correctly and
-neither can tell the other.** The key is **Static** — it takes effect at the next reboot — so the
-disagreement begins at a boot and persists until someone changes a configuration neither side can
-successfully exchange. The station rejects every message it receives for a missing or unverifiable
-`mac` and refuses to send unsigned; the server does the same in the other direction. Both fail
-closed, which is correct, and the result is a station that is connected, conformant and **mute**.
+**A station that does not sign is connected, non-conforming and mute.** It refuses every message it
+receives for a missing or unverifiable `mac` and refuses to send unsigned; the server refuses in the
+other direction. Both fail closed, which is correct, and neither can tell the other.
 
 **Every channel that could carry the diagnosis is closed by the condition it would diagnose.**
-`MessageSigningMode` is Chapter 08 registry key #18 and is readable with GetConfiguration [MSG-020]
-— but GetConfiguration is one of the **44 signed message types of the 47**, so it is refused for the
-same reason everything else is. The three [structural exemptions](#56-message-signing-classification)
+GetConfiguration [MSG-020] is one of the **44 signed message types of the 47**, so it is refused for
+the same reason everything else is. The three [structural exemptions](#56-message-signing-classification)
 are the only messages that survive, and two of them cannot help: the BootNotification **RESPONSE**
 arrives after the server has already decided, and ConnectionLost is the broker's Last Will, which the
 station does not compose.
 
-**That leaves the BootNotification REQUEST, and it now carries the answer.** A station **SHOULD**
-send the OPTIONAL top-level `messageSigningMode` on every BootNotification, reporting the mode it has
-just booted into, and a server that receives one **MUST** compare it against the mode it holds for
-that station. On a mismatch the server **MUST** log it and **MUST** treat the station as
-unreachable-by-signed-message rather than as faulty — the station is not broken and retrying will not
-help — and the repair is an operator changing one side, out of band, exactly as for the trust anchors
+**That leaves the BootNotification REQUEST, and it carries the answer.** A station **SHOULD** send
+the OPTIONAL top-level `messageSigningMode` on every BootNotification. The only conforming value is
+`"All"`; a station reporting `"None"` is announcing that every non-exempt message it sends will be
+refused. A server that receives one **MUST** log it and **MUST** treat that station as
+unreachable-by-signed-message rather than as faulty — it is not broken, and retrying will not help.
+The repair is an operator reprovisioning the station, out of band, exactly as for the trust anchors
 of [§7.2 of Chapter 01](01-architecture.md).
 
-**Why the field is OPTIONAL and what that costs.** Making it REQUIRED would invalidate every
-BootNotification a currently-deployed station sends, which trades a diagnostic for an outage. The
-price of OPTIONAL is that **silence is ambiguous**: a boot without the field is either a station
-that predates `0.31.0` or one that chose not to send it, and a server cannot distinguish them. A
-server **MUST NOT** infer a mode from its absence. The field makes the state *expressible*, which is
-the whole of what was missing — before `0.31.0` a fail-closed station had no way to say so on any
-message the protocol would still accept from it, and that is a member of the defect class indexed in
-[KNOWN-ISSUES](../KNOWN-ISSUES.md), not an ordinary gap.
+**The field is DEPRECATED and still REQUIRED to be accepted.** With the mode withdrawn there is only
+one conforming value, so the field can no longer distinguish two legitimate states — it distinguishes
+a conforming station from a broken one, which is a narrower job than it was designed for. It is
+**retained** in `boot-notification-request` and **MUST** continue to be accepted, because removing it
+from a schema that is `additionalProperties: false` would refuse the boot of every station already
+sending it, and stations already do. Its removal is a later revision, after the field has fallen out
+of use; **a deprecation a receiver may not yet enforce is the only kind that does not cause an
+outage.**
+
+**Why silence stays ambiguous.** A boot without the field is either a station that predates `0.31.0`
+or one that chose not to send it, and a server cannot distinguish them. A server **MUST NOT** infer
+anything from its absence.
 
 #### Receiving
 

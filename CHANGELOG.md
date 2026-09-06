@@ -8,6 +8,68 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.34.0] — 2026-09-06
+
+> **MINOR, normative.** A configuration key is **withdrawn**, one response schema gains two fields,
+> one request field is **deprecated but retained**, and two descriptions are corrected. `0` of the
+> 342 conformance vectors move.
+
+### Removed — `MessageSigningMode`, because a switch that turns a security control off is a defect
+
+- **Signing is unconditional.** [`06-security.md` §5.1](spec/06-security.md#51-overview) no longer
+  offers a mode. Every MQTT message MUST carry a `mac` except the **three structural exemptions**,
+  and those are exempt because of *when they happen* — BootNotification REQUEST precedes the session
+  key, BootNotification RESPONSE carries it, ConnectionLost is the broker's Last Will published after
+  the station is gone — never because of a choice anyone made.
+- **Registry key #18 is withdrawn**, taking the registry from 29 keys to **28** (Security 7 → 6) and
+  the `literals` range-form count from 2 to 1. `tools/check-config-ranges.py` held its own restated
+  copy of that count and stayed red until it followed, which is the order the check exists to force.
+- **The measurement that decided it.** The reference implementation took `None`'s offer: five of its
+  six test suites ran with signing off, and in that state a station that signed correctly and one
+  that forged were *the same event* — the verifier answered "skipped" before it read the `mac`. The
+  mode was not a knob that happened to be wrong; it was a knob whose existence made the control
+  unobservable.
+- A station that does not sign is therefore **non-conforming**, not "in another mode", and every
+  non-exempt message it sends is refused `1013 MAC_MISSING`.
+
+### Deprecated — `messageSigningMode` on BootNotification REQUEST, and deliberately NOT removed
+
+- With one conforming value left the field can no longer distinguish two legitimate states. It is
+  **retained** and MUST still be accepted, because `boot-notification-request` is
+  `additionalProperties: false` and **stations already send it** — the reference simulator does, at
+  `Station.ts:650`, with a test pinning it. Removing it would refuse their boot.
+- `0` of 342 vectors carry the field, so the vector cost of removal is nil — **and that is not the
+  same thing as the cost being nil.** Removal is a later revision, after the field falls out of use.
+  A deprecation a receiver may not yet enforce is the only kind that does not cause an outage.
+
+### Added — `errorCode` / `errorText` on `trigger-message-response`, and only there
+
+- The *Implicit Error Codes* note at the head of [`03-messages.md`](spec/03-messages.md) makes
+  `1005`, `2007` and `6001` implicit for **ALL** Server → Station REQUESTs. Measured across the 14
+  such actions, **two** had a response schema with nowhere to put any code: TriggerMessage, fixed
+  here, and [GetConfiguration](spec/03-messages.md#62-getconfiguration), whose response *requires*
+  `configuration` and so cannot express a refusal at all — recorded, not half-fixed.
+- **Direction decided the treatment, not appetite.** A TriggerMessage RESPONSE travels
+  station → server: the server accepts more than before and an older station simply never emits the
+  fields, so no validator can break. The two offline responses that carry `reason` travel
+  server → station, where a station validating against an older vendored copy refuses an unknown
+  property outright — the hazard behind five previous rejections of exactly this shape. **They were
+  not widened.**
+
+### Fixed — one field, two conventions, in the same chapter
+
+- `AuthorizeOfflinePass` §2.1's example put a registry NAME in `reason`
+  (`"OFFLINE_PASS_EXPIRED"`); `TransactionEvent` §4.1's put free prose
+  (`"Receipt signature verification failed"`). Same field, same type, same chapter. The **name** is
+  now the stated convention for both, described on the schemas with **no shape change** — no
+  `pattern`, no new property — so the 15 codes those two Error Responses tables list are
+  machine-readable without touching the hazard direction.
+- This is the class indexed in [KNOWN-ISSUES](KNOWN-ISSUES.md) — *a rule the schema cannot express* —
+  and the precedent was followed rather than re-litigated: `0.26.0` resolved Heartbeat's four
+  uncarryable codes with **zero schema bytes** after finding none had ever been a response value,
+  and instances 15 and 16 closed the same way at `0.32.0`.
+---
+
 ## [0.33.1] — 2026-09-06
 
 > **PATCH, non-normative.** **Zero** files under `schemas/` change, **zero** of the 334 conformance

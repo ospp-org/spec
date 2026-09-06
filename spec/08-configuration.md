@@ -1,6 +1,6 @@
 # Chapter 08 — Configuration
 
-> **Status:** Draft | **OSPP Version:** 0.33.1
+> **Status:** Draft | **OSPP Version:** 0.34.0
 
 This chapter defines the configuration model for OSPP stations, including the key-value store structure, supported data types, access modes, mutability semantics, and the complete registry of standard configuration keys. Configuration is read and written via the [GetConfiguration](03-messages.md#62-getconfiguration) and [ChangeConfiguration](03-messages.md#61-changeconfiguration) messages defined in Chapter 03.
 
@@ -67,7 +67,7 @@ Configuration keys are organized into profiles that align with station capabilit
 |---------|------------|------|:--------:|
 | **Core** | `Core` | HeartbeatIntervalSeconds, ConnectionTimeout, ReconnectBackoffMax, StationName, TimeZone, ProtocolVersion, FirmwareVersion, BootRetryInterval, ConnectionLostGracePeriod | Yes |
 | **Transaction** | `Transaction` | MeterValuesInterval, MeterValuesSampleInterval, MaxSessionDurationSeconds, SessionTimeout, ReservationDefaultTTL, DefaultCreditsPerSession | Yes |
-| **Security** | `Security` | CertificateSerialNumber, AuthorizationCacheEnabled, MessageSigningMode, OfflinePassPublicKey, CertificateRenewalThresholdDays, CertificateRenewalEnabled, StationIdentityCertificate | Yes |
+| **Security** | `Security` | CertificateSerialNumber, AuthorizationCacheEnabled, OfflinePassPublicKey, CertificateRenewalThresholdDays, CertificateRenewalEnabled, StationIdentityCertificate | Yes |
 | **Offline / BLE** | `OfflineBLE` | OfflineModeEnabled, MaxOfflineTransactions, OfflinePassMaxAge, RevocationEpoch | Conditional (required if `capabilities.bleSupported = true`) |
 | **Device Management** | `DeviceManagement` | FirmwareUpdateEnabled, LogLevel, AutoRebootEnabled | Conditional (required if `capabilities.deviceManagementSupported = true`) |
 | **Vendor-Specific** | -- | `Vendor_{VendorName}_*` | No |
@@ -89,7 +89,7 @@ Every cell takes one of five forms, and no others:
 | `<min>--<max>` | Inclusive integer bounds. Both endpoints are legal values. | 15 |
 | `--` | No range constraint beyond the declared type of §1.2. | 8 |
 | `max <n> chars` | Maximum length in UTF-8 characters. | 2 |
-| A list of quoted literals | The complete set of legal values, stated inline. | 2 |
+| A list of quoted literals | The complete set of legal values, stated inline. | 1 |
 | A named external constraint | Defined by the key's own Description or by the chapter it cites. | 2 |
 
 The counts above are checked by `tools/check-config-ranges.py`, which also verifies that every restatement of a range elsewhere in this specification agrees with the cell here.
@@ -173,7 +173,6 @@ Two such pairs exist. `HeartbeatIntervalSeconds` with `heartbeatIntervalSec` **a
 |-----|------|---------|:------:|:----------:|-------|-------------|
 | `CertificateSerialNumber` | string | -- | R | Static | -- | Serial number of the station's **CURRENT** X.509 client certificate. ReadOnly; updated when a new certificate is provisioned. A PREVIOUS certificate retained during rotation is deliberately not represented here — this key is single-valued by design, and the overlap it does not show is bounded by [Chapter 06 — Security](06-security.md), §4.7.6. |
 | `AuthorizationCacheEnabled` | boolean | `true` | RW | Dynamic | -- | When `true`, the station caches authorization responses locally for faster repeat authorizations. |
-| `MessageSigningMode` | string | `"All"` | RW | **Static** | `"All"`, `"None"` | Controls HMAC-SHA256 message signing. `All` = every message except the three structural exemptions (see [Chapter 06](06-security.md), §5.6); `None` = disabled, development and test harnesses only. **Static**, not Dynamic: the mode is bound to the session key, which is issued at boot, so a mid-session change would leave one peer signing and the other not — and verification fails closed while signing fails closed too, so the station goes silent in both directions. Taking effect at the next reboot means the change and the new key land on the same event. |
 | `OfflinePassPublicKey` | string | -- | W | Dynamic | valid SEC1 key | Server's ECDSA P-256 public key for OfflinePass signature verification (uncompressed or compressed SEC1 format). Updated via ChangeConfiguration during key rotation. Stations MUST accept passes signed by the current key, and the immediately previous key **for the grace period only** — the window is bounded by [Chapter 06 — Security](06-security.md), §6.7 step 4, which is its only statement; after it expires the station **MUST** discard the cached previous key. |
 | `CertificateRenewalThresholdDays` | integer | `30` | RW | Dynamic | 7--90 | Days before certificate expiry to initiate automatic renewal. The station checks daily and starts the SignCertificate flow when within this threshold. See [Chapter 06 — Security](06-security.md), §4.7. |
 | `CertificateRenewalEnabled` | boolean | `true` | RW | Dynamic | -- | Master switch for automatic certificate renewal. When `false`, the station does not initiate renewal automatically but still responds to server-triggered renewal (TriggerCertificateRenewal [MSG-024]). |
@@ -443,17 +442,16 @@ The table adds two columns Sections 2--6 do not carry — the index number and t
 | 15 | `DefaultCreditsPerSession` | integer | `100` | RW | Dynamic | Transaction |
 | 16 | `CertificateSerialNumber` | string | -- | R | Static | Security |
 | 17 | `AuthorizationCacheEnabled` | boolean | `true` | RW | Dynamic | Security |
-| 18 | `MessageSigningMode` | string | `"All"` | RW | Static | Security |
-| 19 | `OfflinePassPublicKey` | string | -- | W | Dynamic | Security |
-| 20 | `CertificateRenewalThresholdDays` | integer | `30` | RW | Dynamic | Security |
-| 21 | `CertificateRenewalEnabled` | boolean | `true` | RW | Dynamic | Security |
-| 22 | `OfflineModeEnabled` | boolean | `true` | RW | Dynamic | Offline / BLE |
-| 23 | `MaxOfflineTransactions` | integer | `1000` | RW | Dynamic | Offline / BLE |
-| 24 | `OfflinePassMaxAge` | integer | `86400` | RW | Dynamic | Offline / BLE |
-| 25 | `RevocationEpoch` | integer | `0` | RW | Dynamic | Offline / BLE |
-| 26 | `FirmwareUpdateEnabled` | boolean | `true` | RW | Dynamic | Device Management |
-| 27 | `LogLevel` | string | `"Info"` | RW | Dynamic | Device Management |
-| 28 | `AutoRebootEnabled` | boolean | `false` | RW | Dynamic | Device Management |
-| 29 | `StationIdentityCertificate` | string | -- | W | Dynamic | Security |
+| 18 | `OfflinePassPublicKey` | string | -- | W | Dynamic | Security |
+| 19 | `CertificateRenewalThresholdDays` | integer | `30` | RW | Dynamic | Security |
+| 20 | `CertificateRenewalEnabled` | boolean | `true` | RW | Dynamic | Security |
+| 21 | `OfflineModeEnabled` | boolean | `true` | RW | Dynamic | Offline / BLE |
+| 22 | `MaxOfflineTransactions` | integer | `1000` | RW | Dynamic | Offline / BLE |
+| 23 | `OfflinePassMaxAge` | integer | `86400` | RW | Dynamic | Offline / BLE |
+| 24 | `RevocationEpoch` | integer | `0` | RW | Dynamic | Offline / BLE |
+| 25 | `FirmwareUpdateEnabled` | boolean | `true` | RW | Dynamic | Device Management |
+| 26 | `LogLevel` | string | `"Info"` | RW | Dynamic | Device Management |
+| 27 | `AutoRebootEnabled` | boolean | `false` | RW | Dynamic | Device Management |
+| 28 | `StationIdentityCertificate` | string | -- | W | Dynamic | Security |
 
-**Total: 29 standard configuration keys** (9 Core + 6 Transaction + **7** Security + 4 Offline/BLE + 3 Device Management). `DiagnosticsUploadUrl` was withdrawn in `0.23.0` — see the note in [§6](#6-device-management-configuration-keys). The index column is a row number in this derived table and is renumbered with it; it is not an identifier and nothing cites it.
+**Total: 28 standard configuration keys** (9 Core + 6 Transaction + **6** Security + 4 Offline/BLE + 3 Device Management). `MessageSigningMode` was withdrawn in `0.34.0` — signing is unconditional and no key selects it ([Chapter 06 §5.1](06-security.md#51-overview)). `DiagnosticsUploadUrl` was withdrawn in `0.23.0` — see the note in [§6](#6-device-management-configuration-keys). The index column is a row number in this derived table and is renumbered with it; it is not an identifier and nothing cites it.

@@ -135,7 +135,10 @@ NAMED = ('IANA tz', 'valid SEC1 key')
 # the table was corrected first and this gate stayed red, which is the correct order and the
 # reason the check exists.
 # 0.30.0 registered key #29 `StationIdentityCertificate` (`max 500 chars`), moving 'maxchars' 1 -> 2.
-EXPECTED_FORMS = {'numeric': 15, 'none': 8, 'maxchars': 2, 'literals': 2, 'named': 2}
+# 0.34.0 withdrew `MessageSigningMode` -- signing is unconditional and no key selects it -- taking
+# the last two-value literal enum with it and moving 'literals' 2 -> 1. Same order as 0.23.0: the
+# table was corrected first and this gate stayed red until this line followed, which is the point.
+EXPECTED_FORMS = {'numeric': 15, 'none': 8, 'maxchars': 2, 'literals': 1, 'named': 2}
 
 # Registry key -> dedicated wire field, and the schema that bounds that field.
 ALIASES = {

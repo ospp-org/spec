@@ -4,12 +4,26 @@
   "title": "TriggerMessageResponse",
   "description": "Response to a TriggerMessage request indicating whether the station will send the requested message.",
   "type": "object",
-  "required": ["status"],
+  "required": [
+    "status"
+  ],
   "additionalProperties": false,
   "properties": {
     "status": {
       "type": "string",
-      "enum": ["Accepted", "Rejected", "NotImplemented"]
+      "enum": [
+        "Accepted",
+        "Rejected",
+        "NotImplemented"
+      ]
+    },
+    "errorCode": {
+      "type": "integer"
+    },
+    "errorText": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]+$",
+      "maxLength": 128
     }
   }
 }

@@ -1,6 +1,6 @@
 # Chapter 03 — Message Catalog
 
-> **Status:** Draft | **OSPP Version:** 0.33.1
+> **Status:** Draft | **OSPP Version:** 0.34.0
 
 This chapter is the normative reference for **every message** in the OSPP protocol. Each message is documented with its complete payload schema, metadata, and example.
 
@@ -895,7 +895,7 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
 ```json
 {
   "status": "Rejected",
-  "reason": "Receipt signature verification failed"
+  "reason": "OFFLINE_PASS_INVALID"
 }
 ```
 
@@ -2347,6 +2347,8 @@ Instructs the station to send a specific message immediately, outside of its nor
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
 | `status` | string | Yes | `"Accepted"`, `"Rejected"`, or `"NotImplemented"` |
+| `errorCode` | integer | Cond. | The numeric registry code. **REQUIRED when `status` is `Rejected`.** Added in `0.34.0` — see below. |
+| `errorText` | string | Cond. | The registry NAME, `UPPER_SNAKE_CASE`. **REQUIRED when `status` is `Rejected`.** |
 
 #### Example
 
@@ -2367,9 +2369,23 @@ Instructs the station to send a specific message immediately, outside of its nor
 }
 ```
 
+**`errorCode` and `errorText` were added in `0.34.0`, and the reason is the *Implicit Error Codes* note at the head of this chapter.**
+`1005`, `2007` and `6001` are implicit for **ALL** Server → Station REQUEST messages, TriggerMessage
+among them — and its response had no field able to carry any of the three. Measured across the 14
+Server → Station REQUEST actions, it was one of **two** whose response schema could not express a
+code; the other is [GetConfiguration](#62-getconfiguration), whose own residue is recorded there.
+
+This is the **safe direction**: a TriggerMessage RESPONSE travels station → server, so a station
+built against an older vendored copy simply never emits the new fields and the server accepts what
+it always did. The two offline responses that carry `reason` instead are *not* given this treatment,
+because those travel server → station, where a station validating against an older copy would refuse
+an unknown property outright.
+
 #### Error Responses
 
-TriggerMessage does not define message-specific error codes. The `NotImplemented` status value indicates the station does not support triggering the requested message type.
+TriggerMessage defines no **message-specific** error codes — the three implicit ones above are the
+whole set. The `NotImplemented` status value indicates the station does not support triggering the
+requested message type.
 
 **`NotImplemented` and `2007` answer different questions, and the scope is what separates them.** `2007 COMMAND_NOT_SUPPORTED` is implicit for every Server→Station REQUEST (see *Implicit Error Codes* above) and is about the **action**: the station does not implement TriggerMessage at all, or has it disabled by configuration. `NotImplemented` is about the **argument**: the station implements TriggerMessage, received it, and cannot produce the specific `requestedMessage` asked for. A station that supports TriggerMessage **MUST** answer an unsupported `requestedMessage` with `NotImplemented` and **MUST NOT** substitute `2007`, which would tell the server the command itself is unavailable and stop it asking for any message type.
 

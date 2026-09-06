@@ -146,7 +146,8 @@
         "All",
         "None"
       ],
-      "description": "The MessageSigningMode the station is CURRENTLY operating in, as loaded from NVS at this boot. OPTIONAL: a station that omits it says nothing, which is what every station said before 0.31.0. It is deliberately NOT a member of `capabilities` -- that object is feature flags, four booleans, describing what the station supports; this is configuration state, describing what it is doing. It rides THIS message because BootNotification REQUEST is one of the three structural exemptions from message signing (06-security.md 5.6), and so the only message that still arrives when the station and the server disagree about the mode. Every other channel that could report the mode -- GetConfiguration included -- is among the 44 signed types, so a station that has failed closed cannot use any of them. Without this field that state is not merely undiagnosed, it is inexpressible."
+      "description": "DEPRECATED at 0.34.0 and RETAINED. Signing is unconditional (06-security.md 5.1), so the only conforming value is \"All\" and this field can no longer distinguish two legitimate states -- it distinguishes a conforming station from one whose every non-exempt message will be refused with 1013. It stays in this schema because removing a property from a closed object refuses the boot of every station already sending it, and stations do. A server MUST continue to accept it and MUST NOT infer anything from its absence. Removal is a later revision, after the field has fallen out of use.",
+      "deprecated": true
     }
   }
 }

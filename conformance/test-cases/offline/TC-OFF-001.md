@@ -1,6 +1,6 @@
 # TC-OFF-001 — Full Offline BLE Session
 
-> **Status: EXPERIMENTAL artefact.** This case exercises the BLE surface, which is EXPERIMENTAL in 0.33 and carries three blockers — see [Release status](../../../README.md#ble-is-experimental) and [KNOWN-ISSUES](../../../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-three-defects). It is published for review, not for certification, and **Extended and Complete compliance cannot be claimed against 0.33**.
+> **Status: EXPERIMENTAL artefact.** This case exercises the BLE surface, which is EXPERIMENTAL in 0.34 and carries three blockers — see [Release status](../../../README.md#ble-is-experimental) and [KNOWN-ISSUES](../../../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-three-defects). It is published for review, not for certification, and **Extended and Complete compliance cannot be claimed against 0.34**.
 
 
 ## Profile

@@ -33,26 +33,44 @@
     "reason": {
       "type": "string",
       "maxLength": 256,
-      "description": "Human-readable rejection reason. Present when status is Rejected."
+      "description": "The registry NAME of the error, in UPPER_SNAKE_CASE (e.g. \"OFFLINE_PASS_EXPIRED\"), not prose. This response carries no errorCode field and is not gaining one: it travels server->station, where a station validating against an older vendored copy would refuse an unknown property outright. The name is what makes the codes this action's Error Responses table lists machine-readable, and it needs no schema shape change to do it. Present when status is Rejected."
     }
   },
   "allOf": [
     {
       "if": {
-        "properties": { "status": { "const": "Accepted" } },
-        "required": ["status"]
+        "properties": {
+          "status": {
+            "const": "Accepted"
+          }
+        },
+        "required": [
+          "status"
+        ]
       },
       "then": {
-        "required": ["sessionId", "durationSeconds", "creditsAuthorized"]
+        "required": [
+          "sessionId",
+          "durationSeconds",
+          "creditsAuthorized"
+        ]
       }
     },
     {
       "if": {
-        "properties": { "status": { "const": "Rejected" } },
-        "required": ["status"]
+        "properties": {
+          "status": {
+            "const": "Rejected"
+          }
+        },
+        "required": [
+          "status"
+        ]
       },
       "then": {
-        "required": ["reason"]
+        "required": [
+          "reason"
+        ]
       }
     }
   ]
