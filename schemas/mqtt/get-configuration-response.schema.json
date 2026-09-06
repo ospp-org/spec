@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/mqtt/get-configuration-response.schema.json",
   "title": "GetConfigurationResponse",
-  "description": "Response containing the requested configuration entries and any unknown keys. A WriteOnly key MUST NOT appear in configuration[] however the request reached it; the exclusion is a prose rule in 08-configuration.md section 1.3, not something this schema can express, because expressing it would require enumerating key names here and the registry also admits vendor keys. Note that 'readonly' is a boolean and carries no third state for WriteOnly: none is needed, since a WriteOnly key is absent from the response entirely.",
+  "description": "Response containing the requested configuration entries and any unknown keys. A WriteOnly key MUST NOT appear in configuration[] however the request reached it; the exclusion is a prose rule in 08-configuration.md section 1.3, not something this schema can express, because expressing it would require enumerating key names here and the registry also admits vendor keys. Note that 'readonly' is a boolean and carries no third state for WriteOnly: none is needed, since a WriteOnly key is absent from the response entirely. A refusal is carried by errorCode and errorText, added in 0.35.0; there is no 'status' member and none is needed, because the presence of errorCode is itself the discriminator. 'configuration' stays REQUIRED on every branch: a refusing station has zero entries to report and the empty array says exactly that -- a value this message already carried, and one get-configuration.md section 6 already makes mandatory when every requested key is unknown. On a refusal both arrays are empty, because a station that did not process the request classified no key as unknown either.",
   "type": "object",
   "required": ["configuration"],
   "additionalProperties": false,
@@ -35,6 +35,48 @@
         "type": "string",
         "maxLength": 256
       }
+    },
+    "errorCode": {
+      "type": "integer",
+      "description": "The numeric registry code of a refusal. Its presence is what makes the response a refusal, so it travels with errorText and with an empty configuration array."
+    },
+    "errorText": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]+$",
+      "maxLength": 128,
+      "description": "The registry NAME of the refusal, UPPER_SNAKE_CASE. Travels with errorCode; neither is emitted alone."
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "type": "object",
+        "required": ["errorCode"]
+      },
+      "then": {
+        "type": "object",
+        "required": ["errorText"],
+        "properties": {
+          "configuration": {
+            "type": "array",
+            "maxItems": 0
+          },
+          "unknownKeys": {
+            "type": "array",
+            "maxItems": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "type": "object",
+        "required": ["errorText"]
+      },
+      "then": {
+        "type": "object",
+        "required": ["errorCode"]
+      }
+    }
+  ]
 }

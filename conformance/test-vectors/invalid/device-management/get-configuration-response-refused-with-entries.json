@@ -1,0 +1,11 @@
+{
+  "configuration": [
+    {
+      "key": "HeartbeatIntervalSeconds",
+      "value": "30",
+      "readonly": false
+    }
+  ],
+  "errorCode": 2007,
+  "errorText": "COMMAND_NOT_SUPPORTED"
+}

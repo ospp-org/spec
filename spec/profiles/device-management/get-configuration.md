@@ -23,8 +23,10 @@ GetConfiguration is a server-initiated command that reads one or more configurat
 
 | Field | Type | Required | Description |
 |----------------|----------|----------|-----------------------------------------------|
-| `configuration` | object[] | Yes | Array of configuration entries (see below). |
+| `configuration` | object[] | Yes | Array of configuration entries (see below). Empty when there is nothing to report, and on a refusal. |
 | `unknownKeys` | string[] | No | Keys from the request that the station does not recognize. |
+| `errorCode` | integer | Cond. | The numeric registry code of a refusal (`0.35.0`). Its presence is what makes the response a refusal. |
+| `errorText` | string | Cond. | The registry NAME, `UPPER_SNAKE_CASE`. **REQUIRED** with `errorCode`, and never emitted without it. |
 
 ### 4.1 Configuration Entry Object
 
@@ -73,6 +75,19 @@ If all requested keys are unknown, the station **MUST** respond with an empty `c
 ## 7. Error Handling
 
 This message uses implicit error codes only (1005, 2007, 6001 — see `spec/03-messages.md` §Introduction).
+Since `0.35.0` the response can carry them: `errorCode` and `errorText` are OPTIONAL members, and a
+response carrying one **MUST** carry the other.
+
+**A refusal keeps `configuration`, and sends it empty.** The member stays REQUIRED on every branch.
+A station that refuses has zero entries to report, and the empty array is the value this message
+already uses to say so — §6 below mandates it when every requested key is unknown, and §5.1 mandates
+it for a request naming only WriteOnly keys. `unknownKeys` **MUST** be empty or absent on a refusal
+too: a station that did not process the request classified no key as unknown.
+
+**The two conditions that look like refusals are not refusals.** An unrecognised key (§6) and a
+WriteOnly key (§5.1) are both *answered*, not refused, and neither **MUST** carry an `errorCode`. A
+response with no `errorCode` is an answer whatever its arrays hold; a response with one is a refusal
+and its arrays are empty. Nothing else distinguishes them, and nothing else needs to.
 
 ## 8. Examples
 
@@ -140,6 +155,27 @@ This message uses implicit error codes only (1005, 2007, 6001 — see `spec/03-m
   "source": "Server",
   "protocolVersion": "0.3.0",
   "payload": {}
+}
+```
+
+### 8.4 Response (Refusal)
+
+A station that does not implement GetConfiguration — or has it disabled by configuration — answers
+`2007`, with both arrays empty.
+
+```json
+{
+  "messageId": "msg_a1b2c3d4-e5f6-7890-abcd-111222333aaa",
+  "messageType": "Response",
+  "action": "GetConfiguration",
+  "timestamp": "2026-02-13T10:30:00.200Z",
+  "source": "Station",
+  "protocolVersion": "0.3.0",
+  "payload": {
+    "configuration": [],
+    "errorCode": 2007,
+    "errorText": "COMMAND_NOT_SUPPORTED"
+  }
 }
 ```
 

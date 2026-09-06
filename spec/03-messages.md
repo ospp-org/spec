@@ -1,6 +1,6 @@
 # Chapter 03 — Message Catalog
 
-> **Status:** Draft | **OSPP Version:** 0.34.0
+> **Status:** Draft | **OSPP Version:** 0.35.0
 
 This chapter is the normative reference for **every message** in the OSPP protocol. Each message is documented with its complete payload schema, metadata, and example.
 
@@ -1512,11 +1512,13 @@ Retrieves one or more configuration values from the station.
 
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
-| `configuration` | array | Yes | List of key-value entries |
+| `configuration` | array | Yes | List of key-value entries. Empty when there is nothing to report, and on a refusal |
 | `configuration[].key` | string | Yes | Configuration key name |
 | `configuration[].value` | string | Yes | Current value as string |
 | `configuration[].readonly` | boolean | Yes | `true` if the key cannot be changed |
 | `unknownKeys` | array of string | No | Keys from the request that the station does not recognize |
+| `errorCode` | integer | Cond. | The numeric registry code of a refusal. Added in `0.35.0` — see below. Its presence is what makes the response a refusal |
+| `errorText` | string | Cond. | The registry NAME, `UPPER_SNAKE_CASE`. **REQUIRED with `errorCode`**, and never emitted without it |
 
 > **WriteOnly keys are never returned.** A key whose access mode is WriteOnly — see [Chapter 08 — Configuration](08-configuration.md), §1.3 — **MUST NOT** appear in `configuration[]`, whether the request named it explicitly or asked for everything with an empty or absent `keys` array. WriteOnly keys are security credentials, and a configuration dump that carries them is a credential dump. `OfflinePassPublicKey` is currently the only WriteOnly key in the registry.
 >
@@ -1550,9 +1552,56 @@ Retrieves one or more configuration values from the station.
 {}
 ```
 
+**RESPONSE (refusal):**
+
+```json
+{
+  "configuration": [],
+  "errorCode": 2007,
+  "errorText": "COMMAND_NOT_SUPPORTED"
+}
+```
+
+**`errorCode` and `errorText` were added in `0.35.0`, and the reason is the *Implicit Error Codes* note at the head of this chapter.**
+`1005`, `2007` and `6001` are implicit for **ALL** Server → Station REQUEST messages, GetConfiguration
+among them — and its response had no field able to carry any of the three, nor a `status` to hang one
+on. Measured across the 14 Server → Station REQUEST actions, it was the second and last of **two**
+whose response schema could not express a code; the first, [TriggerMessage](#614-triggermessage), was
+fixed at `0.34.0`.
+
+**`configuration` stays REQUIRED, and that is a measurement rather than a preference.** The obvious
+reading is that a station refusing cannot also send a list, so `required` would have to be relaxed —
+a change to the contract. It does not, because the empty array is not a placeholder the station
+invents to satisfy a schema: it is a value this message **already** carries and already means
+something by. [§6 of the profile](profiles/device-management/get-configuration.md#6-unknown-keys-handling)
+obliges a station whose requested keys are all unrecognised to answer with an empty `configuration`
+array, and §5.1 obliges the same answer to a request naming only WriteOnly keys. A refusing station
+has zero entries to report, and `configuration: []` says exactly that and nothing false. The
+relaxation would also cost something measurable rather than nothing:
+`get-configuration-response-missing-required` is a conformance vector that is invalid **because** the
+member is required, and relaxing it turns that vector valid.
+
+**The refusal is therefore fully expressible, not half.** A response carrying `errorCode` **MUST**
+also carry `errorText`, and both arrays **MUST** then be empty — a station that did not process the
+request classified no key as unknown either. A response carrying neither field is an answer, whatever
+the arrays hold. The discriminator is the presence of `errorCode`, so the existing meaning of an
+empty `configuration` survives untouched: a server reading a station built before `0.35.0` sees what
+it always saw.
+
+This is the **safe direction**: a GetConfiguration RESPONSE travels station → server on
+`ospp/v1/stations/{station_id}/to-server`, so a station built against an older vendored copy simply
+never emits the new fields and the server accepts what it always did. The two offline responses that
+carry `reason` are *not* given this treatment, because those travel server → station, where a station
+validating against an older copy would refuse an unknown property outright.
+
 #### Error Responses
 
-This message uses implicit error codes only (see [§Introduction — Implicit error codes](#implicit-error-codes)).
+GetConfiguration defines no **message-specific** error codes — the three implicit ones above are the
+whole set, and as of `0.35.0` the response can carry them. Two conditions that look like refusals are
+**not**: an unrecognised key is reported in `unknownKeys` and **MUST NOT** produce one, and a request
+naming a WriteOnly key is answered in neither array and **MUST NOT** produce one either
+([§5.1 of the profile](profiles/device-management/get-configuration.md#51-writeonly-keys-are-never-returned)).
+Both are answers, and both are carried by a response with no `errorCode`.
 
 ---
 

@@ -1,6 +1,6 @@
 # Chapter 07 — Error Codes & Resilience
 
-> **Status:** Draft | **OSPP Version:** 0.34.0
+> **Status:** Draft | **OSPP Version:** 0.35.0
 
 This chapter defines the complete error taxonomy for the OSPP protocol, including the error code registry, standard error response format, retry policies, circuit breaker patterns, and graceful degradation behavior.
 
@@ -115,19 +115,36 @@ The last clause is the load-bearing one. A receiver generally cannot tell which 
 
 When a station or server rejects a REQUEST, it **MUST** respond with a RESPONSE message whose `payload` carries `status: "Rejected"`, `errorCode`, and `errorText`.
 
-That holds wherever the message's own response schema declares those members. **Seven do not**, and every response schema is closed (`additionalProperties: false`), so on those messages an `errorCode` cannot be placed on the wire at all:
+That holds wherever the message's own response schema declares those members. **Five do not**, and every response schema is closed (`additionalProperties: false`), so on those messages an `errorCode` cannot be placed on the wire at all. The denominator is **20** response schemas under `schemas/mqtt/`, of which **15** declare a top-level `errorCode` and these five do not:
 
 | Response schema | How a rejection is signalled | `errorCode` on the wire |
 |---|---|:---:|
 | `transaction-event-response` | `status` + `reason` (REQUIRED when not `Accepted`) — see [reconciliation §6.4](profiles/offline/reconciliation.md#64-response) | no |
 | `authorize-offline-pass-response` | `status` + `reason` | no |
 | `data-transfer-response` | `status` (`Rejected`, `UnknownVendor`, `UnknownData`) | no |
-| `trigger-message-response` | `status` (`Rejected`, `NotImplemented`) | no |
 | `change-configuration-response` | per-key `results[].status`, with `results[].errorCode` / `results[].errorText` | per key, not top level |
-| `get-configuration-response` | declares no `status`; a rejection is not expressible | no |
 | `heartbeat-response` | declares no `status`; a rejection is not expressible, and none is ever sent — [§4.1](#41-station--server-mqtt-actions) | no |
 
-`boot-notification-response` **was** on this list and is not any more: it now declares `errorCode` and `errorText`, both **REQUIRED when `status` is `Rejected`**. That message carries four codes with four different recoveries — `2001`, `1005`, `1007`, `6001` — so a station that could not read the code could not select among them, and the per-code recoveries in §3 could not execute on the one path every station traverses at every boot.
+**Three have left this list, and each left for its own reason.** `boot-notification-response` went
+first: it now declares `errorCode` and `errorText`, both **REQUIRED when `status` is `Rejected`**,
+because that message carries four codes with four different recoveries — `2001`, `1005`, `1007`,
+`6001` — so a station that could not read the code could not select among them, and the per-code
+recoveries in §3 could not execute on the one path every station traverses at every boot.
+`trigger-message-response` and `get-configuration-response` followed at `0.34.0` and `0.35.0`, and
+they are the same finding twice: the *Implicit Error Codes* note makes `1005`, `2007` and `6001`
+implicit for **ALL** Server → Station REQUESTs, and measured across the **14** such actions these two
+were the only ones whose response could not carry any of the three. Both are station → server, the
+direction in which widening a response cannot break a validator.
+
+`get-configuration-response` was the harder of the two and the reason is worth recording, because the
+obvious reading was wrong. It declares no `status`, so it looked as though `configuration` would have
+to be relaxed out of `required` before a refusal could be expressed at all — a contract change on a
+member every conforming station already sends. It did not: `configuration: []` is a value the message
+**already** carries and already means something by ([`get-configuration.md` §6](profiles/device-management/get-configuration.md#6-unknown-keys-handling)
+mandates it when every requested key is unknown), so a refusing station reports zero entries and says
+nothing false. The presence of `errorCode` is the discriminator, and `required` did not move. This is
+the same route the `0.26.0` Heartbeat resolution took and the `0.34.0` `reason` convention after it:
+**measure whether the value already exists before changing a shape to make room for it.**
 
 This is a **known gap, not a permission**. §4 assigns error codes to several of these actions that their schemas cannot carry, and closing it requires schema changes and an SDK re-vendor; it is recorded as unscheduled work in [ROADMAP.md](../ROADMAP.md). An implementation **MUST NOT** read this as licence to omit `errorCode` on a message whose schema does declare it.
 
@@ -525,7 +542,7 @@ This table maps which error codes can appear in the RESPONSE or rejection of eac
 | StopService [MSG-006] | **3006**, **3007**, 3005, 3011 |
 | Reset [MSG-015] | **3016**, 5107, 5110 |
 | ChangeConfiguration [MSG-013] | **3015**, 1012, 2008, 5108, 5109 |
-| GetConfiguration [MSG-014] | *(implicit only)* |
+| GetConfiguration [MSG-014] | *(implicit only — carried in `errorCode`/`errorText` since `0.35.0`; see [§2.1](#21-mqtt-error-response))* |
 | SetMaintenanceMode [MSG-020] | **3001**, **3002**, **3005**, **3014** |
 | UpdateFirmware [MSG-016] | **5014**, **5015**, **5017**, **5018**, **5112**, 5016, 5103, 5107, 1011 |
 | GetDiagnostics [MSG-018] | **5019**, **5020**, **5021**, 5103, 5107, 1011 |
@@ -533,7 +550,7 @@ This table maps which error codes can appear in the RESPONSE or rejection of eac
 | CertificateInstall [MSG-023] | **4011**, **4012**, 5103, 5107 |
 | TriggerCertificateRenewal [MSG-024] | **4014**, 5107 |
 | DataTransfer [MSG-025] | *(implicit only — uses status values UnknownVendor/UnknownData, not error codes)* |
-| TriggerMessage [MSG-026] | *(implicit only — uses status value NotImplemented, not error codes)* |
+| TriggerMessage [MSG-026] | *(implicit only — carried in `errorCode`/`errorText` since `0.34.0`; `NotImplemented` is a status value about the argument, not a code)* |
 
 ### 4.3 BLE Message Types
 

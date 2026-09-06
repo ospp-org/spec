@@ -8,6 +8,102 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.35.0] — 2026-09-06
+
+> **MINOR, normative.** The last Server → Station action whose response could not express a refusal
+> gains the two fields that carry one — and the member that looked as though it had to be relaxed to
+> make room did not move, because the value it already carried was the right one.
+
+### The finding
+
+The *Implicit Error Codes* note at the head of [Chapter 03](spec/03-messages.md) makes `1005`,
+`2007` and `6001` implicit for **ALL** Server → Station REQUEST messages. Measured across the **14**
+such actions — the denominator is the Direction column of the MQTT registry, not a recollection —
+**two** had a response schema with nowhere to put any code. `0.34.0` fixed `trigger-message-response`.
+This release fixes `get-configuration-response`, which was the harder of the two because it declares
+no `status` either: there was no branch to hang a code on, only two arrays.
+
+### What did NOT change, and why that is the finding
+
+`configuration` is still **REQUIRED**. The obvious reading — a station refusing cannot also send a
+list, therefore `required` must be relaxed — was wrong, and the check that caught it is the one this
+repository has now run eight times: **ask whether the value already exists under another meaning
+before changing a shape to make room for it.**
+
+`configuration: []` was already a value this message carries and already means something by.
+[`get-configuration.md` §6](spec/profiles/device-management/get-configuration.md#6-unknown-keys-handling)
+obliges a station whose requested keys are all unrecognised to answer with an empty `configuration`
+array and says in the same sentence that this **is not an error condition**; §5.1 obliges the same
+answer to a request naming only WriteOnly keys, which appear in neither array. A refusing station has
+zero entries to report, so the empty array says exactly that and asserts nothing false. The refusal
+is therefore **fully** expressible, not half — which is what the previous cycle recorded it as, and
+that record is now corrected rather than quietly dropped.
+
+The relaxation was not merely unnecessary; it was measured and **negative**.
+`conformance/test-vectors/invalid/device-management/get-configuration-response-missing-required.json`
+is invalid **because** the member is required, and dropping it from `required` turns that vector
+valid — measured, by doing it and running `tools/verify-schemas.py`. A contract change that deletes
+an existing conformance vector's meaning and buys nothing is not a tidier contract.
+
+Prior instances of the same check: `0.26.0` (Heartbeat's four uncarryable codes — none had ever been
+a response value), `0.32.0` (instances 15 and 16 — the value needed a session-status representation
+that 0 of 86 schemas define), `0.34.0` (the `reason` convention — a registry NAME, with no shape
+change).
+
+### Direction
+
+A GetConfiguration RESPONSE travels **station → server**, on
+`ospp/v1/stations/{station_id}/to-server` with `source: "Station"`. This is the **safe direction**:
+the server accepts more, and a station built against an older vendored copy simply never emits the
+new fields. The two offline responses carrying `reason` travel server → station, where a station
+validating an older vendored copy refuses an unknown property outright — the hazard behind five
+previous rejections of this exact shape. They were **not** widened, again.
+
+### Changed
+
+- **`schemas/mqtt/get-configuration-response.schema.json`** — `errorCode` (integer) and `errorText`
+  (string, `^[A-Z][A-Z0-9_]+$`, ≤128) added as OPTIONAL members. `required` is unchanged. Two
+  `if`/`then` arms make the pair inseparable and force both arrays empty on a refusal: a station that
+  did not process the request classified no key as unknown either. `allOf` with `if`/`then` is house
+  style — `dependentRequired` appears in 0 of 86 schemas.
+- **`spec/03-messages.md`** §6.2 — the two fields documented, a refusal example, the rationale above,
+  and an *Error Responses* section that names the two conditions which look like refusals and are
+  not: an unrecognised key and a WriteOnly key are both **answered**.
+- **`spec/profiles/device-management/get-configuration.md`** — §4 response table, §7 error handling,
+  §8.4 refusal example.
+- **`spec/07-errors.md`** §2.1 — the table of response schemas that cannot carry an `errorCode` goes
+  from **seven rows to five**, and the denominator is now stated: 20 response schemas under
+  `schemas/mqtt/`, of which 15 declare a top-level `errorCode`. **One of the two removed rows was
+  already stale at `0.34.0`**: `trigger-message-response` gained the fields in that release and this
+  table still said `no`. §4.2's TriggerMessage and GetConfiguration rows updated with it.
+- **`KNOWN-ISSUES.md`** — the class *an obligation no field, no code and no actor can carry* gains
+  instances **17** (TriggerMessage, closed `0.34.0`, recorded here for the first time) and **18**
+  (GetConfiguration, closed here). Sixteen → eighteen; the first sub-shape 9 → 11; `11 + 3 + 1 + 3 =
+  18`. Open stays **five** — both new instances close on arrival.
+- **`ROADMAP.md`** — *Seven MQTT response schemas cannot carry an `errorCode`* → **Five**. The entry
+  that called `get-configuration-response` *"worth fixing eventually"* records what it cost instead
+  of being deleted, and the bullet that called `trigger-message-response` *"acceptable, noted"*
+  records that the reasoning did not survive the implicit-codes note.
+- **Version** bumped to `0.35.0` across 29 documents; `tools/check-doc-claims.py` caught the two the
+  sweep missed, including one split across a line break.
+
+### Conformance
+
+**4 new vectors, corpus 337 → 341.** One valid (`get-configuration-response-refused`) and three
+invalid, one per clause added: `-refused-half` (`errorText` absent), `-refused-with-entries`
+(`configuration` non-empty on a refusal), `-refused-with-unknown-keys` (`unknownKeys` non-empty on a
+refusal). **Each was proved non-vacuous by planting its own defect** — deleting the `allOf` flips the
+first two to valid, deleting the `unknownKeys` clause flips the third — because three of the four
+already fail today under `additionalProperties: false`, which is the wrong reason and would have
+passed vacuously forever.
+
+### Not changed
+
+`protocolVersion` stays `0.3.0`. No error code added, withdrawn or renumbered — the registry stays at
+**119**. No configuration key touched — **28**. `1` of 86 schemas moves; the other 85 are untouched.
+
+---
+
 ## [0.34.0] — 2026-09-06
 
 > **MINOR, normative.** A configuration key is **withdrawn**, one response schema gains two fields,

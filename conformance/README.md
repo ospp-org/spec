@@ -1,6 +1,6 @@
 # OSPP Conformance Testing
 
-> **Status:** Draft | **OSPP Version:** 0.34.0
+> **Status:** Draft | **OSPP Version:** 0.35.0
 
 This document defines the conformance testing framework for OSPP implementations.
 Conformance testing validates that a station or server implementation correctly
@@ -28,7 +28,7 @@ before claiming conformance.
 
 ## 2. Compliance Levels
 
-> **Extended and Complete cannot be claimed against 0.34.**
+> **Extended and Complete cannot be claimed against 0.35.**
 >
 > Both levels require the Offline / BLE profile, whose BLE half is **EXPERIMENTAL** in this
 > revision and carries three blockers that make it unimplementable as written — see

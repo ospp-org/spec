@@ -1,0 +1,8 @@
+{
+  "configuration": [],
+  "unknownKeys": [
+    "NonExistentKey"
+  ],
+  "errorCode": 2007,
+  "errorText": "COMMAND_NOT_SUPPORTED"
+}
