@@ -17,7 +17,7 @@ The Core profile establishes the foundation upon which all other profiles — [T
 | [BootNotification](boot-notification.md) | Station to Server | REQUEST/RESPONSE | Station registers identity and capabilities; server responds with acceptance, heartbeat interval, and clock sync. |
 | [Heartbeat](heartbeat.md) | Station to Server | REQUEST/RESPONSE | Periodic keep-alive with empty payload; server responds with current time for clock synchronization. |
 | [StatusNotification](status-notification.md) | Station to Server | EVENT | Bay state change notification with per-program availability. No response expected. |
-| [ConnectionLost](connection-lost.md) | Broker to Server | EVENT | Server detects station disconnect via MQTT LWT or heartbeat timeout. |
+| [ConnectionLost](connection-lost.md) | Broker to Server, or Station to Server | EVENT | Station disconnect: the broker's LWT on an unexpected drop, the station's own notice before a planned shutdown, or server-inferred on heartbeat timeout. |
 | [DataTransfer](data-transfer.md) | Bidirectional | REQUEST/RESPONSE | Vendor-extensible data exchange between station and server. |
 | [TriggerMessage](trigger-message.md) | Server to Station | REQUEST/RESPONSE | Server requests station to send a specific message immediately. |
 

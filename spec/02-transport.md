@@ -1,6 +1,6 @@
 # Chapter 02 — Transport
 
-> **Status:** Draft | **OSPP Version:** 0.35.0
+> **Status:** Draft | **OSPP Version:** 0.36.0
 
 OSPP defines three transport layers for communication between participants. Each transport serves a distinct channel with its own security model, reliability guarantees, and failure modes.
 
@@ -146,7 +146,7 @@ The `v1` segment in the topic path is a **namespace identifier**, NOT the protoc
 - The protocol version is carried inside the message envelope via the `protocolVersion` field (see [Chapter 03 — Messages](03-messages.md)) and checked at boot by **exact match** against the set the server supports ([VERSIONING.md](../VERSIONING.md)). "Negotiation" here means that check and its `1007` outcome; the two peers do not converge on a version, and a shared MAJOR implies nothing.
 - The topic namespace `v1` MUST remain `v1` for every OSPP protocol version, regardless of that version's MAJOR component. The two numbers are unrelated: the namespace identifies the topic layout, the envelope field identifies the message contract.
 - A new topic namespace (e.g., `v2`) would only be introduced for a fundamental transport-level change — a different topic shape or a different addressing scheme — not for any change the envelope's `protocolVersion` can express.
-- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.35.0*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.3.0`): the two version numbers evolve separately and need not match.
+- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.36.0*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.3.0`): the two version numbers evolve separately and need not match.
 
 **Negotiation happens once, at boot. A later mismatch is not re-negotiated, and is not refused.**
 
@@ -352,6 +352,7 @@ The station MUST configure an LWT message at MQTT CONNECT time:
 - The LWT timestamp is set at CONNECT time and MAY be stale when delivered. The server SHOULD use the broker's delivery time for disconnect tracking.
 - The **Will Delay Interval** of 10 seconds prevents LWT from firing during brief network glitches. If the station reconnects within 10 seconds, the LWT is cancelled.
 - The LWT has **no Message Expiry Interval** — it MUST always be delivered regardless of delay.
+- **A clean MQTT DISCONNECT suppresses the will entirely** — the broker discards it, which is correct, because the station did not disappear. A station that disconnects deliberately therefore produces no LWT and **MUST** publish a ConnectionLost with `reason: "PlannedShutdown"` as its last message before the DISCONNECT packet if it wants the server to know. Without it the departure is invisible until the heartbeat timeout of §4.2, and setting the will to say `PlannedShutdown` instead is not an option: the will fires only when the station did *not* leave cleanly, so it would then be a lie. See [`connection-lost.md` §4.3](profiles/core/connection-lost.md).
 
 **Server processing on LWT receipt:**
 

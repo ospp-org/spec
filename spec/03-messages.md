@@ -1,6 +1,6 @@
 # Chapter 03 — Message Catalog
 
-> **Status:** Draft | **OSPP Version:** 0.35.0
+> **Status:** Draft | **OSPP Version:** 0.36.0
 
 This chapter is the normative reference for **every message** in the OSPP protocol. Each message is documented with its complete payload schema, metadata, and example.
 
@@ -14,7 +14,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHALL NOT**, **S
 
 ### MQTT Messages
 
-All MQTT messages are wrapped in the standard OSPP envelope (see the [Conventions](#conventions) section below). The payload tables below document only the **`payload` field** of the envelope. The envelope fields (`messageId`, `messageType`, `action`, `timestamp`, `source`, `protocolVersion`) are always present. The `mac` field is present on **every** message except the three that structurally cannot carry one — BootNotification REQUEST, BootNotification RESPONSE, ConnectionLost (LWT) — and is absent everywhere under the development-only `None` signing mode. See [Chapter 06 §5.6](06-security.md#56-message-signing-classification).
+All MQTT messages are wrapped in the standard OSPP envelope (see the [Conventions](#conventions) section below). The payload tables below document only the **`payload` field** of the envelope. The envelope fields (`messageId`, `messageType`, `action`, `timestamp`, `source`, `protocolVersion`) are always present. The `mac` field is present on **every** message except the three that structurally cannot carry one — BootNotification REQUEST, BootNotification RESPONSE, ConnectionLost (LWT) — and is absent everywhere under the development-only `None` signing mode. ConnectionLost is exempt as an ACTION, which covers its station-published `PlannedShutdown` form too; that form **MAY** carry a `mac` and is not refused for lacking one (see [§5.5](#55-connectionlost)). See [Chapter 06 §5.6](06-security.md#56-message-signing-classification).
 
 MQTT topics follow the patterns defined in [Chapter 02 — Transport](02-transport.md), Section 2:
 
@@ -83,7 +83,7 @@ Each message below includes:
 | 9 | [StatusNotification](#52-statusnotification) | Station → Server | EVENT | Status | — |
 | 10 | [MeterValues](#53-metervalues) | Station → Server | EVENT | Status | — |
 | 40 | [SessionEnded](#54-sessionended) | Station → Server | EVENT | Status | — |
-| 11 | [ConnectionLost](#55-connectionlost) | Broker → Server | EVENT (LWT) | Status | — |
+| 11 | [ConnectionLost](#55-connectionlost) | Broker → Server, or Station → Server | EVENT | Status | — |
 | 12 | [SecurityEvent](#56-securityevent) | Station → Server | EVENT | Status | — |
 | 13 | [ChangeConfiguration](#61-changeconfiguration) | Server → Station | REQ/RES | Config | 60s |
 | 14 | [GetConfiguration](#62-getconfiguration) | Server → Station | REQ/RES | Config | 30s |
@@ -1256,26 +1256,30 @@ This message is NOT sent when the session is stopped by a server-initiated StopS
 
 | Property | Value |
 |----------|-------|
-| **Direction** | MQTT Broker → Server |
-| **Transport** | MQTT (Last Will and Testament) |
+| **Direction** | MQTT Broker → Server (LWT), or Station → Server (planned shutdown) |
+| **Transport** | MQTT (Last Will and Testament, or an ordinary station publish) |
 | **Message Type** | EVENT |
 | **Topic** | `ospp/v1/stations/{station_id}/to-server` |
-| **Trigger** | Unexpected station disconnect (TCP connection lost without MQTT DISCONNECT) |
+| **Trigger** | Unexpected disconnect (TCP lost without MQTT DISCONNECT), or the station's own notice immediately before a deliberate DISCONNECT |
 | **Expected Response** | None (EVENT) |
 | **Timeout** | N/A |
 | **Idempotency** | Yes — multiple LWT for same station are deduplicated |
 | **Message Expiry** | Never (exempt — critical event) |
 
-This is the **Last Will and Testament (LWT)** message, pre-configured by the station at MQTT CONNECT time. The broker publishes it when the station disconnects unexpectedly (no MQTT DISCONNECT packet received within the keep-alive window).
+This message has two senders, distinguished by `reason`.
 
-> **Signing note:** The ConnectionLost message is **exempt** from HMAC-SHA256 signing because it is pre-configured at connect time and published by the broker, not the station.
+`UnexpectedDisconnect` is the **Last Will and Testament (LWT)**, pre-configured by the station at MQTT CONNECT time; the broker publishes it when the station disconnects unexpectedly (no MQTT DISCONNECT packet received within the keep-alive window).
+
+`PlannedShutdown` is published by the **station itself**, on the same topic, as its last message before a clean MQTT DISCONNECT. A clean DISCONNECT suppresses the will, so without it a deliberate shutdown is invisible until the heartbeat timeout. See [`connection-lost.md` §4.3](profiles/core/connection-lost.md).
+
+> **Signing note:** ConnectionLost is **exempt** from HMAC-SHA256 signing, and the exemption is on the ACTION. For the LWT the reason is structural — it is pre-configured at connect time and published by the broker, not the station, so there is no live session key to sign it with. The station-published `PlannedShutdown` form has no such obstacle and **MAY** carry a `mac`; a server **MUST NOT** refuse it for the absence of one, because the exemption is per action and a station is entitled to rely on it. Authentication of the sender does not rest on the `mac` in either case: the topic is bound to the station's client certificate by the broker, so no other party can publish a ConnectionLost naming this station.
 
 #### Payload
 
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
 | `stationId` | string | Yes | Station that disconnected (`stn_{uuid}`) |
-| `reason` | string | Yes | `"UnexpectedDisconnect"` |
+| `reason` | string | Yes | `"UnexpectedDisconnect"` (broker, LWT) or `"PlannedShutdown"` (station, before a clean DISCONNECT) |
 
 #### Example
 
@@ -1294,7 +1298,7 @@ This is the **Last Will and Testament (LWT)** message, pre-configured by the sta
 }
 ```
 
-> **Note:** The full envelope is shown because this message is pre-configured at CONNECT time with a placeholder timestamp. The broker publishes the exact pre-configured message.
+> **Note:** The full envelope is shown because this message is pre-configured at CONNECT time with a placeholder timestamp. The broker publishes the exact pre-configured message. The `PlannedShutdown` form is an ordinary station publish with a live timestamp and `source: "Station"` — see [`connection-lost.md` §8.2](profiles/core/connection-lost.md).
 
 ---
 

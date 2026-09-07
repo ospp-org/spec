@@ -54,9 +54,21 @@ const VERIFIER = path.join(ROOT, 'tools', 'verify-example-signatures.mjs');
 // Anti-vacuity floors. These are not decoration: a corpus that silently shrank to
 // one surface would still report "all passed" without them. Raise them when the
 // corpus grows; a raise is a deliberate edit, a shrink is a red build.
-const MIN_VECTORS = 12;
+const MIN_VECTORS = 14;
 const MIN_SURFACES = 8;
 const REQUIRED_CLASSES = ['BODY', 'SIG', 'KEY'];
+
+// A class present SOMEWHERE in the corpus says nothing about the surface an
+// integrator is actually implementing. Firmware is the surface where OSPP ships a
+// POINTER rather than the artefact — 06-security.md §4.6 makes the station verify an
+// image the protocol never delivers, against a key the protocol never delivers either
+// — so it is the one surface where the corpus is the implementer's only instrument,
+// and it carried exactly one vector, of one class. Named per surface rather than as a
+// global floor because "the corpus has a BODY vector" was already true and still left
+// firmware with nothing to exercise.
+const REQUIRED_CLASSES_BY_SURFACE = {
+  firmware: ['BODY', 'SIG', 'KEY'],
+};
 
 const failures = [];
 let checks = 0;
@@ -213,6 +225,15 @@ export function verifyTamperRejection() {
     checks++;
     if (!classes.has(c)) {
       fail('-', `ANTI-VACUITY: mutation class ${c} must be represented`, 'present', 'absent');
+    }
+  }
+  for (const [surface, required] of Object.entries(REQUIRED_CLASSES_BY_SURFACE)) {
+    const held = new Set(vectors.filter((v) => v.surface === surface).map((v) => v.class));
+    for (const c of required) {
+      checks++;
+      if (!held.has(c)) {
+        fail('-', `ANTI-VACUITY: surface ${surface} must carry a ${c} vector`, 'present', 'absent');
+      }
     }
   }
   checks++;

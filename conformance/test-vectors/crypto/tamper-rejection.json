@@ -8,7 +8,7 @@
   },
   "specRef": "06-security.md §5.4, §6.5",
   "generatedBy": "tools/generate-tamper-vectors.mjs",
-  "count": 12,
+  "count": 14,
   "vectors": [
     {
       "id": "receipt-body-credits-raised",
@@ -551,6 +551,86 @@
         "firmwareVersion": "3.0.1",
         "checksum": "sha256:928de7ea35ba13fd64dfdec744051a7af9142a06bab3404a8bc548b5761644b0",
         "signature": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtw==",
+        "forceDowngrade": true,
+        "scheduledAt": "2026-03-15T02:00:00.000Z"
+      }
+    },
+    {
+      "id": "firmware-body-image-byte-flipped",
+      "surface": "firmware",
+      "class": "BODY",
+      "base": "conformance/test-vectors/valid/device-management/update-firmware-request-full.json",
+      "key": "conformance/test-keys/firmware-test-pub.pem",
+      "baseKey": "conformance/test-keys/firmware-test-pub.pem",
+      "what": "one byte of the IMAGE flipped and the checksum RECOMPUTED to match, signature untouched — the document is entirely self-consistent, so a station that verifies only the checksum installs it. That is 06-security.md §4.6 in one vector: \"SHA-256 checksum verification alone is NOT sufficient — it protects against corruption but not against malicious replacement.\" The checksum travels in the same message as the URL, so whoever substitutes the binary substitutes the checksum with it; only the signature establishes ORIGIN.",
+      "mutation": "image[-1] ^= 0x01; checksum recomputed over the mutated image so the document stays self-consistent; signature untouched",
+      "mutatedPointer": "checksum",
+      "was": "sha256:928de7ea35ba13fd64dfdec744051a7af9142a06bab3404a8bc548b5761644b0",
+      "now": "sha256:bf1d2b647b39dece8fbbaf1d64c0ebe06d6f2ccd1a6272bd8561700b10df117f",
+      "schema": "schemas/mqtt/update-firmware-request.schema.json",
+      "portable": {
+        "algorithm": "ECDSA-P256-SHA256",
+        "key": "conformance/test-keys/firmware-test-pub.pem",
+        "base": {
+          "signedBytesBase64": "IyBPU1BQIHN5bnRoZXRpYyB0ZXN0IGZpcm13YXJlIHBheWxvYWQgKG5vdCBib290YWJsZSkKAAAAAAAAAAAAAA==",
+          "signature": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtg==",
+          "key": "conformance/test-keys/firmware-test-pub.pem",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAESz8S803ICDCV+ZqvxBpmNv3/tE2f\nfJA9nH++tXWSXEvmnK/T1FuQTODr4VyGTvrvbS3Tqxe5WWhhI5M/9tX6fA==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": true
+        },
+        "tampered": {
+          "signedBytesBase64": "IyBPU1BQIHN5bnRoZXRpYyB0ZXN0IGZpcm13YXJlIHBheWxvYWQgKG5vdCBib290YWJsZSkKAAAAAAAAAAAAAQ==",
+          "signature": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtg==",
+          "key": "conformance/test-keys/firmware-test-pub.pem",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAESz8S803ICDCV+ZqvxBpmNv3/tE2f\nfJA9nH++tXWSXEvmnK/T1FuQTODr4VyGTvrvbS3Tqxe5WWhhI5M/9tX6fA==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": false
+        }
+      },
+      "document": {
+        "firmwareUrl": "https://firmware.acmecorp.com/ssp/releases/v3.0.1/firmware.bin",
+        "firmwareVersion": "3.0.1",
+        "checksum": "sha256:bf1d2b647b39dece8fbbaf1d64c0ebe06d6f2ccd1a6272bd8561700b10df117f",
+        "signature": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtg==",
+        "forceDowngrade": true,
+        "scheduledAt": "2026-03-15T02:00:00.000Z"
+      }
+    },
+    {
+      "id": "firmware-verified-with-station-key",
+      "surface": "firmware",
+      "class": "KEY",
+      "base": "conformance/test-vectors/valid/device-management/update-firmware-request-full.json",
+      "key": "conformance/test-keys/station-test-pub.pem",
+      "baseKey": "conformance/test-keys/firmware-test-pub.pem",
+      "what": "pristine image and pristine signature offered to the STATION identity key — proves the station binds firmware to the FIRMWARE SIGNING identity and not merely to \"a key it happens to hold\". The station already holds several: §4.6 pre-provisions a Firmware Signing Certificate into the secure element alongside the station identity keypair, and no OSPP message carries either, so picking the right one is entirely the implementer's to get wrong and nothing on the wire would show it.",
+      "mutation": "no mutation; wrong key",
+      "mutatedPointer": null,
+      "was": null,
+      "now": null,
+      "schema": "schemas/mqtt/update-firmware-request.schema.json",
+      "portable": {
+        "algorithm": "ECDSA-P256-SHA256",
+        "key": "conformance/test-keys/station-test-pub.pem",
+        "base": {
+          "signedBytesBase64": "IyBPU1BQIHN5bnRoZXRpYyB0ZXN0IGZpcm13YXJlIHBheWxvYWQgKG5vdCBib290YWJsZSkKAAAAAAAAAAAAAA==",
+          "signature": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtg==",
+          "key": "conformance/test-keys/firmware-test-pub.pem",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAESz8S803ICDCV+ZqvxBpmNv3/tE2f\nfJA9nH++tXWSXEvmnK/T1FuQTODr4VyGTvrvbS3Tqxe5WWhhI5M/9tX6fA==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": true
+        },
+        "tampered": {
+          "signedBytesBase64": "IyBPU1BQIHN5bnRoZXRpYyB0ZXN0IGZpcm13YXJlIHBheWxvYWQgKG5vdCBib290YWJsZSkKAAAAAAAAAAAAAA==",
+          "signature": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtg==",
+          "key": "conformance/test-keys/station-test-pub.pem",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDt9+jMxZqDWv7r5TjeCFCsSRFOoK\nYKGn76DpptnXeBNFvrg8sNFA8lbsoVWKQQNp525SinXw6NrhBfeg5OmC7g==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": false
+        }
+      },
+      "document": {
+        "firmwareUrl": "https://firmware.acmecorp.com/ssp/releases/v3.0.1/firmware.bin",
+        "firmwareVersion": "3.0.1",
+        "checksum": "sha256:928de7ea35ba13fd64dfdec744051a7af9142a06bab3404a8bc548b5761644b0",
+        "signature": "MEQCIE+QRZGQsfk/WFjJLU3KPtMMcjOXlpSU1FdPdoQmWgkRAiBn3N21lQU8lX9gxlb2rcLPF4gC9d8MnKy7er47XHAQtg==",
         "forceDowngrade": true,
         "scheduledAt": "2026-03-15T02:00:00.000Z"
       }

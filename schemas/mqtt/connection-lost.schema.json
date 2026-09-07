@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/mqtt/connection-lost.schema.json",
   "title": "ConnectionLost",
-  "description": "MQTT Last Will and Testament message published by the broker when a station disconnects unexpectedly.",
+  "description": "The station is no longer connected. Published by the BROKER as the station's Last Will and Testament when the link drops without a clean MQTT DISCONNECT, or by the STATION itself, immediately before a clean DISCONNECT it performs on purpose. The `reason` says which.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -15,7 +15,11 @@
     },
     "reason": {
       "type": "string",
-      "const": "UnexpectedDisconnect"
+      "enum": [
+        "UnexpectedDisconnect",
+        "PlannedShutdown"
+      ],
+      "description": "Why the station is gone. `UnexpectedDisconnect` is the LWT value and is set by the station at CONNECT, so it can only ever describe a drop the station did not choose. `PlannedShutdown` is published by the station itself, on its own topic, immediately before it sends a clean MQTT DISCONNECT — a clean DISCONNECT suppresses the will, so without this value a station shutting down on purpose has no way to say so and the server learns nothing until the heartbeat timeout."
     }
   }
 }

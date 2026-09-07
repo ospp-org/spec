@@ -35,6 +35,7 @@
 // =============================================================================
 
 import { readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -158,7 +159,7 @@ function keyMaterialOf(ref) {
 }
 
 /** {bytes, signature, algorithm} — what a verifier is handed, per surface. */
-function portableForm(surface, doc) {
+function portableForm(surface, doc, image = null) {
   switch (surface) {
     case 'receipt':
       return { bytes: Buffer.from(doc.receipt.data, 'base64'), signature: doc.receipt.signature, algorithm: 'ECDSA-P256-SHA256' };
@@ -174,8 +175,10 @@ function portableForm(surface, doc) {
       return { bytes: Buffer.from(canonicalize(body), 'utf-8'), signature: doc.stationCert.signature, algorithm: 'ECDSA-P256-SHA256' };
     }
     case 'firmware':
-      // The signature is over the IMAGE, not over the request that points at it.
-      return { bytes: readFileSync(path.join(ROOT, FIRMWARE_BIN)), signature: doc.signature, algorithm: 'ECDSA-P256-SHA256' };
+      // The signature is over the IMAGE, not over the request that points at it. That
+      // is also why a firmware BODY case cannot be expressed by editing the document:
+      // the signed bytes are not in it. Such a case hands its own mutated image in.
+      return { bytes: image ?? readFileSync(path.join(ROOT, FIRMWARE_BIN)), signature: doc.signature, algorithm: 'ECDSA-P256-SHA256' };
     case 'sessionProof':
       return { bytes: Buffer.concat([lp(doc.type), lp(doc.offlinePass.passId), lp(String(doc.counter))]), signature: doc.sessionProof, algorithm: 'HMAC-SHA256' };
     case 'sessionKeyConfirmation':
@@ -319,6 +322,36 @@ const CASES = [
       return { doc: r.doc, pointer: 'signature', was: r.was, note: 'signature[-1] ^= 0x01' };
     },
   },
+  {
+    id: 'firmware-body-image-byte-flipped',
+    surface: 'firmware', class: 'BODY',
+    base: 'conformance/test-vectors/valid/device-management/update-firmware-request-full.json',
+    key: 'conformance/test-keys/firmware-test-pub.pem',
+    what:
+      'one byte of the IMAGE flipped and the checksum RECOMPUTED to match, signature untouched — the document is entirely self-consistent, so a station that verifies only the checksum installs it. That is 06-security.md §4.6 in one vector: "SHA-256 checksum verification alone is NOT sufficient — it protects against corruption but not against malicious replacement." The checksum travels in the same message as the URL, so whoever substitutes the binary substitutes the checksum with it; only the signature establishes ORIGIN.',
+    apply: (d) => {
+      const mutated = Buffer.from(readFileSync(path.join(ROOT, FIRMWARE_BIN)));
+      mutated[mutated.length - 1] ^= 0x01;
+      const r = setAt(d, 'checksum', 'sha256:' + createHash('sha256').update(mutated).digest('hex'));
+      return {
+        doc: r.doc,
+        pointer: 'checksum',
+        was: r.was,
+        note: 'image[-1] ^= 0x01; checksum recomputed over the mutated image so the document stays self-consistent; signature untouched',
+        tamperedBytes: mutated,
+      };
+    },
+  },
+  {
+    id: 'firmware-verified-with-station-key',
+    surface: 'firmware', class: 'KEY',
+    base: 'conformance/test-vectors/valid/device-management/update-firmware-request-full.json',
+    key: 'conformance/test-keys/station-test-pub.pem',
+    baseKey: 'conformance/test-keys/firmware-test-pub.pem',
+    what:
+      'pristine image and pristine signature offered to the STATION identity key — proves the station binds firmware to the FIRMWARE SIGNING identity and not merely to "a key it happens to hold". The station already holds several: §4.6 pre-provisions a Firmware Signing Certificate into the secure element alongside the station identity keypair, and no OSPP message carries either, so picking the right one is entirely the implementer\'s to get wrong and nothing on the wire would show it.',
+    apply: (d) => ({ doc: d, pointer: null, was: null, note: 'no mutation; wrong key' }),
+  },
 
   // ── sessionKeyConfirmation (HMAC-SHA256, session key) ─────────────────────
   {
@@ -380,7 +413,7 @@ function build() {
   const vectors = [];
   for (const c of CASES) {
     const base = read(c.base);
-    const { doc, pointer, was, note } = c.apply(base);
+    const { doc, pointer, was, note, tamperedBytes } = c.apply(base);
     vectors.push({
       id: c.id,
       surface: c.surface,
@@ -402,7 +435,7 @@ function build() {
       // `mustVerify` is the assertion, stated in the data rather than in each
       // consumer's test file.
       portable: {
-        algorithm: portableForm(c.surface, doc).algorithm,
+        algorithm: portableForm(c.surface, doc, tamperedBytes).algorithm,
         key: c.key,
         base: {
           signedBytesBase64: portableForm(c.surface, base).bytes.toString('base64'),
@@ -417,8 +450,8 @@ function build() {
           mustVerify: true,
         },
         tampered: {
-          signedBytesBase64: portableForm(c.surface, doc).bytes.toString('base64'),
-          signature: portableForm(c.surface, doc).signature,
+          signedBytesBase64: portableForm(c.surface, doc, tamperedBytes).bytes.toString('base64'),
+          signature: portableForm(c.surface, doc, tamperedBytes).signature,
           key: c.key,
           keyMaterial: keyMaterialOf(c.key),
           mustVerify: false,

@@ -8,6 +8,103 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.36.0] — 2026-09-08
+
+> **MINOR, normative.** A station that shuts down on purpose could not say so — the only value the
+> wire admits for a departure asserts the opposite — and the one crypto surface where OSPP ships a
+> pointer instead of the artefact had a single tamper vector, of a single class.
+
+### 1. The goodbye: `ConnectionLost.reason` gains `PlannedShutdown`
+
+**The gap is not a suppressed will; it is that the reason is a constant.** Measured on UAT
+2026-09-07: 35 seconds after a station left with a clean MQTT DISCONNECT, `stations.is_online` was
+still `true`. That part is correct MQTT — `sessionExpiryInterval: 0` on a clean DISCONNECT makes the
+broker *discard* the will, and it should, because the station did not disappear.
+
+What is wrong is what the station is left holding. `connection-lost.schema.json` typed `reason` as a
+**`const`** — one admissible value, `UnexpectedDisconnect` — so a station powering down on schedule
+had two options and neither is correct:
+
+- **stay silent**, and the server believes it is alive for `3.5 × heartbeatIntervalSec` (105 s at the
+  RECOMMENDED settings); or
+- **drop the link ungracefully** so the broker fires a will that says `UnexpectedDisconnect` — which
+  is false, and which [`06-security.md` §4.6] aside, is the one thing an operator triaging a fleet
+  must be able to trust.
+
+Setting the *will* to say `PlannedShutdown` is not a third option and the schema now says so: the
+will is registered in the CONNECT packet, fires only when the station did **not** leave cleanly, and
+at the moment it is written the station cannot know how the connection will end. A station **MUST
+NOT** register a will claiming `PlannedShutdown`.
+
+**The value already existed under another meaning — that was checked first, and it did not.** The
+search that has now paid eight times found nothing: `PowerOff`, `GoingOffline`, `Goodbye`,
+`Farewell` — **0 hits** across schemas in all repos; `ScheduledReset` is a *boot* reason (why the
+station came back, never why it is leaving) and `decommission` names an out-of-scope admin
+lifecycle. `bay-status` has no `Maintenance` and its `Unavailable` is about a **bay**, and reachable
+only after a server-commanded `SetMaintenanceMode` — the opposite direction. The specification names
+the missing thing once, in its own words, and never defines it:
+[`connection-lost.md` §4.2] rule 3, *"or the station performs a clean MQTT DISCONNECT **without
+sending an explicit offline notification**"*.
+
+**Radius, stated before the schema was touched and then measured:** ONE schema file; of the **341**
+vectors the schema gate validated, **341 keep their verdict** and **1** is added
+(`connection-lost-planned-shutdown.json`). The existing negative
+`invalid/core/connection-lost-invalid-enum.json` carries `graceful_shutdown` and stays correctly
+**rejected** — it is not inverted, because what it pins is that `reason` is a closed set, which is
+still true; it now also pins the spelling.
+
+**Signing is deliberately unchanged.** ConnectionLost stays exempt, and the exemption is on the
+ACTION. For the LWT the reason is structural — the broker publishes it after the station is gone, so
+there is no live key. The station-published form has no such obstacle and **MAY** carry a `mac`, but
+a server **MUST NOT** refuse it for the absence of one: the exemption is per action and a station is
+entitled to rely on it. Authentication rests where it already did — the broker binds
+`ospp/v1/stations/{station_id}/to-server` to the station's client certificate, so no other party can
+publish a ConnectionLost naming this station. [`03-messages.md`]'s signing note said the exemption
+held "because it is pre-configured at connect time and published by the broker, not the station" —
+a sentence this change would have falsified, so it is rewritten rather than left to rot.
+
+**The money does not move.** A planned shutdown is not a lighter event for a customer mid-wash:
+§5 steps 1–5 are identical for all three detection paths, and a station that announces its departure
+with a session running owes exactly the same settlement on the same timer. What the announcement
+changes is the diagnosis. §5 gains rule 7 for that: the server **MUST** record *which* mechanism
+reported the departure and **MUST NOT** collapse the three, because they assert opposite things
+about the station and nothing recovers the distinction afterwards from `is_online = false`.
+
+### 2. Firmware tamper vectors: the surface with a pointer had one class of three
+
+[`06-security.md` §4.6] makes the **station** verify a firmware image against a Firmware Signing
+Certificate, and **no OSPP message carries either the image or the key** — the protocol ships a URL
+and a signature. That makes the conformance corpus the implementer's only instrument for the one
+obligation he cannot exercise against a live server. It held **one** firmware vector, of class SIG.
+
+Two are added, so the surface now carries all three classes — **14 vectors across 8 surfaces**, up
+from 12:
+
+- **`firmware-body-image-byte-flipped` (BODY)** — one byte of the image flipped **and the checksum
+  recomputed to match**, signature untouched. The document is entirely self-consistent, so a station
+  that verifies only the checksum installs it. That is §4.6's own sentence expressed as bytes:
+  *"SHA-256 checksum verification alone is NOT sufficient — it protects against corruption but not
+  against malicious replacement."* The checksum travels in the same message as the URL, so whoever
+  substitutes the binary substitutes the checksum with it; only the signature establishes ORIGIN.
+- **`firmware-verified-with-station-key` (KEY)** — a pristine image and a pristine signature offered
+  to the **station identity** key. The station already holds several keys and the protocol delivers
+  none of them, so picking the wrong one is entirely the implementer's to get wrong and nothing on
+  the wire would show it.
+
+**No new key material was minted.** Both vectors use keys the corpus has always published and
+documents in `conformance/test-keys/README.md`: `firmware-test-pub.pem` (the correct signer) and
+`station-test-pub.pem` (the wrong one), with the signed artefact
+`conformance/test-firmware/test-firmware.bin`. Each case carries the portable form with the key
+**inline** and asserts, first, that the **untouched base verifies** (`mustVerify: true`) before
+asserting the tampered one is refused — the discipline the other 12 already follow.
+
+**The gate is what makes the absence red.** `verify-tamper-rejection.mjs` had a global
+`REQUIRED_CLASSES` floor, and it was already satisfied — the corpus *had* a BODY vector, just not for
+firmware. A per-surface floor (`REQUIRED_CLASSES_BY_SURFACE`) is added and `MIN_VECTORS` raised
+12 → 14; the new floor was RED before the vectors existed and names the surface it is protecting.
+
+---
+
 ## [0.35.0] — 2026-09-06
 
 > **MINOR, normative.** The last Server → Station action whose response could not express a refusal
