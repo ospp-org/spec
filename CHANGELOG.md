@@ -8,6 +8,23 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.37.2] — 2026-09-08
+
+> **PATCH, non-normative.** One cross-reference, wrong in prose I wrote the same day.
+
+`02-transport.md` §3.3's new rule-set opens by grounding per-sender uniqueness in Chapter 01 and
+cited it as **§6**. The statement is real — *"Message identifiers (`msg_`) are RFC 4122 UUIDs and
+are unique per sender"* — but it lives in **§3 Identity Scheme**, and Chapter 01 has no §6 that
+says anything of the kind. Nothing catches this: the link carried no `#anchor`, so a link checker
+resolves it to the file and passes, and the section number is ordinary prose to every other gate.
+It now reads §3 and carries `#3-identity-scheme`, so the next reader lands on the sentence and a
+link checker starts to have an opinion.
+
+**0 schema bytes, 0 vectors, 342 → no change (345/345)**; `protocolVersion` stays `0.3.0`. Gates
+8 of 8.
+
+---
+
 ## [0.37.1] — 2026-09-08
 
 > **PATCH, non-normative.** `errorText` has been `^[A-Z][A-Z0-9_]+$` for a long time and the
