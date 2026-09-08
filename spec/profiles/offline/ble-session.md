@@ -1,6 +1,6 @@
 # BLE Session Lifecycle
 
-> **Status: EXPERIMENTAL** | **OSPP Version:** 0.37.2
+> **Status: EXPERIMENTAL** | **OSPP Version:** 0.37.3
 >
 > Published for review, **not** for implementation. May change incompatibly without a MAJOR
 > bump. See [Release status](../../../README.md#ble-is-experimental).

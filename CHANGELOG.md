@@ -8,6 +8,40 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.37.3] — 2026-09-08
+
+> **PATCH, normative correction.** Rule 4's comparison basis was **the whole envelope**, and it
+> should never have been. It is the **`payload`**, and the difference is a double-execution.
+
+### What 0.37.0 got wrong
+
+Rule 4 said content equality is the OSPP Canonical Form *"of the message with `mac` removed — the
+exact byte sequence §5.4 already computes the MAC over"*. That is a true sentence about the MAC and
+the wrong basis for this comparison, because `timestamp` is inside it.
+
+A sender that re-composes a REQUEST after a response timeout **keeps** the `messageId` — it has to,
+that is what correlates the answer ([§3.2](spec/02-transport.md)) — and re-stamps the time. Under an
+envelope-level comparison that honest retry is **not equal** to the original, so rule 4 declares a
+collision and hands it to the handler a second time. Rule 4 exists so a genuine second claim is not
+swallowed; read that way it produces the double execution rule 3 exists to prevent, on the most
+ordinary event in the protocol.
+
+**The comparison is the canonical `payload`, and nothing else.** The payload is the claim; the
+envelope around it is transport. Two identical claims are one claim however the envelope was
+stamped. The "cannot be stricter than the signature" property survives unchanged — the payload sits
+inside the byte sequence §5.4 already MACs, so a frame whose `mac` verified has been reduced to this
+form already.
+
+**Found by reading the reference implementation against the text**, which had reached the same
+conclusion first and written down why: *"identical payload, re-stamped, carry different macs.
+Comparing macs would call every ordinary redelivery a conflict. Only the payload is the claim."*
+The specification and the implementation disagreed, and the specification was wrong.
+
+**0 schema bytes, 0 vectors, 345/345 unchanged**; `protocolVersion` stays `0.3.0`. Gates 8 of 8.
+The 0.37.0 entries above are left as written — they record what that release said.
+
+---
+
 ## [0.37.2] — 2026-09-08
 
 > **PATCH, non-normative.** One cross-reference, wrong in prose I wrote the same day.
