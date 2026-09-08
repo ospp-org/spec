@@ -8,6 +8,47 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.37.1] — 2026-09-08
+
+> **PATCH, non-normative.** `errorText` has been `^[A-Z][A-Z0-9_]+$` for a long time and the
+> corpus did not exercise it **once**. Three vectors, and the restriction is guarded.
+
+### The measurement that made this worth doing
+
+The pattern was removed from **all 18** schemas that carry it — 19 declarations, all on
+`errorText`, at top level and nested (`change-configuration-response` inside its results array,
+`status-notification` on a per-program entry as well as the bay) — and `verify-schemas.py` returned
+**342/342, identical to baseline**. Of the 35 vectors that touch the field, the **5** that would
+have failed are all on `diagnostics-notification` and `firmware-status-notification`, the two that
+deliberately carry **no** pattern. On the eighteen that do: **zero**. A constraint no vector
+exercises is a constraint that can be deleted without any instrument saying so.
+
+It had already cost something. `ts-station-simulator` emitted prose into `errorText` from **eight**
+sites, every one on a pattern-bearing schema — frames a validating server drops — and its own
+`docs/MEASURED-dlq-drained-20260901T000000Z.md` records exactly this reaching the server DLQ:
+*"/errorText: The string should match pattern: ^[A-Z][A-Z0-9_]+$"*.
+
+### The three vectors, and why three
+
+| Vector | Shape it catches |
+|---|---|
+| `invalid/transaction/reserve-bay-response-invalid-pattern.json` | prose with spaces and lowercase — the simulator's actual defect |
+| `invalid/transaction/stop-service-response-invalid-pattern.json` | `SESSION-NOT-FOUND` — **hyphens where the rule says underscores**, the one violation that still looks machine-readable |
+| `invalid/core/status-notification-invalid-pattern.json` | a **nested** `errorText`, on a program entry, with the bay-level one left valid |
+
+Each is otherwise schema-valid and fails **only** on `errorText`, so none can pass for a second
+reason. `verify-schemas.py` gains the `-invalid-pattern` suffix so the names resolve to their
+schemas.
+
+**The control:** with the pattern stripped from all 18 schemas the corpus now reports **exactly 3
+FAIL — these three and nothing else**, against 0 before. That is the whole claim, and it is the
+difference between a corpus that would notice the constraint disappearing and one that would not.
+
+Corpus **342 → 345** (168 valid, 177 invalid). **0 schema bytes**, no normative text moved,
+`protocolVersion` stays `0.3.0`.
+
+---
+
 ## [0.37.0] — 2026-09-08
 
 > **MINOR, normative.** The deduplication rule was stated entirely on message **type**, so a

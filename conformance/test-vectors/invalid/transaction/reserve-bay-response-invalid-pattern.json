@@ -1,0 +1,5 @@
+{
+  "status": "Rejected",
+  "errorCode": 3014,
+  "errorText": "Bay bay_c1d2e3f4a5b6 is in state Occupied, cannot reserve"
+}

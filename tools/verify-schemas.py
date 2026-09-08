@@ -29,6 +29,7 @@ SUFFIXES = [
     "-additional-properties",
     "-missing-required",
     "-missing-signature",
+    "-invalid-pattern",
     "-invalid-status",
     "-invalid-enum",
     "-invalid-type",

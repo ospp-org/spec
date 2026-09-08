@@ -1,0 +1,15 @@
+{
+  "bayId": "bay_d4e5f6a7b8c9d0e1",
+  "bayNumber": 3,
+  "status": "Faulted",
+  "programs": [
+    {
+      "programNumber": 2,
+      "available": false,
+      "errorCode": 5008,
+      "errorText": "sensor failure"
+    }
+  ],
+  "errorCode": 5008,
+  "errorText": "SENSOR_FAILURE"
+}
