@@ -30,7 +30,17 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-09-06  (unreleased)  433 unbolded, 1255 bolded spans — the restated counts and
+    (this HEAD) 2026-09-08  (unreleased)  430 unbolded, 1282 bolded spans — the deduplication rule
+                                   that was never written down. Unbolded FALLS BY THREE and BASELINE
+                                   follows it down to 430; all three are in `02-transport.md` §3.3
+                                   (82 -> 79), which had three plain MUSTs in the four lines above a
+                                   table whose behaviour they impose, and no other file moves. Both
+                                   numbers RE-DERIVED on this tree. The companion figure reads 1272
+                                   before this change where the row below records 1255, so that one
+                                   was not re-derived at 0.34.0, 0.35.0 or 0.36.0 either; it is
+                                   recorded here rather than corrected in place, for the reason the
+                                   row below gives.
+    (superseded) 2026-09-06  (unreleased)  433 unbolded, 1255 bolded spans — the restated counts and
                                    rosters. Unbolded is UNCHANGED and at BASELINE: 0.33.1 moves no
                                    normative prose at all, only numbers this document states about
                                    itself. Both numbers RE-DERIVED on this tree — and the bolded
@@ -217,7 +227,7 @@ import re
 import sys
 from collections import Counter
 
-BASELINE = 433
+BASELINE = 430
 
 KEYWORD = re.compile(r'\b(MUST NOT|MUST|SHALL NOT|SHALL)\b')
 FENCE = re.compile(r'```.*?```', re.S)

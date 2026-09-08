@@ -1,6 +1,6 @@
 # Chapter 03 — Message Catalog
 
-> **Status:** Draft | **OSPP Version:** 0.36.0
+> **Status:** Draft | **OSPP Version:** 0.37.0
 
 This chapter is the normative reference for **every message** in the OSPP protocol. Each message is documented with its complete payload schema, metadata, and example.
 
@@ -1263,7 +1263,7 @@ This message is NOT sent when the session is stopped by a server-initiated StopS
 | **Trigger** | Unexpected disconnect (TCP lost without MQTT DISCONNECT), or the station's own notice immediately before a deliberate DISCONNECT |
 | **Expected Response** | None (EVENT) |
 | **Timeout** | N/A |
-| **Idempotency** | Yes — multiple LWT for same station are deduplicated |
+| **Idempotency** | Yes, by the handler — **not** by transport dedup. The LWT `messageId` is fixed at CONNECT and republished unchanged on every unexpected disconnect, so successive disconnects arrive under one identifier with identical content; a receiver that deduplicates them records the station online through every disconnect after the first. ConnectionLost is exempt from deduplication and its handling **MUST** be idempotent instead ([`02-transport.md` §3.3](02-transport.md#33-deduplication) rule 5) |
 | **Message Expiry** | Never (exempt — critical event) |
 
 This message has two senders, distinguished by `reason`.

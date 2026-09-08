@@ -1,6 +1,6 @@
 # Chapter 02 — Transport
 
-> **Status:** Draft | **OSPP Version:** 0.36.0
+> **Status:** Draft | **OSPP Version:** 0.37.0
 
 OSPP defines three transport layers for communication between participants. Each transport serves a distinct channel with its own security model, reliability guarantees, and failure modes.
 
@@ -146,7 +146,7 @@ The `v1` segment in the topic path is a **namespace identifier**, NOT the protoc
 - The protocol version is carried inside the message envelope via the `protocolVersion` field (see [Chapter 03 — Messages](03-messages.md)) and checked at boot by **exact match** against the set the server supports ([VERSIONING.md](../VERSIONING.md)). "Negotiation" here means that check and its `1007` outcome; the two peers do not converge on a version, and a shared MAJOR implies nothing.
 - The topic namespace `v1` MUST remain `v1` for every OSPP protocol version, regardless of that version's MAJOR component. The two numbers are unrelated: the namespace identifies the topic layout, the envelope field identifies the message contract.
 - A new topic namespace (e.g., `v2`) would only be introduced for a fundamental transport-level change — a different topic shape or a different addressing scheme — not for any change the envelope's `protocolVersion` can express.
-- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.36.0*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.3.0`): the two version numbers evolve separately and need not match.
+- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.37.0*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.3.0`): the two version numbers evolve separately and need not match.
 
 **Negotiation happens once, at boot. A later mismatch is not re-negotiated, and is not refused.**
 
@@ -238,13 +238,15 @@ Receivers MUST handle out-of-order messages gracefully:
 
 ### 3.3 Deduplication
 
-QoS 1 may deliver the same message more than once. Both station and server MUST implement deduplication.
+QoS 1 may deliver the same message more than once. Both station and server **MUST** implement deduplication.
+
+**What a duplicate is.** A duplicate is a message whose `messageId` has already been seen from the same sender **and** whose content is the same. Both halves are required. `messageId` is unique per sender ([Chapter 01 §6](01-architecture.md)), so a repeated identifier is *normally* one message delivered twice — the case rule 3 governs. Rules 4 and 5 name the two cases where it is not, and in neither of them does rule 3 apply.
 
 **Requirements:**
 
-- The receiver MUST maintain a set of recently seen `messageId` values.
-- The deduplication window MUST be at least **1000 message IDs** or **1 hour**, whichever is larger.
-- Duplicate handling by message type:
+1. The receiver **MUST** maintain a set of recently seen `messageId` values, scoped to the sender. A set shared across senders lets one peer's identifier suppress another's.
+2. The deduplication window **MUST** be at least **1000 message IDs** or **1 hour**, whichever is larger.
+3. Duplicate handling by message type:
 
 | Message Type | On Duplicate |
 |-------------|--------------|
@@ -253,7 +255,16 @@ QoS 1 may deliver the same message more than once. Both station and server MUST 
 | EVENT | Silently discard |
 | ERROR | Silently discard |
 
-Implementations SHOULD use a hash set or LRU cache for O(1) lookup.
+4. **A differing payload is not a duplicate.** If the `messageId` repeats but the content differs from what was recorded under it, the two are not one message delivered twice — they are two claims under one identifier. The receiver **MUST NOT** apply rule 3 to the second. It **MUST** process it on its own content and answer it on its own terms, exactly as if the identifier had been fresh. OSPP defines no error code for an identifier collision and none is to be invented: the second message is not refused, it is *handled*.
+5. **An identifier that is reused by design is not a duplicate marker.** ConnectionLost in its LWT form carries a `messageId` registered with the broker at CONNECT and republished unchanged on every unexpected disconnect ([§4.3](#43-last-will-and-testament-lwt)), so successive disconnects arrive under one identifier with **identical** content — which rule 4 cannot separate, because there is nothing different to see. A receiver **MUST NOT** deduplicate ConnectionLost, and **MUST** make its handling of it idempotent, since it will legitimately process it many times. A station **SHOULD** register a freshly generated `messageId` with each will it sets, which makes the identifier honest but does not relieve the receiver of this rule: the receiver cannot tell which stations did.
+
+Implementations **SHOULD** use a hash set or LRU cache for O(1) lookup.
+
+> **Why rule 4 is stated here rather than left to each message.** This specification already applies it twice, each time to one identifier: to `offlineTxId` in [`reconciliation.md` §3](profiles/offline/reconciliation.md), where a differing signed receipt under a stored identifier is a collision answered `Rejected` with `2017 OFFLINE_RECEIPT_MISMATCH` rather than acknowledged as a repeat, and to `reservationId` in [`reserve-bay.md` §5.1](profiles/transaction/reserve-bay.md) rule 8, whose words are the general form — *"identity of the identifier is not identity of the request"*. Both sit **above** the transport. Without rule 4 the transport contradicts them: it collapses the second claim before the layer that owes the comparison can see it, and a `2017` that [`reconciliation.md` §3](profiles/offline/reconciliation.md) makes mandatory becomes unreachable whenever the colliding submissions also share a `messageId`. A rule two profiles depend on cannot live only in those profiles.
+>
+> **What the comparison is made over, and why it cannot be stricter than the signature.** Content equality is equality of the **OSPP Canonical Form** ([`06-security.md` §4.8](06-security.md#48-ospp-canonical-form)) of the message with `mac` removed — the exact byte sequence [§5.4](06-security.md#54-mac-computation) already computes the MAC over. So key order, whitespace and other insignificant encoding differences **MUST NOT** make two messages differ here: a message whose `mac` verified has already been reduced to this form, and a comparison stricter than the one the signature survived would reject frames the receiver has itself proved authentic. Two honest QoS 1 redeliveries are byte-identical and compare equal; note that `timestamp` is inside the signed form, so two *separately composed* messages are distinguishable even when their payloads agree.
+>
+> **When the comparison cannot be made.** A receiver that has not retained enough of the recorded message to compare **MUST** treat the repeat as a duplicate and apply rule 3. That is the safe direction and the only one: applying rule 3 to a genuine collision loses a message, while skipping it on a genuine redelivery acts twice on one — and for a REQUEST that means executing it twice. Retention is not a new obligation; rule 3 already requires the cached RESPONSE, and rule 4 asks the receiver to keep a fingerprint of what produced it.
 
 ### 3.4 Retain Flag
 

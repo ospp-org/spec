@@ -8,6 +8,91 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.37.0] — 2026-09-08
+
+> **MINOR, normative.** The deduplication rule was stated entirely on message **type**, so a
+> receiver was told what to do with a repeated `messageId` and never told what makes one a repeat.
+> Two cases fall through that gap in opposite directions, and this specification already answers
+> the first one twice — for `offlineTxId` and for `reservationId` — one identifier at a time,
+> **above** the transport that swallows the second claim before either rule can see it.
+
+### 1. §3.3 gains what a duplicate *is*
+
+`02-transport.md` §3.3 said *"the receiver MUST maintain a set of recently seen `messageId`
+values"* and then gave a table keyed on REQUEST / RESPONSE / EVENT / ERROR. Nothing in it mentions
+content. Read literally — and it is the only reading available — a second message under a seen
+identifier is a duplicate **whatever it says**, and for a REQUEST the receiver replays the cached
+RESPONSE to it.
+
+**The rule is stated twice already, and both statements sit above the layer that defeats them.**
+[`reconciliation.md` §3](spec/profiles/offline/reconciliation.md) makes it a **MUST**: a
+TransactionEvent whose signed `receipt.data` differs from the stored one under the same
+`offlineTxId` is *"either an identifier collision or tampering"*, answered `Rejected` with
+`2017 OFFLINE_RECEIPT_MISMATCH`, both records retained, the operator alerted.
+[`reserve-bay.md` §5.1](spec/profiles/transaction/reserve-bay.md) rule 8 states the general form in
+words this release simply moves down a layer — *"identity of the identifier is not identity of the
+request"*. Neither is reachable when the colliding submissions also share a `messageId`: transport
+dedup runs **first** and returns the cached answer, so a MUST at the profile level becomes
+undecidable by the layer beneath it. That is the argument for writing the rule here rather than a
+third time in a third profile.
+
+**§3.3 rule 4** now says a repeat whose content differs is not a duplicate: the table does not
+apply, and the receiver processes the message on its own content and answers it on its own terms.
+**No error code is introduced** — none exists for an identifier collision among the 121, and none is
+invented. The second message is not refused; it is handled.
+
+**What the comparison is over.** Equality of the **OSPP Canonical Form**
+([`06-security.md` §4.8](spec/06-security.md)) with `mac` removed — the exact byte sequence §5.4
+already computes the MAC over. Stated that way the comparison **cannot be stricter than the
+signature the frame already passed**: key order and whitespace cannot make two messages differ,
+because a message whose `mac` verified has been reduced to this form already. `timestamp` is inside
+the signed form, so two separately composed messages remain distinguishable even when their
+payloads agree, while two QoS 1 redeliveries of one message are byte-identical and compare equal.
+
+**Where it degrades.** A receiver that has not retained enough to compare **MUST** apply the table.
+That is the safe direction and the only one: treating a collision as a duplicate loses a message,
+whereas skipping the comparison on a genuine redelivery executes a REQUEST twice.
+
+### 2. §3.3 rule 5 — and rule 4 could not have covered it
+
+**An identifier reused by design is not a duplicate marker.** The ConnectionLost LWT `messageId` is
+registered with the broker at CONNECT and republished **unchanged** on every unexpected disconnect,
+so successive disconnects arrive under one identifier carrying **identical** content. Rule 4 cannot
+separate them — there is nothing different to see — which is why rule 5 is a second rule and not a
+corollary of the first.
+
+`03-messages.md` §5.5 stated the wrong outcome outright. Its Idempotency row read *"Yes — multiple
+LWT for same station are deduplicated"*, in a column [§1](spec/03-messages.md) defines as *"whether
+the message can be safely retried"* and whose sibling rows carry MUSTs. A receiver implementing it
+claims the identifier on the first disconnect and discards every later one for the whole window —
+**at least 1000 IDs or an hour** — so the station stays recorded online through every disconnect
+after the first, and the session recovery timers that the event exists to arm never arm. The row now
+says the idempotency is the **handler's**, not transport dedup's, and points at rule 5.
+
+A receiver **MUST NOT** deduplicate ConnectionLost and **MUST** make its handling idempotent
+instead. A station **SHOULD** register a freshly generated `messageId` with each will it sets —
+which makes the identifier honest without relieving the receiver, who cannot tell which stations
+did.
+
+### 3. One restatement corrected
+
+[`06-security.md` §2](spec/06-security.md) said receivers *"reject duplicates"*, which is neither
+behaviour §3.3 defines — a duplicate REQUEST is answered from cache and everything else is
+discarded; nothing is rejected. It now states both, and the content condition.
+
+### Radius, measured before anything was touched
+
+| | |
+|---|---|
+| Schema bytes moved | **0** — `messageId` carries no `pattern`; the rule is about receiver behaviour, not shape |
+| Conformance vectors moved | **0 of 348**; `verify-schemas.py` **342/342**, identical to baseline |
+| `protocolVersion` | unchanged at `0.3.0` |
+| Documents changed | **3** — `02-transport.md`, `03-messages.md`, `06-security.md` |
+| Bold ratchet | unbolded **433 → 430**, entirely `02-transport.md` (82 → 79); three plain MUSTs in the lines above the table whose behaviour they impose. BASELINE lowered to 430; both figures re-derived on this tree |
+| Gate set | 8 of 8 green, set-identical to baseline; `verify-protocol.sh` **6 FAIL** unchanged, entry-for-entry (all BLE schemas) |
+
+---
+
 ## [0.36.0] — 2026-09-08
 
 > **MINOR, normative.** A station that shuts down on purpose could not say so — the only value the

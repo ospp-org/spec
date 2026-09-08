@@ -1,7 +1,7 @@
 # OSPP Known Issues
 
 **Date:** 2026-09-08
-**Specification-document version:** 0.36.0 (release tag `v0.36.0`)
+**Specification-document version:** 0.37.0 (release tag `v0.37.0`)
 **Status:** 3 blockers open (all BLE), **27** non-blocking issues open, **24** decisions recorded (one of
 them reversing another), and one named defect **class** with **eighteen** instances, **five** still open. **The counts are
 re-derived from the headings on every release, never incremented** — the previous revision read 24
@@ -23,7 +23,7 @@ the arcs since
 | **Total open** | **30** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
-EXPERIMENTAL in 0.36** — see [BLE release status](README.md#ble-is-experimental). They do
+EXPERIMENTAL in 0.37** — see [BLE release status](README.md#ble-is-experimental). They do
 not affect the MQTT surface, offline reconciliation, or provisioning, all of which are
 implemented and exercised against a second implementation.
 

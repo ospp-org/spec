@@ -1,6 +1,6 @@
 # Chapter 06 — Security
 
-> **Status:** Draft | **OSPP Version:** 0.36.0
+> **Status:** Draft | **OSPP Version:** 0.37.0
 
 This chapter defines the complete security model for the OSPP protocol, covering threat analysis, authentication, authorization, cryptographic requirements, message integrity, offline security, anti-abuse mechanisms, and data protection.
 
@@ -38,7 +38,7 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 **Description:** An attacker captures a valid MQTT message or BLE message and retransmits it to trigger duplicate actions (e.g., replay a StartService to get a free service, replay a TransactionEvent to double-charge a user).
 
 **Countermeasures:**
-- Every MQTT message carries a unique `messageId` (RFC 4122 UUID). Receivers maintain a deduplication window (last 1000 IDs or 1 hour) and reject duplicates (see [Chapter 02](02-transport.md), §3.3).
+- Every MQTT message carries a unique `messageId` (RFC 4122 UUID). Receivers maintain a deduplication window (last 1000 IDs or 1 hour) and suppress duplicates — replaying the cached RESPONSE for a REQUEST, discarding anything else. A repeat is a duplicate only if its content also matches; two differing messages under one identifier are both processed (see [Chapter 02](02-transport.md#33-deduplication), §3.3).
 - HMAC-SHA256 binds the `messageId` and `timestamp` to the session key — replayed messages with old timestamps are detectable.
 - BLE OfflineAuthRequest [MSG-031] includes a **monotonic counter** that MUST be strictly greater than the last seen counter; replaying an old counter value triggers error `2005 OFFLINE_COUNTER_REPLAY`.
 - BLE session keys are derived per-handshake from fresh ephemeral ECDH keys and nonces (§6.5), so captured messages from a previous session are invalid and cannot be decrypted later (forward secrecy).
