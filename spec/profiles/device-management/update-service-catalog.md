@@ -63,26 +63,48 @@ The station **MUST** reject the catalog if any service entry fails validation.
 `0.31.0` and the bound is stated here instead, on the **emitter**, because the emitter is the only
 party that can honour it:
 
-9. A server **MUST NOT** publish an UpdateServiceCatalog whose serialized payload exceeds the **64 KB**
-   MQTT Maximum Packet Size ([Chapter 02 §1.2](../../02-transport.md#12-connection-parameters)), and
-   **SHOULD** stay well inside it. A station **MAY** refuse an oversized catalog with
-   `5025 CATALOG_TOO_LARGE`, and needs no capability negotiation to do so.
+9. A server **MUST NOT** publish an UpdateServiceCatalog whose serialised **envelope** exceeds the
+   **64 512-byte envelope cap** ([Chapter 02 §10.2.1](../../02-transport.md#1021-the-envelope-cap)),
+   and **SHOULD** stay well inside it. A station **MAY** refuse an oversized envelope on length alone,
+   before parsing and before verifying `mac`, with `1014 MESSAGE_TOO_LARGE` — that is the refusal §10.2.1
+   grants every receiver, and it is the one that protects a fixed receive buffer. `5025
+   CATALOG_TOO_LARGE` remains available for a catalog the station can receive and cannot **keep**;
+   see the note below.
 
 **The arithmetic, so a station can size its receive buffer from published bounds rather than from a
 promise.** Every service entry is already bounded by
 [`service-item.schema.json`](../../../schemas/common/service-item.schema.json): `serviceName` at 128
 characters, `bindings` at 64 entries, and each binding's ordinals at 64 and 32. A worst-case entry
-admitted by those bounds serialises to roughly **2.5 KB**, so 64 KB holds about **25** of them;
-entries at the size the conformance corpus actually carries (largest **206 B**, mean **181 B**) fit
-about **318**. A station that provisions for 64 KB is correct under every legal catalog, which is the
-figure it already has to provision for anyway, since it is the packet ceiling for every message.
+admitted by those bounds serialises to **2 762 B**, so the 64 512-byte envelope cap holds **22** of
+them; entries at the size a deployed catalog actually carries (largest **213 B** measured over the
+services configured on a live environment, against the conformance corpus's **206 B**) fit about
+**295**. A station that provisions for the envelope cap is correct under every legal catalog, which
+is the figure it already has to provision for anyway, since §10.2.1 makes it the ceiling for every
+message.
 
-**Why no `maxItems`.** A schema bound would have to pick one of those two numbers. Picking 25 forbids
-catalogs that are legal, useful and in service; picking 318 permits a payload that cannot be
-delivered. The transport ceiling is the real constraint, it already exists, and it binds the party
-that can measure the payload before sending it. `5025`'s Recommended Action told servers to *"check
-station capabilities for maximum catalog size"* until `0.30.0` — a field that has never existed — and
-now names this ceiling.
+**Why no `maxItems`.** A schema bound would have to pick one of those two numbers. Picking 22 forbids
+catalogs that are legal, useful and in service; picking 295 permits a payload that cannot be
+delivered. The envelope cap is the real constraint, it binds every action rather than this one, and
+it binds the party that can measure the payload before sending it. `5025`'s Recommended Action told
+servers to *"check station capabilities for maximum catalog size"* until `0.30.0` — a field that has
+never existed — and now names this ceiling.
+
+> **`5025 CATALOG_TOO_LARGE` loses one of its two grounds to the envelope cap, and it is the
+> ground that could never be honoured.** The registry row gives two: *storage* and *processing*
+> capacity. The processing ground is unreachable by construction once §10.2.1 holds, and was
+> unreachable in a worse way before it. To emit `5025` a station must first read `catalogVersion`
+> and `services` out of the payload — and it may not touch the payload until `mac` verifies
+> ([Chapter 06 §5.4](../../06-security.md)), which requires re-canonicalising the **whole**
+> envelope, which forbids streaming. So a station could only say *"this is more than I can
+> process"* about bytes it had already buffered and hashed in full: the refusal that defends the
+> buffer sat behind the buffer. Under the cap that contradiction is gone, because the largest
+> envelope a station can legally receive is a number it provisions for once, and any catalog
+> within it is by definition one it can process. **What survives is the storage ground**: a
+> station that receives, verifies and parses a legal catalog and then cannot persist it answers
+> `5025` — and that is a fact about its flash, not about its receive path. A station with no such
+> limit will never emit `5025`, and that is correct rather than a coverage gap.
+> [`TC-DM-008`](../../../conformance/test-cases/device-management/TC-DM-008.md) records why the
+> code has no conformance case; this is why it cannot get one from the wire alone.
 
 ## 7. Error Codes
 

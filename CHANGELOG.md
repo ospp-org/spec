@@ -8,6 +8,114 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.38.0] — 2026-09-10
+
+> **MINOR, normative.** Nothing in this specification bounded a **message**. Twenty-two
+> `maxLength` keywords bound fields; **zero** bound the envelope — and the one refusal that
+> defends a receiver's buffer could only be issued from behind that buffer.
+
+### The envelope cap
+
+`02-transport.md` §10.2.1 is new: **a serialised MQTT envelope MUST NOT exceed 64 512 bytes
+(63 KiB)**.
+
+**Why it cannot be a schema keyword.** Measured across all **86** schemas: **70** admit a bounded
+serialisation, **16** do not. On the MQTT wire the split is **37 of 47** bounded, and the other
+**10** carry **12** unbounded members — **7** arrays with no `maxItems`
+(`update-service-catalog-request.services`, `get-configuration-request.keys`,
+`get-configuration-response.configuration` and `.unknownKeys`,
+`change-configuration-response.results`, `boot-notification-response.supportedVersions`,
+`authorize-offline-pass-request.offlinePass.offlineAllowance.allowedServiceTypes`) and **5** open
+objects (`boot-notification-response.configuration`, `security-event.details`,
+`start-service-request.params`, and the `data` of both DataTransfer messages). No `maxItems`
+closes an open object, and JSON Schema has no keyword for the length of a serialisation. So the
+cap is normative prose that implementations enforce — **0 schema bytes, 345 of 345 vectors
+unchanged.**
+
+**Why 64 512 and not another number.** Every input is measured, none is chosen:
+
+| input | value | how it was obtained |
+|---|--:|---|
+| broker's declared ceiling on the whole packet | **65 536** | the `maximumPacketSize` property of a live CONNACK, and §1.2 |
+| PUBLISH header at every field's own maximum | **285** | 4 fixed + 151 topic (`topicPrefix` ≤ 64, `stationId` ≤ 64) + 2 packet id + ≤ 128 properties |
+| header allowance actually reserved | **1 024** | 3.6× the worst case |
+| largest envelope the schemas admit | **50 572** | `certificate-install-request` (`certificate` 16 384 + `caCertificateChain` 32 768) plus 1 336 of envelope at its maxima |
+| largest envelope observed on a deployment | **1 220** | 206 distinct frames over 47 (action, messageType, source) triples |
+| largest real service catalog | **1 326** | 5 services, 195–213 bytes each |
+
+The cap clears the largest frame the schemas can produce by **27.6 %** and the largest anybody
+has sent by **48×**. Below it, an UpdateServiceCatalog holds **22** services at the worst case
+`service-item.schema.json` admits and about **295** at the size a real catalog carries — which
+is why `KNOWN-ISSUES`'s `maxItems` dilemma (25 forbids legal catalogs, 318 permits undeliverable
+ones) **dissolves** rather than being decided: a bound on the envelope forbids exactly the
+catalogs that would not arrive, and nothing else.
+
+`DataTransfer.data` moves from **64 KB** to **61 440 bytes (60 KiB)** for the same reason: at
+64 KB the field alone exceeded the envelope that has to carry it.
+
+### The refusal that sat behind the buffer
+
+A receiver **MAY** now refuse an inbound envelope **on serialised length alone, before parsing and
+before verifying `mac`**. That is the only refusal permitted to precede MAC verification, and it
+is the one that never had to enter the buffer it protects.
+
+It closes a contradiction rather than adding a rule. Verifying `mac` requires re-canonicalising
+the **whole** envelope, so streaming is forbidden by construction — a receiver holds the complete
+frame before it may read one field. Any refusal grounded in *"more than I can hold"* was therefore
+issued about bytes already held. **`5025 CATALOG_TOO_LARGE` was exactly that**: to emit it a
+station had to read `services` out of a payload it may not touch until the MAC verifies over
+every byte of it. Its **processing** ground is now unreachable by construction; its **storage**
+ground survives untouched, because that is decided after a successful parse and is a fact about
+flash. A station with no persistence limit will never emit `5025`, and that is the specification
+working rather than a coverage gap.
+
+New `07-errors.md` §3.7 names the class and shows it **exhausted at 3 of 119 rows**: `1014`
+(reachable, and now explicitly authorised pre-parse), `5025` (halved), and `5017
+INSUFFICIENT_STORAGE` — which stays **open**, because UpdateFirmware carries **0 of 6** properties
+naming the image's size, so a station cannot decide "this will not fit" before spending the
+download. The envelope cap does not reach that one: the size in question is the transfer's, not
+the frame's.
+
+### The ordering floor gained the window it was already being compared against
+
+`02-transport.md` §3.2 said only *discard a StatusNotification below the floor*. Read literally
+that discards every report a conforming station sends while its clock sits a second behind, and
+leaves the bay at a stale status with nothing on the wire to say why. Two rules are added, and
+**neither introduces a new number**:
+
+- **Clamp, do not refuse.** A receiver **MUST** take the smaller of the envelope `timestamp` and
+  its own receive time before comparing. A fast RTC would otherwise write a future watermark into
+  the floor and reject every real report until wall-clock time caught up — the same failure the
+  neighbouring bullet already forbids the *server* from causing.
+- **A three-band shortfall.** At most the message's own **MQTT Expiry Interval** (30 s for
+  StatusNotification, [Chapter 03 Appendix B](spec/03-messages.md)) it is a late delivery and is
+  discarded; above that up to **300 s** it is skew and is **accepted**; above 300 s it is
+  discarded and recorded where an operator can reach it. The lower edge is the interval past which
+  the broker would have dropped the message itself; the upper is the five minutes
+  `heartbeat.md` §6 rule 3 already makes a **MUST**.
+
+### `actualDurationSeconds` is the field the monotonic-timer rule exists for
+
+`heartbeat.md` §6 gains rule 6. Rule 5 has required a monotonic timer for session elapsed time
+since long before this release; what was missing is that it named no field, so the obligation read
+as advice. The field is `actualDurationSeconds`, it is the operand a settlement is computed from,
+and **the receiver takes it verbatim**: all three schemas that carry it
+(`session-ended-event`, `stop-service-response`, `ble/stop-service-response`) constrain it to
+`integer, minimum 0` with **no `maximum`**, and no rule asks a receiver to compare it against the
+interval between the session's own `startedAt` and `endedAt`. A station that derives it from the
+wall clock therefore bills every correction that lands mid-session, in whichever direction it
+went. The wall clock stamps values that get **ordered**; the monotonic timer produces the one that
+gets **differenced**; a station whose time comes from a network the operator does not control
+**MUST NOT** let the two share a clock.
+
+### Cascade
+
+`protocolVersion` stays `0.3.0`. Schemas move **0 bytes** and the vector corpus is **345/345,
+identical**. Both SDKs gain the cap constant and the two guards (emitter refuses to publish above
+it; receiver may refuse on length before parsing), and re-tag together; the server pin follows.
+
+---
+
 ## [0.37.3] — 2026-09-08
 
 > **PATCH, normative correction.** Rule 4's comparison basis was **the whole envelope**, and it

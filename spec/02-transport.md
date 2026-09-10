@@ -1,6 +1,6 @@
 # Chapter 02 — Transport
 
-> **Status:** Draft | **OSPP Version:** 0.37.3
+> **Status:** Draft | **OSPP Version:** 0.38.0
 
 OSPP defines three transport layers for communication between participants. Each transport serves a distinct channel with its own security model, reliability guarantees, and failure modes.
 
@@ -42,7 +42,7 @@ The station MUST establish the MQTT connection with the following parameters:
 | **Session Expiry Interval** | `3600` (1 hour) | Session state is retained for up to 1 hour after disconnect |
 | **Keep Alive** | `30` seconds — **default; overridden by `mqttConfig.keepAliveSeconds`** when the provisioning response carries it ([Flows §2](04-flows.md#2-station-provisioning)) | Balance between liveness detection and bandwidth |
 | **Receive Maximum** | `10` | Flow control — max 10 unacknowledged messages in flight |
-| **Maximum Packet Size** | `65536` (64 KB) | Practical limit; typical messages are 200–500 bytes |
+| **Maximum Packet Size** | `65536` (64 KB) | The transport ceiling on the whole MQTT packet. **A broker MUST NOT be configured below it**, because the 64 512-byte envelope cap of [§10.2.1](#1021-the-envelope-cap) sits 1 024 bytes inside it and a conformant envelope must always be deliverable. Typical messages are 200–500 bytes |
 | **Client ID** | `{stationId}` (e.g., `stn_a1b2c3d4`) — **fixed; not overridable by `mqttConfig.clientIdTemplate`** | MUST match the CN in the station's X.509 client certificate. The `stationId` already includes the `stn_` prefix — do not add it again. The broker enforces topic ACLs on that CN (§3.3 of [Chapter 06](06-security.md)), so this value is bound to the certificate rather than configured. |
 | **Will Delay Interval** | `10` seconds | Grace period before LWT fires (prevents false disconnects) |
 
@@ -146,7 +146,7 @@ The `v1` segment in the topic path is a **namespace identifier**, NOT the protoc
 - The protocol version is carried inside the message envelope via the `protocolVersion` field (see [Chapter 03 — Messages](03-messages.md)) and checked at boot by **exact match** against the set the server supports ([VERSIONING.md](../VERSIONING.md)). "Negotiation" here means that check and its `1007` outcome; the two peers do not converge on a version, and a shared MAJOR implies nothing.
 - The topic namespace `v1` MUST remain `v1` for every OSPP protocol version, regardless of that version's MAJOR component. The two numbers are unrelated: the namespace identifies the topic layout, the envelope field identifies the message contract.
 - A new topic namespace (e.g., `v2`) would only be introduced for a fundamental transport-level change — a different topic shape or a different addressing scheme — not for any change the envelope's `protocolVersion` can express.
-- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.37.3*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.3.0`): the two version numbers evolve separately and need not match.
+- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.38.0*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.3.0`): the two version numbers evolve separately and need not match.
 
 **Negotiation happens once, at boot. A later mismatch is not re-negotiated, and is not refused.**
 
@@ -225,6 +225,18 @@ Receivers MUST handle out-of-order messages gracefully:
     - Only a StatusNotification the receiver accepted and applied advances the floor. A report the receiver *discarded* **MUST NOT** advance it — otherwise one stale arrival raises the bar against every later report, including correct ones.
     - **No server-internal state change advances the floor.** Not the bay reset performed on a station's boot, not the connection-loss reset ([CORE-008](profiles/core/README.md)), not a heartbeat-timeout sweep, and not a general row-modification timestamp that any of those happen to touch. The floor is a **station-clock** value that arrived on the wire; a **server-clock** event is not commensurable with it and **MUST NOT** be substituted for it. A receiver that stamps its own clock into the floor will reject the very report it is waiting for: `serverTime` is computed before such a reset is written, so a conforming station that syncs to it is handed a clock reference already behind the bar it must clear, and the protocol treats several minutes of station skew as unremarkable.
     - Where no report has yet been accepted for a bay there is **no** floor, and that bay's first report **MUST NOT** be discarded on ordering grounds.
+    - **A timestamp ahead of the receiver's own clock is clamped, never refused.** Before comparing against the floor, the receiver **MUST** take the smaller of the envelope `timestamp` and its own receive time as the effective value. A station whose clock runs fast would otherwise write a future watermark into the floor and reject every real report until wall-clock time caught up — the same failure the bullet above forbids the *server* from causing, arriving from the station side instead. Clamping preserves the discard rule: a genuinely older message keeps its own past value and is still compared as one.
+    - **How far below the floor is still acceptable.** A report below the floor is not one condition but three, separated by the **shortfall** — the floor minus the effective timestamp:
+
+        | shortfall | what it is | what the receiver does |
+        |---|---|---|
+        | at most the message's own **MQTT Expiry Interval** — 30 s for StatusNotification ([Chapter 03 Appendix B](03-messages.md#appendix-b--mqtt-message-expiry-reference)) | a late delivery: the broker could still have been holding it | **discard**, and log |
+        | more than that, up to **300 s** | station clock skew inside the window that [`heartbeat.md` §6](profiles/core/heartbeat.md#6-clock-synchronization) rule 3 already treats as tolerable | **accept and apply** |
+        | more than **300 s** | skew the receiver cannot order against at all; the station is required by that same rule 3 to be logging `5106 CLOCK_ERROR` about the same fact | **discard**, and record it where an operator can reach it ([Chapter 05 §3.4](05-state-machines.md)) |
+
+      **Neither edge is a new number.** The lower one is the interval past which the broker would have dropped the message on its own, so a report older than the floor by more than that cannot be a late delivery — and one older by less might be. The upper one is the same five minutes rule 3 of `heartbeat.md` §6 makes a **MUST**. What was missing is that a receiver uses them as an *acceptance* window at all: read without it, "discard anything below the floor" discards every report a conforming station sends while its clock sits a second behind, and the bay is left at a stale status with nothing on the wire to say why.
+
+      A receiver that implements no window at all — discarding every below-floor report — remains conformant with the `SHOULD` above and is the degenerate case of this table, with both edges at zero. A receiver that implements one **MUST** use these edges rather than invent others, because both are already the station's own obligations and it can be held to neither of anything else.
 - **TransactionEvents**: The `txCounter` field is forensic evidence, not an ordering guarantee (per-pass, per-station; see [`profiles/transaction/transaction-event.md`](profiles/transaction/transaction-event.md)). Ascending order is RECOMMENDED; the receiver settles each transaction on its own merits in arrival order and does not gate on the counter.
 - **Online session-scoped EVENTs (Per-Session `seqNo`, OPTIONAL)**: MeterValues and SessionEnded MAY carry a per-session monotonic `seqNo` field starting at `0` for the first session-scoped EVENT and incrementing by exactly `1` for each subsequent EVENT in the same session (same `sessionId`). If `seqNo` is present:
     - The receiver MUST verify that consecutive EVENTs for the same `sessionId` increment `seqNo` by exactly `1`.
@@ -962,9 +974,68 @@ lenient parser.
 
 | Transport | Max Payload | Typical Size |
 |-----------|-------------|--------------|
-| MQTT | 64 KB (MQTT Maximum Packet Size) | 200–500 bytes |
+| MQTT | **64 512 bytes** — the envelope cap of §10.2.1, inside the 64 KB Maximum Packet Size of [§1.2](#12-connection-parameters) | 200–500 bytes |
 | BLE | Limited by MTU; fragmented if needed | 50–800 bytes |
 | HTTPS | No protocol limit; server MAY enforce 1 MB | Varies |
+
+#### 10.2.1 The envelope cap
+
+An OSPP message on MQTT is one envelope, serialised to UTF-8, published as the whole of one
+PUBLISH payload (§10.1). **That serialisation MUST NOT exceed 64 512 bytes (63 KiB).**
+
+**The bound is on the envelope and not on any field inside it, because no arrangement of
+field bounds can express it.** Ten of the 47 MQTT message schemas admit a member with no
+size bound of its own — **12 such members**, of which **7 are arrays without `maxItems`**
+(`update-service-catalog-request.services`, `get-configuration-request.keys`,
+`get-configuration-response.configuration` and `.unknownKeys`,
+`change-configuration-response.results`, `boot-notification-response.supportedVersions`,
+`authorize-offline-pass-request.offlinePass.offlineAllowance.allowedServiceTypes`) and
+**5 are open objects** (`boot-notification-response.configuration`, `security-event.details`,
+`start-service-request.params`, and the `data` of both DataTransfer messages), which no
+`maxItems` can close. JSON Schema has no keyword for the length of a serialisation, so this
+cap is a normative rule that implementations enforce, not a schema constraint;
+`mqtt-envelope.schema.json` cannot and does not carry it.
+
+**Emitter.** A publisher **MUST** measure the serialised envelope and **MUST NOT** publish
+one above the cap. It is the only party that can measure it before it exists on the wire.
+For the one action whose size an operator controls — UpdateServiceCatalog — this is the
+same obligation [`update-service-catalog.md` §6](profiles/device-management/update-service-catalog.md)
+rule 9 already imposes, now stated once for every action.
+
+**Receiver.** A receiver **MAY** refuse an inbound envelope on serialised length alone,
+before parsing it and before verifying `mac`. This is the **only** refusal permitted to
+precede MAC verification ([Chapter 06 §5.4](06-security.md)), and it exists so that a
+station with a fixed receive buffer never has to hold more than the cap in order to decide.
+The refusal is `1014 MESSAGE_TOO_LARGE`; where the envelope was not parsed far enough to
+read a `messageId`, no RESPONSE can echo one, so it is logged and discarded rather than
+answered ([Chapter 07 §2.1](07-errors.md)).
+
+**Transport.** The cap sits **1 024 bytes** below the 65 536-byte MQTT Maximum Packet Size
+of [§1.2](#12-connection-parameters), and that gap is the PUBLISH header allowance: fixed
+header 4 bytes, topic name at most 151 (`topicPrefix` ≤ 64, `/stations/`, `stationId` ≤ 64,
+`/to-station`, plus the 2-byte length), packet identifier 2, and MQTT 5 properties — at most
+128 for the `contentType`, `correlationData` and `messageExpiryInterval` OSPP sets. That is
+**285 bytes** at the maxima every one of those fields is bounded by, so the allowance is
+3.6× the worst case. **A broker MUST NOT be configured with a Maximum Packet Size below
+65 536**, or a conformant envelope becomes undeliverable at a size the emitter was told was
+legal.
+
+**How 64 512 was derived, and against what.**
+
+| measurement | bytes | source |
+|---|--:|---|
+| largest envelope the schemas admit with every bound at its maximum | **50 572** | `certificate-install-request` (49 236 = `certificate` 16 384 + `caCertificateChain` 32 768) plus the envelope's own 1 336 at its maxima |
+| largest envelope observed on a live deployment | **1 220** | 206 distinct frames across 47 (action, messageType, source) triples |
+| largest service catalog an operator has actually configured | **1 326** | 5 services, per item 195–213 bytes |
+| broker's declared ceiling | **65 536** | the `maximumPacketSize` property of CONNACK, and the same number in §1.2 |
+
+The cap is **27.6 %** above the largest frame the schemas can produce and **48×** above the
+largest one anybody has sent. At 64 512 an UpdateServiceCatalog holds **22** services at the
+maximum `service-item.schema.json` admits (2 762 bytes each) and about **295** at the size a
+real catalog carries. That is the answer to the choice
+[KNOWN-ISSUES](../KNOWN-ISSUES.md) recorded as unresolvable at the item level — a `maxItems`
+of 25 forbids legal catalogs and one of 318 permits undeliverable ones — because a bound on
+the envelope forbids neither: it forbids exactly the catalogs that would not arrive.
 
 ### 10.3 Timestamp Format
 
@@ -1015,7 +1086,7 @@ All timestamps MUST use **ISO 8601** format with **millisecond precision** and *
 | Will Delay Interval | 10s grace period for LWT | MUST |
 | Shared Subscriptions | Server horizontal scaling | SHOULD (production) |
 | Reason Codes | Structured error reporting in CONNACK/PUBACK | MUST |
-| Maximum Packet Size | 64 KB limit negotiation | SHOULD |
+| Maximum Packet Size | 64 KB packet ceiling; the 64 512-byte envelope cap of §10.2.1 sits inside it | SHOULD |
 | Receive Maximum | Flow control (10 in-flight messages) | SHOULD |
 | Topic Alias | Bandwidth optimization for high-frequency topics (MeterValues, Heartbeat). Stations **MAY** negotiate topic aliases with the broker to reduce per-message overhead. | MAY |
 | User Properties | Metadata propagation (e.g., correlation IDs, trace context) without modifying the JSON payload. Implementations **MAY** attach `X-Trace-Id` and `X-Correlation-Id` as User Properties. | MAY |

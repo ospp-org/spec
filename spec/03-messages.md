@@ -1,6 +1,6 @@
 # Chapter 03 — Message Catalog
 
-> **Status:** Draft | **OSPP Version:** 0.37.3
+> **Status:** Draft | **OSPP Version:** 0.38.0
 
 This chapter is the normative reference for **every message** in the OSPP protocol. Each message is documented with its complete payload schema, metadata, and example.
 
@@ -2365,7 +2365,7 @@ DataTransfer does not define message-specific error codes. Unknown vendors and d
 
 #### Size and Rate Limits
 
-The `data` field **MUST NOT** exceed **64 KB** when JSON-serialized. Payloads exceeding this limit **SHOULD** be rejected by the receiver with status `Rejected`. Both station and server **SHOULD** rate-limit DataTransfer messages to a maximum of **10 per minute per vendor**.
+The `data` field **MUST NOT** exceed **61 440 bytes (60 KiB)** when JSON-serialized — the figure derived in [`data-transfer.md` §5](profiles/core/data-transfer.md) rule 7 from the 64 512-byte envelope cap of [Chapter 02 §10.2.1](02-transport.md#1021-the-envelope-cap). Payloads exceeding this limit **SHOULD** be rejected by the receiver with status `Rejected`. Both station and server **SHOULD** rate-limit DataTransfer messages to a maximum of **10 per minute per vendor**.
 
 DataTransfer is HMAC-signed like every other message ([Chapter 06 §5.6](06-security.md#56-message-signing-classification)); an earlier revision exempted it as "not protocol-critical", and that class of per-message judgement is withdrawn. Vendor extensions requiring integrity **beyond** the transport MAC **SHOULD** implement application-level signing within the `data` payload.
 

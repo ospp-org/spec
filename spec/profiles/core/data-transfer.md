@@ -45,7 +45,7 @@ DataTransfer is **bidirectional** — both the station and the server may initia
 4. DataTransfer messages are HMAC-signed like any other MQTT message ([Chapter 06 §5.6](../../06-security.md#56-message-signing-classification)). An earlier revision exempted them as "not protocol-critical"; per-message judgement of that kind is withdrawn.
 5. Idempotency is vendor-defined — the protocol does not enforce idempotency for DataTransfer.
 6. Implementations SHOULD impose a maximum payload size limit consistent with their MQTT message size configuration.
-7. The `data` field **MUST NOT** exceed **64 KB** when JSON-serialized. Receivers **SHOULD** reject payloads exceeding this limit with status `Rejected`.
+7. The `data` field **MUST NOT** exceed **61 440 bytes (60 KiB)** when JSON-serialized. Receivers **SHOULD** reject payloads exceeding this limit with status `Rejected`. **The binding constraint is the envelope, not this field**: the 64 512-byte envelope cap ([Chapter 02 §10.2.1](../../02-transport.md#1021-the-envelope-cap)) leaves 3 072 bytes outside a 60 KiB `data`, and the envelope plus this payload's own wrapper occupy at most **1 505** of them at every one of their maxima (`messageId` 64, `action` 64, `protocolVersion` 32, `mac` 1 024, `vendorId` 64, `dataId` 64) — so a `data` at the limit is deliverable under every legal combination of the fields around it, with better than 2× to spare.
 8. Both station and server **SHOULD** rate-limit DataTransfer messages to a maximum of **10 per minute per `vendorId`**.
 
 ## 6. Error Handling

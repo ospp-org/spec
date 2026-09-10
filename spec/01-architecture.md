@@ -1,6 +1,6 @@
 # Chapter 01 — Architecture
 
-> **Status:** Draft | **OSPP Version:** 0.37.3
+> **Status:** Draft | **OSPP Version:** 0.38.0
 
 This chapter defines the foundational system model upon which all subsequent chapters build: the participants, their communication channels, the hardware model, the identity scheme, the controller topologies, and the layered communication stack.
 
@@ -246,7 +246,7 @@ The declaration **MUST** be **stable between boots while the hardware is unchang
 
 A **faulted** bay or program is declared **present-but-unavailable**, never omitted. Absence means the hardware itself changed, and a hardware change requires re-provisioning. Reporting a fault by dropping the item would make a blown fuse indistinguishable from a removed bay.
 
-The maximum number of programs per bay MUST NOT exceed **32**. Together with the 64-bay maximum this bounds the boot re-declaration below 8 KB, far under the 64 KB MQTT Maximum Packet Size of [Chapter 02 — Transport §1.2](02-transport.md#12-connection-parameters). A real installation has 4–8 bays; the maxima exist to bound the payload, not to describe expected deployments.
+The maximum number of programs per bay MUST NOT exceed **32**. Together with the 64-bay maximum this bounds the boot re-declaration below 10 KB — measured at **9 406** bytes with every member of `boot-notification-request.schema.json` at its maximum — far under the 64 512-byte envelope cap of [Chapter 02 — Transport §10.2.1](02-transport.md#1021-the-envelope-cap). A real installation has 4–8 bays; the maxima exist to bound the payload, not to describe expected deployments.
 
 ### 4.3 Gateway
 

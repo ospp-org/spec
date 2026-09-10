@@ -30,7 +30,27 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-09-08  (unreleased)  430 unbolded, 1282 bolded spans — the deduplication rule
+    (this HEAD) 2026-09-10  (unreleased)  430 unbolded, 1298 bolded spans — the envelope cap, the
+                                   ordering-floor window, and the note on codes that refuse what they
+                                   already hold. Unbolded is UNCHANGED and at BASELINE: every keyword
+                                   the four new blocks introduce is bolded on the way in, which is the
+                                   only way to add normative prose without moving this number. The
+                                   companion figure rises by TWELVE (1286 -> 1298) and is RE-DERIVED on
+                                   this tree; it reads 1286 before this change where the row below
+                                   records 1282, so that one was not re-derived at 0.37.1, 0.37.2 or
+                                   0.37.3 either — recorded here rather than corrected in place, for
+                                   the reason two rows below gives.
+    4041617  2026-09-08  v0.37.3   430 unbolded, 1286 bolded spans. STAMPED RETROSPECTIVELY and
+                                   measured from a clean `git archive` of the tag, not carried
+                                   forward: the row below was written as "(this HEAD) ...
+                                   (unreleased)" and never stamped, which is the omission this
+                                   header already records against v0.24.1, v0.25.0 and v0.27.0.
+                                   Measured across the whole 0.37 line while stamping it — v0.37.0,
+                                   v0.37.1 and v0.37.2 all read 1285 and only v0.37.3 reads 1286 —
+                                   so the row below at 1282 is the 0.37.0 **pre-tag** tree and three
+                                   bolded spans arrived between it and the tag. Unbolded is 430 on
+                                   every one of the four.
+    (0.37.0 pre-tag) 2026-09-08    430 unbolded, 1282 bolded spans — the deduplication rule
                                    that was never written down. Unbolded FALLS BY THREE and BASELINE
                                    follows it down to 430; all three are in `02-transport.md` §3.3
                                    (82 -> 79), which had three plain MUSTs in the four lines above a

@@ -1,7 +1,7 @@
 # OSPP Known Issues
 
 **Date:** 2026-09-08
-**Specification-document version:** 0.37.3 (release tag `v0.37.3`)
+**Specification-document version:** 0.38.0 (release tag `v0.38.0`)
 **Status:** 3 blockers open (all BLE), **27** non-blocking issues open, **24** decisions recorded (one of
 them reversing another), and one named defect **class** with **eighteen** instances, **five** still open. **The counts are
 re-derived from the headings on every release, never incremented** — the previous revision read 24
@@ -23,7 +23,7 @@ the arcs since
 | **Total open** | **30** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
-EXPERIMENTAL in 0.37** — see [BLE release status](README.md#ble-is-experimental). They do
+EXPERIMENTAL in 0.38** — see [BLE release status](README.md#ble-is-experimental). They do
 not affect the MQTT surface, offline reconciliation, or provisioning, all of which are
 implemented and exercised against a second implementation.
 
@@ -334,7 +334,7 @@ entry below, which said otherwise and is now closed).
 | **`SessionTimeout` has no `reason` value** | **`Inactivity` added — the enum is widened** | None of the six was true of an idle stop, so the one event required to report it had nothing to report it with. The far end breaks hard and knowingly: the server's transformer `tryFrom()`s this enum and **throws** on an unknown value, and its handler matches all six with no default arm — both are ours and both deploy with the SDK. Billed pro-rata on delivered duration, the same as `Local`. **This closes all three gaps of the §8 note**, not one: the trigger disagreement is resolved by the registry that already governed (user interaction, *not* MeterValues), §3.3 gains the transition row §3.4 had been naming, and the both-directions breakage at legal settings **dissolves** once MeterValues no longer reset the timer — no range was narrowed to fix it |
 | **`MessageSigningMode` has no wire signal** | **OPTIONAL top-level `messageSigningMode` added** | The decisive argument is that every channel which could report the mode is closed by the condition it would report: GetConfiguration is among the 44 signed types of 47, so a fail-closed station cannot use it. BootNotification REQUEST is one of the three structural exemptions and therefore the only message that still arrives. **Not inside `capabilities`** — that object is feature flags describing what a station *supports*, four booleans; this is configuration state describing what it is *doing*. **OPTIONAL**, so no deployed station is invalidated, at the stated price that **silence is ambiguous** and a server **MUST NOT** infer a mode from its absence |
 | **`SecurityEvent.details` has no shape** | **Declined. Not enforced** | The field is open, the prose specifying its content already exists, and a fourth restatement changes nothing that three have not. It has the largest vector radius in the set — **17** — and the enforcement it would buy is not worth them at this cycle. The gap stands, recorded, with its instance in the class index below |
-| **`UpdateServiceCatalog.services` has no `maxItems`** | **Normative ceiling on the emitter. Zero bytes** | The bound belongs to the only party that can measure the payload before sending it, and we are the only emitter. A server **MUST NOT** publish a catalog exceeding the 64 KB packet ceiling that already exists. A schema `maxItems` would have to pick a number: the item is already bounded (`serviceName` 128, `bindings` 64), so the worst case admitted is ~2.5 KB and 64 KB holds **25**, while entries at the size the corpus really carries (max 206 B) fit **318**. Picking 25 forbids legal catalogs; picking 318 permits an undeliverable one |
+| **`UpdateServiceCatalog.services` has no `maxItems`** | **Normative ceiling on the emitter. Zero bytes.** Superseded at `0.38.0` by the envelope cap, which generalises it | The bound belongs to the only party that can measure the payload before sending it, and we are the only emitter. A schema `maxItems` would have to pick a number: the item is already bounded (`serviceName` 128, `bindings` 64), so the worst case admitted is **2 762 B** and the cap holds **22**, while entries at the size a deployed catalog really carries (max **213 B**, against the corpus's 206 B) fit about **295**. Picking 22 forbids legal catalogs; picking 295 permits an undeliverable one. **`0.38.0` resolves the dilemma by moving the bound up a level**: [Chapter 02 §10.2.1](spec/02-transport.md#1021-the-envelope-cap) caps the serialised **envelope** at 64 512 bytes for every action, so no catalog is forbidden by an item count and none that is admitted is undeliverable. The decision recorded here — a normative ceiling on the emitter, no schema keyword — is unchanged; only its scope widened from one action to all of them |
 | **No physical-stop confirmation on `stop-service-response`** | **Declined** | Exactly the shape refused four times: a new member on a closed RESPONSE. The reporting route was built at `0.30.0` through two messages that already exist. Settlement still runs on the self-reported duration, and that is the residue, recorded |
 
 **Two more rode the same cascade at nil marginal cost**, because `schemas/` was already open:

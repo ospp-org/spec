@@ -1,6 +1,6 @@
 # Chapter 07 — Error Codes & Resilience
 
-> **Status:** Draft | **OSPP Version:** 0.37.3
+> **Status:** Draft | **OSPP Version:** 0.38.0
 
 This chapter defines the complete error taxonomy for the OSPP protocol, including the error code registry, standard error response format, retry policies, circuit breaker patterns, and graceful degradation behavior.
 
@@ -309,7 +309,7 @@ Transport errors cover network connectivity, protocol negotiation, message forma
 | 1011 | `URL_UNREACHABLE` | Error | true | A remote URL (e.g., firmware download, diagnostics upload) is not reachable. | Retry with exponential backoff. Verify network connectivity and URL correctness. |
 | 1012 | `MAC_VERIFICATION_FAILED` | Critical | false | HMAC-SHA256 message authentication code verification failed. The message may have been tampered with. | Reject the message. Log SecurityEvent [MSG-012] with `type: "MacVerificationFailure"`. 3+ failures from same source within 60s → flag as potentially compromised. |
 | 1013 | `MAC_MISSING` | Error | false | `MessageSigningMode` is `"All"` and the received message carries no `mac` field, on a message that is not one of the three structural exemptions ([Chapter 06 §5.6](../spec/06-security.md#56-message-signing-classification)). Also emitted when the receiver holds no session key for the peer: unable to verify is unable to accept. | Reject the message — never process it unverified. Log SecurityEvent [MSG-012]. Note where the fault is: a conforming sender **refuses to send** rather than sending unsigned ([Chapter 06 §5.7](../spec/06-security.md#57-failure-handling--both-directions-fail-closed)), so a message reaching this code was produced by a sender that did not fail closed. |
-| 1014 | `MESSAGE_TOO_LARGE` | Error | false | Received message exceeds the maximum allowed size (64 KB for MQTT, negotiated MTU for BLE). | Reject the message. Sender must reduce payload size — e.g., split MeterValues into multiple messages. |
+| 1014 | `MESSAGE_TOO_LARGE` | Error | false | Received envelope exceeds the maximum allowed size — the **64 512-byte envelope cap** of [Chapter 02 §10.2.1](02-transport.md#1021-the-envelope-cap) for MQTT, the negotiated MTU for BLE. | Reject the message. This is the **one** refusal a receiver **MAY** make on length alone, before parsing and before verifying `mac`; where no `messageId` was read, log and discard rather than answer ([§2.1](#21-mqtt-error-response)). Sender must reduce payload size — e.g., split MeterValues into multiple messages. |
 
 ### 3.2 Authentication & Authorization Errors (2xxx)
 
@@ -455,7 +455,7 @@ Station errors are reported by the station itself and cover physical hardware fa
 | 5021 | `NO_DIAGNOSTICS_AVAILABLE` | Warning | false | No diagnostic data is available for the requested time window. | Request a broader time window, or wait for the station to accumulate more diagnostic data. |
 | 5023 | `INVALID_CATALOG` | Error | false | One or more service entries in the UpdateServiceCatalog [MSG-021] request failed validation — a missing required field, an invalid pricing type, no price for the declared `pricingType` or the other type's price present ([`service-item.schema.json`](../schemas/common/service-item.schema.json) enforces both with `if`/`then`), a malformed service definition — or the catalog as a whole is inconsistent, a duplicate `serviceId` across entries being the case that arises. **Scope:** this is the code for every entry-level *and* catalog-level validation failure in this message. `3015 PAYLOAD_INVALID` does not compete with it: [§3.3](#33-session--bay-errors-3xxx) narrows `3015` to a value that could never be valid, which reaches only a payload-level member outside the `services` array, an empty `catalogVersion` being the example. | Fix the catalog payload. The response for this message is a **closed** schema with no `details` member ([`update-service-catalog-response.schema.json`](../schemas/mqtt/update-service-catalog-response.schema.json)), so `errorCode` and `errorText` are the whole of what the station can say — the server locates the offending entry by re-validating the payload it sent against the service-item schema, not by reading the reply. |
 | 5024 | `UNSUPPORTED_SERVICE` | Error | false | The catalog contains a service the station cannot run — a `serviceId` its hardware does not support, or, the case that now arises in practice, a `bindings` entry naming a `(bayNumber, programNumber)` pair the station never declared. The station declares its bays and their program ordinals at provisioning and re-declares them on every boot ([Chapter 01 §4.2](01-architecture.md)), so this is decidable from the payload alone. **The station rejects the entire catalog and keeps the one it had.** Earlier revisions had the station ignore the offending entry and apply the rest; that is withdrawn. Nothing in the response can name which entries were dropped — [`update-service-catalog-response.schema.json`](../schemas/mqtt/update-service-catalog-response.schema.json) is closed and carries `status`, `previousCatalogVersion`, `errorCode`, `errorText` and nothing else — so a partial application left the server holding a `catalogVersion` for a catalog no station had, with no way to discover it. A refusal the server can see is worth more than an application it cannot. | Station: respond `Rejected` with this code and leave the previous catalog in force. Server/Operator: the catalog names a service this station cannot run. Correct the binding, remove the entry, or re-provision the station if its hardware genuinely changed. Do **NOT** re-send unchanged. |
-| 5025 | `CATALOG_TOO_LARGE` | Error | false | The service catalog exceeds the station's storage or processing capacity. | Reduce the number of services in the catalog. **Do not look for a capability advertising a maximum catalog size — there is none.** `capabilities` on BootNotification carries four booleans and is `additionalProperties: false`, and no schema bounds `services[]`; this cell directed servers at a field that has never existed. Size against the 64 KB MQTT packet ceiling ([Chapter 02 §5](02-transport.md)) until a bound is registered — recorded in [KNOWN-ISSUES](../KNOWN-ISSUES.md). |
+| 5025 | `CATALOG_TOO_LARGE` | Error | false | The service catalog exceeds the station's **storage** capacity. The *processing* half of this condition is unreachable by construction — see the note below the table. | Reduce the number of services in the catalog. **Do not look for a capability advertising a maximum catalog size — there is none.** `capabilities` on BootNotification carries four booleans and is `additionalProperties: false`, and no schema bounds `services[]`; this cell directed servers at a field that has never existed. Size against the **64 512-byte envelope cap** ([Chapter 02 §10.2.1](02-transport.md#1021-the-envelope-cap)), which is what replaced the unregistered bound. |
 
 #### 5.1xx — Software Errors
 
@@ -490,6 +490,51 @@ Server errors are generated by the server and returned to mobile apps, web payme
 | 6006 | `RATE_LIMIT_EXCEEDED` | Warning | true | The request was rejected due to rate limiting (per-IP, per-user, or per-device). | Wait before retrying. The `Retry-After` HTTP header (if present) indicates when to retry. See Chapter 06 §7.1 for rate limit thresholds. |
 | 6007 | `SERVICE_DEGRADED` | Info | true | One or more server subsystems are operating in degraded mode (e.g., payment processor unreachable, search index stale). | Non-blocking. The server continues to function with reduced capabilities. Degraded features are listed in the `details` field. |
 | 6008 | `COMMAND_PRE_EMPTED` | Warning | true | The **server** refused to dispatch a command and stopped it locally, so it never reached the station. A server **MAY** do this and **MUST** answer with this code when it does, and **MUST NOT** borrow the station's. `details.reason` **MUST** name the condition, because it is the only member present on every occurrence and it says which of the two kinds of pre-empt this is. **(1) Predicted refusal** — the server holds enough state to see the station would decline, as for a Reset with sessions running. `details.wouldBe` **MUST** carry the code the station would have answered (`3016` for that Reset). **(2) Server-protective** — the server declines for a reason of its own, the circuit breaker of [§6.3](#63-server--station-command-circuit-breaker) being the defined case. Here `details.wouldBe` **MUST** be absent: the station was never going to refuse, it was never going to answer at all, and inventing a code it never gave is the borrowing this entry exists to forbid. **When `details.wouldBe` is absent the receiver MUST treat the command as refused and not performed**, and **MUST NOT** infer that it would have succeeded — an unpredictable outcome is not a safe one, and this is the only default under which the worst case is a command that must be re-issued rather than one believed done that never ran. The pairing is the point: an operator seeing `3016` knows the message reached the station and the station said no; an operator seeing `6008` knows it never left the server. Those have different remedies, because the server's view can be **stale** — it may hold a session the station finished seconds ago — and a stale pre-empt is repaired by reconciling the server, not by touching the station. A pre-empt is an OPTIMISATION and is never required: a server that dispatches and lets the station answer is equally conforming. A server **MUST NOT** pre-empt a command carrying an override the station would honour — a Reset with `force: true` **MUST** be dispatched however many sessions are running, because forcing is precisely the instruction to proceed anyway. **Scope:** this code is reachable from in-scope endpoints that dispatch a station command ([§4.4](#44-rest-api-endpoints)) and from operator surfaces this specification does not define ([§2.4](#24-rest-api-error-response), *Scope*) — an administrative Reset being the worked example. On the latter the contract above still describes the answer, but there is nothing for a conformance test to address, which is why no test case exercises that path. | Operator: read `details.reason` — it says which kind of pre-empt this is. If `details.wouldBe` is present, treat it as that code's row directs; where it disagrees with the station, the server's view is stale — reconcile the server, do not visit the station. If absent, the command did not run and no outcome may be assumed; re-issue once the named condition clears. Server: always carry `details.reason`; carry `details.wouldBe` only for a predicted refusal; never pre-empt a forced command. |
+
+---
+
+### 3.7 The codes that refuse what the receiver has already accepted
+
+Three codes in this registry say *"more than I can hold"* about something the emitter had to
+hold in order to say it. They are worth naming as one class, because two of them are closed by
+the envelope cap of [Chapter 02 §10.2.1](02-transport.md#1021-the-envelope-cap) and the third
+is not, and the difference is instructive rather than accidental.
+
+The shape is this. A receiver may not touch a message's `payload` until `mac` verifies
+([Chapter 06 §5.4](06-security.md)), and verifying `mac` means re-canonicalising the **whole**
+envelope — sorted keys, every member present. Streaming is therefore forbidden by construction:
+a receiver holds the complete frame before it may read one field of it. Any refusal whose ground
+is *"this exceeds what I can hold"* is then a statement made from behind the very buffer it
+claims not to have.
+
+| code | ground | is it still reachable | why |
+|---|---|---|---|
+| `1014 MESSAGE_TOO_LARGE` | the envelope exceeds the maximum size | **yes, and legitimately so** | §10.2.1 grants the length-only refusal explicitly, *before* parsing and *before* `mac`. Serialised length is the one property a receiver can decide from the octet count alone, so this refusal never had to enter the buffer. What was missing was the permission, not the possibility |
+| `5025 CATALOG_TOO_LARGE` | the catalog exceeds the station's **storage or processing** capacity | **halved** | the *processing* ground is unreachable: a catalog inside the cap is inside the buffer a station provisions for anyway. The *storage* ground survives and is sound, because it is decided **after** a successful parse and is a fact about flash, not about the receive path — see [`update-service-catalog.md` §6](profiles/device-management/update-service-catalog.md) |
+| `5017 INSUFFICIENT_STORAGE` | the station cannot hold the firmware image | **yes, and the contradiction is open** | UpdateFirmware carries **0 of 6** properties naming the image's size ([`update-firmware-request.schema.json`](../schemas/mqtt/update-firmware-request.schema.json): `firmwareUrl`, `firmwareVersion`, `checksum`, `signature`, `forceDowngrade`, `scheduledAt`), so **nothing in the protocol tells a station what it is about to fetch**. The contradiction is softer than the other two only because the image does not arrive over MQTT: an HTTPS transfer can be abandoned in flight, and a station **MAY** learn the size from a `Content-Length` the origin chooses to send. Neither is a protocol guarantee — a chunked response has no length, and this specification requires no header — so the decision is still made after committing bandwidth, and the shortfall is still reported on `Failed`. The envelope cap does not reach it: the size in question is the transfer's, not the frame's |
+
+**The class is exhausted at three, of 119 rows.** Every other code naming a limit —
+`3010 MAX_DURATION_EXCEEDED`, `4002`/`4003`/`4004`, `5107 OPERATION_IN_PROGRESS`,
+`5111 BUFFER_FULL`, `5105 MEMORY_ERROR`, `6006 RATE_LIMIT_EXCEEDED` — refuses on a **policy or
+count** it evaluates without first accepting the thing it is refusing, so none of them carries
+the contradiction. `5111 BUFFER_FULL` describes the emitter's own accumulated queue rather
+than an inbound message at all, and `5103 STORAGE_ERROR` is a write fault on a working store —
+*"a capacity condition on a working store, not a store that failed to write"* is the distinction
+[`ble-session.md` §1](profiles/offline/ble-session.md) rule 3 already draws between them.
+
+> **One overlap is left standing, and it is named rather than repaired.**
+> [`update-service-catalog.md` §7](profiles/device-management/update-service-catalog.md) gives
+> `5103` as *"insufficient or inaccessible storage for persisting the catalog"* — which is
+> word-for-word `5025`'s surviving storage ground. Two codes therefore describe one condition on
+> one action, and a station may emit either. That is a registry-shape question about which code
+> owns *"a legal catalog I cannot keep"*, not a size question, so this cycle records it instead of
+> deciding it: choosing would retire a code, and no measurement here says which.
+
+**A code that no conforming implementation can reach is a note, not a defect.** `5025` at zero
+conformance coverage is recorded in
+[`TC-DM-008`](../conformance/test-cases/device-management/TC-DM-008.md) and stays there: a
+station with no persistence limit will never emit it, and that is the specification working
+rather than a gap in it.
 
 ---
 
