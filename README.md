@@ -19,7 +19,7 @@
 
 Not every part of this specification is at the same maturity. Read this before implementing.
 
-| Surface | Status in 0.39 | Basis |
+| Surface | Status in 0.40 | Basis |
 |---|---|---|
 | MQTT station↔server (Core, Transaction, Security, Device Management) | **Stable** | Implemented by a server and exercised by an independent station implementation |
 | HTTPS provisioning (`POST /api/v1/stations/provision`) | **Stable** | Implemented; error vocabulary and precedence chain covered by conformance cases |
@@ -57,7 +57,7 @@ sequencing layer this cycle removed. They will be repaired against a real implem
 
 **Consequence for conformance.** The **Extended** and **Complete** compliance levels require the
 Offline / BLE profile, whose BLE half is experimental. **Neither level can be claimed against
-0.39.** **Development** and **Standard** are unaffected and remain claimable — see
+0.40.** **Development** and **Standard** are unaffected and remain claimable — see
 [Compliance Levels](conformance/README.md#2-compliance-levels).
 
 ---

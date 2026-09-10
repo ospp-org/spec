@@ -25,7 +25,7 @@ ospp-version: 0.39.1
 > [Release status](../README.md#release-status) and
 > [KNOWN-ISSUES](../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-three-defects).
 >
-> **Extended** and **Complete** compliance cannot be claimed against 0.39, because both require
+> **Extended** and **Complete** compliance cannot be claimed against 0.40, because both require
 > the BLE half of the Offline profile. **Development** and **Standard** are unaffected.
 
 ## Document Map

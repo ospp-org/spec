@@ -57,7 +57,7 @@
           "errorText": {
             "type": "string",
             "pattern": "^[A-Z][A-Z0-9_]+$",
-            "maxLength": 128,
+            "maxLength": 64,
             "description": "OPTIONAL. Machine-readable name for the program-level errorCode, in UPPER_SNAKE_CASE. Accompanies errorCode whenever that is present."
           }
         },
@@ -114,7 +114,7 @@
     "errorText": {
       "type": "string",
       "pattern": "^[A-Z][A-Z0-9_]+$",
-      "maxLength": 128,
+      "maxLength": 64,
       "description": "Bay-level machine-readable error name in UPPER_SNAKE_CASE. REQUIRED when `status` is Faulted."
     }
   },

@@ -28,7 +28,7 @@ before claiming conformance.
 
 ## 2. Compliance Levels
 
-> **Extended and Complete cannot be claimed against 0.39.**
+> **Extended and Complete cannot be claimed against 0.40.**
 >
 > Both levels require the Offline / BLE profile, whose BLE half is **EXPERIMENTAL** in this
 > revision and carries three blockers that make it unimplementable as written — see

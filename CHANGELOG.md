@@ -8,6 +8,80 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.40.0] — 2026-09-10
+
+### Changed
+
+- **BREAKING (validation, producers): `errorText` is uniformed to `maxLength: 64` on all 19
+  declarations that pair it with an `errorCode`.** The field was declared **21** times across the
+  86 schemas with **three** different limits — 64 (×1, `boot-notification-response`), 128 (×17),
+  256 (×3, the certificate frames). Its two meanings are real and were already separated, but by
+  **`pattern`** rather than by length: 19 declarations carry `^[A-Z][A-Z0-9_]+$` — the §1.3
+  per-code registry name — and 2 carry no pattern and hold per-occurrence prose.
+
+  The three limits cut **across** that boundary instead of along it. The 15 code declarations at
+  128 and the 3 at 256 carry **byte-identical descriptions** — *"Machine-readable error name in
+  UPPER_SNAKE_CASE. Present when status is Rejected."* — so nothing distinguished them. And the
+  two prose declarations, the only ones that genuinely need room for an explanation, sat at 128,
+  **below** three machine-name declarations at 256: the limits were ordered against the meanings.
+
+  The `0.9.0` entry records the cause: the UPPER_SNAKE pattern was added on 2026-07-29, and before
+  it *"Fifteen constrained length only"*. The lengths are the older, weaker proxy for a
+  distinction the pattern now carries properly, and were never re-derived once it did. No
+  normative text names a length for the field — measured at zero occurrences across `spec/*.md`
+  and `guides/*.md` — so nothing had to change but the schemas.
+
+  **64 is derived, not chosen.** §3 declares **119** codes with **119** distinct `errorText`
+  names; the longest is **28** characters (`PROVISIONING_REQUEST_INVALID`) and **none** exceeds 32.
+  64 leaves **2.3×** headroom over the longest name the registry can ever supply, and is the value
+  `boot-notification-response` already used. §2.4 rule 228 makes the bound load-bearing in exactly
+  one direction — `errorCode` and `errorText` **MUST NOT** be truncated — so a cap must clear the
+  registry rather than merely fit the corpus, and this one does.
+
+  **The 2 prose declarations keep `maxLength: 128`** and remain governed by
+  [KNOWN-ISSUES](KNOWN-ISSUES.md) — uniforming them with the code declarations would assert that
+  they mean the same thing, which is the open question, not the answer.
+
+### Radius, measured before the change rather than asserted after
+
+| | |
+|---|---|
+| declarations moved | **18** of 19 (one was already at 64) |
+| schema files touched | **17** |
+| schema bytes | **18 insertions, 18 deletions** — numbers only, no reformatting |
+| vectors touching `errorText` | **38** of 350 files, 39 occurrences |
+| vectors carrying an UPPER_SNAKE value over 64 | **0** (longest is **27**, `INVALID_CONFIGURATION_VALUE`) |
+| corpus result | **291/291** before and after |
+| normative text moved | none |
+| `protocolVersion` | unchanged at `0.3.0` |
+
+The floor was pinned in **both** directions rather than trusted from one green run: at
+`maxLength: 26` exactly **one** vector fails, and at 8 **eighteen** do — so the corpus does
+exercise this keyword and a pass at 64 is a measurement rather than a suite that never looks.
+
+### Known cost outside the corpus
+
+One downstream test premise moves with this and is named so it is not discovered as a failure:
+the reference server's `ReasonColumnOverflowTest` built `str_repeat('E', 128)` as *"a maximal
+station errorText"*. It was valid for **two** reasons at once — 128 uppercase letters satisfy the
+pattern **and** sat exactly on `start-service-response`'s bound — and at 64 it is neither maximal
+nor over the 128-character column guard it fed. The repair is to derive the maximum from the
+schema instead of transcribing it, which is what that file now does.
+
+### Not changed, and why
+
+`reason` and `signature` also carry more than one limit each, and were checked against this same
+shape. **Neither matches it**: measured across all 86 schemas, **zero** descriptions on either
+field carry more than one limit (`reason` has 3 distinct descriptions across 256/500, `signature`
+5 across 512/1024). Their divergence tracks something, where `errorText`'s tracked nothing.
+
+Two `reason` declarations do carry a **related** defect, recorded rather than repaired here:
+`authorize-offline-pass-response` and `transaction-event-response` describe the field as *"The
+registry NAME of the error, in UPPER_SNAKE_CASE … not prose"* and declare **no `pattern`** — the
+same gap `0.9.0` closed for `errorText`.
+
+---
+
 ## [0.39.1] — 2026-09-10
 
 > **PATCH, non-normative — `0.39.0` invalidated two of its own counts, in two different ways, and

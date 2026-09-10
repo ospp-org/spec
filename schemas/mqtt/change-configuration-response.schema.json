@@ -40,7 +40,7 @@
           "errorText": {
             "type": "string",
             "pattern": "^[A-Z][A-Z0-9_]+$",
-            "maxLength": 128,
+            "maxLength": 64,
             "description": "Machine-readable error name. SHOULD accompany a Rejected or NotSupported result (08-configuration.md section 8.2) — a SHOULD, which is why no if/then requires it here."
           }
         }

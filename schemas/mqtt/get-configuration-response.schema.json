@@ -43,7 +43,7 @@
     "errorText": {
       "type": "string",
       "pattern": "^[A-Z][A-Z0-9_]+$",
-      "maxLength": 128,
+      "maxLength": 64,
       "description": "The registry NAME of the refusal, UPPER_SNAKE_CASE. Travels with errorCode; neither is emitted alone."
     }
   },
