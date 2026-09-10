@@ -1,8 +1,8 @@
 # OSPP Known Issues
 
-**Date:** 2026-09-08
+**Date:** 2026-09-10
 **Specification-document version:** 0.39.1 (release tag `v0.39.1`)
-**Status:** 3 blockers open (all BLE), **27** non-blocking issues open, **24** decisions recorded (one of
+**Status:** 3 blockers open (all BLE), **28** non-blocking issues open, **24** decisions recorded (one of
 them reversing another), and one named defect **class** with **eighteen** instances, **five** still open. **The counts are
 re-derived from the headings on every release, never incremented** — the previous revision read 24
 open against 25 `## OPEN` headings, which is how a summary drifts from the file it summarises.
@@ -16,11 +16,11 @@ the arcs since
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 27 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · **[no gate range-checks a config value inside an example payload](#open--no-gate-range-checks-a-configuration-value-that-sits-inside-an-example-payload)** · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) · **[`5016` is required for two conditions and named for one](#open--5016-version_already_installed-is-required-for-two-conditions-and-one-of-them-is-the-opposite-of-what-the-name-says)** · **[UpdateFirmware is both idempotent and `5107`](#open--updatefirmware-is-documented-as-idempotent-and-as-rejected-with-5107-for-the-same-second-command)** · **[no code describes a non-HTTPS firmware URL](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal)** · **[`offeredVersion` vs `attemptedVersion`](#open--the-firmwaredowngradeattempt-securityevent-names-the-offered-version-with-two-different-member-names-and-nothing-can-tell)**  · **[a station whose hardware changes has no route back into service](#open--a-station-whose-hardware-genuinely-changes-has-no-route-back-into-service-because-the-two-rules-that-guard-topology-point-at-each-other)** · **[the hardware storage levels do not hold the Category-1 floors](#open--the-hardware-storage-levels-do-not-hold-the-category-1-floors-they-are-said-to-size)** · **[OfflinePass validity rides an uncorrected wall clock, and the backstop reads the same clock](#open--offlinepass-temporal-validity-rides-a-wall-clock-with-no-offline-correction-and-the-servers-backstop-reads-the-same-clock)** · **[`5019` has no carrier on either side](#open--5019-upload_failed-names-a-condition-that-cannot-exist-when-its-response-is-sent-and-its-real-carrier-has-no-code-field)** · **[the anti-downgrade guard verifies one artefact and decides on another](#open--the-anti-downgrade-guard-verifies-one-artefact-and-decides-on-another-and-no-field-is-missing)** · **[the firmware signing certificate rotates annually and no message can deliver it](#open--the-firmware-signing-certificate-is-stated-to-rotate-annually-and-no-message-can-deliver-the-new-one)**   |
+| OPEN | 28 | 4xxx grouping · `httpStatus()`/`category()` accessors · `errorText` carrying prose on two messages · provisioning station-side conformance · `StationIdentityCertificate` · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · **[no gate range-checks a config value inside an example payload](#open--no-gate-range-checks-a-configuration-value-that-sits-inside-an-example-payload)** · [the signing toolchain canonicalizes with the SDK](#open--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself) · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[nothing checks a `Message Expiry` against the category it names](#open--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) · **[`5016` is required for two conditions and named for one](#open--5016-version_already_installed-is-required-for-two-conditions-and-one-of-them-is-the-opposite-of-what-the-name-says)** · **[UpdateFirmware is both idempotent and `5107`](#open--updatefirmware-is-documented-as-idempotent-and-as-rejected-with-5107-for-the-same-second-command)** · **[no code describes a non-HTTPS firmware URL](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal)** · **[`offeredVersion` vs `attemptedVersion`](#open--the-firmwaredowngradeattempt-securityevent-names-the-offered-version-with-two-different-member-names-and-nothing-can-tell)**  · **[a station whose hardware changes has no route back into service](#open--a-station-whose-hardware-genuinely-changes-has-no-route-back-into-service-because-the-two-rules-that-guard-topology-point-at-each-other)** · **[the hardware storage levels do not hold the Category-1 floors](#open--the-hardware-storage-levels-do-not-hold-the-category-1-floors-they-are-said-to-size)** · **[OfflinePass validity rides an uncorrected wall clock, and the backstop reads the same clock](#open--offlinepass-temporal-validity-rides-a-wall-clock-with-no-offline-correction-and-the-servers-backstop-reads-the-same-clock)** · **[`5019` has no carrier on either side](#open--5019-upload_failed-names-a-condition-that-cannot-exist-when-its-response-is-sent-and-its-real-carrier-has-no-code-field)** · **[the anti-downgrade guard verifies one artefact and decides on another](#open--the-anti-downgrade-guard-verifies-one-artefact-and-decides-on-another-and-no-field-is-missing)** · **[the firmware signing certificate rotates annually and no message can deliver it](#open--the-firmware-signing-certificate-is-stated-to-rotate-annually-and-no-message-can-deliver-the-new-one)** · **[one field carries three different length limits](#open--one-field-carries-three-different-length-limits-and-the-split-is-not-the-one-the-fields-two-meanings-would-draw)**   |
 | CLOSED | 7 | [Device Management Required vs RECOMMENDED](#closed-0160--the-device-management-profile-was-required-in-chapter-08-and-recommended-not-mandatory-in-its-own-readme) — closed in 0.16.0 in favour of the capability · [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
 | **CLASS** | 18 | **[an obligation no field, no code and no actor can carry](#class--an-obligation-no-field-no-code-and-no-actor-can-carry)** — an index of the eighteen instances; **5** still open, 1 a blocker. `0.35.0` closed instance 18 and recorded 17 with it — the same defect on two of the fourteen Server → Station actions, and 18 closed **without** the contract relaxation it appeared to need. `0.32.0` closed instances 15 and 16, the same defect on the two halves of one session, and supplied the **fourth remedy** the class had not recorded: withdraw the demand. The fourth sub-shape, named at 0.30.0 — a closed enumeration in which no legal value is true — still holds **three** instances, all closed at 0.31.0 |
 | DECIDED | 24 | **[`2008` was listed under two statuses and the licence permitting it could not be broken](#decided-0320--2008-was-listed-under-two-statuses-and-the-licence-that-permitted-it-could-not-be-broken)** — §4.4's truthfulness obligation un-scoped and the multi-status licence given a checkable condition; the row fell out as a consequence; prose only, zero schema bytes · **[a start that energised and a boot that cannot say what happened](#decided-0320--a-start-that-energised-a-boot-that-cannot-say-what-happened-and-the-two-remedies-that-were-refused)** — the third arm of the §3.5 partition, reported through two messages that already exist; a new `SessionEnded.reason` and a queryable session state both refused with their costs · **[§10.1 required receivers to ignore unknown fields, and every schema forbids it](#decided-0290--02-transportmd-101-required-receivers-to-ignore-unknown-fields-and-every-schema-in-this-repository-forbids-it)** — 73 of 73 object schemas are closed, and three decisions already taken (§2.1's known gap, exact-match negotiation, the `0.26.0` triple refusal) rest on receivers *not* ignoring; prose only, zero schema bytes · **[the broker MUST check revocation, the list is bounded twice, and a stale list buys one alerted hour](#decided-0270--the-broker-must-check-revocation-the-list-is-bounded-twice-and-a-list-that-goes-stale-buys-one-alerted-hour-before-the-door-shuts)** — axis 1a + 2a&2b + 3c; verified by declaration because no message can carry it, and the two bounds are broker settings deliberately outside the Chapter 08 registry · **[`allowedServiceTypes` withdrawn in two steps](#decided-0250--offlineallowanceallowedservicetypes-is-withdrawn-in-two-steps-because-nobody-ever-asked-for-the-constraint)** · **[ownership transfer and decommissioning stay undefined, and §1.3 now says so](#decided-0250--station-ownership-transfer-and-decommissioning-stay-undefined-and-the-specification-now-says-so)** · **[the server is the billing authority on the offline path too](#decided-0240--the-server-is-the-billing-authority-on-the-offline-path-too-and-81-was-the-outlier)** · **[`OfflinePassMaxAge` kept, wired into check #2, defaulted to inert](#decided-0240--offlinepassmaxage-is-kept-wired-into-check-2-and-defaulted-to-inert)** · **[`DiagnosticsUploadUrl` withdrawn — a key nothing reads](#decided-0230--diagnosticsuploadurl-had-no-reachable-consumer-and-is-withdrawn-rather-than-defined)** · **[UpdateFirmware to a `Pending` station is `Accepted`, notifications suppressed](#decided-0210--updatefirmware-to-a-pending-station-was-refused-on-a-premise-the-same-chapter-contradicts-and-with-a-response-no-error-code-could-carry)** — **reverses the `0.20.0` row below**: the `Rejected` it mandated needed an `errorCode` no registry entry supplies, and §6.6 already reported the outcome on BootNotification; the discriminator's second clause survives, its reading did not · **[nine gates in `tools/` were reachable from no job](#decided-0201--two-validation-scripts-reported-100-failure-and-no-workflow-ran-them-the-workflows-now-call-the-scripts-and-a-census-guards-the-class)** — the workflows now call the scripts, and `check-tool-callers.py` guards the class · **[the firmware gate is on the INSTALL, not the download](#decided-0200--the-active-session-gate-named-three-stages-it-gates-the-install-and-scheduledat-defers-the-install-with-it)** — and `scheduledAt` defers the install with it; the stall rule scoped rather than `Verified` given a wire value · **[~~UpdateFirmware to a `Pending` station is `Rejected`~~ — REVERSED in `0.21.0`](#decided-0200--updatefirmware-had-no-row-in-the-pending-command-table-it-is-rejected-and-the-discriminator-gained-the-clause-that-says-why)** — kept as the record; the row it added was right, the verdict in it was not · **[a restricted station may renew its own certificate](#decided-0190--one-table-gave-the-same-act-opposite-verdicts-and-a-certificate-renewal-could-not-conclude-in-the-state-the-spec-keeps-open-for-repairs)** — the exception's *reason* restated to cover both members rather than a second name added to a list · [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
-| **Total open** | **30** | |
+| **Total open** | **31** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.39** — see [BLE release status](README.md#ble-is-experimental). They do
@@ -1538,6 +1538,105 @@ misnamed rather than merely unconstrained.
 
 Whichever is chosen, the pattern added elsewhere on 2026-07-29 should extend to these two once
 the field means what §1.3 says.
+
+---
+
+## OPEN — one field carries three different length limits, and the split is not the one the field's two meanings would draw
+
+**Raised 2026-09-10, measured against `v0.39.1` across all 86 schemas. This is adjacent to
+[the naming question above](#open--two-messages-carry-errordescription-semantics-under-the-name-errortext)
+and is a different defect: that one is about what `errorText` *means* on two messages, this one is
+about how long it may be on all twenty-one.**
+
+`errorText` is declared **21 times** across the 86 schemas, and carries **three** distinct
+`maxLength` values:
+
+| `maxLength` | Sites | Which |
+|---:|---:|---|
+| 64 | 1 | `mqtt/boot-notification-response` |
+| 128 | 17 | 15 responses + the two prose notifications below |
+| 256 | 3 | `mqtt/certificate-install-response`, `mqtt/sign-certificate-response`, `mqtt/trigger-certificate-renewal-response` |
+
+**The field does have two meanings, and they are already separated — by `pattern`, not by
+`maxLength`.** Nineteen sites declare `^[A-Z][A-Z0-9_]+$` (the §1.3 per-code registry name); two
+declare no pattern and carry per-occurrence prose (`diagnostics-notification`,
+`firmware-status-notification` — the subject of the entry above).
+
+**The three lengths cut across that boundary rather than along it:**
+
+* The **15** code sites at 128 and the **3** code sites at 256 carry **byte-identical
+  descriptions** — *"Machine-readable error name in UPPER_SNAKE_CASE. Present when status is
+  Rejected."* Same meaning, same pattern, twice the limit. Nothing distinguishes them.
+* The **prose** sites — the only two that genuinely need room for an explanation — sit at **128**,
+  *below* three machine-name sites at 256. The limits are ordered against the meanings.
+* The one site at 64 (`boot-notification-response`) differs from the 128 group only in its
+  description saying *"Required when status is Rejected"* rather than *"Present when"*. Same
+  pattern, same meaning.
+
+**So it is historic, not semantic — and the changelog says so directly.** The `0.9.0` row in
+`spec/00-introduction.md` records that the UPPER_SNAKE pattern was added on 2026-07-29 to the
+declarations that pair with an `errorCode`, and that before that change *"**Fifteen constrained
+length only**, so a raw validator diagnostic reached firmware in the field §1.3 reserves for
+programmatic matching."* The lengths are the older, weaker proxy for a meaning the `pattern` now
+carries properly. They were never re-derived once it did.
+
+**No normative text names a length for this field.** Measured: zero occurrences across
+`spec/*.md` and `guides/*.md` where `errorText` appears within 200 characters of a length, a byte
+count, or a `maxLength`. §1.3 defines the field; §2.4 rule 228 adds that `errorCode` and
+`errorText` **MUST NOT** be truncated — which makes the limit load-bearing in one direction only:
+it must clear the registry, because an emitter that overflows it has no legal way to shorten.
+
+### What a uniform limit would cost — measured, not estimated
+
+The registry is the whole population of legal values for the 19 code sites. `spec/07-errors.md`
+declares **119** codes and **119** distinct `errorText` names:
+
+* longest: **28** characters — `PROVISIONING_REQUEST_INVALID`
+* names longer than 32: **0**; longer than 64: **0**
+* the conformance corpus carries 39 `errorText` occurrences, of which 31 match the pattern;
+  longest of those is **27** — `INVALID_CONFIGURATION_VALUE`
+
+**Setting all 19 code sites to 64 costs nothing that can be measured.** Rewriting them and running
+the SDK's corpus validator (`sdk-ts`, 291 assertions over the 350-vector corpus):
+
+| Mutation | Result |
+|---|---|
+| code sites → **64** | **291/291 pass** |
+| code sites → **32** | 291/291 pass |
+| code sites → **28** | 291/291 pass |
+| code sites → **27** | 291/291 pass |
+| code sites → **26** | **1 fails** — the floor, exactly at `INVALID_CONFIGURATION_VALUE` |
+| all 21 sites → **8** | **18 fail** — positive control: the corpus does exercise this keyword |
+
+The two-sided control matters: at 26 exactly one vector breaks and at 8 eighteen do, so a green
+run at 64 is a measurement rather than a corpus that never looks. **64 leaves 2.3× headroom over
+the longest name the registry can ever supply**, and is the value one site already uses.
+
+The remaining cost is on **producers**, and only on producers that emit something the registry
+does not contain — which is already non-conforming under §1.3. The two prose sites keep **128**;
+they are governed by the entry above and should not be uniformed with the code sites while they
+still mean something different.
+
+### The same shape appears on two more fields
+
+`errorText` is not alone. Across the 86 schemas, **three** property names carry more than one
+distinct value for the same length keyword:
+
+| Field | Distinct `maxLength` | Sites | What the values actually are |
+|---|---|---:|---|
+| `errorText` | **3** — 64 / 128 / 256 | 21 | registry names, longest **28** |
+| `reason` | **2** — 256 / 500 | 6 | plus **2** sites with *no* `maxLength` at all (`connection-lost`, `session-ended-event`) — both are closed `enum`s, so unbounded is correct there and the divergence is really 256 vs 500 across 4 sites. The 500 is `set-maintenance-mode-request`, the only one that is operator free text; `V2-010` in this file records an earlier "maxLength corrected to 500 in both schemas" |
+| `signature` | **2** — 512 / 1024 | 5 | every real value in the corpus is **96** characters (base64 of a DER P-256 signature); both limits are 5–10× the longest value that can exist |
+
+`signature` is the sharper instance of the same class: the values are fixed-width by construction
+— ECDSA P-256, DER, base64 — and the corpus's 28 distinct signatures are **all exactly 96
+characters**. Neither 512 nor 1024 was derived from that; `update-firmware-request` additionally
+carries a `pattern` the other four do not.
+
+**Recorded, not repaired.** Uniforming `errorText`'s 19 code sites is a schema change across 18
+files with a measured cost of zero against the corpus and the registry, but it is breaking for any
+producer already emitting a non-registry value, and this file's convention is that a schema
+tightening is adjudicated in a release rather than folded into a measurement.
 
 ---
 
