@@ -274,6 +274,75 @@ The rules that follow from it:
    created.
 5. **Never quote a gate's number from anywhere but the gate.** If a comment in a workflow
    needs a count to explain itself, point at the file that owns it instead of repeating it.
+6. **A count may only count artefacts the sentence is not part of.** Rows of a table,
+   members of a schema, files in a directory — safe. Occurrences of a token inside the
+   corpus that holds the sentence — not.
+7. **A change that moves an artefact sweeps every count of that artefact, in the same
+   commit.** Including counts in the sibling repositories, where nothing mechanical can
+   reach them.
+
+Rules 6 and 7 are two more sub-kinds, and neither is the *stale* kind or the *wrong
+instrument* kind above. They are separated here because each fails at a different moment
+and only one of them can be repaired by re-measuring.
+
+### Rule 6 — the self-counting restatement is false at SAVE, not later
+
+`0.39.0` wrote *"`5103` … occurs at **30** sites in `spec/`"* into two files under `spec/`,
+which added occurrences of `5103` to `spec/`. The sentence was correct when it was measured
+and false when it was saved. Re-measured after the commit it read **36**, and it would move
+again on the next edit that names the code.
+
+**There is no value to correct it to, and that is literal.** Re-measured at `3df7b3d`, the
+commit that saved the sentence, `5103` under `spec/` answers **four different numbers**
+depending on which instrument you point at it:
+
+| instrument | at `3df7b3d` | at `ab69db0` |
+|---|--:|--:|
+| `git grep -o '5103' -- spec/ \| wc -l` — occurrences | **40** | **42** |
+| `git grep -c '5103' -- spec/`, summed — lines | **36** | **38** |
+| ``git grep -o '`5103`' -- spec/ \| wc -l`` — backticked | **20** | **22** |
+| `git grep -l '5103' -- spec/ \| wc -l` — files | **10** | **10** |
+
+Three of the four moved between two commits, and none of them is more correct than the
+others. `0.39.1` withdrew the sentence rather than re-measuring it, and replaced it with the
+figure that was load-bearing anyway — a count of §4's table rows, which the sentence does not
+join. That is the only repair: count something else.
+
+**This one IS mechanical, and it is wired.** `tools/check-doc-claims.py` CLAIM 5 refuses the
+*shape*, not the value — a phrase counting occurrences of a token in a corpus path that
+contains the file the phrase is in. Controls, both directions, on real trees: at `ab69db0`
+(`v0.39.1`) three counting phrases match and **0** are self-counting, exit 0; at `3df7b3d`
+(`v0.39.0`) five match and **2** are, exit 1 — `spec/07-errors.md:532` and
+`spec/profiles/device-management/update-service-catalog.md:130`, the exact pair the next
+release had to withdraw.
+
+Two blindnesses were found while building it, each proved on a real tree rather than argued.
+A claim straddling a line break with a `> ` continuation is one claim, and **both** `0.39.0`
+sites are written that way — the first cut matched line by line, found neither, and reported
+success. And `00-introduction.md`'s version-history rows record what a release said,
+including what it withdrew; they are the only hits at HEAD, and flagging them would forbid
+the record.
+
+### Rule 7 — a census invalidated by the release that is described beside it
+
+The same `0.39.0` bounded `change-configuration-response.results` at `maxItems: 20`. Measured
+with one instrument on both trees:
+
+| census | `v0.38.0` | `v0.39.1` |
+|---|--:|--:|
+| `maxLength` + `maxItems` keywords across the 86 schemas | 101 + **12** = **113** | 101 + **13** = **114** |
+| arrays carrying no `maxItems`, all 86 schemas | **10** | **9** |
+| unbounded members, all 86 schemas | **17** | **16** |
+
+Both of the first two figures were restated in a sibling repository's open-items file, in the
+same document that records the `maxItems: 20` change four sections above them. Nothing was
+copied forward carelessly: the numbers were right when written, and the commit that made them
+wrong is described on the same page.
+
+**This one is mechanical only where the count and the artefact share a repository.** There a
+gate re-derives it — CLAIM 1 through 4 are four such families. Across a repository boundary
+nothing spans the gap, so the sweep is part of the change rather than a follow-up: when a PR
+moves a schema, it moves every number about that schema wherever those numbers live.
 
 ---
 

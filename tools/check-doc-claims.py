@@ -381,6 +381,95 @@ def check_anchors() -> None:
     print(f"  checked : {links} anchor(s) into local headings")
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# CLAIM 5 — a restatement may only count artefacts it is not part of
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# The other four claims RE-DERIVE a number and compare it. This one cannot, and that is
+# the point: a sentence that counts occurrences of a token inside the corpus that holds
+# the sentence has no stable value to be corrected to. Writing it changes what it counts.
+#
+# `0.39.0` shipped *"`5103` … occurs at **30** sites in `spec/`"* into TWO files under
+# `spec/`, which added occurrences of `5103` to `spec/`. Correct when measured, false when
+# saved; re-measured after the commit it read **36**, and it would move again on the next
+# edit naming the code. `0.39.1` withdrew it rather than re-measuring, and replaced it with
+# the figure that was load-bearing anyway — a count of §4's table rows, which the sentence
+# does not join.
+#
+# So this claim is a PROHIBITION on the shape, not a comparison of a value. Counting rows
+# of a table, members of a schema, files in a directory is safe. Counting occurrences of a
+# token in a corpus that contains the sentence is not, and no amount of re-measuring fixes
+# it. See CONTRIBUTING.md, *No Number Without Its Measurement Point*, rule 6.
+#
+# Two blindnesses were found and fixed while building this, each proved on a real tree:
+#
+#  - A claim straddling a line break with a `> ` continuation is one claim. Both `0.39.0`
+#    sites are written that way, and the first cut — matching line by line — found NEITHER
+#    while reporting success. `normalise()` blanks blockquote and list markers so the join
+#    is seen, and keeps byte offsets so line numbers stay true.
+#  - `00-introduction.md`'s version-history rows RECORD what a release said, including what
+#    it withdrew. Those two rows are the only hits at HEAD, and flagging them would forbid
+#    the record. A row opening `| X.Y.Z | YYYY-MM-DD |` is a record, matching the exemption
+#    the module docstring already grants that table.
+#
+# Controls, both directions, on real trees: at `ab69db0` (v0.39.1) 3 counting phrases match
+# and 0 are self-counting; at `3df7b3d` (v0.39.0) 5 match and **2** are — `spec/07-errors.md`
+# and `spec/profiles/device-management/update-service-catalog.md`, the exact pair the next
+# release had to withdraw.
+
+_HISTORY_ROW = re.compile(r"^\|\s*\d+\.\d+\.\d+\s*\|\s*\d{4}-\d{2}-\d{2}\s*\|")
+_COUNT = r"\*{0,2}(\d+)\*{0,2}"
+_CORPUS = r"`?([\w.-]+(?:/[\w.-]+)*/)`?"
+_SELF_COUNTING = [
+    re.compile(r"occurs? at\s+" + _COUNT + r"\s+sites?\s+(?:in|across|under)\s+" + _CORPUS),
+    re.compile(r"appears?\s+" + _COUNT + r"\s+times?\s+(?:in|across|under)\s+" + _CORPUS),
+    re.compile(r"named\s+" + _COUNT + r"\s+times?\s+(?:in|across|under)\s+" + _CORPUS),
+    re.compile(_COUNT + r"\s+occurrences?\s+(?:of\s+\S[^,.]{0,60}?\s+)?(?:in|across|under)\s+" + _CORPUS),
+    re.compile(_COUNT + r"\s+sites?\s+(?:in|across|under)\s+" + _CORPUS),
+]
+
+_MARKER = re.compile(r"^(\s*)((?:>\s*)+|[-*+]\s+)")
+
+
+def normalise(text: str) -> str:
+    """Blank blockquote and list markers, preserving offsets so line numbers stay true."""
+    return "\n".join(_MARKER.sub(lambda m: " " * len(m.group(0)), ln) for ln in text.split("\n"))
+
+
+def check_self_counting() -> None:
+    phrases = 0
+    found: list[tuple[str, int]] = []
+    for path in live_markdown():
+        rel = str(path.relative_to(ROOT))
+        raw = path.read_text(encoding="utf-8")
+        lines = raw.split("\n")
+        text = normalise(raw)
+        for pat in _SELF_COUNTING:
+            for hit in pat.finditer(text):
+                phrases += 1
+                line_no = text.count("\n", 0, hit.start()) + 1
+                if _HISTORY_ROW.match(lines[line_no - 1]):
+                    continue
+                corpus = hit.group(2).rstrip("/")
+                if not (rel.startswith(corpus + "/") or rel == corpus or corpus in (".", "")):
+                    continue
+                if (rel, line_no) in found:
+                    continue
+                found.append((rel, line_no))
+                quoted = re.sub(r"\s+", " ", hit.group(0)).strip()
+                failures.append(
+                    f"{rel}:{line_no}: counts occurrences inside `{corpus}/`, which contains "
+                    f"this file — {quoted!r}. Saving this sentence changes what it counts; "
+                    f"count something the sentence is not part of instead."
+                )
+    if phrases < MIN_SITES:
+        broken.append(
+            "no occurrence-count phrase found anywhere; the self-counting patterns match "
+            "nothing, so an empty result is not evidence"
+        )
+    print(f"  checked : {phrases} occurrence-count phrase(s), {len(found)} self-counting")
+
+
 def main() -> int:
     print("registry count")
     check_registry_count()
@@ -390,6 +479,8 @@ def main() -> int:
     check_release_version()
     print("anchors into local headings")
     check_anchors()
+    print("self-counting restatements")
+    check_self_counting()
 
     print()
     if broken:

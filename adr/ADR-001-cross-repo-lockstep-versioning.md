@@ -133,6 +133,35 @@ For an SDK-pair release, "complete" is:
    its contract did not change, and re-tagging it to chase an SDK version would make
    the tag mean the SDK's release cadence rather than the contract's.
 
+#### The order, which the list above does not carry
+
+"Complete" is a set; this is a **sequence**, and it is separate because a release can satisfy
+every item on that list and still ship a false claim.
+
+1. **Tag the spec and push the tag.** Until it exists on the remote, most of each SDK's
+   gates cannot run at all: measured in the tree, `ospp-sdk-php` has 9 `scripts/check-*.sh`
+   of which **8** clone the spec at the tag named in `.spec-ref`, and `sdk-ts` has 9
+   `check:*` npm scripts of which **7** do. A pin to a tag that is not there breaks them
+   rather than failing them — item 2 of the list above.
+2. **Move both `.spec-ref` files to that tag.**
+3. **Then run every SDK gate.**
+4. **Then tag and push the SDKs.**
+
+**Why the order is load-bearing, and not just tidy.** `check-doc-claims` is the exception in
+both SDKs — the one gate that runs with no clone and reads `.spec-ref` *as its expected
+value* (`sdk-ts/scripts/check-doc-claims.ts:77`, used at `:155` and `:261`). So it is the
+only gate that can be green **before** the pin has settled, and its green then describes a
+tree that will not exist by the time the SDK is tagged.
+
+That is not hypothetical. `@ospp/protocol` `0.37.0` was tagged and published carrying **two
+false claims** — `README.md` and `src/enums/SessionEndReason.ts` both said `v0.37.3` while
+`.spec-ref` had moved to `v0.38.0`. `check:doc-claims` reports exactly that pair, and it
+**was green when it ran**, because `.spec-ref` moved afterwards in the same session.
+Repaired in `0.37.1`, where all **14** claims agree.
+
+**A gate's green is a statement about the tree it read.** Any step that changes an input to
+a gate invalidates every run of that gate before it, so the run has to come last.
+
 The rule this replaces — "a release tag `vX.Y.Z` MUST exist on all three repositories
 before the release is considered published" — governs a **spec** release. It was
 never meant to forbid the SDKs from shipping a fix, a re-vendor, or a lockstep
