@@ -47,13 +47,13 @@ holds still across releases cannot identify one.
 > no way to tell `v0.11.1` from `v0.11.0`. An unmoving version is not a
 > conservative choice; it is a document asserting something untrue about itself.
 
-**Every site MUST carry the same value.** As of `0.13.0` there are **29**, across
-26 files — the count is stated so that a sweep can be checked rather than
+**Every site MUST carry the same value.** Re-derived at `ab69db0`, 2026-09-10, `v0.39.1`:
+**29**, across 26 files — the count is stated so that a sweep can be checked rather than
 trusted:
 
 | Sites | Where | Form |
 |------:|-------|------|
-| 22 | the 9 numbered chapters, `spec/glossary.md`, the 7 profile documents under `spec/profiles/`, and the `README`/`SECURITY` of `conformance/`, `conformance/test-vectors/`, `schemas/`, `examples/` | `**OSPP Version:** X.Y.Z` on line 3 |
+| 22 | the 9 numbered chapters, `spec/glossary.md`, **7 of the 36** markdown files under `spec/profiles/`, and 5 `README`/`SECURITY` files — both of `conformance/`, and the `README` alone of `conformance/test-vectors/`, `schemas/`, `examples/` | `**OSPP Version:** X.Y.Z` on line 3 |
 | 1 | `README.md` | the version badge — the number appears **twice** on that line, in the alt text and in the shields.io URL |
 | 2 | `spec/README.md` | the `ospp-version:` front-matter key **and** the *OSPP Version* table row; these have disagreed with each other before, at `0.8.0` and `0.9.0` |
 | 2 | `guides/implementors-guide.md` | `**Spec Version:** X.Y.Z` in the header **and** *"This guide covers OSPP X.Y.Z"* in the closing line; the closing line was unchecked until `0.12.0` and had gone stale unnoticed |
@@ -64,6 +64,17 @@ Documents that carry **no** version header — the conformance test cases, the
 worked examples under `examples/flows/` and `examples/error-scenarios/`, and the
 per-message profile documents — are outside this set by design and MUST NOT gain
 one; they are versioned by the release they ship in.
+
+**This table is a reader's map, not the gate's input, and the difference is why it went
+stale while the total stayed right.** `tools/verify-protocol.sh` DISCOVERS the 22 header
+files by walking `spec/`, `conformance/`, `schemas/` and `examples/` for
+`**OSPP Version:**`; only the 7 named sites are hard-coded. So the total is maintained
+mechanically and the prose that says *where* is maintained by nobody. Between `0.13.0` and
+`v0.39.1` the arithmetic never moved — 9 + 1 + 7 + 5 = 22 — while `spec/profiles/` grew from
+7 markdown files to **36**, and the row went on reading as though the directory held seven.
+A releaser following it would give a new profile document a header that the paragraph below
+forbids. Re-measure this table's rows when you touch it; the total will not tell you they
+have drifted.
 
 `tools/verify-protocol.sh` checks that every site agrees with `spec/README.md`'s
 front-matter and that the newest `## [X.Y.Z]` heading in `CHANGELOG.md` agrees
@@ -208,7 +219,9 @@ without notice, so **a comparison of the two version numbers MUST NOT be introdu
 it is exact rather than ordinal.
 
 See [ADR-001](adr/ADR-001-cross-repo-lockstep-versioning.md), *SDK-pair releases
-against a spec tag*, for what makes such a release complete.
+against a spec tag*, for what makes such a release complete **and for the order the steps
+must run in** — the completeness list is a set, and a release can satisfy every item on it
+and still publish a claim a gate reported green before the input moved.
 
 ## Schema Versioning
 
