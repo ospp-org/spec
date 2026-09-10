@@ -8,6 +8,87 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.39.0] — 2026-09-10
+
+> **MINOR, normative.** The one field a settlement is computed from had **no rounding rule**, and
+> its clock obligation was written on one of its two carriers.
+
+### What was measured
+
+An integrator guide told a firmware author that `actualDurationSeconds` is *"rounded from the wall
+clock"*. Measured against the reference station implementation and against captured traffic, that
+sentence is half right and half forbidden — and the halves fail in opposite directions.
+
+**The rounding half was right, and this specification never said it.** Re-derived from the three
+captured sessions that carry both ends — measuring from the `StartService` REQUEST timestamp to the
+stop carrier's — the reported integer equals `round(wall Δ)` on **3 of 3**:
+
+| session | wall Δ | reported | `round` | `floor` |
+|---|--:|--:|--:|--:|
+| StopService RESPONSE | 40.662 | **41** | 41 | 40 |
+| SessionEnded EVENT | 32.921 | **33** | 33 | 32 |
+| StopService RESPONSE | 37.438 | **37** | 37 | 37 |
+
+Only the first separates `round` from `floor`; the third cannot, and is reported so rather than
+counted as agreement. Across **57** occurrences of round/ceil/floor/truncate in `spec/`, not one
+said how this field reaches an integer — while the one rounding convention that *was* stated
+belongs to a quantity carrying no money (`profiles/transaction/meter-values.md` §4, *"round to the
+nearest integer"*).
+
+**The cost of that silence is exact.** `creditsCharged = ceil(actualDurationSeconds / 60 *
+priceCreditsPerMinute)`, so a one-second difference is a whole credit step: at 100 credits/minute a
+40.662-second wash bills **69** credits rounded and **67** truncated. Two stations, both previously
+conformant, **2 credits** apart on one service.
+
+`stop-service.md` §5 rule 5 now requires rounding to the **nearest** second; `session-ended.md` §5
+rule 2 states the same on the other carrier.
+
+### The clock half needed no new rule — it needed to be where the reader was
+
+`profiles/core/heartbeat.md` §6 rule 5 has required a monotonic timer for session elapsed time
+since **`v0.1.0-draft.1`** (2026-03-02), and `profiles/transaction/session-ended.md` §5 rule 2 has
+named `actualDurationSeconds` explicitly since **2026-08-11**. But `stop-service.md` §5 rule 5 — the
+ordinary, user-initiated stop, and the path most implementers read first — named the **endpoints**
+of the interval (*"from the service start time to the moment of deactivation"*) and not the clock
+that measures it. One field, two carriers, one of them silent. Rule 5 now names it and points at
+both statements of the obligation.
+
+This matters most to exactly the hardware this floor was lowered for in `0.29.0`: a station whose
+time comes from the cellular network takes `NITZ` corrections at moments it does not choose, and a
+correction landing mid-session is billed, in whichever direction it went, with nothing downstream
+to catch it — the receiver takes the number verbatim, and all three schemas carrying it give
+`integer, minimum 0` with no `maximum`.
+
+### And the rule that measures a session had no subject
+
+`heartbeat.md` §6 rule 5 read *"Session elapsed time **MUST** be tracked using a monotonic timer,
+not the wall clock"* — with no subject, since `v0.1.0-draft.1`. Both parties measure sessions, so
+the omission was load-bearing. Measured against the reference server: **4 sites** derive a session's
+elapsed time as `started_at->diffInSeconds(now())` on the PHP wall clock, and all four write the
+column a settlement reads; a **fifth** clock — SQL `NOW()`, the database's, not the application's —
+gates the overdue-session sweep. Of **10** session-relevant time sites, **7** reach money. Monotonic
+sources in that codebase: **zero** (positive control: 210 `now()` call sites; `hrtime` 0,
+`CLOCK_MONOTONIC` 0).
+
+That is not a violation, because the rule never said whose it was — and it could not have been the
+receiver's. A receiver settling a session it was never told the duration of has one anchor, a
+**stored** `startedAt` that survives restarts and may not have been written by the process now
+reading it. No monotonic timer spans that. Rule 5 is therefore scoped to **the station**, matching
+what `session-ended.md` §5 rule 2 already said in terms, and the receiver's case is stated for the
+first time: it **MUST** derive from its own wall clock, because there is nothing else, and it
+**SHOULD** record whether a settled duration was *reported* or *derived* — same number, different
+provenance, different failure mode, and no operator auditing a bill can tell them apart otherwise.
+`SHOULD` because no message carries the distinction and no conformance test can observe it.
+
+### Cascade
+
+`protocolVersion` stays `0.3.0`. **0 schema bytes; 345 of 345 vectors unchanged; no SDK code
+moves** — measured: `actualDurationSeconds` occurs **14** times across both SDKs' `src/`, and every
+occurrence is a type declaration or a bundled test vector. Neither SDK computes a duration. Both
+SDKs move `.spec-ref` and re-tag so the pinned-spec claim stays true.
+
+---
+
 ## [0.38.0] — 2026-09-10
 
 > **MINOR, normative.** Nothing in this specification bounded a **message**. Twenty-two

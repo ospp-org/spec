@@ -30,7 +30,19 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-09-10  (unreleased)  430 unbolded, 1298 bolded spans — the envelope cap, the
+    (this HEAD) 2026-09-10  (unreleased)  430 unbolded, 1303 bolded spans — the rounding rule the
+                                   billing operand never had, and the clock obligation that was
+                                   written on one of its two carriers. Unbolded is UNCHANGED and at
+                                   BASELINE, and it took one repair to keep it there: the history row
+                                   added here QUOTES rule 5, and an unbolded quoted `MUST` counted as
+                                   a finding until it was put in backticks — the same call the v0.29.0
+                                   row below records, that a reference to an obligation must not be
+                                   dressed as one. The companion rises by FIVE (1298 -> 1303), in
+                                   `profiles/transaction/` and `profiles/core/`, RE-DERIVED here. The
+                                   1298 it rises from is the row below, RE-MEASURED from a clean
+                                   `git archive` of v0.38.0 rather than carried forward — the same
+                                   discipline that row's own note records.
+    18c664f  2026-09-10  v0.38.0   430 unbolded, 1298 bolded spans — the envelope cap, the
                                    ordering-floor window, and the note on codes that refuse what they
                                    already hold. Unbolded is UNCHANGED and at BASELINE: every keyword
                                    the four new blocks introduce is bolded on the way in, which is the
