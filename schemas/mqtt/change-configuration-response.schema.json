@@ -10,7 +10,8 @@
     "results": {
       "type": "array",
       "minItems": 1,
-      "description": "Per-key results in the same order as the request keys array",
+      "maxItems": 20,
+      "description": "Per-key results in the same order as the request keys array. Bounded at 20 because change-configuration.md rule 3 makes this array one entry per request key, and change-configuration-request.schema.json bounds keys at 20; the pairing was normative and only this half was unenforceable.",
       "items": {
         "type": "object",
         "required": ["key", "status"],

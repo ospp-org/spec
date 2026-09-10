@@ -80,12 +80,33 @@ first time: it **MUST** derive from its own wall clock, because there is nothing
 provenance, different failure mode, and no operator auditing a bill can tell them apart otherwise.
 `SHOULD` because no message carries the distinction and no conformance test can observe it.
 
+### Two smaller repairs that were measured before they were made
+
+**`change-configuration-response.results` gains `maxItems: 20`, and the bound was already
+normative.** `change-configuration.md` §6 rule 3 requires *"one entry per request key, in the same
+order"*, and `change-configuration-request.schema.json` bounds `keys` at **20** — so the pairing
+was a `MUST` of which only one half could be checked. **Radius, measured before the edit:** **6**
+vectors validate against this schema (3 valid, 3 invalid) carrying **1, 2, 4, 1, 1, 1** entries, so
+**0 of 6** change verdict and the corpus stays **345/345**. Positive control on the new keyword,
+boundary-exact: 1 accepted, **20** accepted, **21** rejected — the constraint bites where it
+should rather than being inert.
+
+**`5025` and `5103` are not one class, and now say so.** Both appeared on UpdateServiceCatalog with
+cells that named storage and nothing that separated them, so a station that could not keep a
+catalog had to guess. The discriminator is **whether the write was attempted** — a pre-write
+capacity judgement on a working store is `5025`, an attempted write that failed is `5103` — which
+is the distinction `ble-session.md` §1 rule 3 already draws between `5103` and `5111`. They are not
+one class by reach either: `5103` is the general persistence code of **5** actions and occurs at
+**30** sites in `spec/`, `5025` belongs to one action and occurs at **17**. **Neither is dead**,
+and `07-errors.md` §3.7 no longer records the overlap as an open question.
+
 ### Cascade
 
-`protocolVersion` stays `0.3.0`. **0 schema bytes; 345 of 345 vectors unchanged; no SDK code
-moves** — measured: `actualDurationSeconds` occurs **14** times across both SDKs' `src/`, and every
-occurrence is a type declaration or a bundled test vector. Neither SDK computes a duration. Both
-SDKs move `.spec-ref` and re-tag so the pinned-spec claim stays true.
+`protocolVersion` stays `0.3.0`. **1 schema file moves** (`change-configuration-response`, one
+keyword and its rationale); the vector corpus is **345 of 345, unchanged**; **no SDK code moves** —
+measured: `actualDurationSeconds` occurs **14** times across both SDKs' `src/`, and every
+occurrence is a type declaration or a bundled test vector, so neither SDK computes a duration. Both
+SDKs re-vendor that one schema, move `.spec-ref`, and re-tag so the pinned-spec claim stays true.
 
 ---
 

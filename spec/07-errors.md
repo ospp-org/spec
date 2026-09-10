@@ -522,13 +522,15 @@ than an inbound message at all, and `5103 STORAGE_ERROR` is a write fault on a w
 *"a capacity condition on a working store, not a store that failed to write"* is the distinction
 [`ble-session.md` §1](profiles/offline/ble-session.md) rule 3 already draws between them.
 
-> **One overlap is left standing, and it is named rather than repaired.**
-> [`update-service-catalog.md` §7](profiles/device-management/update-service-catalog.md) gives
-> `5103` as *"insufficient or inaccessible storage for persisting the catalog"* — which is
-> word-for-word `5025`'s surviving storage ground. Two codes therefore describe one condition on
-> one action, and a station may emit either. That is a registry-shape question about which code
-> owns *"a legal catalog I cannot keep"*, not a size question, so this cycle records it instead of
-> deciding it: choosing would retire a code, and no measurement here says which.
+> **The one overlap that looked like a fourth member is not one, and `0.39.0` gave it its
+> discriminator.** [`update-service-catalog.md` §7](profiles/device-management/update-service-catalog.md)
+> lists `5103` beside `5025` on the same action, and both cells named storage. They are not one
+> condition: the separator is **whether the write was attempted** — a pre-write capacity judgement
+> on a working store is `5025`, an attempted write that failed is `5103` — which is the same
+> distinction [`ble-session.md` §1](profiles/offline/ble-session.md) rule 3 already draws between
+> `5103` and `5111`. Nor are they one class by reach: `5103` is the general persistence-failure
+> code of **5** actions in [§4](#4-error-code-usage-per-message) and occurs at **30** sites in
+> `spec/`, while `5025` belongs to one action and occurs at **17**. **Neither is dead.**
 
 **A code that no conforming implementation can reach is a note, not a defect.** `5025` at zero
 conformance coverage is recorded in

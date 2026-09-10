@@ -113,8 +113,25 @@ never existed — and now names this ceiling.
 | `3015` | `PAYLOAD_INVALID` | Error | A payload-level value that is wrong in itself — an empty `catalogVersion`, for instance. [Chapter 07 §3.3](../../07-errors.md) narrows this code to a value that could never be valid, so it does not reach a service **entry**: an entry that fails validation, a missing or conflicting price included, is `5023` by rule 1 above. |
 | `5023` | `INVALID_CATALOG` | Error | Any service entry failed validation — a missing required field, an invalid pricing type, no price for the declared `pricingType`, or the other type's price present — or the catalog as a whole is inconsistent, a duplicate `serviceId` being the case that arises. |
 | `5024` | `UNSUPPORTED_SERVICE` | Error | The catalog names a service the station cannot run, or binds one to a `(bayNumber, programNumber)` pair it never declared. The whole catalog is refused — see rule 8. **Not `5023`:** that is rule 1's code for an entry that failed *validation*, and such an entry passes validation — what it fails is a fact only the station holds. Exercised by [`TC-DM-008`](../../../conformance/test-cases/device-management/TC-DM-008.md) Part E. |
-| `5025` | `CATALOG_TOO_LARGE` | Error | The catalog exceeds the station's storage or processing capacity. |
-| `5103` | `STORAGE_ERROR` | Error | Insufficient or inaccessible storage for persisting the catalog. |
+| `5025` | `CATALOG_TOO_LARGE` | Error | The catalog is larger than the station can **keep** — a capacity judgement made **before** attempting the write, on a store that works. See the discriminator below. |
+| `5103` | `STORAGE_ERROR` | Error | The station **attempted** to persist the catalog and the store failed — an I/O fault, not a capacity judgement. See the discriminator below. |
+
+> **Two codes, one action, and until `0.39.0` no rule saying which.** Both cells named storage and
+> neither said what separates them, so a station that could not keep a catalog had to guess. The
+> discriminator is **whether the write was attempted**, and it is the same one
+> [`ble-session.md` §1](../offline/ble-session.md) rule 3 already uses to separate `5103` from
+> `5111`: *"a capacity condition on a working store, not a store that failed to write"*.
+>
+> - The station compares the catalog against the room it has and declines **before** writing ⇒ `5025`.
+> - The station writes and the write **fails** ⇒ `5103`.
+>
+> **Neither code is dead, and they are not one class.** `5103` is the general persistence-failure
+> code of **5** actions in [Chapter 07 §4](../../07-errors.md) — StartService, UpdateFirmware,
+> GetDiagnostics, UpdateServiceCatalog and CertificateInstall — and occurs at **30** sites in
+> `spec/`; `5025` belongs to this action alone and occurs at **17**. What they shared was a word,
+> not a condition. `5025` is also the code the envelope cap narrowed (§6, rule 9's note): its
+> *processing* ground is unreachable by construction, and the ground surviving there is precisely
+> the pre-write capacity judgement this discriminator names.
 
 ## 8. Examples
 
