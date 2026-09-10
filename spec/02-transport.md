@@ -1,6 +1,6 @@
 # Chapter 02 — Transport
 
-> **Status:** Draft | **OSPP Version:** 0.39.0
+> **Status:** Draft | **OSPP Version:** 0.39.1
 
 OSPP defines three transport layers for communication between participants. Each transport serves a distinct channel with its own security model, reliability guarantees, and failure modes.
 
@@ -146,7 +146,7 @@ The `v1` segment in the topic path is a **namespace identifier**, NOT the protoc
 - The protocol version is carried inside the message envelope via the `protocolVersion` field (see [Chapter 03 — Messages](03-messages.md)) and checked at boot by **exact match** against the set the server supports ([VERSIONING.md](../VERSIONING.md)). "Negotiation" here means that check and its `1007` outcome; the two peers do not converge on a version, and a shared MAJOR implies nothing.
 - The topic namespace `v1` MUST remain `v1` for every OSPP protocol version, regardless of that version's MAJOR component. The two numbers are unrelated: the namespace identifies the topic layout, the envelope field identifies the message contract.
 - A new topic namespace (e.g., `v2`) would only be introduced for a fundamental transport-level change — a different topic shape or a different addressing scheme — not for any change the envelope's `protocolVersion` can express.
-- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.39.0*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.3.0`): the two version numbers evolve separately and need not match.
+- The **specification-document version** shown in each chapter header (e.g. *OSPP Version: 0.39.1*) versions this specification's prose and schemas. It is **independent of** the wire `protocolVersion` field carried in the message envelope (e.g. `0.3.0`): the two version numbers evolve separately and need not match.
 
 **Negotiation happens once, at boot. A later mismatch is not re-negotiated, and is not refused.**
 
@@ -984,17 +984,25 @@ An OSPP message on MQTT is one envelope, serialised to UTF-8, published as the w
 PUBLISH payload (§10.1). **That serialisation MUST NOT exceed 64 512 bytes (63 KiB).**
 
 **The bound is on the envelope and not on any field inside it, because no arrangement of
-field bounds can express it.** Ten of the 47 MQTT message schemas admit a member with no
-size bound of its own — **12 such members**, of which **7 are arrays without `maxItems`**
+field bounds can express it.** **Nine** of the 47 MQTT message schemas admit a member with no
+size bound of its own — **11 such members**, of which **6 are arrays without `maxItems`**
 (`update-service-catalog-request.services`, `get-configuration-request.keys`,
 `get-configuration-response.configuration` and `.unknownKeys`,
-`change-configuration-response.results`, `boot-notification-response.supportedVersions`,
+`boot-notification-response.supportedVersions`,
 `authorize-offline-pass-request.offlinePass.offlineAllowance.allowedServiceTypes`) and
 **5 are open objects** (`boot-notification-response.configuration`, `security-event.details`,
 `start-service-request.params`, and the `data` of both DataTransfer messages), which no
 `maxItems` can close. JSON Schema has no keyword for the length of a serialisation, so this
 cap is a normative rule that implementations enforce, not a schema constraint;
 `mqtt-envelope.schema.json` cannot and does not carry it.
+
+> **This census read `10 / 12 / 7` at `0.38.0`, and `0.39.0` moved it by bounding one of the
+> seven.** `change-configuration-response.results` gained `maxItems: 20`
+> ([`change-configuration.md` §6](profiles/device-management/change-configuration.md) rule 3 already
+> made it one entry per request key, and the request bounds `keys` at 20), which left that schema
+> with no unbounded member at all. The `0.38.0` figures stand where they were written — a
+> measurement point is not rewritten after the fact — and this paragraph carries the current
+> reading.
 
 **Emitter.** A publisher **MUST** measure the serialised envelope and **MUST NOT** publish
 one above the cap. It is the only party that can measure it before it exists on the wire.

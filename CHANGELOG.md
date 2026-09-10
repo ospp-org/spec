@@ -8,6 +8,46 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.39.1] — 2026-09-10
+
+> **PATCH, non-normative — `0.39.0` invalidated two of its own counts, in two different ways, and
+> one of them could never have been right.**
+
+### A census the same release moved
+
+`02-transport.md` §10.2.1 stated the measurement that justifies the envelope cap: **10 of the 47**
+MQTT schemas admit an unbounded member, **12** such members, **7** of them arrays without
+`maxItems` — and named `change-configuration-response.results` in that list of seven. `0.39.0`
+then bounded that very member at `maxItems: 20`, leaving the schema with no unbounded member at
+all, and did not re-read the paragraph. The live figures are now **9 / 11 / 6** and `results` is
+gone from the list.
+
+**The `0.38.0` records are not touched.** `10 / 12 / 7` was true on the tree that wrote it, and
+this repository's own rule is that a measurement point is not rewritten after the fact — so the
+`0.38.0` changelog entry and the `0.38.0` history row keep their numbers, and §10.2.1 now says in
+one sentence which reading is which.
+
+### A count that was false the moment it was written
+
+The note separating `5025` from `5103` said `5103` *"occurs at 30 sites in `spec/`"* and `5025`
+*"at 17"*. Those were correct when measured — and writing them into `07-errors.md` and
+`update-service-catalog.md` **added occurrences of both tokens to `spec/`**, so the sentences
+falsified themselves on save. Re-measured now they read 36 and 23, and they would move again on
+the next edit that mentions either code.
+
+**Withdrawn rather than re-measured.** A self-counting claim has no stable value to correct it to.
+What replaces it is the figure that was doing the work anyway: [§4](spec/07-errors.md) lists
+`5103` against **5** actions and `5025` against **one**. That count is derived from a table the
+sentence does not join, so reading it does not change it. The class verdict is unaffected —
+different classes, discriminated by whether the write was attempted, neither dead.
+
+### Cascade
+
+`protocolVersion` stays `0.3.0`. **0 schema bytes, 345 of 345 vectors, no SDK code.** Both SDKs
+move `.spec-ref` and re-tag so the pinned-spec claim stays true.
+
+---
+
 ## [0.39.0] — 2026-09-10
 
 > **MINOR, normative.** The one field a settlement is computed from had **no rounding rule**, and
@@ -96,9 +136,11 @@ cells that named storage and nothing that separated them, so a station that coul
 catalog had to guess. The discriminator is **whether the write was attempted** — a pre-write
 capacity judgement on a working store is `5025`, an attempted write that failed is `5103` — which
 is the distinction `ble-session.md` §1 rule 3 already draws between `5103` and `5111`. They are not
-one class by reach either: `5103` is the general persistence code of **5** actions and occurs at
-**30** sites in `spec/`, `5025` belongs to one action and occurs at **17**. **Neither is dead**,
-and `07-errors.md` §3.7 no longer records the overlap as an open question.
+one class by reach either: §4 lists `5103` against **5** actions and `5025` against **one**.
+**Neither is dead**, and `07-errors.md` §3.7 no longer records the overlap as an open question.
+*(This paragraph originally also gave raw occurrence counts — 30 and 17. They were false the
+moment they were written, for the reason `0.39.1` records, and are withdrawn rather than
+re-measured: the §4 row counts are the load-bearing figures and they do not self-invalidate.)*
 
 ### Cascade
 

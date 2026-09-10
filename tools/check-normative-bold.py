@@ -30,7 +30,13 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-09-10  (unreleased)  430 unbolded, 1303 bolded spans — the rounding rule the
+    (this HEAD) 2026-09-10  (unreleased)  430 unbolded, 1303 bolded spans — the two counts 0.39.0
+                                   invalidated. Both numbers UNCHANGED from the row below: 0.39.1
+                                   moves no normative prose at all, only figures the specification
+                                   states about itself, which is exactly the shape the 0.33.1 row
+                                   further down records. RE-DERIVED on this tree rather than carried.
+    3df7b3d  2026-09-10  v0.39.0   430 unbolded, 1303 bolded spans, RE-MEASURED from a clean
+                                   `git archive` of the tag — the rounding rule the
                                    billing operand never had, and the clock obligation that was
                                    written on one of its two carriers. Unbolded is UNCHANGED and at
                                    BASELINE, and it took one repair to keep it there: the history row

@@ -125,11 +125,10 @@ never existed — and now names this ceiling.
 > - The station compares the catalog against the room it has and declines **before** writing ⇒ `5025`.
 > - The station writes and the write **fails** ⇒ `5103`.
 >
-> **Neither code is dead, and they are not one class.** `5103` is the general persistence-failure
-> code of **5** actions in [Chapter 07 §4](../../07-errors.md) — StartService, UpdateFirmware,
-> GetDiagnostics, UpdateServiceCatalog and CertificateInstall — and occurs at **30** sites in
-> `spec/`; `5025` belongs to this action alone and occurs at **17**. What they shared was a word,
-> not a condition. `5025` is also the code the envelope cap narrowed (§6, rule 9's note): its
+> **Neither code is dead, and they are not one class.** [Chapter 07 §4](../../07-errors.md) lists
+> `5103` against **5** actions — StartService, UpdateFirmware, GetDiagnostics,
+> UpdateServiceCatalog and CertificateInstall — and `5025` against **one**, this one. What they
+> shared was a word, not a condition. `5025` is also the code the envelope cap narrowed (§6, rule 9's note): its
 > *processing* ground is unreachable by construction, and the ground surviving there is precisely
 > the pre-write capacity judgement this discriminator names.
 

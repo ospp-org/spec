@@ -1,6 +1,6 @@
 # Chapter 07 — Error Codes & Resilience
 
-> **Status:** Draft | **OSPP Version:** 0.39.0
+> **Status:** Draft | **OSPP Version:** 0.39.1
 
 This chapter defines the complete error taxonomy for the OSPP protocol, including the error code registry, standard error response format, retry policies, circuit breaker patterns, and graceful degradation behavior.
 
@@ -528,9 +528,14 @@ than an inbound message at all, and `5103 STORAGE_ERROR` is a write fault on a w
 > condition: the separator is **whether the write was attempted** — a pre-write capacity judgement
 > on a working store is `5025`, an attempted write that failed is `5103` — which is the same
 > distinction [`ble-session.md` §1](profiles/offline/ble-session.md) rule 3 already draws between
-> `5103` and `5111`. Nor are they one class by reach: `5103` is the general persistence-failure
-> code of **5** actions in [§4](#4-error-code-usage-per-message) and occurs at **30** sites in
-> `spec/`, while `5025` belongs to one action and occurs at **17**. **Neither is dead.**
+> `5103` and `5111`. Nor are they one class by reach: [§4](#4-error-code-usage-per-message) lists
+> `5103` against **5** actions — StartService, UpdateFirmware, GetDiagnostics,
+> UpdateServiceCatalog and CertificateInstall — and `5025` against **one**. **Neither is dead.**
+>
+> *(An earlier revision of this note also gave raw occurrence counts for the two codes. It was
+> withdrawn at `0.39.1`: a sentence that says how often a token occurs in `spec/` adds occurrences
+> of that token to `spec/`, so it is false the moment it is written. The §4 row counts above are
+> derived from a table this sentence does not join, and do not move when it is read.)*
 
 **A code that no conforming implementation can reach is a note, not a defect.** `5025` at zero
 conformance coverage is recorded in
