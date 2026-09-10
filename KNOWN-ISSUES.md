@@ -1612,10 +1612,24 @@ The two-sided control matters: at 26 exactly one vector breaks and at 8 eighteen
 run at 64 is a measurement rather than a corpus that never looks. **64 leaves 2.3× headroom over
 the longest name the registry can ever supply**, and is the value one site already uses.
 
-The remaining cost is on **producers**, and only on producers that emit something the registry
-does not contain — which is already non-conforming under §1.3. The two prose sites keep **128**;
-they are governed by the entry above and should not be uniformed with the code sites while they
-still mean something different.
+The two prose sites keep **128**; they are governed by the entry above and should not be uniformed
+with the code sites while they still mean something different.
+
+**The cost is not zero outside the corpus, and the one instance found is worth naming.** A census
+of the reference server (`osp/csms-server`, 107 write sites bound to a field named
+`errorText`/`error_text`) shows that **every** outbound MQTT/BLE write is derived from the code
+enum — nine sites, all `OsppErrorCode->errorText()` or `->name`, ceiling 28 — so no conforming
+implementation on that side emits a wire value a 64 would cut. Its long free-prose strings (the
+longest is **92** characters, `InitiateFirmwareUpdateAction.php:248`) are written to `error_text`
+database columns and re-served over REST, a surface these schemas do not govern.
+
+But **one test premise does break**: `tests/Feature/Payment/ReasonColumnOverflowTest.php:78`
+constructs `str_repeat('E', 128)` and documents it as *"a maximal station errorText (OSPP schema
+maxLength = 128)"*. It is valid **today** for both reasons at once — 128 uppercase letters satisfy
+`^[A-Z][A-Z0-9_]+$` and sit exactly on `start-service-response`'s bound — and a uniform 64 makes
+it invalid. That is a test asserting how a downstream column handles a maximal upstream value, so
+tightening the schema does not merely renumber it; it removes the maximum the test was written to
+exercise. Any uniforming release has to carry that file with it.
 
 ### The same shape appears on two more fields
 
