@@ -1684,7 +1684,7 @@ Commands the station to **reboot**. There is exactly one reset operation and eve
 | **Trigger** | Administrator initiates OTA firmware update |
 | **Expected Response** | UpdateFirmware RESPONSE, then [FirmwareStatusNotification](#65-firmwarestatusnotification) events |
 | **Timeout** | 300 seconds |
-| **Idempotency** | Yes — same `firmwareVersion` + `checksum` is a no-op if already installed or in progress |
+| **Idempotency** | Yes — a repeat installs nothing. Already installed: `Rejected` with `5016` ([Chapter 06 §4.6.1](06-security.md#461-anti-downgrade-protection)), unless `forceDowngrade` is set. Already in progress: `Rejected` with `5107`. Idempotent in effect, not silent in response |
 | **Message Expiry** | 600 seconds |
 
 Instructs the station to download and install a new firmware version. The station uses an **A/B partition** scheme: the new firmware is written to the inactive partition, and on reboot the bootloader switches to it. On failure, the station automatically rolls back to the previous partition.
@@ -1744,7 +1744,7 @@ Instructs the station to download and install a new firmware version. The statio
 | `1011` | `URL_UNREACHABLE` — firmware URL cannot be reached |
 | `5014` | `DOWNLOAD_FAILED` — firmware binary download failed |
 | `5015` | `CHECKSUM_MISMATCH` — firmware checksum does not match expected value |
-| `5016` | `VERSION_ALREADY_INSTALLED` — target firmware version is already installed |
+| `5016` | `VERSION_ALREADY_INSTALLED` — target firmware version is the same as or older than the installed one, and `forceDowngrade` was not set |
 | `5017` | `INSUFFICIENT_STORAGE` — not enough storage to download/install firmware |
 | `5018` | `INSTALLATION_FAILED` — firmware installation failed |
 | `5103` | `STORAGE_ERROR` — insufficient storage for firmware download |

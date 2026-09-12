@@ -26,6 +26,75 @@ Under [VERSIONING.md](VERSIONING.md) it takes a **MINOR**: no wire format moves,
 conformance surface grows, and an implementation that was conforming before can be non-conforming
 after.
 
+- **The MeterValues skip permission is conditioned on the running program, because read flat it was
+  widest where it was least safe** ([`profiles/transaction/meter-values.md` §5.1](spec/profiles/transaction/meter-values.md)
+  rule 5). The permission stood in exactly **1** place across `spec/`, `schemas/` and
+  `conformance/`, and it said only *"if no meter readings have changed since the last event, the
+  station **MAY** skip that interval"*. During an active delivery, a reading that should be
+  advancing and is not is the signature of a stalled pump, a closed valve or an empty consumable —
+  so the flat permission licensed suppressing the one report that would carry the fault, and
+  licensed it precisely in the case that matters. It is now conditioned: a station **MAY** skip
+  only where the running program is not expected to advance any member it reports, **MUST** send
+  the event where it is, and **MUST** send the event if it cannot decide. Which members a program
+  advances is knowledge only the station has —
+  [`meter-values.schema.json`](schemas/common/meter-values.schema.json) requires one of
+  `liquidMl`, `consumableMl`, `energyWh` and binds none to any program — so the rule binds the
+  station to act on that knowledge rather than on the bare comparison, and says outright that no
+  receiver can check it.
+
+- **`5016` had two predicates in six places, and now has one** ([`06-security.md` §4.6.1](spec/06-security.md),
+  [`07-errors.md` §3](spec/07-errors.md), [`update-firmware.md` §5 and §9](spec/profiles/device-management/update-firmware.md),
+  [`03-messages.md` §6.4](spec/03-messages.md), [`implementors-guide.md`](guides/implementors-guide.md)).
+  **4 of 6** attached the code to *equality*, **2 of 6** to *older than* — and a **7th** site, the
+  `UpdateFirmware` idempotency row of [Chapter 03 §6.4](spec/03-messages.md), called a repeat a
+  *no-op*, which is idempotent in effect but not silent in response; a receiver meeting a
+  `5016` could not tell which fired, and a station satisfying either was conforming. The predicate
+  is now the **union** — a station refuses an offered `firmwareVersion` that is **the same as or
+  older than** the installed one and installs only a strictly newer one — which makes both prior
+  readings true and loses nothing, since no third case existed. `forceDowngrade` is unchanged and
+  now overrides a wider set: an explicitly requested re-install of the running version and an
+  explicitly requested rollback both proceed. The **SecurityEvent does not** follow the union: a
+  `FirmwareDowngradeAttempt` is raised only for a strictly older version, never for an equal one,
+  because the two halves share a recovery but not a threat — an equal version is a re-issue, and
+  raising a `Warning` on the most ordinary operator mistake there is would teach the console to
+  ignore the signal. Closes the OPEN KNOWN-ISSUES entry raised 2026-08-17,
+  taking its option 2 — and **without** the `details` discriminator that option assumed it needed,
+  because under the union both halves have the same operator recovery.
+
+- **"Older than" is a numeric comparison of three integers, and a string comparison is forbidden**
+  ([`06-security.md` §4.6.1](spec/06-security.md)). The obligation to refuse a downgrade had been
+  there since the chapter was written; the comparison had not, in **0** places — and
+  `semver.org` / *Semantic Versioning* appear in **0** files under `spec/`, `schemas/` and
+  `conformance/`, so nothing external supplied it either. The schema had already reduced the
+  question to one bit: `firmwareVersion` matches `^\d+\.\d+\.\d+$`, three decimal components
+  with no pre-release and no build metadata, so a version is a triple and the only live ambiguity
+  was numeric versus lexicographic. Lexicographic orders `1.10.0` **before** `1.9.0`, so the first
+  release whose minor or patch reaches two digits is refused with `5016` and reported as a
+  `FirmwareDowngradeAttempt` — a security alert raised against a legitimate rollout, at a point in
+  a product's life that is certain rather than hypothetical. Leading zeros are admitted by the
+  pattern and carry no meaning: `1.02.0` and `1.2.0` are the same version.
+
+- **`SessionTimeout` accepts `0`, and `0` disables the inactivity stop**
+  ([`08-configuration.md` §3](spec/08-configuration.md)). The key's range was `30--600`, so the
+  one value an operator would reach for to turn the behaviour off was **out of range** — and
+  zero-as-disabled was not an existing convention to fall back on: of the integer keys in the
+  registry only `RevocationEpoch` has a range starting at `0`, and there `0` is a legitimate epoch
+  rather than a disable, while *"0 disables"* appeared **0** times in the chapter. The range is now
+  `0--600` and the row states the semantics: at `0` the station **MUST NOT** stop a session on
+  inactivity, and the session is bounded by `durationSeconds` and `MaxSessionDurationSeconds`
+  alone. The key itself is untouched — it stays `Required: Yes` in the `Transaction` profile, so a
+  station still exposes and accepts it; what changes is that the registry now has a value meaning
+  *do not do this*, which it did not before. The stop itself remains a `MAY`, correctly: what
+  counts as *user interaction* is named **10** times across **4** files and defined in **0** of
+  them, so whether a board can implement the stop at all depends on the inputs it has.
+
+  **Radius for all four, measured before and after and identical on both sides: 0 schema bytes, 0
+  conformance vectors, 0 example payloads, 0 new codes.** 86/86 schemas compile, 56/56 examples
+  pass, registry self-consistency 119 rows / 0 contradictions, the unbolded-normative-keyword
+  ratchet holds at **430 (baseline 430)**, and all seven `tools/check-*` gates exit 0. The one
+  registry cell that moved keeps its `<min>--<max>` form, so §1.6's per-form counts are unchanged,
+  and the range has **0** restatements elsewhere in the specification.
+
 - **The two station-scoped offline ceilings refuse with `4002`, and until now they refused with
   nothing** ([`profiles/offline/offline-pass.md` §2.2](spec/profiles/offline/offline-pass.md),
   [`07-errors.md` §3](spec/07-errors.md)). `stationOfflineWindowHours` and `stationMaxOfflineTx`
