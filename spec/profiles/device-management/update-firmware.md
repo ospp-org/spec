@@ -105,6 +105,34 @@ If the watchdog timer expires and automatic rollback fails (e.g., both firmware 
 | `5107` | `OPERATION_IN_PROGRESS` | Warning | Another firmware update or operation is already in progress. |
 | `5112` | `FIRMWARE_SIGNATURE_INVALID` | Critical | ECDSA P-256 firmware signature verification failed after download. |
 
+> **`5017` has to be decided before the download, and the request does not carry the number it needs.**
+> The station is asked to refuse for want of storage, and `UpdateFirmware` carries **0 of its 6**
+> properties naming the image's size — `firmwareUrl`, `firmwareVersion`, `checksum`, `signature`,
+> `forceDowngrade`, `scheduledAt`, with `additionalProperties: false`. The response and the status
+> notification carry none either. So the only refusal that can be made *before* the bandwidth is
+> spent is the one the station has no operand for, while `5014`, `5103` and `5112` are all reachable
+> only *after* the image is on the wire. [Chapter 07 §3.7](../../07-errors.md) states this as one of
+> **3 of 119** registry rows in that shape; this note says what to do about it.
+>
+> **Whose job it is, which nothing said before.** The size is knowable in practice — an HTTP origin
+> that serves a fixed file answers `Content-Length` — but [Chapter 07](../../07-errors.md) is careful
+> that this is *"neither a protocol guarantee — a chunked response has no length, and this
+> specification requires no header"*. That leaves the guarantee unowned, and it need not be. A
+> **server** that issues `UpdateFirmware` **SHOULD** serve the image from an origin it controls that
+> answers a `Content-Length`, and **SHOULD NOT** point a station at an origin that responds
+> chunked: the server chooses the URL, so the server is the only party that can make the number
+> available, and a station cannot negotiate for it. A **station** **SHOULD** issue a `HEAD` (or a
+> ranged `GET`) before downloading and refuse with `5017` when the advertised length does not fit,
+> and **MUST NOT** treat the absence of a `Content-Length` as a refusal ground — an origin outside
+> the server's control may legitimately omit it, and refusing on that would make an
+> unstated header mandatory in effect.
+>
+> **What remains a choice, stated so it is not mistaken for a gap.** With no length available the
+> station **MUST** fall back to downloading and refusing on exhaustion (`5103`/`5014`), which costs
+> the bandwidth. Carrying the size on the wire as a seventh property would remove the fallback
+> entirely; that is a schema change, deliberately not made here, and it is the only thing that would
+> turn `SHOULD` into `MUST`.
+
 ## 10. Examples
 
 ### 10.1 Request (Scheduled Update)

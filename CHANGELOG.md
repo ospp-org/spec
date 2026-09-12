@@ -8,6 +8,101 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [Unreleased]
+
+### Added
+
+**The seven open items that reach a first integrator are closed — six as normative rules, one as a
+structural impossibility stated outright.** They were not blockers: each had a workable answer the
+integrator could choose, and none had one the protocol gave him. That is precisely why they were
+closed now rather than later — the first integrator's choice becomes precedent, and seven silent
+choices are seven places to diverge from.
+
+**Radius: 0 schema bytes, 0 conformance vectors, 0 example payloads.** All 86 schemas compile and
+all 56 examples pass, unchanged; every signature in the corpus still verifies. The SDK cascade is
+therefore **empty by construction** — there is no enum, no field and no vector for the two SDKs to
+mirror — so this entry is `[Unreleased]` and the release cascade is not performed here.
+Under [VERSIONING.md](VERSIONING.md) it takes a **MINOR**: no wire format moves, but the
+conformance surface grows, and an implementation that was conforming before can be non-conforming
+after.
+
+- **Offline per-pass state MUST survive a restart** ([`06-security.md` §6.1.1](spec/06-security.md)).
+  Checks #6, #7, #9 and #10 of the ten are each taken against state accumulated from earlier
+  transactions — uses-so-far, credits-so-far, the instant of the last transaction from the pass, and
+  `lastSeenCounter`. The station **MUST** hold all four in non-volatile storage keyed by
+  `offlinePassId` and commit them durably **before** signing the receipt, in the ordering `txCounter`
+  already carries; on boot it **MUST** reload them. A station that keeps them in RAM offers a pass
+  that may be spent `maxUses` transactions and `maxTotalCredits` credits **again after every power
+  cycle**, with the rate limit lapsed and the local anti-replay horizon reset — **four of the ten
+  checks vacuous, and the three that bound spending among them.** A station that cannot provide the
+  storage **MUST NOT** declare `capabilities.offlineModeSupported: true`. Check #10's own note
+  already assumed the value it compares is *"what its own NVS has seen"*; nothing made that an
+  obligation.
+
+- **Non-integer numbers are forbidden on the signed path, and a receiver is licensed to refuse
+  one** ([`06-security.md` §4.8.1](spec/06-security.md)). What stood was an observation — *"OSPP
+  messages do not currently use floating-point numbers in fields subject to canonicalization"* —
+  which describes the messages this specification defines, not what a conforming peer may emit. The
+  **four** open objects falsify it, derived from the schemas rather than quoted: `data` in
+  `data-transfer-request` and `data-transfer-response`, `details` in `security-event`, `params` in
+  `start-service-request`; **three of the four can be server-authored**. A peer **MUST NOT** emit a
+  non-integer there, and a receiver that meets one **MUST** refuse with `1005
+  INVALID_MESSAGE_FORMAT` — whose row already covers *"invalid field types"* — and **MUST NOT**
+  invent a serialization. **No new error code**: what was missing was never a code, it was the
+  permission to use one.
+
+- **A provisioning replay MUST NOT re-record the topology** ([`04-flows.md`](spec/04-flows.md),
+  *Single-use and idempotent retry*). The chapter forbids refusing a `programNumber`-set drift and
+  discharges it by saying it *"is caught at first boot as `3018 TOPOLOGY_MISMATCH`"*. That holds
+  only while the server still has the first provision's topology to compare against — the reference
+  [`05-state-machines.md` §1.5](spec/05-state-machines.md) rule 3 names. A server that re-recorded a
+  replay's `bays` would overwrite it and every later boot would compare the station **against its
+  own latest declaration**, matching by construction. The drift would then reach nobody, surfacing
+  three chapters away as `3017 PROGRAM_NOT_DECLARED` — whose recommended action blames the server.
+  Searched before writing: **0** statements existed either way.
+
+- **The four transaction response timeouts are measured from the REQUEST's envelope `timestamp`**
+  ([`profiles/transaction/README.md` §4.2](spec/profiles/transaction/README.md)). The figures —
+  StartService 10 s, StopService 10 s, ReserveBay 5 s, CancelReservation 5 s — have been there since
+  the profile was written; the instant they run from has not, in **0** of the four rows. Not the
+  publish, not the broker acknowledgement, not the moment the server began waiting: none of those is
+  on the wire. The note also separates them from [Chapter 02 §5.1](spec/02-transport.md)'s 30 s,
+  which bounds delivery and acceptance rather than the wait for an answer — a server may hold a
+  command deliverable for 30 s and declare it unanswered at 10 s, both correct at once.
+
+- **The clock rule generalises from one field to the whole specification**
+  ([`profiles/core/heartbeat.md` §6](spec/profiles/core/heartbeat.md) rule 7). Instants are
+  wall-clock UTC; elapsed durations and repeat intervals measured inside one uninterrupted process
+  come from a monotonic source. The discriminator is named — **must it survive a restart** — because
+  a monotonic source restarts when the process does, and so are the two deliberate exceptions:
+  `constraints.minIntervalSec`, which compares against a persisted instant, and
+  `CertificateRenewalThresholdDays`, which lives on the certificate's scale.
+  `stationOfflineWindowHours` stays monotonic *because* it bounds one continuous stretch. Before
+  this, **3** quantities had a clock named and **14** did not.
+
+- **Firmware image size: whose job the number is** ([`profiles/device-management/update-firmware.md`
+  §9](spec/profiles/device-management/update-firmware.md)). `5017 INSUFFICIENT_STORAGE` has to be
+  decided before the download and `UpdateFirmware` carries **0 of 6** properties naming the size. A
+  server **SHOULD** serve the image from an origin it controls that answers `Content-Length` and
+  **SHOULD NOT** point a station at a chunked origin — the server chooses the URL, so it is the only
+  party that can make the number available. A station **SHOULD** `HEAD` before downloading and
+  **MUST NOT** treat a missing `Content-Length` as a refusal ground.
+
+### Clarified
+
+- **`1003 TLS_HANDSHAKE_FAILED` is a code you log and cannot send, and that is structural**
+  ([`02-transport.md` §2](spec/02-transport.md)). The failure being reported is the failure of the
+  channel that would carry the report: no session, no topic, no envelope, no `mac`. The asymmetry
+  with its neighbour is named — a certificate-caused handshake failure is `1004` and **does** have a
+  retrospective carrier, `CertificateError`, one of the **12** `type` members of
+  `security-event.schema.json`, while **none** of the 12 describes a cipher-suite or
+  protocol-version failure and the schema has no `errorCode` and is `additionalProperties: false`.
+  A station **MUST** record the failure locally and keep it across backoff **and across a reboot**,
+  and **SHOULD** surface it on the first connection that succeeds. A thirteenth `type` member is
+  costed rather than taken: **1** schema, **1** example, **5** conformance vectors, **3** prose
+  files and **8** files across the two SDKs — a lockstep release under
+  [ADR-001](adr/ADR-001-cross-repo-lockstep-versioning.md), named here so the decision is visible.
+
 ## [0.40.0] — 2026-09-10
 
 ### Changed

@@ -790,7 +790,7 @@ Given a JSON value `V`:
         - `U+2028` LINE SEPARATOR and `U+2029` PARAGRAPH SEPARATOR are likewise literal: they are categories `Zl`/`Zp`, not control characters, and RFC 8259 does not require escaping them. (They must be escaped to embed JSON in a JavaScript source file, which is a property of that host language, not of JSON.)
     - Integers: emit without leading zeros, without a leading `+`, and without a trailing decimal point.
     - Booleans / null: emit as `true`, `false`, `null`.
-    - OSPP messages do not currently use floating-point numbers in fields subject to canonicalization; if added in a future version, IEEE 754 number serialization rules will be defined here.
+    - Numbers: **only integers may appear in a field subject to canonicalization.** A peer **MUST NOT** emit a JSON number that is not an integer anywhere in a message it signs, and that prohibition reaches into the **open objects** as well — `data` in [`data-transfer-request`](../schemas/mqtt/data-transfer-request.schema.json) and [`data-transfer-response`](../schemas/mqtt/data-transfer-response.schema.json), `details` in [`security-event`](../schemas/mqtt/security-event.schema.json), and `params` in [`start-service-request`](../schemas/mqtt/start-service-request.schema.json). Those four are the only places a number can appear that no schema constrains, and three of them can be **server**-authored, so this is a rule for both peers and not only for firmware. IEEE 754 serialization rules are deliberately **not** defined: defining them would make non-integers legal, and the reason they are illegal is below.
 4. **Encode as UTF-8 bytes**. The resulting byte sequence is the canonical form.
 
 #### 4.8.2 Worked Example
@@ -825,7 +825,11 @@ OSPP Canonical Form is **materially similar to RFC 8785 JCS but does not require
 OSPP does not pin RFC 8785 normatively because:
 
 - Existing OSPP message vocabulary is ASCII-only; Unicode normalization adds implementation cost without observable behavior.
-- IEEE 754 number serialization rules from JCS apply only to floating-point numbers, which OSPP does not use in canonicalized fields today.
+- IEEE 754 number serialization rules from JCS are deliberately not adopted, because §4.8.1 forbids non-integer numbers in canonicalized fields outright rather than defining a serialization for them.
+
+> **Why a non-integer is refused rather than serialized, and what a receiver does with one.** This used to read as an observation — *"OSPP messages do not currently use floating-point numbers in fields subject to canonicalization"* — which is a statement about the messages this specification defines, not about what a conforming peer may put on the wire. The four open objects named in §4.8.1 falsify it: each accepts any JSON value, so a peer could legally place `0.1` in one, and the receiver would have to canonicalize a value whose byte form is not defined. It cannot: `0.1` has no unique decimal representation, the two reference implementations of this specification's own canonicalizer disagree on where the boundary lies for large magnitudes, and a `mac` computed over one serialization does not verify against the other. The receiver would be left with a frame it can neither verify nor, under [§5.7](#57-failure-handling--both-directions-fail-closed), accept.
+>
+> So the emitter is forbidden and the receiver is **licensed**: a receiver that meets a non-integer number in a field subject to canonicalization **MUST** refuse the message with `1005 INVALID_MESSAGE_FORMAT` ([Chapter 07](07-errors.md)) — whose registry row already covers *"invalid field types"* and whose recommended action is already *"do **not** resend the identical bytes — the sender must correct them"* — and **MUST NOT** attempt a serialization of its own. **No new error code is introduced**; what was missing was never a code, it was the permission to use one.
 
 A future OSPP version MAY adopt RFC 8785 strictly if message vocabulary is extended with non-ASCII strings or floating-point numbers.
 
@@ -1166,6 +1170,42 @@ Processing **MUST** stop at the first failure, and the validator **MUST** reject
 | 10 | **Counter anti-replay (station-local horizon)** | `2005` | `counter` MUST be strictly greater than `lastSeenCounter` for this pass on this station. See the counter-model note below. |
 
 **Implementation note:** Implementations SHOULD perform structural and temporal checks before cryptographic verification to mitigate denial-of-service. The error code returned SHOULD correspond to the first failed check in the canonical order (1–10).
+
+**The state four of these checks are taken against MUST survive a restart.** Checks #6, #7, #9 and
+#10 do not compare the pass against itself; each compares it against state the station accumulated
+from **earlier** transactions on that pass — the uses already counted (#6), the credits already
+counted (#7), the instant of the last transaction from this pass (#9), and `lastSeenCounter` (#10).
+The station **MUST** hold all four in non-volatile storage, keyed by `offlinePassId`, and **MUST**
+commit the updated values durably — flushed, not merely buffered — **before** it signs the
+transaction receipt. That is the same ordering `txCounter` already carries
+([§6.3](#63-signed-counter--forensic-evidence)), and for the same reason: a value written after the
+receipt is a value a power cut can lose while the receipt it was supposed to bound survives. On
+boot the station **MUST** reload them, and **MUST NOT** treat a pass it has already served as one
+it has not seen.
+
+> **What a station that keeps them in RAM is actually offering.** After a restart, uses-so-far and
+> credits-so-far are zero and `lastSeenCounter` is `-1`. A pass may then be spent `maxUses`
+> transactions and `maxTotalCredits` credits **again** after every power cycle, with no bound on how
+> often; the `minIntervalSec` rate limit lapses; and every counter value the app has already used is
+> accepted once more. **Four of the ten checks are vacuous, and the three that bound spending are
+> among them** — an attacker who can power-cycle a bay has an unbounded credit line, and the local
+> half of the anti-replay defence reopens on every boot. Check #10's own note above already assumes
+> the value it compares is *"what its own NVS has seen"*; this paragraph is what makes that an
+> obligation rather than an assumption.
+>
+> The cross-station backstop does **not** cover this. Reconcile-time `(offlinePassId, passCounter)`
+> uniqueness ([`reconciliation.md` §6.1](profiles/offline/reconciliation.md#61-check-list) checks
+> #12/#13) catches the replay **after the service has been delivered and the station is back
+> online**, which is recovery, not prevention — and for a station that is offline by design for
+> `stationOfflineWindowHours`, that can be a full day of delivered service.
+
+**A station that cannot keep them MUST NOT claim the profile.** Non-volatile storage for four
+integers per live pass is the floor for performing checks #6, #7, #9 and #10 at all, so a station
+that cannot provide it **MUST NOT** declare `capabilities.offlineModeSupported: true` in its
+BootNotification. Declaring the capability is a claim to implement the Offline profile *in its
+entirety* ([Chapter 01 §7](01-architecture.md)); a station that would answer four of the ten checks
+from empty state does not implement it, and is better off refusing offline authorization than
+granting it without the limits the pass carries.
 
 **Checks #6 and #7 state their counter's referent, and that is the whole content of the rule.** Written as a bare comparison, each admits two readings that differ by one transaction — is the count taken *before* this transaction or *including* it? — and this table said `<` for #6 and #7 while [`offline-pass.md` §4](profiles/offline/offline-pass.md#4-validation-checks-10) and [`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks-11-checks) said "MUST NOT exceed" for the same two, and `<=` for #8 in this very table. Only one of those four statements can be read without knowing the referent. The rows above now fix the referent and state the **outcome** — `maxUses` transactions, `maxTotalCredits` credits — because the outcome is what an implementation is conformance-tested on, and it is the same number under either counter convention once the convention is named. What consumes a use, and why a transaction the server meets twice still consumes one, is [`offline-pass.md` §6](profiles/offline/offline-pass.md#6-lifecycle) step 5.
 

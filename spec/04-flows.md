@@ -341,6 +341,29 @@ Because provisioning traverses unreliable links, the station **MAY** retry with 
 
 **Descriptive drift MUST be ignored.** A retry whose descriptive fields differ — `serialNumber` and every program `label` in `bays` — is a replay. A `label` is descriptive for the same reason `serialNumber` is: it names the hardware for a human, and nothing in the protocol keys off it. This is what stops a corrected typo in a firmware constant from being read as a different station. The **structural** members of `bays` — the `bayNumber` set and each bay's `programNumber` set — are **not** descriptive: they are the topology itself, and drift in them is a mismatch rather than something ignored here. **The two halves are refused at different moments, and this sentence used to say otherwise.** A `bayNumber`-set drift is rejected at step 5 of *Error precedence* with `4020 BAY_COUNT_MISMATCH`. A `programNumber`-set drift is **not**, and cannot be: step 5 compares `bayNumber` values only, `4020`'s own entry is scoped to that set and **MUST** carry `details.declaredBayNumbers` and `details.registeredBayNumbers` — members with no program counterpart — and no code in the [Chapter 07 §3](07-errors.md#3-error-code-registry) registry describes *"the program set you declared is not the one recorded"*. A server **MUST NOT** refuse a provision on a `programNumber`-set drift; it is caught at first boot as `3018 TOPOLOGY_MISMATCH`, whose comparison is over bay numbers **and** program ordinals ([Chapter 05 §1.5](05-state-machines.md#15-topology-at-boot)), on a `Pending` response that keeps the repair channel open. Refusing at provisioning would leave the station without a certificate — it would break commissioning to punish a data disagreement — and the refusal that does happen loses nothing by falling one step later. These are the only descriptive fields the request carries: the body is a closed field set ([`provisioning-request.schema.json`](../schemas/provisioning-request.schema.json)), and station model and firmware version are reported in BootNotification ([Chapter 03 — Messages](03-messages.md)), not at provisioning. The server **MUST** return `200 OK` with the **byte-identical** certificate already issued and **MUST NOT** mint a second certificate. For these fields the token, not the body, determines the certificate. What the rest of the response carries is governed by *What a replay returns* below.
 
+**A replay MUST NOT re-record the topology, and without this the catcher above cannot fire.** The
+sentence before it discharges a `programNumber`-set drift by saying it is caught at first boot as
+`3018` — and that holds only while the server still has something to compare the boot declaration
+*against*. The reference the boot comparison reads is *"the topology submitted at provisioning"*
+([Chapter 05 §1.5](05-state-machines.md#15-topology-at-boot) rule 3), which is the topology of the
+**first successful** provision, the one the token bound. A server that re-recorded the `bays` of a
+replay would overwrite that reference with the drifted set, and every boot thereafter would compare
+the station **against its own latest declaration** — a comparison that matches by construction and
+can never fire. The drift would then reach nobody: not at provisioning, where refusing is forbidden,
+and not at boot, where the evidence has been erased. The server therefore **MUST** treat the
+recorded topology exactly as it treats the certificate: established once, by the first successful
+provision, and **MUST NOT** update it from a replay body. This is not an extra obligation on top of
+byte-identity — it is what byte-identity of the certificate already implies, said about the record
+the certificate was issued against, and it was missing.
+
+> **Why this was worth writing down rather than assuming.** Re-recording is the natural
+> implementation: the provisioning handler already writes the topology, and a replay runs the same
+> handler. Nothing in this chapter told it not to, and the consequence is silent — the station is
+> certified, boots `Accepted`, sells, and the drift surfaces only when a session reaches a bay whose
+> program the station does not have, as `3017 PROGRAM_NOT_DECLARED`, whose own recommended action
+> assigns the fault to the **server**. A rule whose violation produces a clean-looking commissioning
+> and a failure three chapters away is exactly the kind that has to be stated.
+
 **What a replay returns.** A replay is answered with `200 OK` and a response that is **schema-valid in full** ([`provisioning-response.schema.json`](../schemas/provisioning-response.schema.json)). Its fields divide into three groups, and the division is normative: byte-identity applies to the first group and **MUST NOT** be applied to the third; the second is bound to the certificate the response itself carries.
 
 **Identity — MUST be byte-identical to the original response.** These are what the token bound and certified; returning anything else would mean one token issued two identities:

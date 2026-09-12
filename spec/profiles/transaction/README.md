@@ -85,6 +85,31 @@ All seven actions in this profile are REQUIRED for OSPP compliance at Standard l
 | ReserveBay response timeout | 5s | Server MUST receive a response within 5 seconds. |
 | CancelReservation response timeout | 5s | Server MUST receive a response within 5 seconds. |
 
+**Every one of the four is measured from the REQUEST's envelope `timestamp`**, the instant the
+server stamped when it composed the command ([`mqtt-envelope.schema.json`](../../../schemas/common/mqtt-envelope.schema.json),
+where `timestamp` is required on every message and documented as *"UTC timestamp when this message
+was created"*). The deadline is **not** measured from the PUBLISH, from the broker's acknowledgement,
+or from the moment the server began waiting — none of those is on the wire, so none of them is a
+figure two implementations could agree on after the fact. The station's answer is timely when its
+RESPONSE reaches the server no later than that `timestamp` plus the value above.
+
+> **Why this needed saying, and what its absence costs.** The four figures have been here since the
+> profile was written and the instant they run from has not. Read from the publish, a command that
+> sat in the broker's queue is judged by a clock that never started; read from receipt, the station
+> is charged for the server's own compose-to-publish latency. Two servers implementing the same
+> table can therefore disagree about whether the same station answered in time — and because
+> StartService and StopService are the two commands that move money, the disagreement is about
+> whether a session was ever authorised, or whether one that was already delivered gets settled.
+> Naming the instant costs no field: `timestamp` is already required on every message, is already
+> what [Chapter 02 §5.1](../../02-transport.md#51-expiry-rules) measures **Station Max Age**
+> against, and is inside the canonicalized body, so it is signed.
+>
+> **These four are response deadlines and are not the same quantity as §5.1's rows.** Chapter 02
+> §5.1 gives Session commands a Station Max Age and an MQTT Expiry Interval of **30 s** each; those
+> bound how long the *message* stays deliverable and acceptable, not how long the *server* waits for
+> an answer. A server may therefore hold a command deliverable for 30 s and still declare it
+> unanswered at 10 s, and both figures are correct at once.
+
 The response timeouts above are local to this profile. The three configurable interval and duration
 limits — `MeterValuesInterval`, `ReservationDefaultTTL` and `MaxSessionDurationSeconds` — are defined
 once, with their defaults and ranges, in

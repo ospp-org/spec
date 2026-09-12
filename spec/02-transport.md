@@ -111,6 +111,38 @@ Station                                              Broker
 | CONNACK with non-zero reason code | Station MUST log the reason code, retry with backoff |
 | CONNACK `0x86` (Bad Username or Password) | Likely mTLS misconfiguration — station MUST NOT retry without operator intervention |
 
+> **`1003` is a code you log and cannot send, and that is structural rather than an omission.**
+> The row above says *log*, and no stronger verb is available: the failure being reported is the
+> failure of the channel that would carry the report. There is no MQTT session, so there is no
+> topic, no envelope and no `mac` — a station meeting `1003` has nothing to publish it on, and a
+> future revision cannot give it one for the moment it happens.
+>
+> **The asymmetry with its neighbour is the sharp edge, and it is worth naming.** A handshake that
+> fails on a *certificate* is `1004`, and `1004` has a retrospective carrier: `CertificateError` is
+> one of the 12 members of `type` in
+> [`security-event.schema.json`](../schemas/mqtt/security-event.schema.json). A handshake that fails
+> on a *cipher suite or protocol version* is `1003`, and **none** of those 12 members describes it —
+> the schema has no `errorCode` member and is `additionalProperties: false`, so `details` is the only
+> slot and it is an open object with no defined key for this. So of the two halves of the same
+> event, one can be told after the fact and the other cannot.
+>
+> **What a station MUST do instead, which is the part an implementer needs today.** It **MUST**
+> record the failure locally — the negotiated-version or cipher-suite mismatch, with a timestamp —
+> and **MUST** keep it across the retry backoff and across a reboot, because the operator's only
+> question afterwards is *why was this station dark*, and the answer exists nowhere else. It
+> **SHOULD** surface the record on the first connection that does succeed, and where the hardware
+> has a local channel — a display, a serial console, a diagnostics endpoint — it **SHOULD** surface
+> it there too, since a station that never completes a handshake never gets a second chance to
+> speak.
+>
+> **A retrospective wire carrier is a schema change and is deliberately not made here.** Adding a
+> thirteenth `type` member would move: **1** schema, **1** example payload, **5** conformance
+> vectors, **3** prose files that enumerate the members, and **8** files across the two SDKs
+> (including `sdk-ts`'s byte-identical vendored copy of the schema and three of its test vectors) —
+> a coordinated lockstep release under [ADR-001](../adr/ADR-001-cross-repo-lockstep-versioning.md),
+> not an editorial fix. It is named here with its cost so the decision is visible rather than
+> rediscovered.
+
 ### 1.4 Port
 
 The broker MUST listen on **port 8883** (MQTT over TLS, [IANA assigned](https://www.iana.org/assignments/service-names-port-numbers)).
