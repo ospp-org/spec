@@ -26,6 +26,34 @@ Under [VERSIONING.md](VERSIONING.md) it takes a **MINOR**: no wire format moves,
 conformance surface grows, and an implementation that was conforming before can be non-conforming
 after.
 
+- **The two station-scoped offline ceilings refuse with `4002`, and until now they refused with
+  nothing** ([`profiles/offline/offline-pass.md` §2.2](spec/profiles/offline/offline-pass.md),
+  [`07-errors.md` §3](spec/07-errors.md)). `stationOfflineWindowHours` and `stationMaxOfflineTx`
+  are the only two ceilings in `constraints` that no server evaluates — the station checks them
+  alone, and they appear in **none** of the ten checks of §6.1.1, which is where every other
+  ceiling takes its code from. The schemas nonetheless force a code:
+  [`ble/auth-response.schema.json`](schemas/ble/auth-response.schema.json) makes `errorCode`
+  **REQUIRED** on `result: "Rejected"`, and
+  [`ble/start-service-response.schema.json`](schemas/ble/start-service-response.schema.json)
+  requires `errorCode` **and** an `errorText` matching the registry's `^[A-Z][A-Z0-9_]+$`. A
+  conforming station was therefore obliged to emit an integer the registry gave it no value for,
+  and the first integrator's pick would have become the precedent. A station **MUST** now refuse
+  with `4002 OFFLINE_LIMIT_EXCEEDED` and **MUST** name which constraint in `details.constraint`.
+  **No new error code**: the condition is an offline ceiling being reached, which is what `4002`
+  already means; `4002`'s registry row was scoped to the pass's two ceilings by its description
+  alone, and that description is what changed. The distinction is carried in `details` rather than
+  in a second code because the two families differ only in what the **app** can do — a pass-scoped
+  ceiling is cleared by a new pass, a station-scoped one by nothing until that station reconnects —
+  and a second code would cost a registry entry, a vector set and a lockstep SDK release
+  ([ADR-001](adr/ADR-001-cross-repo-lockstep-versioning.md)) to carry what an already-open object
+  carries for free.
+
+  **Radius: 0 schema bytes, 0 conformance vectors, 0 example payloads, 0 new codes.** Measured
+  before and after, identical on both sides: 86/86 schemas compile, 56/56 examples pass, registry
+  self-consistency 119 rows / 0 contradictions, and the unbolded-normative-keyword ratchet holds
+  at **430 (baseline 430)**. `TC-OFF-002` asserts `4002` for checks #6 and #7 only; widening the
+  row adds a meaning without removing the one it tests.
+
 - **Offline per-pass state MUST survive a restart** ([`06-security.md` §6.1.1](spec/06-security.md)).
   Checks #6, #7, #9 and #10 of the ten are each taken against state accumulated from earlier
   transactions — uses-so-far, credits-so-far, the instant of the last transaction from the pass, and

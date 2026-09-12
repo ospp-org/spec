@@ -39,6 +39,31 @@ An **OfflinePass** is a server-signed credential that authorizes a user to start
 | `stationOfflineWindowHours` | integer | Yes | Maximum hours a station can operate offline (minimum 1). Measured by the station as a **monotonic** delta from its last successful MQTT connection, not as a wall-clock difference — see §4, check #2. |
 | `stationMaxOfflineTx` | integer | Yes | Maximum offline transactions a station accepts before requiring sync (minimum 1). |
 
+**The two station-scoped constraints refuse with `4002`, and until now they refused with nothing.**
+`stationOfflineWindowHours` and `stationMaxOfflineTx` are the only two ceilings in this object that
+no server evaluates: they bound the **station**, they are checked by the station alone, and they
+appear in none of the ten checks of [`06-security.md` §6.1.1](../../06-security.md), which is where
+every other ceiling gets its code. That left a station obliged to emit a code it had no value for —
+[`auth-response.schema.json`](../../../schemas/ble/auth-response.schema.json) makes `errorCode`
+**REQUIRED** whenever `result` is `Rejected`, and
+[`start-service-response.schema.json`](../../../schemas/ble/start-service-response.schema.json)
+requires `errorCode` **and** an `errorText` matching the registry's
+`^[A-Z][A-Z0-9_]+$`. A station **MUST** therefore refuse with `4002 OFFLINE_LIMIT_EXCEEDED` when
+either is reached, and **MUST** name which one in `details.constraint`, using the field name
+verbatim. **No new code is introduced**: the condition is an offline ceiling being reached, which is
+what `4002` already means; what was missing was the statement that it covers these two.
+
+**Why the distinction has to travel, and why a second code is the wrong way to carry it.** The two
+families differ in what the app can do about the refusal. A pass-scoped ceiling is exhausted for
+**that pass**, and a newly issued pass clears it. A station-scoped ceiling is a property of the
+**station** — it has been offline too long, or has buffered too many transactions — and no pass
+issued to anyone clears it until that station reconnects. An app that retries with a fresh pass
+against a station-scoped refusal loops without progress, and the user is told nothing. Splitting the
+code would make that visible at the cost of a registry entry, a conformance vector set and a
+lockstep SDK release ([ADR-001](../../../adr/ADR-001-cross-repo-lockstep-versioning.md)); `details`
+is already an open object on both carriers and already the place per-occurrence context travels, so
+the distinction is carried there.
+
 **Upper bounds, and what happens when a pass asks for more than a station can give.** Every field in §2.1 and §2.2 stated a *minimum* and no *maximum* until 0.30.0, so a pass could be signed authorising more offline transactions than any conformant station is able to buffer — a contradiction between two obligations of this same specification, and one no station could resolve locally. The rule is precedence, not a new number:
 
 - **The station's own configuration bounds the pass, never the other way round.** For each constraint the station **MUST** enforce the **lower** of the pass value and its own configured limit, and **MUST NOT** raise a local limit because a pass asked it to. A pass is an authorisation, not a reconfiguration.
