@@ -1,7 +1,7 @@
 # OSPP Known Issues
 
 **Date:** 2026-09-10
-**Specification-document version:** 0.40.0 (release tag `v0.40.0`)
+**Specification-document version:** 0.41.0 (release tag `v0.41.0`)
 **Status:** 3 blockers open (all BLE), **27** non-blocking issues open, **25** decisions recorded (one of
 them reversing another), and one named defect **class** with **eighteen** instances, **five** still open. **The counts are
 re-derived from the headings on every release, never incremented** — the previous revision read 24

@@ -8,7 +8,7 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
-## [Unreleased]
+## [0.41.0] — 2026-09-14
 
 ### Added
 
