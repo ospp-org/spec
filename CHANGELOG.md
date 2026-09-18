@@ -8,6 +8,107 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.42.0] — 2026-09-18
+
+### Added
+
+**One new error code, and the emitter-side rule that makes it rare.** Two documents in the
+reference server specified a code for this area, written by sessions that did not see each other,
+and both asked for ordinal `3020`. Measured against this chapter, **only one of the two needed
+minting** — see *Considered and not added* below, because a later reader will ask.
+
+- **`3020 BINDING_UNCOVERED`** ([`07-errors.md` §3.3](spec/07-errors.md)) — the server holds a
+  service→program binding for the requested (bay, service) pair and the ordinal that binding names
+  is **not** in the set the station declared for that bay. It is server-originated toward the
+  requesting client and **MUST NOT** reach a station, which declared correctly and has no part in
+  the fault. The gap it closes is a real one and nobody has to act for it to open: a station that
+  declares a narrower program set at its next boot uncovers every binding naming an ordinal it
+  dropped, and that declaration does not touch the binding. Until now such a start was dispatched
+  and the station answered `3017 PROGRAM_NOT_DECLARED` — a true statement about a message the
+  server should not have sent, which assigns the fault to the wrong party.
+
+  **It is a separate entry rather than a branch of `3019`, for the reason `3019` is separate from
+  `3017`.** The two conditions are opposites — a binding **absent** and a binding **present but
+  stale** — so a single code covering both would carry one of two instructions that is always
+  wrong for the other. `3019`'s own action tells an operator to *create the binding*, which here
+  is already there.
+
+  **Severity is `Error`, and that was measured rather than asserted.** Both source documents said
+  `Warning` and neither argued for it. The 3xxx band splits **20 of 20** on one discriminant:
+  `Warning` where the condition clears by waiting (8 rows — bay busy, reserved, in maintenance, a
+  reservation expired), `Error` where it recurs identically until something is corrected (12 rows).
+  An uncovered binding recurs until an operator re-binds. `recoverable` stays `true`, which is
+  `3019`'s pairing exactly.
+
+- **Rule 10 of [`update-service-catalog.md` §6](spec/profiles/device-management/update-service-catalog.md),
+  on the emitter.** Rule 8 makes the station's refusal **total** — one `bindings` entry naming a
+  pair the station never declared and the station refuses the **entire** catalog and keeps the one
+  it had — while nothing obliged the server not to send such an entry. Counted by which party they
+  bind, the chapter's processing rules were **8 of 9 on the station, 1 on the server** (the
+  envelope cap), and **0 on the server about content**. They are now **8 of 10 on the station, 2 on
+  the server**. A server **MUST NOT** publish an entry whose `(bayNumber, programNumber)` pair the
+  station has not declared **where it holds a declaration for that bay**, **MUST** withhold the
+  entry, and **SHOULD** report what it withheld to the operator.
+
+  **The second half of the rule is load-bearing and is a rule, not a ratio.** Where the server
+  holds **no** declaration for the bay it **MUST NOT** withhold on that ground: a bay that has
+  declared nothing has told the server nothing, and nothing is not a report that a program is gone.
+  A rule written without that half withholds on silence and takes every not-yet-declared bay out of
+  service. It holds at any ratio — one bay in a thousand in that state deserves the same treatment
+  as nine in ten — because what decides it is what silence **means**, not how often it occurs. A
+  conforming server therefore needs two predicates, not one: *does a declaration exist for this
+  bay*, and only then *does it cover this ordinal*.
+
+  The report to the operator is **out of band**: this message carries no member for it in either
+  direction, and the response schema is closed (rule 8). A report kept per *service* is not enough
+  — a service that keeps one covered binding and loses another is still published, and the lost
+  link is invisible in any account kept that way. The unit of the report is the **entry**.
+
+### Considered and not added
+
+**`PROGRAM_UNAVAILABLE`, for a program the station has reported dead, is NOT minted, because this
+chapter already grants it and declines a second entry in terms.** The request was measured against
+`.spec-ref v0.27.0`; the answer landed at **0.31.0**, after it was written, and the contradiction
+that answer left behind was removed at **0.33.0**. `3003 SERVICE_UNAVAILABLE`'s own cell says
+*"**No code is added for this**"* and gives the discriminator instead — `details.cause`, with
+`station-reported` the branch that means precisely *the station reported this program
+`available: false`*. The ordinal that would have distinguished the two rides
+`details.programNumber`, which the same cell says *"is already on the wire and needs no new
+member"*. [§1.4](spec/07-errors.md) is the governing rule: an entry reachable from two paths whose
+safe recoveries differ **MUST** either split into two codes **or** state the branches and name the
+`details` member that selects them. `3003` took the second. Minting a second entry would have
+asserted a distinction the station does not make and contradicted a cell four sections above it.
+
+The request's supporting measurement is also stale in every row: it recorded three implementations
+answering `503`, `500` and `503` for `3003`. Re-measured, **all three now answer `409`** — the row
+this chapter put `3003` into at 0.30.0.
+
+### Changed
+
+- **`3003` gains `3020` as a neighbour in [§2.4](spec/07-errors.md)'s status table `409` row**, and
+  that placement is deliberate rather than incidental. §4.4 states that the status is not a property
+  of the code and §3 carries no status column, both unchanged. But measured across the **119** codes
+  the two reference SDKs both carry: where §2.4 names a code they agree **30 of 30**; where §2.4 is
+  silent they disagree **41 of 89**. Every divergence sits in this chapter's silence. That is §2.4's
+  own sentence measured — *"a registry that declines to state a mapping does not avoid one — it
+  delegates it, once per implementation"* — so a new code reachable over REST is named here rather
+  than left to be decided once per library.
+
+- **Band and total counts** ([§1.1](spec/07-errors.md)): 3xxx **20 → 21**, total **119 → 120**.
+  `POST /sessions/start` in [§4.4](spec/07-errors.md) gains the code, mirroring `3019`; Appendix A
+  gains its roster row.
+
+**Radius, measured before the tag: 0 schema bytes, 0 of 345 conformance vectors, 0 example
+payloads.** No schema enumerates error codes — `errorCode` is an integer, bounded `1000..9999` in
+two schemas and unbounded in seventeen — so both new-code cascades are additive in the SDK
+registries alone. Under [VERSIONING.md](VERSIONING.md) and
+[CONTRIBUTING.md](CONTRIBUTING.md) a new error code is a **MINOR**.
+
+**Verifier: 6 failures, 6 skips, 4426 checks — the recorded baseline, failure set identical by
+name.** `protocolVersion` stays `0.3.0`.
+
+---
+
 ## [0.41.0] — 2026-09-14
 
 ### Added
