@@ -56,7 +56,7 @@ The station **MUST** reject the catalog if any service entry fails validation.
 5. The station **MUST** persist the catalog to non-volatile storage so it survives reboots. This was a `SHOULD` until `0.25.0`, against a `MUST` in [`profiles/device-management/README.md` §4](README.md) and a second in [`03-messages.md` §6.9](../../03-messages.md); one document out of three carried the weaker word, and the two that carry the obligation are the ones a server relies on when it declines to re-push after a station reboot.
 6. Active sessions **MUST NOT** be affected by a catalog update. New pricing takes effect only for sessions started after the catalog is applied.
 7. The response `messageId` **MUST** match the request `messageId`.
-8. If the catalog names a service the station cannot run — a `serviceId` its hardware does not support, or a `bindings` entry naming a `(bayNumber, programNumber)` pair it did not declare at provisioning or at its most recent boot — the station **MUST** respond `Rejected` with error code `5024 UNSUPPORTED_SERVICE` and **MUST** leave the previous catalog in force. It **MUST NOT** apply the remaining entries and report success. The response schema is closed and carries no member naming what was dropped, so a partial application leaves the server tracking a `catalogVersion` for a catalog that exists on no station, with nothing on the wire able to reveal it. A refusal the server can see is worth more than an application it cannot.
+8. If the catalog names a service the station cannot run — a `serviceId` its hardware does not support, or a `bindings` entry naming a `(bayNumber, programNumber)` pair it did not declare at provisioning or at its most recent boot — the station **MUST** respond `Rejected` with error code `5024 UNSUPPORTED_SERVICE` and **MUST** leave the previous catalog in force. It **MUST NOT** apply the remaining entries and report success. The response schema is closed and carries no member naming what was dropped, so a partial application leaves the server tracking a `catalogVersion` for a catalog that exists on no station, with nothing on the wire able to reveal it. A refusal the server can see is worth more than an application it cannot. Rule 10 below obliges the **server** not to create this occasion; this rule is what holds when it does, and neither rule relieves the other.
 
 **Sizing, which is the server's obligation and not the station's problem to guess.** `services` has
 `minItems: 1` and no `maxItems`, so nothing in the schema bounds a catalog. That is deliberate at
@@ -70,6 +70,54 @@ party that can honour it:
    grants every receiver, and it is the one that protects a fixed receive buffer. `5025
    CATALOG_TOO_LARGE` remains available for a catalog the station can receive and cannot **keep**;
    see the note below.
+
+**Coverage, which only the server can check, and the silence it must not read as a report.** Rule 8
+puts the refusal on the station and makes it **total**: one `bindings` entry naming a pair the station
+never declared costs the **whole** catalog, and the response schema is closed, so nothing on the wire
+says which entry was at fault. Nothing above obliges the server not to send such an entry — the only
+party that holds both the binding and the declaration, and therefore the only party that can compare
+them, has no duty to. The obligation is stated here, on the **emitter**, for rule 9's reason:
+
+10. A server **MUST NOT** publish an UpdateServiceCatalog containing a `bindings` entry whose
+    `(bayNumber, programNumber)` pair the station has not declared — at provisioning or at its most
+    recent boot — **where the server holds a declaration for that bay**. It **MUST** withhold that
+    entry, and **SHOULD** report what it withheld to the operator. Where the server holds **no**
+    declaration for the bay, it **MUST NOT** withhold on this ground: an absent declaration is not a
+    report that a program is gone. Withholding **MUST NOT** alter any other entry — the rest of the
+    catalog is published as it stands — and a service left with no publishable binding **MUST** be
+    withheld entire rather than published with an empty `bindings`, which `minItems: 1` forbids in
+    any case.
+
+> **The second half is the load-bearing one, and it is a rule rather than a ratio.** The two halves
+> answer different facts. A bay that has declared its programs and does not name an ordinal has told
+> the server that ordinal is not there. A bay that has declared nothing has told the server **nothing**,
+> and nothing is not a report that a program is gone. A rule written without the second half withholds
+> on silence, which takes every not-yet-declared bay out of service — and it is wrong whether one bay
+> in a thousand is in that state or nine in ten, because what decides it is what silence **means**, not
+> how often it occurs. A conforming server therefore needs two predicates, not one: *does a declaration
+> exist for this bay*, and only then *does it cover this ordinal*.
+>
+> **What the report is, and where it is not.** The report to the operator is **out of band**. This
+> message carries no member for it in either direction — the request has no place to name a withheld
+> entry and the response is closed (rule 8) — so a server discharges the **SHOULD** on its own
+> operator surface, not on the wire. A report that names only the services it dropped entirely is not
+> enough: a service that keeps one covered binding and loses another is still published, and the lost
+> link is invisible in any account kept per service. The unit of the report is the **entry** — the
+> service, the bay and the ordinal withheld.
+>
+> **Interaction with the rules above.** Rule 9 is unaffected in direction: withholding only ever
+> removes bytes, so a catalog inside the envelope cap stays inside it. Rule 2's atomicity is untouched,
+> because what the station receives is one complete catalog and the withholding happened before it was
+> published. Rule 8 keeps its full force: a station that receives an uncovered entry **MUST** still
+> refuse the whole catalog, and a server that reaches that outcome has already broken this rule. This
+> rule is not a licence to publish first and repair afterwards.
+>
+> **[`3020 BINDING_UNCOVERED`](../../07-errors.md#33-session--bay-errors-3xxx)** is the registry entry
+> for the same disagreement met at a different moment: a start refused because the binding names an
+> ordinal the station no longer declares. This rule keeps the entry out of the catalog; `3020` answers
+> the caller when a start reaches an uncovered binding anyway. It is **not** carried on this message
+> and does not appear in §7. Neither the rule nor the code is reachable on a bay that has declared
+> nothing.
 
 **The arithmetic, so a station can size its receive buffer from published bounds rather than from a
 promise.** Every service entry is already bounded by
