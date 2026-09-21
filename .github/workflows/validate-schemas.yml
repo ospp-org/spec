@@ -14,6 +14,9 @@ name: Validate JSON Schemas
 # resolve, a non-vacuity guard, and stderr left alone — and this file is the caller.
 
 on:
+  # Callable so release-gates.yml reuses this exact invocation rather than
+  # restating it — a second copy of a gate's command line is the drift this repo gates against.
+  workflow_call:
   push:
     paths:
       - 'schemas/**'

@@ -1,0 +1,87 @@
+name: Release Gates
+
+# Every gate this repository runs, on the release path.
+#
+# ─── What this file is repairing, measured rather than supposed ──────────────────────────────
+#
+# `check-doc-claims.py` reported ELEVEN stale release markers at v0.42.0. Measured across the
+# tags in an isolated clone: green at v0.39.1 and v0.40.0, RED at v0.41.0 with eleven findings,
+# and RED at v0.42.0 with the SAME eleven. So the sweep that had moved `Status in 0.39` to
+# `Status in 0.40` at every release up to v0.40.0 was skipped at v0.41.0, and v0.42.0 did not
+# notice. `Lint Markdown` is older still: green through v0.36.0, two MD029 at v0.37.0, +MD052 at
+# v0.37.1, +MD038 at v0.40.0, +MD018 at v0.41.0 — six tags red, monotonically rising, never once
+# falling.
+#
+# Neither was hidden. `gh run list` shows Check Drift failing at 0dab3a3f (v0.41.0) and 4bd763d2
+# (v0.42.0), and Lint Markdown failing at every recorded run back to eade9f07 (v0.40.0). CI said
+# so on main, out loud, and both tags were cut anyway.
+#
+# The reason is in release.yml: its only verification was a step named "Verify CI is green" whose
+# body was an `echo` and a comment deferring to branch protection. And `gh run list
+# --workflow=release.yml` returns `[]` — that workflow has NEVER executed. The release path in
+# actual use is a tag cut by hand, which passed through no gate at all.
+#
+# So two triggers, because there are two release paths and only one of them is the documented one:
+#
+#   workflow_call  — release.yml calls this before it creates the tag (see `needs: gates` there)
+#   push: tags     — a tag cut by hand, outside release.yml, is still measured
+#
+# The second is the one that matters. A gate wired only into a workflow nobody starts is the
+# same defect one level up, and this repository already has a tool for that class
+# (tools/check-tool-callers.py); this file exists so the release does not reproduce it.
+#
+# ─── Why this delegates instead of restating ─────────────────────────────────────────────────
+#
+# Each job below is `uses:` against the workflow that already owns that gate. Nothing here
+# repeats a command line. That is deliberate: `lint-markdown.yml` carries a thirteen-rule
+# `--disable` list whose explicitness is a recorded decision ("the cost of each suppression is
+# visible in the diff that adds it"), and a second copy of it here would drift from the first
+# exactly the way the eleven markers drifted from the version header. One invocation per gate,
+# reused. Adding a gate to CI adds it to the release path in the same edit.
+#
+# `verify-signatures.yml` stays a separate job with its own checkout because it MUTATES the
+# working tree — `sign-inline-md.mjs --all` rewrites the markdown and compares hashes, which is
+# the measurement and cannot be removed. It must never share a job with anything asserting a
+# clean tree. Calling it as its own workflow preserves that isolation for free.
+
+on:
+  workflow_call:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  drift:
+    uses: ./.github/workflows/check-drift.yml
+
+  lint:
+    uses: ./.github/workflows/lint-markdown.yml
+
+  links:
+    uses: ./.github/workflows/link-check.yml
+
+  schemas:
+    uses: ./.github/workflows/validate-schemas.yml
+
+  examples:
+    uses: ./.github/workflows/validate-examples.yml
+
+  vectors:
+    uses: ./.github/workflows/validate-test-vectors.yml
+
+  protocol:
+    uses: ./.github/workflows/verify-protocol.yml
+
+  # Own job, own checkout — it rewrites the tree on purpose. See the header.
+  signatures:
+    uses: ./.github/workflows/verify-signatures.yml
+
+  # A verdict, so that "the gates ran" is a thing a reader can see rather than infer from
+  # eight green ticks they have to collect by hand. It fails if any gate above failed.
+  verdict:
+    needs: [drift, lint, links, schemas, examples, vectors, protocol, signatures]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Every release gate passed
+        run: echo "8 gate workflows green — this tree is releasable."

@@ -292,12 +292,12 @@ QoS 1 may deliver the same message more than once. Both station and server **MUS
 2. The deduplication window **MUST** be at least **1000 message IDs** or **1 hour**, whichever is larger.
 3. Duplicate handling by message type:
 
-| Message Type | On Duplicate |
-|-------------|--------------|
-| REQUEST | Re-send the **same cached RESPONSE** (idempotent) |
-| RESPONSE | Silently discard |
-| EVENT | Silently discard |
-| ERROR | Silently discard |
+   | Message Type | On Duplicate |
+   |-------------|--------------|
+   | REQUEST | Re-send the **same cached RESPONSE** (idempotent) |
+   | RESPONSE | Silently discard |
+   | EVENT | Silently discard |
+   | ERROR | Silently discard |
 
 4. **A differing payload is not a duplicate.** If the `messageId` repeats but the content differs from what was recorded under it, the two are not one message delivered twice — they are two claims under one identifier. The receiver **MUST NOT** apply rule 3 to the second. It **MUST** process it on its own content and answer it on its own terms, exactly as if the identifier had been fresh. OSPP defines no error code for an identifier collision and none is to be invented: the second message is not refused, it is *handled*.
 5. **An identifier that is reused by design is not a duplicate marker.** ConnectionLost in its LWT form carries a `messageId` registered with the broker at CONNECT and republished unchanged on every unexpected disconnect ([§4.3](#43-last-will-and-testament-lwt)), so successive disconnects arrive under one identifier with **identical** content — which rule 4 cannot separate, because there is nothing different to see. A receiver **MUST NOT** deduplicate ConnectionLost, and **MUST** make its handling of it idempotent, since it will legitimately process it many times. A station **SHOULD** register a freshly generated `messageId` with each will it sets, which makes the identifier honest but does not relieve the receiver of this rule: the receiver cannot tell which stations did.

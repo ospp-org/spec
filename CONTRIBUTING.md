@@ -317,7 +317,7 @@ contains the file the phrase is in. Controls, both directions, on real trees: at
 release had to withdraw.
 
 Two blindnesses were found while building it, each proved on a real tree rather than argued.
-A claim straddling a line break with a `> ` continuation is one claim, and **both** `0.39.0`
+A claim straddling a line break with a `>` continuation is one claim, and **both** `0.39.0`
 sites are written that way — the first cut matched line by line, found neither, and reported
 success. And `00-introduction.md`'s version-history rows record what a release said,
 including what it withdrew; they are the only hits at HEAD, and flagging them would forbid

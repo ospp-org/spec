@@ -51,6 +51,9 @@ name: Verify Signed Conformance
 # is the file a reader has to open anyway.
 
 on:
+  # Callable so release-gates.yml reuses this exact invocation rather than
+  # restating it — a second copy of a gate's command line is the drift this repo gates against.
+  workflow_call:
   push:
     paths:
       - 'conformance/**'

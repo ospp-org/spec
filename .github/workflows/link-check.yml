@@ -1,6 +1,9 @@
 name: Check Links
 
 on:
+  # Callable so release-gates.yml reuses this exact invocation rather than
+  # restating it — a second copy of a gate's command line is the drift this repo gates against.
+  workflow_call:
   push:
     paths:
       - '**/*.md'

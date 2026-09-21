@@ -696,7 +696,7 @@ exercises is a constraint that can be deleted without any instrument saying so.
 It had already cost something. `ts-station-simulator` emitted prose into `errorText` from **eight**
 sites, every one on a pattern-bearing schema — frames a validating server drops — and its own
 `docs/MEASURED-dlq-drained-20260901T000000Z.md` records exactly this reaching the server DLQ:
-*"/errorText: The string should match pattern: ^[A-Z][A-Z0-9_]+$"*.
+*"/errorText: The string should match pattern: `^[A-Z][A-Z0-9_]+$`"*.
 
 ### The three vectors, and why three
 

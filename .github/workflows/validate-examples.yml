@@ -19,6 +19,9 @@ name: Validate Example Payloads
 # CI covers — 52 checked here, against 51 before.
 
 on:
+  # Callable so release-gates.yml reuses this exact invocation rather than
+  # restating it — a second copy of a gate's command line is the drift this repo gates against.
+  workflow_call:
   push:
     paths:
       - 'schemas/**'

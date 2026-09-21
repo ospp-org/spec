@@ -1179,8 +1179,8 @@ Processing **MUST** stop at the first failure, and the validator **MUST** reject
 
 **Implementation note:** Implementations SHOULD perform structural and temporal checks before cryptographic verification to mitigate denial-of-service. The error code returned SHOULD correspond to the first failed check in the canonical order (1–10).
 
-**The state four of these checks are taken against MUST survive a restart.** Checks #6, #7, #9 and
-#10 do not compare the pass against itself; each compares it against state the station accumulated
+**The state four of these checks are taken against MUST survive a restart.** Checks #6, #7, #9
+and #10 do not compare the pass against itself; each compares it against state the station accumulated
 from **earlier** transactions on that pass — the uses already counted (#6), the credits already
 counted (#7), the instant of the last transaction from this pass (#9), and `lastSeenCounter` (#10).
 The station **MUST** hold all four in non-volatile storage, keyed by `offlinePassId`, and **MUST**

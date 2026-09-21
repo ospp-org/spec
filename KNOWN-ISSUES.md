@@ -23,7 +23,7 @@ the arcs since
 | **Total open** | **30** | |
 
 **The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
-EXPERIMENTAL in 0.40** — see [BLE release status](README.md#ble-is-experimental). They do
+EXPERIMENTAL in 0.42** — see [BLE release status](README.md#ble-is-experimental). They do
 not affect the MQTT surface, offline reconciliation, or provisioning, all of which are
 implemented and exercised against a second implementation.
 

@@ -1,5 +1,33 @@
 name: Release
 
+# ─── The step that said it verified CI, and did not ──────────────────────────────────────────
+#
+# This workflow used to open with a step named "Verify CI is green" whose entire body was
+#
+#     echo "Checking that all CI checks pass..."
+#     # The branch protection rules should enforce this,
+#     # but we verify explicitly as a safety check.
+#
+# It checked nothing. The comment deferred to branch protection and the step name claimed the
+# opposite, so a reader of the job log saw a green tick under a truthful-looking label.
+#
+# What that cost, measured: `check-doc-claims.py` went red at v0.41.0 with eleven stale release
+# markers and v0.42.0 shipped the same eleven; `Lint Markdown` has been red since v0.37.0, rising
+# one finding at a time and never falling. `gh run list` shows both failing on main at the exact
+# commits that were tagged. Nothing stopped either tag.
+#
+# And this workflow was not even the path: `gh run list --workflow=release.yml` returns `[]`.
+# It has never executed. Releases are tags cut by hand.
+#
+# So the repair is in two places, and this file is only one of them:
+#   * here — `needs: gates`, which runs .github/workflows/release-gates.yml before the tag exists
+#   * there — release-gates.yml ALSO triggers on `push: tags: ['v*']`, so the hand-cut path that
+#     is actually in use is measured too
+#
+# A gate reachable only from a workflow nobody starts is the defect one level up. This repository
+# already owns an instrument for that class (tools/check-tool-callers.py); the release path is
+# not allowed to reproduce it.
+
 on:
   workflow_dispatch:
     inputs:
@@ -9,23 +37,61 @@ on:
         type: string
 
 jobs:
+  # Every gate, before the tag exists. Delegated rather than restated — see release-gates.yml.
+  gates:
+    uses: ./.github/workflows/release-gates.yml
+
   release:
+    needs: gates
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      # Through the environment, never interpolated into a shell word. `${{ inputs.version }}`
+      # spliced straight into `run:` is a command-injection shape even behind workflow_dispatch,
+      # and it was spliced into a `git tag` argument and into an awk program.
+      VERSION: ${{ inputs.version }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify CI is green
+      # The tag is `v` + this string, and `awk` below builds a pattern from it, so it is pinned
+      # to the grammar VERSIONING.md states before either uses it.
+      - name: Validate the version string
         run: |
-          echo "Checking that all CI checks pass..."
-          # The branch protection rules should enforce this,
-          # but we verify explicitly as a safety check.
+          set -euo pipefail
+          if ! printf '%s' "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-(draft|rc|alpha|beta)\.[0-9]+)?$'; then
+            echo "::error::'$VERSION' is not a release version (X.Y.Z with an optional -draft.N / -rc.N / -alpha.N / -beta.N)"
+            exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then
+            echo "::error::tag v$VERSION already exists"
+            exit 1
+          fi
+
+      # The gates above re-derive every restated number against the artefact it describes, and
+      # CLAIM 3 of check-doc-claims.py re-derives the release-status claims from
+      # spec/00-introduction.md. That only helps if the header being released is the version
+      # being tagged, which nothing compared: the eleven markers drifted while the 29 version
+      # headers were swept correctly, because the two families have different keepers.
+      - name: The version headers already say this is the release being tagged
+        run: |
+          set -euo pipefail
+          header=$(grep -oP '(?<=\*\*OSPP Version:\*\* )[0-9][^ |]*' spec/00-introduction.md | head -1)
+          if [ -z "$header" ]; then
+            echo "::error::could not read **OSPP Version:** out of spec/00-introduction.md"
+            exit 1
+          fi
+          if [ "$header" != "$VERSION" ]; then
+            echo "::error::spec/00-introduction.md says $header, the tag would say v$VERSION — bump the headers first"
+            exit 1
+          fi
+          echo "spec/00-introduction.md and the requested tag agree on $VERSION"
 
       - name: Verify version in CHANGELOG
         run: |
-          if ! grep -q "\[${{ inputs.version }}\]" CHANGELOG.md; then
-            echo "ERROR: Version ${{ inputs.version }} not found in CHANGELOG.md"
+          set -euo pipefail
+          if ! grep -qF "[$VERSION]" CHANGELOG.md; then
+            echo "::error::Version $VERSION not found in CHANGELOG.md"
             exit 1
           fi
 
@@ -36,14 +102,25 @@ jobs:
 
       - name: Create tag
         run: |
-          git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}"
-          git push origin "v${{ inputs.version }}"
+          set -euo pipefail
+          git tag -a "v$VERSION" -m "Release v$VERSION"
+          git push origin "v$VERSION"
 
       - name: Extract changelog for this version
         id: changelog
         run: |
-          # Extract the section for this version from CHANGELOG.md
-          awk '/^## \[${{ inputs.version }}\]/{found=1; next} /^## \[/{if(found) exit} found' CHANGELOG.md > release-notes.md
+          set -euo pipefail
+          # Extract the section for this version from CHANGELOG.md. The heading is matched as a
+          # literal string rather than spliced into the awk program as a regex.
+          awk -v want="## [$VERSION]" '
+            index($0, want) == 1 { found = 1; next }
+            /^## \[/            { if (found) exit }
+            found
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "::error::CHANGELOG.md has no body under '## [$VERSION]'"
+            exit 1
+          fi
           echo "Release notes extracted."
 
       - name: Create GitHub Release
