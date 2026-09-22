@@ -8,6 +8,77 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.43.0] — 2026-09-22
+
+### Changed
+
+**The session key had no discard trigger for the one departure a station announces, and the rule
+that should have supplied one forbade the only bound NIST asks for.** Both halves of
+[`06-security.md` §5.9](spec/06-security.md) were wrong, and each is why the other went unnoticed:
+a reader who asked "what discards the key on a planned shutdown?" found rule 3 forbidding every
+clock and concluded the gap was deliberate.
+
+- **Rule 2 gains a `PlannedShutdown` discard trigger.** It named two — "the LWT or any
+  broker-reported disconnect" — and a planned shutdown is neither. A clean MQTT DISCONNECT
+  suppresses the will ([`02-transport.md` §4.3](spec/02-transport.md)), so no will fires; and the
+  ConnectionLost that carries `reason: "PlannedShutdown"` is published by the **station**, on its
+  own topic, so nothing about it is broker-reported. Rule 2's condition — *the MQTT session ends* —
+  was therefore satisfied on a path where neither of its triggers could fire, and the key was left
+  with no event to discard it at all.
+
+  **The trigger is safe to act on immediately, and that is a rule rather than an assumption.**
+  [`connection-lost.md` §4.3](spec/profiles/core/connection-lost.md) rule 2 requires the
+  announcement to be the station's **last** OSPP message, published *after* any SessionEnded,
+  TransactionEvent or StatusNotification it still owes; rule 5 forbids the station to send it and
+  then stay connected. So nothing billable follows it, which is the property the LWT path does not
+  have and the reason this trigger can take the key at once.
+
+- **Rule 3 forbids a clock as the key's LIFECYCLE, not every time bound.** It read *"A clock-based
+  TTL on this key is forbidden"* — an absolute that no implementation can honour in one case and
+  that NIST SP 800-57 argues against in general, since every symmetric key wants a cryptoperiod.
+  The case is the heartbeat timeout of [`connection-lost.md` §4.2](spec/profiles/core/connection-lost.md):
+  the peer *infers* the station is gone from application silence, no event ever confirms it, and an
+  unbounded key stays resident for ever. Rule 3 now says a clock **MUST NOT** be what discards the
+  key — rule 2's triggers are — and permits a **backstop** bound for that one unconfirmable case,
+  armed only once the peer has already decided to discard and never while the session is still held
+  to be alive. The first sentence, which is the one that matters, is untouched: a peer **MUST NOT**
+  expire the key while the MQTT session is alive.
+
+  **Nothing is removed beyond the over-broad sentence.** The fuse this rule was written against —
+  a TTL armed at issuance, on a healthy station, firing while it is online and working — remains
+  forbidden, and the paragraph saying why is unchanged.
+
+**The two rules are restated in six places and all six move with them**, because a specification
+that disagrees with itself is the failure this step exists to prevent: the HMAC-session-key summary
+table and the lead sentence of §5.9 ([`06-security.md`](spec/06-security.md) — both said *"no
+independent TTL"*), the TLS/SSH/IPsec divergence note beside it (*"why OSPP does not"* bound key
+lifetime), the anti-replay parenthetical in
+[`heartbeat.md` §6](spec/profiles/core/heartbeat.md) (*"expressly forbidden"*, unqualified), and
+both halves of the implementor's guide — the station-side *"there is none"* and the server-side
+list, which enumerated rule 2's two triggers verbatim and would have gone stale as an incomplete
+copy. **Five further sites reference these rules and are NOT falsified**, so they are left alone:
+the "Rotation" row of the same table, the volatile-storage MUST of §4.3, the `Pending`-holds-a-key
+note in [`boot-notification.md`](spec/profiles/core/boot-notification.md), the source rule in
+[`02-transport.md` §4.3](spec/02-transport.md), and the Station FSM row in
+[`05-state-machines.md` §1](spec/05-state-machines.md) — whose Condition column is scoped to the
+ungraceful transition and was already silent on the graceful one before this release.
+
+**Radius: 0 schema bytes, 0 of 345 vectors, 0 example payloads.** The `ConnectionLost.reason` enum
+is unchanged at its two members, `UnexpectedDisconnect` and `PlannedShutdown` — `PlannedShutdown`
+has been on the wire since `0.36.0` and this release does not touch it, only what the server owes
+on receiving it. Detection remains **three mechanisms carrying two wire values**: the heartbeat
+timeout produces no ConnectionLost message at all, which is exactly why it is the case rule 3's
+backstop answers. **0 of 34 conformance cases** assert session-key discard or TTL as a behaviour
+today, so none is contradicted and none needed updating; `TC-CORE-002` exercises disconnect and
+recovery without ever asserting the key's fate. `protocolVersion` stays `0.3.0`. Verifier 6
+failures, 6 skips, 4434 checks — baseline, identical by name.
+
+**No SDK carries these rules.** Both SDKs were read: neither holds a session-key lifecycle enum, a
+discard-trigger set, a TTL constant for the key, or a gated documentation claim about its lifetime.
+`@ospp/protocol` types `ConnectionLostReason` as the two wire values and `ospp/protocol` ships no
+payload DTOs at all; both express the key only as bytes to sign with. The SDK releases that follow
+this tag are therefore a spec-pin move and a version bump, with no rule change to carry.
+
 ## [0.42.0] — 2026-09-18
 
 ### Added

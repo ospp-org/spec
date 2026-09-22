@@ -2,7 +2,7 @@
 
 > **For:** Developers building OSPP-compatible stations, servers, or user agents
 > **Level:** Practical guide, not formal spec. Read this first, then the spec chapters.
-> **Spec Version:** 0.42.0
+> **Spec Version:** 0.43.0
 
 ---
 
@@ -228,7 +228,7 @@ Power on
 **Critical rules:**
 - BLE advertising starts BEFORE MQTT connection (users can browse even while MQTT connects)
 - Do NOT process commands while `Booting` or `Rejected`. Queue them (max 10 pending commands); if the queue overflows, reject with `6001 SERVER_INTERNAL_ERROR`. While `Pending` you MUST process and answer them — that is the channel an operator repairs you through — but you MUST still refuse StartService and ReserveBay with `3002 BAY_NOT_READY`, because a restricted station serves no customers. See [Chapter 05 §1.4](../spec/05-state-machines.md#14-the-restricted-states).
-- The `sessionKey` from the server response is your HMAC-SHA256 signing key for this session. Store it in RAM only, never in NVS. It lives exactly as long as the MQTT session: discard it on disconnect, and expect a new one from the next boot. Do **not** implement a TTL on it — there is none, and one can only ever fire early, on a station that is online and working.
+- The `sessionKey` from the server response is your HMAC-SHA256 signing key for this session. Store it in RAM only, never in NVS. It lives exactly as long as the MQTT session: discard it on disconnect, and expect a new one from the next boot. Do **not** implement a TTL on it — the disconnect is what ends it, and a clock can only ever fire early, on a station that is online and working.
 
 ### 2.4 MQTT Connection Details
 
@@ -726,7 +726,7 @@ QoS: 1 (always)
 1. Look up the station by `stationId`
 2. If unknown → respond `Rejected` with error `2001 STATION_NOT_REGISTERED`
 3. Validate the protocol version by **exact match** against the set your server supports — hold it as a configurable list, not a single value, so the set can be widened before a fleet moves. If the station's `protocolVersion` is not a member, respond `Rejected` with error `1007 PROTOCOL_VERSION_MISMATCH` and include both the `supportedVersions` array (e.g., `["0.3.0", "0.4.0"]`) and a `retryInterval` — the station stays in the `Rejected` restricted state and keeps retrying, so do not treat 1007 as a terminal state server-side. Do **not** compare MAJOR components: a shared MAJOR implies nothing, and every OSPP version to date has MAJOR `0`
-4. Generate a 32-byte random session key (for HMAC signing) — on **every `Accepted` and every `Pending`** response, unconditionally, whatever the signing mode. Bind its lifetime to the MQTT session and drop it on the LWT or any broker-reported disconnect; do not put a TTL on it.
+4. Generate a 32-byte random session key (for HMAC signing) — on **every `Accepted` and every `Pending`** response, unconditionally, whatever the signing mode. Bind its lifetime to the MQTT session and drop it on the LWT, on a ConnectionLost carrying `reason: "PlannedShutdown"`, or on any broker-reported disconnect; do not make a TTL the thing that discards it. A backstop bound is for the one case none of those reach — the heartbeat timeout, where nothing ever confirms the session ended.
 5. Respond `Accepted` with:
    - `serverTime` (ISO 8601 UTC) — station syncs its clock to this
    - `heartbeatIntervalSec` (default 30s)
@@ -1326,4 +1326,4 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 
 ---
 
-*This guide covers OSPP 0.42.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*
+*This guide covers OSPP 0.43.0. For normative requirements, always refer to the [spec chapters](../spec/). For message field definitions, refer to the [JSON Schemas](../schemas/). For realistic examples, see the [example payloads and flows](../examples/).*

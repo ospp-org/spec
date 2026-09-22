@@ -1,6 +1,6 @@
 # Chapter 06 — Security
 
-> **Status:** Draft | **OSPP Version:** 0.42.0
+> **Status:** Draft | **OSPP Version:** 0.43.0
 
 This chapter defines the complete security model for the OSPP protocol, covering threat analysis, authentication, authorization, cryptographic requirements, message integrity, offline security, anti-abuse mechanisms, and data protection.
 
@@ -524,7 +524,7 @@ Server Signing Key (ECDSA P-256, server-side HSM)
 | **Generation** | Server generates 32 random bytes at BootNotification `Accepted` |
 | **Distribution** | Sent in BootNotification RESPONSE [MSG-001] `sessionKey` field (protected by TLS) |
 | **Storage** | Station: volatile memory (RAM). Server: in-memory session store. |
-| **Lifetime** | Exactly one MQTT session, from boot to disconnect. **No independent TTL** — neither peer expires it while the session is alive ([§5.9](#59-session-key-lifetime)) |
+| **Lifetime** | Exactly one MQTT session, from boot to disconnect. **No TTL as its lifecycle** — neither peer expires it while the session is alive; a backstop bound is permitted only where no event can confirm the session ended ([§5.9](#59-session-key-lifetime)) |
 | **Rotation** | Only by re-boot: every reconnection produces a BootNotification and therefore a new key. There is no separate rotation mechanism and none is needed ([§5.9](#59-session-key-lifetime)) |
 
 #### Server ECDSA P-256 Key (OfflinePass + ServerSignedAuth signing)
@@ -1076,16 +1076,16 @@ Where OSPP does have non-repudiation it comes from an **asymmetric** signature, 
 
 ### 5.9 Session Key Lifetime
 
-**The session key lives exactly as long as the MQTT session.** There is no independent TTL and no rotation mechanism.
+**The session key lives exactly as long as the MQTT session.** Its lifecycle is that session's end, not a clock, and there is no rotation mechanism.
 
 1. The key is issued in the BootNotification RESPONSE and both peers hold it in volatile memory only ([§4.3](#43-key-management-lifecycle)).
-2. Both peers **MUST** discard it when the MQTT session ends — the station on disconnect, the server on the LWT or on any broker-reported disconnect.
-3. A peer **MUST NOT** expire the key while the MQTT session is alive. A clock-based TTL on this key is forbidden. A key that outlives nothing and expires on a clock is a fuse that can only ever fire early: the station is online and healthy, its messages start being rejected, the server's commands start being refused, and the security events raised name the station.
+2. Both peers **MUST** discard it when the MQTT session ends — the station on disconnect, the server on the LWT, on a ConnectionLost carrying `reason: "PlannedShutdown"` ([`connection-lost.md` §4.3](profiles/core/connection-lost.md)), or on any broker-reported disconnect. The planned-shutdown trigger is not reached by the other two: a clean DISCONNECT suppresses the will ([`02-transport.md` §4.3](02-transport.md)), so that announcement is the only notice the server gets, and it is the station's **last** message — everything the station still owed was published before it.
+3. A peer **MUST NOT** expire the key while the MQTT session is alive, and a clock **MUST NOT** be what discards it: the triggers of rule 2 are. A key that outlives nothing and expires on a clock is a fuse that can only ever fire early: the station is online and healthy, its messages start being rejected, the server's commands start being refused, and the security events raised name the station. One case rule 2 cannot reach is the heartbeat timeout of [`connection-lost.md` §4.2](profiles/core/connection-lost.md), where the peer infers the station is gone and no event ever confirms it; for that case a peer **MAY** put a **backstop** bound on a key it has already decided to discard — the cryptoperiod NIST SP 800-57 asks of every symmetric key — provided the bound is armed only at that decision and never while the session is still held to be alive.
 4. Any reconnect produces a BootNotification ([CORE-001](profiles/core/README.md)), which issues a new key. That is the whole of the rotation story, and it is why no separate mechanism is needed: the event that would justify re-keying is the same event that already re-keys.
 
 > **Divergence from TLS, SSH and IPsec, and why none of their drivers apply.**
 >
-> All three bound key lifetime, and it is worth saying why OSPP does not, so the absence reads as a decision rather than an omission.
+> All three make a time bound the key's lifecycle, and it is worth saying why OSPP does not, so the absence reads as a decision rather than an omission. (Rule 3's backstop is not a counter-example: it fires only where no event can confirm the session ended.)
 >
 > - **No confidentiality role.** The session key is used for a MAC and nothing else; confidentiality is TLS's job on both legs. So the AEAD usage bounds that force rekeying in TLS 1.3 — the limits on how much data a single key may protect before ciphertext distinguishability becomes a concern — have no analogue here.
 > - **No counter to exhaust.** OSPP's MAC input carries no sequence number, so there is no counter space to run out of. What could exhaust is the birthday bound on distinct messages under one key, and at OSPP volumes — a few hundred messages per station per hour — that is on the order of **10⁶ years**. It is not a design constraint at any fleet size this protocol will see.
