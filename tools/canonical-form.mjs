@@ -27,8 +27,11 @@
  * tool that needs it.
  *
  * This is not hypothetical for this repo. `sign-inline-md.mjs`, `sign-example.mjs`,
- * `verify-example-signatures.mjs`, `verify-ble-crypto.mjs` and
- * `generate-ble-vectors.mjs` DO import `canonicalize` from `@ospp/protocol`.
+ * `verify-example-signatures.mjs`, `verify-ble-crypto.mjs`,
+ * `generate-ble-vectors.mjs` and `generate-tamper-vectors.mjs` DO import
+ * `canonicalize` from `@ospp/protocol` -- SIX of the twelve tools here. This
+ * comment, `tools/README.md` and the KNOWN-ISSUES entry all said FIVE: the roster
+ * was written before `generate-tamper-vectors.mjs` existed and never re-derived.
  *
  * That import resolved to DEFECTIVE code until 0.30.0. This comment said the
  * installed copy was `0.5.4`; it was `0.13.0`, which matched the declared `^0.13.0`
@@ -38,11 +41,15 @@
  * object so the sort is discarded for integer-like keys). A wrong version number
  * pointed the fix at the wrong axis for four releases.
  *
- * The pin is now `^0.28.0` and the installed canonicalizer sorts by UTF-8 bytes.
- * Re-measured on the bump: `verify-all-signatures.sh` is green and the signer
+ * The pin is now `^0.40.0` and the installed canonicalizer sorts by UTF-8 bytes.
+ * Re-measured on that bump: `verify-all-signatures.sh` is green and the signer
  * produces ZERO drift across all 20 signed documents, which is the evidence that
  * the previously measured exposure really was zero rather than merely unobserved.
- * Moving those five tools onto THIS module is still open; do not "simplify" this
+ * The same measurement was repeated moving 0.29.0 -> 0.40.0: `CanonicalJsonBytes`
+ * and `EcdsaSigner` are byte-identical between those two releases, the two
+ * canonicalizers agree on all 2161 objects in the 496 committed JSON files, and
+ * the signer again produced zero drift.
+ * Moving those six tools onto THIS module is still open; do not "simplify" this
  * module into that import.
  *
  * If you are about to make this file shorter by importing the SDK: the gate goes

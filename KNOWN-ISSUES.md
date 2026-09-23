@@ -615,13 +615,15 @@ Measured at this HEAD:
 | What exists | Count |
 |---|---:|
 | Conformance test cases, `conformance/test-cases/**/TC-*.md` | **34** |
-| Files under `conformance/harness/` | **2** |
-| Bytes under `conformance/harness/` | **0** |
+| Executable harness files under `conformance/harness/` | **0** |
+| Files under `conformance/harness/` | **3** |
 
-The two files are `conformance/harness/runner/.gitkeep` and
-`conformance/harness/server-simulator/.gitkeep`. `conformance/README.md` says so itself — the
+The three files are the two zero-byte placeholders `conformance/harness/runner/.gitkeep` and
+`conformance/harness/server-simulator/.gitkeep`, plus `conformance/harness/README.md`, which
+states that neither executes and points back here. `conformance/README.md` says so too — the
 harness is *"planned for future releases; the `harness/` directory contains placeholder
-structure."*
+structure"* — but it said so only one directory up, which is not where a reader looking for a
+runner arrives.
 
 **So the 34 cases are 34 manual procedures and no automated verdict.** A second implementor can read
 what conformance means and cannot execute it, cannot regression-test against it, and cannot produce
@@ -2223,12 +2225,16 @@ sections are counted, and it was not re-derived independently. The other rows we
 ## OPEN — the signing toolchain canonicalizes with the SDK, so it verifies the SDK against itself
 
 **Raised 2026-08-12, while deciding where the spec repo's own canonical-form implementation
-should live.** Five tools import the rule they exist to check:
+should live.** Six tools import the rule they exist to check:
 
 `tools/sign-inline-md.mjs`, `tools/sign-example.mjs`, `tools/verify-example-signatures.mjs`,
-`tools/verify-ble-crypto.mjs` and `tools/generate-ble-vectors.mjs` all do
+`tools/verify-ble-crypto.mjs`, `tools/generate-ble-vectors.mjs` and
+`tools/generate-tamper-vectors.mjs` all do
 `import { canonicalize } from '@ospp/protocol'`. That is the whole signing **and**
-signature-verification chain. A gate that canonicalizes with the SDK passes whatever the SDK
+signature-verification chain. This entry said **five** until it was re-derived: the roster
+was written on the day the issue was raised and `generate-tamper-vectors.mjs` landed on
+2026-09-02, three weeks later, importing the same function and gated the same way
+(`verify-all-signatures.sh` runs it with `--check`). A gate that canonicalizes with the SDK passes whatever the SDK
 does, including whatever it does wrong — `verify-example-signatures.mjs` checks signatures using
 the same canonicalizer that produced them, so it cannot fail on a canonicalization defect by
 construction. This is the third instance of the shape: a gate once compared the two SDKs to each
@@ -2245,7 +2251,7 @@ which rebuilds a sorted object and thereby discards the sort for integer-like ke
 number nothing gates is the one that goes stale, and here the stale number made a real defect look
 like a housekeeping task.
 
-**The dependency half is CLOSED at 0.30.0.** The pin is `^0.28.0`; the installed
+**The dependency half is CLOSED at 0.30.0.** The pin is `^0.40.0`; the installed
 `CanonicalJsonSerializer` sorts with an explicit UTF-8 byte comparator. This entry's own prescribed
 order — *"bump the dependency first and re-measure"* — was followed: on the bump
 `verify-all-signatures.sh` is green and `sign-inline-md.mjs --all` produces **zero drift across all
@@ -2253,13 +2259,27 @@ order — *"bump the dependency first and re-measure"* — was followed: on the 
 zero rather than merely unobserved: had any committed signature depended on the broken ordering,
 re-signing with the corrected canonicalizer would have moved bytes.
 
+**The pin had then gone stale by eleven minors, and this entry stated the wrong one.** A `^0.x`
+caret resolves `>=0.x.0 <0.(x+1).0`, so `^0.29.0` could not reach the `0.40.0` both SDKs publish;
+the pin is now `^0.40.0`, with `package-lock.json` moved in the same edit, because `npm ci` reads
+the lock and a `package.json` bumped alone changes nothing the gates run. Re-measured across that
+move, on the four exports these tools actually use: `CanonicalJsonBytes.js`, `EcdsaSigner.js` and
+`HmacSigner.js` are **byte-identical** between 0.29.0 and 0.40.0, the only change in
+`CanonicalJsonSerializer.js` is a comment, and `SIGNATURE_ALGORITHM` is unchanged. Run as code
+rather than read: the two canonicalizers agree byte-for-byte on **all 2161 objects and arrays in
+the 496 committed JSON files** (0 mismatches, against a control pair that the same comparison
+does separate), and `sign-inline-md.mjs --all` again produced **zero drift across the 20 signed
+documents**. Nothing under `schemas/` moved. The one file in the `@ospp/protocol/server` export
+surface that did change, `validation/SchemaValidator.js`, is imported by **0 of the 12** tools
+here (control: 7 of 12 import something else from that package).
+
 **Measured exposure: zero.** Across 372 committed JSON files and 1846 objects, no object has keys
 whose UTF-8 and UTF-16 orderings differ and none has an integer-like key. No committed signature
 is wrong. The defect is latent, not active, which is why 0.13.0 did not re-point the signing chain
 in the same change: doing so re-canonicalizes signed artefacts for no present correctness gain,
 and the safe order is to bump the dependency first and re-measure.
 
-**What remains open** is the circularity itself: those five tools still import the SDK rather than
+**What remains open** is the circularity itself: those six tools still import the SDK rather than
 [`tools/canonical-form.mjs`](tools/canonical-form.mjs), the single implementation written from the
 text. A correct SDK does not repair that shape — `verify-example-signatures.mjs` still checks
 signatures with the same canonicalizer that produced them, and still cannot fail on a

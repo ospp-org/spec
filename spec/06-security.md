@@ -953,7 +953,7 @@ These three cannot carry a verifiable MAC. Each is exempt because of what it *is
 |---------|------------------------|
 | BootNotification **REQUEST** [MSG-001] | It **precedes** the session key. There is no key to sign with. |
 | BootNotification **RESPONSE** [MSG-001] | It **carries** the session key. A MAC computed with the key delivered inside the same message is cryptographically void — a forger who could substitute the message could substitute the key and produce a matching MAC. |
-| ConnectionLost (LWT) [MSG-011] | It **replaces** the station. It is registered with the broker at CONNECT time and published by the broker after the station is gone. On a first connection there is no key yet; on a reconnect the station holds the *previous* key, and by the time the will is delivered the server has rotated to the new one — so a will-MAC is not merely absent, it is guaranteed stale on arrival. |
+| ConnectionLost (LWT) [MSG-011] | It **replaces** the station. It is registered with the broker in the CONNECT packet — which precedes the BootNotification RESPONSE that issues this session's key ([§5.9](#59-session-key-lifetime) rule 1) — and published by the broker after the station is gone. Its bytes are therefore fixed when no key for this session exists yet, and sent when the station is no longer there to sign them. That holds on a reconnect as much as on a first connection: rule 2 has both peers discard the old key when the previous MQTT session ended, and rule 4 issues the next one only from the BootNotification that follows. |
 
 Integrity for all three is provided by mTLS, not by HMAC. Their exemption is unconditional: it holds in `All` mode, and it is not something a deployment can turn off.
 
@@ -1124,7 +1124,7 @@ The OfflinePass is a server-signed credential that authorizes offline service us
 | `constraints.stationOfflineWindowHours` | integer | Max hours a station can be offline and still accept this pass. A **monotonic** elapsed duration from the last successful MQTT connection, not a wall-clock difference (§6.1.1 check #2). |
 | `constraints.stationMaxOfflineTx` | integer | Max offline transactions a station can accumulate |
 | `signatureAlgorithm` | string | Signature algorithm identifier. MUST be `"ECDSA-P256-SHA256"` for v0.1. |
-| `signature` | string | ECDSA P-256 signature over all fields above (Base64-encoded, RFC 6979 deterministic nonces) |
+| `signature` | string | ECDSA P-256 signature over the OSPP Canonical Form ([§4.8](#48-ospp-canonical-form)) of all fields above **excluding `signature` and `signatureAlgorithm`** (Base64-encoded, RFC 6979 deterministic nonces). The exclusion is not optional and is not new: it is what [`offline-pass.md` §2](profiles/offline/offline-pass.md#2-offlinepass-fields) states, what §6.5.2 states for the StationIdentity wrapper that uses this same key, and what the signer and verifier in `tools/` both implement — `signature` cannot cover itself, and `signatureAlgorithm` is pinned to one `const` by [`offline-pass.schema.json`](../schemas/common/offline-pass.schema.json), so there is no algorithm for an attacker to substitute. |
 
 #### Example
 
