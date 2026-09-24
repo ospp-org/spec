@@ -65,7 +65,8 @@ export function verifyCanonicalFormVectors(root = ROOT) {
     if (got !== v.canonical) fail(`vector ${v.name}`, v.canonical, got);
   }
 
-  // 2 — the comparator, directly (06-security.md:679).
+  // 2 — the comparator, directly (06-security.md §4.8.1 Algorithm, the same section
+  // canonical-form.mjs cites; its header records why the line form was dropped).
   const pairs = [
     // UTF-8 byte order puts U+FFFD (EF BF BD) before U+1D400 (F0 9D 90 80).
     // Array.prototype.sort() puts them the other way: D835 < FFFD in UTF-16.

@@ -21,8 +21,9 @@ body:
     id: location
     attributes:
       label: Location
-      description: File path and section/line number
-      placeholder: "e.g., spec/03-messages.md Section 4.2, line 312"
+      description: File path and section or heading. Cite a section, not a line - a line
+        number rots at the next release and still resolves, which is worse than dangling.
+      placeholder: "e.g., spec/03-messages.md §4.2, or the heading it sits under"
     validations:
       required: true
 
