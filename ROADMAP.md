@@ -2,16 +2,21 @@
 
 ## Milestone Plan
 
+The four milestones that follow `v0.3.0` in the table were once given the version numbers `v0.4.0`
+to `v0.7.0`. The specification's own releases passed those numbers without delivering any of the
+four, so they now carry **no target version**; the number each once had is kept in brackets so an
+old reference can still be followed.
+
 | Version | Milestone | Description |
 |---------|-----------|-------------|
 | v0.1.0 | Protocol specification published | Initial public draft with full message catalog, schemas, and test vectors |
 | v0.2.0 | SessionEnded EVENT + Unknown bay state | New message for autonomous session termination, authoring fixes, example validation |
 | v0.2.1 | Version negotiation fix | `supportedVersions` field in BootNotification RESPONSE for protocol version mismatch |
 | v0.3.0 | Provisioning trust anchor split + brokerUri MUST | Schema rename `caCert` → `stationCaChain`, new optional `brokerRootCa`, normative MUST on `mqttConfig.brokerUri` consumption |
-| v0.4.0 | Online authorization + device model | RFID/NFC credential verification, local auth list, inventory reporting |
-| v0.5.0 | First station implementation | Embedded firmware reference implementation |
-| v0.6.0 | End-to-end testing complete | Full integration testing across MQTT, BLE, and offline flows |
-| v0.7.0 | Pilot deployment | Field testing with real hardware and users |
+| unscheduled (was v0.4.0) | Online authorization + device model | RFID/NFC credential verification, local auth list, inventory reporting |
+| unscheduled (was v0.5.0) | First station implementation | Embedded firmware reference implementation |
+| unscheduled (was v0.6.0) | End-to-end testing complete | Full integration testing across MQTT, BLE, and offline flows |
+| unscheduled (was v0.7.0) | Pilot deployment | Field testing with real hardware and users |
 | v1.0.0 | Stable release | Backwards compatibility commitment begins |
 
 ---
@@ -83,7 +88,7 @@ Purpose: resolve a load-bearing semantic ambiguity in the provisioning response 
 
 See [CHANGELOG.md](CHANGELOG.md) `[0.3.0]` entry.
 
-## v0.4.0 (Planned)
+## Planned, no target version (was v0.4.0)
 
 ### Online Authorization
 
@@ -111,7 +116,7 @@ See [CHANGELOG.md](CHANGELOG.md) `[0.3.0]` entry.
 - ~~**Reconciliation backpressure**~~ — **answered in `0.9.0`**, and by the opposite mechanism to the one this item proposed: acknowledgement is per **event**, never per batch. [`reconciliation.md` §2](spec/profiles/offline/reconciliation.md#2-sync-procedure) step 4 has the server answer each TransactionEvent on its own merits, and the retry rule in the same section bounds the station instead of the server (30 s response timeout, exponential backoff 5 s to 60 s, up to 10 attempts). Flow control is the transport's, not the profile's — [`02-transport.md` §1.2](spec/02-transport.md#12-connection-parameters) sets **Receive Maximum** to `10`, capping unacknowledged messages in flight. Both of those were already normative in the release that recorded this item. What `0.9.0` settled was the remaining half, and it settled it against the item: §2's *No ordering obligation* forbids the server to withhold, hold or re-order settlement, so "server-side acknowledgment before next batch" is not an option the specification leaves open.
 - **Error code 2002 split:** Split `2002 OFFLINE_PASS_INVALID` into separate codes for ECDSA signature failure vs. device binding mismatch for improved machine-readable diagnostics
 
-## v0.5.0 (Future)
+## Future, no target version (was v0.5.0)
 
 - Smart Charging profile (if EV charging scope)
 - Real-time cost updates
