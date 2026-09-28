@@ -3220,6 +3220,8 @@ Cross-reference table for MQTT Message Expiry Interval per action (see [Chapter 
 | GetDiagnostics | 300s | 600s | No |
 | DiagnosticsNotification | — | 60s | No |
 | UpdateServiceCatalog | 30s | 60s | No |
+| DataTransfer | 30s | 60s | No |
+| TriggerMessage | 10s | 60s | No |
 
 ---
 

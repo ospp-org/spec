@@ -486,9 +486,19 @@ OSPP uses MQTT 5.0 **Message Expiry Interval** to prevent stale commands from be
 | **Periodic reporting** | MeterValues | 60s | 120s |
 | **Critical events** | BootNotification, TransactionEvent, SessionEnded, SecurityEvent, ConnectionLost (LWT) | — | **Never expires** |
 
-> **Note:** UpdateServiceCatalog overrides the management-command default with a 60-second MQTT Expiry (see [Chapter 03](03-messages.md), Appendix B).
+**Per-action overrides.** The actions below take an MQTT Expiry Interval different from the rest of their category:
+
+| Action | Category | MQTT Expiry Interval |
+|--------|----------|----------------------|
+| UpdateServiceCatalog | Management commands | 60s |
+| TriggerMessage | Management commands | 60s |
+| DataTransfer | Management commands | 60s |
+
+An override replaces the category's MQTT Expiry Interval only; the Station Max Age stays the category's. [Chapter 03 Appendix B](03-messages.md#appendix-b--mqtt-message-expiry-reference) is the per-action cross-reference.
 
 > **TriggerMessage and DataTransfer were in no row of this table until 0.30.0.** `TriggerMessage` occurred **zero** times in the whole of this chapter while occurring 91 times elsewhere in the specification, so the one table that tells a publisher what expiry to set said nothing about either action, and a publisher had to invent a value or set none. They are classified as management commands because that is what they are — a command the station acts on and answers, neither long-running nor a never-expire event. `TriggerMessage` carries its own tighter obligation on the *station* side ([`trigger-message.md` §5](profiles/core/trigger-message.md) rule 1 — the triggered message within 5 s); that is a response deadline, not a delivery window, and the two are set independently.
+>
+> **From 0.30.0 until 0.44.0 this table and Chapter 03 disagreed on both actions.** The *Management commands* row gave them the category's 120 s MQTT Expiry Interval while their per-message blocks ([Chapter 03 §6.13](03-messages.md#613-datatransfer) and [§6.14](03-messages.md#614-triggermessage)) gave 60 s, and nothing joined the two statements. 0.44.0 settles both at 60 s, the per-message value, as rows of the override table above; they remain management commands with the category's 60 s Station Max Age.
 
 **Station Max Age** is the maximum age of a message the station will accept. If a message's timestamp is older than `now - maxAge`, the station MUST discard it and SHOULD log a warning.
 
