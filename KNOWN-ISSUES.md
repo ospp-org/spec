@@ -1341,13 +1341,32 @@ renaming `§3.4` touches every cross-reference to it; re-ranging the provisionin
 `4xxx` is a breaking change to a published vocabulary; making `category` a per-code property
 rather than a derived one is a cross-SDK change (PHP and TS must agree, or the same code reports
 two categories). Whichever is chosen, the arithmetic derivation is the part that must stop.
+*(0.44.0: point 3 is decided with [the entry below](#decided-0440--httpstatus-and-category-model-properties-the-spec-declines-to-give-a-code-and-the-two-sdks-invented-different-answers)
+— both SDKs' `category()` now say what Appendix A's *Cat.* column says, and that column files
+`4015`–`4020` under `P`, derived from the range as the SDKs derive it; the heading question of
+points 1 and 2 stays open.)*
 
 The finding directly below generalises this one: `category` is one of **two** accessors that
 answer a question the spec declines to define, and they should be decided together.
 
 ---
 
-## OPEN — `httpStatus()` and `category()` model properties the spec declines to give a code, and the two SDKs invented different answers
+## DECIDED (0.44.0) — `httpStatus()` and `category()` model properties the spec declines to give a code, and the two SDKs invented different answers
+
+**Decided for 0.44.0: the specification names no new status, and both accessors stay what they are
+— SDK extensions.** §2.4 and §4.4 are unchanged: the status is still not a property of the code, and
+no code gains a fixed status, so the five codes `1001`, `1012`, `1014`, `2007` and `3013` stay
+unnamed. The two things this entry found that were a disagreement rather than a silence are settled
+in the SDK pair that follows this tag (`0.41.0`): **`2001 STATION_NOT_REGISTERED` answers `422` in
+both SDKs** — `sdk-ts` moves from `401`, which a client reads as an expired credential — and
+**`ospp-sdk-php`'s `category()` labels align to [Appendix A](spec/07-errors.md#appendix-a--quick-reference-all-error-codes)'s
+legend** as `sdk-ts` already spells it: `Transport`, `Auth`, `Session`, `Payment`, `Hardware`,
+`Server` — the legend's *H = Hardware/Software* being the letter `sdk-ts` has always labelled
+`Hardware`. **This entry's premise that the specification has no per-code category was wrong:**
+Appendix A carries a *Cat.* column for all 120 codes, derived from the range exactly as both SDKs
+derive it, so the derivation is the specification's own and the labels were the only disagreement.
+The 40 fall-through defaults stay what they were — one library declining to answer — documented as
+an SDK extension; `httpStatus()` returning `?int` stays withdrawn, below.
 
 **Raised 2026-07-29 during the SDK 0.9.0 release, by enumerating both SDKs' registries against
 each other. Recorded rather than fixed: the question is not which mapping is right, and settling
