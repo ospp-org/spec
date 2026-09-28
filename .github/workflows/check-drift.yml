@@ -99,6 +99,16 @@ jobs:
       - name: Restated counts and rosters vs the artefacts they describe
         run: python3 tools/check-doc-claims.py
 
+      # 02-transport.md §5.1 gives each action's MQTT Expiry Interval by category, and
+      # 03-messages.md restates it twice -- in the action's per-message block and in Appendix B.
+      # Nothing joined the three: 0.14.0's MeterValues repair landed on AuthorizeOfflinePass, and
+      # from 0.30.0 to 0.43.0 §5.1 gave TriggerMessage and DataTransfer 120 s while both of their
+      # blocks said 60 s. A block that names a category is held to §5.1's membership as well.
+      # Both chapters are markdown, which the paths triggers above already cover; the floors and
+      # counts live in the script, not here.
+      - name: Per-message Message Expiry vs 02-transport.md §5.1 and Appendix B
+        run: python3 tools/check-message-expiry.py
+
       # The check with no signal of its own. A gate that verifies the wrong thing still emits a
       # verdict; a gate nothing starts emits nothing at all, so it can only be found by
       # subtracting the set of callers from the set of tools. On the run that introduced this,

@@ -58,7 +58,7 @@ Re-implementing is the point; re-implementing *per tool* is not. Before 0.13.0 `
 
 ## Drift checks
 
-Four checks for the class *"prose asserts a property and nothing establishes it"*. They are run
+Five checks for the class *"prose asserts a property and nothing establishes it"*. They are run
 by `.github/workflows/check-drift.yml`; each takes no arguments and is cwd-independent.
 
 ```bash
@@ -66,10 +66,11 @@ python3 tools/check-config-defaults.py       # restated defaults vs the Chapter 
 python3 tools/check-schema-conditionals.py   # schema descriptions asserting unenforced conditionals
 python3 tools/check-normative-bold.py --list # normative keywords a reader will not see as normative
 python3 tools/check-config-ranges.py         # the Range column, §9 vs §§2--6, and restated ranges
+python3 tools/check-message-expiry.py        # Message Expiry: §5.1 vs the per-message blocks and Appendix B
 ```
 
 They exist because most of that class is *not* mechanically checkable — a claim in prose is not
-machine-comparable to anything. These four are the exceptions, and each is narrow on purpose:
+machine-comparable to anything. These five are the exceptions, and each is narrow on purpose:
 
 > **Both number columns carry their measurement point, and the two are different measurements.**
 > *Precision* is an adjudication — someone read every flag and decided whether it was real — and it
@@ -86,6 +87,7 @@ machine-comparable to anything. These four are the exceptions, and each is narro
 | `check-schema-conditionals` | Both sides are in one JSON file — the `description` and the `if`/`then` that should back it | 33 claims, 5 flagged, **5 real** | 44 claims, 38 backed, **6 not backed** (= `BASELINE`) |
 | `check-normative-bold` | Pure typography — a capitalised keyword outside a `**…**` span | exact, no inference | **438** unbolded (= `BASELINE`, lowered from 439 on 2026-09-03), **1183** bolded spans at `v0.28.0` — RE-DERIVED by running the instrument, not incremented from the previous line. `v0.28.0` bolded exactly one keyword (a `MUST` in the 00-introduction revision row the release added), and the ratchet is what caught it at 440: the fix a raised BASELINE would have hidden. Companion **instrument** corrected at `v0.27.0`; it paired `**` over the raw file while the finding scan paired over the masked copy, so four literal `**` inside backticks cost it 8. `v0.26.0` re-reads **1161**, not the 1156 it shipped. The gated number is unaffected on either tree |
 | `check-config-ranges` | Same structure argument as `check-config-defaults`, one column over — a range restatement is a key name with `<lo>--<hi>` near it, and `--` is as strong a signal as the word "default" | 16 sites, 4 flagged, **4 real**; plus 2 schema-bound comparisons, both real | 18 restated-range sites, 2 wire-field aliases, 2 broker settings, **1 finding** (= `BASELINE`) |
+| `check-message-expiry` | All three statements are structured — §5.1 is a table whose *Actions* cell lists the actions (with a per-action override table under it), each per-message block is a property table under its `### N.M` heading, and Appendix B is keyed by action — so the check is a join on the action name and reads no prose | not built at `v0.12.0`; adjudicated at `b0704054`, below | not built at `v0.27.0`; measured at `6152cfd`, below |
 
 `check-config-ranges` also does what no other check does: it compares **the registry against its own
 summary**. Chapter 08 states the key table twice — §§2--6 with Range and Description, §9 with an
@@ -102,14 +104,28 @@ is invisible to check D until somebody adds the pair, and there is no mechanical
 two names denote one quantity" — the spec asserts it in prose and nothing marks it up. Both known
 pairs were found by reading, not by the check.
 
+`check-message-expiry` joins **three** statements of one value across two chapters rather than a
+restatement against one registry: `02-transport.md` §5.1 is the source, and each action's
+per-message block and Appendix B row restate it. The category a block *names* is a verdict of its
+own — a block naming a category must be in it — because that is the half that catches the
+`0.14.0` edit which gave AuthorizeOfflinePass another action's value and category. An action in
+no §5.1 category, or with no Appendix B row, is printed as coverage and never fails. Adjudicated
+at `b0704054`, 2026-09-24, `0.43.0`: 44 pairs, 4 flagged over 3 actions, **2 of the 3 real** —
+TriggerMessage and DataTransfer, decision Q7 — and UpdateServiceCatalog, whose override was then
+a prose note the check does not read; `0.44.0` moved it into §5.1's override table. Measured at
+`6152cfd`, 2026-09-28 (Q7 applied on `0.43.0`): 46 pairs compared, **46 agreed**, 0 false
+citations, with 5 actions in no §5.1 category and 3 with no Appendix B row as coverage.
+
 Each carries a `BASELINE` or exits non-zero on any finding. **They are ratchets, not allowlists:**
 every finding is printed on every run, and the count may fall but must not rise. When it falls,
 lower the constant in the script so the improvement cannot silently regress.
 
-All four are RED-tested: injecting one drifted default, one unenforced conditional, one unbolded
+All five are RED-tested: injecting one drifted default, one unenforced conditional, one unbolded
 keyword, and — for `check-config-ranges`, once per check it performs — one drifted §9 cell, one
-malformed Range cell and one drifted registry range, makes each exit 1, and removing the injection
-returns it to 0. A gate nobody has watched fail is a gate nobody knows works.
+malformed Range cell and one drifted registry range, and — for `check-message-expiry` — one false
+category citation beside a number that agrees and one `### N.M` heading stripped of its number,
+makes each exit 1, and removing the injection returns it to 0. A gate nobody has watched fail is a
+gate nobody knows works.
 
 What defeated the more ambitious versions is recorded in each script's docstring. In short:
 `check-schema-conditionals` must not flag cross-artefact claims (JSON Schema cannot compare against
