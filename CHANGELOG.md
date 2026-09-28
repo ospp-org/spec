@@ -8,6 +8,138 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [0.44.0] — 2026-09-29
+
+### Changed
+
+**MINOR, normative — an operator's stop now refunds an all-or-nothing wash, the idle timer is off by
+default, and five questions this specification had left open are closed by decision.** Two of the
+changes alter meaning, which [`CONTRIBUTING.md`](CONTRIBUTING.md) counts as breaking and
+[`VERSIONING.md`](VERSIONING.md) permits between `0.x` minors. **Ship order: servers first; no station
+change.** Every normative change here binds the server, or is a default a station already receives from
+its server; no field, value, code, constraint or conformance vector moves, and `protocolVersion` stays
+`0.3.0`.
+
+- **An operator-stopped `FixedDuration` or `MultiUnit` session is refunded in full.** In
+  [`04-flows.md` §6, *Settlement by Service Kind*](spec/04-flows.md#settlement-by-service-kind), the
+  `OperatorStopped` row read **Full charge** — *"a preset the user started is consumed"*. It now reads
+  **Full refund**: the operator, not the customer, cut the preset short. `UserDuration` stays pro-rata on
+  delivered time. The `FixedDuration` premise in the same section, *"a started programme is consumed"*,
+  now says a programme an operator ended is not.
+
+  **Every site that stated the old rule moves with it:** the operator-disable policy paragraph in the
+  same chapter, which said *"The customer IS billed, pro-rata"* unscoped;
+  [`03-messages.md` §5.4](spec/03-messages.md#54-sessionended), reason `OperatorStopped`, whose
+  **MUST** said the customer is billed for what they received and now binds the server to settle by
+  kind; rule 3 of [`reset.md`](spec/profiles/device-management/reset.md); the description text of
+  `session-ended-event.schema.json` and `reset-request.schema.json`; and the rationales of `TC-DM-003`
+  and `TC-TX-007`, whose pass/fail criteria do not change. **Four restatements are scoped to
+  `UserDuration` and stay true, so they are left:** the Refund Policy row of the same chapter, the
+  *Operator ended it* row of [`05-state-machines.md` §3.3](spec/05-state-machines.md), the
+  `OperatorStopped` row of [`session-ended.md` §4](spec/profiles/transaction/session-ended.md) and
+  arm 6 of the implementor's guide — each under a sentence saying it is the `UserDuration` case.
+
+  **A stop the server issues for an operator now has a rule, and it had none.** A server-issued
+  StopService produces no SessionEnded and StopService carries no reason, so the specification was silent
+  on exactly the stop an operator console issues. The same section now says it: the server **MUST**
+  settle such a session as `OperatorStopped`, by service kind, and **MUST NOT** settle it as the
+  customer's own stop. A stop the station refuses stops nothing: the wash runs on and the session keeps
+  its full charge.
+
+- **`SessionTimeout` defaults to `0`, the timer off.**
+  [`08-configuration.md` §3](spec/08-configuration.md#3-transaction-configuration-keys) and its §9
+  summary row move `120` to `0`, with the reason on the row: a station whose only customer input is the
+  start button has no continuous user-interaction signal, so a non-zero default stops every session still
+  running at the timeout. The range, `0--600`, is unchanged, and so is what `0` means. The idle-timeout
+  row of [`05-state-machines.md` §3.3](spec/05-state-machines.md) restates `0`, and §3.4 no longer calls
+  the timer *"not fully specified"* with triggers that *"do not agree"* — Chapter 08's note has recorded
+  since `0.31.0` that all three gaps are closed and that the trigger is user interaction. The two
+  historical explanations of that closure keep their numbers and now say `120` was the default of the
+  time.
+
+- **TriggerMessage and DataTransfer expire at 60 s.** Since 0.30.0,
+  [`02-transport.md` §5.1](spec/02-transport.md) put both in the *Management commands* row, whose MQTT
+  Expiry Interval is 120 s, while their own per-message blocks in
+  [`03-messages.md`](spec/03-messages.md) (§6.13, §6.14) have said 60 s since the first draft, and
+  nothing joined the two. 0.44.0 settles both at 60 s, the per-message value. The prose note that
+  overrode UpdateServiceCatalog becomes a **per-action override table** — UpdateServiceCatalog,
+  TriggerMessage and DataTransfer at 60s — with the rule that an override replaces the category's MQTT
+  Expiry Interval only; the Station Max Age stays the category's. Chapter 03's Appendix B gains a row for
+  each. A station's 60 s Station Max Age already discarded either message after 60 s, so no delivery
+  changes.
+
+- **`errorText` on DiagnosticsNotification and FirmwareStatusNotification is prose, and that is the
+  documented exception.** [`07-errors.md` §1.3](spec/07-errors.md#13-error-object-fields) now says so
+  after its field table: neither message carries an `errorCode`, and on both `errorText` is a
+  per-occurrence, human-readable description of the failure — present only when `status` is `Failed`,
+  at most 128 characters — not the per-code name the table defines, so it takes no `UPPER_SNAKE_CASE`
+  form and is not for programmatic matching. **No schema moves.** The
+  [KNOWN-ISSUES entry](KNOWN-ISSUES.md#decided-0440--two-messages-carry-errordescription-semantics-under-the-name-errortext)
+  becomes DECIDED, option 3, with why the rename and the pattern were declined.
+
+- **`BruteForceAttempt`: the threshold, the window and what counts as one source are
+  implementation-defined.** One sentence on the type's row in
+  [`security-event.md` §4](spec/profiles/security/security-event.md). No normative trigger is added; that
+  waits for the BLE arc, where the one station-side check of a peer this specification defines lives.
+
+- **No new HTTP status is named.** §2.4 and §4.4 are unchanged: the status is still not a property of
+  the code, and `1001`, `1012`, `1014`, `2007` and `3013` stay unnamed. The
+  [KNOWN-ISSUES entry](KNOWN-ISSUES.md#decided-0440--httpstatus-and-category-model-properties-the-spec-declines-to-give-a-code-and-the-two-sdks-invented-different-answers)
+  becomes DECIDED: both accessors stay SDK extensions, and the SDK pair that follows this tag settles the
+  two disagreements it found — `2001 STATION_NOT_REGISTERED` at `422` in both, and the PHP `category()`
+  labels aligned to [Appendix A](spec/07-errors.md#appendix-a--quick-reference-all-error-codes)'s legend.
+  Its premise that no per-code category exists is corrected: Appendix A carries one for all 120 codes.
+
+- **The ROADMAP's milestones once numbered `v0.4.0` to `v0.7.0` carry no target version.** The
+  releases passed those numbers without them; the table and the two section headings say *unscheduled*
+  and keep the old number in brackets.
+
+**Tooling.** Three gates join the ones this repository runs, and none moves a committed byte:
+
+- **The signing and verifying chain canonicalizes with [`tools/canonical-form.mjs`](tools/canonical-form.mjs)**,
+  the implementation written from the text, where six tools had imported `canonicalize` from the SDK
+  and so verified the SDK against itself. Signing is deterministic, and regenerating every artefact the
+  six drive left the tree byte-identical; dropping the key sort from `canonical-form.mjs` now turns seven
+  signature gates red while the same break in the SDK turns none — the reverse of before. The
+  [KNOWN-ISSUES entry](KNOWN-ISSUES.md#closed-0440--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself)
+  closes.
+- **[`tools/check-message-expiry.py`](tools/check-message-expiry.py) joins every per-message
+  `Message Expiry` to its §5.1 category and to Appendix B**, built to the specification its
+  [KNOWN-ISSUES entry](KNOWN-ISSUES.md#closed-0440--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)
+  recorded, which closes. Its first run found the TriggerMessage and DataTransfer contradiction above;
+  at this tag it compares 46 pairs and 46 agree.
+- **[`tools/generate-error-usage.py`](tools/generate-error-usage.py) derives
+  [`07-errors.md` §4.1–4.3](spec/07-errors.md#4-error-code-usage-per-message) from the per-message and
+  profile error tables and checks §4 against them** — the check half of the rebuild
+  [ROADMAP](ROADMAP.md) describes. Measured at the base: 63 divergent (row, code) pairs on 14 of 31
+  rows, and no §4.1 row for `SessionEnded`. Which surface governs is a decision, and five are recorded
+  in the script and in ROADMAP, so the measured pairs are its baseline: it fails on a divergence the
+  baseline does not list and on a listed one that no longer occurs. Generating §4 outright waits on
+  those decisions.
+
+The [KNOWN-ISSUES](KNOWN-ISSUES.md) summary is re-derived from its headings, as its own rule asks: 22
+open, 27 decided, 10 closed. The status line had read 27 open against 26 `## OPEN` headings.
+
+**Decided with no text:** the station's discard-on-first-TLS-use rule
+([`06-security.md` §4.7.6](spec/06-security.md)) stays as written. **Not in this release:** server-side
+durability of SessionEnded, which waits on a measurement of the broker-to-server bridge; and the BLE arc,
+including a normative trigger for `BruteForceAttempt`.
+
+**Also in this release**, on `main` since `v0.43.0` with no entry of their own: the LWT exemption stops
+citing a rotation the specification denies, the tooling's SDK pin reaches the `0.40.0` both SDKs publish,
+one wrong live section citation is corrected, and the bug-report template stops teaching the citation
+form that rots (`a268d5b`, `aeab2e2`).
+
+**Radius, measured against the base (`b0704054`):** **2 of 86** schema files change, and only their
+`description` text — `session-ended-event.schema.json` and `reset-request.schema.json`, each proven
+equal to its base with every `description` removed; **0 of 350** conformance vectors and **0 of 56**
+example payloads move (the three directories' `README.md` headers carry the version); two conformance
+cases change rationale text and no pass/fail criterion. The SDK pair that follows this tag, `0.41.0`,
+re-vendors the two descriptions and moves `SessionTimeout`'s default, `2001`'s status in `sdk-ts` and
+the PHP category labels. `protocolVersion` stays `0.3.0`.
+
+---
+
 ## [0.43.0] — 2026-09-22
 
 ### Changed
