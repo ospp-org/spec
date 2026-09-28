@@ -1,6 +1,6 @@
 # AuthorizeOfflinePass
 
-> **Status:** Draft | **OSPP Version:** 0.43.0
+> **Status:** Draft | **OSPP Version:** 0.44.0
 
 ## 1. Overview
 
