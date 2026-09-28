@@ -79,6 +79,8 @@ The *Required* column below describes the **Error Object**: the complete structu
 | `vendorErrorCode` | string | per-occurrence | OPTIONAL | Vendor-specific sub-code for proprietary diagnostics (see §8). |
 | `details` | object | per-occurrence | OPTIONAL | Additional structured context (e.g., which field failed validation, threshold values, etc.). OPTIONAL in general, but **REQUIRED** for a code whose registry entry branches on a member of it — see §1.4, and Appendix C, whose conditional blocks enforce it. |
 
+**The exception: `errorText` on DiagnosticsNotification [MSG-019] and FirmwareStatusNotification [MSG-017] is prose.** Neither message carries an `errorCode`, and on both `errorText` is a per-occurrence, human-readable description of the failure — present only when `status` is `Failed`, at most 128 characters — not the per-code name defined above, so it takes no `UPPER_SNAKE_CASE` form and is not for programmatic matching.
+
 **Wire carriage is per transport.** The registry is universal; the wire representation is not.
 
 - **REST** ([§2.4](#24-rest-api-error-response)) — the full Error Object above **is** the response body.

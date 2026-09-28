@@ -852,10 +852,11 @@ unassertable, without saying so.
 
 **Why it is not repaired here.** The class note below says to look first for a value already on the wire
 carrying the same meaning. There is one — `errorText` — but on this message it is deliberately free prose,
-and that is the subject of a **different** open finding on this page
-([`errorText` carrying `errorDescription` semantics on two messages](#open--two-messages-carry-errordescription-semantics-under-the-name-errortext)).
+and that is the subject of a **different** finding on this page, decided in `0.44.0`
+([`errorText` carrying `errorDescription` semantics on two messages](#decided-0440--two-messages-carry-errordescription-semantics-under-the-name-errortext)).
 The two are one question: whichever way `errorText`'s naming is settled decides whether `5019` gets a
-carrier. Deciding half of it here would be the third time this repository has patched one of the pair
+carrier. *(Settled in `0.44.0` as option 3 of that entry: `errorText` stays prose on this message, so it
+does not become `5019`'s carrier, and this entry stays open.)* Deciding half of it here would be the third time this repository has patched one of the pair
 without the other.
 
 **The option space.** (1) Add `errorCode` to DiagnosticsNotification — breaking, and the mirror question
@@ -1460,7 +1461,18 @@ still a `500` default standing in for an answer.
 
 ---
 
-## OPEN — two messages carry `errorDescription` semantics under the name `errorText`
+## DECIDED (0.44.0) — two messages carry `errorDescription` semantics under the name `errorText`
+
+**Decided for 0.44.0: option 3 below, and the rest of this entry is the record of the choice.**
+[`07-errors.md` §1.3](spec/07-errors.md#13-error-object-fields) now documents `errorText` on
+DiagnosticsNotification and FirmwareStatusNotification as per-occurrence prose — a deliberate
+exception to the per-code name its table defines. **No schema moves:** both declarations keep
+`maxLength` 128 and their `Failed` conditionals, and no pattern is added. Option 1 was declined
+because the rename breaks every station that sends either message while `protocolVersion` stays
+`0.3.0`, so boot negotiation could not tell old firmware from new; option 2 because it needs
+registry codes for conditions that have none. The cost this entry names for option 3 — a client
+matching `errorText` programmatically never matches on these two — is accepted: no such client
+exists in the reference implementations, and §1.3 now says so where a client reads the field.
 
 **Raised 2026-07-29, adding the `UPPER_SNAKE_CASE` pattern to every `errorText` that pairs with
 an `errorCode`. These two were deliberately left out of that change, because fixing them is a
@@ -1511,7 +1523,8 @@ condition, so the vector shipped as **valid** and nothing could have said otherw
 other three, with four negative vectors exercising both directions, and the offending vector has
 been reworked. **The naming question above is untouched by that**: `errorText` on this message is
 still per-occurrence prose where §1.3 defines a per-code name, and the same is true of
-`firmware-status-notification`, whose `errorText` remains unconditioned. What closed is the
+`firmware-status-notification`, whose `errorText` remains unconditioned. *(Conditioned the same way
+since `0.25.0` — required on `Failed`, forbidden otherwise; the naming question was unaffected.)* What closed is the
 conditional violation; what is open is the name.
 
 **The contrast is inside the same family.** `status-notification.schema.json` declares **both**
@@ -1539,7 +1552,8 @@ misnamed rather than merely unconstrained.
    precisely what a client matching programmatically cannot discover.
 
 Whichever is chosen, the pattern added elsewhere on 2026-07-29 should extend to these two once
-the field means what §1.3 says.
+the field means what §1.3 says. *(Superseded by the 0.44.0 decision above: under option 3 the field
+means prose on these two, so the pattern does not extend to them.)*
 
 ---
 
@@ -1547,7 +1561,7 @@ the field means what §1.3 says.
 
 **RESOLVED IN `0.40.0`. All 19 declarations that pair `errorText` with an `errorCode` are
 uniformed to `maxLength: 64`; the 2 prose declarations keep 128 and stay governed by
-[the entry above](#open--two-messages-carry-errordescription-semantics-under-the-name-errortext).
+[the entry above](#decided-0440--two-messages-carry-errordescription-semantics-under-the-name-errortext).
 Radius measured before the change and unchanged after: 18 declarations across 17 files, 18 schema
 bytes, **291/291** corpus both sides, floor pinned in both directions (26 → 1 failure, 8 → 18).
 The one downstream cost is named in the CHANGELOG and was repaired with it. `reason` and
@@ -1556,7 +1570,7 @@ carry more than one limit — so this closes as a single-field defect rather tha
 class it was first written as. The measurement that follows is kept as the record.**
 
 **Raised 2026-09-10, measured against `v0.39.1` across all 86 schemas. This is adjacent to
-[the naming question above](#open--two-messages-carry-errordescription-semantics-under-the-name-errortext)
+[the naming question above](#decided-0440--two-messages-carry-errordescription-semantics-under-the-name-errortext)
 and is a different defect: that one is about what `errorText` *means* on two messages, this one is
 about how long it may be on all twenty-one.**
 
