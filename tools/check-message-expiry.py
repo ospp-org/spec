@@ -74,13 +74,14 @@ still 30 s, and AuthorizeOfflinePass 120 s against its Appendix B 30 s with a fa
 reporting citation -- and CertificateInstall again; `v0.15.0` (`5814016` 2026-08-13) flags
 none of them. Every one of the three also flags the UpdateServiceCatalog Note.
 
-RED-tested on throwaway copies of `6152cfd` 2026-09-28 (Q7 on 0.43.0): a false category
-citation on a block whose number agrees fires the citation verdict alone, and so do a category
-name §5.1 does not define and an override row naming the wrong category; the `0.14.0`
-AuthorizeOfflinePass row fires both verdicts; a `### N.M` heading stripped of its number, and a
-renamed header cell in the category table, each drop a side below its floor and the check
-refuses before comparing; Appendix B's action names lower-cased leave §5.1 against Appendix B
-with zero pairs, which is refused although the other join's pairs all agree.
+RED-tested 2026-09-28 on throwaway copies of the Q7 change as first written on 0.43.0, before it
+became `c5b885d` here: a false category citation on a block whose number agrees fires the
+citation verdict alone, and so do a category name §5.1 does not define and an override row
+naming the wrong category; the `0.14.0` AuthorizeOfflinePass row fires both verdicts; a
+`### N.M` heading stripped of its number, and a renamed header cell in the category table, each
+drop a side below its floor and the check refuses before comparing; Appendix B's action names
+lower-cased leave §5.1 against Appendix B with zero pairs, which is refused although the other
+join's pairs all agree.
 
 Exit status
 -----------
@@ -103,8 +104,8 @@ APPENDIX_HEADER = ('action', 'response timeout', 'mqtt expiry interval', 'never 
 # Floors: sanity bounds that say the parsers still work, not coverage targets -- an action
 # missing from a table is coverage and is printed as such. Measured at b0704054 2026-09-24
 # 0.43.0: 6 categories naming 22 actions, no override table, 27 of the 40 `### N.M` blocks
-# carrying a Message Expiry row, 22 Appendix B rows. At 6152cfd 2026-09-28 (Q7 applied on
-# 0.43.0): the same, with 3 overrides and 24 Appendix B rows. Each floor is the lower of the two,
+# carrying a Message Expiry row, 22 Appendix B rows. At c5b885d 2026-09-28 (the Q7 commit): the
+# same, with 3 overrides and 24 Appendix B rows. Each floor is the lower of the two,
 # so the check still reads the tree it was built to catch. KNOWN-ISSUES.md gave §5.1 as "27
 # actions across 6 categories"; 27 is the Chapter 03 count -- five MQTT actions are in no
 # category. The override table has no floor: an override that stops parsing leaves its action on

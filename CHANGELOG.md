@@ -16,9 +16,12 @@ as described in [VERSIONING.md](VERSIONING.md).
 default, and five questions this specification had left open are closed by decision.** Two of the
 changes alter meaning, which [`CONTRIBUTING.md`](CONTRIBUTING.md) counts as breaking and
 [`VERSIONING.md`](VERSIONING.md) permits between `0.x` minors. **Ship order: servers first; no station
-change.** Every normative change here binds the server, or is a default a station already receives from
-its server; no field, value, code, constraint or conformance vector moves, and `protocolVersion` stays
-`0.3.0`.
+change.** Every normative change here binds the server except one registry default: `SessionTimeout`
+falls to `0`, which a station uses only where no stored or pushed value exists
+([`08-configuration.md` §1.1](spec/08-configuration.md)). A station's factory default follows at its next
+firmware release, and a server that pushes the key at boot — as the reference server has pushed `0`
+since 2026-09-12 — leaves no station behaviour to change. No field, code, constraint or conformance
+vector moves, and `protocolVersion` stays `0.3.0`.
 
 - **An operator-stopped `FixedDuration` or `MultiUnit` session is refunded in full.** In
   [`04-flows.md` §6, *Settlement by Service Kind*](spec/04-flows.md#settlement-by-service-kind), the
@@ -43,8 +46,10 @@ its server; no field, value, code, constraint or conformance vector moves, and `
   StopService produces no SessionEnded and StopService carries no reason, so the specification was silent
   on exactly the stop an operator console issues. The same section now says it: the server **MUST**
   settle such a session as `OperatorStopped`, by service kind, and **MUST NOT** settle it as the
-  customer's own stop. A stop the station refuses stops nothing: the wash runs on and the session keeps
-  its full charge.
+  customer's own stop. A stop the station refuses while the session is still running is not settled as
+  `OperatorStopped`, because the operator did not end the service: a `FixedDuration` or `MultiUnit`
+  session keeps its full charge, and a `UserDuration` session is pro-rata on its delivered time. A
+  `3006 SESSION_NOT_FOUND` refusal is not that case — the station holds no such session.
 
 - **`SessionTimeout` defaults to `0`, the timer off.**
   [`08-configuration.md` §3](spec/08-configuration.md#3-transaction-configuration-keys) and its §9
@@ -91,10 +96,11 @@ its server; no field, value, code, constraint or conformance vector moves, and `
   Its premise that no per-code category exists is corrected: Appendix A carries one for all 120 codes.
 
 - **The ROADMAP's milestones once numbered `v0.4.0` to `v0.7.0` carry no target version.** The
-  releases passed those numbers without them; the table and the two section headings say *unscheduled*
-  and keep the old number in brackets.
+  releases passed those numbers without them; the table says *unscheduled* and the two section headings
+  *no target version*, each keeping the old number in brackets.
 
-**Tooling.** Three gates join the ones this repository runs, and none moves a committed byte:
+**Tooling.** Two gates join the ones this repository runs, the signing chain stops verifying the SDK
+against itself, and none of the three moves a committed byte:
 
 - **The signing and verifying chain canonicalizes with [`tools/canonical-form.mjs`](tools/canonical-form.mjs)**,
   the implementation written from the text, where six tools had imported `canonicalize` from the SDK
@@ -125,10 +131,27 @@ open, 27 decided, 10 closed. The status line had read 27 open against 26 `## OPE
 durability of SessionEnded, which waits on a measurement of the broker-to-server bridge; and the BLE arc,
 including a normative trigger for `BruteForceAttempt`.
 
-**Also in this release**, on `main` since `v0.43.0` with no entry of their own: the LWT exemption stops
-citing a rotation the specification denies, the tooling's SDK pin reaches the `0.40.0` both SDKs publish,
-one wrong live section citation is corrected, and the bug-report template stops teaching the citation
-form that rots (`a268d5b`, `aeab2e2`).
+**Also in this release**, on `main` since `v0.43.0` with no entry of their own (`a268d5b`, `aeab2e2`),
+text and tooling only — no station or server behaves differently:
+
+- The LWT signing exemption, in
+  [`06-security.md` §5.6](spec/06-security.md#56-message-signing-classification) and in the copy of
+  its sentence among [`02-transport.md`](spec/02-transport.md)'s LWT rules, stops citing a key rotation
+  the specification denies and rests on what §5.9 does say: the will is registered in the CONNECT
+  packet, before the BootNotification response that issues the key. The exemption is unchanged.
+- The OfflinePass `signature` row of `06-security.md` names what the signature covers — the canonical
+  form of every field except `signature` and `signatureAlgorithm`, as `offline-pass.md` and §6.5.2
+  already said.
+- The ROADMAP's *Reconciliation backpressure* item is marked answered in `0.9.0`.
+- `conformance/harness/README.md` states what the harness directory is and is not, and the
+  KNOWN-ISSUES table that counts the directory's files is re-derived.
+- The tooling's SDK pin moves from `^0.29.0` to the `^0.40.0` both SDKs publish, with its lock, and the
+  roster of tools importing the SDK's canonicalizer is re-derived as six, not five, in
+  `tools/README.md`, `tools/canonical-form.mjs` and KNOWN-ISSUES.
+- One wrong live section citation is corrected — the Document History's `stop-service.md` §5 rule 5,
+  which is §6 rule 5 — and `tools/verify-canonical-form.mjs` cites `06-security.md` §4.8.1 by heading
+  instead of by a line that had drifted onto another table.
+- The bug-report template asks for a section or heading instead of a line number.
 
 **Radius, measured against the base (`b0704054`):** **2 of 86** schema files change, and only their
 `description` text — `session-ended-event.schema.json` and `reset-request.schema.json`, each proven

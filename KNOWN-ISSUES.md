@@ -4,8 +4,9 @@
 **Specification-document version:** 0.44.0 (release tag `v0.44.0`)
 **Status:** 3 blockers open (all BLE), **22** non-blocking issues open, **27** decisions recorded (one of
 them reversing another), and one named defect **class** with **eighteen** instances, **five** still open. **The counts are
-re-derived from the headings on every release, never incremented** — the previous revision read 24
-open against 25 `## OPEN` headings, which is how a summary drifts from the file it summarises.
+re-derived from the headings on every release, never incremented** — the previous revision read 27
+open against 26 `## OPEN` headings, which is how a summary drifts
+from the file it summarises.
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle and
 the arcs since
 
@@ -231,7 +232,8 @@ against the other library.
 
 **What this does not settle.** `2001 STATION_NOT_REGISTERED` (php `422`, ts `401`) is the other
 two-sided disagreement and remains open: it is named by no row of the table, which is the `3003`
-shape, not this one. **88 of the 118 registry codes are named by no row at all.** The rule added here
+shape, not this one. *(Settled in `0.44.0` without naming it in the table: both SDKs answer `422` from
+`0.41.0` — [the httpStatus entry](#decided-0440--httpstatus-and-category-model-properties-the-spec-declines-to-give-a-code-and-the-two-sdks-invented-different-answers).)* **88 of the 118 registry codes are named by no row at all.** The rule added here
 constrains how the table may speak, not how much it says.
 
 ---
@@ -863,7 +865,8 @@ without the other.
 arises immediately for FirmwareStatusNotification, which has the identical shape. (2) Constrain this
 `errorText` to `^[A-Z][A-Z0-9_]+$`, as `get-diagnostics-response.schema.json` already does for its own
 `errorText`, so the field carries the registry **name** — breaking for prose, and it forecloses the naming
-finding above. (3) Withdraw `5019`, on the `DiagnosticsUploadUrl` precedent: a code no conformant
+finding above. *(Closed by `0.44.0`: the naming finding was decided the other way — `errorText` stays prose
+on this message — so option (2) is no longer open.)* (3) Withdraw `5019`, on the `DiagnosticsUploadUrl` precedent: a code no conformant
 implementation can emit is not a code. (4) Retain it as a **server-side** classification only, and say so in
 its registry row — it is what a server records about a failed upload, never what a station sends.
 
@@ -1327,6 +1330,10 @@ Three layers disagree about what the `4xxx` range holds.
    }
    ```
 
+   *(The code as it stood at `ospp/protocol v0.8.3`. From `0.41.0` both SDKs return Appendix A's legend
+   words — `Transport`, `Auth`, `Session`, `Payment`, `Hardware`, `Server` — and a provisioning code
+   reports `Payment`, which is what Appendix A's* Cat. *column says of it.)*
+
 **This third one has teeth: it is wrong on the wire, not merely in a heading.** Every
 provisioning code reports `category: "payment"` — `4015`, `4016`, `4017`, `4018`, `4019` and now
 `4020`. A consumer routing or filtering by category files a station-provisioning failure as a
@@ -1347,7 +1354,8 @@ two categories). Whichever is chosen, the arithmetic derivation is the part that
 points 1 and 2 stays open.)*
 
 The finding directly below generalises this one: `category` is one of **two** accessors that
-answer a question the spec declines to define, and they should be decided together.
+answer a question the spec declines to define, and they should be decided together. *(For `category`
+the premise was wrong — Appendix A defines it per code; see the entry below, decided in `0.44.0`.)*
 
 ---
 
@@ -1364,7 +1372,8 @@ legend** as `sdk-ts` already spells it: `Transport`, `Auth`, `Session`, `Payment
 `Server` — the legend's *H = Hardware/Software* being the letter `sdk-ts` has always labelled
 `Hardware`. **This entry's premise that the specification has no per-code category was wrong:**
 Appendix A carries a *Cat.* column for all 120 codes, derived from the range exactly as both SDKs
-derive it, so the derivation is the specification's own and the labels were the only disagreement.
+derive it, so the derivation is the specification's own and the labels were the only disagreement. The
+heading is the finding as it was raised: it holds for the status and not for the category.
 The 40 fall-through defaults stay what they were — one library declining to answer — documented as
 an SDK extension; `httpStatus()` returning `?int` stays withdrawn, below.
 
@@ -1373,7 +1382,8 @@ each other. Recorded rather than fixed: the question is not which mapping is rig
 it is a cross-SDK and spec decision, not a release task.**
 
 Both SDKs expose an accessor mapping an error code to an HTTP status, and one mapping it to a
-category. **The spec defines neither as a property of a code.**
+category. **The spec defines neither as a property of a code.** *(True of the status. Of the category, false —
+see the head of this entry.)*
 
 On status, `07-errors.md` §4.4 is explicit — the paragraph is headed *"The status is not a
 property of the code"*:
@@ -1385,7 +1395,8 @@ property of the code"*:
 > than one status** where the same fault is reachable in states the client must treat differently.
 
 On category, see the finding above: the spec has section *headings*, not a per-code category, and
-both SDKs derive one arithmetically from the numeric range.
+both SDKs derive one arithmetically from the numeric range. *(Wrong: Appendix A carries a per-code* Cat.
+*column, which is what the SDKs derive.)*
 
 **Both SDKs invented answers anyway, and invented different ones.** First enumerated at
 `ospp-sdk-php` v0.8.4 + `sdk-ts` v0.7.0 working trees, 114 codes each. **Re-measured 2026-08-12
@@ -1399,7 +1410,7 @@ unchanged; only the counts moved:
 | code numbers, names | identical |
 | `severity`, `recoverable` | identical — 0 diffs |
 | category *partition* | identical — 15 / 20 / 20 / 20 / 34 / 9 (was 15 / 20 / 17 / 20 / 34 / 8 at 114) |
-| category *label* | **differs**: `5xxx` is `station` (PHP `OsppErrorCode.php`) vs `Hardware` (TS `OsppErrorCode.ts`) — still divergent at the 2026-08-12 re-measurement |
+| category *label* | **differs**: `5xxx` is `station` (PHP `OsppErrorCode.php`) vs `Hardware` (TS `OsppErrorCode.ts`) — still divergent at the 2026-08-12 re-measurement; *aligned in the `0.41.0` SDK pair, both `Hardware`* |
 | `httpStatus` | **41 of 118 disagree** — re-derived 2026-09-05; **42** before this release's SDK repair, see below |
 
 **Re-measured at 0.32.0 by dumping both registries and joining them, and the figure in this table
@@ -1424,14 +1435,16 @@ The 42 split into two kinds, and **only two codes were a disagreement about fact
    is what the open question below actually asks.
 2. **Both chose, and chose differently — exactly 2 of 118**: `2001 STATION_NOT_REGISTERED`
    php=`422` ts=`401`, and `2008 ACTION_NOT_PERMITTED` php=`401` ts=`403`. **After this release
-   there is exactly one**, `2001`. Re-derived after the SDK edit, not predicted.
+   there is exactly one**, `2001`. Re-derived after the SDK edit, not predicted. *(This release is
+   `0.32.0`. After the `0.41.0` SDK pair there is none: `2001` answers `422` in both.)*
 
 **`2008` is settled at 0.32.0 and `2001` is not, and the difference is instructive.** `2008` was
 the one code of the thirty §2.4's table names that appeared under two statuses — measured across
 all 31 code–status pairs — and it is now decided against `401` by [the multi-status
 rule](#decided-0320--2008-was-listed-under-two-statuses-and-the-licence-that-permitted-it-could-not-be-broken).
 `2001` is a different defect and remains open here: it is named by **no row of that table at all**,
-which is the `3003` shape — a silence, filled twice. Those two are not the whole of it either.
+which is the `3003` shape — a silence, filled twice. *(Settled in `0.44.0` without naming it: both SDKs
+answer `422` from `0.41.0`, and the table still names it in no row.)* Those two are not the whole of it either.
 **88 of the 118 registry codes are named by no row**, so the table decides 30 and delegates 88; the
 0.32.0 rule constrains how it may *speak*, not how much it says.
 
@@ -1544,7 +1557,7 @@ been reworked. **The naming question above is untouched by that**: `errorText` o
 still per-occurrence prose where §1.3 defines a per-code name, and the same is true of
 `firmware-status-notification`, whose `errorText` remains unconditioned. *(Conditioned the same way
 since `0.25.0` — required on `Failed`, forbidden otherwise; the naming question was unaffected.)* What closed is the
-conditional violation; what is open is the name.
+conditional violation; what is open is the name. *(Decided in `0.44.0`: option 3, at the head of this entry.)*
 
 **The contrast is inside the same family.** `status-notification.schema.json` declares **both**
 `errorCode` and `errorText`, and its vector carries `errorCode: 5008` with
@@ -1558,7 +1571,7 @@ string accepts anything. This is the same failure mode that let a raw validator 
 firmware on `sign-certificate-response` (fixed 2026-07-29); it survives here because the field is
 misnamed rather than merely unconstrained.
 
-**Not decided here**, and each option has a cost this arc cannot weigh:
+**Not decided here** *(decided in `0.44.0` — option 3, at the head of this entry)*, and each option has a cost this arc cannot weigh:
 
 1. **Rename to `errorDescription`** — most correct against §1.3, and breaking: the member name
    changes on two messages, both schemas are `additionalProperties: false`, and every emitter and
@@ -2097,7 +2110,7 @@ per-message blocks, which 0.44.0 settles at 60 s, the per-message value, with Ap
 rows. At the release it compares 46 pairs and 46 agree; AuthorizeOfflinePass, DiagnosticsNotification,
 FirmwareStatusNotification, Heartbeat and StatusNotification are in no §5.1 category, and
 CertificateInstall, SignCertificate and TriggerCertificateRenewal have no Appendix B row — coverage, not
-failure. **Two statements below were stale when this closed and are corrected in place**, each marked.
+failure. **Three statements below were stale when this closed and are corrected in place**, each marked.
 
 **The fourth gate-that-looks-somewhere-else, and the first whose consequence was a regression shipped
 inside the repair that announced it fixed.** `02-transport.md` §5.1 assigns every action to an expiry
@@ -2130,7 +2143,8 @@ format and nothing needs hand-maintained lists.
 | `03-messages.md` Appendix B | action-keyed table | action → expiry |
 
 1. **Refuse on a thin parse.** Assert a floor on each side before comparing — §5.1 yields 22 actions
-   across 6 categories *(this said 27; the table names 22, corrected at 0.44.0)*, Chapter 03 yields 27 per-message blocks, Appendix B yields 22 rows. A selector
+   across 6 categories *(this said 27; the table names 22, corrected at 0.44.0)*, Chapter 03 yields 27 per-message blocks, Appendix B yields 22 rows *(24 from `0.44.0`, which added the
+   TriggerMessage and DataTransfer rows; the floor stays 22)*. A selector
    that quietly stops matching is this repository's most-repeated failure, and a gate that reports a
    pass on four parsed rows has tested nothing.
 2. **Zero matched pairs is a FAIL, never a pass.** If the join produces no pairs the parser has broken,

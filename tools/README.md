@@ -59,7 +59,8 @@ Re-implementing is the point; re-implementing *per tool* is not. Before 0.13.0 `
 ## Drift checks
 
 Six checks for the class *"prose asserts a property and nothing establishes it"*. They are run
-by `.github/workflows/check-drift.yml`; each takes no arguments and is cwd-independent.
+by `.github/workflows/check-drift.yml`; each is cwd-independent, and each takes no arguments except as
+shown below (`generate-error-usage` checks only with `--check`; `--list` prints the bold findings).
 
 ```bash
 python3 tools/check-config-defaults.py       # restated defaults vs the Chapter 08 registry
@@ -88,7 +89,7 @@ machine-comparable to anything. These six are the exceptions, and each is narrow
 | `check-schema-conditionals` | Both sides are in one JSON file — the `description` and the `if`/`then` that should back it | 33 claims, 5 flagged, **5 real** | 44 claims, 38 backed, **6 not backed** (= `BASELINE`) |
 | `check-normative-bold` | Pure typography — a capitalised keyword outside a `**…**` span | exact, no inference | **438** unbolded (= `BASELINE`, lowered from 439 on 2026-09-03), **1183** bolded spans at `v0.28.0` — RE-DERIVED by running the instrument, not incremented from the previous line. `v0.28.0` bolded exactly one keyword (a `MUST` in the 00-introduction revision row the release added), and the ratchet is what caught it at 440: the fix a raised BASELINE would have hidden. Companion **instrument** corrected at `v0.27.0`; it paired `**` over the raw file while the finding scan paired over the masked copy, so four literal `**` inside backticks cost it 8. `v0.26.0` re-reads **1161**, not the 1156 it shipped. The gated number is unaffected on either tree |
 | `check-config-ranges` | Same structure argument as `check-config-defaults`, one column over — a range restatement is a key name with `<lo>--<hi>` near it, and `--` is as strong a signal as the word "default" | 16 sites, 4 flagged, **4 real**; plus 2 schema-bound comparisons, both real | 18 restated-range sites, 2 wire-field aliases, 2 broker settings, **1 finding** (= `BASELINE`) |
-| `check-message-expiry` | All three statements are structured — §5.1 is a table whose *Actions* cell lists the actions (with a per-action override table under it), each per-message block is a property table under its `### N.M` heading, and Appendix B is keyed by action — so the check is a join on the action name and reads no prose | not built at `v0.12.0`; adjudicated at `b0704054`, below | not built at `v0.27.0`; measured at `6152cfd`, below |
+| `check-message-expiry` | All three statements are structured — §5.1 is a table whose *Actions* cell lists the actions (with a per-action override table under it), each per-message block is a property table under its `### N.M` heading, and Appendix B is keyed by action — so the check is a join on the action name and reads no prose | not built at `v0.12.0`; adjudicated at `b0704054`, below | not built at `v0.27.0`; measured at `c5b885d`, below |
 | `generate-error-usage --check` | All three surfaces are tables — §4's rows, the `Error Code` table in each message's `### N.M` section of `03-messages.md`, and each profile's `## N. Error ...` table — so §4.1-4.3 can be derived as code sets and compared; bold, the editorial *most common* mark, is not compared | not built at `v0.12.0`; measured at `b0704054`, below | not built at `v0.27.0`; measured at `b0704054`, below |
 
 `check-config-ranges` also does what no other check does: it compares **the registry against its own
@@ -115,7 +116,7 @@ no §5.1 category, or with no Appendix B row, is printed as coverage and never f
 at `b0704054`, 2026-09-24, `0.43.0`: 44 pairs, 4 flagged over 3 actions, **2 of the 3 real** —
 TriggerMessage and DataTransfer, decision Q7 — and UpdateServiceCatalog, whose override was then
 a prose note the check does not read; `0.44.0` moved it into §5.1's override table. Measured at
-`6152cfd`, 2026-09-28 (Q7 applied on `0.43.0`): 46 pairs compared, **46 agreed**, 0 false
+`c5b885d`, 2026-09-28 (the Q7 commit): 46 pairs compared, **46 agreed**, 0 false
 citations, with 5 actions in no §5.1 category and 3 with no Appendix B row as coverage.
 
 `generate-error-usage --check` derives rather than restates: its rows come from `03-messages.md`'s
@@ -124,7 +125,8 @@ each message's `### N.M` section of `03-messages.md` and each profile's error ta
 no per-message documents, by a named section map). Measured at `b0704054`, 2026-09-28, `0.43.0`: 32
 rows derived and 31 §4 rows compared; **63 divergent (row, code) pairs on 14 rows, and one missing
 row** (`SessionEnded`) — 22 in §4 and in no table, 9 in a table and not in §4, 40 where `03` and the
-profile disagree with each other. None is resolved by editing: which surface governs is a decision
+profile disagree with each other (8 pairs are in two of those classes, so the three sum to 71). None is
+resolved by editing: which surface governs is a decision
 (the script names five), so the pairs are its `BASELINE`, and it fails on a pair the baseline does not
 list **and** on a listed pair that no longer occurs. Generating §4 outright waits on those decisions;
 §4.4 has no source outside itself and is not derived.
