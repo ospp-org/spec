@@ -144,8 +144,9 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
    rather than failing the station.
 3. `actualDurationSeconds` accurately reflects real elapsed time (+/- 3 seconds).
 4. `creditsCharged` is present and non-negative; for `LocalOutOfCredit` and `Deauthorized` the value MUST be `0`.
-   Those two, and no others: `OperatorStopped` bills the delivered quantity, which is why it needed
-   its own member rather than reusing `Deauthorized`.
+   Those two, and no others: `OperatorStopped` reports the delivered quantity — the server then
+   settles it by service kind, pro-rata for `UserDuration` and a full refund for `FixedDuration` and
+   `MultiUnit` — which is why it needed its own member rather than reusing `Deauthorized`.
 5. SessionEnded EVENT is always sent BEFORE the subsequent StatusNotification.
 6. No StopService RESPONSE is sent for autonomous terminations (Parts A–E).
 7. Bay reaches `Available` **via `Finishing`** after timer expiry / Local / LocalOutOfCredit / Deauthorized (Deauthorized additionally carrying a security flag on the server side), and `Faulted` after Fault. There is no `Occupied` → `Available` edge in [`05-state-machines.md` §2.3](../../../spec/05-state-machines.md#23-transition-table): the wind-down is physical and happens whatever ended the session, so a station that reports `Available` without a preceding `Finishing` fails this result.

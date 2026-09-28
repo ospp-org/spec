@@ -10,7 +10,7 @@
     "force": {
       "type": "boolean",
       "default": false,
-      "description": "Whether to reboot even while a session is running. Omitted or false: the station REFUSES if any bay has an active session, answering 3016 ACTIVE_SESSIONS_PRESENT, and the operator stops the sessions or waits. True: the station settles every active session under the operator-disable policy FIRST (04-flows.md, 'The operator-disable policy') \u2014 the session is stopped, metered from the time ACTUALLY DELIVERED, and reported as SessionEnded with reason OperatorStopped, so the customer is billed for what they received \u2014 and only then reboots. Force is not a licence to drop a session on the floor; it is a licence to end it without waiting."
+      "description": "Whether to reboot even while a session is running. Omitted or false: the station REFUSES if any bay has an active session, answering 3016 ACTIVE_SESSIONS_PRESENT, and the operator stops the sessions or waits. True: the station settles every active session under the operator-disable policy FIRST (04-flows.md, 'The operator-disable policy') \u2014 the session is stopped, metered from the time ACTUALLY DELIVERED, and reported as SessionEnded with reason OperatorStopped, which the server settles by service kind (pro-rata on delivered time for UserDuration, a full refund for FixedDuration and MultiUnit; 04-flows.md, 'Settlement by Service Kind') \u2014 and only then reboots. Force is not a licence to drop a session on the floor; it is a licence to end it without waiting."
     }
   }
 }

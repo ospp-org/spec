@@ -55,10 +55,12 @@ The last of those is the point of Part D. OSPP has no remote factory reset and n
 17. Verify the response is `Accepted`.
 18. Verify the station **settles the session before rebooting**: it sends SessionEnded EVENT [MSG-040]
     with `reason: "OperatorStopped"`, the `actualDurationSeconds` actually delivered, and the
-    `creditsCharged` those seconds earned — so the customer is billed for what they received. The
-    reason value is asserted explicitly because it is the one member of the enum that bills
-    non-zero for a session the station did not run to completion; `Deauthorized`, which reads as
-    the nearest alternative, mandates billing at **zero** and would deliver a wash for free.
+    `creditsCharged` those seconds earned — the report the server settles by service kind (pro-rata
+    for `UserDuration`, a full refund for `FixedDuration` and `MultiUnit`; `04-flows.md` §6). The
+    reason value is asserted explicitly because it is the one member of the enum that reports the
+    delivered time of a session an operator ended; `Deauthorized`, which reads as the nearest
+    alternative, mandates `creditsCharged` `0` and billing at **zero**, and would erase the time a
+    `UserDuration` session is billed on.
 19. Verify that settlement completes before the MQTT connection drops. A station that reboots first and reports afterwards — or not at all — fails: `force` is a licence to end a session without waiting, not to drop it.
 20. Verify the station reboots and sends BootNotification with `bootReason: "RemoteReset"`.
 21. Verify the bay left `Occupied` **via `Finishing`**, not straight to `Available`: there is no

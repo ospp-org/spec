@@ -1114,11 +1114,16 @@ request:
    `creditsCharged` those seconds earned.
 4. Only then reboot, disable, or otherwise act.
 
-The customer **IS** billed, pro-rata. `OperatorStopped` is the only
-`SessionEndReason` that bills non-zero for a session the station did not run to
-completion, and that is the whole reason it exists: the nearest alternatives,
-`LocalOutOfCredit` and `Deauthorized`, both mandate billing at **zero**, so
-reusing either delivers a wash and charges nothing for it.
+What the customer pays is the server's decision, by service kind — see
+*Settlement by Service Kind* below. A `UserDuration` session is billed pro-rata
+on the time delivered; a `FixedDuration` or `MultiUnit` session is refunded in
+full, because the operator, not the customer, cut short a preset the customer
+bought whole. The station's report is the same whatever the kind: it does not
+know the kind and decides no money. That report is the whole reason
+`OperatorStopped` exists: the nearest alternatives, `LocalOutOfCredit` and
+`Deauthorized`, both mandate `creditsCharged` `0` and billing at **zero**, so
+reusing either would erase the delivered time a `UserDuration` session is billed
+on.
 
 Settling is not optional and not best-effort. A station that reboots first and
 reports afterwards has dropped the session on the floor: the server sees a
@@ -1162,7 +1167,7 @@ Three kinds are defined:
 | Kind | What it is | Settlement model |
 |------|-----------|------------------|
 | `UserDuration` | The user chooses the duration at start | **Pro-rata on delivered time** — the baseline matrix above, unchanged. |
-| `FixedDuration` | A preset programme of fixed length (e.g. a 5-minute wash) | **All-or-nothing** — a started programme is consumed; a broken one delivered nothing. |
+| `FixedDuration` | A preset programme of fixed length (e.g. a 5-minute wash) | **All-or-nothing** — a programme the customer started is consumed; one the station broke, or an operator ended, delivered nothing the customer pays for. |
 | `MultiUnit` | A discrete actuation (e.g. a 1–5 s dispense pulse) | **All-or-nothing per unit** — a dispensed unit is charged; a missed one is refunded. |
 
 For `UserDuration`, settlement is exactly the reason-keyed matrix above. `FixedDuration` and `MultiUnit` are both **all-or-nothing**: the kind overrides the pro-rata amount on the three reasons where the models diverge, and matches it on the rest.
@@ -1174,9 +1179,11 @@ For `UserDuration`, settlement is exactly the reason-keyed matrix above. `FixedD
 | `Fault` — hardware fault mid-service | Pro-rata (full refund if less than `faultFullRefundThreshold` delivered) | **Full refund** — a service the station broke delivered nothing of value |
 | `LocalOutOfCredit` / `Deauthorized` | Full refund (`creditsCharged` MUST be `0`) | **Full refund** (same) |
 | `Inactivity` — idle timer elapsed mid-service | Pro-rata on delivered time | **Full charge** — a preset the user started is consumed |
-| `OperatorStopped` — operator ended it mid-service | Pro-rata on delivered time | **Full charge** — a preset the user started is consumed |
+| `OperatorStopped` — operator ended it mid-service | Pro-rata on delivered time | **Full refund** — the operator, not the customer, cut the preset short, so none of it is consumed |
 
 Only the `Local`, `Inactivity`, `Fault` and `OperatorStopped` rows diverge; `TimerExpired` (full charge) and `LocalOutOfCredit` / `Deauthorized` (full refund) are already kind-invariant. An all-or-nothing override is always the pre-authorized amount **in full** or **`0`** — never a partial amount.
+
+**A stop the server issues for an operator settles as `OperatorStopped`.** An operator can also end a session through the server rather than at the station — from an operator console, or by a station disable the server carries out — and the server then sends StopService [MSG-006]. That stop produces no SessionEnded ([Chapter 03 §5.4](03-messages.md#54-sessionended)) and StopService carries no reason, so only the server knows an operator asked for it. The server **MUST** settle such a session as it settles `OperatorStopped`, by service kind — pro-rata on delivered time for `UserDuration`, a full refund for `FixedDuration` and `MultiUnit` — and **MUST NOT** settle it as the customer's own stop. A stop the station refuses stops nothing: the wash runs on, the session keeps its full charge, and the operator's instruction earns no refund.
 
 **Delivery outcome (`MultiUnit`).** A `MultiUnit` session additionally records what physically happened — `Dispensed` on a clean `TimerExpired`, `Missed` on a `Fault`. When the physical outcome is genuinely ambiguous from control-plane signals alone (e.g. a mid-pulse voluntary stop) it is left unrecorded rather than guessed; settlement never depends on it (it stays derived from the kind). A jam the firmware does not itself detect runs the timer to expiry and is therefore billed as delivered; the corrective path is an operator-issued refund, not an automatic one.
 
