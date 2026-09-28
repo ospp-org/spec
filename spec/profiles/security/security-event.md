@@ -53,7 +53,7 @@ Both forms validate against [`security-event.schema.json`](../../../schemas/mqtt
 | `OfflinePassRejected` | An OfflinePass failed validation (bad signature, expired, revoked, replayed). | Warning |
 | `ServerSignedAuthReplay` | A ServerSignedAuth (Partial A) authorization was presented whose signed `appNonce` claim did not match the current handshake's `Hello.appNonce` — a replay of a captured authorization (error `2018 SERVER_AUTH_NONCE_MISMATCH`; `ble-handshake.md` §4.2.2 check #2). The station rejects it at the handshake; the server logs this type at the next reconciliation. | Critical |
 | `TamperDetected` | Physical tampering detected (case opened, sensor triggered, wiring alteration). | Critical |
-| `BruteForceAttempt` | Multiple consecutive authentication failures from the same source within a short window. | Warning |
+| `BruteForceAttempt` | Multiple consecutive authentication failures from the same source within a short window. The threshold, the window and what counts as one source are implementation-defined. | Warning |
 | `FirmwareIntegrityFailure` | Firmware hash verification failed at boot. The installed firmware does not match the expected checksum. | Critical |
 | `FirmwareDowngradeAttempt` | A firmware update was received with a version older than the currently installed version. Logged regardless of whether `forceDowngrade` was set. | Warning |
 | `HardwareFault` | Critical hardware error reported by the station (pump overcurrent, electrical fault, emergency stop). The **fallback** type for a Critical `5xxx` code that is **not** `51xx` and is named by no row in this table — see the two-step selection in [`07-errors.md` §1.2](../../07-errors.md#12-severity-levels). | Critical |
