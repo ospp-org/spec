@@ -123,7 +123,7 @@ Two such pairs exist. `HeartbeatIntervalSeconds` with `heartbeatIntervalSec` **a
 | `MeterValuesInterval` | integer | `60` | RW | Dynamic | 10--3600 | Interval in seconds between MeterValues event reports during an active session. |
 | `MeterValuesSampleInterval` | integer | `10` | RW | Dynamic | 1--60 | Sensor sampling interval in seconds. Controls how frequently the station reads hardware sensors. Aggregated values are reported to the server at `MeterValuesInterval`. |
 | `MaxSessionDurationSeconds` | integer | `900` | RW | Dynamic | 60--3600 | Maximum session duration in seconds. The station MUST auto-stop the service when this limit is reached. |
-| `SessionTimeout` | integer | `120` | RW | Dynamic | 0--600 | Idle session timeout in seconds. If no user interaction occurs within this window after session start, the station **MAY** stop the service, reporting `reason: "Inactivity"` on the SessionEnded EVENT. **`0` disables the timer**: the station **MUST NOT** stop a session on inactivity, and the session is bounded by `durationSeconds` and `MaxSessionDurationSeconds` alone. **MeterValues do not reset the timer** — see the note below. |
+| `SessionTimeout` | integer | `0` | RW | Dynamic | 0--600 | Idle session timeout in seconds. If no user interaction occurs within this window after session start, the station **MAY** stop the service, reporting `reason: "Inactivity"` on the SessionEnded EVENT. **`0` disables the timer**: the station **MUST NOT** stop a session on inactivity, and the session is bounded by `durationSeconds` and `MaxSessionDurationSeconds` alone. **The default is `0`, the timer off**, because a station whose only customer input is the start button — a self-service wash bay — has no continuous user-interaction signal, and a non-zero default would stop every session still running at the timeout; an operator whose station does have such a signal enables the timer by setting a non-zero value. It was `120` until `0.44.0`. **MeterValues do not reset the timer** — see the note below. |
 | `ReservationDefaultTTL` | integer | `300` | RW | Dynamic | 60--1800 | Reservation time-to-live in seconds. Expired reservations are automatically cancelled. |
 | `DefaultCreditsPerSession` | integer | `100` | RW | Dynamic | 1--10000 | Default credit authorization amount in minor currency units when no explicit amount is provided. |
 
@@ -153,7 +153,7 @@ Two such pairs exist. `HeartbeatIntervalSeconds` with `heartbeatIntervalSec` **a
 >    sixteen triggers rather than fifteen.
 > 3. **The both-directions breakage was a consequence of gap 2 and disappears with it.** Under the
 >    MeterValues-counting reading the mechanism failed at *legal* settings in both directions: at the
->    **default pair** (`MeterValuesInterval` `60`, `SessionTimeout` `120`) a MeterValues always
+>    **default pair** of the time (`MeterValuesInterval` `60`, `SessionTimeout` `120` until `0.44.0`) a MeterValues always
 >    arrived inside the window, so the timeout could never fire and the feature was inert as shipped;
 >    at the **legal extreme** (`3600` against `600`, both inside their published ranges) no MeterValues
 >    could arrive inside the window, so every session still running at 600 s was stopped as idle while
@@ -437,7 +437,7 @@ The table adds two columns Sections 2--6 do not carry — the index number and t
 | 10 | `MeterValuesInterval` | integer | `60` | RW | Dynamic | Transaction |
 | 11 | `MeterValuesSampleInterval` | integer | `10` | RW | Dynamic | Transaction |
 | 12 | `MaxSessionDurationSeconds` | integer | `900` | RW | Dynamic | Transaction |
-| 13 | `SessionTimeout` | integer | `120` | RW | Dynamic | Transaction |
+| 13 | `SessionTimeout` | integer | `0` | RW | Dynamic | Transaction |
 | 14 | `ReservationDefaultTTL` | integer | `300` | RW | Dynamic | Transaction |
 | 15 | `DefaultCreditsPerSession` | integer | `100` | RW | Dynamic | Transaction |
 | 16 | `CertificateSerialNumber` | string | -- | R | Static | Security |
