@@ -58,7 +58,7 @@ Re-implementing is the point; re-implementing *per tool* is not. Before 0.13.0 `
 
 ## Drift checks
 
-Five checks for the class *"prose asserts a property and nothing establishes it"*. They are run
+Six checks for the class *"prose asserts a property and nothing establishes it"*. They are run
 by `.github/workflows/check-drift.yml`; each takes no arguments and is cwd-independent.
 
 ```bash
@@ -67,10 +67,11 @@ python3 tools/check-schema-conditionals.py   # schema descriptions asserting une
 python3 tools/check-normative-bold.py --list # normative keywords a reader will not see as normative
 python3 tools/check-config-ranges.py         # the Range column, §9 vs §§2--6, and restated ranges
 python3 tools/check-message-expiry.py        # Message Expiry: §5.1 vs the per-message blocks and Appendix B
+python3 tools/generate-error-usage.py --check # 07-errors.md §4.1-4.3 vs the per-message and profile error tables
 ```
 
 They exist because most of that class is *not* mechanically checkable — a claim in prose is not
-machine-comparable to anything. These five are the exceptions, and each is narrow on purpose:
+machine-comparable to anything. These six are the exceptions, and each is narrow on purpose:
 
 > **Both number columns carry their measurement point, and the two are different measurements.**
 > *Precision* is an adjudication — someone read every flag and decided whether it was real — and it
@@ -88,6 +89,7 @@ machine-comparable to anything. These five are the exceptions, and each is narro
 | `check-normative-bold` | Pure typography — a capitalised keyword outside a `**…**` span | exact, no inference | **438** unbolded (= `BASELINE`, lowered from 439 on 2026-09-03), **1183** bolded spans at `v0.28.0` — RE-DERIVED by running the instrument, not incremented from the previous line. `v0.28.0` bolded exactly one keyword (a `MUST` in the 00-introduction revision row the release added), and the ratchet is what caught it at 440: the fix a raised BASELINE would have hidden. Companion **instrument** corrected at `v0.27.0`; it paired `**` over the raw file while the finding scan paired over the masked copy, so four literal `**` inside backticks cost it 8. `v0.26.0` re-reads **1161**, not the 1156 it shipped. The gated number is unaffected on either tree |
 | `check-config-ranges` | Same structure argument as `check-config-defaults`, one column over — a range restatement is a key name with `<lo>--<hi>` near it, and `--` is as strong a signal as the word "default" | 16 sites, 4 flagged, **4 real**; plus 2 schema-bound comparisons, both real | 18 restated-range sites, 2 wire-field aliases, 2 broker settings, **1 finding** (= `BASELINE`) |
 | `check-message-expiry` | All three statements are structured — §5.1 is a table whose *Actions* cell lists the actions (with a per-action override table under it), each per-message block is a property table under its `### N.M` heading, and Appendix B is keyed by action — so the check is a join on the action name and reads no prose | not built at `v0.12.0`; adjudicated at `b0704054`, below | not built at `v0.27.0`; measured at `6152cfd`, below |
+| `generate-error-usage --check` | All three surfaces are tables — §4's rows, the `Error Code` table in each message's `### N.M` section of `03-messages.md`, and each profile's `## N. Error ...` table — so §4.1-4.3 can be derived as code sets and compared; bold, the editorial *most common* mark, is not compared | not built at `v0.12.0`; measured at `b0704054`, below | not built at `v0.27.0`; measured at `b0704054`, below |
 
 `check-config-ranges` also does what no other check does: it compares **the registry against its own
 summary**. Chapter 08 states the key table twice — §§2--6 with Range and Description, §9 with an
@@ -116,16 +118,29 @@ a prose note the check does not read; `0.44.0` moved it into §5.1's override ta
 `6152cfd`, 2026-09-28 (Q7 applied on `0.43.0`): 46 pairs compared, **46 agreed**, 0 false
 citations, with 5 actions in no §5.1 category and 3 with no Appendix B row as coverage.
 
+`generate-error-usage --check` derives rather than restates: its rows come from `03-messages.md`'s
+Quick Reference, so a message with no §4 row is itself a finding, and its sources are the table in
+each message's `### N.M` section of `03-messages.md` and each profile's error table (BLE, which has
+no per-message documents, by a named section map). Measured at `b0704054`, 2026-09-28, `0.43.0`: 32
+rows derived and 31 §4 rows compared; **63 divergent (row, code) pairs on 14 rows, and one missing
+row** (`SessionEnded`) — 22 in §4 and in no table, 9 in a table and not in §4, 40 where `03` and the
+profile disagree with each other. None is resolved by editing: which surface governs is a decision
+(the script names five), so the pairs are its `BASELINE`, and it fails on a pair the baseline does not
+list **and** on a listed pair that no longer occurs. Generating §4 outright waits on those decisions;
+§4.4 has no source outside itself and is not derived.
+
 Each carries a `BASELINE` or exits non-zero on any finding. **They are ratchets, not allowlists:**
 every finding is printed on every run, and the count may fall but must not rise. When it falls,
 lower the constant in the script so the improvement cannot silently regress.
 
-All five are RED-tested: injecting one drifted default, one unenforced conditional, one unbolded
+All six are RED-tested: injecting one drifted default, one unenforced conditional, one unbolded
 keyword, and — for `check-config-ranges`, once per check it performs — one drifted §9 cell, one
 malformed Range cell and one drifted registry range, and — for `check-message-expiry` — one false
 category citation beside a number that agrees and one `### N.M` heading stripped of its number,
-makes each exit 1, and removing the injection returns it to 0. A gate nobody has watched fail is a
-gate nobody knows works.
+makes each exit 1, and removing the injection returns it to 0 — and, for `generate-error-usage`, one
+code added to one §4 row and one added to one per-message table each exit 1, while a renamed `### N.M`
+heading in `03-messages.md`, a renamed profile error heading and a renamed §4 heading each exit 2 on a
+floor. A gate nobody has watched fail is a gate nobody knows works.
 
 What defeated the more ambitious versions is recorded in each script's docstring. In short:
 `check-schema-conditionals` must not flag cross-artefact claims (JSON Schema cannot compare against

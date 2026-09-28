@@ -20,6 +20,7 @@ on:
       - '**/*.md'
       - 'schemas/**'
       - 'tools/check-*.py'
+      - 'tools/generate-error-usage.py'
       - 'tools/verify-test-nonces.mjs'
       - 'tools/check-tool-callers.py'
       - '.github/workflows/**'
@@ -29,6 +30,7 @@ on:
       - '**/*.md'
       - 'schemas/**'
       - 'tools/check-*.py'
+      - 'tools/generate-error-usage.py'
       - 'tools/verify-test-nonces.mjs'
       - 'tools/check-tool-callers.py'
       - '.github/workflows/**'
@@ -108,6 +110,15 @@ jobs:
       # counts live in the script, not here.
       - name: Per-message Message Expiry vs 02-transport.md §5.1 and Appendix B
         run: python3 tools/check-message-expiry.py
+
+      # 07-errors.md §4 restates, by hand, the error table under each message in 03-messages.md and
+      # the error table of each profile document, and §1.4's every-path rule cites §4 as where a
+      # code is reachable. Nothing compared the three. This derives §4.1-4.3's code sets from the
+      # two sources and fails on a divergence its baseline does not list, and on a baseline entry
+      # that no longer occurs; the 63 pairs measured at introduction wait on decisions recorded in
+      # the script. Generating §4 outright is the half that waits on them.
+      - name: 07-errors.md §4 vs the per-message and profile error tables
+        run: python3 tools/generate-error-usage.py --check
 
       # The check with no signal of its own. A gate that verifies the wrong thing still emits a
       # verdict; a gate nothing starts emits nothing at all, so it can only be found by
