@@ -39,7 +39,7 @@
 import { createHash, createHmac } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { argv, exit } from 'node:process';
-import { canonicalize } from '@ospp/protocol';
+import { canonicalForm } from './canonical-form.mjs';
 import { ecdsaSign, SIGNATURE_ALGORITHM } from '@ospp/protocol/server';
 
 const SESSION_KEY_PATH = 'conformance/test-keys/session-test-key.bin';
@@ -98,7 +98,7 @@ function buildReceiptBody(outer, file) {
 
 function signReceipt(outer, keyPem) {
   const body = buildReceiptBody(outer, '<inline>');
-  const canonicalBytes = Buffer.from(canonicalize(body), 'utf-8');
+  const canonicalBytes = Buffer.from(canonicalForm(body), 'utf-8');
   const signature = ecdsaSign(keyPem, canonicalBytes);
   outer.receipt = {
     data: canonicalBytes.toString('base64'),
@@ -140,7 +140,7 @@ function buildOfflinePassBody(pass, file) {
 function signOfflinePass(outer, keyPem) {
   const pass = outer.offlinePass;
   const body = buildOfflinePassBody(pass, '<inline>');
-  const canonicalBytes = Buffer.from(canonicalize(body), 'utf-8');
+  const canonicalBytes = Buffer.from(canonicalForm(body), 'utf-8');
   const signature = ecdsaSign(keyPem, canonicalBytes);
   // Rebuild the pass object in canonical-required-field order, then trail with
   // signatureAlgorithm + signature (the conventional human-visible order in
@@ -199,7 +199,7 @@ function deriveSsaClaims(outer, file) {
 
 function signServerSignedAuth(outer, keyPem, file) {
   const claims = deriveSsaClaims(outer, file);
-  const canonicalBytes = Buffer.from(canonicalize(claims), 'utf-8');
+  const canonicalBytes = Buffer.from(canonicalForm(claims), 'utf-8');
   const signature = ecdsaSign(keyPem, canonicalBytes);
   outer.signedAuthorization = {
     data: canonicalBytes.toString('base64'),

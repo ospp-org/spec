@@ -28,7 +28,7 @@
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { argv, exit } from 'node:process';
-import { canonicalize } from '@ospp/protocol';
+import { canonicalForm } from './canonical-form.mjs';
 import { ecdsaVerify } from '@ospp/protocol/server';
 
 // Compressed SEC1 P-256 public key on the BLE wire: 33 bytes → 44 Base64 chars,
@@ -177,7 +177,7 @@ function verifyStationIdentity(outer, file, pubPem) {
   // Signed body = cert MINUS signature + signatureAlgorithm, OSPP-canonical (§4.8 / Pin 8).
   const { signature, signatureAlgorithm, ...body } = cert;
   void signatureAlgorithm;
-  const canonicalBytes = Buffer.from(canonicalize(body), 'utf-8');
+  const canonicalBytes = Buffer.from(canonicalForm(body), 'utf-8');
   if (!ecdsaVerify(pubPem, canonicalBytes, signature)) {
     return { file, ok: false, reason: 'stationCert.signature failed to verify against the server public key' };
   }
@@ -264,7 +264,7 @@ function verifyReceipt(outer, file, pubPem) {
   } catch (e) {
     return { file, ok: false, reason: `decoded receipt.data is not valid JSON: ${e.message}` };
   }
-  const recanonical = canonicalize(body);
+  const recanonical = canonicalForm(body);
   if (recanonical !== canonicalBytes.toString('utf-8')) {
     return { file, ok: false, reason: 'receipt.data is not OSPP-canonical' };
   }
@@ -272,8 +272,8 @@ function verifyReceipt(outer, file, pubPem) {
   const mismatches = [];
   for (const k of Object.keys(body)) {
     if (k in outer) {
-      const bv = canonicalize({ v: body[k] });
-      const ov = canonicalize({ v: outer[k] });
+      const bv = canonicalForm({ v: body[k] });
+      const ov = canonicalForm({ v: outer[k] });
       if (bv !== ov) mismatches.push(`${k}: body=${bv} outer=${ov}`);
     }
   }
@@ -302,11 +302,11 @@ function verifyOfflinePass(outer, file, pubPem) {
   }
 
   // Build the canonical body the way the signer must have built it: pass
-  // minus signature + signatureAlgorithm. canonicalize sorts keys so the
+  // minus signature + signatureAlgorithm. canonicalForm sorts keys so the
   // input field order does not affect the bytes.
   const { signature, signatureAlgorithm, ...body } = pass;
   void signatureAlgorithm;
-  const canonicalJson = canonicalize(body);
+  const canonicalJson = canonicalForm(body);
   const canonicalBytes = Buffer.from(canonicalJson, 'utf-8');
 
   if (!ecdsaVerify(pubPem, canonicalBytes, signature)) {
@@ -341,8 +341,8 @@ function verifyOfflinePass(outer, file, pubPem) {
   const mismatches = [];
   for (const [passField, outerField] of Object.entries(mirror)) {
     if (passField in body && outerField in outer) {
-      const bv = canonicalize({ v: body[passField] });
-      const ov = canonicalize({ v: outer[outerField] });
+      const bv = canonicalForm({ v: body[passField] });
+      const ov = canonicalForm({ v: outer[outerField] });
       if (bv !== ov) mismatches.push(`${passField}↔${outerField}: pass=${bv} outer=${ov}`);
     }
   }
@@ -384,7 +384,7 @@ function verifyServerSignedAuth(outer, file, pubPem) {
   } catch (e) {
     return { file, ok: false, reason: `decoded signedAuthorization.data is not valid JSON: ${e.message}` };
   }
-  if (canonicalize(claims) !== canonicalBytes.toString('utf-8')) {
+  if (canonicalForm(claims) !== canonicalBytes.toString('utf-8')) {
     return { file, ok: false, reason: 'signedAuthorization.data is not OSPP-canonical' };
   }
 

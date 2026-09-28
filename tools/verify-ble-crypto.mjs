@@ -21,7 +21,7 @@
 // =============================================================================
 
 import { readFileSync } from 'node:fs';
-import { canonicalize } from '@ospp/protocol';
+import { canonicalForm } from './canonical-form.mjs';
 import { ecdsaVerify } from '@ospp/protocol/server';
 import {
   runRfcAnchors,
@@ -73,7 +73,7 @@ console.log('\n═══ StationIdentity certificate ═══');
 {
   const { signature, signatureAlgorithm, ...body } = oracle.stationIdentity.cert;
   void signatureAlgorithm;
-  const canonicalBytes = Buffer.from(canonicalize(body), 'utf-8');
+  const canonicalBytes = Buffer.from(canonicalForm(body), 'utf-8');
   check('canonical body matches oracle.canonicalBodyUtf8', canonicalBytes.toString('utf-8'), oracle.stationIdentity.canonicalBodyUtf8);
   if (ecdsaVerify(serverPubPem, canonicalBytes, signature)) console.log('    ✓ ECDSA signature verifies under server-test-pub.pem');
   else { console.error('    ✗ ECDSA signature does NOT verify'); failures++; }
@@ -174,8 +174,8 @@ console.log('\n═══ Oracle ↔ schema-fixture coherence ═══');
 for (const sc of oracle.scenarios) {
   const helloFile = JSON.parse(readFileSync(`${OFFLINE_DIR}/hello-${sc.scenario}.json`, 'utf-8'));
   const challengeFile = JSON.parse(readFileSync(`${OFFLINE_DIR}/challenge-${sc.scenario}.json`, 'utf-8'));
-  check(`hello-${sc.scenario}.json == oracle.hello.message`, canonicalize(helloFile), canonicalize(sc.hello.message));
-  check(`challenge-${sc.scenario}.json == oracle.challenge.message`, canonicalize(challengeFile), canonicalize(sc.challenge.message));
+  check(`hello-${sc.scenario}.json == oracle.hello.message`, canonicalForm(helloFile), canonicalForm(sc.hello.message));
+  check(`challenge-${sc.scenario}.json == oracle.challenge.message`, canonicalForm(challengeFile), canonicalForm(sc.challenge.message));
 }
 
 // ── Summary ──────────────────────────────────────────────────────────────────

@@ -26,7 +26,7 @@
 // =============================================================================
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { canonicalize } from '@ospp/protocol';
+import { canonicalForm } from './canonical-form.mjs';
 import { ecdsaSign, ecdsaVerify, SIGNATURE_ALGORITHM } from '@ospp/protocol/server';
 import {
   runRfcAnchors, RFC_ANCHOR_SOURCES,
@@ -98,7 +98,7 @@ function signStationIdentity() {
     issuedAt: CERT_ISSUED_AT,
     expiresAt: CERT_EXPIRES_AT,
   };
-  const canonicalBytes = Buffer.from(canonicalize(body), 'utf-8');
+  const canonicalBytes = Buffer.from(canonicalForm(body), 'utf-8');
   const signature = ecdsaSign(serverKeyPem, canonicalBytes);
   // Self-check: the cert MUST verify under the server signing key before we ship it.
   if (!ecdsaVerify(serverPubPem, canonicalBytes, signature)) {

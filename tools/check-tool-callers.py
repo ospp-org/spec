@@ -94,7 +94,8 @@ EXCLUSIONS = {
         'copy of a resolver is exactly how validate-schemas.sh rotted the first time.',
     'canonical-form.mjs':
         'module, not an entry point — the single canonical-form implementation, imported by '
-        'verify-canonical-form.mjs and verify-mqtt-mac.mjs. Running it would do nothing.',
+        'every tool here that canonicalizes, the signing and signature-verification chain '
+        'included. Running it would do nothing.',
     'ble-crypto.mjs':
         'module, not an entry point — the BLE key-schedule primitives imported by '
         'verify-ble-crypto.mjs and generate-ble-vectors.mjs.',

@@ -26,12 +26,14 @@
  * thing to get wrong. One module, re-implemented on purpose, imported by every
  * tool that needs it.
  *
- * This is not hypothetical for this repo. `sign-inline-md.mjs`, `sign-example.mjs`,
+ * This was not hypothetical for this repo. `sign-inline-md.mjs`, `sign-example.mjs`,
  * `verify-example-signatures.mjs`, `verify-ble-crypto.mjs`,
- * `generate-ble-vectors.mjs` and `generate-tamper-vectors.mjs` DO import
- * `canonicalize` from `@ospp/protocol` -- SIX of the twelve tools here. This
- * comment, `tools/README.md` and the KNOWN-ISSUES entry all said FIVE: the roster
- * was written before `generate-tamper-vectors.mjs` existed and never re-derived.
+ * `generate-ble-vectors.mjs` and `generate-tamper-vectors.mjs` DID import
+ * `canonicalize` from `@ospp/protocol` -- SIX of the twelve tools here, the whole
+ * signing and signature-verification chain. This comment, `tools/README.md` and
+ * the KNOWN-ISSUES entry all said FIVE: the roster was written before
+ * `generate-tamper-vectors.mjs` existed and was re-derived only at the `^0.40.0`
+ * bump.
  *
  * That import resolved to DEFECTIVE code until 0.30.0. This comment said the
  * installed copy was `0.5.4`; it was `0.13.0`, which matched the declared `^0.13.0`
@@ -47,10 +49,23 @@
  * the previously measured exposure really was zero rather than merely unobserved.
  * The same measurement was repeated moving 0.29.0 -> 0.40.0: `CanonicalJsonBytes`
  * and `EcdsaSigner` are byte-identical between those two releases, the two
- * canonicalizers agree on all 2161 objects in the 496 committed JSON files, and
- * the signer again produced zero drift.
- * Moving those six tools onto THIS module is still open; do not "simplify" this
- * module into that import.
+ * canonicalizers agree on all 2158 objects and arrays in the 495 committed JSON
+ * files, and the signer again produced zero drift. (This said 2161 in 496 until
+ * re-derived from `git ls-files` at `b070405`, 2026-09-28: the first walk read a
+ * working checkout and counted one untracked local settings file as committed.)
+ *
+ * A correct SDK did not repair the shape, so the six were then moved onto THIS
+ * module. Each imports `canonicalForm`, which returns what the SDK's `canonicalize`
+ * returned -- a string, UTF-8-encoded by each caller exactly as before -- and only
+ * ECDSA signing and verification still come from `@ospp/protocol/server`. Measured
+ * at `b070405` with the move applied, 2026-09-28: every signer and generator re-run
+ * in write mode left the committed tree byte-identical, and dropping the key sort
+ * in `canonicalForm` below turns seven of the gates in `verify-all-signatures.sh`
+ * red, while the same break in the installed SDK leaves all of them green. Sorting by
+ * UTF-16 code units instead leaves every signature green: no signed body in the
+ * corpus has a key pair the two orders disagree on, so that defect is caught by
+ * `verify-canonical-form.mjs` and its vectors, and by nothing that verifies a
+ * signature.
  *
  * If you are about to make this file shorter by importing the SDK: the gate goes
  * silently circular the moment you do, and nothing will fail to tell you.

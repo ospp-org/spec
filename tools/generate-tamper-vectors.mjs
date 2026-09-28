@@ -39,7 +39,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { canonicalize } from '@ospp/protocol';
+import { canonicalForm } from './canonical-form.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = 'conformance/test-vectors/crypto/tamper-rejection.json';
@@ -74,7 +74,7 @@ function editSignedBody(dataB64, field, newValue) {
   if (!(field in body)) throw new Error(`signed body has no field ${field}`);
   const was = body[field];
   body[field] = newValue;
-  return { data: Buffer.from(canonicalize(body), 'utf8').toString('base64'), was };
+  return { data: Buffer.from(canonicalForm(body), 'utf8').toString('base64'), was };
 }
 
 /** Set a value at a slash-path, returning a deep copy. Refuses to create keys. */
@@ -165,14 +165,14 @@ function portableForm(surface, doc, image = null) {
       return { bytes: Buffer.from(doc.receipt.data, 'base64'), signature: doc.receipt.signature, algorithm: 'ECDSA-P256-SHA256' };
     case 'offlinePass': {
       const { signature, signatureAlgorithm: _a, ...body } = doc.offlinePass;
-      return { bytes: Buffer.from(canonicalize(body), 'utf-8'), signature, algorithm: 'ECDSA-P256-SHA256' };
+      return { bytes: Buffer.from(canonicalForm(body), 'utf-8'), signature, algorithm: 'ECDSA-P256-SHA256' };
     }
     case 'serverSignedAuth':
       return { bytes: Buffer.from(doc.signedAuthorization.data, 'base64'), signature: doc.signedAuthorization.signature, algorithm: 'ECDSA-P256-SHA256' };
     case 'stationIdentity': {
       const body = {};
       for (const k of STATION_IDENTITY_BODY_FIELDS) body[k] = doc.stationCert[k];
-      return { bytes: Buffer.from(canonicalize(body), 'utf-8'), signature: doc.stationCert.signature, algorithm: 'ECDSA-P256-SHA256' };
+      return { bytes: Buffer.from(canonicalForm(body), 'utf-8'), signature: doc.stationCert.signature, algorithm: 'ECDSA-P256-SHA256' };
     }
     case 'firmware':
       // The signature is over the IMAGE, not over the request that points at it. That

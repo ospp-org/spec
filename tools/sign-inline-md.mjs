@@ -34,7 +34,7 @@
 import { createHash, createHmac } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { argv, exit } from 'node:process';
-import { canonicalize } from '@ospp/protocol';
+import { canonicalForm } from './canonical-form.mjs';
 import { ecdsaSign, SIGNATURE_ALGORITHM } from '@ospp/protocol/server';
 
 const KEY_DIR = 'conformance/test-keys';
@@ -139,7 +139,7 @@ function signReceipt(outer) {
     body[f] = outer[f];
   }
   if (outer.meterValues != null) body.meterValues = outer.meterValues;
-  const bytes = Buffer.from(canonicalize(body), 'utf-8');
+  const bytes = Buffer.from(canonicalForm(body), 'utf-8');
   outer.receipt = {
     data: bytes.toString('base64'),
     signature: ecdsaSign(STATION_KEY, bytes),
@@ -159,7 +159,7 @@ function signOfflinePass(outer) {
     if (!(f in pass)) throw new Error(`offlinePass missing field: ${f}`);
     body[f] = pass[f];
   }
-  const bytes = Buffer.from(canonicalize(body), 'utf-8');
+  const bytes = Buffer.from(canonicalForm(body), 'utf-8');
   const sig = ecdsaSign(SERVER_KEY, bytes);
   const signedPass = {};
   for (const f of OFFLINE_PASS_FIELDS) signedPass[f] = body[f];
@@ -197,7 +197,7 @@ function deriveSsaClaims(outer) {
 
 function signServerSignedAuth(outer) {
   const claims = deriveSsaClaims(outer);
-  const bytes = Buffer.from(canonicalize(claims), 'utf-8');
+  const bytes = Buffer.from(canonicalForm(claims), 'utf-8');
   outer.signedAuthorization = {
     data: bytes.toString('base64'),
     signature: ecdsaSign(SERVER_KEY, bytes),
@@ -312,7 +312,7 @@ function signBody(node, directive) {
     // Treat the node as an inline OfflinePass — sign in place via the same logic.
     const body = {};
     for (const f of OFFLINE_PASS_FIELDS) body[f] = node[f];
-    const bytes = Buffer.from(canonicalize(body), 'utf-8');
+    const bytes = Buffer.from(canonicalForm(body), 'utf-8');
     const sig = ecdsaSign(SERVER_KEY, bytes);
     // Rebuild node preserving field order: required + sigAlg + signature
     for (const k of Object.keys(node)) delete node[k];
