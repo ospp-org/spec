@@ -284,7 +284,7 @@ The first offline transaction. Alice used bay 1 around 10:30, using a BLE Offlin
 
 In the order of [`reconciliation.md` §2](../../spec/profiles/offline/reconciliation.md#2-sync-procedure):
 
-- Deduplication: `otx_a1b2c3d4` has not been seen before
+- Deduplication: `otx_a1b2c3d4` is not in the ledger
 - Receipt signature: verifies under the receipt-signing key of `stn_a1b2c3d4`, the station the signed receipt names
 - txCounter recorded: 3 (forensic only — gates nothing)
 - Gate: pass `opass_a1c3e500b2d4` was valid at the signed `endedAt` (10:35), read through the station's clock offset (`clockState` `Synchronized`)
@@ -355,7 +355,7 @@ The second offline transaction. Bob used bay 2 around 12:15, using the Standard 
 
 In the order of [`reconciliation.md` §2](../../spec/profiles/offline/reconciliation.md#2-sync-procedure):
 
-- Deduplication: `otx_e5f6a7b8d9c0` has not been seen before
+- Deduplication: `otx_e5f6a7b8d9c0` is not in the ledger
 - Receipt signature: verifies under the receipt-signing key of `stn_a1b2c3d4`, the station the signed receipt names
 - txCounter recorded: 4 (forensic only — gates nothing)
 - Gate: pass `opass_b0b30030c1d2` was valid at the signed `endedAt` (12:18), read through the station's clock offset
@@ -427,7 +427,7 @@ Alice returned for a second session at bay 3 around 13:10. Same OfflinePass, dif
 
 In the order of [`reconciliation.md` §2](../../spec/profiles/offline/reconciliation.md#2-sync-procedure):
 
-- Deduplication: `otx_a9b0c1d2e3f4` has not been seen before
+- Deduplication: `otx_a9b0c1d2e3f4` is not in the ledger
 - Receipt signature: verifies under the receipt-signing key of `stn_a1b2c3d4`, the station the signed receipt names
 - txCounter recorded: 5 (forensic only — gates nothing)
 - Gate: pass `opass_a1c3e500b2d4` was valid at the signed `endedAt` (13:14), read through the station's clock offset; its `passCounter` 2 has not been settled before for this pass (check #13)

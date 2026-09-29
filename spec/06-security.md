@@ -92,7 +92,7 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 - **Per-pass limits**: `maxUses`, `maxTotalCredits`, `maxCreditsPerTx`, `minIntervalSec`; a request above a limit is refused, never reduced.
 - **Station offline limits**: `OfflineModeEnabled`, `OfflineWindowHours`, `OfflineTransactionLimit` — station configuration ([Chapter 08 §5](08-configuration.md#5-offline--ble-configuration-keys)).
 - **Epoch revocation** — one platform increment invalidates every outstanding pass.
-- **Negative wallet balance allowed** during reconciliation — the user is charged even if their balance goes negative, and the transaction stays pending until the user tops up ([`reconciliation.md` §8.1](profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
+- **Negative wallet balance allowed** during reconciliation — the user is charged even when the debit leaves the balance below zero, and that transaction stays pending until the user tops up ([`reconciliation.md` §8.1](profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
 
 ### T07 - Payment Fraud
 
