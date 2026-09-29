@@ -88,7 +88,7 @@ Verify that when a station reconnects to the server after an offline period, it 
 21. Observe the station reconnects and sends BootNotification again.
 22. Respond Accepted.
 23. Observe the station retransmits TX-C (`offlineTxId: "otx_c3d4e5f6a7b8"`).
-24. Server detects `offlineTxId: "otx_c3d4e5f6a7b8"` has already been processed, and compares the arriving signed `receipt.data` against the stored one. They are byte-identical — this is the same transaction arriving twice.
+24. Server finds `offlineTxId: "otx_c3d4e5f6a7b8"` in its ledger, and compares the arriving signed `receipt.data` against the stored one. They are byte-identical — this is the same transaction arriving twice.
 25. Respond `Duplicate` (idempotent — no re-processing, no second debit), with a `reason`; `reason` is REQUIRED on `Duplicate`.
 26. Verify the station does NOT retransmit TX-C again, and deletes its local record of it — a deletion it **MAY** defer by up to 72 hours ([`transaction-event.md` §5.1](../../../spec/profiles/transaction/transaction-event.md#51-response-status-values)).
 27. **Different data under the same identifier.** Re-send `offlineTxId: "otx_c3d4e5f6a7b8"` a third time, this time carrying a **different** signed receipt — a validly signed receipt for the same `offlineTxId` whose `creditsCharged` differs from the stored one.
@@ -143,7 +143,7 @@ This is the path that destroyed money before 0.9.0, when a retired rule of §4.2
 6. The server settles each transaction at its own recomputation from the signed receipt, capped by the pass limits, and debits the user's wallet by the settled amounts.
 7. A transaction whose `txCounter` is discontinuous with the station's recorded history is settled normally, its money recorded, and an operator alert raised **on the station** — contributing nothing to the user's fraud score.
 8. A transaction whose `txCounter` is at or below previously recorded counters (a station whose store was lost or whose board was replaced) is settled and **never** answered `Duplicate`. Deduplication is keyed on `offlineTxId`, not on the counter.
-9. Negative wallet balances are permitted; the transaction whose debit took the wallet below zero stays pending until the user next tops up, the server notifies the user to top up, and it issues no offline pass while the balance is below zero.
+9. Negative wallet balances are permitted; the transaction whose debit left the wallet below zero stays pending until the user next tops up, the server notifies the user to top up, and it issues no offline pass while the balance is below zero.
 
 ## Failure Criteria
 

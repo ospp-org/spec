@@ -982,7 +982,7 @@ sequenceDiagram
 9. **SSP** relays result as **AuthResponse** [MSG-033] `Accepted` to App via BLE
 10. **App** writes **StartServiceRequest** [MSG-034] → SSP starts service
 11. Service runs with **ServiceStatus** [MSG-038] updates, then stop/receipt
-12. Since the station is online, the session is tracked in real time by the Server and settled when the station reports its end. If the station loses MQTT before then, it reconciles the transaction through TransactionEvent, and the server applies no second debit — only a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback))
+12. Since the station is online, the session is tracked in real time by the Server and settled when the station reports its end — by service kind, never above the `creditsAuthorized` of the authorization, as a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)). If the station loses MQTT before then, it reconciles the transaction through TransactionEvent, and the server applies no second debit — only a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback))
 
 ### Error Paths
 
@@ -1138,10 +1138,10 @@ of by what was delivered.
 | ACK_TIMEOUT (no response) | Full | 100% |
 | Hardware error during active (SessionEnded `reason=Fault`) | Partial (pro-rated) | Based on time used |
 | Station offline during active | Partial (pro-rated) | Based on time used |
-| User manual stop at station (SessionEnded `reason=Local`) | Partial (pro-rated) | Based on time used (charge `creditsCharged` from event) |
+| User manual stop at station (SessionEnded `reason=Local`) | Partial (pro-rated) | Based on time used, recomputed by the server (the event's `creditsCharged` is advisory) |
 | Offline credit exhausted mid-session (SessionEnded `reason=LocalOutOfCredit`) | Full | 100% (no charge — `creditsCharged` MUST be 0) |
 | Offline pass revoked mid-session (SessionEnded `reason=Deauthorized`) | Full | 100% (no charge — session not billable; `creditsCharged` MUST be 0) |
-| Operator ended it (SessionEnded `reason=OperatorStopped`) | Partial (pro-rated) | Based on time used (charge `creditsCharged` from event). The customer received a real wash and is billed for it; the operator's reason for ending it is not the customer's concern. |
+| Operator ended it (SessionEnded `reason=OperatorStopped`) | Partial (pro-rated) | Based on time used, recomputed by the server (the event's `creditsCharged` is advisory). The customer received a real wash and is billed for it; the operator's reason for ending it is not the customer's concern. |
 | Timer ran to completion (SessionEnded `reason=TimerExpired`) | None | Charge full pre-authorized amount (user received the booked duration regardless of meter values) |
 | If less than `faultFullRefundThreshold` of duration delivered AND reason=`Fault` | Full | 100% (override pro-rate) |
 
@@ -1481,7 +1481,7 @@ sequenceDiagram
 3. For each transaction, SSP sends **TransactionEvent REQUEST** [MSG-007] containing the full transaction data, signed receipt, `txCounter`, and meter values
 4. SSP waits for the RESPONSE before sending the next transaction
 5. **Server** processes each transaction:
-   - **Step 1:** Deduplicate by `offlineTxId`. Already seen and the signed `receipt.data` matches → `Duplicate`; already seen and it differs → `Rejected`, retain both records, alert the operator ([`reconciliation.md` §3](profiles/offline/reconciliation.md))
+   - **Step 1:** Deduplicate by `offlineTxId`. The ledger holds the `offlineTxId` and the signed `receipt.data` matches → `Duplicate`; it holds it and the data differs → `Rejected`, retain both records, alert the operator ([`reconciliation.md` §3](profiles/offline/reconciliation.md))
    - **Step 2:** Verify ECDSA P-256 receipt signature — reject if it does not verify; never scored ([`reconciliation.md` §5](profiles/offline/reconciliation.md#5-receipt-signature-verification))
    - **Step 3:** Record `txCounter` as forensic evidence — never gated on. If discontinuous: WARNING + operator alert on the **station**, process anyway (`profiles/offline/reconciliation.md` §4.2)
    - **Step 4:** Apply the reconcile-time gate — was the OfflinePass valid at transaction time: epoch, expiry, individual revocation, read through the station's clock offset ([`reconciliation.md` §6](profiles/offline/reconciliation.md#6-reconcile-time-re-validation-gate)). Limits are not a gate here: they cap settlement and feed fraud scoring

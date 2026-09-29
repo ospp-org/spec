@@ -2832,7 +2832,7 @@ Authentication result from the station. On `Accepted`, the app MAY proceed to st
 | Error Code | Reason | Description |
 |------------|--------|-------------|
 | `2002` | `OFFLINE_PASS_INVALID` | Signature verification failed |
-| `2003` | `OFFLINE_PASS_EXPIRED` | Pass has expired |
+| `2003` | `OFFLINE_PASS_EXPIRED` | Pass has expired, or is older than this station's `OfflinePassMaxAge` |
 | `2004` | `OFFLINE_EPOCH_REVOKED` | Revocation epoch check failed |
 | `4002` | `OFFLINE_LIMIT_EXCEEDED` | Max uses or credits exceeded |
 | `4003` | `OFFLINE_RATE_LIMITED` | Too soon after previous transaction |

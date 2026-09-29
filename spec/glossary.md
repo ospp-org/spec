@@ -340,7 +340,7 @@ specification. Where a definition involves a requirement, normative language
 **Reconciliation**
 : The process of synchronizing **Offline Transactions** with the server after
   connectivity is restored. The station **MUST** upload every offline transaction
-  record the server has not yet answered `Accepted`, `Duplicate` or `Rejected`, and the app **MUST** upload its own copy of every receipt it holds that the server has not yet answered;
+  record the server has not yet answered `Accepted`, `Duplicate` or `Rejected`, and the app **MUST** upload its own copy of every receipt it holds that the server has not yet answered `Accepted`, `Duplicate` or `Rejected`;
   whichever copy of a receipt arrives first may settle, and once one has settled the other is a `Duplicate`. The
   server **MUST** take each through deduplication and, when deduplication does not answer it,
   receipt signature verification and the re-validation gate, then settle it — never above what its authorization allowed — and

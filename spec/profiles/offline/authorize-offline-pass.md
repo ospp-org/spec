@@ -6,7 +6,7 @@
 
 AuthorizeOfflinePass is a station-initiated request used in the **Partial B** offline scenario (phone offline, station online). When a user presents an OfflinePass via BLE and the station has MQTT connectivity, the station forwards the pass to the server for validation. The server performs cryptographic and policy checks and responds with an acceptance (granting a session) or rejection (with a reason code).
 
-This action provides stronger security guarantees than local-only validation because the server can check what a station alone cannot: an individual revocation or a block on the user (§5 check #12), the platform's current epoch (#3), and the pass's use at every station (#6, #7, #10). It does not gate on the wallet balance: the pass's limits bound what it authorizes, and a debit that takes the wallet below zero leaves the transaction pending ([`reconciliation.md` §8.2](reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)). Offline authorization cache is configurable via `AuthorizationCacheEnabled` (see §8 Configuration).
+This action provides stronger security guarantees than local-only validation because the server can check what a station alone cannot: an individual revocation or a block on the user (§5 check #12), the platform's current epoch (#3), and the pass's use at every station (#6, #7, #10). It does not gate on the wallet balance: the pass's limits bound what it authorizes, and a debit that leaves the wallet below zero leaves the transaction pending ([`reconciliation.md` §8.2](reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)). Offline authorization cache is configurable via `AuthorizationCacheEnabled` (see §8 Configuration).
 
 > **Compliance note:** AuthorizeOfflinePass is used in the Partial B scenario, which is required only at **Complete** compliance level. Stations implementing only Basic offline compliance (Full Offline and Partial A) are not required to implement this action.
 
@@ -33,7 +33,7 @@ This action provides stronger security guarantees than local-only validation bec
 | `status` | string | Yes | `Accepted` or `Rejected`. |
 | `sessionId` | string | Cond. | Assigned session identifier. Present when `status` is `Accepted`. |
 | `durationSeconds` | integer | Cond. | Authorized service duration in seconds. Present when `status` is `Accepted`. |
-| `creditsAuthorized` | integer | Cond. | Number of credits authorized for this session. Present when `status` is `Accepted`. |
+| `creditsAuthorized` | integer | Cond. | Number of credits authorized for this session — the estimated cost checks #7 and #8 accepted, which the server debits at authorization and which settlement never exceeds. Present when `status` is `Accepted`. |
 | `reason` | string | Cond. | Human-readable rejection reason. Present when `status` is `Rejected`. |
 
 ## 5. Validation Checks

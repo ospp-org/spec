@@ -27,7 +27,7 @@ Replay and clone protection does **not** depend on this ordering, and never did 
 The server uses the `offlineTxId` field to deduplicate offline transaction events:
 
 1. Each offline transaction is assigned a unique `offlineTxId` (format: `otx_` prefix + random alphanumeric) by the station at the time of service start.
-2. When the server receives a TransactionEvent with an `offlineTxId`, it checks whether its ledger holds that ID.
+2. When the server receives a TransactionEvent or an uploaded receipt with an `offlineTxId`, it checks whether its ledger holds that ID.
 3. If the `offlineTxId` already exists in the server's ledger, the server **MUST** compare the arriving submission against the stored one before answering, whichever channel either of them came by — the station's TransactionEvent or the app's receipt upload ([`app-contract.md` §4](app-contract.md#4-receipt-upload)) — and the two outcomes are different:
    - **Same transaction** — the arriving signed `receipt.data` is **byte-identical** to the stored one. This is a retransmission after a network failure, and it is the common case. The server **MUST** respond `Duplicate` without re-processing (idempotent acknowledgement): no second debit, no second ledger row, no re-validation. The station deletes its copy ([`transaction-event.md` §5.1](../transaction/transaction-event.md)).
    - **Different transaction** — the arriving signed `receipt.data` differs from the stored one. Two distinct claims are being made under one `offlineTxId`, which is either an identifier collision or tampering. The server **MUST** respond `Rejected`, **MUST NOT** debit or persist the arriving claim, **MUST** retain both records, and **MUST** alert the operator (§9). It **MUST** emit an `OfflinePassRejected` SecurityEvent carrying the same forensic detail as any other §6 rejection (§6.3, its `eventId` derived with `N` = `dup`), with `errorCode` `2017 OFFLINE_RECEIPT_MISMATCH` and `details.field: "receipt.data"`, plus the `offlineTxId` and the stored record's identifiers. The station **retains** its copy — `Rejected` never orders a deletion — and that copy is the second of the two records the operator compares.
@@ -73,7 +73,7 @@ The server verifies the ECDSA-P256-SHA256 signature on each offline transaction 
 
 ## 6. Reconcile-Time Re-validation Gate
 
-Before settlement (§8) and fraud scoring (§7), the server **MUST** apply a deterministic **hard-reject gate** to every TransactionEvent and every uploaded receipt that §3 does not answer. This gate is distinct from fraud scoring: it consists of confirmed security-property violations (not probabilistic signals), and each failure **MUST** result in `Rejected` status, no persistence, no wallet debit, and a `SecurityEvent` emission (per §6.3). The gate runs after receipt signature verification (§5) and before settlement (§8).
+Before settlement (§8) and fraud scoring (§7), the server **MUST** apply a deterministic **hard-reject gate** to every arrival — a TransactionEvent or an uploaded receipt — that §3 does not answer. This gate is distinct from fraud scoring: it consists of confirmed security-property violations (not probabilistic signals), and each failure **MUST** result in `Rejected` status, no persistence, no wallet debit, and a `SecurityEvent` emission (per §6.3). The gate runs after receipt signature verification (§5) and before settlement (§8).
 
 ### 6.1 Check List
 
@@ -273,7 +273,7 @@ A server **MUST NOT** issue an additional debit above that amount for any reason
    server **MUST** trigger a top-up reminder and **MUST NOT** issue the user an offline pass
    ([`app-contract.md` §3.5](app-contract.md#35-refusals)). Pending concerns collection, not the debit: the debit
    stands, and what waits for the top-up is the transaction's collection. This is not a dispute over the amount —
-   the amount is the server's own recomputation — so it is settled by payment, not by adjudication.
+   the amount is the server's own recomputation — so the top-up, not adjudication, resolves it.
 6. The user is notified of the charges upon the next app open or push notification.
 
 > **Why recomputation is affordable here, and why the offline value is not stale in practice.**

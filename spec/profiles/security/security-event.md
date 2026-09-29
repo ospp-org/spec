@@ -26,7 +26,7 @@ Both forms validate against [`security-event.schema.json`](../../../schemas/mqtt
 | Site | Trigger |
 |---|---|
 | [`authorize-offline-pass.md` §6](../offline/authorize-offline-pass.md) rule 7 | authorize-time check #1 (signature) and check #10 (counter replay) — **and no other authorize-time outcome** |
-| [`reconciliation.md` §3](../offline/reconciliation.md#3-deduplication-offlinetxid) | a second submission under a known `offlineTxId` whose signed `receipt.data` differs |
+| [`reconciliation.md` §3](../offline/reconciliation.md#3-deduplication-offlinetxid) | a submission under an `offlineTxId` the ledger holds whose signed `receipt.data` differs |
 | [`reconciliation.md` §5](../offline/reconciliation.md#5-receipt-signature-verification) | a receipt whose signature does not verify |
 | [`reconciliation.md` §6.3](../offline/reconciliation.md#63-securityevent-emission) | every applicable reconcile-time gate failure |
 | [`reconciliation.md` §6.7](../offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4) | the auth-form `(authId, sessionId)` replay reject |
