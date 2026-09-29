@@ -231,7 +231,7 @@ Once a transaction has passed the gate (§6), the server settles the user's wall
 
 | Resolved form | The amount a transaction may be charged |
 |---|---|
-| **pass-form**, validated by the station (Full Offline) | At most the pass's `maxCreditsPerTx`. Across all of a pass's transactions, at most its `maxTotalCredits` and at most `maxUses` transactions: a transaction that arrives when the pass's settled transactions have reached either limit is settled at what remains of it — for `maxTotalCredits`, the limit less what those transactions were charged — `0` when nothing does. |
+| **pass-form**, validated by the station (Full Offline) | At most the pass's `maxCreditsPerTx`. Across all of a pass's transactions, taken in the order they arrive (§2), at most its `maxTotalCredits` and at most `maxUses` transactions: a transaction that would take the pass's settled transactions past either limit is settled at what remains of it — for `maxTotalCredits`, the limit less what those transactions were charged — `0` when nothing does. |
 | **pass-form**, authorized by the server (Partial B) | At most the `creditsAuthorized` of the AuthorizeOfflinePass response, within the pass limits above. |
 | **auth-form** (Partial A) | At most the signed `creditsAuthorized`. |
 

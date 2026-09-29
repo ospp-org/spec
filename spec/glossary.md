@@ -330,7 +330,7 @@ specification. Where a definition involves a requirement, normative language
   durations, how the session ended, the state of the station's clock, final meter totals,
   and the credits the station computed; `receipt_fields` in
   [Chapter 06 §6.2](06-security.md#62-transaction-receipt-signing--ecdsa-p-256) is the
-  complete list. The server settles from the signed body, and the station's credit figure
+  complete list. The server settles by its own recomputation, and the station's credit figure
   is advisory. Receipts are available via MQTT (`TransactionEvent`) and BLE (Receipt
   characteristic), and the app uploads its copy to the server
   ([`app-contract.md` §4](profiles/offline/app-contract.md#4-receipt-upload)).
