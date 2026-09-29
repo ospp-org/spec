@@ -139,8 +139,8 @@ Station                                              Broker
 > `type` member moves the schema, its example payloads and conformance vectors, the prose files that
 > enumerate the members, and both SDKs' copies of the schema and their tests — a coordinated lockstep
 > release under [ADR-001](../adr/ADR-001-cross-repo-lockstep-versioning.md), not an editorial fix.
-> `FraudDetected`, the thirteenth member, server-originated only, is such a change, and the next SDK
-> pair carries it. It is named here with its cost so the decision is visible rather than
+> `FraudDetected`, the thirteenth member, server-originated only, was such a change. The
+> retrospective carrier is named here with its cost so the decision is visible rather than
 > rediscovered.
 
 ### 1.4 Port
@@ -979,8 +979,8 @@ All OSPP transports use **JSON** as the serialization format.
 
 This row used to read `Receivers MUST ignore unknown fields (forward compatibility)`, and **no conforming
 implementation could have obeyed it.** Every object schema under `schemas/` declares
-`additionalProperties: false` — **73 of 73**, counting the message schemas, the BLE schemas, the envelope and
-the provisioning pair; the thirteen that do not are scalar type definitions with no members for the keyword to
+`additionalProperties: false` — **75 of 75**, counting the message schemas, the BLE schemas, the envelope, the
+provisioning pair and the offline-pass issuance pair; the thirteen that do not are scalar type definitions with no members for the keyword to
 govern. Those bytes are vendored into both SDKs and gated there byte-for-byte, so a receiver that validates
 refuses a member its copy of the schema does not carry, and a receiver that ignores unknown members is not
 validating. The two obligations had an empty intersection, and three decisions already taken in this

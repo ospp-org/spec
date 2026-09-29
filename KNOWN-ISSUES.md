@@ -2523,8 +2523,8 @@ model and its bands in [`06-security.md` §7.4](spec/06-security.md#74-fraud-det
 - **What it carries.** The server records one for every transaction scored in the Review, Alert or
   Block band. Its `details` carry `score`, `factors` (the identifiers of the §7.4 factors that fired),
   `band`, `action` — `FlaggedForReview`, `OfflineDisabledForUser` or `UserBlocked` — and the
-  transaction's identifiers: `offlineTxId`, `userId`, `stationId`, `messageId`, and `offlinePassId` or
-  `authId`. Its severity follows the band — `Warning`, `Error`, `Critical` — and its `eventId` is
+  transaction's identifiers: `offlineTxId`, `userId`, `stationId` and `offlinePassId` or `authId`, with
+  `messageId` when a TransactionEvent carried the transaction. Its severity follows the band — `Warning`, `Error`, `Critical` — and its `eventId` is
   derived over the domain `ospp:reconcile_tx:fraud:`.
 - **Scored after settlement, and never a rejection.** The order at reconciliation is deduplication,
   signature, gate, settlement, then scoring. Scoring never changes the settled amount, and a scored

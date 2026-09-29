@@ -34,7 +34,7 @@ by the gates in [`tools/`](../../tools/README.md) rather than from here:
 
 | Gate | What it executes |
 |---|---|
-| `tools/verify-schemas.py` | All **345** test vectors — 168 valid, 177 invalid — against the schema each maps to, with zero unmapped |
+| `tools/verify-schemas.py` | All **348** test vectors — 169 valid, 179 invalid — against the schema each maps to, with zero unmapped |
 | `tools/verify-all-signatures.sh` | The signed conformance corpus: example signatures, the BLE crypto oracle, tamper rejection, signer idempotency, handshake nonces |
 | `tools/verify-protocol.sh` | Twenty cross-artefact consistency categories over `spec/`, `schemas/`, `conformance/` and `examples/`, against a recorded baseline |
 | `tools/validate-examples.sh` | Every example payload against its schema |

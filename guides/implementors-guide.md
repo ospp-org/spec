@@ -378,7 +378,7 @@ If MQTT drops during an active session:
 
 1. **Do NOT stop the hardware.** The service continues.
 2. Switch to BLE-available mode (accept offline sessions)
-3. Buffer the **MUST-buffer** categories — TransactionEvent (min 1000, **never** discard), SessionEnded (one per session that ended while you could not send, **never** discard — it is the sole billing source for a session that ended with no StopService to answer), SecurityEvent (200, FIFO). StatusNotification and MeterValues are **regenerable and MAY be discarded**; do not spend the buffer on them. The `MUST` storage level is **512 KB** — and **it does not hold the categories in this bullet.** [`01-architecture.md` §6.5](../spec/01-architecture.md) derives what they cost: 1000 TransactionEvents (1.2 MB) + 1000 SessionEnded (250 KB) + 200 SecurityEvents (120 KB) + overhead = **~1.6 MB**, and §6.5 records the gap between the two as OPEN because raising a mandatory storage level changes the bill of materials of every station. **Size new hardware to the derived figure, not to the 512 KB level row.** At 90% of the TransactionEvent buffer, reject new StartService with `5111 BUFFER_FULL`; at 100%, enter degraded mode and refuse all new sessions (§6.5)
+3. Buffer the **MUST-buffer** categories — TransactionEvent (min 1000, **never** discard), SessionEnded (one per session that ended while you could not send, **never** discard — it is the sole billing source for a session that ended with no StopService to answer), SecurityEvent (200, FIFO). StatusNotification and MeterValues are **regenerable and MAY be discarded**; do not spend the buffer on them. The `MUST` storage level is **512 KB** — and **it does not hold the categories in this bullet.** [`01-architecture.md` §6.5](../spec/01-architecture.md) derives what they cost: 1000 TransactionEvents (1.3 MB) + 1000 SessionEnded (250 KB) + 200 SecurityEvents (120 KB) + overhead = **~1.7 MB**, and §6.5 records the gap between the two as OPEN because raising a mandatory storage level changes the bill of materials of every station. **Size new hardware to the derived figure, not to the 512 KB level row.** At 90% of the TransactionEvent buffer, reject new StartService with `5111 BUFFER_FULL`; at 100%, enter degraded mode and refuse all new sessions (§6.5)
 4. Attempt reconnection with exponential backoff: 1s → 2s → 4s → 8s → 16s → 30s max, with 30% jitter
 5. On reconnect: Full boot sequence (BootNotification, StatusNotification per bay)
 6. Flush buffered messages after boot completes
@@ -469,7 +469,7 @@ fit `maxCreditsPerTx` or what remains of `maxTotalCredits`
 **Your own offline limits apply as well:** refuse a pass you would otherwise accept on your own
 validation with `4002` when `OfflineModeEnabled` is `false`, when more than `OfflineWindowHours`
 have elapsed since your last successful MQTT connection, or when you already hold
-`OfflineTransactionLimit` offline transactions the server has not answered
+`OfflineTransactionLimit` offline transactions the server has not yet answered `Accepted`, `Duplicate` or `Rejected`
 ([`offline-pass.md` §2.2](../spec/profiles/offline/offline-pass.md#22-constraints-object)). What
 you cannot check offline — a block or an individual revocation, whenever issued, an epoch the
 platform moved after you last received configuration, use at other stations, the user's balance —
@@ -548,7 +548,7 @@ Supported keys:
 | `ReservationDefaultTTL` | int (seconds) | 300 | Reservation expiry |
 | `OfflineModeEnabled` | bool | true | Whether you accept an OfflinePass on your **own** validation — Full Offline, and the local fallback of a Partial-B authorization that timed out. It does not govern forwarding a Partial-B pass to the server, nor accepting a Partial-A ServerSignedAuth |
 | `OfflineWindowHours` | int (hours) | 240 | How long after your last successful MQTT connection you may keep accepting passes on your own validation, measured on your monotonic timer |
-| `OfflineTransactionLimit` | int | 1000 | How many offline transactions the server has not answered you may hold before you refuse further passes on your own validation |
+| `OfflineTransactionLimit` | int | 1000 | How many offline transactions not yet answered `Accepted`, `Duplicate` or `Rejected` you may hold before you refuse further passes on your own validation |
 | `OfflinePassMaxAge` | int (seconds) | 864000 | Your own, stricter age limit on a pass (check #2); inert at the default |
 | `RevocationEpoch` | int | 0 | The platform revocation epoch: one value, the same on every station of every tenant. A pass whose `revocationEpoch` is lower is refused |
 | `OfflinePassPublicKey` | CSV (write-only) | — | The server key set: each key's DER `SubjectPublicKeyInfo`, Base64, comma-separated. Every value is the whole set and replaces the one you hold |
@@ -1192,7 +1192,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** Message deduplication (1000+ IDs or 1 hour window)
 - [ ] **[MUST]** Exponential backoff with jitter for reconnection (1s → 30s max)
 - [ ] **[MUST]** Continue active sessions during MQTT disconnect (do NOT stop hardware)
-- [ ] **[MUST]** Buffer TransactionEvent (1000, never discard), SessionEnded (never discard) and SecurityEvent (200, FIFO) during disconnect; StatusNotification and MeterValues MAY be discarded. **512 KB** is the `MUST` storage level and does **not** hold that buffer — [`01-architecture.md` §6.5](../spec/01-architecture.md) derives **~1.6 MB** and flags the gap as OPEN; build to the derived figure
+- [ ] **[MUST]** Buffer TransactionEvent (1000, never discard), SessionEnded (never discard) and SecurityEvent (200, FIFO) during disconnect; StatusNotification and MeterValues MAY be discarded. **512 KB** is the `MUST` storage level and does **not** hold that buffer — [`01-architecture.md` §6.5](../spec/01-architecture.md) derives **~1.7 MB** and flags the gap as OPEN; build to the derived figure
 - [ ] **[MUST]** Message expiry intervals set per action category
 - [ ] **[MUST]** 0-RTT TLS resumption NOT used
 - [ ] **[SHOULD]** Max Packet Size = 65,536 bytes

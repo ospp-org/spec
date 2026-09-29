@@ -729,7 +729,7 @@ sequenceDiagram
 - Station BLE is advertising
 - Station holds the server key set (`OfflinePassPublicKey`) in NVS
 - Station `OfflineModeEnabled` configuration is `true`
-- Station is within its own offline limits: `OfflineWindowHours` has not elapsed since its last MQTT connection, and it holds fewer than `OfflineTransactionLimit` offline transactions the server has not answered ([`offline-pass.md` §2.2](profiles/offline/offline-pass.md#22-constraints-object))
+- Station is within its own offline limits: `OfflineWindowHours` has not elapsed since its last MQTT connection, and it holds fewer than `OfflineTransactionLimit` offline transactions the server has not yet answered `Accepted`, `Duplicate` or `Rejected` ([`offline-pass.md` §2.2](profiles/offline/offline-pass.md#22-constraints-object))
 - App has biometric/PIN capability
 
 ### Sequence Diagram

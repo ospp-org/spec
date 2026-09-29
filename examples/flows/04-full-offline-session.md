@@ -22,7 +22,7 @@ It is a winter evening in Example City. Heavy snowfall has knocked out the inter
 - Station BLE is advertising as `OSPP-b2c3d4` (last 6 hex chars of station ID)
 - Station holds the server key set (`OfflinePassPublicKey`) in NVS, including the key the pass's `keyId` names
 - Station `OfflineModeEnabled` configuration is `true`
-- Station is within its own offline limits: it holds 7 offline transactions the server has not yet answered, well under its `OfflineTransactionLimit` (1000), and it has been offline for far less than its `OfflineWindowHours` (240). Both are station configuration, not pass fields ([`08-configuration.md` §5](../../spec/08-configuration.md#5-offline--ble-configuration-keys))
+- Station is within its own offline limits: it holds 7 offline transactions the server has not yet answered `Accepted`, `Duplicate` or `Rejected`, well under its `OfflineTransactionLimit` (1000), and it has been offline for far less than its `OfflineWindowHours` (240). Both are station configuration, not pass fields ([`08-configuration.md` §5](../../spec/08-configuration.md#5-offline--ble-configuration-keys))
 - Station holds the platform `RevocationEpoch` 42 (matches the pass)
 - Station clock is synchronized to within 5 seconds (last synced before internet dropped)
 - Neither the phone nor the station has internet connectivity

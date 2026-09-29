@@ -39,7 +39,7 @@ Verify the complete full-offline BLE session lifecycle: BLE scan and discovery, 
 4. Station has at least one bay (`bay_a1b2c3d4`) in `Available` state.
 5. Service catalog includes `svc_basic` on `bay_a1b2c3d4`.
 6. The test client BLE stack is initialized and ready to scan.
-7. No station limit is reached: the station's `OfflineModeEnabled` is `true`, fewer than `OfflineWindowHours` have elapsed since its last MQTT connection, and it holds fewer than `OfflineTransactionLimit` unanswered offline transactions ([`offline-pass.md` §2.2](../../../spec/profiles/offline/offline-pass.md#22-constraints-object)).
+7. No station limit is reached: the station's `OfflineModeEnabled` is `true`, fewer than `OfflineWindowHours` have elapsed since its last MQTT connection, and it holds fewer than `OfflineTransactionLimit` offline transactions the server has not yet answered `Accepted`, `Duplicate` or `Rejected` ([`offline-pass.md` §2.2](../../../spec/profiles/offline/offline-pass.md#22-constraints-object)).
 
 ## Steps
 

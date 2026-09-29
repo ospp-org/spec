@@ -59,7 +59,7 @@ If the response is `Rejected` or `Pending`, the station **MUST** retry according
 | `errorText` | string | Cond. | Machine-readable error name in `UPPER_SNAKE_CASE`. **Required** when `status` is `Rejected`; accompanies `errorCode` whenever that is present. |
 | `supportedVersions` | array | Cond. | Every protocol version the server supports. **Required** when `Rejected` with `1007 PROTOCOL_VERSION_MISMATCH`. |
 | `details` | object | Cond. | Diagnostic detail for `errorCode`, carrying `expected` and `declared`. **Required** on a `Pending` response with `3018`; absent otherwise. See §6.1. |
-| `configuration` | object | No | Key-value configuration pairs pushed to the station. |
+| `configuration` | object | Cond. | Key-value configuration pairs pushed to the station. **Required on an `Accepted` response to a station that declares the Offline / BLE profile**, carrying the five offline keys ([Chapter 08 §8.3](../../08-configuration.md#83-configuration-via-bootnotification)). |
 | `sessionKey` | string | Cond. | Base64-encoded 32-byte HMAC session key for message authentication. **Required on every `Accepted` and every `Pending` response**, unconditionally — see §5.3. Absent on `Rejected`. |
 
 ## 5. Processing Rules
