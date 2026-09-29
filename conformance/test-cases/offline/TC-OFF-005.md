@@ -214,7 +214,7 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
 3. **No AuthResponse and no service precede the server's answer.**
 4. On `Accepted`, the station stores `sessionId`, `durationSeconds` and `creditsAuthorized`, and relays `result: "Accepted"` with `sessionKeyConfirmation` — carrying no `sessionId`, which the BLE schema does not admit.
 5. `requestedDurationSeconds` above the authorized value is **clamped to it**, and the clamp is rooted in the AuthorizeOfflinePass response value, never in the unsigned advisory copy on AuthResponse.
-6. A session that stays online end to end is reported under the `sessionId` of the AuthorizeOfflinePass answer, is settled when the station reports its end — never above `creditsAuthorized`, adjusting the authorize-time debit by refund only — and produces **no** TransactionEvent.
+6. A session that stays online end to end reports its SessionEnded, and any MeterValues, under the `sessionId` of the AuthorizeOfflinePass answer, is settled when the station reports its end — never above `creditsAuthorized`, adjusting the authorize-time debit by refund only — and produces **no** TransactionEvent.
 7. An expired pass is **still forwarded**, and is refused by the server at check #2. The profile's code is `2003 OFFLINE_PASS_EXPIRED`; the MQTT response carries `status` and `reason` only.
 8. A replayed `counter` is refused at check #10 (`2005 OFFLINE_COUNTER_REPLAY`, Critical), and the server writes an `OfflinePassRejected` audit record whose `eventId` derives deterministically from the originating REQUEST's `messageId`.
 9. A tampered signature is refused at check #1 (`2002 OFFLINE_PASS_INVALID`) and likewise emits. **Distinct REQUESTs produce distinct `eventId`s.**
@@ -252,4 +252,4 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
 19. The server settles the station-reported `creditsCharged` instead of its own recomputation, whether or not the two agree.
 20. The server refuses a debit because it would make the balance negative, losing the only record of what was owed; or allows it and does not refuse further offline pass issuance while the balance is below zero; or expires, writes off or collects by any other route a transaction left pending below zero before the user tops up.
 21. A distinct `offlineTxId` reusing a settled `(offlinePassId, passCounter)` is accepted, or is answered `Duplicate` rather than `Rejected` — `Duplicate` orders the station to delete a record this case requires be retained.
-22. An online Partial-B session is reported under a `sessionId` other than the AuthorizeOfflinePass answer's, or is settled above `creditsAuthorized`, or by a debit after the authorize-time one.
+22. An online Partial-B session reports its SessionEnded or MeterValues under a `sessionId` other than the AuthorizeOfflinePass answer's, or is settled above `creditsAuthorized`, or by a debit after the authorize-time one.

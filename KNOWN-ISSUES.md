@@ -2274,8 +2274,9 @@ messages of one profile, is a shape rather than a coincidence.
 **The measurement.** `spec/profiles/` carries **170 numbered rules across 23 documents** with a
 `## N. Processing Rules` section. **None of the 23 states whether the numbering is normative.** Two
 documents elsewhere in the tree do say it, and neither is a Processing Rules section:
-`authorize-offline-pass.md` §5 *"Validation Checks"* — *"The server **MUST** perform all of the
-following checks **in order**. Processing **MUST** stop at the first failure."* — and
+`authorize-offline-pass.md` §5 *"Validation Checks"* — *"The server **MUST** perform every check below
+that is not withdrawn — #1--#4, #6--#10 and #12 — in the listed order. Processing **MUST** stop at the
+first failure."* — and
 `connection-lost.md` §5 *"Server-Side Handling"* — *"**MUST** perform the following steps in
 order."* Both prove the specification knows how to say it. Neither generalises, and the sections
 that most need it are the ones without it.
