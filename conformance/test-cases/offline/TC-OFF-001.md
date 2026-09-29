@@ -32,7 +32,7 @@ Verify the complete full-offline BLE session lifecycle: BLE scan and discovery, 
 2. Station BLE radio is active and advertising the OSPP service UUID (0000FFF0).
 3. The app (test client) has a valid OfflinePass:
    - Signed with ECDSA P-256 by a key of the server key set the station holds (`OfflinePassPublicKey`), named by the pass's `keyId`.
-   - `expiresAt` is in the future, `revocationEpoch` >= the platform epoch the station holds.
+   - `expiresAt` is in the future, the pass is no older than the station's `OfflinePassMaxAge` ([`08-configuration.md` §5](../../../spec/08-configuration.md#5-offline--ble-configuration-keys)), and `revocationEpoch` >= the platform epoch the station holds.
    - `maxUses` > 0, `maxTotalCredits` sufficient for the test session.
    - Names no station and no organization: a pass carries no station or organization scope ([`offline-pass.md` §2.3](../../../spec/profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)).
    - `deviceId` matches the test client device.

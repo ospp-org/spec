@@ -590,7 +590,7 @@ The app transitions to the SessionCompletedScreen:
 |   Eco Program - Bay 1           |
 |   Duration: 3m 0s                  |
 |                                  |
-|   Credits debited:      30       |
+|   Credits (station):    30       |
 |   Estimated balance:    42       |
 |                                  |
 |   Liquid: 33.4L | Consumable: 375mL |

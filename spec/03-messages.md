@@ -838,7 +838,7 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
 | Status | Station Action |
 |--------|---------------|
 | `Accepted` | Do not send again; delete the local record (deletion MAY be deferred up to 72 h) |
-| `Duplicate` | Do not send again; delete the local record (the server already holds this same transaction) |
+| `Duplicate` | Do not send again; delete the local record (the server's ledger already holds this same transaction) |
 | `Rejected` | Do not send again; **retain** the local record, marked rejected and flagged for manual investigation |
 | `RetryLater` | Keep in queue; retry with exponential backoff (initial 5 s, cap 300 s). The response carries **no** retry interval — `transaction-event-response.schema.json` is closed over `status` and `reason` — so the backoff is the station's, not a server-supplied value |
 

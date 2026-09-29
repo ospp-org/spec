@@ -158,7 +158,7 @@ The app writes a StopServiceRequest to FFF3 to terminate a running service befor
 | `type` | string | Yes | `StopServiceResponse` (constant). |
 | `result` | string | Yes | `Accepted` or `Rejected`. |
 | `actualDurationSeconds` | integer | Cond. | Actual duration the service ran. Present when `result` is `Accepted`. |
-| `creditsCharged` | integer | Cond. | Total credits charged. Present when `result` is `Accepted`. |
+| `creditsCharged` | integer | Cond. | Credits the station computed for the session; advisory — the server settles its own recomputation ([`reconciliation.md` §8](reconciliation.md#8-wallet-reconciliation)). Present when `result` is `Accepted`. |
 
 **Processing rules:**
 

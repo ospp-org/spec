@@ -25,7 +25,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 | `startedAt` | string | Yes | ISO 8601 UTC timestamp of service activation. |
 | `endedAt` | string | Yes | ISO 8601 UTC timestamp of service completion. |
 | `durationSeconds` | integer | Yes | Actual duration in seconds (minimum 1). |
-| `creditsCharged` | integer | Yes | Credits charged for the session. |
+| `creditsCharged` | integer | Yes | Credits the station computed for the session; advisory — the server settles its own recomputation from the signed receipt ([`reconciliation.md` §8](../offline/reconciliation.md#8-wallet-reconciliation)). |
 | `receipt` | object | Yes | Cryptographically signed receipt (see section 4). The `txCounter` is included in the signed receipt data for integrity. |
 | `txCounter` | integer | Yes | Monotonic transaction counter (minimum 1). Also included in the signed receipt data. |
 | `meterValues` | object | No | Resource consumption readings (liquidMl, consumableMl, energyWh). |
