@@ -75,7 +75,7 @@
       "minLength": 100,
       "maxLength": 4096,
       "pattern": "^-----BEGIN (PUBLIC|EC PUBLIC) KEY-----[\\s\\S]+-----END (PUBLIC|EC PUBLIC) KEY-----\\s*$",
-      "description": "The ECDSA P-256 server signing public key currently signing, as the PEM armour of its DER SubjectPublicKeyInfo — the one encoding of a server key (Chapter 06 — Security §6.7). The station holds it as its server key set until its first BootNotification RESPONSE delivers the whole set (OfflinePassPublicKey, Chapter 08 — Configuration §4). Used to verify OfflinePass and ServerSignedAuth signatures (Chapter 06 — Security §4.2 §6.1 §6.7); the same key set signs the StationIdentity certificate (§6.5.2)."
+      "description": "The ECDSA P-256 server signing public key currently signing, as the PEM armour of its DER SubjectPublicKeyInfo — the one encoding of a server key (Chapter 06 — Security §6.7). The station holds it as its server key set until its first Accepted BootNotification RESPONSE delivers the whole set (OfflinePassPublicKey, Chapter 08 — Configuration §4). Used to verify OfflinePass and ServerSignedAuth signatures (Chapter 06 — Security §4.2 §6.1 §6.7); the same key set signs the StationIdentity certificate (§6.5.2)."
     },
     "stationIdentity": {
       "$ref": "ble/station-identity.schema.json",

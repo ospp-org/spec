@@ -673,7 +673,7 @@ The server, in the order of [`reconciliation.md` §2](../../spec/profiles/offlin
 7. Creates a session record
 8. Responds `Accepted`
 
-The station stops sending the transaction and deletes its record; the deletion **MAY** be deferred by up to 72 hours ([`transaction-event.md` §5.1](../../spec/profiles/transaction/transaction-event.md)).
+The station stops sending the transaction and deletes its record; the deletion **MAY** be deferred by up to 72 hours ([`transaction-event.md` §5.1](../../spec/profiles/transaction/transaction-event.md#51-response-status-values)).
 
 ## Message Sequence Diagram
 

@@ -1557,7 +1557,7 @@ OSPP uses one platform-wide **revocation epoch** for batch OfflinePass invalidat
 |----------|-------|
 | **Mechanism** | Monotonically increasing integer, one for the whole platform |
 | **Owner** | The platform: only a Platform Admin (§3.1) increments it |
-| **Storage** | Station: `RevocationEpoch` configuration key, holding the platform value. Server: database, with the history of every increment ([`reconciliation.md` §6.6](profiles/offline/reconciliation.md)) |
+| **Storage** | Station: `RevocationEpoch` configuration key, holding the platform value. Server: database, with the history of every increment ([`reconciliation.md` §6.6](profiles/offline/reconciliation.md#66-revocation-epoch-at-transaction-time-finding-n8)) |
 | **Distribution** | Pushed to every station that declares the Offline / BLE profile, whatever its tenant, via ChangeConfiguration [MSG-013], and delivered in the configuration of every `Accepted` BootNotification RESPONSE [MSG-001] ([Chapter 08 §8.3](08-configuration.md#83-configuration-via-bootnotification)) |
 | **Validation** | OfflinePass `revocationEpoch` **MUST** be >= the platform epoch — at the station (§6.1.1 check #3), at Partial-B authorize time, and at reconciliation, where the epoch in force at the transaction's time applies |
 

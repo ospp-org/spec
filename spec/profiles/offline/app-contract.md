@@ -91,7 +91,7 @@ The body is the Receipt exactly as the app read it from the station (characteris
 
 ### 4.2 Response
 
-`200 OK` with the body of a TransactionEvent RESPONSE — `status` and, when it is not `Accepted`, `reason` ([`transaction-event-response.schema.json`](../../../schemas/mqtt/transaction-event-response.schema.json)) — with the meanings [`transaction-event.md` §5.1](../transaction/transaction-event.md) gives them.
+`200 OK` with the body of a TransactionEvent RESPONSE — `status` and, when it is not `Accepted`, `reason` ([`transaction-event-response.schema.json`](../../../schemas/mqtt/transaction-event-response.schema.json)) — with the meanings [`transaction-event.md` §5.1](../transaction/transaction-event.md#51-response-status-values) gives them.
 
 ### 4.3 Rules
 

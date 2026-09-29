@@ -90,7 +90,7 @@ Verify that when a station reconnects to the server after an offline period, it 
 23. Observe the station retransmits TX-C (`offlineTxId: "otx_c3d4e5f6a7b8"`).
 24. Server detects `offlineTxId: "otx_c3d4e5f6a7b8"` has already been processed, and compares the arriving signed `receipt.data` against the stored one. They are byte-identical — this is the same transaction arriving twice.
 25. Respond `Duplicate` (idempotent — no re-processing, no second debit), with a `reason`; `reason` is REQUIRED on `Duplicate`.
-26. Verify the station does NOT retransmit TX-C again, and deletes its local record of it — a deletion it **MAY** defer by up to 72 hours ([`transaction-event.md` §5.1](../../../spec/profiles/transaction/transaction-event.md)).
+26. Verify the station does NOT retransmit TX-C again, and deletes its local record of it — a deletion it **MAY** defer by up to 72 hours ([`transaction-event.md` §5.1](../../../spec/profiles/transaction/transaction-event.md#51-response-status-values)).
 27. **Different data under the same identifier.** Re-send `offlineTxId: "otx_c3d4e5f6a7b8"` a third time, this time carrying a **different** signed receipt — a validly signed receipt for the same `offlineTxId` whose `creditsCharged` differs from the stored one.
 28. Verify the server responds `Rejected`, does **not** debit the wallet a second time, and does **not** overwrite the stored record. Two distinct claims under one identifier is a collision or tampering (`reconciliation.md` §3, §9).
 29. Verify the server **retains both records** and raises an operator alert, and emits an `OfflinePassRejected` SecurityEvent whose `details` carry `errorCode` `2017` and `field: "receipt.data"`.

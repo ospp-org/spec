@@ -81,7 +81,7 @@ Verify that the station correctly performs offline transaction reconciliation af
       "reason": "Transaction otx_a1b2c3d4e5f6 already reconciled"
     }
     ```
-18. Verify the station does not send the transaction again and deletes its local record of it — a deletion it **MAY** defer by up to 72 hours ([`transaction-event.md` §5.1](../../../spec/profiles/transaction/transaction-event.md)).
+18. Verify the station does not send the transaction again and deletes its local record of it — a deletion it **MAY** defer by up to 72 hours ([`transaction-event.md` §5.1](../../../spec/profiles/transaction/transaction-event.md#51-response-status-values)).
 19. Verify the station proceeds to the next transaction without retry.
 
 ### Part C — Partial Failure with RetryLater

@@ -76,7 +76,7 @@ Verify that the station correctly sends TransactionEvent messages for offline tr
       "reason": "Transaction already processed"
     }
     ```
-14. Verify the station does NOT send the transaction again, and deletes its local record of it — a deletion it **MAY** defer by up to 72 hours ([`transaction-event.md` §5.1](../../../spec/profiles/transaction/transaction-event.md)).
+14. Verify the station does NOT send the transaction again, and deletes its local record of it — a deletion it **MAY** defer by up to 72 hours ([`transaction-event.md` §5.1](../../../spec/profiles/transaction/transaction-event.md#51-response-status-values)).
 15. Verify the station proceeds to the next transaction in the queue.
 
 ### Part C — RetryLater Response with Backoff
@@ -104,7 +104,7 @@ Verify that the station correctly sends TransactionEvent messages for offline tr
       "reason": "Receipt signature verification failed"
     }
     ```
-24. Verify the station flags the transaction for manual investigation (does NOT retry) and retains its local record, marked rejected — `Rejected` never orders a deletion ([`transaction-event.md` §5.1](../../../spec/profiles/transaction/transaction-event.md)).
+24. Verify the station flags the transaction for manual investigation (does NOT retry) and retains its local record, marked rejected — `Rejected` never orders a deletion ([`transaction-event.md` §5.1](../../../spec/profiles/transaction/transaction-event.md#51-response-status-values)).
 25. Verify the station proceeds to the next transaction in the queue.
 
 ## Expected Results

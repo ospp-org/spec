@@ -874,7 +874,7 @@ The model deliberately does **not** score deterministic security-property violat
 The revocation epoch belongs to the **platform**: a pass is valid at any station whatever its tenant, so every station holds the same value ([`06-security.md` §6.6](../spec/06-security.md#66-epoch-based-revocation)). To invalidate all outstanding OfflinePasses:
 
 1. Increment the platform's single `RevocationEpoch` — only a Platform Admin may; no tenant-level role can reach it — and record when the increment took effect: reconciliation judges each transaction against the epoch in force at its `endedAt`, so a bump after a wash flags that wash for review instead of rejecting it
-2. Push the new epoch to every connected station, whatever its tenant, via `ChangeConfiguration` (keys: `[{key: "RevocationEpoch", value: "new_value"}]`); a station that is offline receives it in the configuration of its next BootNotification RESPONSE
+2. Push the new epoch to every connected station, whatever its tenant, via `ChangeConfiguration` (keys: `[{key: "RevocationEpoch", value: "new_value"}]`); a station that is offline receives it in the configuration of its next `Accepted` BootNotification RESPONSE
 3. Stations will reject any OfflinePass with `revocationEpoch < new_epoch`
 4. When users reconnect, their app uploads the receipts it holds, then requests a fresh OfflinePass (with the new epoch)
 

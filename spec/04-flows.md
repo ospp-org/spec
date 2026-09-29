@@ -1489,7 +1489,7 @@ sequenceDiagram
    - **Step 6:** Run fraud scoring on the settled transaction (see below)
    - **Step 7:** Create session record
 6. Server responds `Accepted`
-7. SSP stops sending the transaction and deletes its record — deletion MAY be deferred by up to 72 hours ([`transaction-event.md` §5.1](profiles/transaction/transaction-event.md))
+7. SSP stops sending the transaction and deletes its record — deletion **MAY** be deferred by up to 72 hours ([`transaction-event.md` §5.1](profiles/transaction/transaction-event.md#51-response-status-values))
 8. Repeat for all pending transactions
 9. When every transaction has been answered, nothing remains to send. The records answered `Rejected` stay on the station, marked for investigation
 
