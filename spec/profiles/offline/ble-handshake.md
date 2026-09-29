@@ -312,7 +312,7 @@ The following rejection reason codes **MAY** appear in the AuthResponse `reason`
 | Reason Code | Error Code | Description |
 |----------------------------|:----------:|-----------------------------------------------|
 | `OFFLINE_PASS_INVALID` | 2002 | ECDSA P-256 signature verification failed. |
-| `OFFLINE_PASS_EXPIRED` | 2003 | Pass `expiresAt` has passed. |
+| `OFFLINE_PASS_EXPIRED` | 2003 | Pass `expiresAt` has passed, or the pass is older than this station's `OfflinePassMaxAge`. |
 | `OFFLINE_EPOCH_REVOKED` | 2004 | Pass revocation epoch is below the station's stored epoch. |
 | `OFFLINE_COUNTER_REPLAY` | 2005 | Counter is not greater than the last seen value. |
 | `BLE_AUTH_FAILED` | 2013 | Session key derivation or session proof is invalid. |

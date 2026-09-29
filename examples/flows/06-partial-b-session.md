@@ -332,7 +332,7 @@ is withdrawn and this pass does not carry it — see
 [`06-security.md` §6.1.1](../../spec/06-security.md#611-offlinepass-validation--10-checks).
 
 Separately from pass validation, the server authorizes the session within the pass's limits — 48
-credits (4 min × 12 credits/min) — and gates nothing on the wallet balance: a debit that took the wallet
+credits (4 min × 12 credits/min) — and gates nothing on the wallet balance: a debit that leaves the wallet
 below zero would leave the transaction pending until Bob next tops up
 ([`reconciliation.md` §8.2](../../spec/profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)). The server then:
 - Debits 48 credits from Bob's wallet (balance: 95 - 48 = 47)

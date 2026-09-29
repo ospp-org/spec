@@ -847,7 +847,7 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
 2. Verify ECDSA receipt signature — reject if it does not verify; never scored
 3. Record `txCounter` (operator alert on the station if the sequence is discontinuous; process anyway)
 4. Apply the reconcile-time gate (was the pass valid at transaction time, read through the station's clock offset?)
-5. Settle: recompute the cost by service kind from the signed receipt, never above what the authorization allowed, and debit the user wallet (a debit that leaves it below zero leaves the transaction pending until the user tops up)
+5. Settle: recompute the cost by service kind from the signed receipt, never above what the authorization allowed, and debit the user wallet — or, where the authorization already debited it, refund only ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)) — (a debit that leaves it below zero leaves the transaction pending until the user tops up)
 6. Run fraud scoring ([Chapter 06 §7.4](06-security.md#74-fraud-detection--offline-transactions)) — record `FraudDetected` and act on the band; the settled amount does not change
 7. Create session record
 8. Respond `Accepted`
