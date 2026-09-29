@@ -226,7 +226,7 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
 15. A Partial-B session that loses MQTT reconciles in the **pass-form**, carrying `offlinePassId` and `passCounter` and **not** `sessionId`.
 16. `passCounter` is the same value across the BLE request, the MQTT authorize request, the envelope, and the signed receipt.
 17. Settlement happens **once**: the true-up, keyed on `(offlinePassId, passCounter)`, is refund-only — it refunds `priorDebit − cappedCost` when the capped cost is lower, never debits more, and never re-debits the full amount.
-18. The settled amount is the server's recomputation, never above `creditsAuthorized`, and may drive the balance negative — which leaves the transaction pending until the user next tops up and blocks further pass issuance, rather than being refused.
+18. The settled amount is the server's recomputation, never above `creditsAuthorized`, and may drive the balance negative — which leaves the transaction pending until the user next tops up and blocks further pass issuance while the balance is below zero, rather than being refused.
 19. A distinct `offlineTxId` reusing a settled `(offlinePassId, passCounter)` is hard-rejected with `2005` and an audit record, before any persistence.
 
 ## Failure Criteria
@@ -250,5 +250,5 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
 17. `passCounter` in the envelope differs from the value in the signed `receipt.data`, or from the `counter` presented at authorize time.
 18. The server debits the full amount at reconcile for a session already debited at authorize time, or debits anything above the authorize-time debit. **This is the double-spend the settle-once rule exists to prevent, and it is invisible in every green happy path**: both debits are individually well-formed, and only the correlation on `(offlinePassId, passCounter)` distinguishes the second from a first.
 19. The server settles the station-reported `creditsCharged` instead of its own recomputation, whether or not the two agree.
-20. The server refuses a debit because it would make the balance negative, losing the only record of what was owed; or allows it and does not restrict further offline pass issuance; or expires, writes off or settles by any other route a transaction left pending below zero before the user tops up.
+20. The server refuses a debit because it would make the balance negative, losing the only record of what was owed; or allows it and does not refuse further offline pass issuance while the balance is below zero; or expires, writes off or settles by any other route a transaction left pending below zero before the user tops up.
 21. A distinct `offlineTxId` reusing a settled `(offlinePassId, passCounter)` is accepted, or is answered `Duplicate` rather than `Rejected` — `Duplicate` orders the station to delete a record this case requires be retained.

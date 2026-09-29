@@ -824,7 +824,7 @@ sequenceDiagram
 | Step | Error | Code | App Action |
 |:----:|-------|------|------------|
 | 11 | Signature invalid | `2002` | Display "Pass invalid", disconnect |
-| 11 | Pass expired | `2003` | Display "Pass expired, go online to renew" |
+| 11 | Pass expired, or older than this station's `OfflinePassMaxAge` | `2003` | Display "Pass not accepted here — go online to renew" |
 | 11 | Epoch revoked | `2004` | Display "Pass revoked" |
 | 11 | Limits exceeded | `4002` | Display "Offline limit reached, go online" |
 | 11 | Rate limited | `4003` | Display "Wait before next session" |

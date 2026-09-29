@@ -186,13 +186,14 @@ The full lifecycle of an OfflinePass is as follows:
 
    Both mobile platforms provide such a key. On iOS the Secure Enclave generates and holds P-256 private keys that cannot be exported, and signs with them. On Android the Keystore generates EC P-256 keys whose key material never enters the application process, can bind them to secure hardware — the Trusted Execution Environment, or StrongBox — and lets the app and, through key attestation, the server check that a key is hardware-backed. The platform documentation this rests on is cited in [`app-contract.md` §3.2](app-contract.md#32-the-device-key).
 
-   **A station's own age limit is not the issuer's concern.** `OfflinePassMaxAge` ([`08-configuration.md` §5](../../08-configuration.md#5-offline--ble-configuration-keys)) is each station's own, stricter refusal threshold, which its operator may change at any time. The issuer cannot know which station will validate a pass — any station that accepts offline passes may (§2.3) — so it signs the platform lifetime and nothing else. A station whose `OfflinePassMaxAge` is below a pass's age refuses that pass with `2003` — on the Partial-B path the server refuses it for the station, with a `reason` rather than a code ([`authorize-offline-pass.md` §5, §6](authorize-offline-pass.md#5-validation-checks)) — and the refusal tells the app that its pass is too old for that station, not what the station's limit is.
+   **A station's own age limit is not the issuer's concern.** `OfflinePassMaxAge` ([`08-configuration.md` §5](../../08-configuration.md#5-offline--ble-configuration-keys)) is each station's own, stricter refusal threshold, which its operator may change at any time. The issuer cannot know which station will validate a pass — any station that accepts offline passes may (§2.3) — so it signs the platform lifetime and nothing else. A station whose `OfflinePassMaxAge` is below a pass's age refuses that pass with `2003` — on the Partial-B path the server refuses it for the station, with a `reason` rather than a code ([`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks), [§7](authorize-offline-pass.md#7-error-codes)) — and the refusal tells the app that its pass is too old for that station, not what the station's limit is.
 2. **Storage:** The app stores the pass in encrypted secure storage (e.g., Android Keystore / iOS Keychain). The pass **MUST NOT** be stored in plaintext or in application-accessible storage. The private half of the device key never leaves the hardware-backed keystore.
 3. **Pre-arming:** The app **MAY** request a new OfflinePass proactively (background pre-arming) before going offline, ensuring the user always has a valid pass available.
 
    3a. **Re-issuance (Normative).** The allowance in a pass is a **snapshot of the wallet at issue
    time**, and a snapshot is only as good as its age. Whenever it has connectivity, the app
-   **MUST** request a fresh pass on each of the following, and the server **MUST** issue one
+   **MUST** request a fresh pass on each of the following, after uploading the receipts it holds
+   ([`app-contract.md` §4.3](app-contract.md#43-rules)), and the server **MUST** issue one
    reflecting the wallet as it stands at that moment, unless it refuses issuance
    ([`app-contract.md` §3.5](app-contract.md#35-refusals)):
 

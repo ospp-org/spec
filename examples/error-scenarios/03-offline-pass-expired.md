@@ -199,8 +199,8 @@ at the top suggests:
 ## Recovery
 
 1. **Immediate option -- find connectivity:** Alice walks to an area with Wi-Fi or
-   cellular signal. The app's ConnectivityDetector detects the network change and
-   automatically requests a new OfflinePass.
+   cellular signal. The app's ConnectivityDetector detects the network change,
+   uploads the receipts it holds, and requests a new OfflinePass.
 
 2. **Pass issuance:** Once online, the app calls `POST /api/v1/offline/passes`
    ([`app-contract.md` §3](../../spec/profiles/offline/app-contract.md#3-pass-issuance))

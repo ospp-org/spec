@@ -341,7 +341,7 @@ specification. Where a definition involves a requirement, normative language
 : The process of synchronizing **Offline Transactions** with the server after
   connectivity is restored. The station **MUST** upload all pending offline
   transaction records, and the app **MUST** upload its own copy of every receipt it holds;
-  whichever copy of a receipt arrives first may settle, and the other is a `Duplicate`. The
+  whichever copy of a receipt arrives first may settle, and once one has settled the other is a `Duplicate`. The
   server **MUST** take each through deduplication, receipt signature verification and the
   re-validation gate, then settle it — never above what its authorization allowed — and
   only then score it for fraud, which never changes the settled amount. A debit that
