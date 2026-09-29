@@ -224,8 +224,8 @@ at the top suggests:
    OfflinePass to successfully complete BLE authentication.
 
 4. **Prevention -- re-issuance and pre-arming:** Whenever it has connectivity, the app
-   requests a fresh pass at application start, after each use of the pass and after each
-   top-up ([`offline-pass.md` §6](../../spec/profiles/offline/offline-pass.md#6-lifecycle)),
+   uploads the receipts it holds and requests a fresh pass at application start, after each use
+   of the pass and after each top-up ([`offline-pass.md` §6](../../spec/profiles/offline/offline-pass.md#6-lifecycle)),
    and its BackgroundPreArmingService requests one before the current pass
    expires, reducing the chance of this scenario occurring.
 

@@ -286,7 +286,7 @@ sequenceDiagram
     end
 
     Note over Station: Reconciles via TransactionEvent when MQTT reconnects
-    Note over User: Uploads its receipt copy when online, the first copy to arrive may settle
+    Note over User: Uploads its receipt copy when online, the first copy to arrive may settle; once one has settled, the other is answered Duplicate
 ```
 
 ---

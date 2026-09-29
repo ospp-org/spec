@@ -1806,7 +1806,7 @@ Consolidated timeout values across all flows:
 | PaymentIntent pending | 5 min | Marked expired |
 | BLE scan | 10-30s | Return to IDLE |
 | BLE handshake step | 10s | ERROR state |
-| AuthorizeOfflinePass | 15s | Fallback to local validation |
+| AuthorizeOfflinePass | 15s | **MAY** fall back to local validation if `OfflineModeEnabled` is `true`; otherwise refuse |
 | TransactionEvent | 60s | Retry later |
 | ChangeConfiguration | 60s | Log failure |
 | GetConfiguration | 30s | Log failure |

@@ -54,6 +54,7 @@ Bob is at "Station Alpha -- Example City" and wants a deluxe treatment on Bay 2.
 15:12:08.000  ServiceStatus update: 120s elapsed, 120s remaining
 15:13:08.000  ServiceStatus update: 180s elapsed, 60s remaining
 15:14:08.000  Timer expires — station auto-stops dispenser
+15:14:08.100  Station sends SessionEnded EVENT (TimerExpired, 240s) — the server settles from it
 15:14:08.400  Station sends StopServiceResponse (240s, 48 credits)
 15:14:09.000  Station generates ECDSA receipt, increments txCounter
 15:14:09.200  Station sends ServiceStatus (ReceiptReady)
@@ -586,11 +587,34 @@ The app timer reaches `4:00` and the progress bar fills completely. A notificati
 
 ---
 
-### Step 16: Station Reports Completion via MQTT (15:14:08.200)
+### Step 16: Station Reports Completion via MQTT (15:14:08.100)
 
-Since the station is online, it reports the bay status change in real-time:
+Since the station is online, it reports the end of the session and then the bay's new state in real time. The SessionEnded EVENT is the delivery record the server settles from, and the server processes it before the StatusNotification that follows it ([`session-ended.md` §5](../../spec/profiles/transaction/session-ended.md#5-processing-rules); [`03-messages.md` §5.4](../../spec/03-messages.md#54-sessionended)):
 
 **MQTT Topic:** `ospp/v1/stations/stn_a1b2c3d4/to-server`
+
+```json
+{
+  "messageId": "msg_sessend_5d6e7f89",
+  "messageType": "Event",
+  "action": "SessionEnded",
+  "timestamp": "2026-02-13T15:14:08.100Z",
+  "source": "Station",
+  "protocolVersion": "0.3.0",
+  "payload": {
+    "sessionId": "sess_d5e6f7a8b9c0",
+    "bayId": "bay_a2b3c4d5e6f7",
+    "reason": "TimerExpired",
+    "actualDurationSeconds": 240,
+    "creditsCharged": 48,
+    "meterValues": {
+      "liquidMl": 0,
+      "consumableMl": 340,
+      "energyWh": 180
+    }
+  }
+}
+```
 
 ```json
 {
@@ -623,7 +647,7 @@ Since the station is online, it reports the bay status change in real-time:
 }
 ```
 
-The server updates session `sess_d5e6f7a8b9c0` to `completed` and settles it: the full 4 minutes were delivered, so the charge is the full 48 credits and there is no refund. Settlement never exceeds the `creditsAuthorized` of the authorization (48), and any true-up against the authorize-time debit is refund-only ([`reconciliation.md` §8](../../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)).
+The server updates session `sess_d5e6f7a8b9c0` to `completed` and settles it from the SessionEnded: the full 4 minutes were delivered, so the charge is the full 48 credits and there is no refund. Settlement never exceeds the `creditsAuthorized` of the authorization (48), and any true-up against the authorize-time debit is refund-only ([`reconciliation.md` §8](../../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)).
 
 | Field | Value |
 |-------|-------|
@@ -832,6 +856,8 @@ On the Operator Dashboard, Charlie sees the session in real-time because the sta
      |                          | timer expires (240s)     |
      |                          | stop service                 |
      |<------ FFF4: StopServiceResponse (240s, 48cr)     |
+     |                          |  SessionEnded (Timer)     |
+     |                          |------------------------->|
      |                          |  StatusNotif (Finishing)  |
      |                          |------------------------->|
      |                          |                          |
@@ -853,7 +879,7 @@ On the Operator Dashboard, Charlie sees the session in real-time because the sta
 
 2. **Server debits wallet at authorization time.** The server debits Bob's wallet at step 9, before the service even starts. This matches the online flow behavior, and the pass's limits, checked against the server's count at every station, bound what the next session may use. There is no risk of over-billing: the `creditsAuthorized` of the response caps what the session may be charged, and any true-up is refund-only ([`reconciliation.md` §8](../../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)).
 
-3. **Settled online; reconciled only if MQTT is lost.** Because the station is online throughout the session, all events (StatusNotification, MeterValues) are sent to the server in real time via MQTT, and the server settles the session when the station reports its end. Had the station lost MQTT before then, it would have reconciled the transaction through TransactionEvent, and the server would have settled it once, as a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](../../spec/profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)). The receipt on FFF6 is Bob's copy, which the app uploads once it has connectivity ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)).
+3. **Settled online; reconciled only if MQTT is lost.** Because the station is online throughout the session, all events (StatusNotification, MeterValues, SessionEnded) are sent to the server in real time via MQTT, and the server settles the session from the SessionEnded the station sends at its end. Had the station lost MQTT before then, it would have reconciled the transaction through TransactionEvent, and the server would have settled it once, as a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](../../spec/profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)). The receipt on FFF6 is Bob's copy, which the app uploads once it has connectivity ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)).
 
 4. **MQTT fallback if AuthorizeOfflinePass times out.** If the server does not respond within 15 seconds, the station **MAY** fall back to local validation (as in Full Offline, Flow 04) if its `OfflineModeEnabled` is `true`, and then within its own offline limits ([`authorize-offline-pass.md` §6](../../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules)). This graceful degradation ensures the user is not stuck if MQTT has a momentary hiccup. The spec defines this in section 5c error paths.
 
