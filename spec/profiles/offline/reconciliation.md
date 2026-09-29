@@ -64,7 +64,7 @@ The station maintains a monotonically increasing transaction counter per station
 
 ## 5. Receipt Signature Verification
 
-The server verifies the ECDSA-P256-SHA256 signature on each offline transaction receipt:
+The server verifies the ECDSA-P256-SHA256 signature on each offline transaction receipt that §3 does not answer:
 
 1. The server **selects** the **receipt-signing** ECDSA P-256 public key of the station the signed receipt names (`stationId`, [`06-security.md` §6.2](../../06-security.md#62-transaction-receipt-signing--ecdsa-p-256)) from that station's retained key set, using the server-authoritative anchor of [Chapter 06 — Security §4.3](../../06-security.md) — for a pass-form receipt, the OfflinePass's own validity window; **never** the station's current key by default, **never** a station-supplied timestamp, and **never** the station's mTLS key. Selecting by the signed `stationId` before the signature is checked is safe: a receipt that names another station fails to verify under that station's key.
 2. The server reconstructs the canonical receipt payload by Base64-decoding the `receipt.data` field.
@@ -73,7 +73,7 @@ The server verifies the ECDSA-P256-SHA256 signature on each offline transaction 
 
 ## 6. Reconcile-Time Re-validation Gate
 
-Before settlement (§8) and fraud scoring (§7), the server **MUST** apply a deterministic **hard-reject gate** to every TransactionEvent and every uploaded receipt. This gate is distinct from fraud scoring: it consists of confirmed security-property violations (not probabilistic signals), and each failure **MUST** result in `Rejected` status, no persistence, no wallet debit, and a `SecurityEvent` emission (per §6.3). The gate runs after receipt signature verification (§5) and before settlement (§8).
+Before settlement (§8) and fraud scoring (§7), the server **MUST** apply a deterministic **hard-reject gate** to every TransactionEvent and every uploaded receipt that §3 does not answer. This gate is distinct from fraud scoring: it consists of confirmed security-property violations (not probabilistic signals), and each failure **MUST** result in `Rejected` status, no persistence, no wallet debit, and a `SecurityEvent` emission (per §6.3). The gate runs after receipt signature verification (§5) and before settlement (§8).
 
 ### 6.1 Check List
 
@@ -266,14 +266,13 @@ A server **MUST NOT** issue an additional debit above that amount for any reason
    and refusing the debit would lose the only record of what was owed.
 5. **A debit that leaves the wallet below zero leaves its transaction pending (Normative).** The
    transaction is recorded and the wallet carries the debt, but the transaction is **pending
-   settlement**: neither the tenant whose station delivered the wash nor the platform collects it —
+   collection**: neither the tenant whose station delivered the wash nor the platform collects it —
    nothing is paid to the tenant for it and nothing is booked to the platform — until the user next
-   tops up; that top-up settles it. It stays pending **with no time limit**: the server **MUST NOT**
-   expire it, write it off, or settle it by any other route. While the balance is below zero the
+   tops up; that top-up releases it for collection. It stays pending **with no time limit**: the server
+   **MUST NOT** expire it, write it off, or collect it by any other route. While the balance is below zero the
    server **MUST** trigger a top-up reminder and **MUST NOT** issue the user an offline pass
-   ([`app-contract.md` §3.5](app-contract.md#35-refusals)). Pending concerns what the transaction owes, not its debit:
-   the debit is posted and the transaction has settled against the wallet (§8); what waits for the top-up is
-   its collection. This is not a dispute over the amount —
+   ([`app-contract.md` §3.5](app-contract.md#35-refusals)). Pending concerns collection, not the debit: the debit
+   stands, and what waits for the top-up is the transaction's collection. This is not a dispute over the amount —
    the amount is the server's own recomputation — so it is settled by payment, not by adjudication.
 6. The user is notified of the charges upon the next app open or push notification.
 
@@ -305,7 +304,7 @@ When the gate resolved the transaction to a prior authorization that was **alrea
 
 1. The server reads the issue-time debit amount (`priorDebit`): the pre-authorized maximum (the signed `creditsAuthorized`) for Partial A; the recorded authorize-time debit for Partial B.
 2. The server recomputes the final cost per the **Billing Authority** rule (`04-flows.md` §6 — by service kind, from the signed receipt, at the tariff in force when the session ran; the station-reported `creditsCharged` is advisory, and the server **MUST** recompute regardless of it) and caps it (§8): the signed `creditsAuthorized` for Partial A, the authorize-time `creditsAuthorized` for Partial B. It then applies a **refund-only true-up**: when the capped cost is below `priorDebit` it refunds `priorDebit − cappedCost`, and otherwise it changes nothing. It **MUST NOT** debit more than `priorDebit` and **MUST NOT** re-debit the full amount. A tariff that rose during the offline window does not raise what the user pays above what was authorized.
-3. The true-up shares the **same idempotency key** as the authorize-time debit, derived from the form's correlation key above — `(authId, sessionId)` for the auth-form, `(offlinePassId, passCounter)` for the pass-form — so a retried reconcile or a late-arriving duplicate cannot double-apply it. The rules of §8.1 on a negative balance, pending settlement and notification apply to a Partial-B session's authorize-time debit, whether the session settles online, when the station reports its end, or through this reconciliation. A Partial-A authorization is refused at issue when the balance does not cover it ([`04-flows.md` §5b](../../04-flows.md#5b-partial-a--phone-online-station-offline)).
+3. The true-up shares the **same idempotency key** as the authorize-time debit, derived from the form's correlation key above — `(authId, sessionId)` for the auth-form, `(offlinePassId, passCounter)` for the pass-form — so a retried reconcile or a late-arriving duplicate cannot double-apply it. The rules of §8.1 on a negative balance, pending collection and notification apply to a Partial-B session's authorize-time debit, whether the session settles online, when the station reports its end, or through this reconciliation. A Partial-A authorization is refused at issue when the balance does not cover it ([`04-flows.md` §5b](../../04-flows.md#5b-partial-a--phone-online-station-offline)).
 4. The server marks the authorization `reconciled` and records the correlation on the transaction: `reconciled_session_id` on the auth-form, where a `sessionId` exists; the resolved authorization's own identifier on the pass-form, where one does not.
 
 > **Forward-guard note (finding N11).** The Partial-B authorize-time-debit path this rule guards is **not yet implemented server-side** (the offline session-creation path is a placeholder at the time of writing), so no double-debit exists today. The rule is specified now so that when that path lands it is built settle-once-correct from the start: the authorize-time debit and the reconcile true-up **MUST** present the same idempotency key — **the one rule 3 above names for the resolved form**, `(authId, sessionId)` for the auth-form and `(offlinePassId, passCounter)` for the pass-form. Until `0.25.0` this sentence said *"the same `sessionId`-derived idempotency key"*, which `0.24.0` had already made unsatisfiable everywhere it mattered: the case this note guards is the **Partial-B offline fallback**, which reconciles in the **pass-form**, and §8 states in terms that `sessionId` *"is not available on the pass-form and **MUST NOT** be required there"*. `0.24.0` re-keyed the rule and repaired the table above; this note kept the old key, and it is the only normative sentence an implementer of the unbuilt path reads. It was the same defect in a second site — see the class index in [`KNOWN-ISSUES.md`](../../../KNOWN-ISSUES.md#class--an-obligation-no-field-no-code-and-no-actor-can-carry), instance 7. Partial A (§6.7) exercises the rule from its first implementation, since it always debits at issue.

@@ -339,11 +339,11 @@ specification. Where a definition involves a requirement, normative language
 
 **Reconciliation**
 : The process of synchronizing **Offline Transactions** with the server after
-  connectivity is restored. The station **MUST** upload every offline
-  transaction record it still holds, and the app **MUST** upload its own copy of every receipt it holds;
+  connectivity is restored. The station **MUST** upload every offline transaction
+  record the server has not yet answered `Accepted`, `Duplicate` or `Rejected`, and the app **MUST** upload its own copy of every receipt it holds;
   whichever copy of a receipt arrives first may settle, and once one has settled the other is a `Duplicate`. The
-  server **MUST** take each through deduplication, receipt signature verification and the
-  re-validation gate, then settle it — never above what its authorization allowed — and
+  server **MUST** take each through deduplication and, when deduplication does not answer it,
+  receipt signature verification and the re-validation gate, then settle it — never above what its authorization allowed — and
   only then score it for fraud, which never changes the settled amount. A debit that
   leaves the wallet below zero leaves its transaction pending until the user next tops up.
   See [`reconciliation.md`](profiles/offline/reconciliation.md) and

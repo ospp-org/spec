@@ -54,8 +54,8 @@ Bob is at "Station Alpha -- Example City" and wants a deluxe treatment on Bay 2.
 15:12:08.000  ServiceStatus update: 120s elapsed, 120s remaining
 15:13:08.000  ServiceStatus update: 180s elapsed, 60s remaining
 15:14:08.000  Timer expires — station auto-stops dispenser
-15:14:08.100  Station sends SessionEnded EVENT (TimerExpired, 240s) — the server settles from it
 15:14:08.050  Station sends StopServiceResponse (240s, 48 credits)
+15:14:08.100  Station sends SessionEnded EVENT (TimerExpired, 240s) — the server settles from it
 15:14:09.000  Station generates ECDSA receipt, increments txCounter
 15:14:09.200  Station sends ServiceStatus (ReceiptReady)
 15:14:09.500  App reads Receipt from FFF6, stores locally

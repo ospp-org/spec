@@ -977,7 +977,7 @@ sequenceDiagram
 4. **App** requests biometric/PIN confirmation
 5. **App** writes **OfflineAuthRequest** [MSG-031] with the OfflinePass
 6. **SSP** does NOT validate locally — instead forwards the pass to the Server via **AuthorizeOfflinePass REQUEST** [MSG-002] over MQTT
-7. **Server** validates the pass ([`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks) — signature, expiry, epoch, device, limits, rate, counter, individual revocation), debits user wallet
+7. **Server** validates the pass ([`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks) — signature, expiry, epoch, device, limits, rate, counter, individual revocation), debits the user's wallet by the `creditsAuthorized` of its answer
 8. **Server** sends **AuthorizeOfflinePass RESPONSE** [MSG-002] `Accepted` with `sessionId`, `durationSeconds`, `creditsAuthorized`
 9. **SSP** relays result as **AuthResponse** [MSG-033] `Accepted` to App via BLE
 10. **App** writes **StartServiceRequest** [MSG-034] → SSP starts service
@@ -1258,14 +1258,14 @@ sequenceDiagram
 | 8 | Webhook timeout (5 min) | PaymentIntent → expired, no credits |
 | 8 | HMAC verification failed | Reject webhook, log SecurityEvent |
 
-A top-up also settles the user's **pending** offline transactions — those whose debit left the wallet below zero ([`reconciliation.md` §8.1](profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)). Until the user tops up, neither the tenant whose station delivered such a wash nor the platform collects it.
+A top-up also releases for collection the user's **pending** transactions — those whose debit left the wallet below zero ([`reconciliation.md` §8.1](profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)). Until the user tops up, neither the tenant whose station delivered such a wash nor the platform collects it.
 
 ### Postconditions
 
 | Component | State |
 |-----------|-------|
 | User Wallet | Balance increased by `packageCredits + bonusCredits` |
-| Pending offline transactions | Settled by the top-up |
+| Pending transactions | Released for collection by the top-up |
 | PaymentIntent | `captured` → `settled` |
 | Fiscal Invoice | Generated for local-currency amount |
 

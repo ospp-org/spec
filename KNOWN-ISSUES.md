@@ -2564,7 +2564,7 @@ reconciliation, never a reconcile gate.
 > ([`reconciliation.md` §8](spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)). And a
 > debit that takes the wallet below zero leaves its transaction **pending**: the wallet carries the
 > debt, but neither the tenant whose station delivered the wash nor the platform collects it until the
-> user next tops up, which settles it, and it stays pending with no time limit; while the balance is
+> user next tops up, which releases it for collection, and it stays pending with no time limit; while the balance is
 > below zero no offline pass is issued
 > ([§8.1](spec/profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
 > So the residue below is no longer a difference that *"surfaces as balance and is

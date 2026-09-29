@@ -1352,7 +1352,7 @@ Completeness and anti-replay are carried elsewhere, on values the station does n
 
 **Server handling during reconciliation:**
 1. Receive TransactionEvent [MSG-007] with `txCounter` and `receipt`
-2. Verify ECDSA signature on the receipt (§6.2) — this is the check that gates
+2. Verify ECDSA signature on the receipt (§6.2), unless deduplication already answered it — this is the check that gates
 3. Persist the `txCounter` on the transaction record as forensic evidence
 4. If the counter is discontinuous with what is already recorded for this station, raise an **operator alert on the station** and settle the transaction normally. The server **MUST NOT** condition settlement, deduplication or response status on the `txCounter`. [reconciliation.md §4.2](profiles/offline/reconciliation.md#42-what-the-server-does-with-it) is the single source of truth; this chapter does not restate it.
 

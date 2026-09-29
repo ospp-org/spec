@@ -131,7 +131,7 @@ This is the path that destroyed money before 0.9.0, when a retired rule of §4.2
 45. Reconcile an offline transaction with `creditsCharged: 12`.
 46. Verify the server allows the debit: a debit that would result in a negative balance is not rejected ([`reconciliation.md` §8.1](../../../spec/profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
 47. Verify the user's wallet is now `-7.0` credits.
-48. Verify the server triggers a top-up reminder notification for the user, records the transaction as **pending settlement** — collected by neither the station's tenant nor the platform until the user next tops up — and issues the user no offline pass while the balance is below zero ([`reconciliation.md` §8.1](../../../spec/profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
+48. Verify the server triggers a top-up reminder notification for the user, records the transaction as **pending collection** — collected by neither the station's tenant nor the platform until the user next tops up — and issues the user no offline pass while the balance is below zero ([`reconciliation.md` §8.1](../../../spec/profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
 
 ## Expected Results
 
@@ -158,4 +158,4 @@ This is the path that destroyed money before 0.9.0, when a retired rule of §4.2
 9. Server rejects a transaction that would cause a negative wallet balance (should allow it).
 10. Station does not retransmit unacknowledged transactions after a reconnection.
 11. Total wallet deduction does not match the sum of the server's recomputed, capped amounts across all reconciled transactions — equal here, by Precondition 7, to the sum of the reported `creditsCharged`.
-12. The server expires, writes off or settles by any other route a transaction left pending below zero before the user tops up, or issues the user an offline pass while the balance is below zero.
+12. The server expires, writes off or collects by any other route a transaction left pending below zero before the user tops up, or issues the user an offline pass while the balance is below zero.

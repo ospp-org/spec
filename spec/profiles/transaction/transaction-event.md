@@ -94,7 +94,7 @@ This section previously read *"**MUST** respond with `Duplicate` regardless of p
 
 ### 7.3 Reconciliation
 
-When the station reports `pendingOfflineTransactions > 0` in BootNotification, the server **SHOULD** expect TransactionEvent messages after acceptance. The server **MUST** reconcile offline charges against the user's wallet balance and apply any adjustments (under- or over-charge corrections).
+When the station reports `pendingOfflineTransactions > 0` in BootNotification, the server **SHOULD** expect TransactionEvent messages after acceptance. The server **MUST** settle each offline transaction against the user's wallet as [`reconciliation.md` §8](../offline/reconciliation.md#8-wallet-reconciliation) states: recomputed from the signed receipt, capped by what its authorization allowed, and refund-only where the wallet was debited at authorization.
 
 ## 8. Error Handling
 
