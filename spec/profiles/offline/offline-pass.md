@@ -33,7 +33,7 @@ An **OfflinePass** is a server-signed credential that authorizes a user to start
 | `maxCreditsPerTx` | integer | Yes | Maximum credits for a single session — the per-session limit (minimum 1). |
 | `allowedServiceTypes` | string[] | **No — withdrawn** | **WITHDRAWN in `0.25.0`.** Accepted and ignored for one transition step, then removed. Servers **MUST NOT** issue it; receivers **MUST NOT** reject on it. No validation check in this specification has ever read it — see [`06-security.md` §6.1.1](../../06-security.md#611-offlinepass-validation--10-checks). |
 
-**A request above a limit is refused, never reduced (Normative).** A validator that finds the cost of a requested service above `maxCreditsPerTx`, or above what remains of `maxTotalCredits`, **MUST** refuse the request (§4 checks #7 and #8) and **MUST NOT** shorten the service, lower its price or otherwise reduce the request until it fits. The customer chooses; the protocol does not choose for them. The app **MUST** show the pass's limits — the per-session limit, the credits remaining under `maxTotalCredits` and the uses remaining under `maxUses` — before the customer chooses a service, so that a refusal on a limit is one the customer could have foreseen.
+**A request above a limit is refused, never reduced (Normative).** A validator that finds the cost of a requested service above `maxCreditsPerTx`, or above what remains of `maxTotalCredits`, **MUST** refuse the request (§4 checks #7 and #8) and **MUST NOT** shorten the service, lower its price or otherwise reduce the request until it fits. The customer chooses; the protocol does not choose for them. The app **MUST** show the pass's limits — the per-session limit, the credits remaining under `maxTotalCredits` and the uses remaining under `maxUses` — before the customer chooses a service, so that a refusal on a limit is one the customer could have foreseen. A station counts only its own use of a pass (§5), so across stations it is the app that keeps the pass within its limits: the app **MUST NOT** request a service whose estimated cost exceeds what the pass has left by its own count — the receipts it holds against that pass — and **MUST** present only the latest pass it was issued.
 
 ### 2.2 constraints Object
 
@@ -80,7 +80,7 @@ The server **MUST** rotate its signing key periodically, and it manages its keys
 | Validator | Checks it **MUST** perform |
 |---|---|
 | **Station**, validating locally over BLE (Full Offline) | **nine** — #1--#4 and #6--#10 |
-| **Server**, at Partial-B authorize-time | the same nine against its own state, and individual revocation — [`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks) |
+| **Server**, at Partial-B authorize-time | the same nine — the age bound of #2 against the forwarding station's `OfflinePassMaxAge` — and individual revocation — [`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks) |
 
 Processing **MUST** stop at the first failure.
 
@@ -166,9 +166,9 @@ Processing **MUST** stop at the first failure.
 - the per-pass counters it keeps itself (checks #6--#10);
 - the availability of the bay and service requested.
 
-It **cannot** refuse on what only the server knows: the user's current wallet balance, a block or a revocation issued after the station went offline, use of the same pass at other stations, or which tenant's customer the user is — the last by design (§2.3). Those are settled where the server is reachable: at Partial-B authorize time and at reconciliation.
+It **cannot** refuse on what only the server knows: a block or an individual revocation, whenever it was issued; an epoch the platform moved after the station last received configuration; use of the same pass at other stations; the user's current wallet balance; or which tenant's customer the user is — the last by design (§2.3). The server acts on the first three where it is reachable: at Partial-B authorize time, where each refuses ([`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks)), and at reconciliation, where revocation and the epoch refuse ([`reconciliation.md` §6.1](reconciliation.md#61-check-list)) and use at other stations caps what is settled ([`reconciliation.md` §8](reconciliation.md#8-wallet-reconciliation)). The wallet balance gates no offline wash on either path: a debit that takes the wallet below zero leaves its transaction pending until the user next tops up ([`reconciliation.md` §8.1](reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
 
-**Trade-off.** Epoch revocation is coarse-grained: it revokes every pass issued before the bump, not one user's. That is acceptable because a pass that escapes a revocation — one presented to a station that has not heard of it — is still **bound to its device** (§2, `devicePublicKey`; see the note on §4 check #4) and **capped by its own limits** (§2.1): what it can buy offline is bounded by `maxUses`, `maxTotalCredits` and `maxCreditsPerTx`, and settlement never charges above them ([`reconciliation.md` §8](reconciliation.md#8-wallet-reconciliation)). It is not acceptable because passes are short: a pass may live ten days.
+**Trade-off.** Epoch revocation is coarse-grained: it revokes every pass issued before the bump, not one user's. That is acceptable because a pass that escapes a revocation — one presented to a station that has not heard of it — is still **bound to its device** (§2, `devicePublicKey`; at the station check #4 compares `deviceId` until a BLE message carries a proof of possession of that key — see the note on §4 check #4) and **capped by its own limits** (§2.1): what it can be charged for is bounded by `maxUses`, `maxTotalCredits` and `maxCreditsPerTx`, because settlement never charges above them ([`reconciliation.md` §8](reconciliation.md#8-wallet-reconciliation)), and what it can be delivered is bounded at each station by that station's own count of the pass (checks #6--#8) and its own offline limits (§2.2). It is not acceptable because passes are short: a pass may live ten days.
 
 ## 6. Lifecycle
 
@@ -186,14 +186,15 @@ The full lifecycle of an OfflinePass is as follows:
 
    Both mobile platforms provide such a key. On iOS the Secure Enclave generates and holds P-256 private keys that cannot be exported, and signs with them. On Android the Keystore generates EC P-256 keys whose key material never enters the application process, can bind them to secure hardware — the Trusted Execution Environment, or StrongBox — and lets the app and, through key attestation, the server check that a key is hardware-backed. The platform documentation this rests on is cited in [`app-contract.md` §3.2](app-contract.md#32-the-device-key).
 
-   **A station's own age limit is not the issuer's concern.** `OfflinePassMaxAge` ([`08-configuration.md` §5](../../08-configuration.md#5-offline--ble-configuration-keys)) is each station's own, stricter refusal threshold, which its operator may change at any time. The issuer cannot know which station will validate a pass — any station that accepts offline passes may (§2.3) — so it signs the platform lifetime and nothing else. A station whose `OfflinePassMaxAge` is below a pass's age refuses that pass with `2003`, and the app learns that station's limit from the refusal.
+   **A station's own age limit is not the issuer's concern.** `OfflinePassMaxAge` ([`08-configuration.md` §5](../../08-configuration.md#5-offline--ble-configuration-keys)) is each station's own, stricter refusal threshold, which its operator may change at any time. The issuer cannot know which station will validate a pass — any station that accepts offline passes may (§2.3) — so it signs the platform lifetime and nothing else. A station whose `OfflinePassMaxAge` is below a pass's age refuses that pass with `2003` — on the Partial-B path the server refuses it for the station ([`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks)) — and the refusal tells the app that its pass is too old for that station, not what the station's limit is.
 2. **Storage:** The app stores the pass in encrypted secure storage (e.g., Android Keystore / iOS Keychain). The pass **MUST NOT** be stored in plaintext or in application-accessible storage. The private half of the device key never leaves the hardware-backed keystore.
 3. **Pre-arming:** The app **MAY** request a new OfflinePass proactively (background pre-arming) before going offline, ensuring the user always has a valid pass available.
 
    3a. **Re-issuance (Normative).** The allowance in a pass is a **snapshot of the wallet at issue
    time**, and a snapshot is only as good as its age. Whenever it has connectivity, the app
    **MUST** request a fresh pass on each of the following, and the server **MUST** issue one
-   reflecting the wallet as it stands at that moment:
+   reflecting the wallet as it stands at that moment, unless it refuses issuance
+   ([`app-contract.md` §3.5](app-contract.md#35-refusals)):
 
    | Trigger | Why |
    |---|---|

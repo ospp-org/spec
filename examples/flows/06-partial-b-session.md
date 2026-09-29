@@ -330,8 +330,10 @@ Nor does anything compare the requested `svc_deluxe` with a list of services: `a
 is withdrawn and this pass does not carry it — see
 [`06-security.md` §6.1.1](../../spec/06-security.md#611-offlinepass-validation--10-checks).
 
-Separately from pass validation, the server confirms Bob's wallet holds 95 credits, enough for the
-48-credit session (4 min × 12 credits/min). The server then:
+Separately from pass validation, the server authorizes the session within the pass's limits — 48
+credits (4 min × 12 credits/min) — and gates nothing on the wallet balance: a debit that took the wallet
+below zero would leave the transaction pending until Bob next tops up
+([`reconciliation.md` §8.2](../../spec/profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)). The server then:
 - Debits 48 credits from Bob's wallet (balance: 95 - 48 = 47)
 - Creates session record `sess_d5e6f7a8b9c0` with `status: active`
 - Records the OfflinePass usage (counter: 3, uses: 3/5, total credits: 128/200)
@@ -663,6 +665,10 @@ The station generates a signed receipt:
 ```json
 {
   "offlineTxId": "otx_f6a7b8c9d0e1",
+  "offlinePassId": "opass_a8b9c0d1e2f3",
+  "passCounter": 3,
+  "userId": "sub_bob2026",
+  "deviceId": "device_b7c4de89f0123456",
   "bayId": "bay_a2b3c4d5e6f7",
   "serviceId": "svc_deluxe",
   "startedAt": "2026-02-13T15:10:08.000Z",
@@ -675,14 +681,11 @@ The station generates a signed receipt:
     "energyWh": 180
   },
   "receipt": {
-    "data": "eyJiYXlJZCI6ImJheV9hMmIzYzRkNWU2ZjciLCJib29rZWREdXJhdGlvblNlY29uZHMiOjI0MCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjo0OCwiZGV2aWNlSWQiOiJkZXZfZjZhN2I4YzkiLCJkdXJhdGlvblNlY29uZHMiOjI0MCwiZW5kUmVhc29uIjoiVGltZXJFeHBpcmVkIiwiZW5kZWRBdCI6IjIwMjYtMDItMTNUMTU6MTQ6MDguMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6MzQwLCJlbmVyZ3lXaCI6MTgwLCJsaXF1aWRNbCI6MH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc180ZTVhYWVhMzM5MTZhOTY0Iiwib2ZmbGluZVR4SWQiOiJvdHhfZjZhN2I4YzlkMGUxIiwicGFzc0NvdW50ZXIiOjEzLCJzZXJ2aWNlSWQiOiJzdmNfZGVsdXhlIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xM1QxNToxMDowOC4wMDBaIiwic3RhdGlvbklkIjoic3RuX2ExYjJjM2Q0IiwidHhDb3VudGVyIjo5LCJ1c2VySWQiOiJzdWJfYzg1MjMxZjgwZjkzMDFhYyJ9",
-    "signature": "MEUCIQCxkqA1qJQsK16pv4/FBQGKx3PCklLyJ8D7LaFLIE0xRQIgHGnFgSFyT/5UhjmMeCSZiOAr2UUylkGT43CMJvbcXvQ=",
+    "data": "eyJiYXlJZCI6ImJheV9hMmIzYzRkNWU2ZjciLCJib29rZWREdXJhdGlvblNlY29uZHMiOjI0MCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjo0OCwiZGV2aWNlSWQiOiJkZXZpY2VfYjdjNGRlODlmMDEyMzQ1NiIsImR1cmF0aW9uU2Vjb25kcyI6MjQwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xM1QxNToxNDowOC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjozNDAsImVuZXJneVdoIjoxODAsImxpcXVpZE1sIjowfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2E4YjljMGQxZTJmMyIsIm9mZmxpbmVUeElkIjoib3R4X2Y2YTdiOGM5ZDBlMSIsInBhc3NDb3VudGVyIjozLCJzZXJ2aWNlSWQiOiJzdmNfZGVsdXhlIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xM1QxNToxMDowOC4wMDBaIiwic3RhdGlvbklkIjoic3RuX2ExYjJjM2Q0IiwidHhDb3VudGVyIjo5LCJ1c2VySWQiOiJzdWJfYm9iMjAyNiJ9",
+    "signature": "MEQCICbGBP1feqDoqZTH/Id92cVTgB9zCABxpSl0Zv6UPHIfAiBr/2hsy/JjzFENdu390jI6KJ26VbbvhSgso09UNCo+HA==",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
-  "txCounter": 9,
-  "userId": "sub_c85231f80f9301ac",
-  "offlinePassId": "opass_4e5aaea33916a964",
-  "passCounter": 13
+  "txCounter": 9
 }
 ```
 
@@ -846,7 +849,7 @@ On the Operator Dashboard, Charlie sees the session in real-time because the sta
 
 ## Key Design Decisions
 
-1. **Station does NOT validate locally in Partial B.** When the station is online, it always forwards the OfflinePass to the server for real-time validation. This is strictly better than local validation because the server can check the user's current balance, verify the pass has not been revoked since issuance, and debit the wallet immediately. The nine local validation checks ([`06-security.md` §6.1.1](../../spec/06-security.md#611-offlinepass-validation--10-checks); see Flow 04) are only used as a fallback.
+1. **Station does NOT validate locally in Partial B.** When the station is online, it always forwards the OfflinePass to the server for real-time validation. This is strictly better than local validation because the server can verify that neither the pass nor its user has been revoked since issuance (check #12), apply the platform's current epoch and the pass's use at every station, and debit the wallet immediately. The nine local validation checks ([`06-security.md` §6.1.1](../../spec/06-security.md#611-offlinepass-validation--10-checks); see Flow 04) are only used as a fallback.
 
 2. **Server debits wallet at authorization time.** The server debits Bob's wallet at step 9, before the service even starts. This matches the online flow behavior and prevents the user from starting multiple sessions with the same credits. There is no risk of over-billing: the `creditsAuthorized` of the response caps what the session may be charged, and any true-up is refund-only ([`reconciliation.md` §8](../../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)).
 

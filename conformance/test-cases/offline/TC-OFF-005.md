@@ -231,7 +231,7 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
 
 ## Failure Criteria
 
-1. **The station answers the app without publishing an AuthorizeOfflinePass REQUEST.** This is local validation wearing Partial B's name, and it is the single defect this case exists to catch: every downstream server-side guarantee — real-time balance, individual revocation (check #12), cross-station usage — is silently discarded, and nothing on the BLE leg looks any different to the user.
+1. **The station answers the app without publishing an AuthorizeOfflinePass REQUEST.** This is local validation wearing Partial B's name, and it is the single defect this case exists to catch: every downstream server-side guarantee — individual revocation (check #12), the platform's current epoch, cross-station usage — is silently discarded, and nothing on the BLE leg looks any different to the user.
 2. The station alters the OfflinePass before forwarding it, or normalizes/re-serializes it in a way that would invalidate the signature.
 3. The station substitutes its own `counter` instead of echoing the app's, breaking the value the reconcile-time uniqueness gate depends on.
 4. The station starts a service, or emits an AuthResponse, before the server's answer arrives.

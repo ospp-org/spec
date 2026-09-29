@@ -1503,7 +1503,7 @@ When the mobile app regains connectivity, it **MUST** upload every receipt it ho
 
 1. App calls `POST /api/v1/offline/receipts` once per receipt, with the Receipt as it read it from the station
 2. Server processes it as it processes the station's TransactionEvent; whichever copy of the same station-signed receipt arrives first may settle, and the other is answered `Duplicate`
-3. This is the **backup reconciliation path** for a station whose own sync fails
+3. The app's copy backs up the station's and is not only a fallback: it may settle first, and it is the one copy that survives a station that never reconnects or loses its store ([`app-contract.md` §4](profiles/offline/app-contract.md#4-receipt-upload))
 
 ### Postconditions
 

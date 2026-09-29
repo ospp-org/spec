@@ -64,7 +64,7 @@
         "properties": {
           "details": {
             "type": "object",
-            "required": ["score", "factors", "band", "action", "offlineTxId", "userId", "stationId", "messageId"],
+            "required": ["score", "factors", "band", "action", "offlineTxId", "userId", "stationId"],
             "properties": {
               "score": { "type": "number", "minimum": 0, "maximum": 1, "description": "The fraud score of 06-security.md 7.4: the sum of the factors that fired, capped at 1." },
               "factors": {
@@ -84,7 +84,7 @@
               "authId": { "type": "string", "pattern": "^auth_[a-f0-9]{8,}$", "minLength": 13, "maxLength": 64 },
               "userId": { "$ref": "../common/user-id.schema.json" },
               "stationId": { "$ref": "../common/station-id.schema.json" },
-              "messageId": { "type": "string", "minLength": 1, "description": "messageId of the TransactionEvent REQUEST whose transaction was scored." }
+              "messageId": { "type": "string", "minLength": 1, "description": "messageId of the TransactionEvent REQUEST that carried the scored transaction. Absent when the app's receipt upload settled it (spec/profiles/offline/app-contract.md 4), which carries none; the record is keyed on offlineTxId either way (spec/profiles/offline/reconciliation.md 7)." }
             }
           }
         }

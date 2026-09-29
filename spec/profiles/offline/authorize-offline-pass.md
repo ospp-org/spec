@@ -6,7 +6,7 @@
 
 AuthorizeOfflinePass is a station-initiated request used in the **Partial B** offline scenario (phone offline, station online). When a user presents an OfflinePass via BLE and the station has MQTT connectivity, the station forwards the pass to the server for validation. The server performs cryptographic and policy checks and responds with an acceptance (granting a session) or rejection (with a reason code).
 
-This action provides stronger security guarantees than local-only validation because the server can check real-time wallet balance, revocation status, and cross-station usage patterns. Offline authorization cache is configurable via `AuthorizationCacheEnabled` (see §8 Configuration).
+This action provides stronger security guarantees than local-only validation because the server can check what a station alone cannot: an individual revocation or a block on the user (§5 check #12), the platform's current epoch (#3), and the pass's use at every station (#6, #7, #10). It does not gate on the wallet balance: the pass's limits bound what it authorizes, and a debit that takes the wallet below zero leaves the transaction pending ([`reconciliation.md` §8.2](reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)). Offline authorization cache is configurable via `AuthorizationCacheEnabled` (see §8 Configuration).
 
 > **Compliance note:** AuthorizeOfflinePass is used in the Partial B scenario, which is required only at **Complete** compliance level. Stations implementing only Basic offline compliance (Full Offline and Partial A) are not required to implement this action.
 
@@ -43,7 +43,7 @@ The server **MUST** perform every check below that is not withdrawn — #1--#4, 
 | # | Check | Error on Failure |
 |:--:|-----------------------------------------------|-------------------------------|
 | 1 | **Signature verification** -- verify the ECDSA P-256 `signature` field with the key of the server's own key set named by the pass's `keyId` ([`06-security.md` §6.7](../../06-security.md#67-server-signing-key-rotation-ecdsa-p-256)). | `2002 OFFLINE_PASS_INVALID` |
-| 2 | **Not expired** -- `expiresAt` **MUST** be greater than the current server time. The station's `OfflinePassMaxAge` is not applied here: it bounds the staleness of an allowance a station judges alone, and this gate judges the pass against the server's own state. | `2003 OFFLINE_PASS_EXPIRED` |
+| 2 | **Within its temporal bounds** -- `expiresAt` **MUST** be greater than the current server time, and the pass's age (`now - issuedAt`) **MUST NOT** exceed the forwarding station's `OfflinePassMaxAge`, the value the server configured on it ([`08-configuration.md` §5](../../08-configuration.md#5-offline--ble-configuration-keys)). The station forwards the pass without validating it ([`04-flows.md` §5c](../../04-flows.md#5c-partial-b--phone-offline-station-online)), so the server applies the station's own, stricter limit for it. | `2003 OFFLINE_PASS_EXPIRED` |
 | 3 | **Revocation epoch** -- `revocationEpoch` **MUST** be greater than or equal to the platform's current `RevocationEpoch` ([`06-security.md` §6.6](../../06-security.md#66-epoch-based-revocation)). | `2004 OFFLINE_EPOCH_REVOKED` |
 | 4 | **Device binding** -- `offlinePass.deviceId` **MUST** match the `deviceId` field in the request. | `2002 OFFLINE_PASS_INVALID` |
 | 5 | **Withdrawn** -- a pass carries no station scope. The number is not reused. | — |

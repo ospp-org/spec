@@ -39,7 +39,7 @@
         "serverKeys": {
           "type": "array",
           "minItems": 1,
-          "description": "The server key set (spec/06-security.md 6.7): every key a pass may currently be signed under, including a key published ahead of its first signature and a retired key kept until its last pass has expired.",
+          "description": "The server key set (spec/06-security.md 6.7): every key a pass may currently be signed under, including a key published ahead of its first signature and a retired key kept until everything it signed has expired.",
           "items": {
             "type": "object",
             "additionalProperties": false,

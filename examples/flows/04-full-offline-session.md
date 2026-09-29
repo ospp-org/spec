@@ -564,11 +564,10 @@ signature = ECDSA-P256-Sign(station_private_key, digest)
 ```
 
 The app:
-1. Verifies the ECDSA signature using the station's public key (obtained during provisioning)
-2. Stores the complete receipt in the offline transaction log (`offlineTxLogStore`)
-3. Updates the local OfflinePass usage: counter = 3, credits used = 20 + 30 = 50
-4. Updates `walletStore.getEstimatedBalance`: previous estimated balance minus 30 credits
-5. Keeps the receipt to upload as soon as it has connectivity, as it does every receipt it holds ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload))
+1. Stores the complete receipt in the offline transaction log (`offlineTxLogStore`)
+2. Updates the local OfflinePass usage: counter = 3, credits used = 20 + 30 = 50
+3. Updates `walletStore.getEstimatedBalance`: previous estimated balance minus 30 credits
+4. Keeps the receipt to upload as soon as it has connectivity, as it does every receipt it holds ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload))
 
 ---
 
@@ -754,7 +753,7 @@ The station stops sending the transaction and deletes its record; the deletion *
 
 ## Key Design Decisions
 
-1. **Station validates locally, not the server.** In the Full Offline flow, the station is the sole authority. It performs the nine OfflinePass checks that apply, using the server key set (`OfflinePassPublicKey`) it holds. There is no round-trip to the server. This means the station must maintain its own counter tracking, the platform revocation epoch it last received, and usage limits per pass. The tradeoff is that the station cannot check what only the server knows — the user's live wallet balance, or a block or revocation issued after the station went offline ([`offline-pass.md` §5](../../spec/profiles/offline/offline-pass.md#5-revocation)) — which is why the OfflinePass has conservative credit limits, and why settlement never charges above them ([`reconciliation.md` §8](../../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)).
+1. **Station validates locally, not the server.** In the Full Offline flow, the station is the sole authority. It performs the nine OfflinePass checks that apply, using the server key set (`OfflinePassPublicKey`) it holds. There is no round-trip to the server. This means the station must maintain its own counter tracking, the platform revocation epoch it last received, and usage limits per pass. The tradeoff is that the station cannot check what only the server knows — a block or an individual revocation, whenever issued, an epoch the platform moved after the station last received configuration, use of the pass at other stations, or the user's live wallet balance ([`offline-pass.md` §5](../../spec/profiles/offline/offline-pass.md#5-revocation)) — which is why the OfflinePass has conservative credit limits, and why settlement never charges above them ([`reconciliation.md` §8](../../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)).
 
 2. **`maxCreditsPerTx` is refused at the wash and capped at settlement — a request is never reduced to fit.** Check #8 compares the estimated cost against the limit and **rejects** with `4004 OFFLINE_PER_TX_EXCEEDED` when it is exceeded; it never trims the request to fit ([`offline-pass.md` §2.1](../../spec/profiles/offline/offline-pass.md#21-offlineallowance-object)). All three normative statements of the check say so — [`offline-pass.md` §4](../../spec/profiles/offline/offline-pass.md#4-validation-checks-10) check #8 station-side, [`authorize-offline-pass.md` §5](../../spec/profiles/offline/authorize-offline-pass.md#5-validation-checks) check #8 server-side, and [`06-security.md` §6.1.1](../../spec/06-security.md#611-offlinepass-validation--10-checks) check #8 — and [`07-errors.md`](../../spec/07-errors.md) records `4004` as **not recoverable**, which a silently reduced session would contradict. Reducing unasked also charges a user for a service they did not agree to. At reconciliation the limit is a cap, not a gate: the server settles no more than `maxCreditsPerTx` ([`reconciliation.md` §8](../../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)) and scores a recomputed cost above it as the fraud factor `ExceedsPerTxLimit` ([`06-security.md` §7.4](../../spec/06-security.md#74-fraud-detection--offline-transactions)). The app is the right place to fit the offer to the limit, and it has what it needs: the pass carries `maxCreditsPerTx` in plaintext from the moment it is issued, and the app **MUST** show the pass's limits before the customer chooses, so a client can bound its own picker before it ever asks. The one clamp the offline path does permit is `requestedDurationSeconds` against a **server-authorized** `durationSeconds` on Partial A / Partial B ([`ble-session.md` §1](../../spec/profiles/offline/ble-session.md#1-starting-a-service)) — Full Offline has no server-authorized value to clamp against.
 

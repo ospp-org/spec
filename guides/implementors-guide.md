@@ -471,9 +471,10 @@ validation with `4002` when `OfflineModeEnabled` is `false`, when more than `Off
 have elapsed since your last successful MQTT connection, or when you already hold
 `OfflineTransactionLimit` offline transactions the server has not answered
 ([`offline-pass.md` §2.2](../spec/profiles/offline/offline-pass.md#22-constraints-object)). What
-you cannot check offline — the user's balance, a block or revocation issued after you went
-offline, use at other stations — the server checks at Partial-B authorize time and at
-reconciliation ([`offline-pass.md` §5](../spec/profiles/offline/offline-pass.md#5-revocation)).
+you cannot check offline — a block or an individual revocation, whenever issued, an epoch the
+platform moved after you last received configuration, use at other stations, the user's balance —
+the server acts on at Partial-B authorize time and at reconciliation, except the balance, which
+gates no offline wash ([`offline-pass.md` §5](../spec/profiles/offline/offline-pass.md#5-revocation)).
 
 You need to persist (in flash/NVS):
 - Per-pass usage counters (uses, total credits, last counter, last timestamp)
@@ -1119,7 +1120,7 @@ Test the error scenarios in `/examples/error-scenarios/`:
 
 **Using TLS 0-RTT.** TLS 1.3 offers 0-RTT resumption, which is vulnerable to replay attacks. OSPP explicitly forbids it. Don't enable it.
 
-**Counting a bare `Accepted` as proof that a station took your new server key set.** `OfflinePassPublicKey` is the server's **key set** — every key a live pass may be signed under, each named by the `keyId` a pass carries — and every value replaces the whole set the station holds, with no cached previous key and no grace period ([`06-security.md` §6.7](../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)). Rotation runs on time, not on confirmations: a new key is published for at least the maximum pass lifetime (864000 s) plus your worst station sync gap before it signs anything, and an old key stays in the set until the last pass it signed has expired. What can still go wrong is the push. ChangeConfiguration is **atomic**: a `results` entry of `Accepted` is that key's *validation verdict*, and if any other entry in the same batch is `Rejected` or `NotSupported`, **the station stored nothing** — while still answering `Accepted` for your key. That station keeps its old set until the next push or its next boot, and if it goes offline first it refuses, with `2002`, every pass whose `keyId` its old set does not name.
+**Counting a bare `Accepted` as proof that a station took your new server key set.** `OfflinePassPublicKey` is the server's **key set** — every key a live pass may be signed under, each named by the `keyId` a pass carries — and every value replaces the whole set the station holds, with no cached previous key and no grace period ([`06-security.md` §6.7](../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)). Rotation runs on time, not on confirmations: a new key is published for at least the maximum pass lifetime (864000 s) plus your worst station sync gap before it signs anything, and an old key stays in the set until everything it signed — passes, ServerSignedAuth, StationIdentity certificates — has expired. What can still go wrong is the push. ChangeConfiguration is **atomic**: a `results` entry of `Accepted` is that key's *validation verdict*, and if any other entry in the same batch is `Rejected` or `NotSupported`, **the station stored nothing** — while still answering `Accepted` for your key. That station keeps its old set until the next push or its next boot, and if it goes offline first it refuses, with `2002`, every pass whose `keyId` its old set does not name.
 
 Two things follow, and the second is the one to implement:
 
@@ -1257,7 +1258,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[SHOULD]** Shared subscriptions (`$share/...`) for horizontal scaling
 - [ ] **[SHOULD]** Rate limiting on REST API
 - [ ] **[SHOULD]** Anti-abuse layers for web payment (5 layers)
-- [ ] **[MUST]** OfflinePass signing keys as a **key set** ([`06-security.md` §6.7](../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)): each new key published at least 864000 s plus the worst station sync gap before its first signature, each old key kept until the last pass it signed has expired, the whole set in every BootNotification RESPONSE. An `Accepted` inside a refused batch means the station stored nothing ([§6.2](#62-security-pitfalls))
+- [ ] **[MUST]** OfflinePass signing keys as a **key set** ([`06-security.md` §6.7](../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)): each new key published at least 864000 s plus the worst station sync gap before its first signature, each old key kept until everything it signed has expired, the whole set in every BootNotification RESPONSE. An `Accepted` inside a refused batch means the station stored nothing ([§6.2](#62-security-pitfalls))
 
 ### Offline / BLE
 
