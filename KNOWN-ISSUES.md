@@ -2,9 +2,9 @@
 
 **Date:** 2026-09-28
 **Specification-document version:** 0.44.0 (release tag `v0.44.0`)
-**Status:** 3 blockers open (all BLE), **22** non-blocking issues open, **27** decisions recorded (one of
-them reversing another), and one named defect **class** with **eighteen** instances, **five** still open. **The counts are
-re-derived from the headings on every release, never incremented** — the previous revision read 27
+**Status:** 2 blockers open (all BLE), **20** non-blocking issues open, **29** decisions recorded (one of
+them reversing another), and one named defect **class** with **eighteen** instances, **four** still open. **The counts are
+re-derived from the headings on every release, never incremented** — the `0.43.0` revision read 27
 open against 26 `## OPEN` headings, which is how a summary drifts
 from the file it summarises.
 **Source:** ospp_audit_v2.md (post-correction audit), plus issues raised in the 0.8.0 cycle and
@@ -16,14 +16,14 @@ the arcs since
 
 | Severity | Count | Where |
 |----------|------:|-------|
-| BLOCKER | 3 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-three-defects) — B-1, B-2, B-3 |
-| OPEN | 22 | [the conformance harness is two directories and a placeholder](#open--the-conformance-harness-is-two-directories-and-a-zero-byte-placeholder-so-nobody-outside-this-project-can-run-conformance) · [three absences with no urgency](#open--three-absences-with-no-urgency-recorded-together-so-they-stop-being-rediscovered) · **[no gate range-checks a config value inside an example payload](#open--no-gate-range-checks-a-configuration-value-that-sits-inside-an-example-payload)** · **[the hardware storage levels do not hold the Category-1 floors](#open--the-hardware-storage-levels-do-not-hold-the-category-1-floors-they-are-said-to-size)** · **[OfflinePass validity rides an uncorrected wall clock, and the backstop reads the same clock](#open--offlinepass-temporal-validity-rides-a-wall-clock-with-no-offline-correction-and-the-servers-backstop-reads-the-same-clock)** · **[`5019` has no carrier on either side](#open--5019-upload_failed-names-a-condition-that-cannot-exist-when-its-response-is-sent-and-its-real-carrier-has-no-code-field)** · [4xxx grouping](#open--4xxx-grouping-the-provisioning-codes-sit-under-a-payment-heading-and-the-sdks-derive-category-from-the-range) · [provisioning station-side conformance](#open--no-conformance-case-exercises-the-provisioning-success-path-from-the-stations-side) · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [no gate parses JSON out of a markdown fence](#open--no-gate-parses-json-out-of-a-markdown-fence-and-511-payloads-live-there) · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · [server-side `FraudDetected` has no SecurityEvent](#open--a-server-that-detects-fraud-at-reconciliation-has-no-securityevent-to-record-the-incident) · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) · **[the anti-downgrade guard verifies one artefact and decides on another](#open--the-anti-downgrade-guard-verifies-one-artefact-and-decides-on-another-and-no-field-is-missing)** · **[the firmware signing certificate rotates annually and no message can deliver it](#open--the-firmware-signing-certificate-is-stated-to-rotate-annually-and-no-message-can-deliver-the-new-one)** · **[UpdateFirmware is both idempotent and `5107`](#open--updatefirmware-is-documented-as-idempotent-and-as-rejected-with-5107-for-the-same-second-command)** · **[no code describes a non-HTTPS firmware URL](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal)** · **[a station whose hardware changes has no route back into service](#open--a-station-whose-hardware-genuinely-changes-has-no-route-back-into-service-because-the-two-rules-that-guard-topology-point-at-each-other)** · **[`offeredVersion` vs `attemptedVersion`](#open--the-firmwaredowngradeattempt-securityevent-names-the-offered-version-with-two-different-member-names-and-nothing-can-tell)** |
-| CLOSED | 10 | **[the signing toolchain canonicalized with the SDK](#closed-0440--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself)** — closed in 0.44.0; the six tools canonicalize with `tools/canonical-form.mjs` and 0 committed bytes moved · **[nothing checked a per-message `Message Expiry` against its category](#closed-0440--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** — closed in 0.44.0 by `tools/check-message-expiry.py` · [Device Management Required vs RECOMMENDED](#closed-0160--the-device-management-profile-was-required-in-chapter-08-and-recommended-not-mandatory-in-its-own-readme) — closed in 0.16.0 in favour of the capability · [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
-| **CLASS** | 18 | **[an obligation no field, no code and no actor can carry](#class--an-obligation-no-field-no-code-and-no-actor-can-carry)** — an index of the eighteen instances; **5** still open, 1 a blocker. `0.35.0` closed instance 18 and recorded 17 with it — the same defect on two of the fourteen Server → Station actions, and 18 closed **without** the contract relaxation it appeared to need. `0.32.0` closed instances 15 and 16, the same defect on the two halves of one session, and supplied the **fourth remedy** the class had not recorded: withdraw the demand. The fourth sub-shape, named at 0.30.0 — a closed enumeration in which no legal value is true — still holds **three** instances, all closed at 0.31.0 |
-| DECIDED | 27 | **[`httpStatus()` and `category()` stay SDK extensions](#decided-0440--httpstatus-and-category-model-properties-the-spec-declines-to-give-a-code-and-the-two-sdks-invented-different-answers)** — no new status is named; the SDK pair settles `2001` at `422` and aligns the PHP category labels to Appendix A · **[`errorText` is prose on two messages, the documented exception](#decided-0440--two-messages-carry-errordescription-semantics-under-the-name-errortext)** — `07-errors.md` §1.3; no schema moves · **[`2008` was listed under two statuses and the licence permitting it could not be broken](#decided-0320--2008-was-listed-under-two-statuses-and-the-licence-that-permitted-it-could-not-be-broken)** — §4.4's truthfulness obligation un-scoped and the multi-status licence given a checkable condition; the row fell out as a consequence; prose only, zero schema bytes · **[a start that energised and a boot that cannot say what happened](#decided-0320--a-start-that-energised-a-boot-that-cannot-say-what-happened-and-the-two-remedies-that-were-refused)** — the third arm of the §3.5 partition, reported through two messages that already exist; a new `SessionEnded.reason` and a queryable session state both refused with their costs · **[§10.1 required receivers to ignore unknown fields, and every schema forbids it](#decided-0290--02-transportmd-101-required-receivers-to-ignore-unknown-fields-and-every-schema-in-this-repository-forbids-it)** — 73 of 73 object schemas are closed, and three decisions already taken (§2.1's known gap, exact-match negotiation, the `0.26.0` triple refusal) rest on receivers *not* ignoring; prose only, zero schema bytes · **[the broker MUST check revocation, the list is bounded twice, and a stale list buys one alerted hour](#decided-0270--the-broker-must-check-revocation-the-list-is-bounded-twice-and-a-list-that-goes-stale-buys-one-alerted-hour-before-the-door-shuts)** — axis 1a + 2a&2b + 3c; verified by declaration because no message can carry it, and the two bounds are broker settings deliberately outside the Chapter 08 registry · **[`allowedServiceTypes` withdrawn in two steps](#decided-0250--offlineallowanceallowedservicetypes-is-withdrawn-in-two-steps-because-nobody-ever-asked-for-the-constraint)** · **[ownership transfer and decommissioning stay undefined, and §1.3 now says so](#decided-0250--station-ownership-transfer-and-decommissioning-stay-undefined-and-the-specification-now-says-so)** · **[the server is the billing authority on the offline path too](#decided-0240--the-server-is-the-billing-authority-on-the-offline-path-too-and-81-was-the-outlier)** · **[`OfflinePassMaxAge` kept, wired into check #2, defaulted to inert](#decided-0240--offlinepassmaxage-is-kept-wired-into-check-2-and-defaulted-to-inert)** · **[`DiagnosticsUploadUrl` withdrawn — a key nothing reads](#decided-0230--diagnosticsuploadurl-had-no-reachable-consumer-and-is-withdrawn-rather-than-defined)** · **[UpdateFirmware to a `Pending` station is `Accepted`, notifications suppressed](#decided-0210--updatefirmware-to-a-pending-station-was-refused-on-a-premise-the-same-chapter-contradicts-and-with-a-response-no-error-code-could-carry)** — **reverses the `0.20.0` row below**: the `Rejected` it mandated needed an `errorCode` no registry entry supplies, and §6.6 already reported the outcome on BootNotification; the discriminator's second clause survives, its reading did not · **[nine gates in `tools/` were reachable from no job](#decided-0201--two-validation-scripts-reported-100-failure-and-no-workflow-ran-them-the-workflows-now-call-the-scripts-and-a-census-guards-the-class)** — the workflows now call the scripts, and `check-tool-callers.py` guards the class · **[the firmware gate is on the INSTALL, not the download](#decided-0200--the-active-session-gate-named-three-stages-it-gates-the-install-and-scheduledat-defers-the-install-with-it)** — and `scheduledAt` defers the install with it; the stall rule scoped rather than `Verified` given a wire value · **[~~UpdateFirmware to a `Pending` station is `Rejected`~~ — REVERSED in `0.21.0`](#decided-0200--updatefirmware-had-no-row-in-the-pending-command-table-it-is-rejected-and-the-discriminator-gained-the-clause-that-says-why)** — kept as the record; the row it added was right, the verdict in it was not · **[a restricted station may renew its own certificate](#decided-0190--one-table-gave-the-same-act-opposite-verdicts-and-a-certificate-renewal-could-not-conclude-in-the-state-the-spec-keeps-open-for-repairs)** — the exception's *reason* restated to cover both members rather than a second name added to a list · [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
-| **Total open** | **26** | |
+| BLOCKER | 2 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-two-defects) — B-1, B-3; B-2 is closed (see CLOSED) |
+| OPEN | 20 | [the conformance harness is two directories and a placeholder](#open--the-conformance-harness-is-two-directories-and-a-zero-byte-placeholder-so-nobody-outside-this-project-can-run-conformance) · [three absences with no urgency](#open--three-absences-with-no-urgency-recorded-together-so-they-stop-being-rediscovered) · **[no gate range-checks a config value inside an example payload](#open--no-gate-range-checks-a-configuration-value-that-sits-inside-an-example-payload)** · **[the hardware storage levels do not hold the Category-1 floors](#open--the-hardware-storage-levels-do-not-hold-the-category-1-floors-they-are-said-to-size)** · **[`5019` has no carrier on either side](#open--5019-upload_failed-names-a-condition-that-cannot-exist-when-its-response-is-sent-and-its-real-carrier-has-no-code-field)** · [4xxx grouping](#open--4xxx-grouping-the-provisioning-codes-sit-under-a-payment-heading-and-the-sdks-derive-category-from-the-range) · [provisioning station-side conformance](#open--no-conformance-case-exercises-the-provisioning-success-path-from-the-stations-side) · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [no gate parses JSON out of a markdown fence](#open--no-gate-parses-json-out-of-a-markdown-fence-and-511-payloads-live-there) · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) · **[the anti-downgrade guard verifies one artefact and decides on another](#open--the-anti-downgrade-guard-verifies-one-artefact-and-decides-on-another-and-no-field-is-missing)** · **[the firmware signing certificate rotates annually and no message can deliver it](#open--the-firmware-signing-certificate-is-stated-to-rotate-annually-and-no-message-can-deliver-the-new-one)** · **[UpdateFirmware is both idempotent and `5107`](#open--updatefirmware-is-documented-as-idempotent-and-as-rejected-with-5107-for-the-same-second-command)** · **[no code describes a non-HTTPS firmware URL](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal)** · **[a station whose hardware changes has no route back into service](#open--a-station-whose-hardware-genuinely-changes-has-no-route-back-into-service-because-the-two-rules-that-guard-topology-point-at-each-other)** · **[`offeredVersion` vs `attemptedVersion`](#open--the-firmwaredowngradeattempt-securityevent-names-the-offered-version-with-two-different-member-names-and-nothing-can-tell)** |
+| CLOSED | 10 | **[B-2 — a station-scoped OfflinePass](#b-2--a-station-scoped-offlinepass-is-unrepresentable-in-the-authoritative-schema)** — closed 2026-09-29 by withdrawing the demand: a pass carries no station or organization scope, and check #5 and codes `2006`/`2015` are withdrawn. A subsection of the BLOCKER entry, so it is listed here and not counted among the ten `## CLOSED` headings · **[the signing toolchain canonicalized with the SDK](#closed-0440--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself)** — closed in 0.44.0; the six tools canonicalize with `tools/canonical-form.mjs` and 0 committed bytes moved · **[nothing checked a per-message `Message Expiry` against its category](#closed-0440--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** — closed in 0.44.0 by `tools/check-message-expiry.py` · [Device Management Required vs RECOMMENDED](#closed-0160--the-device-management-profile-was-required-in-chapter-08-and-recommended-not-mandatory-in-its-own-readme) — closed in 0.16.0 in favour of the capability · [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
+| **CLASS** | 18 | **[an obligation no field, no code and no actor can carry](#class--an-obligation-no-field-no-code-and-no-actor-can-carry)** — an index of the eighteen instances; **4** still open, none a blocker. On 2026-09-29 instance 1, the station-scoped pass, closed by withdrawing its demand, and instance 3, dual signing across a single-valued key, already closed by saying so, closed by construction: the server key set, and the `keyId` every pass now carries. `0.35.0` closed instance 18 and recorded 17 with it — the same defect on two of the fourteen Server → Station actions, and 18 closed **without** the contract relaxation it appeared to need. `0.32.0` closed instances 15 and 16, the same defect on the two halves of one session, and supplied the **fourth remedy** the class had not recorded: withdraw the demand. The fourth sub-shape, named at 0.30.0 — a closed enumeration in which no legal value is true — still holds **three** instances, all closed at 0.31.0 |
+| DECIDED | 29 | **[the server judges offline times through the clock offset it measures at reconnection](#decided--the-server-judges-offline-times-through-the-clock-offset-it-measures-at-reconnection-and-never-rewrites-them)** — option 1 of the entry's own list, in the form of `reconciliation.md` §6.8: `Synchronized` receipts judged through the offset, `Unsynchronized` ones as signed and flagged, signed times never rewritten · **[`FraudDetected` is a server-originated record, and a Block-band transaction is settled and flagged](#decided--frauddetected-is-a-server-originated-record-and-a-block-band-transaction-is-settled-and-flagged)** — no station emits it, the operator is alerted in the Alert and Block bands, and the fraud model's contradictions were fixed with it · **[`httpStatus()` and `category()` stay SDK extensions](#decided-0440--httpstatus-and-category-model-properties-the-spec-declines-to-give-a-code-and-the-two-sdks-invented-different-answers)** — no new status is named; the SDK pair settles `2001` at `422` and aligns the PHP category labels to Appendix A · **[`errorText` is prose on two messages, the documented exception](#decided-0440--two-messages-carry-errordescription-semantics-under-the-name-errortext)** — `07-errors.md` §1.3; no schema moves · **[`2008` was listed under two statuses and the licence permitting it could not be broken](#decided-0320--2008-was-listed-under-two-statuses-and-the-licence-that-permitted-it-could-not-be-broken)** — §4.4's truthfulness obligation un-scoped and the multi-status licence given a checkable condition; the row fell out as a consequence; prose only, zero schema bytes · **[a start that energised and a boot that cannot say what happened](#decided-0320--a-start-that-energised-a-boot-that-cannot-say-what-happened-and-the-two-remedies-that-were-refused)** — the third arm of the §3.5 partition, reported through two messages that already exist; a new `SessionEnded.reason` and a queryable session state both refused with their costs · **[§10.1 required receivers to ignore unknown fields, and every schema forbids it](#decided-0290--02-transportmd-101-required-receivers-to-ignore-unknown-fields-and-every-schema-in-this-repository-forbids-it)** — 73 of 73 object schemas are closed, and three decisions already taken (§2.1's known gap, exact-match negotiation, the `0.26.0` triple refusal) rest on receivers *not* ignoring; prose only, zero schema bytes · **[the broker MUST check revocation, the list is bounded twice, and a stale list buys one alerted hour](#decided-0270--the-broker-must-check-revocation-the-list-is-bounded-twice-and-a-list-that-goes-stale-buys-one-alerted-hour-before-the-door-shuts)** — axis 1a + 2a&2b + 3c; verified by declaration because no message can carry it, and the two bounds are broker settings deliberately outside the Chapter 08 registry · **[`allowedServiceTypes` withdrawn in two steps](#decided-0250--offlineallowanceallowedservicetypes-is-withdrawn-in-two-steps-because-nobody-ever-asked-for-the-constraint)** — step two, the schema removal, still pending · **[ownership transfer and decommissioning stay undefined, and §1.3 now says so](#decided-0250--station-ownership-transfer-and-decommissioning-stay-undefined-and-the-specification-now-says-so)** · **[the server is the billing authority on the offline path too](#decided-0240--the-server-is-the-billing-authority-on-the-offline-path-too-and-81-was-the-outlier)** — superseded in part: settlement is now capped, and a debit that takes the wallet below zero leaves its transaction pending · **[`OfflinePassMaxAge` kept, wired into check #2, defaulted to inert](#decided-0240--offlinepassmaxage-is-kept-wired-into-check-2-and-defaulted-to-inert)** — superseded in part: the pass lifetime is the platform's, 3 days by default and never more than 10 · **[`DiagnosticsUploadUrl` withdrawn — a key nothing reads](#decided-0230--diagnosticsuploadurl-had-no-reachable-consumer-and-is-withdrawn-rather-than-defined)** · **[UpdateFirmware to a `Pending` station is `Accepted`, notifications suppressed](#decided-0210--updatefirmware-to-a-pending-station-was-refused-on-a-premise-the-same-chapter-contradicts-and-with-a-response-no-error-code-could-carry)** — **reverses the `0.20.0` row below**: the `Rejected` it mandated needed an `errorCode` no registry entry supplies, and §6.6 already reported the outcome on BootNotification; the discriminator's second clause survives, its reading did not · **[nine gates in `tools/` were reachable from no job](#decided-0201--two-validation-scripts-reported-100-failure-and-no-workflow-ran-them-the-workflows-now-call-the-scripts-and-a-census-guards-the-class)** — the workflows now call the scripts, and `check-tool-callers.py` guards the class · **[the firmware gate is on the INSTALL, not the download](#decided-0200--the-active-session-gate-named-three-stages-it-gates-the-install-and-scheduledat-defers-the-install-with-it)** — and `scheduledAt` defers the install with it; the stall rule scoped rather than `Verified` given a wire value · **[~~UpdateFirmware to a `Pending` station is `Rejected`~~ — REVERSED in `0.21.0`](#decided-0200--updatefirmware-had-no-row-in-the-pending-command-table-it-is-rejected-and-the-discriminator-gained-the-clause-that-says-why)** — kept as the record; the row it added was right, the verdict in it was not · **[a restricted station may renew its own certificate](#decided-0190--one-table-gave-the-same-act-opposite-verdicts-and-a-certificate-renewal-could-not-conclude-in-the-state-the-spec-keeps-open-for-repairs)** — the exception's *reason* restated to cover both members rather than a second name added to a list · [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it; superseded, since a station now holds a key set and keeps no grace period · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
+| **Total open** | **23** | the 2 open blocker subsections (B-1, B-3), the 20 `## OPEN` headings, and the one CLASS, which still has open instances — the same sum that gave `0.44.0`'s 26 (3 + 22 + 1) |
 
-**The three blockers are confined to BLE, and are the reason the BLE artefacts ship as
+**The two open blockers are confined to BLE, and are the reason the BLE artefacts ship as
 EXPERIMENTAL in 0.44** — see [BLE release status](README.md#ble-is-experimental). They do
 not affect the MQTT surface, offline reconciliation, or provisioning, all of which are
 implemented and exercised against a second implementation.
@@ -117,7 +117,7 @@ The following 30 issues were resolved in the backlog batch fix.
 
 ---
 
-## BLOCKER — the BLE surface is not implementable as written (three defects)
+## BLOCKER — the BLE surface is not implementable as written (two defects)
 
 **Raised 2026-07-28, scoping the 0.8.0 tag. These are the reason the BLE artefacts are marked
 EXPERIMENTAL — see [BLE release status](README.md#ble-is-experimental). Recorded, not
@@ -125,6 +125,14 @@ repaired: each fix is a design decision, and BLE is implemented nowhere — the 
 BLE key at provisioning, no `StationIdentity` is issued, and no second implementation exercises
 the transport. Designing against nothing is what produced the sequencing layer this cycle
 removed.**
+
+**Two defects are open, B-1 and B-3.** The entry was raised with three; [B-2](#b-2--a-station-scoped-offlinepass-is-unrepresentable-in-the-authoritative-schema)
+closed on 2026-09-29, when the pass lost its station scope instead of gaining a field to carry it,
+and its record is kept below. **Recorded beside them, and not a defect of the written text:** the
+pass now carries the public half of the device key it is bound to, `devicePublicKey`, and no BLE
+message carries a proof of possession of that key, so check #4 compares `deviceId` as its table row
+states ([`offline-pass.md` §4](spec/profiles/offline/offline-pass.md#4-validation-checks-10), the
+note on check #4).
 
 ### B-1 — two incompatible fragmentation protocols are simultaneously normative
 
@@ -148,10 +156,25 @@ implementation follows.
 
 ### B-2 — a station-scoped OfflinePass is unrepresentable in the authoritative schema
 
+**CLOSED 2026-09-29 — the demand is withdrawn, not met.** An OfflinePass carries no station or
+organization scope: it belongs to its user and that user's device, and is valid at any station that
+accepts offline passes ([`offline-pass.md` §2.3](spec/profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)),
+and a server **MUST NOT** issue a pass restricted to stations or to an organization. The check this
+defect could not carry, #5, is withdrawn in place and its number is not reused; the server-side
+station and organization checks go with it — authorize-time #5 and #11
+([`authorize-offline-pass.md` §5](spec/profiles/offline/authorize-offline-pass.md#5-validation-checks)),
+reconcile-time #7 and #8 ([`reconciliation.md` §6.2](spec/profiles/offline/reconciliation.md#62-withdrawn-station-and-organization-binding)) —
+and `2006 OFFLINE_STATION_MISMATCH` and `2015 OFFLINE_ORG_MISMATCH` leave the registry, their
+numbers kept from reuse ([`07-errors.md` §1.1](spec/07-errors.md#11-code-ranges)). No schema member
+was added: the pass the conformance case asked for is no longer a pass any server may issue. This is
+the fourth remedy of [the class below](#class--an-obligation-no-field-no-code-and-no-actor-can-carry)
+— withdraw the demand — and it closes that index's instance 1. **What follows is the record, as
+raised.**
+
 Validation check 5 requires the station's ID to be permitted by the pass
-([`offline-pass.md`:66](spec/profiles/offline/offline-pass.md), rejecting with
+([`offline-pass.md` §4](spec/profiles/offline/offline-pass.md#4-validation-checks-10), rejecting with
 `2006 OFFLINE_STATION_MISMATCH`), and
-[`TC-OFF-002`:17-19](conformance/test-cases/offline/TC-OFF-002.md) instructs a tester to "Create
+[`TC-OFF-002`](conformance/test-cases/offline/TC-OFF-002.md) instructs a tester to "Create
 an OfflinePass whose station-scoping constraint does not include the test station".
 
 [`offline-pass.schema.json`](schemas/common/offline-pass.schema.json) has no member that can
@@ -160,9 +183,9 @@ carry that constraint — not at the top level, not inside `constraints` — and
 cannot be constructed and remain schema-valid.
 
 This bites on the **BLE** path only. On the MQTT path the constraint is server-side state, not a
-wire field — [`authorize-offline-pass.md`:49](spec/profiles/offline/authorize-offline-pass.md)
+wire field — [`authorize-offline-pass.md` §5](spec/profiles/offline/authorize-offline-pass.md#5-validation-checks)
 is explicit that `allowed_station_ids` belongs to "the **server's stored pass record** (not a
-wire field)", and [`reconciliation.md`:92](spec/profiles/offline/reconciliation.md) reads it from
+wire field)", and [`reconciliation.md` §6.2](spec/profiles/offline/reconciliation.md#62-withdrawn-station-and-organization-binding) reads it from
 there. A station validating a pass locally over BLE has no server to ask and can only read the
 pass, which cannot say.
 
@@ -307,7 +330,7 @@ correct side and already permitted the repaired behaviour.
 | `1005` *"Do NOT retry"* vs CORE-011 *"MUST retry BootNotification indefinitely"* | **both stand, scoped** | Measured on the cells: `1007` and `2001` each carry the CORE-011 reconciliation clause twice; `1005` carried it **zero** times. §5.2 of the same chapter already sets boot retry to unlimited, and `boot-notification.md` §5 already states the resolution. A firmware author implementing the registry literally **bricks the station**: it stops booting, so it can never receive the update that would fix the malformed field |
 | `transaction/README.md`:100 (*duplicate ReserveBay MUST return `3014`*) vs `reserve-bay.md` rule 7 (*identical repeat returns `Accepted`*) | the **README** loses | Rule 7 landed in `5b124a1` at 0.14.0 and swept four sibling files; the README bullet sits in the same directory as `reserve-bay.md` and was not in that commit. `git log -S` shows it unedited since the initial commit |
 | `01-architecture.md`:422's `MUST` 512 KB vs its own footnote deriving ~1.6 MB | **neither is changed** | Raising a mandatory storage level changes the bill of materials of every conformant station, and that decision stays OPEN. The row is *already* self-annotated and the guide was repaired at 0.29.0. **The genuinely unswept site was a third one** — `08-configuration.md`:196 still asserted that the 512 KB level *"sizes … for exactly that"* floor, in the normative registry entry a reader consults while configuring the buffer |
-| `06-security.md` §6.6's *"global"* `RevocationEpoch` vs a per-tenant implementation | the **spec** loses | The global model is a **platform-wide denial of service reachable from an ordinary tenant permission**: one operator revoking their own passes revokes every tenant's. The reference implementation repaired exactly that and has been per-tenant since. The word stood at **nine** sites, not the three reported — five in §6.6, plus the Chapter 08 registry entry, two in `offline-pass.md`, and one in the implementor's guide |
+| `06-security.md` §6.6's *"global"* `RevocationEpoch` vs a per-tenant implementation | the **spec** loses | The global model is a **platform-wide denial of service reachable from an ordinary tenant permission**: one operator revoking their own passes revokes every tenant's. The reference implementation repaired exactly that and has been per-tenant since. The word stood at **nine** sites, not the three reported — five in §6.6, plus the Chapter 08 registry entry, two in `offline-pass.md`, and one in the implementor's guide. **Reversed 2026-09-29:** a pass now belongs to its user and is valid at any tenant's station, so the epoch is one platform value that only the platform increments ([`06-security.md` §6.6](spec/06-security.md#66-epoch-based-revocation)); no tenant-level permission reaches it, which removes the denial of service this row guarded against |
 | `3003` opening with *"hardware not present"* vs *"availability, not existence"* twelve lines below | the **existence formulations** lose | Two of them, not one — `07-errors.md`:329 and `start-service.md`:72, the second inside the very profile that draws the distinction. The non-existence case has its own code, `3019 SERVICE_NOT_BOUND`, and the server routes it there |
 
 ---
@@ -775,9 +798,11 @@ Choosing the new level is the decision.
 
 ---
 
-## OPEN — OfflinePass temporal validity rides a wall clock with no offline correction, and the server's backstop reads the same clock
+## DECIDED — the server judges offline times through the clock offset it measures at reconnection, and never rewrites them
 
-**Raised 2026-08-19, in `0.25.0`.**
+**Raised 2026-08-19, in `0.25.0`.** *(Decided 2026-09-29 — see* Decided *at the end of this entry.
+Everything above it is the record of the question as it was open, kept because the option taken is
+argued there.)*
 
 [`06-security.md` §6.1.1](spec/06-security.md#611-offlinepass-validation--10-checks) check #2 requires
 `expiresAt` to be in the future and `now - issuedAt` not to exceed `OfflinePassMaxAge`. Both are wall-clock
@@ -825,6 +850,50 @@ for billing, station time for audit"* — but check #9 is a **security** decisio
    which read no clock, and by check #13's global counter uniqueness. A drifted clock buys an attacker a
    pass that is already spent-limited. This is a defensible position and it is currently the *de facto* one —
    it is simply nowhere written.
+
+### Decided
+
+**Decided by Gabi on 2026-09-29: option 1, in the form of
+[`reconciliation.md` §6.8](spec/profiles/offline/reconciliation.md#68-station-clock-offset).** The skew
+is not bounded by a policy number *N*: the server measures it, and uses the measurement to judge and
+never to rewrite.
+
+1. **Measured at reconnection.** The server records the station's clock offset from the first message
+   the station sends on the new connection — its BootNotification — before the station corrects its
+   clock from the response's `serverTime`: the station-stamped envelope timestamp minus the server's
+   own receive time. That offset describes the clock on which the station signed the receipts of the
+   offline period the reconnection ends.
+2. **The receipt says whether the offset applies.** Every receipt now carries a signed `clockState`
+   ([`06-security.md` §6.2](spec/06-security.md#62-transaction-receipt-signing--ecdsa-p-256)):
+   `Synchronized` when the station's wall clock had been set from the server since it last booted,
+   `Unsynchronized` when it had not.
+3. **Judged through it.** For a `Synchronized` receipt, check #9, check #10 and the timestamp factor of
+   [`06-security.md` §7.4](spec/06-security.md#74-fraud-detection--offline-transactions) read the
+   signed times corrected by that offset. An `Unsynchronized` receipt is judged on its signed times as
+   they are, and flagged for review. A receipt that reaches the server before any offset for its period
+   exists — the app's copy can — is judged on its signed times as they are.
+4. **Impossible times are flagged.** A transaction whose times, read as above, end after the station
+   reported it or begin before the pass that authorized it was issued is flagged for review.
+5. **Nothing signed is rewritten.** The signed `startedAt` and `endedAt` are stored as signed, and the
+   offset applied is stored beside them. Durations are not corrected at all: `durationSeconds` is
+   measured on the station's monotonic timer, and no wall-clock offset applies to it.
+
+**What this closes.** The backstop no longer reads the station's clock alone. A station running days
+slow reports an `endedAt` that the offset measured at its reconnection corrects before check #9
+compares it, and a receipt the offset cannot describe is flagged rather than trusted. §9's drift row,
+quoted above as *"Use server time for billing, station time for audit"*, now reads *"Judge through the
+offset, never rewrite"*, and the tariff in force at `endedAt` is chosen through the offset too
+([`reconciliation.md` §8.1](spec/profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
+The station side of `0.25.0` is unchanged: a station still **MUST NOT** refuse a pass for want
+of confidence in its clock, and the offline window is still measured on the monotonic timer — now as
+the station configuration key `OfflineWindowHours`
+([`08-configuration.md` §5](spec/08-configuration.md#5-offline--ble-configuration-keys)), no longer a
+pass field.
+
+**The options not taken.** Option 2 stays rejected for the reason it gives: a window bounds how long a
+station may be offline, not how long a pass is valid. Option 3's bound still stands beneath the
+decision — the limits read no clock, and settlement never charges above them
+([`reconciliation.md` §8](spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)).
 
 ---
 
@@ -875,6 +944,15 @@ its registry row — it is what a server records about a failed upload, never wh
 ## DECIDED (0.25.0) — `offlineAllowance.allowedServiceTypes` is withdrawn in two steps, because nobody ever asked for the constraint
 
 **Raised 2026-08-19, in `0.25.0`, by promoting a statement the specification already carried.**
+
+> **Status, 2026-09-29.** Step one holds and step two is still pending: the schema still admits the
+> member, and every receiver **MUST** still accept a pass that carries it. Two facts below have moved.
+> The example payloads and conformance vectors no longer carry the member: every fixture pass was
+> edited and re-signed when the pass gained `devicePublicKey` and `keyId` and lost its station
+> constraints, so the re-signing the measured cost below counts is done, and what remains of step two
+> is the breaking schema edit itself. And circulation now turns over within **ten days**, the maximum
+> pass lifetime, not within a day
+> ([`06-security.md` §6.1.1](spec/06-security.md#611-offlinepass-validation--10-checks)).
 
 [`06-security.md` §6.1.1](spec/06-security.md#611-offlinepass-validation--10-checks) ends with:
 
@@ -1215,9 +1293,9 @@ the rule against the artefact that would have to carry it.
 
 | # | Instance | What could not carry it | State |
 |:--:|---|---|---|
-| 1 | A station-scoped OfflinePass | `offline-pass.schema.json` has no member for `allowed_station_ids` and is `additionalProperties: false` at both levels | [B-2](#b-2--a-station-scoped-offlinepass-is-unrepresentable-in-the-authoritative-schema) — **BLOCKER, open** |
+| 1 | A station-scoped OfflinePass | `offline-pass.schema.json` has no member for `allowed_station_ids` and is `additionalProperties: false` at both levels | [B-2](#b-2--a-station-scoped-offlinepass-is-unrepresentable-in-the-authoritative-schema) — **closed 2026-09-29, by withdrawing the demand**: a pass carries no station or organization scope ([`offline-pass.md` §2.3](spec/profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)), and check #5 and codes `2006`/`2015` are withdrawn |
 | 2 | UpdateFirmware to a `Pending` station **MUST** be `Rejected` | the `Rejected` needed an `errorCode` no registry entry supplies | [DECIDED 0.21.0](#decided-0210--updatefirmware-to-a-pending-station-was-refused-on-a-premise-the-same-chapter-contradicts-and-with-a-response-no-error-code-could-carry) — reversed |
-| 3 | Dual signing across an `OfflinePassPublicKey` rotation | a single-valued registry key, a pass with no key identifier, and a pass not bound to a station on the wire — no choice serves both cohorts, and per-station selection is impossible at signing time | CHANGELOG `0.17.0` — closed by saying so |
+| 3 | Dual signing across an `OfflinePassPublicKey` rotation | a single-valued registry key, a pass with no key identifier, and a pass not bound to a station on the wire — no choice serves both cohorts, and per-station selection is impossible at signing time | CHANGELOG `0.17.0` — closed by saying so. **Closed by construction 2026-09-29**: `OfflinePassPublicKey` now holds the server's whole key set, each key published before its first signature, and every pass names the key that signed it in `keyId`, so no choice between cohorts of stations is left to make ([`06-security.md` §6.7](spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)) |
 | 4 | A station refusing for want of a trust anchor | no error code in the registry describes that refusal | [OPEN](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) |
 | 5 | A firmware URL that is not HTTPS, refused by the schema | no error code in the registry describes that refusal | [OPEN](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal) |
 | 6 | A `StatusNotification` rejection | `StatusNotification.conf` defines no fields, so the response cannot carry one | CHANGELOG — closed |
@@ -1235,9 +1313,11 @@ the rule against the artefact that would have to carry it.
 | 18 | **A GetConfiguration refusal, at all** | no **field**, and not even a `status` to hang one on: `get-configuration-response` declared `configuration` (REQUIRED), `unknownKeys` and nothing else, closed. The same three implicit codes applied. Measured across the **14** Server → Station REQUEST actions, this and instance 17 were the only two whose response could not express a code | **CLOSED 0.35.0** — `errorCode`/`errorText` added and `required` **not** relaxed, because `configuration: []` was already a value the message carried and already meant *nothing to report* ([`get-configuration.md` §6](spec/profiles/device-management/get-configuration.md#6-unknown-keys-handling)). The relaxation was measurable and negative: it turns an existing invalid conformance vector valid |
 
 **Eighteen instances is what the written record supports**, counted by reading CHANGELOG and this
-file rather than carried from a note; **five** are still open and one is a blocker — `0.31.0` closed
-three (11, 12, 13), `0.32.0` closed two (15, 16), and `0.34.0`/`0.35.0` closed one each (17, 18),
-which is why the open count did not move. The sub-shapes are still **four**, re-derived on the table
+file rather than carried from a note; **four** are still open — 4, 5, 8 and 14 — and none is a
+blocker. `0.31.0` closed three (11, 12, 13), `0.32.0` closed two (15, 16), and `0.34.0`/`0.35.0` closed
+one each (17, 18), which is why the open count did not move across those releases; it moved on
+2026-09-29, when instance 1 closed by withdrawing its demand. Instance 3, already closed by saying so,
+closed by construction the same day. The sub-shapes are still **four**, re-derived on the table
 above rather than incremented: **eleven** are a mandated refusal or report with no error code and
 no response field to carry it (2, 4, 5, 6, 8, 10, 14, 15, 16, 17, 18); **three** are a rule keyed on a
 value the authoritative schema forbids on the branch where the rule applies (1, 3, 7); **one** is a
@@ -1263,6 +1343,8 @@ the fourth and it is the one that adds nothing: **withdraw the demand.** Instanc
 a new `SessionEnded.reason`; instead the rule requiring the event was scoped, because the value the
 enum could not supply was one nobody had measured. A sub-shape named by the artefact that cannot
 carry the value implies no single remedy, and **the cheapest remedy is sometimes to stop asking**.
+Instance 1 closed by the same remedy on 2026-09-29: the station-scoped pass was not made representable;
+the scope was withdrawn, and with it the check and the two codes that enforced it.
 
 **Instances 15 and 16 are the same defect on the two halves of one session**, which is why they
 closed together and by the same route: a start that energised and cannot say what it delivered, and a
@@ -2386,11 +2468,12 @@ the same section and has always been a Transaction action. New file:
 
 ---
 
-## OPEN — a server that detects fraud at reconciliation has no SecurityEvent to record the incident
+## DECIDED — FraudDetected is a server-originated record, and a Block-band transaction is settled and flagged
 
 **Raised 2026-06-04 in `CHANGELOG.md` [0.4.1] alongside the SessionEnded note, and moved here in
 0.13.0 for the same reason.** Still open, and still unimplemented: `FraudDetected` appears nowhere
-in `spec/` or `schemas/`.
+in `spec/` or `schemas/`. *(Both true until 2026-09-29, when it was decided — see* Decided *at the
+end of this entry. Everything above it is the record.)*
 
 When the server's offline-transaction reconciliation scoring concludes that a transaction is
 fraudulent, its **reaction** is well specified — disable offline mode for the user, revoke active
@@ -2419,11 +2502,71 @@ just to its enum.
 > and the station-side semantics decided together. Cheaper than this entry claimed, still a
 > decision, and still out of scope for the cycle that corrected the premise.
 
+### Decided
+
+**Decided by Gabi on 2026-09-29: `FraudDetected` is a SecurityEvent type that only the server
+records, and a transaction in the Block band stays settled and is flagged.** The rule has three homes:
+the type in [`security-event.md` §4](spec/profiles/security/security-event.md#4-event-types), the
+emission in [`reconciliation.md` §7](spec/profiles/offline/reconciliation.md#7-fraud-detection), the
+model and its bands in [`06-security.md` §7.4](spec/06-security.md#74-fraud-detection--offline-transactions).
+
+- **Server-originated only.** `FraudDetected` joins the `type` enum of `security-event.schema.json`,
+  which both origins share, and the cost the update above named is answered in the profile rather
+  than in the schema: a station **MUST NOT** emit one, and a server **MUST NOT** treat one published by
+  a station as a fraud finding
+  ([`security-event.md` §2.1](spec/profiles/security/security-event.md#21-two-origins-one-payload-shape)).
+  No station holds what the score is computed from.
+- **What it carries.** The server records one for every transaction scored in the Review, Alert or
+  Block band. Its `details` carry `score`, `factors` (the identifiers of the §7.4 factors that fired),
+  `band`, `action` — `FlaggedForReview`, `OfflineDisabledForUser` or `UserBlocked` — and the
+  transaction's identifiers: `offlineTxId`, `userId`, `stationId`, `messageId`, and `offlinePassId` or
+  `authId`. Its severity follows the band — `Warning`, `Error`, `Critical` — and its `eventId` is
+  derived over the domain `ospp:reconcile_tx:fraud:`.
+- **Scored after settlement, and never a rejection.** The order at reconciliation is deduplication,
+  signature, gate, settlement, then scoring. Scoring never changes the settled amount, and a scored
+  transaction is answered `Accepted`.
+- **Block band: settled and flagged.** The wash was delivered, so the user is charged what settlement
+  allows; the user is blocked and every pass of the user revoked, so the server refuses them wherever
+  it is reachable; and the operator of the station that delivered the wash is alerted. The Block
+  reaction §7.4 used to state alone — revoke the pass, block the account — now follows a settlement
+  instead of standing in place of one.
+- **The operator alert.** For the Alert and Block bands the server **MUST** alert the operator of the
+  station that delivered the transaction.
+
+**The fraud model's contradictions were fixed with it.** The factor *"pass was revoked at tx time"*
+could never fire — reconcile check #10 rejects such a transaction before it is settled — and is
+removed. An invalid receipt signature, which
+[`reconciliation.md` §5](spec/profiles/offline/reconciliation.md#5-receipt-signature-verification)
+called a fraud signal while its §7 called it a deterministic rejection, is a rejection and is never
+scored. One threshold set remains: §7.4's bands — Review `0.30`, Alert `0.60`, Block `0.80` — are the
+only fraud thresholds, where the worked reconciliation example had scored against `0.50`. The score is
+the sum of the factors that fire, capped at `1.00`; before, the factors could sum past the scale they
+were said to fill. And the pass limits are a gate at the station, a cap at settlement and factors at
+reconciliation, never a reconcile gate.
+
 ---
 
 ## DECIDED (0.24.0) — the server is the billing authority on the offline path too, and §8.1 was the outlier
 
 **Raised and decided 2026-08-18, in the offline spec-contradiction cycle.**
+
+> **Superseded in part, 2026-09-29.** The authority stands — the server recomputes, and the station's
+> `creditsCharged` stays advisory — but two things this decision leaned on have changed. Settlement is
+> now **capped** at what the transaction's authorization allowed at the moment of the wash — the
+> pass's `maxCreditsPerTx`, and across a pass its `maxTotalCredits` and `maxUses`, or the
+> `creditsAuthorized` of a Partial-A or Partial-B authorization — and no debit above that is taken for
+> any reason, a tariff that rose while the station was offline included; what the cap leaves uncharged
+> is not recovered from the user later
+> ([`reconciliation.md` §8](spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)). And a
+> debit that takes the wallet below zero leaves its transaction **pending**: the wallet carries the
+> debt, but neither the tenant whose station delivered the wash nor the platform collects it until the
+> user next tops up, which settles it, and it stays pending with no time limit; while the balance is
+> below zero no offline pass is issued
+> ([§8.1](spec/profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
+> So the residue below is no longer a difference that *"surfaces as balance and is
+> collectable"*: a tariff change inside the offline window is bounded from above by the cap. Item 2's
+> window is now bounded by the platform pass lifetime, at most ten days, and more tightly only where a
+> station's operator has lowered `OfflinePassMaxAge`. The decision is kept below as the record.
 
 [`spec/04-flows.md` §6](spec/04-flows.md) binds the server as *"the **authoritative billing engine**
 for all sessions"* and **MUST**-requires it to recompute regardless of the station-reported
@@ -2465,6 +2608,23 @@ amount against the signature and the pass-form gate does not.
 ## DECIDED (0.24.0) — `OfflinePassMaxAge` is kept, wired into check #2, and defaulted to inert
 
 **Raised and decided 2026-08-18, in the offline spec-contradiction cycle.**
+
+> **Superseded in part, 2026-09-29.** The pass lifetime is now one platform value, applied to every
+> pass at issuance: 3 days by default (`259200`), never more than 10 days (`864000`)
+> ([`offline-pass.md` §6](spec/profiles/offline/offline-pass.md#6-lifecycle)).
+> `OfflinePassMaxAge` moved with it — range `300--864000`, default `864000` — and is still
+> deliberately inert at its default, because an unexpired pass is now by construction younger than ten
+> days ([`08-configuration.md` §5](spec/08-configuration.md#5-offline--ble-configuration-keys)). Item 1
+> stands. Item 2's consistency obligation — that the issuer **MUST NOT** sign a validity longer than
+> the value configured on the stations — is **withdrawn**: a pass is valid at any station that accepts
+> offline passes, so the issuer cannot know which station will validate it, and it signs the platform
+> lifetime and nothing else; a station whose `OfflinePassMaxAge` is below a pass's age refuses that
+> pass with `2003`. The three days the rejected proposal below wanted are now the default pass
+> lifetime, reached by exactly the larger decision the rejection named — raising the cap on signed
+> validity — and not through this key. Epoch revocation stays coarse-grained on a different
+> justification: not a short lifetime, but a pass bound to its device key and capped by its own
+> limits ([`offline-pass.md` §5](spec/profiles/offline/offline-pass.md#5-revocation)). The decision is
+> kept below as the record.
 
 The key defined a **MUST** reject that no validation list performed — not the station's ten, not the
 eleven at authorize-time, not the thirteen at reconcile. Measured across all five implementation
@@ -2876,7 +3036,8 @@ anywhere, which is the correct state. Correcting the assumption and exempting th
 **six**. A ratchet was considered and rejected: a ceiling over a number that was 8/9 one zone
 guards less than examining the zone, and examining it is what removed a third of the findings.
 
-The six survivors are **all BLE**, in a surface marked EXPERIMENTAL with three open blockers —
+The six survivors are **all BLE**, in a surface marked EXPERIMENTAL with three open blockers
+*(two since B-2 closed on 2026-09-29)* —
 four schemas with no test vector, and two field gaps where a member is documented for its MQTT
 sibling but not for the BLE message. Vectors written before that surface is implementable would
 prove nothing, so they stand.
@@ -3171,7 +3332,7 @@ CA) stored in the station's secure element or encrypted NVS."*
 |---|---|
 | `update-firmware-request.schema.json` | closed over `firmwareUrl`, `firmwareVersion`, `checksum`, `signature`, `forceDowngrade`, `scheduledAt` — no certificate member, and no chain member |
 | `CertificateInstall [MSG-023]` | `certificateType` is `enum: ["StationCertificate", "MQTTClientCertificate"]`. There is no firmware value, and the enum is closed |
-| `ChangeConfiguration [MSG-013]` | Chapter 08 §§2--6 register 28 keys and none of them holds a firmware signing certificate; §1.3 then makes a station **MUST** answer `NotSupported` to an unrecognised key |
+| `ChangeConfiguration [MSG-013]` | Chapter 08 §§2--6 register 30 keys and none of them holds a firmware signing certificate; §1.3 then makes a station **MUST** answer `NotSupported` to an unrecognised key |
 | the firmware image itself | circular where the leaf is the anchor: the image carrying the new certificate is signed by that certificate |
 
 `conformance/test-firmware/README.md` states the same posture from the other side — *"signed offline
@@ -3181,7 +3342,8 @@ station's secure element"* — so the corpus agrees that no in-field route exist
 **Contrast makes the omission visible rather than incidental.** The station's *own* mTLS certificate
 has a full renewal profile (§4.7, `certificate-renewal.md`, `SignCertificate [MSG-022]`,
 `CertificateInstall [MSG-023]`, `TriggerCertificateRenewal [MSG-024]`). `OfflinePassPublicKey`
-rotates through a registered Chapter 08 key with a defined grace period (§6.7). The firmware signing
+carries the server's signing keys as a set through a registered Chapter 08 key, delivered at every boot
+and by ChangeConfiguration, with defined windows for a key entering and leaving the set (§6.7). The firmware signing
 authority — the one credential that gates what **code** a station will run — states a rotation
 cadence and defines no mechanism at all.
 
@@ -3716,6 +3878,17 @@ de-duplication; §4.7.3 names it as the shape to reach for if the case is judged
 ---
 
 ## DECIDED (0.17.0) — a wire mechanism to shorten the previous-key grace period was evaluated for compromise response and rejected
+
+> **Superseded, 2026-09-29.** The mechanism evaluated here has nothing left to act on. A station now
+> holds the server's **key set**, each key named by the `keyId` a pass carries, and keeps no cached
+> previous key and no grace period; a value of `OfflinePassPublicKey` is always the whole set, and the
+> station replaces the set it holds with it
+> ([`06-security.md` §6.7](spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)).
+> Compromise response removes the compromised key from the set at once and pushes the new set to
+> every station — the effect the proposal wanted, reached without a new registry key or flag. What
+> stays true is this entry's larger point: a station that has not received the new set goes on
+> accepting the key it holds, and only reaching it — by ChangeConfiguration, or at its next boot at
+> the latest — ends that. The evaluation is kept below as the record.
 
 `06-security.md` §6.7.1 gives the server a compromise posture that changes obligations and adds
 nothing to the wire. One wire mechanism was considered on the way there and is recorded here with

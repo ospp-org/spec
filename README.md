@@ -4,7 +4,7 @@
 ![Status: Draft](https://img.shields.io/badge/status-draft-orange)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 ![Messages: 40](https://img.shields.io/badge/messages-40-green)
-![Schemas: 86](https://img.shields.io/badge/schemas-86-green)
+![Schemas: 88](https://img.shields.io/badge/schemas-88-green)
 
 ---
 
@@ -24,6 +24,7 @@ Not every part of this specification is at the same maturity. Read this before i
 | MQTT station↔server (Core, Transaction, Security, Device Management) | **Stable** | Implemented by a server and exercised by an independent station implementation |
 | HTTPS provisioning (`POST /api/v1/stations/provision`) | **Stable** | Implemented; error vocabulary and precedence chain covered by conformance cases |
 | Offline reconciliation, OfflinePass lifecycle, AuthorizeOfflinePass | **Stable** | Implemented and exercised over MQTT |
+| Offline app–server contract — pass issuance and receipt upload over HTTPS ([`app-contract.md`](spec/profiles/offline/app-contract.md)) | **Draft** | Binds the server and the app, not the station |
 | **BLE transport, handshake and session** | **EXPERIMENTAL** | See below |
 
 ### BLE is experimental
@@ -33,25 +34,27 @@ The BLE surface — [`ble-transport.md`](spec/profiles/offline/ble-transport.md)
 [`ble-session.md`](spec/profiles/offline/ble-session.md), the 15 schemas under
 [`schemas/ble/`](schemas/ble/), [Chapter 02 §8](spec/02-transport.md),
 [ADR-002](adr/ADR-002-ble-handshake-security-architecture.md), and conformance cases
-[TC-OFF-001](conformance/test-cases/offline/TC-OFF-001.md) and
-[TC-OFF-002](conformance/test-cases/offline/TC-OFF-002.md) — is **EXPERIMENTAL**. It is
+[TC-OFF-001](conformance/test-cases/offline/TC-OFF-001.md),
+[TC-OFF-002](conformance/test-cases/offline/TC-OFF-002.md) and
+[TC-OFF-005](conformance/test-cases/offline/TC-OFF-005.md) — is **EXPERIMENTAL**. It is
 published for review, **not** for implementation, and it may change incompatibly without a MAJOR
 bump.
 
-**It carries three known blockers that make it unimplementable as written.** Each is stated in
-full in [KNOWN-ISSUES](KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-three-defects):
+**It carries two known blockers that make it unimplementable as written.** Each is stated in
+full in [KNOWN-ISSUES](KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-two-defects):
 
 - **B-1** — two incompatible fragmentation protocols are simultaneously normative, one in
   Chapter 02 §8.6 and one in `ble-transport.md` §11.
-- **B-2** — a station-scoped OfflinePass is required by validation check 5 and by TC-OFF-002,
-  but cannot be expressed in `offline-pass.schema.json`.
 - **B-3** — the three BLE response schemas disagree with each other and with Chapter 07 §2.3;
   `stop-service-response` has no rejection branch at all, while the profile mandates a
   `Rejected` reply.
 
+B-2, a station-scoped OfflinePass the schema could not express, is closed: a pass carries no
+station scope ([`offline-pass.md` §2.3](spec/profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)).
+
 Why it is marked rather than repaired: BLE is implemented nowhere. The server accepts no BLE key
 at provisioning and issues no `StationIdentity`, the firmware implementer has not begun it, and
-no second implementation exercises the transport. Repairing the three blockers means making
+no second implementation exercises the transport. Repairing the two blockers means making
 design choices with nothing to validate them against — the pattern that produced the offline
 sequencing layer this cycle removed. They will be repaired against a real implementation.
 
@@ -68,7 +71,7 @@ OSPP is an **open, vendor-neutral communication protocol** for self-service stat
 
 Think of it as **OCPP for self-service industries**. Where OCPP standardized EV charger-to-server communication, OSPP does the same for any station that delivers a time-bounded service through a physical bay. The protocol supports **online operation** (MQTT 5.0 over TLS 1.2+, TLS 1.3 recommended), **offline operation** (BLE 4.2+ GATT with cryptographically signed passes), and **four hybrid connectivity scenarios** — ensuring service continuity even when internet is unavailable.
 
-OSPP covers **40 messages** (27 MQTT + 13 BLE), **86 JSON Schemas**, **120 error codes**, **5 compliance profiles**, and a complete security model with mTLS, selective HMAC-SHA256 message signing, ECDSA P-256 offline authorization and receipt signing, and ECDSA P-384 root CA. It does NOT cover server-to-app REST APIs, payment gateway integration, business logic, or hardware internals — those are implementation-specific.
+OSPP covers **40 messages** (27 MQTT + 13 BLE), **88 JSON Schemas**, **118 error codes**, **5 compliance profiles**, and a complete security model with mTLS, selective HMAC-SHA256 message signing, ECDSA P-256 offline authorization and receipt signing, and ECDSA P-384 root CA. Apart from the two exchanges the offline model depends on — pass issuance and receipt upload, defined in [`app-contract.md`](spec/profiles/offline/app-contract.md) — it does NOT cover server-to-app REST APIs, payment gateway integration, business logic, or hardware internals; those are implementation-specific.
 
 ---
 
@@ -178,8 +181,8 @@ npx ajv-cli validate \
 | [04](spec/04-flows.md) | Protocol Flows | 15 end-to-end flows with sequence diagrams and step-by-step detail | Draft |
 | [05](spec/05-state-machines.md) | State Machines | Station, Bay, Session, Reservation, BLE Connection, Firmware Update, Diagnostics Upload FSMs | Draft |
 | [06](spec/06-security.md) | Security | Threat model, mTLS, HMAC-SHA256, PKI, OfflinePass, receipts, fraud scoring | Draft |
-| [07](spec/07-errors.md) | Error Codes | 120 codes (6 categories), retry policies, circuit breaker, graceful degradation | Draft |
-| [08](spec/08-configuration.md) | Configuration | 29 standard configuration keys, data types, access modes | Draft |
+| [07](spec/07-errors.md) | Error Codes | 118 codes (6 categories), retry policies, circuit breaker, graceful degradation | Draft |
+| [08](spec/08-configuration.md) | Configuration | 30 standard configuration keys, data types, access modes | Draft |
 | [--](spec/glossary.md) | Glossary | Terms and definitions | Draft |
 
 ### Profiles
@@ -192,7 +195,7 @@ Each profile defines a subset of protocol actions. Implementations declare which
 | **Transaction** | 7 | StartService, StopService, TransactionEvent, MeterValues, SessionEnded, ReserveBay, CancelReservation | [spec/profiles/transaction/](spec/profiles/transaction/) |
 | **Security** | 4 | SecurityEvent, SignCertificate, CertificateInstall, TriggerCertificateRenewal | [spec/profiles/security/](spec/profiles/security/) |
 | **Device Management** | 9 | Config, Reset, Firmware, Diagnostics, Maintenance, ServiceCatalog | [spec/profiles/device-management/](spec/profiles/device-management/) |
-| **Offline / BLE** | 14 | AuthorizeOfflinePass (MQTT), BLE transport, handshake, offline sessions, OfflinePass, reconciliation | [spec/profiles/offline/](spec/profiles/offline/) |
+| **Offline / BLE** | 14 | AuthorizeOfflinePass (MQTT), BLE transport, handshake, offline sessions, OfflinePass, reconciliation, app–server contract (HTTPS) | [spec/profiles/offline/](spec/profiles/offline/) |
 
 ### Message Catalog
 
@@ -239,10 +242,11 @@ Full definitions: [Chapter 03 — Message Catalog](spec/03-messages.md)
 
 ## JSON Schemas
 
-**86 schema files** in [`schemas/`](schemas/) — JSON Schema Draft 2020-12, strict validation (`additionalProperties: false`).
+**88 schema files** in [`schemas/`](schemas/) — JSON Schema Draft 2020-12, strict validation (`additionalProperties: false`).
 
 | Directory | Count | Content |
 |-----------|:-----:|---------|
+| [`schemas/`](schemas/) (top level) | 4 | HTTPS request and response bodies: station provisioning, and offline pass issuance |
 | [`schemas/common/`](schemas/common/) | 22 | Shared types: identifiers, timestamps, credit amounts, error objects, OfflinePass, receipt, envelope |
 | [`schemas/mqtt/`](schemas/mqtt/) | 47 | REQUEST/RESPONSE/EVENT payload schemas for all 27 MQTT actions |
 | [`schemas/ble/`](schemas/ble/) | 15 | BLE message schemas for all 13 BLE message types, plus the StationIdentity certificate and secure-frame structures |
@@ -253,13 +257,13 @@ Full index: [schemas/README.md](schemas/README.md)
 
 ## Examples
 
-**69 example files** in [`examples/`](examples/) — realistic, production-quality data.
+**75 example files** in [`examples/`](examples/) — realistic, production-quality data.
 
 | Directory | Count | Content |
 |-----------|:-----:|---------|
-| [`examples/payloads/mqtt/`](examples/payloads/mqtt/) | 36 | JSON payloads for every MQTT message |
+| [`examples/payloads/mqtt/`](examples/payloads/mqtt/) | 40 | JSON payloads for every MQTT message |
 | [`examples/payloads/ble/`](examples/payloads/ble/) | 15 | JSON payloads for every BLE message |
-| [`examples/payloads/http/`](examples/payloads/http/) | 1 | The provisioning request payload (the one REST call in scope) |
+| [`examples/payloads/http/`](examples/payloads/http/) | 3 | The provisioning request, and the offline pass issuance request and response of the app–server contract |
 | [`examples/flows/`](examples/flows/) | 12 | Narrative walkthroughs with complete message sequences |
 | [`examples/error-scenarios/`](examples/error-scenarios/) | 5 | Common error scenarios with full messages |
 
@@ -370,7 +374,7 @@ ospp/
 │   ├── 04-flows.md              Chapter 04: Protocol Flows (15 flows)
 │   ├── 05-state-machines.md     Chapter 05: State Machines
 │   ├── 06-security.md           Chapter 06: Security Model
-│   ├── 07-errors.md             Chapter 07: Error Codes (120 codes)
+│   ├── 07-errors.md             Chapter 07: Error Codes (118 codes)
 │   ├── 08-configuration.md      Chapter 08: Configuration Keys
 │   ├── glossary.md              Glossary of terms
 │   └── profiles/                Profile specifications
@@ -378,15 +382,16 @@ ospp/
 │       ├── transaction/             7 actions (StartService, StopService, ...)
 │       ├── security/                4 actions (SecurityEvent, SignCertificate, ...)
 │       ├── device-management/       9 actions (Config, Firmware, Diagnostics, ...)
-│       └── offline/                 6 docs (AuthorizeOfflinePass, BLE transport, handshake, ...)
-├── schemas/                 JSON Schema definitions (86 files)
+│       └── offline/                 7 docs (AuthorizeOfflinePass, app–server contract, BLE transport, handshake, ...)
+├── schemas/                 JSON Schema definitions (88 files)
+│   ├── *.schema.json            4 HTTPS request/response schemas (provisioning, offline pass issuance)
 │   ├── common/                  22 shared type schemas ($ref targets)
 │   ├── mqtt/                    47 MQTT message payload schemas
 │   └── ble/                     15 BLE message schemas
-├── examples/                Example payloads and narrative flows (69 files)
-│   ├── payloads/mqtt/           36 MQTT payload examples
+├── examples/                Example payloads and narrative flows (75 files)
+│   ├── payloads/mqtt/           40 MQTT payload examples
 │   ├── payloads/ble/            15 BLE payload examples
-│   ├── payloads/http/           1 provisioning request example
+│   ├── payloads/http/           3 HTTPS examples (provisioning request; offline pass issuance request and response)
 │   ├── flows/                   12 end-to-end flow narratives
 │   └── error-scenarios/         5 error scenario walkthroughs
 ├── guides/                  Developer guides

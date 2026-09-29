@@ -38,8 +38,8 @@ sequenceDiagram
         Note over User,Station: Phase 3 — OfflinePass Authorization
         User->>BLE: Write FFF3: OfflineAuthRequest
         Note right of User: {offlinePass, counter, sessionProof}
-        Station->>Station: Validate OfflinePass (10 checks)
-        Note over Station: 1.Signature 2.Expiry 3.Epoch<br/>4.Device 5.Station 6.MaxUses<br/>7.MaxCredits 8.PerTx 9.Rate 10.Counter
+        Station->>Station: Validate OfflinePass (nine checks, check 5 withdrawn)
+        Note over Station: 1.Signature by keyId 2.Expiry and max age 3.Platform epoch<br/>4.Device (5 withdrawn) 6.MaxUses<br/>7.MaxCredits 8.PerTx 9.Rate 10.Counter<br/>plus own limits: OfflineModeEnabled, OfflineWindowHours, OfflineTransactionLimit
         BLE-->>User: Notify FFF4: AuthResponse {result: "Accepted"}
     end
 
@@ -77,4 +77,4 @@ sequenceDiagram
 
     Note over User,Station: Transaction stored locally on both sides
     Note over Station: When MQTT reconnects → TransactionEvent sent to server
-    Note over User: When internet returns → App syncs offline tx with server
+    Note over User: When internet returns → App uploads its receipt copy (POST /api/v1/offline/receipts)<br/>First copy to arrive settles, the other is answered Duplicate
