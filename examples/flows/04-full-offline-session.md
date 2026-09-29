@@ -664,7 +664,7 @@ When the station regains MQTT connectivity, it performs the reconciliation flow 
 ```
 
 The server, in the order of [`reconciliation.md` §2](../../spec/profiles/offline/reconciliation.md#2-sync-procedure):
-1. Deduplicates by `offlineTxId` (`otx_a3b4c5d6e7f8`). Whichever copy of a receipt arrives first — the station's TransactionEvent or the app's upload — may settle, and the other is answered `Duplicate` ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload))
+1. Deduplicates by `offlineTxId` (`otx_a3b4c5d6e7f8`). Whichever copy of a receipt arrives first — the station's TransactionEvent or the app's upload — may settle, and once one has settled the other is answered `Duplicate` ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload))
 2. Verifies the receipt signature with the receipt-signing key of the station the signed receipt names (`stationId`)
 3. Records txCounter 8 as forensic evidence (contiguous with the last known counter — noted, not gated on)
 4. Applies the reconcile-time gate: the OfflinePass was valid at the transaction's signed `endedAt`, read through the station's clock offset ([`reconciliation.md` §6.8](../../spec/profiles/offline/reconciliation.md#68-station-clock-offset))

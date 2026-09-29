@@ -143,7 +143,7 @@ This is the path that destroyed money before 0.9.0, when a retired rule of §4.2
 6. The server settles each transaction at its own recomputation from the signed receipt, capped by the pass limits, and debits the user's wallet by the settled amounts.
 7. A transaction whose `txCounter` is discontinuous with the station's recorded history is settled normally, its money recorded, and an operator alert raised **on the station** — contributing nothing to the user's fraud score.
 8. A transaction whose `txCounter` is at or below previously recorded counters (a station whose store was lost or whose board was replaced) is settled and **never** answered `Duplicate`. Deduplication is keyed on `offlineTxId`, not on the counter.
-9. Negative wallet balances are permitted; the transaction whose debit took the wallet below zero stays pending until the user next tops up, the server notifies the user to top up, and it issues no offline pass meanwhile.
+9. Negative wallet balances are permitted; the transaction whose debit took the wallet below zero stays pending until the user next tops up, the server notifies the user to top up, and it issues no offline pass while the balance is below zero.
 
 ## Failure Criteria
 

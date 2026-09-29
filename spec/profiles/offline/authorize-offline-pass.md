@@ -43,7 +43,7 @@ The server **MUST** perform every check below that is not withdrawn — #1--#4, 
 | # | Check | Error on Failure |
 |:--:|-----------------------------------------------|-------------------------------|
 | 1 | **Signature verification** -- verify the ECDSA P-256 `signature` field with the key of the server's own key set named by the pass's `keyId` ([`06-security.md` §6.7](../../06-security.md#67-server-signing-key-rotation-ecdsa-p-256)). | `2002 OFFLINE_PASS_INVALID` |
-| 2 | **Within its temporal bounds** -- `expiresAt` **MUST** be greater than the current server time, and the pass's age (`now - issuedAt`) **MUST NOT** exceed the forwarding station's `OfflinePassMaxAge`, the value the server configured on it ([`08-configuration.md` §5](../../08-configuration.md#5-offline--ble-configuration-keys)). The station forwards the pass without validating it ([`04-flows.md` §5c](../../04-flows.md#5c-partial-b--phone-offline-station-online)), so the server applies the station's own, stricter limit for it. | `2003 OFFLINE_PASS_EXPIRED` |
+| 2 | **Within its temporal bounds** -- `expiresAt` **MUST** be greater than the current server time, and the pass's age (`now - issuedAt`) **MUST NOT** exceed the forwarding station's `OfflinePassMaxAge` — the value the server configured on it, or the default of [`08-configuration.md` §5](../../08-configuration.md#5-offline--ble-configuration-keys) where it configured none. The station forwards the pass without validating it ([`04-flows.md` §5c](../../04-flows.md#5c-partial-b--phone-offline-station-online)), so the server applies the station's own, stricter limit for it. | `2003 OFFLINE_PASS_EXPIRED` |
 | 3 | **Revocation epoch** -- `revocationEpoch` **MUST** be greater than or equal to the platform's current `RevocationEpoch` ([`06-security.md` §6.6](../../06-security.md#66-epoch-based-revocation)). | `2004 OFFLINE_EPOCH_REVOKED` |
 | 4 | **Device binding** -- `offlinePass.deviceId` **MUST** match the `deviceId` field in the request. | `2002 OFFLINE_PASS_INVALID` |
 | 5 | **Withdrawn** -- a pass carries no station scope. The number is not reused. | — |
@@ -98,7 +98,7 @@ The server **MUST** perform every check below that is not withdrawn — #1--#4, 
 | Code | Text | Severity | Description |
 |:----:|-------------------------------|----------|-----------------------------------------------|
 | 2002 | `OFFLINE_PASS_INVALID` | Error | ECDSA P-256 signature verification failed or pass structure is invalid. |
-| 2003 | `OFFLINE_PASS_EXPIRED` | Warning | Pass `expiresAt` timestamp has passed. |
+| 2003 | `OFFLINE_PASS_EXPIRED` | Warning | Pass `expiresAt` timestamp has passed, or the pass is older than the forwarding station's `OfflinePassMaxAge`. |
 | 2004 | `OFFLINE_EPOCH_REVOKED` | Error | Pass `revocationEpoch` is less than the platform's current epoch. |
 | 2005 | `OFFLINE_COUNTER_REPLAY` | Critical | Counter is not strictly greater than last seen; possible replay attack. |
 | 2014 | `OFFLINE_PASS_REVOKED` | Error | The pass is revoked on the server, individually or by a block on its user (check #12). |

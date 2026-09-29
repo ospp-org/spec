@@ -311,7 +311,7 @@ The server runs the authorize-time checks of
 — #1–#4, #6–#10 and #12; #5 and #11 are withdrawn — in that order, stopping at the first failure:
 
 1. **Signature verification** — the ECDSA P-256 `signature` verifies with the key of the server's own key set named by the pass's `keyId` (`YjX5pR0TzmU3ubs17wImQQ`)
-2. **Not expired** — `expiresAt` (2026-02-14T06:00:00.000Z) is in the future
+2. **Within its temporal bounds** — `expiresAt` (2026-02-14T06:00:00.000Z) is in the future, and the pass's age (9 h 10 min) is within the `OfflinePassMaxAge` of `stn_a1b2c3d4` (864000 s, the default)
 3. **Revocation epoch** — pass `revocationEpoch` (42) >= the platform's current `RevocationEpoch` (42)
 4. **Device binding** — `offlinePass.deviceId` (`device_b7c4de89f0123456`) matches the request's `deviceId`
 5. *(withdrawn — a pass carries no station scope)*
@@ -851,7 +851,7 @@ On the Operator Dashboard, Charlie sees the session in real-time because the sta
 
 1. **Station does NOT validate locally in Partial B.** When the station is online, it always forwards the OfflinePass to the server for real-time validation. This is strictly better than local validation because the server can verify that neither the pass nor its user has been revoked since issuance (check #12), apply the platform's current epoch and the pass's use at every station, and debit the wallet immediately. The nine local validation checks ([`06-security.md` §6.1.1](../../spec/06-security.md#611-offlinepass-validation--10-checks); see Flow 04) are only used as a fallback.
 
-2. **Server debits wallet at authorization time.** The server debits Bob's wallet at step 9, before the service even starts. This matches the online flow behavior and prevents the user from starting multiple sessions with the same credits. There is no risk of over-billing: the `creditsAuthorized` of the response caps what the session may be charged, and any true-up is refund-only ([`reconciliation.md` §8](../../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)).
+2. **Server debits wallet at authorization time.** The server debits Bob's wallet at step 9, before the service even starts. This matches the online flow behavior, and the pass's limits, checked against the server's count at every station, bound what the next session may use. There is no risk of over-billing: the `creditsAuthorized` of the response caps what the session may be charged, and any true-up is refund-only ([`reconciliation.md` §8](../../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)).
 
 3. **Settled online; reconciled only if MQTT is lost.** Because the station is online throughout the session, all events (StatusNotification, MeterValues) are sent to the server in real time via MQTT, and the server settles the session when the station reports its end. Had the station lost MQTT before then, it would have reconciled the transaction through TransactionEvent, and the server would have settled it once, as a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](../../spec/profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)). The receipt on FFF6 is Bob's copy, which the app uploads once it has connectivity ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)).
 

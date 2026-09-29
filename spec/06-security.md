@@ -1624,7 +1624,7 @@ sequenceDiagram
     Server-->>App: trust bundle {keyOld, keyNew} with every pass issued
     Note over Server: Publish-before window: max pass lifetime + worst sync gap
     Server->>Server: Sign with keyNew (keyId names it in every pass)
-    Note over Server: Keep-after window: until the last pass signed by keyOld has expired
+    Note over Server: Keep-after window: until everything keyOld signed has expired
     Server->>SSP: ChangeConfiguration [MSG-013] {OfflinePassPublicKey = {keyNew}}
     Note over Server: Compromise response inverts the windows — §6.7.1
 ```

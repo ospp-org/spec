@@ -474,7 +474,7 @@ have elapsed since your last successful MQTT connection, or when you already hol
 you cannot check offline — a block or an individual revocation, whenever issued, an epoch the
 platform moved after you last received configuration, use at other stations, the user's balance —
 the server acts on at Partial-B authorize time and at reconciliation, except the balance, which
-gates no offline wash ([`offline-pass.md` §5](../spec/profiles/offline/offline-pass.md#5-revocation)).
+gates no wash on a pass ([`offline-pass.md` §5](../spec/profiles/offline/offline-pass.md#5-revocation)).
 
 You need to persist (in flash/NVS):
 - Per-pass usage counters (uses, total credits, last counter, last timestamp)
@@ -932,9 +932,9 @@ Your app needs to:
 3. **BLE scanning** — Filter for service UUID `0000FFF0-0000-1000-8000-00805F9B34FB`.
 4. **HELLO/CHALLENGE handshake** — Exchange nonces + per-handshake ephemeral P-256 keys; verify the StationIdentity certificate, under a key of your trust bundle, before sending any pass.
 5. **Derive session key** — `HKDF-SHA256(es ‖ ee ‖ appNonce ‖ stationNonce)` over the two ECDH secrets (the BLE LTK is **not** used); then send all post-Challenge messages through the ChaCha20-Poly1305 AEAD channel.
-6. **Authenticate** — Send OfflineAuthRequest (Full Offline, Partial B) or ServerSignedAuth (Partial A). Before the customer chooses a service, show the pass's limits — the per-wash limit, the credits remaining and the uses remaining; a request above a limit is refused, never reduced ([`offline-pass.md` §2.1](../spec/profiles/offline/offline-pass.md#21-offlineallowance-object)).
+6. **Authenticate** — Send OfflineAuthRequest (Full Offline, Partial B) or ServerSignedAuth (Partial A). Before the customer chooses a service, show the pass's limits — the per-wash limit, the credits remaining and the uses remaining — and request nothing the pass cannot cover by your own count of the receipts you hold against it, and nothing sooner than `minIntervalSec` after its last use; present only the latest pass you were issued; a request above a limit is refused, never reduced ([`offline-pass.md` §2.1](../spec/profiles/offline/offline-pass.md#21-offlineallowance-object)).
 7. **Store receipts** — After an offline session, store the signed receipt in a local transaction log.
-8. **Upload every receipt** — as soon as you have connectivity, `POST /api/v1/offline/receipts` with the Receipt exactly as you read it from FFF6; stop once it is answered `Accepted`, `Duplicate` or `Rejected`, and retry after a backoff on `RetryLater` ([`app-contract.md` §4](../spec/profiles/offline/app-contract.md#4-receipt-upload)). Whichever copy — yours or the station's — reaches the server first may settle; the other is answered `Duplicate`.
+8. **Upload every receipt** — as soon as you have connectivity, `POST /api/v1/offline/receipts` with the Receipt exactly as you read it from FFF6; stop once it is answered `Accepted`, `Duplicate` or `Rejected`, and retry after a backoff on `RetryLater` ([`app-contract.md` §4](../spec/profiles/offline/app-contract.md#4-receipt-upload)). Whichever copy — yours or the station's — reaches the server first may settle; once one has settled, the other is answered `Duplicate`.
 
 **The four connectivity scenarios:**
 

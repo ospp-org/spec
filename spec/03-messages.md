@@ -426,7 +426,7 @@ In the **Partial B** offline scenario (phone offline, station online), the mobil
 |------------|-----------|
 | `1005` | `INVALID_MESSAGE_FORMAT` — request is not valid JSON or missing required fields |
 | `2002` | `OFFLINE_PASS_INVALID` — signature verification failed |
-| `2003` | `OFFLINE_PASS_EXPIRED` — pass has expired |
+| `2003` | `OFFLINE_PASS_EXPIRED` — pass has expired, or is older than the forwarding station's `OfflinePassMaxAge` |
 | `2004` | `OFFLINE_EPOCH_REVOKED` — revocation epoch is newer than pass epoch |
 | `2005` | `OFFLINE_COUNTER_REPLAY` — counter replay detected |
 | `2014` | `OFFLINE_PASS_REVOKED` — the pass is revoked on the server, individually or by a block on its user |
