@@ -2556,11 +2556,11 @@ reconciliation, never a reconcile gate.
 
 > **Superseded in part, 2026-09-29.** The authority stands — the server recomputes, and the station's
 > `creditsCharged` stays advisory — but two things this decision leaned on have changed. Settlement is
-> now **capped** at what the transaction's authorization allowed at the moment of the wash — the
-> pass's `maxCreditsPerTx`, and across a pass its `maxTotalCredits` and `maxUses`, or the
-> `creditsAuthorized` of a Partial-A or Partial-B authorization — and no debit above that is taken for
-> any reason, a tariff that rose while the station was offline included; what the cap leaves uncharged
-> is not recovered from the user later
+> now **capped**: at the pass's `maxCreditsPerTx`, the signed `creditsAuthorized` of a Partial-A
+> authorization or the `creditsAuthorized` of a Partial-B one within the pass's limits, and across a pass at
+> its `maxTotalCredits` and `maxUses`, taken in the order the transactions arrive — and no
+> debit above that is taken for any reason, a tariff that rose while the station was offline included;
+> what the cap leaves uncharged is not recovered from the user later
 > ([`reconciliation.md` §8](spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)). And a
 > debit that leaves the wallet below zero leaves its transaction **pending**: the wallet carries the
 > debt, but neither the tenant whose station delivered the wash nor the platform collects it until the
