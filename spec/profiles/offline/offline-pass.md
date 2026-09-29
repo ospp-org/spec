@@ -219,13 +219,15 @@ The full lifecycle of an OfflinePass is as follows:
    >
    > **The two counters also hold two different quantities, and that is the second half of the
    > defect.** At authorize-time the only figure available is an **estimate** — the cost the server
-   > projects for the requested service and duration. At reconcile the figure is the **actual**
-   > delivered cost, recomputed by the server from the signed receipt
-   > ([`reconciliation.md` §8.1](reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
+   > projects for the requested service and duration. At settlement the figure is the **actual**
+   > delivered cost, recomputed by the server — from the signed receipt at reconciliation
+   > ([`reconciliation.md` §8.1](reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)), from the
+   > reported end when a Partial-B session settles online
+   > ([`04-flows.md` §5c](../../04-flows.md#5c-partial-b--phone-offline-station-online)).
    > Adding the second to the first counts one transaction twice **and** at two different
    > valuations. The authorize-time advance is therefore **provisional**: the server **MUST**
    > replace it with the recomputed actual when the transaction settles, and **MUST NOT** add to
-   > it. A pass that was authorized and never reconciled keeps its provisional figure, which is the
+   > it. A pass that was authorized and whose transaction never settled keeps its provisional figure, which is the
    > conservative direction and the one that cannot overspend.
    >
    > This is stated because the two sites read as independent obligations and were implemented as
