@@ -1268,8 +1268,10 @@ Every offline transaction produces a cryptographically signed receipt, ensuring 
    // the ServerSignedAuth claims), NOT a station-local id (finding F2). The station
    // adopts this server sessionId for the whole session — StartServiceResponse and
    // the signed receipt — so it is the settle-once correlation key
-   // (reconciliation.md §6.7 / §8.2). (Full-Offline / pass-form sessions, which
-   // have no server-issued sessionId, mint a station-local one — ble-session.md §1.)
+   // (reconciliation.md §6.7 / §8.2). (Pass-form sessions mint a station-local one
+   // for BLE — ble-session.md §1; a Partial-B session also holds the server's, from
+   // its AuthorizeOfflinePass answer, and reports on MQTT under it —
+   // authorize-offline-pass.md §6.)
    // `passCounter` (finding N7) is the pass's app-global monotonic usage counter,
    // signed so the server enforces global (offlinePassId, passCounter) uniqueness
    // at reconcile (reconciliation.md §6.1 checks #12/#13). Distinct from

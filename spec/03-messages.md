@@ -2717,8 +2717,8 @@ The app MUST request biometric or PIN confirmation from the user before sending 
 3. `revocationEpoch` >= the platform `RevocationEpoch` the station holds
 4. `deviceId` matches Hello `deviceId`
 5. *(withdrawn)*
-6. `maxUses` not exceeded
-7. `maxTotalCredits` not exceeded
+6. fewer than `maxUses` transactions already counted against this pass
+7. credits already counted plus this transaction's estimated cost not above `maxTotalCredits`
 8. `maxCreditsPerTx` not exceeded for this transaction
 9. `minIntervalSec` elapsed since last transaction from this pass
 10. `counter` > `lastSeenCounter` (anti-replay)

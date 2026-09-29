@@ -251,7 +251,7 @@ The station **MUST** maintain a server-side auto-stop timer for every active BLE
 2. The timer counts down in real time, independent of the BLE connection state.
 3. When the timer reaches zero, the station **MUST** stop the physical hardware, calculate final `creditsCharged`, generate a signed receipt, store it on FFF6, and send a `ReceiptReady` notification on FFF5 (if the app is still connected).
 4. The auto-stop timer ensures that services always complete within the authorized duration, even if the app crashes, the BLE connection drops, or the user walks away.
-5. The auto-stop timer **MUST NOT** be extended or reset by app requests. The only way to stop a service before the timer expires is via a StopServiceRequest.
+5. The auto-stop timer **MUST NOT** be extended or reset by app requests. The app stops a service before the timer expires only by a StopServiceRequest.
 
 ## 7. Related Schemas
 

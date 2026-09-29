@@ -455,7 +455,7 @@ When you receive an OfflineAuthRequest, validate the OfflinePass in this order
 | 3 | Epoch | `2004` | `revocationEpoch` >= the platform `RevocationEpoch` your station holds |
 | 4 | Device | `2002` | `deviceId` matches the `deviceId` from the Hello message |
 | 5 | *Withdrawn* | — | A pass carries no station or organization scope and is valid at any station that accepts offline passes ([`offline-pass.md` §2.3](../spec/profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)). The number is not reused |
-| 6 | Uses | `4002` | This pass hasn't exceeded `maxUses` on your station |
+| 6 | Uses | `4002` | The transactions already counted against this pass on your station are fewer than `maxUses` |
 | 7 | Total credits | `4002` | Credits already counted for this pass **plus** this request's estimated cost do not exceed `maxTotalCredits` |
 | 8 | Per-TX credits | `4004` | Requested service cost <= `maxCreditsPerTx` |
 | 9 | Interval | `4003` | Time since last TX from this pass >= `minIntervalSec` |
