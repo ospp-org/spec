@@ -2,12 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/common/offline-pass.schema.json",
   "title": "Offline Pass",
-  "description": "Cryptographically signed pass authorizing offline service sessions with spending and usage constraints",
+  "description": "Cryptographically signed pass authorizing offline service sessions with spending and usage limits. It belongs to the user (sub) and to that user's device (devicePublicKey) and carries no station and no organization: it is valid at any station that accepts offline passes (spec/profiles/offline/offline-pass.md 2.3).",
   "type": "object",
   "required": [
     "passId",
     "sub",
     "deviceId",
+    "devicePublicKey",
+    "keyId",
     "issuedAt",
     "expiresAt",
     "policyVersion",
@@ -30,13 +32,22 @@
       "$ref": "device-id.schema.json",
       "description": "Device this pass is bound to"
     },
+    "devicePublicKey": {
+      "$ref": "ec-public-key.schema.json",
+      "description": "The device's P-256 public key, compressed SEC1, Base64 (06-security.md 6.5.2). Its private key was generated in, and cannot be exported from, the phone's hardware-backed keystore; the pass is bound to the device holding it (spec/profiles/offline/offline-pass.md 2 and 6)."
+    },
+    "keyId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{22}$",
+      "description": "Identifier of the server signing key that signed this pass: base64url (unpadded) of the first 16 bytes of SHA-256 over the DER SubjectPublicKeyInfo of that key (06-security.md 4.3 and 6.7). A verifier selects the key of its server key set that carries this identifier."
+    },
     "issuedAt": {
       "$ref": "timestamp.schema.json",
       "description": "When this pass was issued"
     },
     "expiresAt": {
       "$ref": "timestamp.schema.json",
-      "description": "When this pass expires"
+      "description": "When this pass expires: issuedAt plus the platform pass lifetime (default 3 days, never more than 10 days; spec/profiles/offline/offline-pass.md 6)"
     },
     "policyVersion": {
       "type": "integer",
@@ -46,7 +57,7 @@
     "revocationEpoch": {
       "type": "integer",
       "minimum": 0,
-      "description": "Revocation epoch; stations reject passes with epoch lower than their stored minimum"
+      "description": "The platform RevocationEpoch at issuance; a station rejects a pass whose epoch is lower than the platform value it holds (06-security.md 6.6)"
     },
     "offlineAllowance": {
       "type": "object",
@@ -78,34 +89,22 @@
             "$ref": "service-id.schema.json"
           },
           "minItems": 1,
-          "description": "WITHDRAWN in 0.25.0 — retained as an accepted-and-ignored member for one transition step only. No validation gate in this specification reads it: not the station's nine checks (06-security.md 6.1.1), not the authorize-time eleven, not the reconcile-time thirteen. Servers MUST NOT issue it in new passes; stations and servers MUST accept a pass that carries it and MUST NOT reject on its presence, absence or contents. The member is removed outright in a later release, once passes carrying it have left circulation."
+          "description": "WITHDRAWN in 0.25.0 — retained as an accepted-and-ignored member for one transition step only. No validation gate in this specification reads it: not the station's checks (06-security.md 6.1.1), not the authorize-time gate, not the reconcile-time gate. Servers MUST NOT issue it in new passes; stations and servers MUST accept a pass that carries it and MUST NOT reject on its presence, absence or contents. The member is removed outright in a later release, once passes carrying it have left circulation."
         }
       },
       "additionalProperties": false
     },
     "constraints": {
       "type": "object",
-      "description": "Operational constraints for offline sessions",
+      "description": "Per-pass rate constraint. The station's own offline limits are station configuration, not pass fields (08-configuration.md 5)",
       "required": [
-        "minIntervalSec",
-        "stationOfflineWindowHours",
-        "stationMaxOfflineTx"
+        "minIntervalSec"
       ],
       "properties": {
         "minIntervalSec": {
           "type": "integer",
           "minimum": 0,
           "description": "Minimum interval in seconds between consecutive offline transactions"
-        },
-        "stationOfflineWindowHours": {
-          "type": "integer",
-          "minimum": 1,
-          "description": "Maximum hours a station can operate in offline mode"
-        },
-        "stationMaxOfflineTx": {
-          "type": "integer",
-          "minimum": 1,
-          "description": "Maximum offline transactions a station will accept before requiring sync"
         }
       },
       "additionalProperties": false
