@@ -4,6 +4,8 @@
     "passId": "opass_a1b2c3d4e5f6a7b8",
     "sub": "sub_xyz789",
     "deviceId": "device_a8f3bc12e4567890",
+    "devicePublicKey": "A0xX3DTR7Imb4hzGyaH1WyUX/5U/CIghk7B/cZV11KFi",
+    "keyId": "YjX5pR0TzmU3ubs17wImQQ",
     "issuedAt": "2026-02-13T06:00:00.000Z",
     "expiresAt": "2026-02-14T06:00:00.000Z",
     "policyVersion": 1,
@@ -11,19 +13,13 @@
     "offlineAllowance": {
       "maxTotalCredits": 100,
       "maxUses": 5,
-      "maxCreditsPerTx": 30,
-      "allowedServiceTypes": [
-        "svc_eco",
-        "svc_standard"
-      ]
+      "maxCreditsPerTx": 30
     },
     "constraints": {
-      "minIntervalSec": 60,
-      "stationOfflineWindowHours": 72,
-      "stationMaxOfflineTx": 100
+      "minIntervalSec": 60
     },
     "signatureAlgorithm": "ECDSA-P256-SHA256",
-    "signature": "MEUCIQCHILb34TgfmMNW3cl1cTgmRubw7WpdWkCPXu3ELZdD7AIgYrkZxrQzu/tsMOoOxCCvWknEmyIQjVTQYMhugDwhlXA="
+    "signature": "MEQCIEdmkzFrxGI2oFsnkRwMay8MkqW1LNqYOnpwGkx/0fyRAiAfeKR7knNY/2igxjLMVp3FLthLwOMLIbFrOyft/MwYEQ=="
   },
   "counter": 5,
   "sessionProof": "CSzb7m/7wtCkHmR3aKmT7mF6U3DiUHVBtp67tLr5RO8="

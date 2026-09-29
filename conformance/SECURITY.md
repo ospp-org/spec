@@ -61,4 +61,7 @@ Security considerations for setting up and running OSPP conformance tests.
 - BLE test transmit power **SHOULD** be set to the minimum level required for
   reliable communication within the test area.
 - Offline passes issued for BLE tests **MUST** have short expiry times
-  (maximum 5 minutes) to limit exposure if intercepted.
+  (maximum 5 minutes) to limit exposure if intercepted. A server applies one platform pass
+  lifetime, `offlinePassLifetimeSeconds`, to every pass it issues
+  ([`offline-pass.md` §6](../spec/profiles/offline/offline-pass.md#6-lifecycle)), so the
+  test deployment sets that value to at most 300 seconds.

@@ -2,7 +2,7 @@
 
 ## Scenario
 
-Alice is at "Station Alpha -- Example City" and wants to start the Eco Program service on Bay 1. Her phone has 4G connectivity, but the station's MQTT connection is down due to an ISP fiber cut in the area. The station has been offline for about 20 minutes, but its BLE radio is advertising normally. Alice opens the app, which detects the station via BLE and reads that it reports `connectivity: "Offline"`. Since her phone is online, the app uses the **Partial A** strategy: it calls `POST /sessions/offline-auth` to obtain a server-signed ECDSA P-256 authorization, then delivers it to the station over BLE. The station verifies the signature locally using the server's public key stored in NVS. Alice runs a 3-minute Eco Program session on Bay 1, stops, and receives a signed receipt. Credits were debited server-side at step 1, so no reconciliation is needed for billing.
+Alice is at "Station Alpha -- Example City" and wants to start the Eco Program service on Bay 1. Her phone has 4G connectivity, but the station's MQTT connection is down due to an ISP fiber cut in the area. The station has been offline for about 20 minutes, but its BLE radio is advertising normally. Alice opens the app, which detects the station via BLE and reads that it reports `connectivity: "Offline"`. Since her phone is online, the app uses the **Partial A** strategy: it calls `POST /sessions/offline-auth` to obtain a server-signed ECDSA P-256 authorization, then delivers it to the station over BLE. The station verifies the signature locally with a key of the server key set (`OfflinePassPublicKey`) it holds. Alice runs a 3-minute Eco Program session on Bay 1, stops, and receives a signed receipt. Credits were pre-debited server-side when the authorization was issued; settlement is a refund-only true-up against that pre-debit, never above the authorization's `creditsAuthorized` and never a second debit ([`reconciliation.md` §8.2](../../spec/profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)).
 
 ## Participants
 
@@ -21,8 +21,8 @@ Alice is at "Station Alpha -- Example City" and wants to start the Eco Program s
 - Alice's wallet balance: 120 credits
 - Station `stn_a1b2c3d4` has been offline (MQTT disconnected) for ~20 minutes
 - Station BLE is advertising as `OSPP-b2c3d4`
-- Station has the server's ECDSA P-256 verify key (`OfflinePassPublicKey`) stored in NVS
-- Station `OfflineModeEnabled` configuration is `true`
+- Station holds the server key set (`OfflinePassPublicKey`) in NVS
+- Station `OfflineModeEnabled` does not matter here: it governs only whether the station accepts an OfflinePass on its own validation, and a ServerSignedAuth is authorized and debited by the server ([`08-configuration.md` §5](../../spec/08-configuration.md#5-offline--ble-configuration-keys))
 - Bay 1 status: `Available`
 
 ## Timeline
@@ -180,9 +180,9 @@ The server performs the following:
 4. Notes that station `stn_a1b2c3d4` is currently offline (last heartbeat missed) — proceeds optimistically
 5. Debits 50 credits from Alice's wallet (balance: 120 - 50 = 70)
 6. Creates session record `sess_c4d5e6f7a8b9` with `status: pending` (awaiting reconciliation from station)
-7. Signs an authorization blob with the server's ECDSA P-256 private key
+7. Signs an authorization blob with its current server signing key (ECDSA P-256)
 
-The authorization blob contains `stationId`, `bayId`, `serviceId`, `durationSeconds`, `issuedAt`, `expiresAt` (5-minute validity window), and the ECDSA P-256 signature.
+Among its claims, the authorization blob carries `stationId`, `bayId`, `serviceId`, `durationSeconds`, `creditsAuthorized` (50: the pre-debit, and the most the session may be charged), `issuedAt` and `expiresAt` (5-minute validity window), under the server's ECDSA P-256 signature.
 
 **HTTP Response:**
 
@@ -278,7 +278,7 @@ The app delivers the server-signed authorization obtained in Step 5.
 
 The station decodes the `signedAuthorization` Base64 blob and performs the following checks:
 
-1. **ECDSA P-256 signature verification** — using `OfflinePassPublicKey` stored in NVS (cached previous key also accepted during the grace period)
+1. **ECDSA P-256 signature verification** — with a key of the server key set (`OfflinePassPublicKey`) the station holds. A ServerSignedAuth names no `keyId`, so the station tries the keys of its set; there is no cached previous key and no grace period ([`06-security.md` §6.7](../../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256))
 2. **stationId matches** — the authorization is for `stn_a1b2c3d4` (this station)
 3. **bayId is valid** — `bay_c1d2e3f4a5b6` exists on this station
 4. **serviceId is valid** — `svc_eco` is in the local catalog
@@ -412,7 +412,7 @@ Alice sees the timer tick up and the progress bar advance. The meter readings up
 At about 2 minutes 54 seconds, Alice decides the car is clean. She taps "Stop service". The app shows a confirmation dialog:
 
 > **Stop service?**
-> Unused credits have already been processed by the server.
+> Unused credits are refunded when the session settles.
 > [Cancel] [Stop]
 
 Alice taps "Stop".
@@ -482,6 +482,10 @@ The station generates a signed receipt:
 ```json
 {
   "offlineTxId": "otx_e5f6a7b8c9d0",
+  "authId": "auth_c89731927892",
+  "sessionId": "sess_c4d5e6f7a8b9",
+  "userId": "sub_alice2026",
+  "deviceId": "device_a8f3bc12e4567890",
   "bayId": "bay_c1d2e3f4a5b6",
   "serviceId": "svc_eco",
   "startedAt": "2026-02-13T14:30:08.500Z",
@@ -494,18 +498,15 @@ The station generates a signed receipt:
     "energyWh": 120
   },
   "receipt": {
-    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQ2hhcmdlZCI6MjksImRldmljZUlkIjoiZGV2X2U1ZjZhN2I4IiwiZHVyYXRpb25TZWNvbmRzIjoxNzQsImVuZGVkQXQiOiIyMDI2LTAyLTEzVDE0OjMzOjAyLjQwMFoiLCJtZXRlclZhbHVlcyI6eyJjb25zdW1hYmxlTWwiOjQ3MCwiZW5lcmd5V2giOjEyMCwibGlxdWlkTWwiOjM5ODAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzXzBjMDMyMGMzZWJjMTgwM2UiLCJvZmZsaW5lVHhJZCI6Im90eF9lNWY2YTdiOGM5ZDAiLCJwYXNzQ291bnRlciI6NjAsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDE0OjMwOjA4LjUwMFoiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl83NmZhYWY2OWUxNzBjMjMwIn0=",
-    "signature": "MEQCIAIYG+rPwGt+tym0ozyFhZ8a26yNtfnmh9o6J8VOPWXeAiBTC5sG10DnPxleMHw7+amtHH1PUfRhCIZftlpV2uLckQ==",
+    "data": "eyJhdXRoSWQiOiJhdXRoX2M4OTczMTkyNzg5MiIsImJheUlkIjoiYmF5X2MxZDJlM2Y0YTViNiIsImJvb2tlZER1cmF0aW9uU2Vjb25kcyI6MzAwLCJjbG9ja1N0YXRlIjoiU3luY2hyb25pemVkIiwiY3JlZGl0c0NoYXJnZWQiOjI5LCJkZXZpY2VJZCI6ImRldmljZV9hOGYzYmMxMmU0NTY3ODkwIiwiZHVyYXRpb25TZWNvbmRzIjoxNzQsImVuZFJlYXNvbiI6IkxvY2FsIiwiZW5kZWRBdCI6IjIwMjYtMDItMTNUMTQ6MzM6MDIuNDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6NDcwLCJlbmVyZ3lXaCI6MTIwLCJsaXF1aWRNbCI6Mzk4MDB9LCJvZmZsaW5lVHhJZCI6Im90eF9lNWY2YTdiOGM5ZDAiLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic2Vzc2lvbklkIjoic2Vzc19jNGQ1ZTZmN2E4YjkiLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDE0OjMwOjA4LjUwMFoiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9hbGljZTIwMjYifQ==",
+    "signature": "MEUCIQC5Ont2E3TnPYbB7s3OMCFKGNc1NcWiHnCpcLM5SyGZrgIgLGs9bpdYUR02K+2gHZPgTPMLw3/sCoOMgK3vPO1D+yo=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
-  "txCounter": 8,
-  "userId": "sub_76faaf69e170c230",
-  "offlinePassId": "opass_0c0320c3ebc1803e",
-  "passCounter": 60
+  "txCounter": 8
 }
 ```
 
-The app stores this receipt in its offline transaction log. Since Alice's phone is online, the app can also immediately sync this receipt with the server.
+The app stores this receipt in its offline transaction log. Since Alice's phone is online, it uploads the receipt at once, as it does every receipt it holds ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)).
 
 ---
 
@@ -537,53 +538,43 @@ The app transitions to the SessionCompletedScreen:
 +----------------------------------+
 ```
 
-Since the server pre-debited 50 credits but only 29 were used, the app notifies the server of the actual usage. The server will refund the remaining 21 credits once it receives the reconciliation data from the station (or from the app's own sync).
+The server pre-debited 50 credits. It settles the session from whichever copy of the signed receipt reaches it first — here the app's upload in Step 19, otherwise the station's TransactionEvent — and refunds what the session did not cost: the true-up is refund-only and never exceeds the authorization's `creditsAuthorized` ([`reconciliation.md` §8.2](../../spec/profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)).
 
 ---
 
-### Step 19: App Syncs with Server (14:33:05.000)
+### Step 19: App Uploads the Receipt (14:33:05.000)
 
-Since Alice's phone is online, the app immediately sends the receipt to the server as a backup reconciliation path:
+Since Alice's phone is online, the app uploads the receipt at once ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)). The request body is the Receipt of Step 17, exactly as the app read it from FFF6.
 
 **HTTP Request:**
 
 ```http
-POST /api/v1/me/offline-txs HTTP/1.1
+POST /api/v1/offline/receipts HTTP/1.1
 Host: api.example.com
 Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
 Content-Type: application/json
 X-Device-Id: device_a8f3bc12e4567890
 X-Request-Id: req_sync_9e0f1a2b
+```
+
+**HTTP Response:**
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+X-Request-Id: req_sync_9e0f1a2b
 
 {
-  "transactions": [
-    {
-      "offlineTxId": "otx_e5f6a7b8c9d0",
-      "sessionId": "sess_c4d5e6f7a8b9",
-      "stationId": "stn_a1b2c3d4",
-      "bayId": "bay_c1d2e3f4a5b6",
-      "serviceId": "svc_eco",
-      "startedAt": "2026-02-13T14:30:08.500Z",
-      "endedAt": "2026-02-13T14:33:02.400Z",
-      "durationSeconds": 174,
-      "creditsCharged": 29,
-      "receipt": {
-        "data": "eyJvZmZsaW5lVHhJZCI6Im90eF9wYV9lNWY2ZzdoOCIsImJheUlkIjoiYmF5X3gxeTJ6MyIsInNlcnZpY2VJZCI6InN2Y19mb2FtIiwiZHVyYXRpb24iOjE3NCwiY3JlZGl0cyI6MzB9",
-        "signature": "MEQCIGpXvN8hJpLyD3kWm0aOxCqFb5sE7nGdT2fYiJwKxQAiALvHaRH3A/PmY28encskVtipPWxdwDSMp7p9mhacGBQh",
-        "signatureAlgorithm": "ECDSA-P256-SHA256"
-      },
-      "txCounter": 8
-    }
-  ]
+  "status": "Accepted"
 }
 ```
 
-The server receives this, verifies the ECDSA receipt, and processes the refund:
+The server processes the upload as it processes a station's TransactionEvent — deduplication, receipt signature verification, the reconcile-time gate, settlement, then fraud scoring — and answers with the body of a TransactionEvent RESPONSE. Settlement is the refund-only true-up of the pre-debit: the server recomputes the cost from the signed receipt (Eco Program is a `UserDuration` service in this operator's catalog, so Alice's stop, `endReason` `Local`, is billed pro-rata on the 174 seconds delivered), caps it at `creditsAuthorized`, and refunds the difference:
 
 | Field | Value |
 |-------|-------|
-| Pre-debited credits | 50 |
-| Actual credits used | 29 |
+| Pre-debited credits (`creditsAuthorized`) | 50 |
+| Recomputed cost, capped at `creditsAuthorized` | 29 |
 | Refund | 50 - 29 = **21 credits** |
 | Alice's new balance | 70 + 21 = **91 credits** |
 
@@ -605,7 +596,7 @@ On the Operator Dashboard, Charlie sees:
            Station sync: Pending (station offline)
 ```
 
-3. The session is marked as `completed` but flagged "Station sync pending" — full reconciliation will occur when the station's MQTT reconnects and sends TransactionEvent [MSG-007]
+3. The session is settled from the app's copy and flagged "Station sync pending". When the station's MQTT reconnects and it sends its TransactionEvent [MSG-007] for the same receipt, the server answers `Duplicate`, because the signed data is byte-identical, and the station deletes its record ([`reconciliation.md` §3](../../spec/profiles/offline/reconciliation.md#3-deduplication-offlinetxid))
 
 ## Message Sequence Diagram
 
@@ -656,24 +647,24 @@ On the Operator Dashboard, Charlie sees:
      |                      |                          |
      | -- BLE disconnect -->|                          |
      |                      |                          |
-     |  POST /me/offline-txs|                          |
+     |  POST /receipts      |                          |
      |--------------------->|                          |
-     |                      | verify receipt           |
+     |                      | verify, gate, settle     |
      |                      | refund 21 credits        |
-     |  200 OK              |                          |
+     |  200 OK (Accepted)   |                          |
      |<---------------------|                          |
      |                      |                          |
 ```
 
 ## Key Design Decisions
 
-1. **Credits are debited server-side before the BLE handshake.** In Partial A, the server is reachable, so billing happens upfront at step 5. This means the station does not need to make credit decisions locally. The server pre-debits the maximum (50 credits for 5 minutes) and refunds the difference after actual usage is known.
+1. **Credits are debited server-side before the BLE handshake.** In Partial A, the server is reachable, so billing happens upfront at step 5. This means the station does not need to make credit decisions locally. The server pre-debits the maximum (50 credits for 5 minutes) and refunds the difference after actual usage is known. That maximum is the authorization's signed `creditsAuthorized`, and it caps what the session may be charged: the true-up is refund-only and never debits more, even if the tariff rose while the station was offline ([`reconciliation.md` §8.2](../../spec/profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)).
 
-2. **ECDSA P-256 signature provides server trust without connectivity.** The station trusts the authorization because it can verify the server's ECDSA P-256 signature using `OfflinePassPublicKey` stored in NVS during provisioning. No network round-trip is needed. During key rotation the station also accepts the internally cached previous key for a grace period (300 seconds).
+2. **ECDSA P-256 signature provides server trust without connectivity.** The station trusts the authorization because it can verify the server's ECDSA P-256 signature with a key of the server key set (`OfflinePassPublicKey`) it holds — delivered at provisioning, at every boot and by ChangeConfiguration. No network round-trip is needed. During a key rotation the set holds both the old and the new key; there is no internally cached previous key and no grace period ([`06-security.md` §6.7](../../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)).
 
 3. **The signed authorization has a 5-minute expiry window.** The `expiresAt` field prevents replay attacks. If Alice takes more than 5 minutes between obtaining the authorization and presenting it to the station via BLE, the station will reject it. This is a deliberate trade-off between security and usability.
 
-4. **App-side sync provides a fast reconciliation path.** Since Alice's phone is online, the app can immediately sync the receipt with the server. This means the refund happens within seconds, not hours. The station will also send a TransactionEvent when MQTT reconnects, but the server will deduplicate it as `Duplicate`.
+4. **The app's upload provides a fast reconciliation path.** Since Alice's phone is online, the app uploads the receipt at once ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)). This means the refund happens within seconds, not hours. Whichever copy of the station-signed receipt arrives first may settle: the station's TransactionEvent, sent when MQTT reconnects, carries the same signed data and is answered `Duplicate`.
 
 5. **The receipt is signed with ECDSA P-256 regardless of online status.** Even though the server already knows about this session (it created it at step 5), the station still generates a cryptographic receipt. This provides non-repudiation and allows the server to verify that the station actually delivered the service as authorized.
 

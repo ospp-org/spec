@@ -31,12 +31,11 @@ before claiming conformance.
 > **Extended and Complete cannot be claimed against 0.44.**
 >
 > Both levels require the Offline / BLE profile, whose BLE half is **EXPERIMENTAL** in this
-> revision and carries three blockers that make it unimplementable as written — see
+> revision and carries two blockers that make it unimplementable as written — see
 > [Release status](../README.md#ble-is-experimental) and
-> [KNOWN-ISSUES](../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-three-defects).
-> `TC-OFF-001` and `TC-OFF-002` exercise that surface and are experimental artefacts with it;
-> `TC-OFF-002` check 5 is directly blocked, since it instructs the tester to construct a pass the
-> authoritative schema cannot represent (B-2).
+> [KNOWN-ISSUES](../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-two-defects).
+> `TC-OFF-001`, `TC-OFF-002` and `TC-OFF-005` exercise that surface and are experimental artefacts
+> with it.
 >
 > **Development and Standard are unaffected and remain claimable.** Their required cases —
 > `TC-CORE-*`, `TC-TX-*`, `TC-SEC-*` — run over MQTT and HTTPS only. Two are worth naming because
@@ -143,7 +142,7 @@ relays auth to server via MQTT).
 |-------------|------------|
 | All Extended requirements | TC-CORE-*, TC-TX-*, TC-SEC-*, TC-DM-* |
 | Full offline BLE session | TC-OFF-001 |
-| OfflinePass validation (10 checks) | TC-OFF-002 |
+| OfflinePass validation (10 checks: #5 withdrawn, nine performed by the station) | TC-OFF-002 |
 | Reconciliation — server-side processing | TC-OFF-003 |
 | Reconciliation — station upload & recovery | TC-OFF-004 |
 | **Partial B — station-relayed authorization** | **TC-OFF-005** |
@@ -259,7 +258,8 @@ conforming — it may say so, which is the whole point of requiring the answer, 
 | TC-DM-007 | Set Maintenance Mode | Device Management | Extended |
 | TC-DM-008 | Update Service Catalog | Device Management | Extended |
 | TC-DM-009 | Get Configuration | Device Management | Extended |
-| TC-OFF-001 | Full Offline BLE Session | Offline | Complete — **EXPERIMENTAL, not claimable in 0.8** |
-| TC-OFF-002 | OfflinePass Validation (10 Checks) | Offline | Complete — **EXPERIMENTAL, not claimable in 0.8**; check 5 unrunnable (B-2) |
+| TC-OFF-001 | Full Offline BLE Session | Offline | Complete — **EXPERIMENTAL, not claimable in 0.44** |
+| TC-OFF-002 | OfflinePass Validation (10 Checks) | Offline | Complete — **EXPERIMENTAL, not claimable in 0.44**; check 5 withdrawn |
 | TC-OFF-003 | Reconciliation: Server-Side Processing | Offline | Complete — MQTT, stable |
 | TC-OFF-004 | Reconciliation: Station Upload & Recovery | Offline | Complete — MQTT, stable |
+| TC-OFF-005 | Partial B: Station-Relayed Authorization | Offline | Complete — **EXPERIMENTAL, not claimable in 0.44** |

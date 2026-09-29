@@ -172,7 +172,9 @@ This case does that.
 ### Part F — `serverVerifyKey`
 
 26. Verify `serverVerifyKey` is a PEM `PUBLIC KEY` or `EC PUBLIC KEY` block that decodes to an **ECDSA
-    P-256** public key.
+    P-256** public key, and that its body is the key's DER `SubjectPublicKeyInfo`, point uncompressed —
+    the one encoding of a server key, never a bare SEC1 point
+    ([`06-security.md` §6.7](../../../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)).
 27. Verify it is **not** equal to the public key of `clientCert`, and not equal to `K_rcpt_1.pub`. It is
     the server's signing key, not any key the station submitted.
 
@@ -253,8 +255,11 @@ This case does that.
     value, not the value in `RESP_1`.
 46. Verify the frozen group of step 42 is **still byte-identical** across this same response — the
     change moved `mqttConfig` and nothing else.
-47. Have the operator **rotate the server signing key**. Re-send on `T1` and verify `serverVerifyKey` is
-    the **new** key. Where `stationIdentity` is present, verify its `signature` verifies against the
+47. Have the operator **rotate the server signing key** through to the switch — the point at which the
+    server signs with the new key ([`06-security.md` §6.7](../../../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)),
+    which a scheduled rotation reaches only after the publish-before window, and a
+    compromise response at once (§6.7.1). Re-send on `T1` and verify `serverVerifyKey` is the **new** key,
+    the key currently signing. Where `stationIdentity` is present, verify its `signature` verifies against the
     `serverVerifyKey` in **this** response — the two are returned together and must correspond in every
     response, not only the first.
 48. Have the operator **re-anchor `brokerRootCa`**. Re-send on `T1` and verify `brokerRootCa` is the

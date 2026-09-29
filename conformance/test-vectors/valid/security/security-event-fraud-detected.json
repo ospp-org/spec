@@ -1,0 +1,21 @@
+{
+  "eventId": "sec_5d0f3a9c1e7b2468",
+  "type": "FraudDetected",
+  "severity": "Critical",
+  "timestamp": "2026-03-01T11:02:13.000Z",
+  "details": {
+    "score": 0.9,
+    "factors": [
+      "InvalidTimestamps",
+      "CumulativeUsesExceeded",
+      "NegativeBalance"
+    ],
+    "band": "Block",
+    "action": "UserBlocked",
+    "offlineTxId": "otx_c4d5e6f7a8b9",
+    "offlinePassId": "opass_f1e2d3c4b5a69788",
+    "userId": "sub_9a8b7c6d",
+    "stationId": "stn_a1b2c3d4",
+    "messageId": "msg_7e6d5c4b-3a29-1807-f6e5-d4c3b2a19087"
+  }
+}

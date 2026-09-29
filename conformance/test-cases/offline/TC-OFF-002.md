@@ -1,8 +1,6 @@
 # TC-OFF-002 — OfflinePass Validation (10 Checks)
 
-> **Status: EXPERIMENTAL artefact.** This case exercises the BLE surface, which is EXPERIMENTAL in 0.44 and carries three blockers — see [Release status](../../../README.md#ble-is-experimental) and [KNOWN-ISSUES](../../../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-three-defects). It is published for review, not for certification, and **Extended and Complete compliance cannot be claimed against 0.44**.
-
-> **Check 5 (Station ID Constraint) is directly blocked by [B-2](../../../KNOWN-ISSUES.md#b-2--a-station-scoped-offlinepass-is-unrepresentable-in-the-authoritative-schema).** Steps 17-19 instruct the tester to create an OfflinePass whose station-scoping constraint excludes the test station, but [`offline-pass.schema.json`](../../../schemas/common/offline-pass.schema.json) has no member that can carry such a constraint and is closed at both levels. The pass this check requires cannot be constructed and remain schema-valid. The check is unrunnable as written.
+> **Status: EXPERIMENTAL artefact.** This case exercises the BLE surface, which is EXPERIMENTAL in 0.44 and carries two blockers — see [Release status](../../../README.md#ble-is-experimental) and [KNOWN-ISSUES](../../../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-two-defects). It is published for review, not for certification, and **Extended and Complete compliance cannot be claimed against 0.44**.
 
 
 ## Profile
@@ -11,14 +9,16 @@ Offline/BLE Profile
 
 ## Purpose
 
-Verify that the station correctly performs all 10 OfflinePass validation checks during BLE authentication, rejecting passes that fail any check with the appropriate error code and accepting only passes that satisfy all validation criteria simultaneously.
+Verify that the station correctly performs the OfflinePass validation checks during BLE authentication — ten numbered checks, of which check #5 is withdrawn, so nine performed by the station: #1–#4 and #6–#10 — rejecting passes that fail any check with the appropriate error code and accepting only passes that satisfy all of them simultaneously. "10 checks" in the title is the cited count of the numbered list, not the number a station performs.
 
 ## References
 
-- `spec/profiles/offline/offline-pass.md` §4 — 10 validation checks
+- `spec/profiles/offline/offline-pass.md` §4 — the validation checks: ten numbered, #5 withdrawn, nine performed by the station
+- `spec/profiles/offline/offline-pass.md` §2.3 — a pass carries no station or organization scope
+- `spec/profiles/offline/offline-pass.md` §2.2 — the station's own offline limits, refused with `4002` and `details.constraint`
 - `spec/profiles/offline/ble-handshake.md` — OfflineAuthRequest / AuthResponse
 - `spec/profiles/offline/authorize-offline-pass.md` — Validation checks and error codes
-- `spec/07-errors.md` §3.2 — Error codes: 2002 `OFFLINE_PASS_INVALID`, 2003 `OFFLINE_PASS_EXPIRED`, 2004 `OFFLINE_EPOCH_REVOKED`, 2005 `OFFLINE_COUNTER_REPLAY`, 2006 `OFFLINE_STATION_MISMATCH`
+- `spec/07-errors.md` §3.2 — Error codes: 2002 `OFFLINE_PASS_INVALID`, 2003 `OFFLINE_PASS_EXPIRED`, 2004 `OFFLINE_EPOCH_REVOKED`, 2005 `OFFLINE_COUNTER_REPLAY`
 - `spec/07-errors.md` §3.4 — Error codes: 4002 `OFFLINE_LIMIT_EXCEEDED`, 4003 `OFFLINE_RATE_LIMITED`, 4004 `OFFLINE_PER_TX_EXCEEDED`
 - `spec/profiles/security/security-event.md` — SecurityEvent for invalid credentials
 - `schemas/common/offline-pass.schema.json`
@@ -26,17 +26,19 @@ Verify that the station correctly performs all 10 OfflinePass validation checks 
 ## Preconditions
 
 1. Station is in offline mode (MQTT disconnected), BLE advertising active.
-2. Station has the server's ECDSA P-256 public key provisioned for signature verification.
+2. Station holds the server key set (`OfflinePassPublicKey`), and the set contains the key that signs the test passes; each pass names that key in `keyId` ([`06-security.md` §6.7](../../../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)).
 3. Station's current `RevocationEpoch` is set to `5`.
 4. Station's `lastSeenCounter` for the test user is set to `10`.
 5. Station knows its own `stationId` (e.g., `"stn_b1c2d3e4f5a6"`).
 6. A baseline valid OfflinePass is prepared with all fields correct:
    - Valid ECDSA P-256 signature, `expiresAt` in the future, `revocationEpoch: 5`.
-   - `deviceId` matches test device, station-scoping constraint includes `"stn_b1c2d3e4f5a6"`.
+   - `deviceId` matches test device, and `devicePublicKey` is that device's key.
+   - The pass names no station and no organization: a pass carries no station or organization scope ([`offline-pass.md` §2.3](../../../spec/profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)).
    - `maxUses: 10` (not exhausted), `maxTotalCredits: 100` (not exhausted).
    - `maxCreditsPerTx: 20`, `minIntervalSec: 60`.
    - The OfflineAuthRequest envelope carries `counter: 11` (greater than the station's `lastSeenCounter` of 10). `counter` is a member of [`offline-auth-request.schema.json`](../../../schemas/ble/offline-auth-request.schema.json), **not** of the pass — `offline-pass.schema.json` is closed and has no such field.
 7. BLE connection is established and HELLO/CHALLENGE handshake is completed for each sub-test.
+8. No station limit is reached: the station's `OfflineModeEnabled` is `true`, fewer than `OfflineWindowHours` have elapsed since its last MQTT connection, and it holds fewer than `OfflineTransactionLimit` unanswered offline transactions ([`offline-pass.md` §2.2](../../../spec/profiles/offline/offline-pass.md#22-constraints-object); [`08-configuration.md` §5](../../../spec/08-configuration.md#5-offline--ble-configuration-keys)). A station limit refuses with `4002`, the code of checks #6 and #7, so a station that had reached one would make those two checks unreadable. The station's `OfflinePassMaxAge` exceeds the baseline pass's age, so check #2 refuses only on `expiresAt`.
 
 ## Steps
 
@@ -71,11 +73,9 @@ Verify that the station correctly performs all 10 OfflinePass validation checks 
 15. Send OfflineAuthRequest.
 16. Verify AuthResponse: `result: "Rejected"`, error code `2002` (`OFFLINE_PASS_INVALID`).
 
-### Check 5 — Station ID Constraint (allowedStationIds)
+### Check 5 — Withdrawn
 
-17. Create an OfflinePass whose station-scoping constraint does not include the test station `"stn_b1c2d3e4f5a6"` (e.g., scoped only to `"stn_c7d8e9f0a1b2"`).
-18. Send OfflineAuthRequest.
-19. Verify AuthResponse: `result: "Rejected"`, error code `2006` (`OFFLINE_STATION_MISMATCH`).
+Withdrawn with check #5: a pass carries no station or organization scope ([`offline-pass.md` §2.3](../../../spec/profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)), so there is nothing to vary; steps 17–19 are withdrawn and their numbers are not reused.
 
 ### Check 6 — Maximum Uses (maxUses)
 
@@ -123,7 +123,7 @@ Verify that the station correctly performs all 10 OfflinePass validation checks 
 3. **Check 2 (Expiry):** Expired pass -> `2003 OFFLINE_PASS_EXPIRED`.
 4. **Check 3 (Epoch):** Old epoch -> `2004 OFFLINE_EPOCH_REVOKED`.
 5. **Check 4 (Device):** Wrong fingerprint -> `2002 OFFLINE_PASS_INVALID`.
-6. **Check 5 (Station):** Wrong station -> `2006 OFFLINE_STATION_MISMATCH`.
+6. **Check 5:** withdrawn — a pass carries no station or organization scope, and no result is expected.
 7. **Check 6 (Uses):** Exhausted uses -> `4002 OFFLINE_LIMIT_EXCEEDED`.
 8. **Check 7 (Credits):** Exhausted credits -> `4002 OFFLINE_LIMIT_EXCEEDED`.
 9. **Check 8 (Per-Tx):** Per-tx limit too low -> `4004 OFFLINE_PER_TX_EXCEEDED`.

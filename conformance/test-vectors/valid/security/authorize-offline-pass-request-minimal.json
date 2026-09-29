@@ -4,6 +4,8 @@
     "passId": "opass_a1b2c3d4e5f6",
     "sub": "sub_user01abc",
     "deviceId": "device-iphone-14-pro-001",
+    "devicePublicKey": "A+aNWTS04CWiEzjfjaEOhm0Pa/YPB572UNMlcx1ZffgT",
+    "keyId": "YjX5pR0TzmU3ubs17wImQQ",
     "issuedAt": "2026-02-15T08:00:00.000Z",
     "expiresAt": "2026-02-16T08:00:00.000Z",
     "policyVersion": 1,
@@ -11,18 +13,13 @@
     "offlineAllowance": {
       "maxTotalCredits": 500,
       "maxUses": 3,
-      "maxCreditsPerTx": 200,
-      "allowedServiceTypes": [
-        "svc_basic"
-      ]
+      "maxCreditsPerTx": 200
     },
     "constraints": {
-      "minIntervalSec": 300,
-      "stationOfflineWindowHours": 24,
-      "stationMaxOfflineTx": 50
+      "minIntervalSec": 300
     },
     "signatureAlgorithm": "ECDSA-P256-SHA256",
-    "signature": "MEUCIQDxdjEoG+JvauO+PXTr2KGgaQslpTL6Ru0CuUZpOCJNKQIgGdW49fhfL6Q5mgotHYmVSDpoukkdvAokfBl1dY6jGhI="
+    "signature": "MEUCIQCQobJNkoPnS/crg26Ec25LamGzfiUfLR/lLyPYVtdWTwIgWnzon0WI3eMKrOk4zxdwizLCFRDVURdkZJHvK4svVO8="
   },
   "deviceId": "device-iphone-14-pro-001",
   "counter": 0,

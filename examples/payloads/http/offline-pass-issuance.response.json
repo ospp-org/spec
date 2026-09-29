@@ -1,0 +1,33 @@
+{
+  "offlinePass": {
+    "passId": "opass_c3d4e5f6a7b8",
+    "sub": "sub_9a8b7c6d",
+    "deviceId": "dev_android_abc123",
+    "devicePublicKey": "AnqCJkURKXFi9hQaO5EzjzvZXf8V0LCdzMg496b+y2rN",
+    "keyId": "YjX5pR0TzmU3ubs17wImQQ",
+    "issuedAt": "2026-09-29T12:10:00.000Z",
+    "expiresAt": "2026-10-02T12:10:00.000Z",
+    "policyVersion": 1,
+    "revocationEpoch": 42,
+    "offlineAllowance": {
+      "maxTotalCredits": 200,
+      "maxUses": 5,
+      "maxCreditsPerTx": 50
+    },
+    "constraints": {
+      "minIntervalSec": 60
+    },
+    "signatureAlgorithm": "ECDSA-P256-SHA256",
+    "signature": "MEUCIQDcjrDIQTbp1i/QJvd9JZlICLcxnw2MYCJCZQ3UofxtPQIgCB3pMBcBNMBoona2asL8IxJFROta3v8jEcUMSh14LI0="
+  },
+  "trustBundle": {
+    "stationCaCertificate": "-----BEGIN CERTIFICATE-----\nMIIBqTCCAU+gAwIBAgICBVAwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBU\nZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjA5MjkxMjA0\nMjBaFw0zMTA5MjkxMjA0MjBaMDMxEjAQBgNVBAoMCU9TUFAgVGVzdDEdMBsGA1UE\nAwwUT1NQUCBUZXN0IFN0YXRpb24gQ0EwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNC\nAASV+9CgAE4tgTzAKWwxVGw9wkyvqJhltZhs/62oD8EQ144coXVZ5S7LcVowOBB6\nRCV30pndUexf5mPlLvNrPAYuo1MwUTAdBgNVHQ4EFgQUF8cBGg8AqgEQ2/dlYB9f\nNDJLxlgwHwYDVR0jBBgwFoAUF8cBGg8AqgEQ2/dlYB9fNDJLxlgwDwYDVR0TAQH/\nBAUwAwEB/zAKBggqhkjOPQQDAgNIADBFAiEAwMWP7Ia0x9Uc4exjPV3AUGcuX+Dq\nBeI79s+WLLw7Fw4CIG36K8XxqbRQQVr+Bja//n3WB6h4Cqs3woRRNJpDWTsi\n-----END CERTIFICATE-----\n",
+    "stationCaCrl": "-----BEGIN X509 CRL-----\nMIHKMHMCAQEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYD\nVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQRcNMjYwOTI5MTIwNDIwWhcNMjYxMDA2\nMTIwNDIwWqAPMA0wCwYDVR0UBAQCAhAAMAoGCCqGSM49BAMCA0cAMEQCIGxNLjLG\nKr78hLgo9gHhuQ0yK57f3WC6Wk9q7ZkALnyFAiBdmVe0Isvro7QrabTxOXPs9bkG\nDDkAZ+DdNR/8/72kqQ==\n-----END X509 CRL-----\n",
+    "serverKeys": [
+      {
+        "keyId": "YjX5pR0TzmU3ubs17wImQQ",
+        "publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/HdgUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA=="
+      }
+    ]
+  }
+}

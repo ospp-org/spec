@@ -21,21 +21,21 @@
       "mutation": "body.creditsCharged 200 → 201",
       "mutatedPointer": "receipt/data",
       "was": "200",
-      "now": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiY3JlZGl0c0NoYXJnZWQiOjIwMSwiZGV2aWNlSWQiOiJkZXZfZTRkM2MyYjEiLCJkdXJhdGlvblNlY29uZHMiOjkwMCwiZW5kZWRBdCI6IjIwMjYtMDItMTVUMTQ6NDU6MDAuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6MTIwMCwiZW5lcmd5V2giOjM1MDAsImxpcXVpZE1sIjo0NTYwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19lNGQzYzJiMWEwZjllOGQ3Iiwib2ZmbGluZVR4SWQiOiJvdHhfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwYXNzQ291bnRlciI6NTksInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xNVQxNDozMDowMC4wMDBaIiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfZTRkM2MyYjFhMGY5ZThkN2M2YjVhNDkzODI3MWU0ZDMifQ==",
+      "now": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAxLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNSIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
       "schema": "schemas/ble/receipt.schema.json",
       "portable": {
         "algorithm": "ECDSA-P256-SHA256",
         "key": "conformance/test-keys/station-test-pub.pem",
         "base": {
-          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiY3JlZGl0c0NoYXJnZWQiOjIwMCwiZGV2aWNlSWQiOiJkZXZfZTRkM2MyYjEiLCJkdXJhdGlvblNlY29uZHMiOjkwMCwiZW5kZWRBdCI6IjIwMjYtMDItMTVUMTQ6NDU6MDAuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6MTIwMCwiZW5lcmd5V2giOjM1MDAsImxpcXVpZE1sIjo0NTYwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19lNGQzYzJiMWEwZjllOGQ3Iiwib2ZmbGluZVR4SWQiOiJvdHhfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwYXNzQ291bnRlciI6NTksInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xNVQxNDozMDowMC4wMDBaIiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfZTRkM2MyYjFhMGY5ZThkN2M2YjVhNDkzODI3MWU0ZDMifQ==",
-          "signature": "MEQCIG+7iPvobm1DkL8VYZcFh1CsucoZbLZlNSrLc5CXCYvvAiAGExxQI1gW243YAzGF4G+9q3sbN0zJkqly/Cjv+oR0oQ==",
+          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNSIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
+          "signature": "MEUCIQD1loq9BuUTTPbtdejp5ytICvB+sLVtQ18qOI/G2nHp2gIgUHmlwJhyZHifwXwdmcEj5LKWLicdG4maPsPvBzQ/WEY=",
           "key": "conformance/test-keys/station-test-pub.pem",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDt9+jMxZqDWv7r5TjeCFCsSRFOoK\nYKGn76DpptnXeBNFvrg8sNFA8lbsoVWKQQNp525SinXw6NrhBfeg5OmC7g==\n-----END PUBLIC KEY-----\n",
           "mustVerify": true
         },
         "tampered": {
-          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiY3JlZGl0c0NoYXJnZWQiOjIwMSwiZGV2aWNlSWQiOiJkZXZfZTRkM2MyYjEiLCJkdXJhdGlvblNlY29uZHMiOjkwMCwiZW5kZWRBdCI6IjIwMjYtMDItMTVUMTQ6NDU6MDAuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6MTIwMCwiZW5lcmd5V2giOjM1MDAsImxpcXVpZE1sIjo0NTYwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19lNGQzYzJiMWEwZjllOGQ3Iiwib2ZmbGluZVR4SWQiOiJvdHhfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwYXNzQ291bnRlciI6NTksInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xNVQxNDozMDowMC4wMDBaIiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfZTRkM2MyYjFhMGY5ZThkN2M2YjVhNDkzODI3MWU0ZDMifQ==",
-          "signature": "MEQCIG+7iPvobm1DkL8VYZcFh1CsucoZbLZlNSrLc5CXCYvvAiAGExxQI1gW243YAzGF4G+9q3sbN0zJkqly/Cjv+oR0oQ==",
+          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAxLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNSIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
+          "signature": "MEUCIQD1loq9BuUTTPbtdejp5ytICvB+sLVtQ18qOI/G2nHp2gIgUHmlwJhyZHifwXwdmcEj5LKWLicdG4maPsPvBzQ/WEY=",
           "key": "conformance/test-keys/station-test-pub.pem",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDt9+jMxZqDWv7r5TjeCFCsSRFOoK\nYKGn76DpptnXeBNFvrg8sNFA8lbsoVWKQQNp525SinXw6NrhBfeg5OmC7g==\n-----END PUBLIC KEY-----\n",
           "mustVerify": false
@@ -59,8 +59,8 @@
           "energyWh": 3500
         },
         "receipt": {
-          "data": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiY3JlZGl0c0NoYXJnZWQiOjIwMSwiZGV2aWNlSWQiOiJkZXZfZTRkM2MyYjEiLCJkdXJhdGlvblNlY29uZHMiOjkwMCwiZW5kZWRBdCI6IjIwMjYtMDItMTVUMTQ6NDU6MDAuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6MTIwMCwiZW5lcmd5V2giOjM1MDAsImxpcXVpZE1sIjo0NTYwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19lNGQzYzJiMWEwZjllOGQ3Iiwib2ZmbGluZVR4SWQiOiJvdHhfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwYXNzQ291bnRlciI6NTksInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xNVQxNDozMDowMC4wMDBaIiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfZTRkM2MyYjFhMGY5ZThkN2M2YjVhNDkzODI3MWU0ZDMifQ==",
-          "signature": "MEQCIG+7iPvobm1DkL8VYZcFh1CsucoZbLZlNSrLc5CXCYvvAiAGExxQI1gW243YAzGF4G+9q3sbN0zJkqly/Cjv+oR0oQ==",
+          "data": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAxLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNSIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
+          "signature": "MEUCIQD1loq9BuUTTPbtdejp5ytICvB+sLVtQ18qOI/G2nHp2gIgUHmlwJhyZHifwXwdmcEj5LKWLicdG4maPsPvBzQ/WEY=",
           "signatureAlgorithm": "ECDSA-P256-SHA256"
         },
         "txCounter": 8
@@ -76,22 +76,22 @@
       "what": "low bit of the final octet of the DER `s` scalar flipped; DER framing intact",
       "mutation": "signature[-1] ^= 0x01",
       "mutatedPointer": "receipt/signature",
-      "was": "MEQCIG+7iPvobm1DkL8VYZcFh1CsucoZbLZlNSrLc5CXCYvvAiAGExxQI1gW243YAzGF4G+9q3sbN0zJkqly/Cjv+oR0oQ==",
-      "now": "MEQCIG+7iPvobm1DkL8VYZcFh1CsucoZbLZlNSrLc5CXCYvvAiAGExxQI1gW243YAzGF4G+9q3sbN0zJkqly/Cjv+oR0oA==",
+      "was": "MEUCIQD1loq9BuUTTPbtdejp5ytICvB+sLVtQ18qOI/G2nHp2gIgUHmlwJhyZHifwXwdmcEj5LKWLicdG4maPsPvBzQ/WEY=",
+      "now": "MEUCIQD1loq9BuUTTPbtdejp5ytICvB+sLVtQ18qOI/G2nHp2gIgUHmlwJhyZHifwXwdmcEj5LKWLicdG4maPsPvBzQ/WEc=",
       "schema": "schemas/ble/receipt.schema.json",
       "portable": {
         "algorithm": "ECDSA-P256-SHA256",
         "key": "conformance/test-keys/station-test-pub.pem",
         "base": {
-          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiY3JlZGl0c0NoYXJnZWQiOjIwMCwiZGV2aWNlSWQiOiJkZXZfZTRkM2MyYjEiLCJkdXJhdGlvblNlY29uZHMiOjkwMCwiZW5kZWRBdCI6IjIwMjYtMDItMTVUMTQ6NDU6MDAuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6MTIwMCwiZW5lcmd5V2giOjM1MDAsImxpcXVpZE1sIjo0NTYwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19lNGQzYzJiMWEwZjllOGQ3Iiwib2ZmbGluZVR4SWQiOiJvdHhfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwYXNzQ291bnRlciI6NTksInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xNVQxNDozMDowMC4wMDBaIiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfZTRkM2MyYjFhMGY5ZThkN2M2YjVhNDkzODI3MWU0ZDMifQ==",
-          "signature": "MEQCIG+7iPvobm1DkL8VYZcFh1CsucoZbLZlNSrLc5CXCYvvAiAGExxQI1gW243YAzGF4G+9q3sbN0zJkqly/Cjv+oR0oQ==",
+          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNSIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
+          "signature": "MEUCIQD1loq9BuUTTPbtdejp5ytICvB+sLVtQ18qOI/G2nHp2gIgUHmlwJhyZHifwXwdmcEj5LKWLicdG4maPsPvBzQ/WEY=",
           "key": "conformance/test-keys/station-test-pub.pem",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDt9+jMxZqDWv7r5TjeCFCsSRFOoK\nYKGn76DpptnXeBNFvrg8sNFA8lbsoVWKQQNp525SinXw6NrhBfeg5OmC7g==\n-----END PUBLIC KEY-----\n",
           "mustVerify": true
         },
         "tampered": {
-          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiY3JlZGl0c0NoYXJnZWQiOjIwMCwiZGV2aWNlSWQiOiJkZXZfZTRkM2MyYjEiLCJkdXJhdGlvblNlY29uZHMiOjkwMCwiZW5kZWRBdCI6IjIwMjYtMDItMTVUMTQ6NDU6MDAuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6MTIwMCwiZW5lcmd5V2giOjM1MDAsImxpcXVpZE1sIjo0NTYwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19lNGQzYzJiMWEwZjllOGQ3Iiwib2ZmbGluZVR4SWQiOiJvdHhfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwYXNzQ291bnRlciI6NTksInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xNVQxNDozMDowMC4wMDBaIiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfZTRkM2MyYjFhMGY5ZThkN2M2YjVhNDkzODI3MWU0ZDMifQ==",
-          "signature": "MEQCIG+7iPvobm1DkL8VYZcFh1CsucoZbLZlNSrLc5CXCYvvAiAGExxQI1gW243YAzGF4G+9q3sbN0zJkqly/Cjv+oR0oA==",
+          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNSIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
+          "signature": "MEUCIQD1loq9BuUTTPbtdejp5ytICvB+sLVtQ18qOI/G2nHp2gIgUHmlwJhyZHifwXwdmcEj5LKWLicdG4maPsPvBzQ/WEc=",
           "key": "conformance/test-keys/station-test-pub.pem",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDt9+jMxZqDWv7r5TjeCFCsSRFOoK\nYKGn76DpptnXeBNFvrg8sNFA8lbsoVWKQQNp525SinXw6NrhBfeg5OmC7g==\n-----END PUBLIC KEY-----\n",
           "mustVerify": false
@@ -115,8 +115,8 @@
           "energyWh": 3500
         },
         "receipt": {
-          "data": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiY3JlZGl0c0NoYXJnZWQiOjIwMCwiZGV2aWNlSWQiOiJkZXZfZTRkM2MyYjEiLCJkdXJhdGlvblNlY29uZHMiOjkwMCwiZW5kZWRBdCI6IjIwMjYtMDItMTVUMTQ6NDU6MDAuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6MTIwMCwiZW5lcmd5V2giOjM1MDAsImxpcXVpZE1sIjo0NTYwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19lNGQzYzJiMWEwZjllOGQ3Iiwib2ZmbGluZVR4SWQiOiJvdHhfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwYXNzQ291bnRlciI6NTksInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xNVQxNDozMDowMC4wMDBaIiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfZTRkM2MyYjFhMGY5ZThkN2M2YjVhNDkzODI3MWU0ZDMifQ==",
-          "signature": "MEQCIG+7iPvobm1DkL8VYZcFh1CsucoZbLZlNSrLc5CXCYvvAiAGExxQI1gW243YAzGF4G+9q3sbN0zJkqly/Cjv+oR0oA==",
+          "data": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNSIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
+          "signature": "MEUCIQD1loq9BuUTTPbtdejp5ytICvB+sLVtQ18qOI/G2nHp2gIgUHmlwJhyZHifwXwdmcEj5LKWLicdG4maPsPvBzQ/WEc=",
           "signatureAlgorithm": "ECDSA-P256-SHA256"
         },
         "txCounter": 8
@@ -139,15 +139,15 @@
         "algorithm": "ECDSA-P256-SHA256",
         "key": "conformance/test-keys/server-test-pub.pem",
         "base": {
-          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiY3JlZGl0c0NoYXJnZWQiOjIwMCwiZGV2aWNlSWQiOiJkZXZfZTRkM2MyYjEiLCJkdXJhdGlvblNlY29uZHMiOjkwMCwiZW5kZWRBdCI6IjIwMjYtMDItMTVUMTQ6NDU6MDAuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6MTIwMCwiZW5lcmd5V2giOjM1MDAsImxpcXVpZE1sIjo0NTYwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19lNGQzYzJiMWEwZjllOGQ3Iiwib2ZmbGluZVR4SWQiOiJvdHhfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwYXNzQ291bnRlciI6NTksInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xNVQxNDozMDowMC4wMDBaIiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfZTRkM2MyYjFhMGY5ZThkN2M2YjVhNDkzODI3MWU0ZDMifQ==",
-          "signature": "MEQCIG+7iPvobm1DkL8VYZcFh1CsucoZbLZlNSrLc5CXCYvvAiAGExxQI1gW243YAzGF4G+9q3sbN0zJkqly/Cjv+oR0oQ==",
+          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNSIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
+          "signature": "MEUCIQD1loq9BuUTTPbtdejp5ytICvB+sLVtQ18qOI/G2nHp2gIgUHmlwJhyZHifwXwdmcEj5LKWLicdG4maPsPvBzQ/WEY=",
           "key": "conformance/test-keys/station-test-pub.pem",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDt9+jMxZqDWv7r5TjeCFCsSRFOoK\nYKGn76DpptnXeBNFvrg8sNFA8lbsoVWKQQNp525SinXw6NrhBfeg5OmC7g==\n-----END PUBLIC KEY-----\n",
           "mustVerify": true
         },
         "tampered": {
-          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiY3JlZGl0c0NoYXJnZWQiOjIwMCwiZGV2aWNlSWQiOiJkZXZfZTRkM2MyYjEiLCJkdXJhdGlvblNlY29uZHMiOjkwMCwiZW5kZWRBdCI6IjIwMjYtMDItMTVUMTQ6NDU6MDAuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6MTIwMCwiZW5lcmd5V2giOjM1MDAsImxpcXVpZE1sIjo0NTYwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19lNGQzYzJiMWEwZjllOGQ3Iiwib2ZmbGluZVR4SWQiOiJvdHhfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwYXNzQ291bnRlciI6NTksInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xNVQxNDozMDowMC4wMDBaIiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfZTRkM2MyYjFhMGY5ZThkN2M2YjVhNDkzODI3MWU0ZDMifQ==",
-          "signature": "MEQCIG+7iPvobm1DkL8VYZcFh1CsucoZbLZlNSrLc5CXCYvvAiAGExxQI1gW243YAzGF4G+9q3sbN0zJkqly/Cjv+oR0oQ==",
+          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNSIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
+          "signature": "MEUCIQD1loq9BuUTTPbtdejp5ytICvB+sLVtQ18qOI/G2nHp2gIgUHmlwJhyZHifwXwdmcEj5LKWLicdG4maPsPvBzQ/WEY=",
           "key": "conformance/test-keys/server-test-pub.pem",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/Hd\ngUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==\n-----END PUBLIC KEY-----\n",
           "mustVerify": false
@@ -171,8 +171,8 @@
           "energyWh": 3500
         },
         "receipt": {
-          "data": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiY3JlZGl0c0NoYXJnZWQiOjIwMCwiZGV2aWNlSWQiOiJkZXZfZTRkM2MyYjEiLCJkdXJhdGlvblNlY29uZHMiOjkwMCwiZW5kZWRBdCI6IjIwMjYtMDItMTVUMTQ6NDU6MDAuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6MTIwMCwiZW5lcmd5V2giOjM1MDAsImxpcXVpZE1sIjo0NTYwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19lNGQzYzJiMWEwZjllOGQ3Iiwib2ZmbGluZVR4SWQiOiJvdHhfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwYXNzQ291bnRlciI6NTksInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xNVQxNDozMDowMC4wMDBaIiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfZTRkM2MyYjFhMGY5ZThkN2M2YjVhNDkzODI3MWU0ZDMifQ==",
-          "signature": "MEQCIG+7iPvobm1DkL8VYZcFh1CsucoZbLZlNSrLc5CXCYvvAiAGExxQI1gW243YAzGF4G+9q3sbN0zJkqly/Cjv+oR0oQ==",
+          "data": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNSIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
+          "signature": "MEUCIQD1loq9BuUTTPbtdejp5ytICvB+sLVtQ18qOI/G2nHp2gIgUHmlwJhyZHifwXwdmcEj5LKWLicdG4maPsPvBzQ/WEY=",
           "signatureAlgorithm": "ECDSA-P256-SHA256"
         },
         "txCounter": 8
@@ -188,22 +188,22 @@
       "what": "OfflinePass signature s-scalar bit flipped",
       "mutation": "signature[-1] ^= 0x01",
       "mutatedPointer": "offlinePass/signature",
-      "was": "MEUCIQCnEHKHHsez+291Vw16fp5axR7XFEMSi3pBqRwSi+rhMQIgLSX3qEp8AJMnB85SsS8FsKR1O1wLQUqxXVm/thb74Yg=",
-      "now": "MEUCIQCnEHKHHsez+291Vw16fp5axR7XFEMSi3pBqRwSi+rhMQIgLSX3qEp8AJMnB85SsS8FsKR1O1wLQUqxXVm/thb74Yk=",
+      "was": "MEQCIHoH4TWiuBQYEX7rD1zv56aiaafIR0wRzjGR8xrHrwQLAiAgAoy6nFpGQjExd9RcVOeGaUgPYtFbJhJUjRSDI+/KtA==",
+      "now": "MEQCIHoH4TWiuBQYEX7rD1zv56aiaafIR0wRzjGR8xrHrwQLAiAgAoy6nFpGQjExd9RcVOeGaUgPYtFbJhJUjRSDI+/KtQ==",
       "schema": "schemas/ble/offline-auth-request.schema.json",
       "portable": {
         "algorithm": "ECDSA-P256-SHA256",
         "key": "conformance/test-keys/server-test-pub.pem",
         "base": {
-          "signedBytesBase64": "eyJjb25zdHJhaW50cyI6eyJtaW5JbnRlcnZhbFNlYyI6NjAsInN0YXRpb25NYXhPZmZsaW5lVHgiOjIwMCwic3RhdGlvbk9mZmxpbmVXaW5kb3dIb3VycyI6NzJ9LCJkZXZpY2VJZCI6ImQ3ZThmOWEwYjFjMmQzZTRmNWE2YjdjOGQ5ZTBmMWEyIiwiZXhwaXJlc0F0IjoiMjAyNi0wMi0xM1QxNDozMDowMC4wMDBaIiwiaXNzdWVkQXQiOiIyMDI2LTAyLTEyVDE0OjMwOjAwLjAwMFoiLCJvZmZsaW5lQWxsb3dhbmNlIjp7ImFsbG93ZWRTZXJ2aWNlVHlwZXMiOlsic3ZjX2Jhc2ljIiwic3ZjX3ByZW1pdW0iLCJzdmNfYXV4aWxpYXJ5Il0sIm1heENyZWRpdHNQZXJUeCI6NTAwLCJtYXhUb3RhbENyZWRpdHMiOjIwMDAsIm1heFVzZXMiOjIwfSwicGFzc0lkIjoib3Bhc3NfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwb2xpY3lWZXJzaW9uIjozLCJyZXZvY2F0aW9uRXBvY2giOjIsInN1YiI6InN1Yl9wcmVtaXVtVXNlcjQyWHlaIn0=",
-          "signature": "MEUCIQCnEHKHHsez+291Vw16fp5axR7XFEMSi3pBqRwSi+rhMQIgLSX3qEp8AJMnB85SsS8FsKR1O1wLQUqxXVm/thb74Yg=",
+          "signedBytesBase64": "eyJjb25zdHJhaW50cyI6eyJtaW5JbnRlcnZhbFNlYyI6NjB9LCJkZXZpY2VJZCI6ImQ3ZThmOWEwYjFjMmQzZTRmNWE2YjdjOGQ5ZTBmMWEyIiwiZGV2aWNlUHVibGljS2V5IjoiQWsxd0lCWlVFamlQbnFKSmFRRVZrVUN4TmRCU1JGdWlxZE1NeU5lWFdLNVUiLCJleHBpcmVzQXQiOiIyMDI2LTAyLTEzVDE0OjMwOjAwLjAwMFoiLCJpc3N1ZWRBdCI6IjIwMjYtMDItMTJUMTQ6MzA6MDAuMDAwWiIsImtleUlkIjoiWWpYNXBSMFR6bVUzdWJzMTd3SW1RUSIsIm9mZmxpbmVBbGxvd2FuY2UiOnsibWF4Q3JlZGl0c1BlclR4Ijo1MDAsIm1heFRvdGFsQ3JlZGl0cyI6MjAwMCwibWF4VXNlcyI6MjB9LCJwYXNzSWQiOiJvcGFzc19lNGQzYzJiMWEwZjllOGQ3YzZiNSIsInBvbGljeVZlcnNpb24iOjMsInJldm9jYXRpb25FcG9jaCI6Miwic3ViIjoic3ViX3ByZW1pdW1Vc2VyNDJYeVoifQ==",
+          "signature": "MEQCIHoH4TWiuBQYEX7rD1zv56aiaafIR0wRzjGR8xrHrwQLAiAgAoy6nFpGQjExd9RcVOeGaUgPYtFbJhJUjRSDI+/KtA==",
           "key": "conformance/test-keys/server-test-pub.pem",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/Hd\ngUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==\n-----END PUBLIC KEY-----\n",
           "mustVerify": true
         },
         "tampered": {
-          "signedBytesBase64": "eyJjb25zdHJhaW50cyI6eyJtaW5JbnRlcnZhbFNlYyI6NjAsInN0YXRpb25NYXhPZmZsaW5lVHgiOjIwMCwic3RhdGlvbk9mZmxpbmVXaW5kb3dIb3VycyI6NzJ9LCJkZXZpY2VJZCI6ImQ3ZThmOWEwYjFjMmQzZTRmNWE2YjdjOGQ5ZTBmMWEyIiwiZXhwaXJlc0F0IjoiMjAyNi0wMi0xM1QxNDozMDowMC4wMDBaIiwiaXNzdWVkQXQiOiIyMDI2LTAyLTEyVDE0OjMwOjAwLjAwMFoiLCJvZmZsaW5lQWxsb3dhbmNlIjp7ImFsbG93ZWRTZXJ2aWNlVHlwZXMiOlsic3ZjX2Jhc2ljIiwic3ZjX3ByZW1pdW0iLCJzdmNfYXV4aWxpYXJ5Il0sIm1heENyZWRpdHNQZXJUeCI6NTAwLCJtYXhUb3RhbENyZWRpdHMiOjIwMDAsIm1heFVzZXMiOjIwfSwicGFzc0lkIjoib3Bhc3NfZTRkM2MyYjFhMGY5ZThkN2M2YjUiLCJwb2xpY3lWZXJzaW9uIjozLCJyZXZvY2F0aW9uRXBvY2giOjIsInN1YiI6InN1Yl9wcmVtaXVtVXNlcjQyWHlaIn0=",
-          "signature": "MEUCIQCnEHKHHsez+291Vw16fp5axR7XFEMSi3pBqRwSi+rhMQIgLSX3qEp8AJMnB85SsS8FsKR1O1wLQUqxXVm/thb74Yk=",
+          "signedBytesBase64": "eyJjb25zdHJhaW50cyI6eyJtaW5JbnRlcnZhbFNlYyI6NjB9LCJkZXZpY2VJZCI6ImQ3ZThmOWEwYjFjMmQzZTRmNWE2YjdjOGQ5ZTBmMWEyIiwiZGV2aWNlUHVibGljS2V5IjoiQWsxd0lCWlVFamlQbnFKSmFRRVZrVUN4TmRCU1JGdWlxZE1NeU5lWFdLNVUiLCJleHBpcmVzQXQiOiIyMDI2LTAyLTEzVDE0OjMwOjAwLjAwMFoiLCJpc3N1ZWRBdCI6IjIwMjYtMDItMTJUMTQ6MzA6MDAuMDAwWiIsImtleUlkIjoiWWpYNXBSMFR6bVUzdWJzMTd3SW1RUSIsIm9mZmxpbmVBbGxvd2FuY2UiOnsibWF4Q3JlZGl0c1BlclR4Ijo1MDAsIm1heFRvdGFsQ3JlZGl0cyI6MjAwMCwibWF4VXNlcyI6MjB9LCJwYXNzSWQiOiJvcGFzc19lNGQzYzJiMWEwZjllOGQ3YzZiNSIsInBvbGljeVZlcnNpb24iOjMsInJldm9jYXRpb25FcG9jaCI6Miwic3ViIjoic3ViX3ByZW1pdW1Vc2VyNDJYeVoifQ==",
+          "signature": "MEQCIHoH4TWiuBQYEX7rD1zv56aiaafIR0wRzjGR8xrHrwQLAiAgAoy6nFpGQjExd9RcVOeGaUgPYtFbJhJUjRSDI+/KtQ==",
           "key": "conformance/test-keys/server-test-pub.pem",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/Hd\ngUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==\n-----END PUBLIC KEY-----\n",
           "mustVerify": false
@@ -215,6 +215,8 @@
           "passId": "opass_e4d3c2b1a0f9e8d7c6b5",
           "sub": "sub_premiumUser42XyZ",
           "deviceId": "d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2",
+          "devicePublicKey": "Ak1wIBZUEjiPnqJJaQEVkUCxNdBSRFuiqdMMyNeXWK5U",
+          "keyId": "YjX5pR0TzmU3ubs17wImQQ",
           "issuedAt": "2026-02-12T14:30:00.000Z",
           "expiresAt": "2026-02-13T14:30:00.000Z",
           "policyVersion": 3,
@@ -222,20 +224,13 @@
           "offlineAllowance": {
             "maxTotalCredits": 2000,
             "maxUses": 20,
-            "maxCreditsPerTx": 500,
-            "allowedServiceTypes": [
-              "svc_basic",
-              "svc_premium",
-              "svc_auxiliary"
-            ]
+            "maxCreditsPerTx": 500
           },
           "constraints": {
-            "minIntervalSec": 60,
-            "stationOfflineWindowHours": 72,
-            "stationMaxOfflineTx": 200
+            "minIntervalSec": 60
           },
           "signatureAlgorithm": "ECDSA-P256-SHA256",
-          "signature": "MEUCIQCnEHKHHsez+291Vw16fp5axR7XFEMSi3pBqRwSi+rhMQIgLSX3qEp8AJMnB85SsS8FsKR1O1wLQUqxXVm/thb74Yk="
+          "signature": "MEQCIHoH4TWiuBQYEX7rD1zv56aiaafIR0wRzjGR8xrHrwQLAiAgAoy6nFpGQjExd9RcVOeGaUgPYtFbJhJUjRSDI+/KtQ=="
         },
         "counter": 7,
         "sessionProof": "Z2CslLwYw8mNTbU2MPkHX4Ijy3oK5+5u+pWl8ycC0QY="
@@ -279,6 +274,8 @@
           "passId": "opass_e4d3c2b1a0f9e8d7c6b5",
           "sub": "sub_premiumUser42XyZ",
           "deviceId": "d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2",
+          "devicePublicKey": "Ak1wIBZUEjiPnqJJaQEVkUCxNdBSRFuiqdMMyNeXWK5U",
+          "keyId": "YjX5pR0TzmU3ubs17wImQQ",
           "issuedAt": "2026-02-12T14:30:00.000Z",
           "expiresAt": "2026-02-13T14:30:00.000Z",
           "policyVersion": 3,
@@ -286,20 +283,13 @@
           "offlineAllowance": {
             "maxTotalCredits": 2000,
             "maxUses": 20,
-            "maxCreditsPerTx": 500,
-            "allowedServiceTypes": [
-              "svc_basic",
-              "svc_premium",
-              "svc_auxiliary"
-            ]
+            "maxCreditsPerTx": 500
           },
           "constraints": {
-            "minIntervalSec": 60,
-            "stationOfflineWindowHours": 72,
-            "stationMaxOfflineTx": 200
+            "minIntervalSec": 60
           },
           "signatureAlgorithm": "ECDSA-P256-SHA256",
-          "signature": "MEUCIQCnEHKHHsez+291Vw16fp5axR7XFEMSi3pBqRwSi+rhMQIgLSX3qEp8AJMnB85SsS8FsKR1O1wLQUqxXVm/thb74Yg="
+          "signature": "MEQCIHoH4TWiuBQYEX7rD1zv56aiaafIR0wRzjGR8xrHrwQLAiAgAoy6nFpGQjExd9RcVOeGaUgPYtFbJhJUjRSDI+/KtA=="
         },
         "counter": 7,
         "sessionProof": "Z2CslLwYw8mNTbU2MPkHX4Ijy3oK5+5u+pWl8ycC0Qc="

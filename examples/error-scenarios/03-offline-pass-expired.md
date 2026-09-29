@@ -18,13 +18,18 @@ before she can use the station.
 
 ## What Goes Wrong
 
-Alice's OfflinePass was issued on 2026-02-11 with a 24-hour validity window
-(expires 2026-02-12T10:00:00.000Z). The app did not refresh the pass because Alice
-had no connectivity since it expired. When the station performs its local
-validation of the OfflinePass, check #2 (expiration) fails because the current
-time (2026-02-13T10:30:05.000Z per the station's RTC) is past the `expiresAt`
-timestamp. The station rejects the offline authentication with error code
-**2003 OFFLINE_PASS_EXPIRED**.
+Alice's OfflinePass was issued on 2026-02-11 and expired at 2026-02-12T10:00:00.000Z:
+its `expiresAt` is `issuedAt` plus the platform pass lifetime, which this example platform
+sets to one day — the default is three days, and never more than ten
+([`offline-pass.md` §6](../../spec/profiles/offline/offline-pass.md#6-lifecycle)).
+The app could not re-issue the pass because Alice has had no connectivity since before it
+expired. When the station performs its local validation of the OfflinePass, check #2
+(temporal bounds) fails because the current time (2026-02-13T10:30:05.000Z per the
+station's RTC) is past the `expiresAt` timestamp. The station rejects the offline
+authentication with error code **2003 OFFLINE_PASS_EXPIRED**. The other bound of check #2,
+the pass's age against the station's own `OfflinePassMaxAge`, is not what fails: at its default of 864000
+seconds (ten days) it is inert, and an operator arms it by lowering it
+([`08-configuration.md` §5](../../spec/08-configuration.md#5-offline--ble-configuration-keys)).
 
 ## Timeline
 
@@ -93,7 +98,7 @@ timestamp. The station rejects the offline authentication with error code
 ### 4. App -> Station: OfflineAuthRequest (BLE Write to FFF3)
 
 The app constructs the offline auth request using the stored (expired) OfflinePass.
-The `expiresAt` field clearly shows the pass expired over 24 hours ago.
+The `expiresAt` field clearly shows the pass expired more than a day ago.
 
 **BLE Characteristic:** FFF3 (Auth Channel, WRITE)
 
@@ -104,6 +109,8 @@ The `expiresAt` field clearly shows the pass expired over 24 hours ago.
     "passId": "opass_b1c2d3e4f5a6",
     "sub": "sub_alice2026",
     "deviceId": "device_a8f3bc12e4567890",
+    "devicePublicKey": "A0xX3DTR7Imb4hzGyaH1WyUX/5U/CIghk7B/cZV11KFi",
+    "keyId": "YjX5pR0TzmU3ubs17wImQQ",
     "issuedAt": "2026-02-11T10:00:00.000Z",
     "expiresAt": "2026-02-12T10:00:00.000Z",
     "policyVersion": 1,
@@ -111,20 +118,13 @@ The `expiresAt` field clearly shows the pass expired over 24 hours ago.
     "offlineAllowance": {
       "maxTotalCredits": 100,
       "maxUses": 5,
-      "maxCreditsPerTx": 30,
-      "allowedServiceTypes": [
-        "svc_eco",
-        "svc_standard",
-        "svc_deluxe"
-      ]
+      "maxCreditsPerTx": 30
     },
     "constraints": {
-      "minIntervalSec": 60,
-      "stationOfflineWindowHours": 72,
-      "stationMaxOfflineTx": 100
+      "minIntervalSec": 60
     },
     "signatureAlgorithm": "ECDSA-P256-SHA256",
-    "signature": "MEUCIQC9G52Px/9kqSJPxFfcWh7VA1IXtYxj+pIA5R8mMv7+xgIgVR8A/SJLEhhN1qUwnY6prnTEmON5EjSBVrzuk6DF/FM="
+    "signature": "MEUCIQD9u+aV3D9r6ffR8hfxt/L2uDkqJ239oI4l2eXBqezwcwIgVs9Dz0M5iXmPg3hfKVXu60so5UcFsG0ispLJh22Kc3g="
   },
   "counter": 3,
   "sessionProof": "EtKD75H71pKdOC5mrEsIAS7a04p7oQzRcdNZv/G0uPA="
@@ -133,19 +133,22 @@ The `expiresAt` field clearly shows the pass expired over 24 hours ago.
 
 ### 5. Station: Local Validation of OfflinePass
 
-The station performs the following validation checks on the OfflinePass:
+The station performs the nine checks that apply
+([`06-security.md` §6.1.1](../../spec/06-security.md#611-offlinepass-validation--10-checks)),
+stopping at the first failure:
 
 ```
 OfflinePass Validation:
   Check #1 - Signature verification:    PASS
-    Verified ES256 signature against server's public key.
-  Check #2 - Expiration check:          FAIL
+    Verified ECDSA P-256 signature with the server key named by keyId (YjX5pR0TzmU3ubs17wImQQ).
+  Check #2 - Temporal bounds:           FAIL
     expiresAt:  2026-02-12T10:00:00.000Z
     now (RTC):  2026-02-13T10:30:08.000Z
     Delta:      +24h 30m 08s (expired)
   Check #3 - Revocation epoch:          SKIPPED (prior check failed)
   Check #4 - Device binding:            SKIPPED (prior check failed)
-  Checks #5-#10:                        SKIPPED (prior check failed)
+  Check #5 - (withdrawn)
+  Checks #6-#10:                        SKIPPED (prior check failed)
 
 Result: REJECTED (check #2 failed — offline pass expired)
 ```
@@ -197,42 +200,34 @@ at the top suggests:
 
 1. **Immediate option -- find connectivity:** Alice walks to an area with Wi-Fi or
    cellular signal. The app's ConnectivityDetector detects the network change and
-   automatically triggers a background refresh of the OfflinePass.
+   automatically requests a new OfflinePass.
 
-2. **OfflinePass refresh flow:** Once online, the app calls
-   `POST /api/offline-pass/refresh`:
-
-   ```json
-   {
-     "userId": "sub_alice2026",
-     "stationId": "stn_a1b2c3d4",
-     "expiredPassId": "opass_b1c2d3e4f5a6"
-   }
-   ```
-
-   The server issues a new OfflinePass with a fresh 24-hour validity window:
+2. **Pass issuance:** Once online, the app calls `POST /api/v1/offline/passes`
+   ([`app-contract.md` §3](../../spec/profiles/offline/app-contract.md#3-pass-issuance))
+   with its device identifier and the public key of its hardware-backed device key,
+   the same key for every pass it requests on this phone:
 
    ```json
    {
-     "passId": "opass_c3d4e5f6a7b8",
-     "userId": "sub_alice2026",
-     "stationId": "stn_a1b2c3d4",
-     "issuedAt": "2026-02-13T10:35:00.000Z",
-     "expiresAt": "2026-02-14T10:35:00.000Z",
-     "maxCredits": 100,
-     "remainingCredits": 100,
-     "allowedServices": ["svc_eco", "svc_standard", "svc_deluxe"],
-     "signature": "eyJhbGciOiJFUzI1NiJ9.new_offlinepass_payload_signature_base64url",
-     "attestationToken": "device_attestation_token_base64"
+     "deviceId": "device_a8f3bc12e4567890",
+     "devicePublicKey": "A0xX3DTR7Imb4hzGyaH1WyUX/5U/CIghk7B/cZV11KFi"
    }
    ```
+
+   The server answers with a new `offlinePass`, valid for one platform lifetime from its
+   issue, and the `trustBundle` the app keeps in place of the one it held
+   ([`app-contract.md` §3.4](../../spec/profiles/offline/app-contract.md#34-the-trust-bundle));
+   [`offline-pass-issuance.response.json`](../payloads/http/offline-pass-issuance.response.json)
+   shows the shape of that response.
 
 3. **Retry offline session:** Alice returns to the station and the app uses the new
    OfflinePass to successfully complete BLE authentication.
 
-4. **Prevention -- background pre-arming:** The app's BackgroundPreArmingService
-   periodically checks OfflinePass expiration and refreshes it proactively when
-   connectivity is available, reducing the chance of this scenario occurring.
+4. **Prevention -- re-issuance and pre-arming:** Whenever it has connectivity, the app
+   requests a fresh pass at application start, after each use of the pass and after each
+   top-up ([`offline-pass.md` §6](../../spec/profiles/offline/offline-pass.md#6-lifecycle)),
+   and its BackgroundPreArmingService requests one before the current pass
+   expires, reducing the chance of this scenario occurring.
 
 5. **Prevention -- expiration warning:** The app shows a notification 2 hours
    before the OfflinePass expires (if the app is in the foreground), prompting Alice

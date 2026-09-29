@@ -4,7 +4,7 @@
 
 ## Scenario
 
-Bob is at "Station Alpha -- Example City" and wants a deluxe treatment on Bay 2. His phone has no cellular signal — the area has a dead zone behind the building where he parked. However, the station's MQTT connection is healthy over its dedicated Ethernet line. Bob has an OfflinePass pre-armed in his the app from earlier today when he had WiFi. He opens the app, connects to the station via BLE, and sees that the station reports `connectivity: "Online"`. The app's ConnectivityDetector identifies this as a **Partial B** scenario: the app sends an OfflineAuthRequest with the OfflinePass over BLE, and the station forwards it to the server via MQTT for real-time validation. The server validates the pass, debits Bob's wallet, and responds to the station, which relays the acceptance to the app over BLE. Bob runs a 4-minute Deluxe Program session on Bay 2, the timer expires naturally, and a receipt is generated. Since the station is online throughout, the session is tracked in real-time by the server and no later reconciliation is needed.
+Bob is at "Station Alpha -- Example City" and wants a deluxe treatment on Bay 2. His phone has no cellular signal — the area has a dead zone behind the building where he parked. However, the station's MQTT connection is healthy over its dedicated Ethernet line. Bob has an OfflinePass pre-armed in his the app from earlier today when he had WiFi. He opens the app, connects to the station via BLE, and sees that the station reports `connectivity: "Online"`. The app's ConnectivityDetector identifies this as a **Partial B** scenario: the app sends an OfflineAuthRequest with the OfflinePass over BLE, and the station forwards it to the server via MQTT for real-time validation. The server validates the pass, debits Bob's wallet, and responds to the station, which relays the acceptance to the app over BLE. Bob runs a 4-minute Deluxe Program session on Bay 2, the timer expires naturally, and a receipt is generated. Since the station is online throughout, the session is tracked in real time by the server and settled online when the station reports its end; it would be reconciled through TransactionEvent only if the station lost MQTT before then ([`04-flows.md` §5c](../../spec/04-flows.md#5c-partial-b--phone-offline-station-online)).
 
 ## Participants
 
@@ -153,7 +153,7 @@ The app sees `connectivity: "Online"` — the station has an active MQTT connect
 }
 ```
 
-Bob sees the service catalog. He selects Bay 2 and "Deluxe Program" (12 credits/min) for 4 minutes (48 credits max).
+Bob sees the service catalog. Before he chooses, the app shows the pass's limits, as it must ([`offline-pass.md` §2.1](../../spec/profiles/offline/offline-pass.md#21-offlineallowance-object)): 60 credits per session, 120 of 200 credits remaining, 3 of 5 uses remaining. He selects Bay 2 and "Deluxe Program" (12 credits/min) for 4 minutes (48 credits max).
 
 ---
 
@@ -233,6 +233,8 @@ The app presents the pre-armed OfflinePass. In Partial B, the station does NOT v
     "passId": "opass_a8b9c0d1e2f3",
     "sub": "sub_bob2026",
     "deviceId": "device_b7c4de89f0123456",
+    "devicePublicKey": "A/h6jULcl8Sq6+dJE1aS5RFXBrrbdfl8odxzkH3y2CuW",
+    "keyId": "YjX5pR0TzmU3ubs17wImQQ",
     "issuedAt": "2026-02-13T06:00:00.000Z",
     "expiresAt": "2026-02-14T06:00:00.000Z",
     "policyVersion": 1,
@@ -240,20 +242,13 @@ The app presents the pre-armed OfflinePass. In Partial B, the station does NOT v
     "offlineAllowance": {
       "maxTotalCredits": 200,
       "maxUses": 5,
-      "maxCreditsPerTx": 60,
-      "allowedServiceTypes": [
-        "svc_eco",
-        "svc_deluxe",
-        "svc_standard"
-      ]
+      "maxCreditsPerTx": 60
     },
     "constraints": {
-      "minIntervalSec": 60,
-      "stationOfflineWindowHours": 72,
-      "stationMaxOfflineTx": 100
+      "minIntervalSec": 60
     },
     "signatureAlgorithm": "ECDSA-P256-SHA256",
-    "signature": "MEUCIQCX8jIRa9VQUgwWleELd2icmn0Nk/k608JtlFPNxz2lqAIgNIm76KijjkqTPGN1nlZLk0yGQUPGkK+qy6Xr4Bjjkig="
+    "signature": "MEUCIQDLE+HuJ7QIM3ekfOQCgO0eg8bOtZG7jM/y5ZdXVcETrQIgJRyHJw58Bh41UnB1eYt9M5X43eLgXqPOzaFoqzeBi5U="
   },
   "counter": 3,
   "sessionProof": "hAW4BhA445dJmlLG78qcEn36DHEhkjIDNt3fZOGGh0c="
@@ -282,6 +277,8 @@ Because the station is online (`stationConnectivity: "Online"`), it does NOT per
       "passId": "opass_a8b9c0d1e2f3",
       "sub": "sub_bob2026",
       "deviceId": "device_b7c4de89f0123456",
+      "devicePublicKey": "A/h6jULcl8Sq6+dJE1aS5RFXBrrbdfl8odxzkH3y2CuW",
+      "keyId": "YjX5pR0TzmU3ubs17wImQQ",
       "issuedAt": "2026-02-13T06:00:00.000Z",
       "expiresAt": "2026-02-14T06:00:00.000Z",
       "policyVersion": 1,
@@ -289,20 +286,13 @@ Because the station is online (`stationConnectivity: "Online"`), it does NOT per
       "offlineAllowance": {
         "maxTotalCredits": 200,
         "maxUses": 5,
-        "maxCreditsPerTx": 60,
-        "allowedServiceTypes": [
-          "svc_eco",
-          "svc_deluxe",
-          "svc_standard"
-        ]
+        "maxCreditsPerTx": 60
       },
       "constraints": {
-        "minIntervalSec": 60,
-        "stationOfflineWindowHours": 72,
-        "stationMaxOfflineTx": 100
+        "minIntervalSec": 60
       },
       "signatureAlgorithm": "ECDSA-P256-SHA256",
-      "signature": "MEUCIQCX8jIRa9VQUgwWleELd2icmn0Nk/k608JtlFPNxz2lqAIgNIm76KijjkqTPGN1nlZLk0yGQUPGkK+qy6Xr4Bjjkig="
+      "signature": "MEUCIQDLE+HuJ7QIM3ekfOQCgO0eg8bOtZG7jM/y5ZdXVcETrQIgJRyHJw58Bh41UnB1eYt9M5X43eLgXqPOzaFoqzeBi5U="
     },
     "deviceId": "device_b7c4de89f0123456",
     "counter": 3,
@@ -316,24 +306,28 @@ Because the station is online (`stationConnectivity: "Online"`), it does NOT per
 
 ### Step 9: Server Validates OfflinePass in Real-Time (15:10:06.600)
 
-The server runs the eleven authorize-time checks of
-[`authorize-offline-pass.md` §5](../../spec/profiles/offline/authorize-offline-pass.md#5-validation-checks-11-checks),
-in that order, stopping at the first failure:
+The server runs the authorize-time checks of
+[`authorize-offline-pass.md` §5](../../spec/profiles/offline/authorize-offline-pass.md#5-validation-checks)
+— #1–#4, #6–#10 and #12; #5 and #11 are withdrawn — in that order, stopping at the first failure:
 
-1. **Signature verification** — the ECDSA P-256 `signature` verifies against the server's own signing key
+1. **Signature verification** — the ECDSA P-256 `signature` verifies with the key of the server's own key set named by the pass's `keyId` (`YjX5pR0TzmU3ubs17wImQQ`)
 2. **Not expired** — `expiresAt` (2026-02-14T06:00:00.000Z) is in the future
-3. **Revocation epoch** — pass `revocationEpoch` (42) >= the server's current `RevocationEpoch` (42)
+3. **Revocation epoch** — pass `revocationEpoch` (42) >= the platform's current `RevocationEpoch` (42)
 4. **Device binding** — `offlinePass.deviceId` (`device_b7c4de89f0123456`) matches the request's `deviceId`
-5. **Station allowance** — the stored pass record's `allowed_station_ids` is empty, so the pass is unscoped and this station is permitted
-6. **Usage limit** — used 2 times, `maxUses` is 5
-7. **Total credits limit** — 80 credits charged so far, `maxTotalCredits` is 200
+5. *(withdrawn — a pass carries no station scope)*
+6. **Usage limit** — 2 uses already counted, fewer than `maxUses` (5)
+7. **Total credits limit** — 80 credits already counted + 48 estimated for this session = 128, not above `maxTotalCredits` (200)
 8. **Per-transaction credits** — 48 credits estimated for this session, `maxCreditsPerTx` is 60
 9. **Rate limit** — last use was 45 minutes ago, `minIntervalSec` is 60
 10. **Counter replay** — `counter` 3 > last seen counter 2
-11. **Org binding** — the stored pass record's `organization_id` equals the reporting station's
+11. *(withdrawn — a pass carries no organization scope)*
+12. **Individual revocation** — neither the pass nor Bob is revoked or blocked on the server
 
-All eleven pass. Note what is *not* among them: nothing checks the requested `svc_deluxe` against the
-pass's `allowedServiceTypes`. The list is carried and signed but no gate reads it — see
+All ten pass. Nothing among them asks which station or which operator presented the pass: it is
+valid at any station that accepts offline passes
+([`offline-pass.md` §2.3](../../spec/profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)).
+Nor does anything compare the requested `svc_deluxe` with a list of services: `allowedServiceTypes`
+is withdrawn and this pass does not carry it — see
 [`06-security.md` §6.1.1](../../spec/06-security.md#611-offlinepass-validation--10-checks).
 
 Separately from pass validation, the server confirms Bob's wallet holds 95 credits, enough for the
@@ -627,7 +621,7 @@ Since the station is online, it reports the bay status change in real-time:
 }
 ```
 
-The server updates session `sess_d5e6f7a8b9c0` to `completed`. Since the full 4 minutes were used, there is no refund.
+The server updates session `sess_d5e6f7a8b9c0` to `completed` and settles it: the full 4 minutes were delivered, so the charge is the full 48 credits and there is no refund. Settlement never exceeds the `creditsAuthorized` of the authorization (48), and any true-up against the authorize-time debit is refund-only ([`reconciliation.md` §8](../../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)).
 
 | Field | Value |
 |-------|-------|
@@ -681,8 +675,8 @@ The station generates a signed receipt:
     "energyWh": 180
   },
   "receipt": {
-    "data": "eyJiYXlJZCI6ImJheV9hMmIzYzRkNWU2ZjciLCJjcmVkaXRzQ2hhcmdlZCI6NDgsImRldmljZUlkIjoiZGV2X2Y2YTdiOGM5IiwiZHVyYXRpb25TZWNvbmRzIjoyNDAsImVuZGVkQXQiOiIyMDI2LTAyLTEzVDE1OjE0OjA4LjAwMFoiLCJtZXRlclZhbHVlcyI6eyJjb25zdW1hYmxlTWwiOjM0MCwiZW5lcmd5V2giOjE4MCwibGlxdWlkTWwiOjB9LCJvZmZsaW5lUGFzc0lkIjoib3Bhc3NfNGU1YWFlYTMzOTE2YTk2NCIsIm9mZmxpbmVUeElkIjoib3R4X2Y2YTdiOGM5ZDBlMSIsInBhc3NDb3VudGVyIjoxMywic2VydmljZUlkIjoic3ZjX2RlbHV4ZSIsInN0YXJ0ZWRBdCI6IjIwMjYtMDItMTNUMTU6MTA6MDguMDAwWiIsInR4Q291bnRlciI6OSwidXNlcklkIjoic3ViX2M4NTIzMWY4MGY5MzAxYWMifQ==",
-    "signature": "MEUCIQCjhokHC8nNYNQgzn0PsmvtQloX5BSsLpXQOH2uDR4BBgIgLVx5c/1JDlbXp751rd/YStDU27sV+LngLV6B+NjwBfI=",
+    "data": "eyJiYXlJZCI6ImJheV9hMmIzYzRkNWU2ZjciLCJib29rZWREdXJhdGlvblNlY29uZHMiOjI0MCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjo0OCwiZGV2aWNlSWQiOiJkZXZfZjZhN2I4YzkiLCJkdXJhdGlvblNlY29uZHMiOjI0MCwiZW5kUmVhc29uIjoiVGltZXJFeHBpcmVkIiwiZW5kZWRBdCI6IjIwMjYtMDItMTNUMTU6MTQ6MDguMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6MzQwLCJlbmVyZ3lXaCI6MTgwLCJsaXF1aWRNbCI6MH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc180ZTVhYWVhMzM5MTZhOTY0Iiwib2ZmbGluZVR4SWQiOiJvdHhfZjZhN2I4YzlkMGUxIiwicGFzc0NvdW50ZXIiOjEzLCJzZXJ2aWNlSWQiOiJzdmNfZGVsdXhlIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xM1QxNToxMDowOC4wMDBaIiwic3RhdGlvbklkIjoic3RuX2ExYjJjM2Q0IiwidHhDb3VudGVyIjo5LCJ1c2VySWQiOiJzdWJfYzg1MjMxZjgwZjkzMDFhYyJ9",
+    "signature": "MEUCIQCxkqA1qJQsK16pv4/FBQGKx3PCklLyJ8D7LaFLIE0xRQIgHGnFgSFyT/5UhjmMeCSZiOAr2UUylkGT43CMJvbcXvQ=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "txCounter": 9,
@@ -692,7 +686,7 @@ The station generates a signed receipt:
 }
 ```
 
-The app stores the receipt locally. Since the phone is offline, the app cannot sync immediately, but it does not need to — the station already reported everything to the server via MQTT in real-time.
+The app stores the receipt locally. The session was settled online, from the station's real-time reports; the app still uploads the receipt once it has connectivity, as it does every receipt it holds ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)).
 
 ---
 
@@ -852,13 +846,13 @@ On the Operator Dashboard, Charlie sees the session in real-time because the sta
 
 ## Key Design Decisions
 
-1. **Station does NOT validate locally in Partial B.** When the station is online, it always forwards the OfflinePass to the server for real-time validation. This is strictly better than local validation because the server can check the user's current balance, verify the pass has not been revoked since issuance, and debit the wallet immediately. The 10 local validation checks (see Flow 5a) are only used as a fallback.
+1. **Station does NOT validate locally in Partial B.** When the station is online, it always forwards the OfflinePass to the server for real-time validation. This is strictly better than local validation because the server can check the user's current balance, verify the pass has not been revoked since issuance, and debit the wallet immediately. The nine local validation checks ([`06-security.md` §6.1.1](../../spec/06-security.md#611-offlinepass-validation--10-checks); see Flow 04) are only used as a fallback.
 
-2. **Server debits wallet at authorization time.** The server debits Bob's wallet at step 9, before the service even starts. This matches the online flow behavior and prevents the user from starting multiple sessions with the same credits. There is no risk of over-billing because the amount is calculated from the requested duration.
+2. **Server debits wallet at authorization time.** The server debits Bob's wallet at step 9, before the service even starts. This matches the online flow behavior and prevents the user from starting multiple sessions with the same credits. There is no risk of over-billing: the `creditsAuthorized` of the response caps what the session may be charged, and any true-up is refund-only ([`reconciliation.md` §8](../../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)).
 
-3. **No reconciliation needed.** Because the station is online throughout the session, all events (StatusNotification, MeterValues) are sent to the server in real-time via MQTT. The session is fully tracked server-side. The receipt generated on FFF6 serves as a local record for Bob but does not trigger a TransactionEvent reconciliation.
+3. **Settled online; reconciled only if MQTT is lost.** Because the station is online throughout the session, all events (StatusNotification, MeterValues) are sent to the server in real time via MQTT, and the server settles the session when the station reports its end. Had the station lost MQTT before then, it would have reconciled the transaction through TransactionEvent, and the server would have settled it once, as a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](../../spec/profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)). The receipt on FFF6 is Bob's copy, which the app uploads once it has connectivity ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)).
 
-4. **MQTT fallback if AuthorizeOfflinePass times out.** If the server does not respond within 15 seconds, the station falls back to local validation (as in Full Offline, Flow 5a). This graceful degradation ensures the user is not stuck if MQTT has a momentary hiccup. The spec defines this in section 5c error paths.
+4. **MQTT fallback if AuthorizeOfflinePass times out.** If the server does not respond within 15 seconds, the station falls back to local validation (as in Full Offline, Flow 04) if its `OfflineModeEnabled` is `true`, and then within its own offline limits ([`authorize-offline-pass.md` §6](../../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules)). This graceful degradation ensures the user is not stuck if MQTT has a momentary hiccup. The spec defines this in section 5c error paths.
 
 5. **Dual-channel reporting.** During the session, the station sends updates on both BLE (ServiceStatus on FFF5 to the app) and MQTT (MeterValues to the server). These are independent channels. The BLE updates provide real-time UI feedback to Bob, while the MQTT events feed the operator dashboard and billing system.
 
