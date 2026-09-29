@@ -16,6 +16,7 @@ Verify that the station correctly performs the OfflinePass validation checks dur
 - `spec/profiles/offline/offline-pass.md` §4 — the validation checks: ten numbered, #5 withdrawn, nine performed by the station
 - `spec/profiles/offline/offline-pass.md` §2.3 — a pass carries no station or organization scope
 - `spec/profiles/offline/offline-pass.md` §2.2 — the station's own offline limits, refused with `4002` and `details.constraint`
+- `spec/08-configuration.md` §5 — `OfflinePassMaxAge`, the station's own age bound of check #2
 - `spec/profiles/offline/ble-handshake.md` — OfflineAuthRequest / AuthResponse
 - `spec/profiles/offline/authorize-offline-pass.md` — Validation checks and error codes
 - `spec/07-errors.md` §3.2 — Error codes: 2002 `OFFLINE_PASS_INVALID`, 2003 `OFFLINE_PASS_EXPIRED`, 2004 `OFFLINE_EPOCH_REVOKED`, 2005 `OFFLINE_COUNTER_REPLAY`
@@ -38,7 +39,8 @@ Verify that the station correctly performs the OfflinePass validation checks dur
    - `maxCreditsPerTx: 20`, `minIntervalSec: 60`.
    - The OfflineAuthRequest envelope carries `counter: 11` (greater than the station's `lastSeenCounter` of 10). `counter` is a member of [`offline-auth-request.schema.json`](../../../schemas/ble/offline-auth-request.schema.json), **not** of the pass — `offline-pass.schema.json` is closed and has no such field.
 7. BLE connection is established and HELLO/CHALLENGE handshake is completed for each sub-test.
-8. No station limit is reached: the station's `OfflineModeEnabled` is `true`, fewer than `OfflineWindowHours` have elapsed since its last MQTT connection, and it holds fewer than `OfflineTransactionLimit` offline transactions the server has not yet answered `Accepted`, `Duplicate` or `Rejected` ([`offline-pass.md` §2.2](../../../spec/profiles/offline/offline-pass.md#22-constraints-object); [`08-configuration.md` §5](../../../spec/08-configuration.md#5-offline--ble-configuration-keys)). A station limit refuses with `4002`, the code of checks #6 and #7, so a station that had reached one would make those two checks unreadable. The station's `OfflinePassMaxAge` exceeds the baseline pass's age, so check #2 refuses only on `expiresAt`.
+8. No station limit is reached: the station's `OfflineModeEnabled` is `true`, fewer than `OfflineWindowHours` have elapsed since its last MQTT connection, and it holds fewer than `OfflineTransactionLimit` offline transactions the server has not yet answered `Accepted`, `Duplicate` or `Rejected` ([`offline-pass.md` §2.2](../../../spec/profiles/offline/offline-pass.md#22-constraints-object); [`08-configuration.md` §5](../../../spec/08-configuration.md#5-offline--ble-configuration-keys)). A station limit refuses with `4002`, the code of checks #6 and #7, so a station that had reached one would make those two checks unreadable.
+9. The station's `OfflinePassMaxAge` is `86400` (one day), set before the station went offline ([`08-configuration.md` §5](../../../spec/08-configuration.md#5-offline--ble-configuration-keys)). Every pass the steps present was issued less than a day before it is presented, except the pass of step 41, so the age bound of check #2 fails in step 41 alone.
 
 ## Steps
 
@@ -55,11 +57,19 @@ Verify that the station correctly performs the OfflinePass validation checks dur
 6. Verify AuthResponse: `result: "Rejected"`, error code `2002` (`OFFLINE_PASS_INVALID`).
 7. Verify a SecurityEvent is logged with `type: "OfflinePassRejected"`.
 
-### Check 2 — Expiry (expiresAt > now)
+### Check 2 — Temporal Bounds (expiresAt > now, age <= OfflinePassMaxAge)
 
-8. Create an OfflinePass with `expiresAt` set to 1 hour in the past (properly signed).
+Either bound failing is this check failing ([`offline-pass.md` §4](../../../spec/profiles/offline/offline-pass.md#4-validation-checks-10)). The expiry bound:
+
+8. Create an OfflinePass issued 2 hours ago whose `expiresAt` is 1 hour in the past (properly signed).
 9. Send OfflineAuthRequest.
 10. Verify AuthResponse: `result: "Rejected"`, error code `2003` (`OFFLINE_PASS_EXPIRED`).
+
+The age bound, in steps numbered after the last so that no step is renumbered:
+
+41. Create an OfflinePass issued 2 days ago whose `expiresAt` is 1 day in the future (properly signed): within its platform lifetime, but older than the station's `OfflinePassMaxAge` of `86400`.
+42. Send OfflineAuthRequest.
+43. Verify AuthResponse: `result: "Rejected"`, error code `2003` (`OFFLINE_PASS_EXPIRED`).
 
 ### Check 3 — Revocation Epoch (pass epoch >= station epoch)
 
@@ -120,7 +130,7 @@ Withdrawn with check #5: a pass carries no station or organization scope ([`offl
 
 1. **Check 0 (Structure):** Missing required fields -> `2002 OFFLINE_PASS_INVALID`.
 2. **Check 1 (Signature):** Tampered signature -> `2002 OFFLINE_PASS_INVALID` + SecurityEvent.
-3. **Check 2 (Expiry):** Expired pass -> `2003 OFFLINE_PASS_EXPIRED`.
+3. **Check 2 (Temporal bounds):** Expired pass, or a pass older than the station's `OfflinePassMaxAge` -> `2003 OFFLINE_PASS_EXPIRED`.
 4. **Check 3 (Epoch):** Old epoch -> `2004 OFFLINE_EPOCH_REVOKED`.
 5. **Check 4 (Device):** Wrong fingerprint -> `2002 OFFLINE_PASS_INVALID`.
 6. **Check 5:** withdrawn — a pass carries no station or organization scope, and no result is expected.

@@ -808,7 +808,7 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
 | `startedAt` | string | Yes | Session start time (ISO 8601 UTC) |
 | `endedAt` | string | Yes | Session end time (ISO 8601 UTC) |
 | `durationSeconds` | integer | Yes | Actual session duration in seconds |
-| `creditsCharged` | integer | Yes | Credits debited from user |
+| `creditsCharged` | integer | Yes | Credits the station computed; advisory — the server settles its own recomputation from the signed receipt ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)) |
 | `receipt` | object | Yes | Signed receipt — see fields below |
 | `receipt.data` | string | Yes | Base64-encoded canonical JSON of receipt data |
 | `receipt.signature` | string | Yes | Base64-encoded ECDSA P-256 signature |
@@ -3005,7 +3005,7 @@ Final billing information for the session. After this, the station generates a s
 | `type` | string | Yes | `"StopServiceResponse"` |
 | `result` | string | Yes | `"Accepted"` or `"Rejected"` |
 | `actualDurationSeconds` | integer | Cond. | Actual service duration in seconds (when `Accepted`) |
-| `creditsCharged` | integer | Cond. | Total credits debited (when `Accepted`) |
+| `creditsCharged` | integer | Cond. | Credits the station computed for the session (when `Accepted`); advisory — the server settles its own recomputation ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)) |
 
 #### Example
 
@@ -3120,7 +3120,7 @@ The app **MUST** store the receipt in its offline transaction log and sync it to
 | `startedAt` | string | Yes | Session start time (ISO 8601 UTC) |
 | `endedAt` | string | Yes | Session end time (ISO 8601 UTC) |
 | `durationSeconds` | integer | Yes | Actual session duration in seconds |
-| `creditsCharged` | integer | Yes | Credits debited from user |
+| `creditsCharged` | integer | Yes | Credits the station computed; advisory — the server settles its own recomputation from this receipt ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)) |
 | `meterValues` | object | No | Final consumption readings |
 | `meterValues.liquidMl` | integer | No | Liquid consumed in milliliters |
 | `meterValues.consumableMl` | integer | No | Consumable consumed in milliliters |

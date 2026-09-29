@@ -52,7 +52,7 @@ Each status carries **two separate obligations** — whether the station sends t
 | Status | Send it again? | Local record | Meaning |
 |--------------|---|---|---------------------------------------------------|
 | `Accepted` | **MUST NOT** | **MUST** delete | Transaction recorded successfully. |
-| `Duplicate` | **MUST NOT** | **MUST** delete | The server already holds **this same transaction** — same `offlineTxId`, same signed receipt (`reconciliation.md` §3). Nothing is in dispute, so the station's copy has no further purpose. |
+| `Duplicate` | **MUST NOT** | **MUST** delete | The server's ledger already holds **this same transaction** — same `offlineTxId`, same signed receipt (`reconciliation.md` §3). Nothing is in dispute, so the station's copy has no further purpose. |
 | `Rejected` | **MUST NOT** | **MUST** retain, marked rejected | The transaction was refused on its merits — bad receipt, revoked pass, a failed §6 gate check, or an `offlineTxId` that collides with a stored transaction carrying **different** data. |
 | `RetryLater` | **MUST** retry after backoff | **MUST** retain | Server is temporarily unable to process. |
 
@@ -68,7 +68,7 @@ Each status carries **two separate obligations** — whether the station sends t
 4. On `Accepted` or `Duplicate`: the station **MUST NOT** send the transaction again, and **MUST** delete it from its local offline log. Deletion **MAY** be deferred by up to 72 hours so the station keeps a short local audit window (`reconciliation.md` §2 step 5); what it **MUST NOT** do is send the transaction again in the meantime.
 5. On `Rejected`: the station **MUST NOT** retry, and **MUST** retain the transaction in its local log marked as rejected — it is not deleted, because a rejection is the one terminal outcome where the station's copy is still evidence. The station **MUST** flag it for manual investigation, and **SHOULD** report the rejection via a SecurityEvent if the `reason` indicates credential issues.
 6. On `RetryLater`: the station **MUST** retry with exponential backoff (initial 5s, cap 300s (online retry scenario -- server responds RetryLater)). The station **MUST NOT** skip the transaction or proceed to the next.
-7. The server **MUST** validate the `receipt.signature` against the station's known ECDSA public key — of a receipt whose `offlineTxId` it does not already hold, since [`reconciliation.md` §3](../offline/reconciliation.md#3-deduplication-offlinetxid) compares another arrival without verifying it. If verification fails, the server **MUST** respond with `Rejected`.
+7. The server **MUST** validate the `receipt.signature` against the station's known ECDSA public key — of a receipt whose `offlineTxId` its ledger does not hold, since [`reconciliation.md` §3](../offline/reconciliation.md#3-deduplication-offlinetxid) compares another arrival without verifying it. If verification fails, the server **MUST** respond with `Rejected`.
 8. The server **MUST** record the `txCounter` as forensic evidence and **MUST NOT** condition the response on it. If the counter is not contiguous with the server's record for this station, the server **SHOULD** raise an operator alert on the station and **MUST** process the transaction normally (`reconciliation.md` §4.2).
 
 ## 7. Offline Transaction Integrity
@@ -85,9 +85,9 @@ Each offline transaction includes a monotonic `txCounter`, carried as forensic e
 
 ### 7.2 Deduplication
 
-The server **MUST** deduplicate transactions using the `offlineTxId` field. When a transaction with the same `offlineTxId` already exists, the answer depends on whether the two submissions carry the **same** transaction, and [`reconciliation.md` §3](../offline/reconciliation.md) is the single source of truth for the comparison:
+The server **MUST** deduplicate transactions using the `offlineTxId` field. When the server's ledger already holds a transaction with the same `offlineTxId`, the answer depends on whether the two submissions carry the **same** transaction, and [`reconciliation.md` §3](../offline/reconciliation.md#3-deduplication-offlinetxid) is the single source of truth for the comparison:
 
-- **Same signed `receipt.data`** — a retransmission of a transaction the server already holds. The server **MUST** respond `Duplicate` without re-processing.
+- **Same signed `receipt.data`** — a retransmission of a transaction the ledger holds. The server **MUST** respond `Duplicate` without re-processing.
 - **Different signed `receipt.data`** — two different claims under one `offlineTxId`. The server **MUST** respond `Rejected`, retain both records, and alert the operator (§9 of that profile).
 
 This section previously read *"**MUST** respond with `Duplicate` regardless of payload differences"*, which collapsed the two and, because `Duplicate` orders the station to delete its copy, instructed it to destroy one of the two records `reconciliation.md` §9 requires be retained for comparison.

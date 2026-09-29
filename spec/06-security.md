@@ -1307,7 +1307,7 @@ Every offline transaction produces a cryptographically signed receipt, ensuring 
 
 #### Verification (Server-Side)
 
-During reconciliation ([Flow §10](04-flows.md#10-offline--online-reconciliation)), the server verifies each receipt whose `offlineTxId` it does not already hold ([`reconciliation.md` §3](profiles/offline/reconciliation.md#3-deduplication-offlinetxid) compares another arrival without verifying it):
+During reconciliation ([Flow §10](04-flows.md#10-offline--online-reconciliation)), the server verifies each receipt whose `offlineTxId` its ledger does not hold ([`reconciliation.md` §3](profiles/offline/reconciliation.md#3-deduplication-offlinetxid) compares another arrival without verifying it):
 
 ```
 1. **Select** the receipt-signing ECDSA P-256 public key of the station the receipt names (`stationId`) **for this receipt** — from the server-authoritative anchor defined in §4.3, over that station's retained key set; **not** simply the station's current key, and **not** the mTLS key
