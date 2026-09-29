@@ -234,7 +234,7 @@ The Receipt characteristic provides a signed transaction receipt after service c
 | `startedAt` | string | Yes | ISO 8601 timestamp of service start. |
 | `endedAt` | string | Yes | ISO 8601 timestamp of service end. |
 | `durationSeconds` | integer | Yes | Actual duration in seconds. |
-| `creditsCharged` | integer | Yes | Credits the station computed; advisory — the server settles its own recomputation from this receipt ([`reconciliation.md` §8](reconciliation.md#8-wallet-reconciliation)). |
+| `creditsCharged` | integer | Yes | Credits the station computed; advisory — the server settles its own recomputation ([`reconciliation.md` §8](reconciliation.md#8-wallet-reconciliation)). |
 | `meterValues` | object | No | Final meter readings. |
 | `receipt` | object | Yes | Signed receipt object (see below). |
 | `txCounter` | integer | Yes | Monotonic transaction counter. |

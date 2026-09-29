@@ -163,7 +163,7 @@ The app writes a StopServiceRequest to FFF3 to terminate a running service befor
 **Processing rules:**
 
 1. The station **MUST** stop the physical hardware immediately upon receiving a valid StopServiceRequest.
-2. The station **MUST** calculate `creditsCharged` based on the actual duration and the service's pricing rate. The figure is advisory: the server settles by service kind from the signed receipt, never above what the authorization allowed ([`reconciliation.md` §8](reconciliation.md#8-wallet-reconciliation)).
+2. The station **MUST** calculate `creditsCharged` based on the actual duration and the service's pricing rate. The figure is advisory: the server settles by service kind, never above what the authorization allowed ([`reconciliation.md` §8](reconciliation.md#8-wallet-reconciliation)).
 3. The station **MUST** generate a signed receipt and make it available on FFF6.
 4. The station **MUST** send a FFF5 notification with `status: "ReceiptReady"` after the receipt is generated.
 5. If the `sessionId` does not match any active session, the station **MUST** respond with `Rejected`.

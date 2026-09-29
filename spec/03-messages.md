@@ -3120,7 +3120,7 @@ The app **MUST** store the receipt in its offline transaction log and sync it to
 | `startedAt` | string | Yes | Session start time (ISO 8601 UTC) |
 | `endedAt` | string | Yes | Session end time (ISO 8601 UTC) |
 | `durationSeconds` | integer | Yes | Actual session duration in seconds |
-| `creditsCharged` | integer | Yes | Credits the station computed; advisory — the server settles its own recomputation from this receipt ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)) |
+| `creditsCharged` | integer | Yes | Credits the station computed; advisory — the server settles its own recomputation ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)) |
 | `meterValues` | object | No | Final consumption readings |
 | `meterValues.liquidMl` | integer | No | Liquid consumed in milliliters |
 | `meterValues.consumableMl` | integer | No | Consumable consumed in milliliters |
