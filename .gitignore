@@ -5,3 +5,5 @@ node_modules/
 *.tmp
 *.bak
 verification-report.md
+__pycache__/
+*.pyc
