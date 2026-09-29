@@ -10,7 +10,13 @@
 # went stale: `9 FAIL / 6 SKIP` was true at v0.20.0 and was still being quoted after 0.20.1
 # and 0.20.2 had closed three of them.
 #
-#   (this HEAD) 2026-09-03  (unreleased)  6 FAIL, 6 SKIP  (4180 checks, 4168 PASS) — the
+#   (this HEAD) 2026-09-29  (unreleased)  5 FAIL, 6 SKIP  (4710 checks, 4699 PASS) — the offline
+#                                  model and its consistency review. 03-messages.md §7.13's Receipt
+#                                  table now names every member of ble/receipt.schema.json, the body
+#                                  the app uploads, so `receipt` leaves the failure SET; against
+#                                  98ab87c (v0.44.0 plus two commits: 6 FAIL, 6 SKIP, 4453 checks) the
+#                                  SET differs by exactly that entry. +257 checks, all passing.
+#   (superseded) 2026-09-03  (unreleased)  6 FAIL, 6 SKIP  (4180 checks, 4168 PASS) — the
 #                                  spec-cascade cycle. Ratchet added and the script WIRED into
 #                                  CI (.github/workflows/verify-protocol.yml). Measured on a
 #                                  clean tree at a421d6f0 it was 9 FAIL: the three extra were
@@ -36,8 +42,9 @@
 #                                  `git archive`, NOT inherited
 #   (v0.20.0)            9 FAIL, 6 SKIP — superseded; 0.20.1 and 0.20.2 closed three
 #
-# The 6 are one root cause: ble-secure-frame and station-identity exist as schemas with
-# no 03-messages.md heading and no test vectors (4), plus auth-response and receipt (2).
+# The 5 are one root cause: ble-secure-frame and station-identity exist as schemas with
+# no 03-messages.md heading and no test vectors (4), plus auth-response (1); receipt left
+# the set on 2026-09-29, when 03-messages.md §7.13 named its members.
 # The 6 SKIPs are silent — SKIP(c, reason) discards the reason — and are BLE schema
 # resolution noise. Category 8 says 6 SKIP where verify-schemas.py says 0, and CI gates
 # on verify-schemas.py, so that discovery gap is invisible to the gate.
@@ -2266,7 +2273,7 @@ log('Report saved to verification-report.md');
 // MEASURED BASELINE — see the header of this file for the full history and the rule that a
 // count without a measurement point goes stale. Re-measure by running this script on a clean
 // tree and diffing the failure SET entry by entry, never by trusting the total.
-const BASELINE = 6;       // FAIL, at the measurement point in this file's header
+const BASELINE = 5;       // FAIL, at the measurement point in this file's header
 const SKIP_BASELINE = 6;  // SKIP, all Category 8 BLE schema-resolution noise
 
 // Anti-vacuity. A discovery bug that finds no files reports 0 FAIL and would score as a pass,

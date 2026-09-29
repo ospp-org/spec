@@ -101,7 +101,7 @@ jobs:
         run: bash tools/verify-all-signatures.sh
 
       # Duplicated with verify-protocol.sh's categories 19 and 20 ON PURPOSE, now that it is
-      # wired. That script is a ratchet sitting at a baseline of 6; these two must fail at zero.
+      # wired. That script is a ratchet sitting at a baseline of 5; these two must fail at zero.
       # A crypto oracle whose finding could be absorbed into someone else's constant is not a
       # crypto oracle. The cost of the duplication is ~30 seconds; the cost of removing it is
       # that a broken canonical form becomes a number in a header.
