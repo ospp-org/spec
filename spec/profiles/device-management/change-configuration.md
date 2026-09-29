@@ -115,7 +115,7 @@ Each entry is this station's **validation verdict for one key**. Whether the val
   "protocolVersion": "0.3.0",
   "payload": {
     "keys": [
-      { "key": "OfflinePassPublicKey", "value": "BPkKbj...base64..." },
+      { "key": "OfflinePassPublicKey", "value": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/HdgUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==" },
       { "key": "RevocationEpoch", "value": "-1" }
     ]
   }
@@ -141,7 +141,7 @@ Each entry is this station's **validation verdict for one key**. Whether the val
 }
 ```
 
-**`OfflinePassPublicKey` was not applied.** Its entry reports that the value passed validation; the batch carried a `Rejected` entry, so rule 2 applies and the station stored nothing. A server rotating its OfflinePass signing key **MUST NOT** read this `Accepted` as evidence that the station holds the new key — see [Chapter 06 — Security](../../06-security.md) §6.7, whose rollout tracking depends on that distinction.
+**`OfflinePassPublicKey` was not applied.** Its entry reports that the value — the server's whole key set, here a set of one key, each key its DER `SubjectPublicKeyInfo` in Base64 and the keys comma-separated ([`08-configuration.md` §4](../../08-configuration.md#4-security-configuration-keys)) — passed validation; the batch carried a `Rejected` entry, so it is applied all or nothing ([§6](#6-processing-rules)) and the station stored nothing. A server changing its key set **MUST NOT** read this `Accepted` as evidence that the station holds the new set — see [Chapter 06 — Security](../../06-security.md#67-server-signing-key-rotation-ecdsa-p-256) §6.7, whose compromise response depends on knowing which stations have taken it.
 
 ### 8.5 Request and Response (Static key — RebootRequired)
 

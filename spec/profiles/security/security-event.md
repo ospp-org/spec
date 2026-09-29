@@ -29,9 +29,10 @@ Both forms validate against [`security-event.schema.json`](../../../schemas/mqtt
 | [`reconciliation.md` §3](../offline/reconciliation.md#3-deduplication-offlinetxid) | a second submission under a known `offlineTxId` whose signed `receipt.data` differs |
 | [`reconciliation.md` §6.3](../offline/reconciliation.md#63-securityevent-emission) | every applicable reconcile-time gate failure |
 | [`reconciliation.md` §6.7](../offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4) | the auth-form `(authId, sessionId)` replay reject |
-| [`07-errors.md` §3.2](../../07-errors.md#32-authentication--authorization-errors-2xxx), codes `2014`, `2015`, `2016`, `2017`, `2018` | the *Recommended Action* cell of each, which reads *"Server: log SecurityEvent"* |
+| [`reconciliation.md` §7](../offline/reconciliation.md#7-fraud-detection) | a reconciled transaction scored in the Review, Alert or Block band — `FraudDetected` |
+| [`07-errors.md` §3.2](../../07-errors.md#32-authentication--authorization-errors-2xxx), codes `2014`, `2016`, `2017`, `2018` | the *Recommended Action* cell of each, which reads *"Server: log SecurityEvent"* |
 
-`OfflinePassRejected` and `ServerSignedAuthReplay` are therefore the two types that occur in both forms. [§4](#4-event-types)'s row for `ServerSignedAuthReplay` already said so — *"the server logs this type at the next reconciliation"* — and was the only place in this document that did.
+`OfflinePassRejected` and `ServerSignedAuthReplay` are therefore the two types that occur in both forms. [§4](#4-event-types)'s row for `ServerSignedAuthReplay` already said so — *"the server logs this type at the next reconciliation"* — and was the only place in this document that did. **`FraudDetected` occurs in the server-originated form only.** Fraud is scored by the server over transactions from every station ([`06-security.md` §7.4](../../06-security.md#74-fraud-detection--offline-transactions)), and no station holds what the score is computed from: a station **MUST NOT** emit a `FraudDetected`, and a server **MUST NOT** treat one published by a station as a fraud finding.
 
 ## 3. Payload Fields
 
@@ -59,6 +60,7 @@ Both forms validate against [`security-event.schema.json`](../../../schemas/mqtt
 | `HardwareFault` | Critical hardware error reported by the station (pump overcurrent, electrical fault, emergency stop). The **fallback** type for a Critical `5xxx` code that is **not** `51xx` and is named by no row in this table — see the two-step selection in [`07-errors.md` §1.2](../../07-errors.md#12-severity-levels). | Critical |
 | `SoftwareFault` | Critical software error reported by the station (firmware crash, watchdog reset, memory exhaustion — `5111 BUFFER_FULL` is this last one). The **fallback** type for a Critical `51xx` code named by no row in this table. `51xx` is tested **before** the `HardwareFault` row's `5xxx`, because `5xxx` contains it. | Critical |
 | `ClockSkew` | Station clock differs from server time by more than 300 seconds, detected during Heartbeat time synchronization. | Warning |
+| `FraudDetected` | **Server-originated only** ([§2.1](#21-two-origins-one-payload-shape)). The server scored a reconciled offline transaction in the Review, Alert or Block band of [`06-security.md` §7.4](../../06-security.md#74-fraud-detection--offline-transactions). `details` carries `score`, `factors` (the §7.4 identifiers that fired), `band`, `action` (the response taken: `FlaggedForReview`, `OfflineDisabledForUser` or `UserBlocked`), and the identifiers `offlineTxId`, `userId`, `stationId`, `messageId` and `offlinePassId` or `authId` ([`reconciliation.md` §7](../offline/reconciliation.md#7-fraud-detection)). A Block-band transaction was delivered and stays settled; the record is how it is flagged. | By band: Warning (Review), Error (Alert), Critical (Block) |
 
 ## 5. Severity Levels
 
@@ -73,7 +75,7 @@ Both forms validate against [`security-event.schema.json`](../../../schemas/mqtt
 
 **Rules 1 through 6 bind the station-originated form** ([§2.1](#21-two-origins-one-payload-shape)); rule 7 binds the server and covers both forms.
 
-1. The station **MUST** generate a SecurityEvent for every security-relevant incident, including but not limited to the event types listed in section 4.
+1. The station **MUST** generate a SecurityEvent for every security-relevant incident, including but not limited to the event types listed in section 4 — except `FraudDetected`, which only the server records ([§2.1](#21-two-origins-one-payload-shape)).
 2. The station **MUST** assign a unique `eventId` to each event using the format `sec_` followed by at least 8 hexadecimal characters. The `eventId` **MUST** be assigned at the moment the incident is detected and **MUST** remain stable across every subsequent transmission of the same logical incident, including QoS 1 retransmissions and buffered replays after a connectivity-loss window (see rule 5). Re-using the same `eventId` for retried emissions of the same incident is the basis on which the server's dedup-by-`eventId` contract (`profiles/security/README.md` §3) operates; assigning a fresh `eventId` per transmission attempt **MUST NOT** occur and would constitute a protocol-level dedup-defeat.
 3. The `timestamp` **MUST** reflect the time the incident was detected on the station, not the time the message is sent. On a server-originated record it **MUST** reflect the time the server detected the incident, not the time the station sent whatever the server was processing ([§2.1](#21-two-origins-one-payload-shape)).
 4. The `details` object **SHOULD** include all context relevant to the incident. For `MacVerificationFailure`, this **SHOULD** include the `messageId`, `action`, and the expected vs. received MAC values. For `OfflinePassRejected`, this **SHOULD** include the `offlinePassId` and the validation check that failed.

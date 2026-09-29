@@ -7,25 +7,22 @@
 > | Part | Documents | Status |
 > |---|---|---|
 > | Offline credential and reconciliation, over **MQTT** | [`offline-pass.md`](offline-pass.md), [`authorize-offline-pass.md`](authorize-offline-pass.md), [`reconciliation.md`](reconciliation.md) | **Stable** — implemented and exercised against a second implementation |
+> | The app–server contract, over **HTTPS** | [`app-contract.md`](app-contract.md) | **Draft** — binds the server and the app, not the station |
 > | **BLE** transport, handshake and session | [`ble-transport.md`](ble-transport.md), [`ble-handshake.md`](ble-handshake.md), [`ble-session.md`](ble-session.md) | **EXPERIMENTAL** |
 >
-> **The BLE half carries three blockers that make it unimplementable as written**, stated in
-> full in [KNOWN-ISSUES](../../../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-three-defects):
+> **The BLE half carries two blockers that make it unimplementable as written**, stated in
+> full in [KNOWN-ISSUES](../../../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-two-defects):
 > **B-1** two incompatible fragmentation protocols both normative ([Chapter 02 §8.6](../../02-transport.md)
-> vs [`ble-transport.md` §11](ble-transport.md)); **B-2** a station-scoped OfflinePass that check 5
-> and TC-OFF-002 require but [`offline-pass.schema.json`](../../../schemas/common/offline-pass.schema.json)
-> cannot express; **B-3** three BLE response schemas that disagree with each other and with
-> [Chapter 07 §2.3](../../07-errors.md), one with no rejection branch at all.
+> vs [`ble-transport.md` §11](ble-transport.md)); **B-3** three BLE response schemas that disagree with each other and with
+> [Chapter 07 §2.3](../../07-errors.md), one with no rejection branch at all. B-2, a station-scoped
+> OfflinePass the schema could not express, is closed: a pass carries no station scope
+> ([`offline-pass.md` §2.3](offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)).
 >
 > BLE is published for review, **not** for implementation, and may change incompatibly without a
 > MAJOR bump. It is marked rather than repaired because it is implemented nowhere — repairing it
 > would mean deciding against nothing to validate the decisions. **Extended** and **Complete**
 > compliance therefore cannot be claimed while they are EXPERIMENTAL; **Development** and **Standard** are
 > unaffected.
->
-> Note that B-2 is narrower than it appears: it bites on the BLE path only. On MQTT the station
-> constraint is server-side state rather than a wire field (§4 of
-> [`authorize-offline-pass.md`](authorize-offline-pass.md)), so reconciliation is unaffected.
 
 ## 1. Overview
 
@@ -57,17 +54,18 @@ This role assignment also aligns with mobile OS power management: iOS and Androi
 | Document | Description |
 |-------------------------------------|-----------------------------------------------|
 | [AuthorizeOfflinePass](authorize-offline-pass.md) | MQTT-based offline pass validation (Partial B scenario) — **stable** |
+| [App–Server Contract](app-contract.md) | Pass issuance with its trust bundle, and the app's receipt upload — binds the server and the app, not the station |
 | [BLE Transport](ble-transport.md) | Hardware requirements, GATT service definition, characteristics, MTU negotiation, fragmentation — **EXPERIMENTAL** ([B-1](../../../KNOWN-ISSUES.md#b-1--two-incompatible-fragmentation-protocols-are-simultaneously-normative)) |
 | [BLE Handshake](ble-handshake.md) | HELLO / CHALLENGE / AUTH authentication sequence, ECDH P-256 + StationIdentity certificate, session key derivation (HKDF-SHA256), AEAD channel — **EXPERIMENTAL** |
 | [BLE Session](ble-session.md) | Service start, real-time monitoring, stop, receipt retrieval, connection drop handling — **EXPERIMENTAL** ([B-3](../../../KNOWN-ISSUES.md#b-3--the-three-ble-response-schemas-disagree-with-each-other-and-with-chapter-07)) |
-| [OfflinePass](offline-pass.md) | Server-signed offline credential structure, 10-check validation, epoch revocation, lifecycle — **stable**, except that check 5 (station scoping) is unrepresentable over BLE ([B-2](../../../KNOWN-ISSUES.md#b-2--a-station-scoped-offlinepass-is-unrepresentable-in-the-authoritative-schema)) |
+| [OfflinePass](offline-pass.md) | Server-signed offline credential structure — the user's, valid at any station that accepts offline passes — its validation checks, revocation, lifecycle — **stable** |
 | [Reconciliation](reconciliation.md) | Offline transaction sync, deduplication, receipt verification, the re-validation gate, fraud detection, wallet debit — **stable** |
 
 ## 5. Compliance Requirements
 
-1. A station that declares the Offline / BLE profile in its BootNotification (`capabilities.bleSupported: true` **and** `capabilities.offlineModeSupported: true` — [`profiles/README.md` §4.1](../README.md#41-station-conformance)) **MUST** implement every document listed above **that is not marked EXPERIMENTAL**. Conformance against the three BLE documents becomes claimable when they leave EXPERIMENTAL, and not before.
+1. A station that declares the Offline / BLE profile in its BootNotification (`capabilities.bleSupported: true` **and** `capabilities.offlineModeSupported: true` — [`profiles/README.md` §4.1](../README.md#41-station-conformance)) **MUST** implement every document listed above **that is not marked EXPERIMENTAL**, except the app–server contract, which no station takes part in. Conformance against the three BLE documents becomes claimable when they leave EXPERIMENTAL, and not before.
 
-   > **Why the rule is scoped rather than stated whole.** Three of the documents above are EXPERIMENTAL and carry blockers B-1, B-2 and B-3, so "implements all documents listed above" has no satisfiable meaning for the BLE half — which leaves a station that has built the stable half with **no conformant declaration to make**. The escape an earlier revision offered here was itself unsound: it said such a station *"does not need to declare `bleSupported`"*, but [§2](#2-connectivity-scenarios) above puts BLE on the phone↔station leg of **all three** offline scenarios — Partial A, Partial B and Full Offline alike — so a station without BLE cannot originate an offline transaction at all. It could only reconcile transactions it had no way to create. Dropping the declaration does not buy conformance; it buys an unreachable profile.
+   > **Why the rule is scoped rather than stated whole.** Three of the documents above are EXPERIMENTAL and carry blockers B-1 and B-3, so "implements all documents listed above" has no satisfiable meaning for the BLE half — which leaves a station that has built the stable half with **no conformant declaration to make**. The escape an earlier revision offered here was itself unsound: it said such a station *"does not need to declare `bleSupported`"*, but [§2](#2-connectivity-scenarios) above puts BLE on the phone↔station leg of **all three** offline scenarios — Partial A, Partial B and Full Offline alike — so a station without BLE cannot originate an offline transaction at all. It could only reconcile transactions it had no way to create. Dropping the declaration does not buy conformance; it buys an unreachable profile.
    >
    > The honest position is the one the compliance levels already take, and this rule now matches it: **Extended** and **Complete** cannot be claimed while the BLE documents are EXPERIMENTAL, **Development** and **Standard** are unaffected, and the capability declaration stays truthful about the hardware the station actually has.
 2. The station MUST support at least the Full Offline and Partial B connectivity scenarios. Partial A support is RECOMMENDED but MAY be omitted if the station does not store server-signed authorization verification keys.

@@ -119,9 +119,9 @@ Station                                              Broker
 >
 > **The asymmetry with its neighbour is the sharp edge, and it is worth naming.** A handshake that
 > fails on a *certificate* is `1004`, and `1004` has a retrospective carrier: `CertificateError` is
-> one of the 12 members of `type` in
+> one of the 13 members of `type` in
 > [`security-event.schema.json`](../schemas/mqtt/security-event.schema.json). A handshake that fails
-> on a *cipher suite or protocol version* is `1003`, and **none** of those 12 members describes it —
+> on a *cipher suite or protocol version* is `1003`, and **none** of those 13 members describes it —
 > the schema has no `errorCode` member and is `additionalProperties: false`, so `details` is the only
 > slot and it is an open object with no defined key for this. So of the two halves of the same
 > event, one can be told after the fact and the other cannot.
@@ -136,7 +136,7 @@ Station                                              Broker
 > speak.
 >
 > **A retrospective wire carrier is a schema change and is deliberately not made here.** Adding a
-> thirteenth `type` member would move: **1** schema, **1** example payload, **5** conformance
+> fourteenth `type` member — `FraudDetected`, server-originated only, is the thirteenth — would move: **1** schema, **1** example payload, **5** conformance
 > vectors, **3** prose files that enumerate the members, and **8** files across the two SDKs
 > (including `sdk-ts`'s byte-identical vendored copy of the schema and three of its test vectors) —
 > a coordinated lockstep release under [ADR-001](../adr/ADR-001-cross-repo-lockstep-versioning.md),
@@ -631,8 +631,8 @@ The broker distributes incoming station messages across all server instances in 
 
 > **EXPERIMENTAL — this entire section.** Published for review, **not** for implementation; it
 > may change incompatibly without a MAJOR bump. See
-> [Release status](../README.md#ble-is-experimental) and the three blockers in
-> [KNOWN-ISSUES](../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-three-defects).
+> [Release status](../README.md#ble-is-experimental) and the two blockers in
+> [KNOWN-ISSUES](../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-two-defects).
 >
 > **[§8.6](#86-fragmentation-protocol) below is one half of blocker
 > [B-1](../KNOWN-ISSUES.md#b-1--two-incompatible-fragmentation-protocols-are-simultaneously-normative).**
@@ -800,7 +800,7 @@ Bonding (storing pairing keys for reconnection) is OPTIONAL. The station MAY sup
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `OfflineModeEnabled` | boolean | `true` | Accept offline sessions via BLE |
+| `OfflineModeEnabled` | boolean | `true` | Accept an OfflinePass on the station's own validation — Full Offline, and the local fallback of Partial B ([Chapter 08 §5](08-configuration.md#5-offline--ble-configuration-keys)) |
 
 ### 8.11 Fallback Behavior
 
@@ -823,7 +823,7 @@ When the station has both MQTT and BLE available:
 
 ## 9. HTTPS Transport (Server ↔ Clients)
 
-OSPP does not normatively define the HTTPS API between the server and end-user clients (mobile app, web payment page), as this is implementation-specific. However, the following transport-level requirements apply to any OSPP-compliant server that exposes an HTTP API.
+OSPP does not normatively define the HTTPS API between the server and end-user clients (mobile app, web payment page), as this is implementation-specific — with one exception: the two exchanges the offline model depends on, pass issuance and receipt upload, which [`app-contract.md`](profiles/offline/app-contract.md) defines normatively. The following transport-level requirements apply to any OSPP-compliant server that exposes an HTTP API.
 
 ### 9.1 General Requirements
 
@@ -872,12 +872,14 @@ This approach avoids cookies and localStorage for GDPR compliance and simplicity
 
 #### 9.2.3 Station REST Fallback — mTLS
 
-For the rare case where a station needs to communicate with the server via HTTPS instead of MQTT (e.g., offline transaction sync when MQTT is unavailable but HTTPS is reachable):
+For the rare case where a station needs to communicate with the server via HTTPS instead of MQTT:
 
 | Parameter | Value |
 |-----------|-------|
 | **Authentication** | mTLS — same X.509 client certificate used for MQTT |
-| **Endpoints** | Limited: offline-txs sync, config fetch |
+| **Endpoints** | Limited: config fetch |
+
+Offline transactions are not among them. A station reconciles them only by TransactionEvent over MQTT ([`reconciliation.md` §2](profiles/offline/reconciliation.md#2-sync-procedure)); the app's copy of a receipt reaches the server by the receipt upload of [`app-contract.md` §4](profiles/offline/app-contract.md#4-receipt-upload).
 
 ### 9.3 Idempotency
 

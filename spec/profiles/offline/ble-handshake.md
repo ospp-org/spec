@@ -3,16 +3,13 @@
 > **Status: EXPERIMENTAL** | **OSPP Version:** 0.44.0
 >
 > Published for review, **not** for implementation. May change incompatibly without a MAJOR
-> bump. See [Release status](../../../README.md#ble-is-experimental) and the three
-> blockers in [KNOWN-ISSUES](../../../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-three-defects).
+> bump. See [Release status](../../../README.md#ble-is-experimental) and the two
+> blockers in [KNOWN-ISSUES](../../../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-two-defects).
 >
-> Two bear directly on this document: the `AuthResponse` rejection shape is blocker
+> One bears directly on this document: the `AuthResponse` rejection shape is blocker
 > [B-3](../../../KNOWN-ISSUES.md#b-3--the-three-ble-response-schemas-disagree-with-each-other-and-with-chapter-07)
 > (its schema carries flat `reason` + `errorCode`, where [Chapter 07 §2.3](../../07-errors.md)
-> mandates a nested seven-field `error` object), and the `2006 OFFLINE_STATION_MISMATCH`
-> row in this document's error table is blocker
-> [B-2](../../../KNOWN-ISSUES.md#b-2--a-station-scoped-offlinepass-is-unrepresentable-in-the-authoritative-schema)
-> (the pass cannot carry the constraint the station is asked to check).
+> mandates a nested seven-field `error` object).
 
 ## 1. Handshake Overview
 
@@ -138,6 +135,8 @@ The prior 4-input hex construction (which additionally bound `bayId`/`serviceId`
     "passId": "opass_a8b9c0d1e2f3",
     "sub": "sub_xyz789",
     "deviceId": "device_a8f3bc12e4567890",
+    "devicePublicKey": "A0xX3DTR7Imb4hzGyaH1WyUX/5U/CIghk7B/cZV11KFi",
+    "keyId": "YjX5pR0TzmU3ubs17wImQQ",
     "issuedAt": "2026-02-13T06:00:00.000Z",
     "expiresAt": "2026-02-14T06:00:00.000Z",
     "policyVersion": 1,
@@ -145,19 +144,13 @@ The prior 4-input hex construction (which additionally bound `bayId`/`serviceId`
     "offlineAllowance": {
       "maxTotalCredits": 100,
       "maxUses": 5,
-      "maxCreditsPerTx": 30,
-      "allowedServiceTypes": [
-        "svc_eco",
-        "svc_standard"
-      ]
+      "maxCreditsPerTx": 30
     },
     "constraints": {
-      "minIntervalSec": 60,
-      "stationOfflineWindowHours": 72,
-      "stationMaxOfflineTx": 100
+      "minIntervalSec": 60
     },
     "signatureAlgorithm": "ECDSA-P256-SHA256",
-    "signature": "MEUCIQD6sC/bKX/fkNskHHEGr01INojLAlu4I6zsEm1keSjYoQIgJAjdhwiYhlQOX/BAqsFq9RRgxpXGSXJU6BeL0qMBnMc="
+    "signature": "MEQCIHHpbSBL42of8rUg+uBwTpxVYDJGPQ6oRlCZ+LuNmCkNAiA4AFsU/P4RvojF7wj2GG9wDxgQRDscL9T5pu8S8EvFPQ=="
   },
   "counter": 5,
   "sessionProof": "ObgxpE1Ad+xl6P8fRWtBstqMY2Tjan9oK/LIWofxvrI="
@@ -168,7 +161,7 @@ The prior 4-input hex construction (which additionally bound `bayId`/`serviceId`
 
 ### 4.2 ServerSignedAuth (Partial A)
 
-Used when the app is online but the station is offline. The app obtains a server-signed authorization (via `POST /sessions/offline-auth`, supplying the same `appNonce` it uses in the `Hello` of this handshake so the server binds the authorization to it — see **Acquisition ordering** below) and relays it to the station over BLE. The station verifies the ECDSA P-256 signature using the server's public key (provisioned at boot) and re-checks each claim against the live handshake state. Like every post-Challenge message, `ServerSignedAuth` is relayed **inside the AEAD channel** ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)).
+Used when the app is online but the station is offline. The app obtains a server-signed authorization (via `POST /sessions/offline-auth`, supplying the same `appNonce` it uses in the `Hello` of this handshake so the server binds the authorization to it — see **Acquisition ordering** below) and relays it to the station over BLE. The station verifies the ECDSA P-256 signature using a key of the server key set it holds ([06-security.md §6.7](../../06-security.md#67-server-signing-key-rotation-ecdsa-p-256)) and re-checks each claim against the live handshake state. Like every post-Challenge message, `ServerSignedAuth` is relayed **inside the AEAD channel** ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)).
 
 **Acquisition ordering (Normative).** The `appNonce` is chosen by the app and is the sole binding between the `POST` and the BLE handshake (§4.2.2 check #2), so the `POST /sessions/offline-auth` and the `Hello` write **MAY** occur in either order, provided the `appNonce` in the POST body equals the `appNonce` in the `Hello`. Two orderings are conformant:
 
@@ -215,7 +208,7 @@ The station **MUST** apply the following checks before accepting a `ServerSigned
 
 | # | Check | Error code |
 |:-:|---|---|
-| 1 | ECDSA P-256 signature verifies against the server's verify key over `base64_decode(signedAuthorization.data)` | `2002 OFFLINE_PASS_INVALID` |
+| 1 | ECDSA P-256 signature verifies over `base64_decode(signedAuthorization.data)` against a key of the server key set the station holds (`OfflinePassPublicKey`, [06-security.md §6.7](../../06-security.md#67-server-signing-key-rotation-ecdsa-p-256)); a `ServerSignedAuth` names no key, so the station tries the keys of the set | `2002 OFFLINE_PASS_INVALID` |
 | 2 | `claims.appNonce == Hello.appNonce` from the current handshake | **`2018 SERVER_AUTH_NONCE_MISMATCH`** |
 | 3 | `claims.stationId == STATION_OWN_ID` (no cross-station replay) | `2002 OFFLINE_PASS_INVALID` |
 | 4 | `claims.deviceId == Hello.deviceId` (device binding) | `2002 OFFLINE_PASS_INVALID` |
@@ -322,7 +315,6 @@ The following rejection reason codes **MAY** appear in the AuthResponse `reason`
 | `OFFLINE_PASS_EXPIRED` | 2003 | Pass `expiresAt` has passed. |
 | `OFFLINE_EPOCH_REVOKED` | 2004 | Pass revocation epoch is below the station's stored epoch. |
 | `OFFLINE_COUNTER_REPLAY` | 2005 | Counter is not greater than the last seen value. |
-| `OFFLINE_STATION_MISMATCH` | 2006 | Station not permitted by the pass constraints. |
 | `BLE_AUTH_FAILED` | 2013 | Session key derivation or session proof is invalid. |
 | `OFFLINE_LIMIT_EXCEEDED` | 4002 | Pass `maxUses` or `maxTotalCredits` exhausted. |
 | `OFFLINE_RATE_LIMITED` | 4003 | `minIntervalSec` not elapsed since last use. |
@@ -426,4 +418,4 @@ The following rejection reason codes **MAY** appear in the AuthResponse `reason`
 - Offline Auth Request: [`offline-auth-request.schema.json`](../../../schemas/ble/offline-auth-request.schema.json)
 - Server Signed Auth: [`server-signed-auth.schema.json`](../../../schemas/ble/server-signed-auth.schema.json)
 - Auth Response: [`auth-response.schema.json`](../../../schemas/ble/auth-response.schema.json)
-- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 2002--2006, 2013, 4002--4004)
+- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 2002--2005, 2013, 4002--4004)

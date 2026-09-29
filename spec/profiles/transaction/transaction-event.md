@@ -106,9 +106,7 @@ When the station reports `pendingOfflineTransactions > 0` in BootNotification, t
 | Payload semantically invalid | `3015 PAYLOAD_INVALID` | Server responds with `Rejected`. |
 | OfflinePass expired | `2003 OFFLINE_PASS_EXPIRED` | Server responds with `Rejected`. |
 | Pass counter or `(authId, sessionId)` replayed | `2005 OFFLINE_COUNTER_REPLAY` | Server responds with `Rejected` and emits the gate SecurityEvent. |
-| Pass not valid for the reporting station | `2006 OFFLINE_STATION_MISMATCH` | Server responds with `Rejected`. |
 | OfflinePass individually revoked | `2014 OFFLINE_PASS_REVOKED` | Server responds with `Rejected`. |
-| Pass issued for a different operator | `2015 OFFLINE_ORG_MISMATCH` | Server responds with `Rejected`. |
 | Pass bound to a different user than the envelope claims | `2016 OFFLINE_USER_MISMATCH` | Server responds with `Rejected`. |
 | Signed receipt disagrees with the envelope or the pass's device binding | `2017 OFFLINE_RECEIPT_MISMATCH` | Server responds with `Rejected`; both records retained. |
 | Server internal error | `6001 SERVER_INTERNAL_ERROR` | Server responds with `RetryLater`. |
@@ -136,8 +134,8 @@ When the station reports `pendingOfflineTransactions > 0` in BootNotification, t
     "durationSeconds": 285,
     "creditsCharged": 48,
     "receipt": {
-      "data": "eyJiYXlJZCI6ImJheV9hMWIyYzNkNCIsImNyZWRpdHNDaGFyZ2VkIjo0OCwiZGV2aWNlSWQiOiJkZXZfZDRlNWY2YTciLCJkdXJhdGlvblNlY29uZHMiOjI4NSwiZW5kZWRBdCI6IjIwMjYtMDItMTNUMDk6NTY6NDUuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6NDcwLCJlbmVyZ3lXaCI6MTM4LCJsaXF1aWRNbCI6NDI4MDB9LCJvZmZsaW5lUGFzc0lkIjoib3Bhc3NfYThiOWMwZDFlMmYzIiwib2ZmbGluZVR4SWQiOiJvdHhfZDRlNWY2YTciLCJwYXNzQ291bnRlciI6Nywic2VydmljZUlkIjoic3ZjX2VjbyIsInN0YXJ0ZWRBdCI6IjIwMjYtMDItMTNUMDk6NTI6MDAuMDAwWiIsInR4Q291bnRlciI6NSwidXNlcklkIjoic3ViXzlhOGI3YzZkIn0=",
-      "signature": "MEUCIQDJqpr+TRAF2ZrcQxtLrpfPOzWvHKSvLmeyZcWNdwApNwIge7pIaiE+fs+rC+fHSP6krvyLG9jG9ny6pL6WqQBiE/A=",
+      "data": "eyJiYXlJZCI6ImJheV9hMWIyYzNkNCIsImJvb2tlZER1cmF0aW9uU2Vjb25kcyI6MzAwLCJjbG9ja1N0YXRlIjoiU3luY2hyb25pemVkIiwiY3JlZGl0c0NoYXJnZWQiOjQ4LCJkZXZpY2VJZCI6ImRldl9kNGU1ZjZhNyIsImR1cmF0aW9uU2Vjb25kcyI6Mjg1LCJlbmRSZWFzb24iOiJMb2NhbCIsImVuZGVkQXQiOiIyMDI2LTAyLTEzVDA5OjU2OjQ1LjAwMFoiLCJtZXRlclZhbHVlcyI6eyJjb25zdW1hYmxlTWwiOjQ3MCwiZW5lcmd5V2giOjEzOCwibGlxdWlkTWwiOjQyODAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2E4YjljMGQxZTJmMyIsIm9mZmxpbmVUeElkIjoib3R4X2Q0ZTVmNmE3IiwicGFzc0NvdW50ZXIiOjcsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDA5OjUyOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJ0eENvdW50ZXIiOjUsInVzZXJJZCI6InN1Yl85YThiN2M2ZCJ9",
+      "signature": "MEUCIQDvXKXdsf7FL4XoHMrbeVPMoJEUfwDCvoVs69+tnVT0BAIgJfTrVkx0FoidyoTuZBeABEYm7gDg9IXgepxHJBcRGHw=",
       "signatureAlgorithm": "ECDSA-P256-SHA256"
     },
     "txCounter": 5,
@@ -210,4 +208,4 @@ When the station reports `pendingOfflineTransactions > 0` in BootNotification, t
 - Receipt: [`receipt.schema.json`](../../../schemas/common/receipt.schema.json)
 - Meter Values: [`meter-values.schema.json`](../../../schemas/common/meter-values.schema.json)
 - Credit Amount: [`credit-amount.schema.json`](../../../schemas/common/credit-amount.schema.json)
-- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 2002--2006, 2014--2017, 1005, 3015, 6001)
+- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 2002--2005, 2014, 2016, 2017, 1005, 3015, 6001)

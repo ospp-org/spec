@@ -36,25 +36,26 @@ This action provides stronger security guarantees than local-only validation bec
 | `creditsAuthorized` | integer | Cond. | Number of credits authorized for this session. Present when `status` is `Accepted`. |
 | `reason` | string | Cond. | Human-readable rejection reason. Present when `status` is `Rejected`. |
 
-## 5. Validation Checks (11 checks)
+## 5. Validation Checks
 
-The server **MUST** perform all of the following checks in order. Processing **MUST** stop at the first failure.
+The server **MUST** perform every check below that is not withdrawn — #1--#4, #6--#10 and #12 — in the listed order. Processing **MUST** stop at the first failure. Checks #5 and #11 are withdrawn: a pass carries no station or organization scope ([`offline-pass.md` §2.3](offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)), and their numbers are not reused.
 
 | # | Check | Error on Failure |
 |:--:|-----------------------------------------------|-------------------------------|
-| 1 | **Signature verification** -- verify the ECDSA P-256 `signature` field against the server's own signing public key. | `2002 OFFLINE_PASS_INVALID` |
-| 2 | **Not expired** -- `expiresAt` **MUST** be greater than the current server time. | `2003 OFFLINE_PASS_EXPIRED` |
-| 3 | **Revocation epoch** -- `revocationEpoch` **MUST** be greater than or equal to the server's current `RevocationEpoch`. | `2004 OFFLINE_EPOCH_REVOKED` |
+| 1 | **Signature verification** -- verify the ECDSA P-256 `signature` field with the key of the server's own key set named by the pass's `keyId` ([`06-security.md` §6.7](../../06-security.md#67-server-signing-key-rotation-ecdsa-p-256)). | `2002 OFFLINE_PASS_INVALID` |
+| 2 | **Not expired** -- `expiresAt` **MUST** be greater than the current server time. The station's `OfflinePassMaxAge` is not applied here: it bounds the staleness of an allowance a station judges alone, and this gate judges the pass against the server's own state. | `2003 OFFLINE_PASS_EXPIRED` |
+| 3 | **Revocation epoch** -- `revocationEpoch` **MUST** be greater than or equal to the platform's current `RevocationEpoch` ([`06-security.md` §6.6](../../06-security.md#66-epoch-based-revocation)). | `2004 OFFLINE_EPOCH_REVOKED` |
 | 4 | **Device binding** -- `offlinePass.deviceId` **MUST** match the `deviceId` field in the request. | `2002 OFFLINE_PASS_INVALID` |
-| 5 | **Station allowance** -- the reporting station **MUST** be permitted by the `allowed_station_ids` of the **server's stored pass record** (not a wire field). | `2006 OFFLINE_STATION_MISMATCH` |
+| 5 | **Withdrawn** -- a pass carries no station scope. The number is not reused. | — |
 | 6 | **Usage limit** -- the transactions **already** counted against this pass **MUST** be fewer than `maxUses`; a pass permits `maxUses` transactions in total. The server's cumulative count and the reconcile-time fleet-wide count are **one counter, not two** ([`offline-pass.md` §6](offline-pass.md#6-lifecycle) step 5). | `4002 OFFLINE_LIMIT_EXCEEDED` |
 | 7 | **Total credits limit** -- the credits already counted **plus** this transaction's estimated cost **MUST NOT** exceed `maxTotalCredits`; a pass permits `maxTotalCredits` credits in total. | `4002 OFFLINE_LIMIT_EXCEEDED` |
 | 8 | **Per-transaction credits** -- this transaction's estimated cost **MUST NOT** exceed `maxCreditsPerTx`. | `4004 OFFLINE_PER_TX_EXCEEDED` |
 | 9 | **Rate limit** -- elapsed time since last use **MUST** be at least `minIntervalSec` seconds. | `4003 OFFLINE_RATE_LIMITED` |
 | 10 | **Counter replay** -- `counter` **MUST** be strictly greater than the last seen counter for this pass. | `2005 OFFLINE_COUNTER_REPLAY` |
-| 11 | **Org binding** -- the issuing `organization_id` of the **server's stored pass record** **MUST** equal the reporting station's `organization_id`. Applies to ALL passes (scoped and unscoped). | `2015 OFFLINE_ORG_MISMATCH` |
+| 11 | **Withdrawn** -- a pass carries no organization scope. The number is not reused. | — |
+| 12 | **Individual revocation** -- the pass **MUST NOT** be revoked on the server: neither individually, nor by a block on its user, which revokes every pass of that user. This is where per-user revocation reaches a pass presented offline: the station has no server to ask, and this gate does ([`offline-pass.md` §5](offline-pass.md#5-revocation)). | `2014 OFFLINE_PASS_REVOKED` |
 
-> **Org binding is one canonical invariant (finding N9).** Check #11 here and the reconcile-time gate's check #7 ([`reconciliation.md` §6.1](reconciliation.md#61-check-list)) are the **same** organization-binding invariant, keyed by the **same wire error code `2015 OFFLINE_ORG_MISMATCH`**. The positional index differs only because the two gates run different check sets in different contexts (authorize-time station-presented credential vs reconcile-time settlement); the invariant, its semantics ("the pass's issuing org must equal the reporting station's org, for scoped and unscoped passes alike"), and its error code are identical. Both read `organization_id` from the **server's stored pass record**, so neither requires the organization to be carried in the signed pass body. Like the other policy rejections at authorize-time (expiry, epoch, station, limits, rate), an org mismatch is **not** a SecurityEvent **at this gate** (§6 rule 7); only check #1 and check #10 emit here. At the reconcile-time gate it is — [`reconciliation.md` §6.3](reconciliation.md#63-securityevent-emission) emits on every applicable check — and §6 rule 7 states why the two gates differ. (v0.6.0/S2 aligns the §6 `eventId` derivation to this §5 table — counter-replay is **check #10** here and in the derivation domain `…check_10:` (finding N9). The `eventId` is deterministic on `(messageId, N)`, so the `check_5 → check_10` migration changes only **future** audit-row identifiers; previously emitted rows are immutable historical records. Cross-gate single-ordinal alignment with the reconcile-time list remains unnecessary: the two gates run different check sets, and the canonical contract is the wire error code, not the positional index.)
+> **Check numbers are identifiers.** The `eventId` of the SecurityEvent §6 requires for checks #1 and #10 is derived from the check number — counter replay is **check #10** here and in the derivation domain `…check_10:` (finding N9) — and the number is cited across the specification. That is why checks #5 and #11 are withdrawn in place rather than removed, and why the revocation check that joins this gate takes a new number, #12, instead of a withdrawn one. The `eventId` is deterministic on `(messageId, N)`; previously emitted rows are immutable historical records. Cross-gate single-ordinal alignment with the reconcile-time list is unnecessary: the two gates run different check sets, and the canonical contract is the wire error code, not the positional index.
 
 ## 6. Processing Rules
 
@@ -63,10 +64,10 @@ The server **MUST** perform all of the following checks in order. Processing **M
 3. The station **MUST** include the `counter` value from the BLE OfflineAuthRequest to enable replay protection verification on the server.
 4. On `Accepted`: the station **MUST** store the `sessionId`, `durationSeconds`, and `creditsAuthorized`, then proceed with service activation. The station **MUST** relay the acceptance result back to the app via the BLE AuthResponse.
 5. On `Rejected`: the station **MUST NOT** start any service. The station **MUST** relay the rejection back to the app via the BLE AuthResponse with the appropriate error code.
-6. If no response is received within 15 seconds, the station **MUST** treat the request as timed out (error `1010 MESSAGE_TIMEOUT`) and **MAY** fall back to local validation if the Offline profile is supported.
-7. The server **MUST** log a SecurityEvent for any signature verification failure (check #1) or counter replay (check #10). **Within the §5 authorize-time gate these are the only two**: the other `Rejected` outcomes (expiry, epoch revocation, station mismatch, org mismatch, usage limits, rate limit) are policy decisions, not security incidents, and **MUST NOT** be emitted as SecurityEvents by the server *at authorize time*.
+6. If no response is received within 15 seconds, the station **MUST** treat the request as timed out (error `1010 MESSAGE_TIMEOUT`) and **MAY** fall back to local validation if the Offline profile is supported and its `OfflineModeEnabled` is `true` ([`08-configuration.md` §5](../../08-configuration.md#5-offline--ble-configuration-keys)); the station's own offline limits then apply ([`offline-pass.md` §2.2](offline-pass.md#22-constraints-object)).
+7. The server **MUST** log a SecurityEvent for any signature verification failure (check #1) or counter replay (check #10). **Within the §5 authorize-time gate these are the only two**: the other `Rejected` outcomes (expiry, epoch revocation, individual revocation, usage limits, rate limit) are policy decisions, not security incidents, and **MUST NOT** be emitted as SecurityEvents by the server *at authorize time*.
 
-    **The scope of that prohibition is this gate, and only this gate.** The reconcile-time gate answers the question differently and on purpose: [`reconciliation.md` §6.3](reconciliation.md#63-securityevent-emission) **MUST**s an emission for **every** applicable check, expiry and org mismatch included, and the *Recommended Action* cells of `2014`, `2015`, `2016` and `2017` ([`07-errors.md` §3.2](../../07-errors.md#32-authentication--authorization-errors-2xxx)) say the same. The two gates are not inconsistent, they are differently situated. At authorize time a policy refusal is a live decision about a credential presented seconds ago, the app is told, and the user can act — logging it as a security incident would fill the audit trail with ordinary refusals. At reconcile time the transaction is already delivered: a policy refusal means money moved against a credential the policy did not permit, nobody is present to act, and the audit row is the only account that will exist. Read this rule as bounded by its own gate, and never as a fleet-wide prohibition.
+    **The scope of that prohibition is this gate, and only this gate.** The reconcile-time gate answers the question differently and on purpose: [`reconciliation.md` §6.3](reconciliation.md#63-securityevent-emission) **MUST**s an emission for **every** applicable check, expiry included, and the *Recommended Action* cells of `2014`, `2016` and `2017` ([`07-errors.md` §3.2](../../07-errors.md#32-authentication--authorization-errors-2xxx)) say the same for the reconcile-time gate. The two gates are not inconsistent, they are differently situated. At authorize time a policy refusal is a live decision about a credential presented seconds ago, the app is told, and the user can act — logging it as a security incident would fill the audit trail with ordinary refusals. At reconcile time the transaction is already delivered: a policy refusal means money moved against a credential the policy did not permit, nobody is present to act, and the audit row is the only account that will exist. Read this rule as bounded by its own gate, and never as a fleet-wide prohibition.
 
     The emitted SecurityEvent is **server-originated** — an audit record, not a message; see [`security-event.md` §2.1](../security/security-event.md#21-two-origins-one-payload-shape) — and **MUST** conform to the SecurityEvent profile (`profiles/security/security-event.md`) with the following constraints:
 
@@ -98,10 +99,9 @@ The server **MUST** perform all of the following checks in order. Processing **M
 |:----:|-------------------------------|----------|-----------------------------------------------|
 | 2002 | `OFFLINE_PASS_INVALID` | Error | ECDSA P-256 signature verification failed or pass structure is invalid. |
 | 2003 | `OFFLINE_PASS_EXPIRED` | Warning | Pass `expiresAt` timestamp has passed. |
-| 2004 | `OFFLINE_EPOCH_REVOKED` | Error | Pass `revocationEpoch` is less than the server's current epoch. |
+| 2004 | `OFFLINE_EPOCH_REVOKED` | Error | Pass `revocationEpoch` is less than the platform's current epoch. |
 | 2005 | `OFFLINE_COUNTER_REPLAY` | Critical | Counter is not strictly greater than last seen; possible replay attack. |
-| 2006 | `OFFLINE_STATION_MISMATCH` | Error | Station not in the pass's allowed station list. |
-| 2015 | `OFFLINE_ORG_MISMATCH` | Error | Pass's issuing organization does not match the reporting station's organization (check #11; same invariant as `reconciliation.md` §6.1 check #7). |
+| 2014 | `OFFLINE_PASS_REVOKED` | Error | The pass is revoked on the server, individually or by a block on its user (check #12). |
 | 4002 | `OFFLINE_LIMIT_EXCEEDED` | Error | `maxUses` or `maxTotalCredits` exceeded. |
 | 4003 | `OFFLINE_RATE_LIMITED` | Warning | `minIntervalSec` constraint violated. |
 | 4004 | `OFFLINE_PER_TX_EXCEEDED` | Error | Requested service cost exceeds `maxCreditsPerTx`. |
@@ -125,6 +125,8 @@ The server **MUST** perform all of the following checks in order. Processing **M
       "passId": "opass_a8b9c0d1e2f3",
       "sub": "sub_9a8b7c6d",
       "deviceId": "dev_android_abc123",
+      "devicePublicKey": "AnqCJkURKXFi9hQaO5EzjzvZXf8V0LCdzMg496b+y2rN",
+      "keyId": "YjX5pR0TzmU3ubs17wImQQ",
       "issuedAt": "2026-02-13T09:50:00.000Z",
       "expiresAt": "2026-02-13T10:50:00.000Z",
       "policyVersion": 1,
@@ -132,19 +134,13 @@ The server **MUST** perform all of the following checks in order. Processing **M
       "offlineAllowance": {
         "maxTotalCredits": 200,
         "maxUses": 5,
-        "maxCreditsPerTx": 50,
-        "allowedServiceTypes": [
-          "svc_eco",
-          "svc_standard"
-        ]
+        "maxCreditsPerTx": 50
       },
       "constraints": {
-        "minIntervalSec": 60,
-        "stationOfflineWindowHours": 24,
-        "stationMaxOfflineTx": 50
+        "minIntervalSec": 60
       },
       "signatureAlgorithm": "ECDSA-P256-SHA256",
-      "signature": "MEQCIAnYOdbX0GrJNoudnOUPviB8qyjrTDLrwI32eGPmvJP+AiA3+5yjsH4JMUjItqGE83WOx58hbBkK1fBAi56MMeip9w=="
+      "signature": "MEQCIHtTBR62/kj2qeB7M2BXb1yek5fh7ryc+lhz5N0sJLPNAiAHnbvbzTENpzKRSUflA/9BsgokbMZbDR1BdsxN4tZlPg=="
     },
     "deviceId": "dev_android_abc123",
     "counter": 5,
@@ -195,4 +191,4 @@ The server **MUST** perform all of the following checks in order. Processing **M
 - Request: [`authorize-offline-pass-request.schema.json`](../../../schemas/mqtt/authorize-offline-pass-request.schema.json)
 - Response: [`authorize-offline-pass-response.schema.json`](../../../schemas/mqtt/authorize-offline-pass-response.schema.json)
 - OfflinePass: [`offline-pass.schema.json`](../../../schemas/common/offline-pass.schema.json)
-- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 2002--2006, 2015, 4002--4004, 6001)
+- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 2002--2005, 2014, 4002--4004, 6001)

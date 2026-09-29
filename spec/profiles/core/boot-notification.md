@@ -207,6 +207,7 @@ The server **MUST NOT** create, extend or trim bay records from a BootNotificati
     "heartbeatIntervalSec": 30,
     "configuration": {
       "RevocationEpoch": "42",
+      "OfflinePassPublicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/HdgUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==",
       "MaxSessionDurationSeconds": "900",
       "OfflineModeEnabled": "true",
       "MeterValuesInterval": "60"

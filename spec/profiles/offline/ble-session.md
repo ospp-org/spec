@@ -163,7 +163,7 @@ The app writes a StopServiceRequest to FFF3 to terminate a running service befor
 **Processing rules:**
 
 1. The station **MUST** stop the physical hardware immediately upon receiving a valid StopServiceRequest.
-2. The station **MUST** calculate `creditsCharged` based on the actual duration and the service's pricing rate.
+2. The station **MUST** calculate `creditsCharged` based on the actual duration and the service's pricing rate. The figure is advisory: the server settles by service kind from the signed receipt, never above what the authorization allowed ([`reconciliation.md` §8](reconciliation.md#8-wallet-reconciliation)).
 3. The station **MUST** generate a signed receipt and make it available on FFF6.
 4. The station **MUST** send a FFF5 notification with `status: "ReceiptReady"` after the receipt is generated.
 5. If the `sessionId` does not match any active session, the station **MUST** respond with `Rejected`.
@@ -200,7 +200,7 @@ After the service ends (manual stop or auto-stop), the app reads characteristic 
 **Processing rules:**
 
 1. The app **SHOULD** read FFF6 after receiving a `ReceiptReady` notification on FFF5.
-2. The app **MUST** store the receipt in local secure storage for later upload to the server.
+2. The app **MUST** store the receipt in local secure storage for later upload to the server, by the receipt upload of [`app-contract.md` §4](app-contract.md#4-receipt-upload).
 3. The receipt includes a `txCounter` field carried as forensic evidence for reconciliation. The app **MUST** preserve this field unmodified — it is inside the signed body, so altering it invalidates the signature.
 4. The receipt's `signature` is an ECDSA-P256-SHA256 signature computed by the station over the canonical `data` field using the station's private key. The server verifies this signature during reconciliation.
 5. The FFF6 value is served as an AEAD frame under the **current** connection's `k_station_to_app` (06-security.md §6.5.3): only the authenticated handshake peer can read the receipt, which carries `userId`/`deviceId`/amounts (finding N15). The financial **record** persists in the station's NVS independently of the BLE channel. If the app is unable to read FFF6 (e.g., BLE disconnect), it **MAY** reconnect later — but because the per-connection session key is discarded on disconnect ([ble-transport.md §13](ble-transport.md)), the app **MUST** complete a fresh handshake first; the station then re-seals the retained receipt under the new channel's key for retrieval. The station **MUST** retain the receipt record until the next session begins on the same bay or the station reboots.
@@ -222,8 +222,8 @@ After the service ends (manual stop or auto-stop), the app reads characteristic 
     "energyWh": 150
   },
   "receipt": {
-    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQ2hhcmdlZCI6NTAsImRldmljZUlkIjoiZGV2X2Q0ZTVmNmE3IiwiZHVyYXRpb25TZWNvbmRzIjoyOTgsImVuZGVkQXQiOiIyMDI2LTAyLTEzVDEwOjA0OjU4LjAwMFoiLCJtZXRlclZhbHVlcyI6eyJjb25zdW1hYmxlTWwiOjUwMCwiZW5lcmd5V2giOjE1MCwibGlxdWlkTWwiOjQ1MjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzXzkyZGYwZDVjMDExZWFmNzQiLCJvZmZsaW5lVHhJZCI6Im90eF9kNGU1ZjZhN2I4YzkiLCJwYXNzQ291bnRlciI6MzYsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDEwOjAwOjAwLjAwMFoiLCJ0eENvdW50ZXIiOjUsInVzZXJJZCI6InN1Yl8wNjA3MmE4MjllMzkxOGE4In0=",
-    "signature": "MEUCIQDSRvP/bEpvafY6VUIUGn7TD7O7VC6TmI/P94Dzy+mhNwIgOK0Sdt86gUUMiG+JVehka2U2S3uKAKJgxNJfR7u4/D8=",
+    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjMwMCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjo1MCwiZGV2aWNlSWQiOiJkZXZfZDRlNWY2YTciLCJkdXJhdGlvblNlY29uZHMiOjI5OCwiZW5kUmVhc29uIjoiTG9jYWwiLCJlbmRlZEF0IjoiMjAyNi0wMi0xM1QxMDowNDo1OC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjo1MDAsImVuZXJneVdoIjoxNTAsImxpcXVpZE1sIjo0NTIwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc185MmRmMGQ1YzAxMWVhZjc0Iiwib2ZmbGluZVR4SWQiOiJvdHhfZDRlNWY2YTdiOGM5IiwicGFzc0NvdW50ZXIiOjM2LCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic3RhdGlvbklkIjoic3RuX2ExYjJjM2Q0IiwidHhDb3VudGVyIjo1LCJ1c2VySWQiOiJzdWJfMDYwNzJhODI5ZTM5MThhOCJ9",
+    "signature": "MEQCIC1xFC3JI43P6xTt1RR6xpxe4u/FIo2Otj7bEq7waOATAiBfKgayOnnmSVHyJFMZrbHtG65GRFCWwwt3KkXlqq4hIQ==",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "txCounter": 5,
