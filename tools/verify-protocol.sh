@@ -10,12 +10,12 @@
 # went stale: `9 FAIL / 6 SKIP` was true at v0.20.0 and was still being quoted after 0.20.1
 # and 0.20.2 had closed three of them.
 #
-#   (this HEAD) 2026-09-29  (unreleased)  5 FAIL, 6 SKIP  (4746 checks, 4735 PASS) — the offline
+#   (this HEAD) 2026-09-29  (unreleased)  5 FAIL, 6 SKIP  (4747 checks, 4736 PASS) — the offline
 #                                  model and its consistency review. 03-messages.md §7.13's Receipt
 #                                  table now names every member of ble/receipt.schema.json, the body
 #                                  the app uploads, so `receipt` leaves the failure SET; against
 #                                  98ab87c (v0.44.0 plus two commits: 6 FAIL, 6 SKIP, 4453 checks) the
-#                                  SET differs by exactly that entry. +293 checks, all passing.
+#                                  SET differs by exactly that entry. +294 checks, all passing.
 #   (superseded) 2026-09-03  (unreleased)  6 FAIL, 6 SKIP  (4180 checks, 4168 PASS) — the
 #                                  spec-cascade cycle. Ratchet added and the script WIRED into
 #                                  CI (.github/workflows/verify-protocol.yml). Measured on a
