@@ -979,7 +979,7 @@ All OSPP transports use **JSON** as the serialization format.
 
 This row used to read `Receivers MUST ignore unknown fields (forward compatibility)`, and **no conforming
 implementation could have obeyed it.** Every object schema under `schemas/` declares
-`additionalProperties: false` — **75 of 75**, counting the message schemas, the BLE schemas, the envelope, the
+`additionalProperties: false` — **75 of 75**, counting the message schemas, the BLE schemas, the common object schemas, the envelope, the
 provisioning pair and the offline-pass issuance pair; the thirteen that do not are scalar type definitions with no members for the keyword to
 govern. Those bytes are vendored into both SDKs and gated there byte-for-byte, so a receiver that validates
 refuses a member its copy of the schema does not carry, and a receiver that ignores unknown members is not

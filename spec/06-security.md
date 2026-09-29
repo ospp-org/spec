@@ -501,7 +501,7 @@ Server Signing Key set (ECDSA P-256, server-side HSM; §6.7)
 - Root CA public certificate is embedded in station firmware and server trust store.
 - Station CA public certificate is distributed during provisioning.
 - Station certificates are issued during provisioning ([Flow §2](04-flows.md#2-station-provisioning)).
-- The server signing key set is distributed to stations at provisioning, in the configuration of every BootNotification RESPONSE [MSG-001] and by ChangeConfiguration [MSG-013], and to the mobile app in the trust bundle of every pass issuance (§6.7).
+- The server signing key set is distributed to stations at provisioning, in the configuration of every `Accepted` BootNotification RESPONSE [MSG-001] and by ChangeConfiguration [MSG-013], and to the mobile app in the trust bundle of every pass issuance (§6.7).
 - The Station CA's **revocation list** is published at the address every station certificate carries in its CRL Distribution Points extension (§4.4), and is fetched by whichever party terminates that certificate. It is the only artefact in this list that travels to the **broker** rather than to the station, and the only one that has to keep arriving after provisioning — which is what [§2.1.1](#211-revocation-checking)'s freshness bounds hold it to.
 - Broker server CA trust anchor is delivered via the provisioning response `brokerRootCa` field when the broker uses a private CA hierarchy. When that field is absent the broker uses a publicly-trusted CA hierarchy and the station's anchor is its system trust store. This is a **summary of §2.1**, which states the requirement normatively and is authoritative: the system trust store is a fallback for the **anchor** only, and it does **not** relax anything else — a station that cannot validate **MUST refuse** (§2.1), and chain validity alone is never sufficient, because the station **MUST** also verify the certificate's identity against the host it meant to reach (§2.1, *Server identity verification*).
 
@@ -1620,7 +1620,7 @@ sequenceDiagram
 
     Server->>Server: Generate keyNew
     Server->>SSP: ChangeConfiguration [MSG-013] {OfflinePassPublicKey = {keyOld, keyNew}}
-    Server-->>SSP: (and in every BootNotification RESPONSE)
+    Server-->>SSP: (and in every Accepted BootNotification RESPONSE)
     Server-->>App: trust bundle {keyOld, keyNew} with every pass issued
     Note over Server: Publish-before window: max pass lifetime + worst sync gap
     Server->>Server: Sign with keyNew (keyId names it in every pass)

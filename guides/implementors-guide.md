@@ -378,7 +378,7 @@ If MQTT drops during an active session:
 
 1. **Do NOT stop the hardware.** The service continues.
 2. Switch to BLE-available mode (accept offline sessions)
-3. Buffer the **MUST-buffer** categories — TransactionEvent (min 1000, **never** discard), SessionEnded (one per session that ended while you could not send, **never** discard — it is the sole billing source for a session that ended with no StopService to answer), SecurityEvent (200, FIFO). StatusNotification and MeterValues are **regenerable and MAY be discarded**; do not spend the buffer on them. The `MUST` storage level is **512 KB** — and **it does not hold the categories in this bullet.** [`01-architecture.md` §6.5](../spec/01-architecture.md) derives what they cost: 1000 TransactionEvents (1.3 MB) + 1000 SessionEnded (250 KB) + 200 SecurityEvents (120 KB) + overhead = **~1.7 MB**, and §6.5 records the gap between the two as OPEN because raising a mandatory storage level changes the bill of materials of every station. **Size new hardware to the derived figure, not to the 512 KB level row.** At 90% of the TransactionEvent buffer, reject new StartService with `5111 BUFFER_FULL`; at 100%, enter degraded mode and refuse all new sessions (§6.5)
+3. Buffer the **MUST-buffer** categories — TransactionEvent (min 1000, **never** discard), SessionEnded (one per session that ended while you could not send, **never** discard — it is the sole billing source for a session that ended with no StopService to answer), SecurityEvent (200, FIFO). StatusNotification and MeterValues are **regenerable and MAY be discarded**; do not spend the buffer on them. The `MUST` storage level is **512 KB** — and **it does not hold the categories in this bullet.** [`01-architecture.md` §6.5](../spec/01-architecture.md#65-offline-message-buffering) derives what they cost: 1000 TransactionEvents (1.3 MB) + 1000 SessionEnded (250 KB) + 200 SecurityEvents (120 KB) + overhead = **~1.7 MB**, and §6.5 records the gap between the two as OPEN because raising a mandatory storage level changes the bill of materials of every station. **Size new hardware to the derived figure, not to the 512 KB level row.** At 90% of the TransactionEvent buffer, reject new StartService with `5111 BUFFER_FULL`; at 100%, enter degraded mode and refuse all new sessions (§6.5)
 4. Attempt reconnection with exponential backoff: 1s → 2s → 4s → 8s → 16s → 30s max, with 30% jitter
 5. On reconnect: Full boot sequence (BootNotification, StatusNotification per bay)
 6. Flush buffered messages after boot completes
@@ -1192,7 +1192,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** Message deduplication (1000+ IDs or 1 hour window)
 - [ ] **[MUST]** Exponential backoff with jitter for reconnection (1s → 30s max)
 - [ ] **[MUST]** Continue active sessions during MQTT disconnect (do NOT stop hardware)
-- [ ] **[MUST]** Buffer TransactionEvent (1000, never discard), SessionEnded (never discard) and SecurityEvent (200, FIFO) during disconnect; StatusNotification and MeterValues MAY be discarded. **512 KB** is the `MUST` storage level and does **not** hold that buffer — [`01-architecture.md` §6.5](../spec/01-architecture.md) derives **~1.7 MB** and flags the gap as OPEN; build to the derived figure
+- [ ] **[MUST]** Buffer TransactionEvent (1000, never discard), SessionEnded (never discard) and SecurityEvent (200, FIFO) during disconnect; StatusNotification and MeterValues **MAY** be discarded. **512 KB** is the `MUST` storage level and does **not** hold that buffer — [`01-architecture.md` §6.5](../spec/01-architecture.md#65-offline-message-buffering) derives **~1.7 MB** and flags the gap as OPEN; build to the derived figure
 - [ ] **[MUST]** Message expiry intervals set per action category
 - [ ] **[MUST]** 0-RTT TLS resumption NOT used
 - [ ] **[SHOULD]** Max Packet Size = 65,536 bytes
@@ -1258,7 +1258,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[SHOULD]** Shared subscriptions (`$share/...`) for horizontal scaling
 - [ ] **[SHOULD]** Rate limiting on REST API
 - [ ] **[SHOULD]** Anti-abuse layers for web payment (5 layers)
-- [ ] **[MUST]** OfflinePass signing keys as a **key set** ([`06-security.md` §6.7](../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)): each new key published at least 864000 s plus the worst station sync gap before its first signature, each old key kept until everything it signed has expired, the whole set in every BootNotification RESPONSE. An `Accepted` inside a refused batch means the station stored nothing ([§6.2](#62-security-pitfalls))
+- [ ] **[MUST]** OfflinePass signing keys as a **key set** ([`06-security.md` §6.7](../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)): each new key published at least 864000 s plus the worst station sync gap before its first signature, each old key kept until everything it signed has expired, the whole set in every `Accepted` BootNotification RESPONSE. An `Accepted` inside a refused batch means the station stored nothing ([§6.2](#62-security-pitfalls))
 
 ### Offline / BLE
 

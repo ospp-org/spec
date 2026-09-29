@@ -995,7 +995,7 @@ fleet-wide credential invalidation as the price of removing a field nothing read
 is short by construction: `OfflinePassMaxAge` defaults to `86400`, and `0.24.0` made the pass re-issue on app
 start, on each consumption and on each top-up, so circulation turns over within a day. **Since 2026-09-29** a pass
 lives up to ten days and `OfflinePassMaxAge` defaults to `864000`, so circulation turns over within ten days
-([`06-security.md` §6.1.1](spec/06-security.md#611-offlinepass-validation--10-checks)).
+([`offline-pass.md` §6](spec/profiles/offline/offline-pass.md#6-lifecycle); [`08-configuration.md` §5](spec/08-configuration.md#5-offline--ble-configuration-keys)).
 
 **Measured cost of step two, so it is not rediscovered.** The member sits **inside the signed body**
 ([`06-security.md` §6.1.1](spec/06-security.md#611-offlinepass-validation--10-checks)), so removing it from any

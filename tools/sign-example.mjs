@@ -13,9 +13,9 @@
 //      wrapper. The signed body is the outer wrapper's 12 receipt fields
 //      (spec §6.2; 10 shared + 2 form-specific, pass/auth `oneOf`), the four signed-only
 //      fields of §6.2 (receipt-fields.mjs), plus `meterValues` when present (omitted from the
-//      canonical body when absent per Note 4). MQTT TransactionEvent envelopes
-//      omit `deviceId` outer; we keep the one already signed, else synthesise it from
-//      `offlineTxId`, so the inner signed body is well-formed.  → typically signed with `station-test-key`.
+//      canonical body when absent per §6.2). MQTT TransactionEvent envelopes
+//      omit `deviceId` outer; the one already signed is kept, else one is synthesised
+//      from `offlineTxId`, so the inner signed body is well-formed.  → typically signed with `station-test-key`.
 //
 //   2. OFFLINE_PASS — input has an `offlinePass` object containing the 11
 //      signed pass fields of `schemas/common/offline-pass.schema.json` plus

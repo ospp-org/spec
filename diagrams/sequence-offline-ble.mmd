@@ -77,4 +77,4 @@ sequenceDiagram
 
     Note over User,Station: Transaction stored locally on both sides
     Note over Station: When MQTT reconnects → TransactionEvent sent to server
-    Note over User: When internet returns → App uploads its receipt copy (POST /api/v1/offline/receipts)<br/>The first copy to arrive may settle, the other is answered Duplicate
+    Note over User: When internet returns → App uploads its receipt copy (POST /api/v1/offline/receipts)<br/>The first copy to arrive may settle; once one has settled, the other is answered Duplicate
