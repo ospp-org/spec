@@ -127,7 +127,7 @@ BROKER_ROW = re.compile(
 NUMERIC = re.compile(r'^(\d+)--(\d+)$')
 MAXCHARS = re.compile(r'^max \d+ chars$')
 LITERALS = re.compile(r'^`"[^"]+"`(,\s*`"[^"]+"`)+$')
-NAMED = ('IANA tz', 'valid SEC1 key')
+NAMED = ('IANA tz', 'valid key set')
 
 # Declared in §1.6. Recomputed here so the prose cannot rot -- which means this constant and
 # that table are two restatements of one fact, and BOTH move when the registry does. Withdrawing
@@ -138,7 +138,10 @@ NAMED = ('IANA tz', 'valid SEC1 key')
 # 0.34.0 withdrew `MessageSigningMode` -- signing is unconditional and no key selects it -- taking
 # the last two-value literal enum with it and moving 'literals' 2 -> 1. Same order as 0.23.0: the
 # table was corrected first and this gate stayed red until this line followed, which is the point.
-EXPECTED_FORMS = {'numeric': 15, 'none': 8, 'maxchars': 2, 'literals': 1, 'named': 2}
+# The offline-model change after 0.44.0 registered `OfflineWindowHours` (1--240) and
+# `OfflineTransactionLimit` (1--10000), moving 'numeric' 15 -> 17, and made `OfflinePassPublicKey`
+# a key set, whose 'valid SEC1 key' cell became 'valid key set' ('named' stays 2).
+EXPECTED_FORMS = {'numeric': 17, 'none': 8, 'maxchars': 2, 'literals': 1, 'named': 2}
 
 # Registry key -> dedicated wire field, and the schema that bounds that field.
 ALIASES = {

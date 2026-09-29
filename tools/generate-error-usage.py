@@ -146,7 +146,10 @@ FLOORS = {
     "§4.1 rows": 12,
     "§4.2 rows": 15,
     "§4.3 rows": 4,
-    "§4 codes, summed over rows": 153,
+    # 153 -> 149 after 0.44.0, reviewed: 2006 and 2015 were withdrawn from the registry (a pass carries
+    # no station or organization scope), leaving the TransactionEvent, AuthorizeOfflinePass and
+    # AuthResponse rows five codes shorter, and 2014 joined the AuthorizeOfflinePass row (check #12).
+    "§4 codes, summed over rows": 149,
     "§4.2 implicit codes": 3,
     "03 implicit codes": 3,
     "03 message sections": 40,
@@ -187,9 +190,8 @@ BLE_SOURCES = {
 # is a row-level entry. The reason names the open decision (D1-D5, see the docstring).
 BASELINE = """
 4.1 | Heartbeat                          | 1005, 1010, 5106, 6001          | profile    | D1: heartbeat.md §8 lists conditions; §4.1's own note dispositions all four
-4.1 | TransactionEvent                   | 2003, 2005, 2006, 2014-2017     | §4+profile | D3: 03 §4.1 lists five codes; the profile and §4 carry the gate's twelve
+4.1 | TransactionEvent                   | 2003, 2005, 2014, 2016, 2017    | §4+profile | D3: 03 §4.1 lists five codes; the profile and §4 carry the gate's ten
 4.1 | AuthorizeOfflinePass               | 1005                            | §4+03      | D3: the profile's §7 table omits it
-4.1 | AuthorizeOfflinePass               | 2015                            | §4+profile | D3: 03 §2.1 omits check #11's code
 4.1 | SignCertificate                    | 1005, 6001                      | §4         | 03 §6.10 omits them and no profile table exists; not under §4.2's implicit note
 4.1 | DataTransfer                       | 1010                            | profile    | D1: the waiting sender's own timeout, never a response value
 4.1 | SessionEnded                       | row                             | no §4 row  | D5: an EVENT in 03's Quick Reference with no §4.1 row

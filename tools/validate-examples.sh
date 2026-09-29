@@ -88,6 +88,10 @@ check schemas/ble/service-status.schema.json examples/payloads/ble/service-statu
 # script was the only thing that did, and the script was the thing that never ran.
 check schemas/provisioning-request.schema.json examples/payloads/http/provisioning.request.json
 
+# The two bodies of the app-server pass issuance (spec/profiles/offline/app-contract.md §3).
+check schemas/offline-pass-issuance-request.schema.json  examples/payloads/http/offline-pass-issuance.request.json
+check schemas/offline-pass-issuance-response.schema.json examples/payloads/http/offline-pass-issuance.response.json
+
 TOTAL=$((PASS + FAIL))
 echo
 echo "Total: $TOTAL checked, $PASS PASS, $FAIL FAIL, $ABSENT pair(s) absent"

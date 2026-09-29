@@ -44,11 +44,14 @@ verify_group "station receipts" conformance/test-keys/station-test-pub.pem \
   examples/payloads/mqtt/transaction-event.request.json \
   conformance/test-vectors/valid/offline/receipt-full.json \
   conformance/test-vectors/valid/offline/receipt-minimal.json \
+  conformance/test-vectors/valid/offline/receipt-auth-form.json \
   conformance/test-vectors/valid/transaction/transaction-event-request-full.json \
-  conformance/test-vectors/valid/transaction/transaction-event-request-minimal.json
+  conformance/test-vectors/valid/transaction/transaction-event-request-minimal.json \
+  conformance/test-vectors/valid/transaction/transaction-event-request-auth-form.json
 
 verify_group "server OfflinePass" conformance/test-keys/server-test-pub.pem \
   examples/payloads/ble/offline-auth-request.json \
+  examples/payloads/http/offline-pass-issuance.response.json \
   examples/payloads/mqtt/authorize-offline-pass.request.json \
   conformance/test-vectors/valid/offline/offline-auth-request-full.json \
   conformance/test-vectors/valid/offline/offline-auth-request-minimal.json \
@@ -169,6 +172,7 @@ INLINE_FILES=(
   examples/flows/04-full-offline-session.md
   examples/flows/05-partial-a-session.md
   examples/flows/06-partial-b-session.md
+  examples/flows/11-reconciliation.md
 )
 
 before=$(for f in "${INLINE_FILES[@]}"; do sha256sum "$f"; done | sha256sum | cut -d' ' -f1)

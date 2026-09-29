@@ -99,6 +99,9 @@ EXCLUSIONS = {
     'ble-crypto.mjs':
         'module, not an entry point — the BLE key-schedule primitives imported by '
         'verify-ble-crypto.mjs and generate-ble-vectors.mjs.',
+    'receipt-fields.mjs':
+        'module, not an entry point — the receipt\'s four signed-only fields, imported by '
+        'sign-example.mjs and sign-inline-md.mjs so the two signers cannot disagree on them.',
     'generate-ble-vectors.mjs':
         'generator. It writes the BLE vectors; CI verifies them with verify-ble-crypto.mjs '
         'instead, which is the direction that can fail.',
