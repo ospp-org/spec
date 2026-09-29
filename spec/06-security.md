@@ -1307,7 +1307,7 @@ Every offline transaction produces a cryptographically signed receipt, ensuring 
 
 #### Verification (Server-Side)
 
-During reconciliation ([Flow §10](04-flows.md#10-offline--online-reconciliation)), the server verifies each receipt:
+During reconciliation ([Flow §10](04-flows.md#10-offline--online-reconciliation)), the server verifies each receipt whose `offlineTxId` it does not already hold ([`reconciliation.md` §3](profiles/offline/reconciliation.md#3-deduplication-offlinetxid) compares another arrival without verifying it):
 
 ```
 1. **Select** the receipt-signing ECDSA P-256 public key of the station the receipt names (`stationId`) **for this receipt** — from the server-authoritative anchor defined in §4.3, over that station's retained key set; **not** simply the station's current key, and **not** the mTLS key
@@ -1595,14 +1595,14 @@ The server's ECDSA P-256 signing key — which signs OfflinePasses, ServerSigned
 |---|---|---|
 | A station | at provisioning | `serverVerifyKey` — the key currently signing ([Flows §2](04-flows.md#2-station-provisioning)) |
 | A station | at every boot | `OfflinePassPublicKey` in the configuration of every `Accepted` BootNotification RESPONSE [MSG-001] ([Chapter 08 §8.3](08-configuration.md#83-configuration-via-bootnotification)): the whole set. This is how a station that was offline through a rotation, or missed its push, receives the keys |
-| A station | whenever the set changes | `OfflinePassPublicKey` by ChangeConfiguration [MSG-013]: the whole set. A batch that another key's refusal voids is not applied ([Chapter 08](08-configuration.md) §8.2), and the station keeps its previous set until the next push or its next boot |
+| A station | whenever the set changes | `OfflinePassPublicKey` by ChangeConfiguration [MSG-013]: the whole set. A batch that another key's refusal voids is not applied ([Chapter 08 §8.2](08-configuration.md#82-changeconfiguration)), and the station keeps its previous set until the next push or its next boot |
 | The app | at every pass issuance | the trust bundle's `serverKeys` ([`app-contract.md` §3.4](profiles/offline/app-contract.md#34-the-trust-bundle)) |
 
 A value of `OfflinePassPublicKey` is always the **whole** set, and the station **MUST** replace the set it holds with it. The station holds no other server key: there is no internally cached previous key and no grace period.
 
 **The windows (Normative).**
 
-1. **Publish before first use.** A new key **MUST** be in the published set for at least the **maximum pass lifetime** — 864000 seconds, ten days ([`offline-pass.md` §6](profiles/offline/offline-pass.md#6-lifecycle)) — **plus the worst station sync gap** before the server signs anything with it. The sync gap is the longest a station may go without receiving configuration while it still accepts passes on its own validation; a station stops doing so once it has been offline longer than its `OfflineWindowHours` ([Chapter 08](08-configuration.md) §5, at most 240 hours), so a deployment's sync gap is at most the largest `OfflineWindowHours` it configures. The first term covers the app — a trust bundle issued before the key was published belongs to passes that have all expired by then — and the second covers the stations.
+1. **Publish before first use.** A new key **MUST** be in the published set for at least the **maximum pass lifetime** — 864000 seconds, ten days ([`offline-pass.md` §6](profiles/offline/offline-pass.md#6-lifecycle)) — **plus the worst station sync gap** before the server signs anything with it. The sync gap is the longest a station may go without receiving configuration while it still accepts passes on its own validation; a station stops doing so once it has been offline longer than its `OfflineWindowHours` ([Chapter 08 §5](08-configuration.md#5-offline--ble-configuration-keys), at most 240 hours), so a deployment's sync gap is at most the largest `OfflineWindowHours` it configures. The first term covers the app — a trust bundle issued before the key was published belongs to passes that have all expired by then — and the second covers the stations.
 2. **Keep after last use.** A key the server has stopped signing with **MUST** stay in the published set until everything it signed has expired — the last pass, at most the maximum pass lifetime after its last signature; the last ServerSignedAuth; and the last StationIdentity certificate ([§6.5.2](#652-stationidentity-certificate)) — and is then removed.
 3. **Sign with one key.** The server signs with one key at a time: the newest key whose publish-before window has elapsed.
 

@@ -982,7 +982,7 @@ sequenceDiagram
 9. **SSP** relays result as **AuthResponse** [MSG-033] `Accepted` to App via BLE
 10. **App** writes **StartServiceRequest** [MSG-034] → SSP starts service
 11. Service runs with **ServiceStatus** [MSG-038] updates, then stop/receipt
-12. Since the station is online, the session is tracked in real time by the Server and settled when the station reports its end. If the station loses MQTT before then, it reconciles the transaction through TransactionEvent, and the server settles it once — a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback))
+12. Since the station is online, the session is tracked in real time by the Server and settled when the station reports its end. If the station loses MQTT before then, it reconciles the transaction through TransactionEvent, and the server applies no second debit — only a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback))
 
 ### Error Paths
 
