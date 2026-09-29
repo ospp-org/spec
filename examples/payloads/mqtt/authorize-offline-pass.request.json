@@ -4,6 +4,8 @@
     "passId": "opass_a8b9c0d1e2f3",
     "sub": "sub_9a8b7c6d",
     "deviceId": "dev_android_abc123",
+    "devicePublicKey": "AnqCJkURKXFi9hQaO5EzjzvZXf8V0LCdzMg496b+y2rN",
+    "keyId": "YjX5pR0TzmU3ubs17wImQQ",
     "issuedAt": "2026-02-13T09:50:00.000Z",
     "expiresAt": "2026-02-13T10:50:00.000Z",
     "policyVersion": 1,
@@ -11,19 +13,13 @@
     "offlineAllowance": {
       "maxTotalCredits": 200,
       "maxUses": 5,
-      "maxCreditsPerTx": 50,
-      "allowedServiceTypes": [
-        "svc_eco",
-        "svc_standard"
-      ]
+      "maxCreditsPerTx": 50
     },
     "constraints": {
-      "minIntervalSec": 60,
-      "stationOfflineWindowHours": 24,
-      "stationMaxOfflineTx": 50
+      "minIntervalSec": 60
     },
     "signatureAlgorithm": "ECDSA-P256-SHA256",
-    "signature": "MEQCIAnYOdbX0GrJNoudnOUPviB8qyjrTDLrwI32eGPmvJP+AiA3+5yjsH4JMUjItqGE83WOx58hbBkK1fBAi56MMeip9w=="
+    "signature": "MEQCIHtTBR62/kj2qeB7M2BXb1yek5fh7ryc+lhz5N0sJLPNAiAHnbvbzTENpzKRSUflA/9BsgokbMZbDR1BdsxN4tZlPg=="
   },
   "deviceId": "dev_android_abc123",
   "counter": 5,

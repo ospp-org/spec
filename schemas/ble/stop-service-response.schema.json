@@ -30,7 +30,7 @@
     },
     "creditsCharged": {
       "$ref": "../common/credit-amount.schema.json",
-      "description": "Total credits charged for the service, present when result is Accepted"
+      "description": "Credits the station computed for the service, present when result is Accepted. Advisory: the server settles its own recomputation (spec/profiles/offline/reconciliation.md 8)"
     }
   },
   "allOf": [

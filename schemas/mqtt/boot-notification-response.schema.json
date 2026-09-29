@@ -52,7 +52,7 @@
       "additionalProperties": {
         "type": "string"
       },
-      "description": "Optional key-value configuration pairs pushed to the station."
+      "description": "Key-value configuration pairs pushed to the station. Optional, except that an Accepted response to a station that declares the Offline / BLE profile carries one with the five offline keys (08-configuration.md 8.3); the schema cannot see the station's capabilities and does not enforce it."
     },
     "sessionKey": {
       "type": "string",

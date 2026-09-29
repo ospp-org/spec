@@ -16,15 +16,16 @@ Validated example payloads and annotated flow sequences for the OSPP protocol.
 examples/
 ├── payloads/          # Individual message examples
 │   ├── mqtt/          # MQTT messages (station ↔ server)
-│   └── ble/           # BLE messages (mobile ↔ station)
+│   ├── ble/           # BLE messages (mobile ↔ station)
+│   └── http/          # HTTPS bodies (app or station ↔ server)
 ├── flows/             # Annotated end-to-end sequences
 └── error-scenarios/   # Error and edge case examples
 ```
 
 - **payloads/** — Standalone JSON files, one per message. MQTT files contain the
   **payload portion only** (the content of the `payload` field in the envelope).
-  BLE files contain the complete message. All files validate against their
-  corresponding JSON Schema.
+  BLE files contain the complete message. HTTP files contain one request or
+  response body. All files validate against their corresponding JSON Schema.
 - **flows/** — Markdown documents showing multi-step interactions with narrative
   context, Mermaid diagrams, and inline JSON payloads.
 - **error-scenarios/** — Examples of error conditions, recovery procedures, and
@@ -61,7 +62,14 @@ Naming convention: `{action}.{type}.json`
 | `service-status.running.json`, `service-status.receipt-ready.json` | Station → Mobile real-time metering (running / receipt-ready variants) |
 | `stop-service-request.json` | Mobile → Station service termination |
 | `stop-service-response.json` | Station → Mobile stop confirmation |
-| `receipt.json` | Station → Mobile signed proof of service |
+| `receipt.json` | Station → Mobile signed proof of service; also the body of the app's receipt upload |
+
+### HTTP Payloads (`payloads/http/`)
+
+| File | Description |
+|------|-------------|
+| `provisioning.request.json` | Station → Server provisioning request |
+| `offline-pass-issuance.request.json`, `offline-pass-issuance.response.json` | App → Server OfflinePass issuance, and the pass with its trust bundle ([`app-contract.md` §3](../spec/profiles/offline/app-contract.md#3-pass-issuance)) |
 
 ## 3. Flow Examples
 

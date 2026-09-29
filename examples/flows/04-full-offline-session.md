@@ -2,7 +2,7 @@
 
 ## Scenario
 
-It is a winter evening in Example City. Heavy snowfall has knocked out the internet at "Station Alpha -- Example City" and Bob's mobile carrier is also down in the area. Bob pulls into bay 1 and wants to use the Eco Program service. He opens the the app, which detects no internet connectivity. The app has a pre-armed OfflinePass (`opass_a8b9c0d1e2f3`) that was refreshed this morning while Bob was on WiFi. The app discovers the station via BLE, connects, reads station info and available services, performs the HELLO/CHALLENGE handshake, authenticates with the OfflinePass (the station validates it locally with all 10 checks), starts "Eco Program" on bay 1, monitors progress via BLE ServiceStatus notifications, and stops after 3 minutes. The station generates a signed receipt with ECDSA P-256 and increments the txCounter. Bob reads the receipt from FFF6 and the app stores it in the offline transaction log for later reconciliation.
+It is a winter evening in Example City. Heavy snowfall has knocked out the internet at "Station Alpha -- Example City" and Bob's mobile carrier is also down in the area. Bob pulls into bay 1 and wants to use the Eco Program service. He opens the the app, which detects no internet connectivity. The app has a pre-armed OfflinePass (`opass_a8b9c0d1e2f3`) that was refreshed this morning while Bob was on WiFi. The app discovers the station via BLE, connects, reads station info and available services, performs the HELLO/CHALLENGE handshake, authenticates with the OfflinePass (the station validates it locally with the nine checks that apply), starts "Eco Program" on bay 1, monitors progress via BLE ServiceStatus notifications, and stops after 3 minutes. The station generates a signed receipt with ECDSA P-256 and increments the txCounter. Bob reads the receipt from FFF6 and the app stores it in the offline transaction log, to upload it to the server once it has a network.
 
 ## Participants
 
@@ -16,14 +16,14 @@ It is a winter evening in Example City. Heavy snowfall has knocked out the inter
 
 ## Pre-conditions
 
-- Bob has a valid OfflinePass `opass_a8b9c0d1e2f3` in the app (issued at 06:00 UTC today, expires tomorrow)
+- Bob has a valid OfflinePass `opass_a8b9c0d1e2f3` in the app, issued at 06:00 UTC today. It expires tomorrow because this example platform sets its pass lifetime to one day; the default is three days, and never more than ten ([`offline-pass.md` §6](../../spec/profiles/offline/offline-pass.md#6-lifecycle))
 - OfflinePass allowance: 100 credits total, 5 max uses, 30 credits max per transaction
 - Bob's OfflinePass counter is at 2 (he has done 2 previous offline sessions)
 - Station BLE is advertising as `OSPP-b2c3d4` (last 6 hex chars of station ID)
-- Station has the server's ECDSA P-256 verify key in NVS
+- Station holds the server key set (`OfflinePassPublicKey`) in NVS, including the key the pass's `keyId` names
 - Station `OfflineModeEnabled` configuration is `true`
-- Station has 7 offline transactions logged (well under the 100-transaction limit)
-- Station's `RevocationEpoch` is 42 (matches the pass)
+- Station is within its own offline limits: it holds 7 offline transactions the server has not yet answered `Accepted`, `Duplicate` or `Rejected`, well under its `OfflineTransactionLimit` (1000), and it has been offline for far less than its `OfflineWindowHours` (240). Both are station configuration, not pass fields ([`08-configuration.md` §5](../../spec/08-configuration.md#5-offline--ble-configuration-keys))
+- Station holds the platform `RevocationEpoch` 42 (matches the pass)
 - Station clock is synchronized to within 5 seconds (last synced before internet dropped)
 - Neither the phone nor the station has internet connectivity
 
@@ -41,7 +41,7 @@ It is a winter evening in Example City. Heavy snowfall has knocked out the inter
 18:32:13.200  App derives session key via HKDF-SHA256
 18:32:14.000  App requests biometric confirmation (Face ID)
 18:32:15.000  App writes OfflineAuthRequest to FFF3 with OfflinePass
-18:32:15.500  Station performs 10-check OfflinePass validation — all pass
+18:32:15.500  Station performs the nine OfflinePass checks — all pass
 18:32:16.000  Station notifies AuthResponse Accepted on FFF4
 18:32:16.500  App writes StartServiceRequest to FFF3
 18:32:17.000  Station activates dispenser, notifies StartServiceResponse Accepted on FFF4
@@ -167,7 +167,7 @@ The BLE connection state transitions: `CONNECTED` -> `HANDSHAKE`.
 
 **What Bob sees:**
 
-The app displays two bay cards. Both show "Available" (Available) in green. Under Bay 1, Bob sees "Eco Program (10 credits/min)" and "Standard Program (8 credits/min)". He taps Bay 1, then selects "Eco Program". A duration picker appears, bounded at 3 minutes: the pass the app is already holding carries `offlineAllowance.maxCreditsPerTx` (30) in plaintext, so the app can read the limit and shape its offer to fit **before** it asks the station for anything. He sets it to 3 minutes (30 credits). The app shows: "Estimated cost: 30 credits. Estimated offline balance: 72 credits."
+The app displays two bay cards. Both show "Available" (Available) in green. Under Bay 1, Bob sees "Eco Program (10 credits/min)" and "Standard Program (8 credits/min)". Before he chooses, the app shows the pass's limits, as it must ([`offline-pass.md` §2.1](../../spec/profiles/offline/offline-pass.md#21-offlineallowance-object)): 30 credits per session, 80 of 100 credits remaining, 3 of 5 uses remaining. He taps Bay 1, then selects "Eco Program". A duration picker appears, bounded at 3 minutes: the pass the app is already holding carries `offlineAllowance.maxCreditsPerTx` (30) in plaintext, so the app can read the limit and shape its offer to fit **before** it asks the station for anything — a request above a limit would be refused, never reduced. He sets it to 3 minutes (30 credits). The app shows: "Estimated cost: 30 credits. Estimated offline balance: 72 credits."
 
 ---
 
@@ -255,6 +255,8 @@ Bob looks at his phone. Face ID succeeds. The app proceeds to send the OfflinePa
     "passId": "opass_a8b9c0d1e2f3",
     "sub": "sub_bob2026",
     "deviceId": "device_b7c4de89f0123456",
+    "devicePublicKey": "A/h6jULcl8Sq6+dJE1aS5RFXBrrbdfl8odxzkH3y2CuW",
+    "keyId": "YjX5pR0TzmU3ubs17wImQQ",
     "issuedAt": "2026-02-13T06:00:00.000Z",
     "expiresAt": "2026-02-14T06:00:00.000Z",
     "policyVersion": 1,
@@ -262,19 +264,13 @@ Bob looks at his phone. Face ID succeeds. The app proceeds to send the OfflinePa
     "offlineAllowance": {
       "maxTotalCredits": 100,
       "maxUses": 5,
-      "maxCreditsPerTx": 30,
-      "allowedServiceTypes": [
-        "svc_eco",
-        "svc_standard"
-      ]
+      "maxCreditsPerTx": 30
     },
     "constraints": {
-      "minIntervalSec": 60,
-      "stationOfflineWindowHours": 72,
-      "stationMaxOfflineTx": 100
+      "minIntervalSec": 60
     },
     "signatureAlgorithm": "ECDSA-P256-SHA256",
-    "signature": "MEQCIBzC45smDhOxczuPyE2aLygdzCpg/CEw8er4EDUPH2KzAiB3MOHIdtxJyZeLHUQpUcemQ0Gk36LFLOi9CcnQXYsB+g=="
+    "signature": "MEQCIG2bOeuUibBTP/iHL+5rR9Nmea9zVnY7Co6/Hq+91rR3AiAn0pFVBCXzdNnPR9ndho4b3iMLsemDrWLs+pLUc4TKPw=="
   },
   "counter": 3,
   "sessionProof": "hAW4BhA445dJmlLG78qcEn36DHEhkjIDNt3fZOGGh0c="
@@ -287,24 +283,24 @@ Key fields:
 
 ---
 
-### Step 11: Station Validates OfflinePass - 10 Checks (18:32:15.500)
+### Step 11: Station Validates OfflinePass - Nine Checks (18:32:15.500)
 
-The station performs all 10 validation checks sequentially:
+The station performs the nine checks that apply, in order, stopping at the first failure. The list has ten numbered checks and #5 is withdrawn ([`06-security.md` §6.1.1](../../spec/06-security.md#611-offlinepass-validation--10-checks)):
 
 | # | Check | Input | Result |
 |--:|-------|-------|--------|
-| 1 | ECDSA P-256 signature valid | `signature` verified against server's ECDSA P-256 public key in NVS | PASS |
-| 2 | Pass not expired | `expiresAt` (2026-02-14T06:00:00.000Z) > station clock (2026-02-13T18:32:15.000Z) | PASS |
-| 3 | Revocation epoch valid | Pass `revocationEpoch` (42) >= station's `RevocationEpoch` config (42) | PASS |
+| 1 | ECDSA P-256 signature valid | `signature` verified with the key of the station's server key set named by the pass's `keyId` (`YjX5pR0TzmU3ubs17wImQQ`) | PASS |
+| 2 | Within its temporal bounds | `expiresAt` (2026-02-14T06:00:00.000Z) > station clock (2026-02-13T18:32:15.000Z), and the pass's age (12 h 32 min) is within the station's `OfflinePassMaxAge` (864000 s) | PASS |
+| 3 | Revocation epoch valid | Pass `revocationEpoch` (42) >= the platform `RevocationEpoch` the station holds (42) | PASS |
 | 4 | Device ID matches Hello | Pass `deviceId` == Hello `deviceId` (`device_b7c4de89f0123456`) | PASS |
-| 5 | Station allowed | Pass has no station restriction (applies to all stations) | PASS |
-| 6 | Max uses not exceeded | 3rd use <= `maxUses` (5) | PASS |
-| 7 | Max total credits not exceeded | Previous credits used (20) + this tx max (30) <= `maxTotalCredits` (100) | PASS |
+| 5 | *(withdrawn)* | A pass carries no station or organization scope ([`offline-pass.md` §2.3](../../spec/profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)); the number is not reused | — |
+| 6 | Max uses not exceeded | Uses already counted (2) < `maxUses` (5) | PASS |
+| 7 | Max total credits not exceeded | Credits already counted (20) + this transaction's estimated cost (30) = 50, not above `maxTotalCredits` (100) | PASS |
 | 8 | Max credits per tx ok | Estimated cost for the requested 3 minutes (30 credits) does not exceed `maxCreditsPerTx` (30) | PASS |
 | 9 | Min interval elapsed | Last tx from this pass was >60s ago (last was hours ago) | PASS |
 | 10 | Counter anti-replay | `counter` (3) > station's `lastSeenCounter` for this pass (2) | PASS |
 
-All 10 checks pass. The station:
+All nine checks pass, and the station is within its own offline limits (see Pre-conditions). The station:
 1. Updates `lastSeenCounter` for `opass_a8b9c0d1e2f3` to 3
 2. Authorizes the session as requested — 3 minutes, 30 credits at 10 credits/min
 
@@ -503,31 +499,19 @@ The station's dispenser was already auto-stopped at the 180-second mark (the aut
 
 ### Step 19: Station Generates Signed Receipt (18:35:19.000)
 
-The station performs the following cryptographic operations:
+The station performs the following operations:
 
-**1. Construct receipt data (canonical JSON):**
+**1. Assign the txCounter.** `txCounter` becomes 8 (the station's 8th offline transaction) and is persisted to NVS before the receipt is signed ([`06-security.md` §6.3](../../spec/06-security.md#63-signed-counter--forensic-evidence)).
 
-```json
-{"offlineTxId":"otx_a3b4c5d6e7f8","bayId":"bay_c1d2e3f4a5b6","serviceId":"svc_eco","startedAt":"2026-02-13T18:32:17.000Z","endedAt":"2026-02-13T18:35:17.000Z","durationSeconds":180,"creditsCharged":30}
-```
+**2. Serialize the receipt fields.** The station serializes the pass-form `receipt_fields` of [`06-security.md` §6.2](../../spec/06-security.md#62-transaction-receipt-signing--ecdsa-p-256) in the OSPP Canonical Form: `offlineTxId`, `offlinePassId`, `passCounter`, `userId`, `deviceId`, `stationId`, `bayId`, `serviceId`, `startedAt`, `endedAt`, `durationSeconds`, `bookedDurationSeconds`, `endReason`, `clockState`, `creditsCharged`, `meterValues` and `txCounter`. Four of them are **signed only**: they appear in no envelope, neither the FFF6 Receipt's nor the TransactionEvent's, and the server reads them from the signed body — `stationId` (`stn_a1b2c3d4`), `endReason` (`TimerExpired`: the service ran its booked time), `bookedDurationSeconds` (180) and `clockState` (`Synchronized`: the clock has been set from the server since the station last booted). `durationSeconds` (180) is measured on the station's monotonic timer.
 
-**2. Base64-encode the canonical JSON:**
+**3. Base64-encode the canonical bytes.** The result is `receipt.data`, shown in Step 21.
 
-```
-receipt.data = base64(canonical_json) = "eyJvZmZsaW5lVHhJZCI6Im90eF9tM240bzVwNiIsImJheUlkIjoiYmF5X3gxeTJ6MyIsInNlcnZpY2VJZCI6InN2Y19mb2FtIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xM1QxODozMjoxNy4wMDBaIiwiZW5kZWRBdCI6IjIwMjYtMDItMTNUMTg6MzU6MTcuMDAwWiIsImR1cmF0aW9uU2Vjb25kcyI6MTgwLCJjcmVkaXRzQ2hhcmdlZCI6MzB9"
-```
-
-**3. Sign with ECDSA P-256:**
+**4. Sign with ECDSA P-256:**
 
 ```
-digest = SHA-256(receipt.data)
+digest    = SHA-256(canonical bytes)       // the canonical bytes, not their Base64 form
 signature = ECDSA-P256-Sign(station_private_key, digest)
-```
-
-**4. Increment txCounter:**
-
-```
-txCounter:           8 (station's 8th offline transaction)
 ```
 
 ---
@@ -555,6 +539,10 @@ txCounter:           8 (station's 8th offline transaction)
 ```json
 {
   "offlineTxId": "otx_a3b4c5d6e7f8",
+  "offlinePassId": "opass_a8b9c0d1e2f3",
+  "passCounter": 3,
+  "userId": "sub_bob2026",
+  "deviceId": "device_b7c4de89f0123456",
   "bayId": "bay_c1d2e3f4a5b6",
   "serviceId": "svc_eco",
   "startedAt": "2026-02-13T18:32:17.000Z",
@@ -567,22 +555,19 @@ txCounter:           8 (station's 8th offline transaction)
     "energyWh": 85
   },
   "receipt": {
-    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQ2hhcmdlZCI6MzAsImRldmljZUlkIjoiZGV2X2EzYjRjNWQ2IiwiZHVyYXRpb25TZWNvbmRzIjoxODAsImVuZGVkQXQiOiIyMDI2LTAyLTEzVDE4OjM1OjE3LjAwMFoiLCJtZXRlclZhbHVlcyI6eyJjb25zdW1hYmxlTWwiOjM3NSwiZW5lcmd5V2giOjg1LCJsaXF1aWRNbCI6MzM0MDB9LCJvZmZsaW5lUGFzc0lkIjoib3Bhc3NfNDQ2OTQ2ZGRhOTlkYWNmOCIsIm9mZmxpbmVUeElkIjoib3R4X2EzYjRjNWQ2ZTdmOCIsInBhc3NDb3VudGVyIjo1Nywic2VydmljZUlkIjoic3ZjX2VjbyIsInN0YXJ0ZWRBdCI6IjIwMjYtMDItMTNUMTg6MzI6MTcuMDAwWiIsInR4Q291bnRlciI6OCwidXNlcklkIjoic3ViXzBiYjRiY2E0NDFjMDFiMzAifQ==",
-    "signature": "MEUCIQD8ovcmLlGOOsEggTnKz0KPclUSq5m95lUkLLY9bn0eBwIgNRl/nvf1d0n8UJY58eWpOfZ4qBhHZ6LZh948261PeYM=",
+    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjE4MCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjozMCwiZGV2aWNlSWQiOiJkZXZpY2VfYjdjNGRlODlmMDEyMzQ1NiIsImR1cmF0aW9uU2Vjb25kcyI6MTgwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xM1QxODozNToxNy4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjozNzUsImVuZXJneVdoIjo4NSwibGlxdWlkTWwiOjMzNDAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2E4YjljMGQxZTJmMyIsIm9mZmxpbmVUeElkIjoib3R4X2EzYjRjNWQ2ZTdmOCIsInBhc3NDb3VudGVyIjozLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xM1QxODozMjoxNy4wMDBaIiwic3RhdGlvbklkIjoic3RuX2ExYjJjM2Q0IiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfYm9iMjAyNiJ9",
+    "signature": "MEQCICMak9WpvoXhB461m1fRcir+k0RKKG1swqI+oEt9bS2GAiAJKrmeam0uyUykofWMu5M8GokaX2Y7tSI3HDQxGBQ+SQ==",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
-  "txCounter": 8,
-  "userId": "sub_0bb4bca441c01b30",
-  "offlinePassId": "opass_446946dda99dacf8",
-  "passCounter": 57
+  "txCounter": 8
 }
 ```
 
 The app:
-1. Verifies the ECDSA signature using the station's public key (obtained during provisioning)
-2. Stores the complete receipt in the offline transaction log (`offlineTxLogStore`)
-3. Updates the local OfflinePass usage: counter = 3, credits used = 20 + 30 = 50
-4. Updates `walletStore.getEstimatedBalance`: previous estimated balance minus 30 credits
+1. Stores the complete receipt in the offline transaction log (`offlineTxLogStore`)
+2. Updates the local OfflinePass usage: counter = 3, credits used = 20 + 30 = 50
+3. Updates `walletStore.getEstimatedBalance`: previous estimated balance minus 30 credits
+4. Keeps the receipt to upload as soon as it has connectivity, as it does every receipt it holds ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload))
 
 ---
 
@@ -605,7 +590,7 @@ The app transitions to the SessionCompletedScreen:
 |   Eco Program - Bay 1           |
 |   Duration: 3m 0s                  |
 |                                  |
-|   Credits debited:      30       |
+|   Credits (station):    30       |
 |   Estimated balance:    42       |
 |                                  |
 |   Liquid: 33.4L | Consumable: 375mL |
@@ -639,7 +624,7 @@ When the station regains MQTT connectivity, it performs the reconciliation flow 
   "payload": {
     "offlineTxId": "otx_a3b4c5d6e7f8",
     "offlinePassId": "opass_a8b9c0d1e2f3",
-    "passCounter": 1,
+    "passCounter": 3,
     "userId": "sub_bob2026",
     "bayId": "bay_c1d2e3f4a5b6",
     "serviceId": "svc_eco",
@@ -648,8 +633,8 @@ When the station regains MQTT connectivity, it performs the reconciliation flow 
     "durationSeconds": 180,
     "creditsCharged": 30,
     "receipt": {
-      "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQ2hhcmdlZCI6MzAsImRldmljZUlkIjoiZGV2X2EzYjRjNWQ2IiwiZHVyYXRpb25TZWNvbmRzIjoxODAsImVuZGVkQXQiOiIyMDI2LTAyLTEzVDE4OjM1OjE3LjAwMFoiLCJtZXRlclZhbHVlcyI6eyJjb25zdW1hYmxlTWwiOjM3NSwiZW5lcmd5V2giOjg1LCJsaXF1aWRNbCI6MzM0MDB9LCJvZmZsaW5lUGFzc0lkIjoib3Bhc3NfYThiOWMwZDFlMmYzIiwib2ZmbGluZVR4SWQiOiJvdHhfYTNiNGM1ZDZlN2Y4IiwicGFzc0NvdW50ZXIiOjEsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDE4OjMyOjE3LjAwMFoiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9ib2IyMDI2In0=",
-      "signature": "MEQCIE3/emR+wNWVGobnPTWffhDgjJjuJByVCs5W9lkZo97WAiBuqbbMlCpmrTifeeJRB7bPT99OMQT+aMWQzWrZYEd6Zg==",
+      "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjE4MCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjozMCwiZGV2aWNlSWQiOiJkZXZpY2VfYjdjNGRlODlmMDEyMzQ1NiIsImR1cmF0aW9uU2Vjb25kcyI6MTgwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xM1QxODozNToxNy4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjozNzUsImVuZXJneVdoIjo4NSwibGlxdWlkTWwiOjMzNDAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2E4YjljMGQxZTJmMyIsIm9mZmxpbmVUeElkIjoib3R4X2EzYjRjNWQ2ZTdmOCIsInBhc3NDb3VudGVyIjozLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xM1QxODozMjoxNy4wMDBaIiwic3RhdGlvbklkIjoic3RuX2ExYjJjM2Q0IiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfYm9iMjAyNiJ9",
+      "signature": "MEQCICMak9WpvoXhB461m1fRcir+k0RKKG1swqI+oEt9bS2GAiAJKrmeam0uyUykofWMu5M8GokaX2Y7tSI3HDQxGBQ+SQ==",
       "signatureAlgorithm": "ECDSA-P256-SHA256"
     },
     "txCounter": 8,
@@ -678,16 +663,17 @@ When the station regains MQTT connectivity, it performs the reconciliation flow 
 }
 ```
 
-The server:
-1. Deduplicates by `offlineTxId` (`otx_a3b4c5d6e7f8`)
-2. Verifies the ECDSA receipt signature against the station's registered public key
+The server, in the order of [`reconciliation.md` §2](../../spec/profiles/offline/reconciliation.md#2-sync-procedure):
+1. Deduplicates by `offlineTxId` (`otx_a3b4c5d6e7f8`). Whichever copy of a receipt arrives first — the station's TransactionEvent or the app's upload — may settle, and once one has settled the other is answered `Duplicate` ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload))
+2. Verifies the receipt signature with the receipt-signing key of the station the signed receipt names (`stationId`)
 3. Records txCounter 8 as forensic evidence (contiguous with the last known counter — noted, not gated on)
-4. Validates the OfflinePass was valid at transaction time
-5. Debits 30 credits from Bob's wallet
-6. Creates a session record
-7. Responds `Accepted`
+4. Applies the reconcile-time gate: the OfflinePass was valid at the transaction's signed `endedAt`, read through the station's clock offset ([`reconciliation.md` §6.8](../../spec/profiles/offline/reconciliation.md#68-station-clock-offset))
+5. Settles: recomputes the cost from the signed receipt — 30 credits, not above `maxCreditsPerTx` (30) — and debits 30 credits from Bob's wallet
+6. Scores the settled transaction for fraud ([`06-security.md` §7.4](../../spec/06-security.md#74-fraud-detection--offline-transactions)); the score is in the Normal band, so no `FraudDetected` record is written
+7. Creates a session record
+8. Responds `Accepted`
 
-The station removes the transaction from its local queue.
+The station stops sending the transaction and deletes its record; the deletion **MAY** be deferred by up to 72 hours ([`transaction-event.md` §5.1](../../spec/profiles/transaction/transaction-event.md#51-response-status-values)).
 
 ## Message Sequence Diagram
 
@@ -721,7 +707,7 @@ The station removes the transaction from its local queue.
      |                                        |
      |  Write FFF3: OfflineAuthRequest       |
      |--------------------------------------->|
-     |                          10-check validation
+     |                          nine-check validation
      |                          all checks PASS
      |  Notify FFF4: AuthResponse (Accepted) |
      |<---------------------------------------|
@@ -767,15 +753,15 @@ The station removes the transaction from its local queue.
 
 ## Key Design Decisions
 
-1. **Station validates locally, not the server.** In the Full Offline flow, the station is the sole authority. It performs all 10 OfflinePass checks using the server's ECDSA P-256 public key stored in NVS. There is no round-trip to the server. This means the station must maintain its own counter tracking, revocation epoch, and usage limits per pass. The tradeoff is that the station cannot check the user's live wallet balance, which is why the OfflinePass has conservative credit limits.
+1. **Station validates locally, not the server.** In the Full Offline flow, the station is the sole authority. It performs the nine OfflinePass checks that apply, using the server key set (`OfflinePassPublicKey`) it holds. There is no round-trip to the server. This means the station must maintain its own counter tracking, the platform revocation epoch it last received, and usage limits per pass. The tradeoff is that the station cannot check what only the server knows — a block or an individual revocation, whenever issued, an epoch the platform moved after the station last received configuration, use of the pass at other stations, or the user's live wallet balance ([`offline-pass.md` §5](../../spec/profiles/offline/offline-pass.md#5-revocation)) — which is why the OfflinePass has conservative credit limits, and why settlement never charges above them ([`reconciliation.md` §8](../../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)).
 
-2. **`maxCreditsPerTx` is a decline threshold, not a cap — and the shaping belongs in the app.** Check #8 compares the estimated cost against the limit and **rejects** with `4004 OFFLINE_PER_TX_EXCEEDED` when it is exceeded; it never trims the request to fit. All three normative statements of the check say so — [`offline-pass.md` §4](../../spec/profiles/offline/offline-pass.md) check #8 station-side, [`authorize-offline-pass.md` §5](../../spec/profiles/offline/authorize-offline-pass.md) check #8 server-side, and [`06-security.md` §6.1.1](../../spec/06-security.md) check #8 — and [`07-errors.md`](../../spec/07-errors.md) records `4004` as **not recoverable**, which a silently reduced session would contradict. Reducing unasked also charges a user for a service they did not agree to, and [`06-security.md` §7.4](../../spec/06-security.md) scores `creditsCharged` > `maxCreditsPerTx` as a fraud signal at reconcile — a scoring rule that only makes sense if an over-limit transaction is refused rather than trimmed. The app is the right place to fit the offer to the limit, and it has what it needs: the pass carries `maxCreditsPerTx` in plaintext from the moment it is issued, so a client can bound its own picker before it ever asks. That is where capping belongs. The one clamp the offline path does permit is `requestedDurationSeconds` against a **server-authorized** `durationSeconds` on Partial A / Partial B ([`ble-session.md` §1](../../spec/profiles/offline/ble-session.md) *Starting a Service*, processing rule 2) — Full Offline has no server-authorized value to clamp against.
+2. **`maxCreditsPerTx` is refused at the wash and capped at settlement — a request is never reduced to fit.** Check #8 compares the estimated cost against the limit and **rejects** with `4004 OFFLINE_PER_TX_EXCEEDED` when it is exceeded; it never trims the request to fit ([`offline-pass.md` §2.1](../../spec/profiles/offline/offline-pass.md#21-offlineallowance-object)). All three normative statements of the check say so — [`offline-pass.md` §4](../../spec/profiles/offline/offline-pass.md#4-validation-checks-10) check #8 station-side, [`authorize-offline-pass.md` §5](../../spec/profiles/offline/authorize-offline-pass.md#5-validation-checks) check #8 server-side, and [`06-security.md` §6.1.1](../../spec/06-security.md#611-offlinepass-validation--10-checks) check #8 — and [`07-errors.md`](../../spec/07-errors.md) records `4004` as **not recoverable**, which a silently reduced session would contradict. Reducing unasked also charges a user for a service they did not agree to. At reconciliation the limit is a cap, not a gate: the server settles no more than `maxCreditsPerTx` ([`reconciliation.md` §8](../../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)) and scores a recomputed cost above it as the fraud factor `ExceedsPerTxLimit` ([`06-security.md` §7.4](../../spec/06-security.md#74-fraud-detection--offline-transactions)). The app is the right place to fit the offer to the limit, and it has what it needs: the pass carries `maxCreditsPerTx` in plaintext from the moment it is issued, and the app **MUST** show the pass's limits before the customer chooses, so a client can bound its own picker before it ever asks. The one clamp the offline path does permit is `requestedDurationSeconds` against a **server-authorized** `durationSeconds` on Partial A / Partial B ([`ble-session.md` §1](../../spec/profiles/offline/ble-session.md#1-starting-a-service)) — Full Offline has no server-authorized value to clamp against.
 
 3. **ECDSA P-256 receipts for non-repudiation.** The station signs every offline transaction receipt with its ECDSA P-256 private key (generated during provisioning, never leaves the device). This means neither the station operator nor the user can forge a receipt. During reconciliation, the server verifies the signature against the station's registered public key.
 
 4. **Monotonic txCounter as forensic evidence.** Each receipt includes a `txCounter` that increments by exactly 1 for each offline transaction, signed into the receipt so it cannot be restated later. A discontinuity is surfaced to the operator as a **station** alert and never withholds settlement. Note what it does *not* prove: an operator who suppresses transactions before they are counted produces no gap at all, so this is an aid to reconstruction, not a completeness guarantee — the guarantees live in point 5 and in `(offlinePassId, passCounter)` uniqueness (`06-security.md` §6.3.1).
 
-5. **Dual reconciliation paths.** Both the station (via TransactionEvent over MQTT) and the app (via `POST /me/offline-txs` over HTTPS) can submit the offline transaction to the server. The server deduplicates by `offlineTxId`. This redundancy ensures that even if one path fails (e.g., the station is decommissioned before reconnecting), the transaction is still settled.
+5. **Two copies of one signed receipt.** The station sends the transaction as a TransactionEvent over MQTT, and the app uploads its copy of the same station-signed receipt over HTTPS (`POST /api/v1/offline/receipts`, [`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)) — it **MUST** upload every receipt it holds. Whichever copy arrives first may settle; once one has settled, the other, byte-identical under the signature, is answered `Duplicate` ([`reconciliation.md` §3](../../spec/profiles/offline/reconciliation.md#3-deduplication-offlinetxid)). This redundancy ensures that even if one path fails (e.g., the station is decommissioned before reconnecting), the transaction is still settled.
 
 6. **Biometric gate before OfflinePass transmission.** The app requires Face ID, Touch ID, or PIN before sending the OfflineAuthRequest. This prevents a stolen unlocked phone from being used for offline sessions. The biometric confirmation is a local device operation and does not require network access.
 

@@ -153,7 +153,7 @@ sequenceDiagram
 4. Broker authenticates the client certificate, returns CONNACK success
 5. SSP subscribes to `ospp/v1/stations/{station_id}/to-station` with QoS 1
 6. SSP sends **BootNotification REQUEST** [MSG-001] with station identity, firmware version, capabilities, and `pendingOfflineTransactions` count
-7. Server validates the station, returns **BootNotification RESPONSE** [MSG-001] with `status: "Accepted"`, `serverTime`, `heartbeatIntervalSec`, optional `configuration` overrides, and `sessionKey` — which is **REQUIRED on every `Accepted` and every `Pending`**, unconditionally. It is not conditional on `MessageSigningMode`: that is station configuration rather than a field of this message, so the condition was never expressible in the schema, and under `None` the key is simply unused ([`boot-notification-response.schema.json`](../schemas/mqtt/boot-notification-response.schema.json), and [`boot-notification.md` §5](profiles/core/boot-notification.md), which makes a keyless `Accepted` **malformed**)
+7. Server validates the station, returns **BootNotification RESPONSE** [MSG-001] with `status: "Accepted"`, `serverTime`, `heartbeatIntervalSec`, a `configuration` block — optional, except that to a station declaring the Offline / BLE profile it carries the five offline keys ([08 §8.3](08-configuration.md#83-configuration-via-bootnotification)) — and `sessionKey` — which is **REQUIRED on every `Accepted` and every `Pending`**, unconditionally. It is not conditional on `MessageSigningMode`: that is station configuration rather than a field of this message, so the condition was never expressible in the schema, and under `None` the key is simply unused ([`boot-notification-response.schema.json`](../schemas/mqtt/boot-notification-response.schema.json), and [`boot-notification.md` §5](profiles/core/boot-notification.md), which makes a keyless `Accepted` **malformed**)
 8. SSP synchronizes its clock to `serverTime`, applies any configuration overrides, stores the HMAC session key
 9. SSP sends one **StatusNotification EVENT** [MSG-009] per bay, reporting `bayNumber`, `status`, and every `programs[]` entry with its availability — programs, because a service is server-minted and at first boot the station has been told none
 10. SSP starts the heartbeat timer at `heartbeatIntervalSec` seconds
@@ -727,9 +727,9 @@ sequenceDiagram
 
 - User has a valid OfflinePass in the app (pre-armed while online)
 - Station BLE is advertising
-- Station has the server's ECDSA P-256 verify key in NVS
+- Station holds the server key set (`OfflinePassPublicKey`) in NVS
 - Station `OfflineModeEnabled` configuration is `true`
-- Station has not exceeded `stationMaxOfflineTx` limit
+- Station is within its own offline limits: `OfflineWindowHours` has not elapsed since its last MQTT connection, and it holds fewer than `OfflineTransactionLimit` offline transactions the server has not yet answered `Accepted`, `Duplicate` or `Rejected` ([`offline-pass.md` §2.2](profiles/offline/offline-pass.md#22-constraints-object))
 - App has biometric/PIN capability
 
 ### Sequence Diagram
@@ -756,7 +756,7 @@ sequenceDiagram
     Note over App: Biometric / PIN confirmation
 
     App->>SSP: Write FFF3: OfflineAuthRequest [MSG-031]
-    Note right of SSP: Station validates OfflinePass (10 checks)
+    Note right of SSP: Station validates OfflinePass (nine checks)
 
     alt Pass valid
         SSP-->>App: Notify FFF4: AuthResponse (Accepted) [MSG-033]
@@ -791,13 +791,13 @@ sequenceDiagram
 2. **App** establishes BLE connection
 3. **App** reads **StationInfo** [MSG-027] from FFF1 — verifies station identity, checks `connectivity: "Offline"`
 4. **App** reads **AvailableServices** [MSG-028] from FFF2 — displays service catalog with prices
-5. User selects a bay and service
+5. User selects a bay and service. Before the choice the app shows the pass's limits — per session, credits remaining, uses remaining — and a service above a limit is refused, never reduced ([`offline-pass.md` §2.1](profiles/offline/offline-pass.md#21-offlineallowance-object))
 6. **App** writes **HELLO** [MSG-029] to FFF3 with `deviceId`, `appNonce`, `appVersion`, `appEphemeralPubKey`
 7. **SSP** responds with **CHALLENGE** [MSG-030] on FFF4 with `stationNonce`, `stationCert` (StationIdentity), `stationEphemeralPubKey`, `stationConnectivity: "Offline"`
-8. **App** verifies `stationCert` against the server signing key (§6.5.2) — **aborts and sends no pass if invalid** — then derives the session key via ECDH P-256 + HKDF-SHA256 (`ikm = es ‖ ee ‖ appNonce ‖ stationNonce`; the LTK is not used). The post-Challenge AEAD channel is now established.
+8. **App** verifies `stationCert` against the server key set of its trust bundle (§6.5.2) — **aborts and sends no pass if invalid** — then derives the session key via ECDH P-256 + HKDF-SHA256 (`ikm = es ‖ ee ‖ appNonce ‖ stationNonce`; the LTK is not used). The post-Challenge AEAD channel is now established.
 9. **App** requests biometric or PIN confirmation from the user
 10. **App** writes **OfflineAuthRequest** [MSG-031] to FFF3 (inside the AEAD channel) with the OfflinePass, counter, and `sessionProof`
-11. **SSP** validates the OfflinePass (10 checks — signature, expiry, epoch, device, limits, interval, counter)
+11. **SSP** validates the OfflinePass — the nine checks of [Chapter 06 §6.1.1](06-security.md#611-offlinepass-validation--10-checks): signature, expiry, epoch, device, limits, interval, counter
 12. **SSP** sends **AuthResponse** [MSG-033] `Accepted` on FFF4 with session key confirmation
 13. **App** writes **StartServiceRequest** [MSG-034] to FFF3 with `bayId`, `serviceId`, `requestedDurationSeconds`
 14. **SSP** activates hardware, sends **StartServiceResponse** [MSG-035] `Accepted` with `sessionId` and `offlineTxId`
@@ -811,7 +811,7 @@ sequenceDiagram
 
 **Later, when connectivity is restored:**
 - **SSP** reconciles via [Flow §10](#10-offline--online-reconciliation) (TransactionEvent [MSG-007])
-- **App** syncs via `POST /me/offline-txs` (backup reconciliation path)
+- **App** uploads its copy of the receipt ([`app-contract.md` §4](profiles/offline/app-contract.md#4-receipt-upload)); whichever copy arrives first may settle, and once one has settled the other is answered `Duplicate`
 
 ### Alternative Paths
 
@@ -824,12 +824,11 @@ sequenceDiagram
 | Step | Error | Code | App Action |
 |:----:|-------|------|------------|
 | 11 | Signature invalid | `2002` | Display "Pass invalid", disconnect |
-| 11 | Pass expired | `2003` | Display "Pass expired, go online to renew" |
+| 11 | Pass expired, or older than this station's `OfflinePassMaxAge` | `2003` | Display "Pass not accepted here — go online to renew" |
 | 11 | Epoch revoked | `2004` | Display "Pass revoked" |
 | 11 | Limits exceeded | `4002` | Display "Offline limit reached, go online" |
 | 11 | Rate limited | `4003` | Display "Wait before next session" |
 | 11 | Counter replay | `2005` | Display "Security error" |
-| 11 | OfflinePass stationId constraint does not match | `2006` | Display "Station mismatch" |
 | 14 | Bay busy | `3001` | Display "Bay occupied" |
 | 14 | Hardware failure | `3009` | Display "Hardware error" |
 
@@ -893,13 +892,13 @@ sequenceDiagram
 ### Happy Path
 
 1. **App** sends `POST /sessions/offline-auth` to Server with `bayId` and `serviceId`
-2. **Server** validates the user, debits the issue-time pre-debit, signs the ServerSignedAuth authorization blob with ECDSA P-256 server key — the signed claims carry `durationSeconds` (which the station clamps the session duration to) and `creditsAuthorized` (the pre-debit basis — **not** a settlement cap; the server recomputes final billing per the Billing Authority §6 / reconciliation §8.2, so settled cost MAY exceed it), alongside `authId`, `sessionId`, `bayId`, `serviceId`, `appNonce`, `issuedAt`, `expiresAt` (full claim set: `server-signed-auth-claims.schema.json`, finding N3)
+2. **Server** validates the user, debits the issue-time pre-debit, signs the ServerSignedAuth authorization blob with ECDSA P-256 server key — the signed claims carry `durationSeconds` (which the station clamps the session duration to) and `creditsAuthorized` (the pre-debit, and the cap on what the session may be charged: the server recomputes final billing per the Billing Authority §6 / reconciliation §8.2 and refunds any difference, never debiting more), alongside `authId`, `sessionId`, `bayId`, `serviceId`, `appNonce`, `issuedAt`, `expiresAt` (full claim set: `server-signed-auth-claims.schema.json`, finding N3)
 3. **Server** returns `signedAuthorization` (Base64) and `sessionId` to the App
 4. **App** connects to the SSP via BLE
 5. **App** reads **StationInfo** [MSG-027] — confirms `connectivity: "Offline"`
 6. **App** writes **HELLO** [MSG-029] → SSP responds with **CHALLENGE** [MSG-030]
 7. **App** writes **ServerSignedAuth** [MSG-032] with the server-signed authorization blob and `sessionId`
-8. **SSP** verifies the ECDSA P-256 signature using `OfflinePassPublicKey` (cached previous key also accepted during the grace period)
+8. **SSP** verifies the ECDSA P-256 signature using a key of its `OfflinePassPublicKey` set ([Chapter 06 §6.7](06-security.md#67-server-signing-key-rotation-ecdsa-p-256))
 9. **SSP** sends **AuthResponse** [MSG-033] `Accepted`
 10. **App** writes **StartServiceRequest** [MSG-034] → SSP starts service
 11. Service runs with **ServiceStatus** [MSG-038] updates
@@ -978,20 +977,20 @@ sequenceDiagram
 4. **App** requests biometric/PIN confirmation
 5. **App** writes **OfflineAuthRequest** [MSG-031] with the OfflinePass
 6. **SSP** does NOT validate locally — instead forwards the pass to the Server via **AuthorizeOfflinePass REQUEST** [MSG-002] over MQTT
-7. **Server** validates the pass (checks signature, expiry, epoch, limits, user balance), debits user wallet
+7. **Server** validates the pass ([`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks) — signature, expiry, epoch, device, limits, rate, counter, individual revocation), debits the user's wallet by the `creditsAuthorized` of its answer
 8. **Server** sends **AuthorizeOfflinePass RESPONSE** [MSG-002] `Accepted` with `sessionId`, `durationSeconds`, `creditsAuthorized`
 9. **SSP** relays result as **AuthResponse** [MSG-033] `Accepted` to App via BLE
 10. **App** writes **StartServiceRequest** [MSG-034] → SSP starts service
 11. Service runs with **ServiceStatus** [MSG-038] updates, then stop/receipt
-12. Since the station is online, the session is tracked in real-time by Server (no later reconciliation needed)
+12. Since the station is online, the session is tracked in real time by the Server and settled when the station reports its end — by service kind, never above the `creditsAuthorized` of the authorization and within the pass's limits, as a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)). If the station loses MQTT before then, it reconciles the transaction through TransactionEvent, and the server applies no second debit — only a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback))
 
 ### Error Paths
 
 | Step | Error | Action |
 |:----:|-------|--------|
-| 6 | MQTT send failure | SSP falls back to local validation (like Full Offline) |
+| 6 | MQTT send failure | SSP **MAY** fall back to local validation (like Full Offline) if its `OfflineModeEnabled` is `true`, within its own offline limits ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)) |
 | 7 | Pass rejected by server | SSP relays rejection to App with error code |
-| 7 | AuthorizeOfflinePass timeout (15s) | SSP falls back to local validation (degraded mode) |
+| 7 | AuthorizeOfflinePass timeout (15s) | SSP **MAY** fall back to local validation (degraded mode) if its `OfflineModeEnabled` is `true`, within its own offline limits ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)) |
 
 ### Postconditions
 
@@ -999,7 +998,7 @@ sequenceDiagram
 |-----------|-------|
 | User Wallet | Debited by Server (real-time, step 7) |
 | Server Session | `active` (real-time tracking) |
-| SSP | Online session — no reconciliation needed |
+| SSP | Online session — reconciled through TransactionEvent only if MQTT is lost before it ends |
 
 ---
 
@@ -1139,10 +1138,10 @@ of by what was delivered.
 | ACK_TIMEOUT (no response) | Full | 100% |
 | Hardware error during active (SessionEnded `reason=Fault`) | Partial (pro-rated) | Based on time used |
 | Station offline during active | Partial (pro-rated) | Based on time used |
-| User manual stop at station (SessionEnded `reason=Local`) | Partial (pro-rated) | Based on time used (charge `creditsCharged` from event) |
+| User manual stop at station (SessionEnded `reason=Local`) | Partial (pro-rated) | Based on time used, recomputed by the server (the event's `creditsCharged` is advisory) |
 | Offline credit exhausted mid-session (SessionEnded `reason=LocalOutOfCredit`) | Full | 100% (no charge — `creditsCharged` MUST be 0) |
 | Offline pass revoked mid-session (SessionEnded `reason=Deauthorized`) | Full | 100% (no charge — session not billable; `creditsCharged` MUST be 0) |
-| Operator ended it (SessionEnded `reason=OperatorStopped`) | Partial (pro-rated) | Based on time used (charge `creditsCharged` from event). The customer received a real wash and is billed for it; the operator's reason for ending it is not the customer's concern. |
+| Operator ended it (SessionEnded `reason=OperatorStopped`) | Partial (pro-rated) | Based on time used, recomputed by the server (the event's `creditsCharged` is advisory). The customer received a real wash and is billed for it; the operator's reason for ending it is not the customer's concern. |
 | Timer ran to completion (SessionEnded `reason=TimerExpired`) | None | Charge full pre-authorized amount (user received the booked duration regardless of meter values) |
 | If less than `faultFullRefundThreshold` of duration delivered AND reason=`Fault` | Full | 100% (override pro-rate) |
 
@@ -1259,11 +1258,14 @@ sequenceDiagram
 | 8 | Webhook timeout (5 min) | PaymentIntent → expired, no credits |
 | 8 | HMAC verification failed | Reject webhook, log SecurityEvent |
 
+A top-up also releases for collection the user's **pending** transactions — those whose debit left the wallet below zero ([`reconciliation.md` §8.1](profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)). Until the user tops up, neither the tenant whose station delivered such a wash nor the platform collects it.
+
 ### Postconditions
 
 | Component | State |
 |-----------|-------|
 | User Wallet | Balance increased by `packageCredits + bonusCredits` |
+| Pending transactions | Released for collection by the top-up |
 | PaymentIntent | `captured` → `settled` |
 | Fiscal Invoice | Generated for local-currency amount |
 
@@ -1451,25 +1453,25 @@ sequenceDiagram
         Server->>Server: 2. Verify ECDSA receipt signature (recon 5)
         Server->>Server: 3. Record txCounter (forensic, gates nothing - recon 4.2)
         Server->>Server: 4. Reconcile-time re-validation gate (recon 6)
-        Server->>Server: 5. Run fraud scoring (recon 7)
-        Server->>Server: 6. Settle wallet - negative balance allowed (recon 8)
+        Server->>Server: 5. Settle wallet - capped, negative balance allowed (recon 8)
+        Server->>Server: 6. Run fraud scoring on the settled tx (recon 7)
 
         alt Accepted
             Server-->>SSP: TransactionEvent RESPONSE (Accepted) [MSG-007]
-            Note over SSP: Remove from local queue
+            Note over SSP: Stop sending it, delete the record (MAY defer 72 h)
         else Duplicate
             Server-->>SSP: TransactionEvent RESPONSE (Duplicate) [MSG-007]
-            Note over SSP: Remove from local queue (already processed)
+            Note over SSP: Stop sending it, delete the record (already processed)
         else Rejected
             Server-->>SSP: TransactionEvent RESPONSE (Rejected, reason) [MSG-007]
-            Note over SSP: Flag for investigation, do NOT retry
+            Note over SSP: Do NOT retry; retain the record, flagged for investigation
         else RetryLater
             Server-->>SSP: TransactionEvent RESPONSE (RetryLater) [MSG-007]
-            Note over SSP: Keep in queue, retry later
+            Note over SSP: Keep the record, retry later
         end
     end
 
-    Note over SSP: Local sync queue cleared
+    Note over SSP: Nothing left to send; Rejected records retained
 ```
 
 ### Happy Path
@@ -1479,38 +1481,38 @@ sequenceDiagram
 3. For each transaction, SSP sends **TransactionEvent REQUEST** [MSG-007] containing the full transaction data, signed receipt, `txCounter`, and meter values
 4. SSP waits for the RESPONSE before sending the next transaction
 5. **Server** processes each transaction:
-   - **Step 1:** Deduplicate by `offlineTxId`. Already seen and the signed `receipt.data` matches → `Duplicate`; already seen and it differs → `Rejected`, retain both records, alert the operator ([`reconciliation.md` §3](profiles/offline/reconciliation.md))
-   - **Step 2:** Verify ECDSA P-256 receipt signature — CRITICAL alert if invalid
+   - **Step 1:** Deduplicate by `offlineTxId`. The ledger holds the `offlineTxId` and the signed `receipt.data` matches → `Duplicate`; it holds it and the data differs → `Rejected`, retain both records, alert the operator ([`reconciliation.md` §3](profiles/offline/reconciliation.md#3-deduplication-offlinetxid))
+   - **Step 2:** Verify ECDSA P-256 receipt signature — reject if it does not verify; never scored ([`reconciliation.md` §5](profiles/offline/reconciliation.md#5-receipt-signature-verification))
    - **Step 3:** Record `txCounter` as forensic evidence — never gated on. If discontinuous: WARNING + operator alert on the **station**, process anyway (`profiles/offline/reconciliation.md` §4.2)
-   - **Step 4:** Validate that the OfflinePass was valid at transaction time (check epoch, expiry, limits)
-   - **Step 5:** Debit user wallet (allow negative balance for offline transactions)
-   - **Step 6:** Run fraud scoring (see below)
+   - **Step 4:** Apply the reconcile-time gate — was the OfflinePass valid at transaction time: epoch, expiry, individual revocation, read through the station's clock offset ([`reconciliation.md` §6](profiles/offline/reconciliation.md#6-reconcile-time-re-validation-gate)). Limits are not a gate here: they cap settlement and feed fraud scoring
+   - **Step 5:** Settle — recompute by service kind from the signed receipt, never above what the authorization allowed, and debit the user wallet — or, where the authorization already debited it, refund only ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)) — (negative balance allowed; a debit that leaves it below zero leaves the transaction pending until the user tops up)
+   - **Step 6:** Run fraud scoring on the settled transaction (see below)
    - **Step 7:** Create session record
 6. Server responds `Accepted`
-7. SSP removes the transaction from its local queue
+7. SSP stops sending the transaction and deletes its record — deletion **MAY** be deferred by up to 72 hours ([`transaction-event.md` §5.1](profiles/transaction/transaction-event.md#51-response-status-values))
 8. Repeat for all pending transactions
-9. When all transactions are processed, SSP clears its local sync queue
+9. When every transaction has been answered, nothing remains to send. The records answered `Rejected` stay on the station, marked for investigation
 
 ### Fraud Scoring
 
-The server computes a fraud score (`0.00`–`1.00`) for each offline transaction. The factor list, the **cross-station cumulative** `maxUses` / `maxTotalCredits` computation (finding N7), and the threshold→action bands are defined authoritatively in [06-security.md §7.4](06-security.md#74-fraud-detection--offline-transactions). This flow does not restate them — finding F3: §7.4 is the single source; this section and `profiles/offline/reconciliation.md` §7 are pointers.
+The server computes a fraud score (`0.00`–`1.00`) for each offline transaction, after settling it. The factor list, the **cross-station cumulative** `maxUses` / `maxTotalCredits` computation (finding N7), and the threshold→action bands are defined authoritatively in [06-security.md §7.4](06-security.md#74-fraud-detection--offline-transactions). This flow does not restate them — finding F3: §7.4 is the single source; this section and `profiles/offline/reconciliation.md` §7 are pointers.
 
 ### App-Side Reconciliation (Backup)
 
-When the mobile app regains connectivity, it SHOULD also sync its offline transaction log:
+When the mobile app regains connectivity, it **MUST** upload every receipt it holds ([`app-contract.md` §4](profiles/offline/app-contract.md#4-receipt-upload)):
 
-1. App calls `POST /me/offline-txs` with its locally stored receipts
-2. Server deduplicates against transactions already received from the station
-3. This serves as a **backup reconciliation path** in case the station's sync fails
+1. App calls `POST /api/v1/offline/receipts` once per receipt, with the Receipt as it read it from the station
+2. Server processes it as it processes the station's TransactionEvent; whichever copy of the same station-signed receipt arrives first may settle, and once one has settled the other is answered `Duplicate`
+3. The app's copy backs up the station's and is not only a fallback: it may settle first, and it is the one copy that survives a station that never reconnects or loses its store ([`app-contract.md` §4](profiles/offline/app-contract.md#4-receipt-upload))
 
 ### Postconditions
 
 | Component | State |
 |-----------|-------|
-| SSP Offline Queue | Empty (all transactions synced) |
+| SSP Offline Log | Nothing left to send; records answered `Accepted` or `Duplicate` deleted (MAY be deferred up to 72 h), records answered `Rejected` retained |
 | Server | Session records created, user wallets debited |
-| User Wallets | Debited (may be negative for high-fraud-score transactions) |
-| Fraud Alerts | Generated for scores >= 0.30 |
+| User Wallets | Debited; a wallet may be negative, and a transaction whose debit left it below zero stays pending until the user tops up |
+| Fraud records | `FraudDetected` for scores in the Review, Alert and Block bands (`0.30` and above); operator alert for Alert and Block (`0.60` and above) — [06-security.md §7.4](06-security.md#74-fraud-detection--offline-transactions) |
 
 ---
 
@@ -1804,7 +1806,7 @@ Consolidated timeout values across all flows:
 | PaymentIntent pending | 5 min | Marked expired |
 | BLE scan | 10-30s | Return to IDLE |
 | BLE handshake step | 10s | ERROR state |
-| AuthorizeOfflinePass | 15s | Fallback to local validation |
+| AuthorizeOfflinePass | 15s | **MAY** fall back to local validation if `OfflineModeEnabled` is `true`; otherwise refuse |
 | TransactionEvent | 60s | Retry later |
 | ChangeConfiguration | 60s | Log failure |
 | GetConfiguration | 30s | Log failure |

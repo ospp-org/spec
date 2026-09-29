@@ -20,10 +20,10 @@ ospp-version: 0.44.0
 > **Not all of this specification is at the same maturity.** The MQTT station↔server surface,
 > HTTPS provisioning, and offline reconciliation are **stable** — implemented and exercised
 > against an independent implementation. The **BLE transport, handshake and session are
-> EXPERIMENTAL**: published for review, not for implementation, and carrying three known
+> EXPERIMENTAL**: published for review, not for implementation, and carrying two known
 > blockers that make them unimplementable as written. See
 > [Release status](../README.md#release-status) and
-> [KNOWN-ISSUES](../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-three-defects).
+> [KNOWN-ISSUES](../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-two-defects).
 >
 > **Extended** and **Complete** compliance cannot be claimed against 0.44, because both require
 > the BLE half of the Offline profile. **Development** and **Standard** are unaffected.
@@ -57,7 +57,7 @@ domain-specific behavior.
 | Transaction | [profiles/transaction/README.md](profiles/transaction/README.md) | Session start/stop, meter values, reservation lifecycle. |
 | Device Management | [profiles/device-management/README.md](profiles/device-management/README.md) | Configuration, firmware update, diagnostics, remote commands. |
 | Security | [profiles/security/README.md](profiles/security/README.md) | Two things: security event reporting — real-time incident notifications (tamper, auth failure, firmware integrity) — and the certificate lifecycle (SignCertificate, CertificateInstall, TriggerCertificateRenewal). |
-| Offline | [profiles/offline/README.md](profiles/offline/README.md) | OfflinePass authorization, offline transaction log, reconciliation — **stable**. BLE transport, handshake and session — **EXPERIMENTAL**, see [B-1/B-2/B-3](../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-three-defects). |
+| Offline | [profiles/offline/README.md](profiles/offline/README.md) | OfflinePass authorization, offline transaction log, reconciliation — **stable**. BLE transport, handshake and session — **EXPERIMENTAL**, see [B-1/B-3](../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-two-defects). |
 
 ## Normative Language
 

@@ -44,11 +44,14 @@ verify_group "station receipts" conformance/test-keys/station-test-pub.pem \
   examples/payloads/mqtt/transaction-event.request.json \
   conformance/test-vectors/valid/offline/receipt-full.json \
   conformance/test-vectors/valid/offline/receipt-minimal.json \
+  conformance/test-vectors/valid/offline/receipt-auth-form.json \
   conformance/test-vectors/valid/transaction/transaction-event-request-full.json \
-  conformance/test-vectors/valid/transaction/transaction-event-request-minimal.json
+  conformance/test-vectors/valid/transaction/transaction-event-request-minimal.json \
+  conformance/test-vectors/valid/transaction/transaction-event-request-auth-form.json
 
 verify_group "server OfflinePass" conformance/test-keys/server-test-pub.pem \
   examples/payloads/ble/offline-auth-request.json \
+  examples/payloads/http/offline-pass-issuance.response.json \
   examples/payloads/mqtt/authorize-offline-pass.request.json \
   conformance/test-vectors/valid/offline/offline-auth-request-full.json \
   conformance/test-vectors/valid/offline/offline-auth-request-minimal.json \
@@ -113,7 +116,8 @@ fi
 #     in section 1 is under conformance/test-vectors/valid/**, and verify-ble-crypto
 #     has no tamper branch, so until this section existed the corpus could show that
 #     a good signature passes and could not show that a bad one is refused — while
-#     TC-SEC-001.md:50-51, TC-SEC-004.md:34, TC-OFF-002.md:122 and TC-OFF-005.md:220
+#     TC-SEC-001.md#part-c--station-rejects-invalid-hmac, TC-SEC-004.md#a1--macverificationfailure-critical,
+#     TC-OFF-002.md#expected-results and TC-OFF-005.md#expected-results
 #     each ask an implementer to prove exactly that. We asked for a test we could
 #     not pass ourselves.
 #
@@ -169,6 +173,7 @@ INLINE_FILES=(
   examples/flows/04-full-offline-session.md
   examples/flows/05-partial-a-session.md
   examples/flows/06-partial-b-session.md
+  examples/flows/11-reconciliation.md
 )
 
 before=$(for f in "${INLINE_FILES[@]}"; do sha256sum "$f"; done | sha256sum | cut -d' ' -f1)

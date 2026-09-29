@@ -60,6 +60,8 @@ Two hygiene properties are borrowed from Noise **explicitly, without the framewo
 
 **Accepted** — D1 is taken; this ADR records it. The concrete construction and its vectors **MUST** pass a dedicated cryptographic-review gate (a cryptographer or an adversarial review on the final construction) **before** `v0.6.0` is frozen/tagged. This ADR governs the architecture; `06-security.md` §6.4/§6.5 governs the byte-exact mechanics.
 
+**Status note, 2026-09-29.** Two premises of the Context and Consequences above have since moved, and the decision is unchanged. A pass now names no station and no organization and is valid at any station that accepts offline passes ([`offline-pass.md` §2.3](../spec/profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)), so the objection to option (II) applies to every pass. And the app verifies a station against the server **key set** of the trust bundle it receives with every pass ([`app-contract.md` §3.4](../spec/profiles/offline/app-contract.md#34-the-trust-bundle)), not against one server key.
+
 ## References
 
 - `spec/06-security.md` §6.4 (BLE Transport Security), §6.5 / §6.5.1 / §6.5.2 / §6.5.3 (ECDH derivation, sessionProof, StationIdentity, AEAD channel).

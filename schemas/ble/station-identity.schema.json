@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/ble/station-identity.schema.json",
   "title": "StationIdentity",
-  "description": "Server-signed certificate binding a station's business identity and issuing organization to its dedicated static BLE ECDH public key. Carried in the BLE Challenge (FFF4) and delivered to the station at provisioning. The mobile app verifies the ECDSA P-256 signature against the server signing key (the same key that signs OfflinePasses) BEFORE transmitting any OfflinePass, which prevents leaking the pass to an impersonating station. Normative definition: 06-security.md §6.5.2. The signed canonical body is the object MINUS the signature and signatureAlgorithm fields (OSPP Canonical Form, 06-security.md §4.8).",
+  "description": "Server-signed certificate binding a station's business identity and issuing organization to its dedicated static BLE ECDH public key. Carried in the BLE Challenge (FFF4) and delivered to the station at provisioning. The mobile app verifies the ECDSA P-256 signature with a key of the server key set in its trust bundle (06-security.md §6.5.2, §6.7; the same keys sign OfflinePasses) BEFORE transmitting any OfflinePass, which prevents leaking the pass to an impersonating station. Normative definition: 06-security.md §6.5.2. The signed canonical body is the object MINUS the signature and signatureAlgorithm fields (OSPP Canonical Form, 06-security.md §4.8).",
   "type": "object",
   "required": [
     "stationId",
@@ -23,7 +23,7 @@
       "type": "string",
       "pattern": "^org_[A-Za-z0-9_-]+$",
       "maxLength": 64,
-      "description": "Issuing organization identifier (org_<uuid>). Binds the station to its operator/tenant; the app MAY cross-check it against the pass's issuing organization."
+      "description": "Issuing organization identifier (org_<uuid>). Binds the station to its operator/tenant. An OfflinePass names no organization (offline-pass.md §2.3), so there is nothing in the pass to cross-check it against."
     },
     "stationPubKey": {
       "$ref": "../common/ec-public-key.schema.json",
@@ -46,7 +46,7 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 1024,
-      "description": "ECDSA P-256 (RFC 6979, low-s normalised) DER signature over the OSPP Canonical Form of the certificate body (all fields except signature and signatureAlgorithm), Base64-encoded. Verified with the server signing public key (provisioning serverVerifyKey)."
+      "description": "ECDSA P-256 (RFC 6979, low-s normalised) DER signature over the OSPP Canonical Form of the certificate body (all fields except signature and signatureAlgorithm), Base64-encoded. Verified by the app with a key of the server key set in its trust bundle (06-security.md §6.5.2, §6.7)."
     }
   }
 }

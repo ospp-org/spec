@@ -10,9 +10,13 @@
 > `stop-service-response` cannot express a rejection at all. See
 > [Release status](../README.md#ble-is-experimental).
 >
-> `common/offline-pass.schema.json` is stable for the MQTT path but cannot express the
-> station-scoping constraint the BLE path requires — blocker
-> [B-2](../KNOWN-ISSUES.md#b-2--a-station-scoped-offlinepass-is-unrepresentable-in-the-authoritative-schema).
+> `common/offline-pass.schema.json` is **stable** and carries no station or organization scope: a
+> pass is valid at any station that accepts offline passes
+> ([`offline-pass.md` §2.3](../spec/profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)).
+>
+> `offline-pass-issuance-request.schema.json` and `offline-pass-issuance-response.schema.json`
+> belong to the offline app–server contract, which is **Draft**
+> ([`profiles/offline/README.md`](../spec/profiles/offline/README.md)).
 >
 > Every other schema here is **stable**.
 
@@ -29,10 +33,12 @@ schemas/
 ├── ble/                                 15 BLE schemas (13 message types + StationIdentity + secure frame) — EXPERIMENTAL
 ├── provisioning-request.schema.json     HTTP provisioning request (Flow §2)
 ├── provisioning-response.schema.json    HTTP provisioning response (Flow §2)
+├── offline-pass-issuance-request.schema.json    HTTP offline pass issuance request (app–server contract §3)
+├── offline-pass-issuance-response.schema.json   HTTP offline pass issuance response (app–server contract §3)
 └── README.md                            This file
 ```
 
-**Total: 86 schema files.**
+**Total: 88 schema files.**
 
 ---
 
@@ -55,7 +61,7 @@ Shared definitions referenced by message schemas via `$ref`.
 | [`credit-amount.schema.json`](common/credit-amount.schema.json) | integer | Credit amount (atomic integer unit) |
 | [`bay-status.schema.json`](common/bay-status.schema.json) | string | Reportable bay state enum (Available, Reserved, Occupied, Finishing, Faulted, Unavailable). The FSM's seventh state, `Unknown`, is not on the wire |
 | [`meter-values.schema.json`](common/meter-values.schema.json) | object | Consumption readings (liquidMl, consumableMl, energyWh) |
-| [`offline-pass.schema.json`](common/offline-pass.schema.json) | object | Complete OfflinePass with allowance, constraints, ECDSA P-256 signature |
+| [`offline-pass.schema.json`](common/offline-pass.schema.json) | object | Complete OfflinePass: the user, the device and its public key (`devicePublicKey`), the signing key's `keyId`, the allowance, the rate constraint and the ECDSA P-256 signature. No station and no organization |
 | [`receipt.schema.json`](common/receipt.schema.json) | object | ECDSA P-256 signed receipt (data + signature + algorithm) |
 | [`service-item.schema.json`](common/service-item.schema.json) | object | Service catalog entry with dual pricing (credits + local currency) |
 | [`mqtt-envelope.schema.json`](common/mqtt-envelope.schema.json) | object | MQTT message envelope (messageId, messageType, action, timestamp, source, protocolVersion, payload, mac) |
@@ -64,12 +70,16 @@ Shared definitions referenced by message schemas via `$ref`.
 
 ## HTTP Schemas (top-level)
 
-Schemas for HTTP request/response bodies that fall outside the MQTT envelope. These payloads run before the operational MQTT session is established or carry transport-agnostic content.
+Schemas for HTTP request/response bodies that fall outside the MQTT envelope: station provisioning, which runs before the operational MQTT session is established, and the pass issuance of the offline app–server contract.
 
 | File | Endpoint | Direction | Spec Reference |
 |------|----------|-----------|----------------|
 | [`provisioning-request.schema.json`](provisioning-request.schema.json) | `POST /api/v1/stations/provision` | Station → Server | [04-flows.md §2](../spec/04-flows.md#2-station-provisioning) |
 | [`provisioning-response.schema.json`](provisioning-response.schema.json) | `POST /api/v1/stations/provision` | Server → Station | [04-flows.md §2](../spec/04-flows.md#2-station-provisioning) |
+| [`offline-pass-issuance-request.schema.json`](offline-pass-issuance-request.schema.json) | `POST /api/v1/offline/passes` | App → Server | [app-contract.md §3](../spec/profiles/offline/app-contract.md#3-pass-issuance) |
+| [`offline-pass-issuance-response.schema.json`](offline-pass-issuance-response.schema.json) | `POST /api/v1/offline/passes` | Server → App | [app-contract.md §3](../spec/profiles/offline/app-contract.md#3-pass-issuance) |
+
+The contract's receipt upload, `POST /api/v1/offline/receipts`, has no schema of its own: its body is [`ble/receipt.schema.json`](ble/receipt.schema.json) and its response body [`mqtt/transaction-event-response.schema.json`](mqtt/transaction-event-response.schema.json) ([app-contract.md §4](../spec/profiles/offline/app-contract.md#4-receipt-upload)).
 
 ---
 
@@ -292,3 +302,4 @@ if (!valid) {
 | [02 — Transport](../spec/02-transport.md) | `common/mqtt-envelope.schema.json` (envelope), `provisioning-response.schema.json` (MQTT connection parameters returned by provisioning) |
 | [04 — Protocol Flows](../spec/04-flows.md) | `provisioning-request.schema.json` + `provisioning-response.schema.json` (Flow §2) |
 | [06 — Security](../spec/06-security.md) | `common/offline-pass.schema.json`, `common/receipt.schema.json` |
+| [Offline app–server contract](../spec/profiles/offline/app-contract.md) | `offline-pass-issuance-request.schema.json` + `offline-pass-issuance-response.schema.json` (§3) |

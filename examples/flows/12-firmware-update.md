@@ -471,7 +471,14 @@ The server recognizes the firmware update boot, verifies the new firmware versio
     "status": "Accepted",
     "serverTime": "2026-02-13T22:02:33.500Z",
     "heartbeatIntervalSec": 30,
-    "sessionKey": "cG9zdC1maXJtd2FyZS1zZXNzaW9uLWtleS0yMDI2LTAyLTEzISE="
+    "sessionKey": "cG9zdC1maXJtd2FyZS1zZXNzaW9uLWtleS0yMDI2LTAyLTEzISE=",
+    "configuration": {
+      "OfflinePassPublicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/HdgUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==",
+      "RevocationEpoch": "42",
+      "OfflineModeEnabled": "true",
+      "OfflineWindowHours": "240",
+      "OfflineTransactionLimit": "1000"
+    }
   }
 }
 ```

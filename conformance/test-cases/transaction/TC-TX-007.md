@@ -121,7 +121,7 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
 
 28. Configure the station for offline mode with an OfflinePass.
 29. Start an offline session via BLE.
-30. Mid-session, increment the station's `RevocationEpoch` (e.g., via ChangeConfiguration with a higher `RevocationEpoch` value, simulating server-issued revocation).
+30. Mid-session, increment the station's `RevocationEpoch` (e.g., via ChangeConfiguration with a higher `RevocationEpoch` value, simulating a platform epoch increment pushed by the server — [`06-security.md` §6.6](../../../spec/06-security.md#66-epoch-based-revocation)).
 31. Verify the station detects the revocation, stops the session, and emits SessionEnded:
     - `payload.reason: "Deauthorized"`
     - `payload.creditsCharged: 0` (MUST be zero — pass invalid)

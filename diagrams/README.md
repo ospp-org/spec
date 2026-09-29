@@ -263,7 +263,7 @@ sequenceDiagram
     rect rgb(255, 243, 224)
         Note over User,Station: OfflinePass Authorization
         User->>BLE: OfflineAuthRequest {offlinePass, counter, sessionProof}
-        Station->>Station: Validate OfflinePass (10 checks)
+        Station->>Station: Validate OfflinePass (nine checks, check 5 withdrawn)
         BLE-->>User: AuthResponse {result: "accepted"}
     end
 
@@ -286,6 +286,7 @@ sequenceDiagram
     end
 
     Note over Station: Reconciles via TransactionEvent when MQTT reconnects
+    Note over User: Uploads its receipt copy when online, the first copy to arrive may settle; once one has settled, the other is answered Duplicate
 ```
 
 ---
@@ -340,7 +341,7 @@ sequenceDiagram
         Broker->>Server: MeterValues [MSG-010]
         Station->>Broker: TransactionEvent (offlineTxId, receipt, txCounter)
         Broker->>Server: TransactionEvent [MSG-007]
-        Server->>Server: Validate receipt (txCounter recorded, not gated)
+        Server->>Server: Dedup, receipt signature, gate, settle, score<br/>(txCounter recorded, not gated)
         Server-->>Broker: TransactionEvent RESPONSE (Accepted)
         Broker-->>Station: Accepted
     end

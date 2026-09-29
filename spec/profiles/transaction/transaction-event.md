@@ -25,7 +25,7 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHOULD**, **RECO
 | `startedAt` | string | Yes | ISO 8601 UTC timestamp of service activation. |
 | `endedAt` | string | Yes | ISO 8601 UTC timestamp of service completion. |
 | `durationSeconds` | integer | Yes | Actual duration in seconds (minimum 1). |
-| `creditsCharged` | integer | Yes | Credits charged for the session. |
+| `creditsCharged` | integer | Yes | Credits the station computed for the session; advisory — the server settles its own recomputation from the signed receipt ([`reconciliation.md` §8](../offline/reconciliation.md#8-wallet-reconciliation)). |
 | `receipt` | object | Yes | Cryptographically signed receipt (see section 4). The `txCounter` is included in the signed receipt data for integrity. |
 | `txCounter` | integer | Yes | Monotonic transaction counter (minimum 1). Also included in the signed receipt data. |
 | `meterValues` | object | No | Resource consumption readings (liquidMl, consumableMl, energyWh). |
@@ -52,7 +52,7 @@ Each status carries **two separate obligations** — whether the station sends t
 | Status | Send it again? | Local record | Meaning |
 |--------------|---|---|---------------------------------------------------|
 | `Accepted` | **MUST NOT** | **MUST** delete | Transaction recorded successfully. |
-| `Duplicate` | **MUST NOT** | **MUST** delete | The server already holds **this same transaction** — same `offlineTxId`, same signed receipt (`reconciliation.md` §3). Nothing is in dispute, so the station's copy has no further purpose. |
+| `Duplicate` | **MUST NOT** | **MUST** delete | The server's ledger already holds **this same transaction** — same `offlineTxId`, same signed receipt (`reconciliation.md` §3). Nothing is in dispute, so the station's copy has no further purpose. |
 | `Rejected` | **MUST NOT** | **MUST** retain, marked rejected | The transaction was refused on its merits — bad receipt, revoked pass, a failed §6 gate check, or an `offlineTxId` that collides with a stored transaction carrying **different** data. |
 | `RetryLater` | **MUST** retry after backoff | **MUST** retain | Server is temporarily unable to process. |
 
@@ -68,7 +68,7 @@ Each status carries **two separate obligations** — whether the station sends t
 4. On `Accepted` or `Duplicate`: the station **MUST NOT** send the transaction again, and **MUST** delete it from its local offline log. Deletion **MAY** be deferred by up to 72 hours so the station keeps a short local audit window (`reconciliation.md` §2 step 5); what it **MUST NOT** do is send the transaction again in the meantime.
 5. On `Rejected`: the station **MUST NOT** retry, and **MUST** retain the transaction in its local log marked as rejected — it is not deleted, because a rejection is the one terminal outcome where the station's copy is still evidence. The station **MUST** flag it for manual investigation, and **SHOULD** report the rejection via a SecurityEvent if the `reason` indicates credential issues.
 6. On `RetryLater`: the station **MUST** retry with exponential backoff (initial 5s, cap 300s (online retry scenario -- server responds RetryLater)). The station **MUST NOT** skip the transaction or proceed to the next.
-7. The server **MUST** validate the `receipt.signature` against the station's known ECDSA public key. If verification fails, the server **MUST** respond with `Rejected`.
+7. The server **MUST** validate the `receipt.signature` against the station's known ECDSA public key — of a receipt whose `offlineTxId` its ledger does not hold, since [`reconciliation.md` §3](../offline/reconciliation.md#3-deduplication-offlinetxid) compares another arrival without verifying it. If verification fails, the server **MUST** respond with `Rejected`.
 8. The server **MUST** record the `txCounter` as forensic evidence and **MUST NOT** condition the response on it. If the counter is not contiguous with the server's record for this station, the server **SHOULD** raise an operator alert on the station and **MUST** process the transaction normally (`reconciliation.md` §4.2).
 
 ## 7. Offline Transaction Integrity
@@ -85,16 +85,16 @@ Each offline transaction includes a monotonic `txCounter`, carried as forensic e
 
 ### 7.2 Deduplication
 
-The server **MUST** deduplicate transactions using the `offlineTxId` field. When a transaction with the same `offlineTxId` already exists, the answer depends on whether the two submissions carry the **same** transaction, and [`reconciliation.md` §3](../offline/reconciliation.md) is the single source of truth for the comparison:
+The server **MUST** deduplicate transactions using the `offlineTxId` field. When the server's ledger already holds a transaction with the same `offlineTxId`, the answer depends on whether the two submissions carry the **same** transaction, and [`reconciliation.md` §3](../offline/reconciliation.md#3-deduplication-offlinetxid) is the single source of truth for the comparison:
 
-- **Same signed `receipt.data`** — a retransmission of a transaction the server already holds. The server **MUST** respond `Duplicate` without re-processing.
+- **Same signed `receipt.data`** — a retransmission of a transaction the ledger holds. The server **MUST** respond `Duplicate` without re-processing.
 - **Different signed `receipt.data`** — two different claims under one `offlineTxId`. The server **MUST** respond `Rejected`, retain both records, and alert the operator (§9 of that profile).
 
 This section previously read *"**MUST** respond with `Duplicate` regardless of payload differences"*, which collapsed the two and, because `Duplicate` orders the station to delete its copy, instructed it to destroy one of the two records `reconciliation.md` §9 requires be retained for comparison.
 
 ### 7.3 Reconciliation
 
-When the station reports `pendingOfflineTransactions > 0` in BootNotification, the server **SHOULD** expect TransactionEvent messages after acceptance. The server **MUST** reconcile offline charges against the user's wallet balance and apply any adjustments (under- or over-charge corrections).
+When the station reports `pendingOfflineTransactions > 0` in BootNotification, the server **SHOULD** expect TransactionEvent messages after acceptance. The server **MUST** settle each offline transaction against the user's wallet as [`reconciliation.md` §8](../offline/reconciliation.md#8-wallet-reconciliation) states: recomputed from the signed receipt, capped by what its authorization allowed, and refund-only where the wallet was debited at authorization.
 
 ## 8. Error Handling
 
@@ -106,9 +106,7 @@ When the station reports `pendingOfflineTransactions > 0` in BootNotification, t
 | Payload semantically invalid | `3015 PAYLOAD_INVALID` | Server responds with `Rejected`. |
 | OfflinePass expired | `2003 OFFLINE_PASS_EXPIRED` | Server responds with `Rejected`. |
 | Pass counter or `(authId, sessionId)` replayed | `2005 OFFLINE_COUNTER_REPLAY` | Server responds with `Rejected` and emits the gate SecurityEvent. |
-| Pass not valid for the reporting station | `2006 OFFLINE_STATION_MISMATCH` | Server responds with `Rejected`. |
 | OfflinePass individually revoked | `2014 OFFLINE_PASS_REVOKED` | Server responds with `Rejected`. |
-| Pass issued for a different operator | `2015 OFFLINE_ORG_MISMATCH` | Server responds with `Rejected`. |
 | Pass bound to a different user than the envelope claims | `2016 OFFLINE_USER_MISMATCH` | Server responds with `Rejected`. |
 | Signed receipt disagrees with the envelope or the pass's device binding | `2017 OFFLINE_RECEIPT_MISMATCH` | Server responds with `Rejected`; both records retained. |
 | Server internal error | `6001 SERVER_INTERNAL_ERROR` | Server responds with `RetryLater`. |
@@ -136,8 +134,8 @@ When the station reports `pendingOfflineTransactions > 0` in BootNotification, t
     "durationSeconds": 285,
     "creditsCharged": 48,
     "receipt": {
-      "data": "eyJiYXlJZCI6ImJheV9hMWIyYzNkNCIsImNyZWRpdHNDaGFyZ2VkIjo0OCwiZGV2aWNlSWQiOiJkZXZfZDRlNWY2YTciLCJkdXJhdGlvblNlY29uZHMiOjI4NSwiZW5kZWRBdCI6IjIwMjYtMDItMTNUMDk6NTY6NDUuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6NDcwLCJlbmVyZ3lXaCI6MTM4LCJsaXF1aWRNbCI6NDI4MDB9LCJvZmZsaW5lUGFzc0lkIjoib3Bhc3NfYThiOWMwZDFlMmYzIiwib2ZmbGluZVR4SWQiOiJvdHhfZDRlNWY2YTciLCJwYXNzQ291bnRlciI6Nywic2VydmljZUlkIjoic3ZjX2VjbyIsInN0YXJ0ZWRBdCI6IjIwMjYtMDItMTNUMDk6NTI6MDAuMDAwWiIsInR4Q291bnRlciI6NSwidXNlcklkIjoic3ViXzlhOGI3YzZkIn0=",
-      "signature": "MEUCIQDJqpr+TRAF2ZrcQxtLrpfPOzWvHKSvLmeyZcWNdwApNwIge7pIaiE+fs+rC+fHSP6krvyLG9jG9ny6pL6WqQBiE/A=",
+      "data": "eyJiYXlJZCI6ImJheV9hMWIyYzNkNCIsImJvb2tlZER1cmF0aW9uU2Vjb25kcyI6MzAwLCJjbG9ja1N0YXRlIjoiU3luY2hyb25pemVkIiwiY3JlZGl0c0NoYXJnZWQiOjQ4LCJkZXZpY2VJZCI6ImRldl9kNGU1ZjZhNyIsImR1cmF0aW9uU2Vjb25kcyI6Mjg1LCJlbmRSZWFzb24iOiJMb2NhbCIsImVuZGVkQXQiOiIyMDI2LTAyLTEzVDA5OjU2OjQ1LjAwMFoiLCJtZXRlclZhbHVlcyI6eyJjb25zdW1hYmxlTWwiOjQ3MCwiZW5lcmd5V2giOjEzOCwibGlxdWlkTWwiOjQyODAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2E4YjljMGQxZTJmMyIsIm9mZmxpbmVUeElkIjoib3R4X2Q0ZTVmNmE3IiwicGFzc0NvdW50ZXIiOjcsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDA5OjUyOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJ0eENvdW50ZXIiOjUsInVzZXJJZCI6InN1Yl85YThiN2M2ZCJ9",
+      "signature": "MEUCIQDvXKXdsf7FL4XoHMrbeVPMoJEUfwDCvoVs69+tnVT0BAIgJfTrVkx0FoidyoTuZBeABEYm7gDg9IXgepxHJBcRGHw=",
       "signatureAlgorithm": "ECDSA-P256-SHA256"
     },
     "txCounter": 5,
@@ -210,4 +208,4 @@ When the station reports `pendingOfflineTransactions > 0` in BootNotification, t
 - Receipt: [`receipt.schema.json`](../../../schemas/common/receipt.schema.json)
 - Meter Values: [`meter-values.schema.json`](../../../schemas/common/meter-values.schema.json)
 - Credit Amount: [`credit-amount.schema.json`](../../../schemas/common/credit-amount.schema.json)
-- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 2002--2006, 2014--2017, 1005, 3015, 6001)
+- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 2002--2005, 2014, 2016, 2017, 1005, 3015, 6001)

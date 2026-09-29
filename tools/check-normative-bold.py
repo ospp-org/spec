@@ -30,11 +30,28 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-09-10  (unreleased)  430 unbolded, 1303 bolded spans — the two counts 0.39.0
+    (this HEAD) 2026-09-29  (unreleased)  406 unbolded, 1414 bolded spans — the offline model and
+                                   its money rules rewritten, and its consistency review. Unbolded
+                                   FALLS BY TWENTY-FOUR and BASELINE follows it down to 406:
+                                   `06-security.md` 80 -> 73, `profiles/offline/reconciliation.md`
+                                   8 -> 0, `03-messages.md` 38 -> 35, `01-architecture.md` 44 -> 42,
+                                   `08-configuration.md` 41 -> 39 and `profiles/offline/offline-pass.md`
+                                   2 -> 0 — each a plain keyword in a sentence the rewrite replaced,
+                                   withdrew or rewrote, bolded where it still binds and put in
+                                   backticks where it is quoted; every keyword the rewrite adds is
+                                   bolded on the way in. Both numbers RE-DERIVED on this tree. The
+                                   companion rises by 63 from v0.44.0 (436d785), which reads 430 and
+                                   1351 from a clean `git archive` of the tag. No row records v0.40.0
+                                   to v0.44.0, so the 48 spans between the row below and v0.44.0 are
+                                   recorded here, not attributed to a release.
+    ab69db0  2026-09-10  v0.39.1   430 unbolded, 1303 bolded spans — the two counts 0.39.0
                                    invalidated. Both numbers UNCHANGED from the row below: 0.39.1
                                    moves no normative prose at all, only figures the specification
                                    states about itself, which is exactly the shape the 0.33.1 row
                                    further down records. RE-DERIVED on this tree rather than carried.
+                                   STAMPED RETROSPECTIVELY on 2026-09-29: written as "(this HEAD)
+                                   ... (unreleased)" and never stamped when v0.39.1 was cut; a clean
+                                   `git archive` of the tag reads the same two numbers.
     3df7b3d  2026-09-10  v0.39.0   430 unbolded, 1303 bolded spans, RE-MEASURED from a clean
                                    `git archive` of the tag — the rounding rule the
                                    billing operand never had, and the clock obligation that was
@@ -265,7 +282,7 @@ import re
 import sys
 from collections import Counter
 
-BASELINE = 430
+BASELINE = 406
 
 KEYWORD = re.compile(r'\b(MUST NOT|MUST|SHALL NOT|SHALL)\b')
 FENCE = re.compile(r'```.*?```', re.S)

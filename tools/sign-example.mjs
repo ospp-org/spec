@@ -11,13 +11,14 @@
 //
 //   1. RECEIPT  — input has a `receipt = {data, signature, signatureAlgorithm}`
 //      wrapper. The signed body is the outer wrapper's 12 receipt fields
-//      (spec §6.2; 10 shared + 2 form-specific, pass/auth `oneOf`) plus `meterValues` when present (omitted from the
-//      canonical body when absent per Note 4). MQTT TransactionEvent envelopes
-//      omit `deviceId` outer; we synthesise it from `offlineTxId` so the inner
-//      signed body is well-formed.  → typically signed with `station-test-key`.
+//      (spec §6.2; 10 shared + 2 form-specific, pass/auth `oneOf`), the four signed-only
+//      fields of §6.2 (receipt-fields.mjs), plus `meterValues` when present (omitted from the
+//      canonical body when absent per §6.2). MQTT TransactionEvent envelopes
+//      omit `deviceId` outer; the one already signed is kept, else one is synthesised
+//      from `offlineTxId`, so the inner signed body is well-formed.  → typically signed with `station-test-key`.
 //
 //   2. OFFLINE_PASS — input has an `offlinePass` object containing the 11
-//      required pass fields per `schemas/common/offline-pass.schema.json` plus
+//      signed pass fields of `schemas/common/offline-pass.schema.json` plus
 //      `signature` + `signatureAlgorithm`. The signed body is the pass object
 //      with those two output fields stripped, canonicalised per spec §4.8.
 //      The output `signature` lives at `offlinePass.signature`.
@@ -40,6 +41,7 @@ import { createHash, createHmac } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { argv, exit } from 'node:process';
 import { canonicalForm } from './canonical-form.mjs';
+import { envelopeAbsentDeviceId, signedOnlyFields } from './receipt-fields.mjs';
 import { ecdsaSign, SIGNATURE_ALGORITHM } from '@ospp/protocol/server';
 
 const SESSION_KEY_PATH = 'conformance/test-keys/session-test-key.bin';
@@ -81,7 +83,7 @@ function buildReceiptBody(outer, file) {
   const body = {};
   for (const field of [...RECEIPT_SHARED_FIELDS, ...formFields]) {
     if (field === 'deviceId' && !(field in outer)) {
-      body.deviceId = deriveDeviceId(outer.offlineTxId);
+      body.deviceId = envelopeAbsentDeviceId(outer, deriveDeviceId);
       continue;
     }
     if (!(field in outer)) {
@@ -93,6 +95,8 @@ function buildReceiptBody(outer, file) {
   if (outer.meterValues !== undefined && outer.meterValues !== null) {
     body.meterValues = outer.meterValues;
   }
+  // §6.2: the four signed-only fields are in no envelope; see receipt-fields.mjs.
+  Object.assign(body, signedOnlyFields(outer));
   return body;
 }
 
@@ -116,6 +120,8 @@ const OFFLINE_PASS_REQUIRED_FIELDS = [
   'passId',
   'sub',
   'deviceId',
+  'devicePublicKey',
+  'keyId',
   'issuedAt',
   'expiresAt',
   'policyVersion',

@@ -25,8 +25,9 @@
 //
 // =============================================================================
 
-import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { createHash, createHmac, createPublicKey, timingSafeEqual } from 'node:crypto';
+import { readFileSync, readdirSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { argv, exit } from 'node:process';
 import { canonicalForm } from './canonical-form.mjs';
 import { ecdsaVerify } from '@ospp/protocol/server';
@@ -60,6 +61,27 @@ function parseArgs(args) {
     exit(2);
   }
   return opts;
+}
+
+// Decoded receipt bodies are validated against receipt-data.schema.json with the ajv the
+// repository already installs for verify-protocol.sh. Built once, on first use.
+const require = createRequire(import.meta.url);
+let receiptDataValidator = null;
+let receiptDataAjv = null;
+function receiptDataErrors(body) {
+  if (!receiptDataValidator) {
+    const Ajv2020 = require('ajv/dist/2020').default;
+    const addFormatsModule = require('ajv-formats');
+    const addFormats = addFormatsModule.default ?? addFormatsModule;
+    receiptDataAjv = new Ajv2020({ allErrors: true, strict: false });
+    addFormats(receiptDataAjv);
+    const dir = new URL('../schemas/common/', import.meta.url);
+    for (const f of readdirSync(dir)) {
+      if (f.endsWith('.schema.json')) receiptDataAjv.addSchema(JSON.parse(readFileSync(new URL(f, dir), 'utf-8')));
+    }
+    receiptDataValidator = receiptDataAjv.getSchema('https://ospp-standard.org/schemas/v1/common/receipt-data.schema.json');
+  }
+  return receiptDataValidator(body) ? null : receiptDataAjv.errorsText(receiptDataValidator.errors);
 }
 
 function hmacBase64(keyBytes, msg) {
@@ -269,6 +291,15 @@ function verifyReceipt(outer, file, pubPem) {
     return { file, ok: false, reason: 'receipt.data is not OSPP-canonical' };
   }
 
+  // The signed body is itself a schema instance, and no other gate decodes it: the vector
+  // validators see only the Base64 string. Validate it against receipt-data.schema.json here,
+  // which is what proves every signed receipt carries the fields settlement reads
+  // (06-security.md §6.2) and nothing the closed body forbids.
+  const bodyErrors = receiptDataErrors(body);
+  if (bodyErrors) {
+    return { file, ok: false, reason: `decoded receipt.data fails receipt-data.schema.json: ${bodyErrors}` };
+  }
+
   const mismatches = [];
   for (const k of Object.keys(body)) {
     if (k in outer) {
@@ -315,20 +346,30 @@ function verifyOfflinePass(outer, file, pubPem) {
 
   // Profile constraint (beyond JSON-schema validity): a "valid" OfflinePass
   // vector MUST also satisfy the offline-pass profile. Maximum validity is
-  // 24 hours from issuedAt (offline-pass.md §2). Schema-validity is necessary
-  // but not sufficient — this guards a vector marked "valid" from silently
-  // shipping a profile violation (N14: both offline-auth-request vectors
-  // shipped a 7-day window). Other profile invariants can be added here.
+  // the maximum platform pass lifetime, 864000 s — ten days — from issuedAt
+  // (offline-pass.md §6). Schema-validity is necessary but not
+  // sufficient — this guards a vector marked "valid" from silently shipping a
+  // profile violation. Other profile invariants can be added here.
   if (typeof body.issuedAt === 'string' && typeof body.expiresAt === 'string') {
     const issuedMs = Date.parse(body.issuedAt);
     const expiresMs = Date.parse(body.expiresAt);
     if (Number.isFinite(issuedMs) && Number.isFinite(expiresMs)) {
-      const MAX_VALIDITY_MS = 24 * 60 * 60 * 1000;
+      const MAX_VALIDITY_MS = 864000 * 1000;
       if (expiresMs - issuedMs > MAX_VALIDITY_MS) {
         const hours = ((expiresMs - issuedMs) / 3_600_000).toFixed(1);
-        return { file, ok: false, reason: `offlinePass validity ${hours}h exceeds the 24h profile maximum (offline-pass.md §2)` };
+        return { file, ok: false, reason: `offlinePass validity ${hours}h exceeds the 240h (10-day) maximum lifetime (offline-pass.md §6)` };
       }
     }
+  }
+
+  // The pass names the key that signed it (offline-pass.md §3). The name must be the
+  // keyId of the key it verified under — the 06-security.md §4.3 construction over that
+  // key's DER SubjectPublicKeyInfo — or a station selecting by keyId would pick nothing.
+  const expectedKeyId = createHash('sha256')
+    .update(createPublicKey(pubPem).export({ type: 'spki', format: 'der' }))
+    .digest().subarray(0, 16).toString('base64url');
+  if (body.keyId !== expectedKeyId) {
+    return { file, ok: false, reason: `offlinePass.keyId ${body.keyId} is not the keyId of the verifying key (${expectedKeyId})` };
   }
 
   // Cross-check pass fields against any outer-level fields that mirror them

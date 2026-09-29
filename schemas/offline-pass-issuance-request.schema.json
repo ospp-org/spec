@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/offline-pass-issuance-request.schema.json",
+  "title": "OfflinePassIssuanceRequest",
+  "description": "HTTP request body sent by the mobile app to the server's pass issuance endpoint (POST /api/v1/offline/passes) per spec/profiles/offline/app-contract.md 3. Carries the device key the server binds into the pass. The server's response is defined by offline-pass-issuance-response.schema.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "deviceId",
+    "devicePublicKey"
+  ],
+  "properties": {
+    "deviceId": {
+      "$ref": "common/device-id.schema.json",
+      "description": "Identifier of the device requesting the pass. Copied into the pass's deviceId."
+    },
+    "devicePublicKey": {
+      "$ref": "common/ec-public-key.schema.json",
+      "description": "The P-256 public key of the device key, compressed SEC1, Base64: a key pair the app generated in the phone's hardware-backed keystore with a non-exportable private key (spec/profiles/offline/app-contract.md 3.2). Copied into the pass's devicePublicKey."
+    }
+  }
+}

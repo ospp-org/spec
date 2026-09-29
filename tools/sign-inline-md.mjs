@@ -27,7 +27,7 @@
 //
 // Usage:
 //   node tools/sign-inline-md.mjs <file.md...>          # explicit list
-//   node tools/sign-inline-md.mjs --all                  # the eight known files
+//   node tools/sign-inline-md.mjs --all                  # every file in ALL_FILES below
 //
 // =============================================================================
 
@@ -35,6 +35,7 @@ import { createHash, createHmac } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { argv, exit } from 'node:process';
 import { canonicalForm } from './canonical-form.mjs';
+import { envelopeAbsentDeviceId, signedOnlyFields } from './receipt-fields.mjs';
 import { ecdsaSign, SIGNATURE_ALGORITHM } from '@ospp/protocol/server';
 
 const KEY_DIR = 'conformance/test-keys';
@@ -74,6 +75,10 @@ const ALL_FILES = [
   'examples/flows/04-full-offline-session.md',
   'examples/flows/05-partial-a-session.md',
   'examples/flows/06-partial-b-session.md',
+  // The reconciliation walkthrough carried three TransactionEvents whose receipt.data decoded to
+  // a four-field body no schema admits, under signatures that verified nothing. It is the one
+  // flow document about settling signed receipts, so its receipts are signed like the rest.
+  'examples/flows/11-reconciliation.md',
 ];
 
 const STATION_KEY = readFileSync(`${KEY_DIR}/station-test-key.pem`, 'utf-8');
@@ -94,7 +99,7 @@ const RECEIPT_SHARED_FIELDS = [
 const RECEIPT_PASS_FORM_FIELDS = ['offlinePassId','passCounter'];
 const RECEIPT_AUTH_FORM_FIELDS = ['authId','sessionId'];
 const OFFLINE_PASS_FIELDS = [
-  'passId','sub','deviceId','issuedAt','expiresAt','policyVersion',
+  'passId','sub','deviceId','devicePublicKey','keyId','issuedAt','expiresAt','policyVersion',
   'revocationEpoch','offlineAllowance','constraints',
 ];
 
@@ -117,7 +122,7 @@ function deriveReceiptStaleFields(outer) {
   const h = (label) => createHash('sha256').update(`${label}|${seed}`).digest('hex');
   const synthesised = new Set();
   if (!('userId' in outer))        outer.userId        = `sub_${h('userId').slice(0, 16)}`;
-  if (!('deviceId' in outer))    { outer.deviceId      = deriveDeviceId(outer.offlineTxId); synthesised.add('deviceId'); }
+  if (!('deviceId' in outer))    { outer.deviceId      = envelopeAbsentDeviceId(outer, deriveDeviceId); synthesised.add('deviceId'); }
   // Auth-form (Partial A) bodies carry {authId, sessionId} and no pass; synthesise
   // the pass-form {offlinePassId, passCounter} only for pass-form bodies.
   const isAuthForm = ('authId' in outer) || ('sessionId' in outer);
@@ -139,6 +144,8 @@ function signReceipt(outer) {
     body[f] = outer[f];
   }
   if (outer.meterValues != null) body.meterValues = outer.meterValues;
+  // The four signed-only fields (06-security.md §6.2) are in no envelope; see receipt-fields.mjs.
+  Object.assign(body, signedOnlyFields(outer));
   const bytes = Buffer.from(canonicalForm(body), 'utf-8');
   outer.receipt = {
     data: bytes.toString('base64'),

@@ -124,9 +124,14 @@ specification. Where a definition involves a requirement, normative language
   the envelope format. See [Chapter 03, Conventions](03-messages.md).
 
 **Epoch Revocation**
-: A mechanism for revoking **OfflinePass** tokens by advancing a monotonic epoch
-  counter on the server. Stations reject any OfflinePass whose epoch is older than
-  the station's current epoch. See the [Offline profile](profiles/offline/README.md).
+: A mechanism for revoking every outstanding **OfflinePass** at once by advancing one
+  monotonic counter, the `RevocationEpoch`. The counter belongs to the platform: there is
+  one for the whole platform, only a Platform Admin increments it, and every station of
+  every tenant holds the platform value. A station rejects any OfflinePass whose
+  `revocationEpoch` is lower than the value it holds. Revoking one user's passes is not an
+  epoch: the server marks them revoked and reads the mark wherever it is in the loop — at
+  Partial-B authorize time and at reconciliation.
+  See [Chapter 06 §6.6](06-security.md#66-epoch-based-revocation).
 
 **EVENT**
 : A message type for unsolicited, unidirectional notifications. EVENTs do not expect
@@ -141,6 +146,15 @@ specification. Where a definition involves a requirement, normative language
   A faulted bay **MUST NOT** accept new sessions or reservations. The station reports
   faulted status via `StatusNotification` with a diagnostic error code.
   See [Chapter 05-state-machines](05-state-machines.md).
+
+**FraudDetected**
+: The SecurityEvent type the **server** records for a reconciled offline transaction whose
+  fraud score falls in the Review, Alert or Block band; a station **MUST NOT** emit it. The
+  server scores a transaction only after settling it, the score never changes the settled
+  amount, and a scored transaction is still answered `Accepted` — in the Block band it stays
+  settled and flagged, the user is blocked, and the operator is alerted.
+  See [Chapter 06 §7.4](06-security.md#74-fraud-detection--offline-transactions) and
+  [`security-event.md` §4](profiles/security/security-event.md#4-event-types).
 
 **FSM (Finite State Machine)**
 : A computational model that defines the valid states and transitions for OSPP
@@ -244,10 +258,18 @@ specification. Where a definition involves a requirement, normative language
 
 **Offline Pass**
 : A digitally signed authorization token that allows a station to start a session
-  without real-time server connectivity. The server signs the OfflinePass with
-  **ECDSA P-256** (RFC 6979 deterministic nonces); the station verifies the signature
-  offline using a pre-distributed public key. An OfflinePass includes a credit limit,
-  expiry time, subscriber identifier, and revocation epoch.
+  without real-time server connectivity. It belongs to the user it is issued to and to that
+  user's device, names no station and no organization, and is valid at any station that
+  accepts offline passes, whatever tenant operates it
+  ([`offline-pass.md` §2.3](profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)).
+  The server signs the OfflinePass with **ECDSA P-256** (RFC 6979 deterministic nonces)
+  under a key of its key set, named by the pass's `keyId`; the station verifies the
+  signature offline with that key of the set it holds
+  ([Chapter 06 §6.7](06-security.md#67-server-signing-key-rotation-ecdsa-p-256)). An
+  OfflinePass includes the subscriber and device identifiers, the device's public key, its
+  credit and use limits, its expiry, and the platform revocation epoch. It lives for one
+  platform-wide lifetime, 3 days by default and never more than 10 days
+  ([`offline-pass.md` §6](profiles/offline/offline-pass.md#6-lifecycle)).
   See the [Offline profile](profiles/offline/README.md) and [Chapter 06 §6.1](06-security.md#61-offlinepass-structure).
 
 **Offline Transaction**
@@ -303,17 +325,29 @@ specification. Where a definition involves a requirement, normative language
 
 **Receipt**
 : A cryptographic proof of a completed session, signed by the station using
-  **ECDSA** P-256. A receipt contains the session identifier, bay identifier,
-  subscriber identifier, start/end timestamps, final meter totals, and billed
-  amount. Receipts are available via MQTT (`TransactionEvent`) and BLE (Receipt
-  characteristic). See the [Transaction profile](profiles/transaction/README.md)
+  **ECDSA** P-256. A receipt names the station that signed it and carries the bay,
+  subscriber, device and service, the start/end timestamps, the booked and delivered
+  durations, how the session ended, the state of the station's clock, final meter totals,
+  and the credits the station computed; `receipt_fields` in
+  [Chapter 06 §6.2](06-security.md#62-transaction-receipt-signing--ecdsa-p-256) is the
+  complete list. The server settles by its own recomputation, and the station's credit figure
+  is advisory. Receipts are available via MQTT (`TransactionEvent`) and BLE (Receipt
+  characteristic), and the app uploads its copy to the server
+  ([`app-contract.md` §4](profiles/offline/app-contract.md#4-receipt-upload)).
+  See the [Transaction profile](profiles/transaction/README.md)
   and [Chapter 06](06-security.md).
 
 **Reconciliation**
 : The process of synchronizing **Offline Transactions** with the server after
-  connectivity is restored. The station **MUST** upload all pending offline
-  transaction records, and the server **MUST** validate, deduplicate, and apply
-  them to subscriber accounts. See the [Offline profile](profiles/offline/README.md).
+  connectivity is restored. The station **MUST** upload every offline transaction
+  record the server has not yet answered `Accepted`, `Duplicate` or `Rejected`, and the app **MUST** upload its own copy of every receipt it holds that the server has not yet answered `Accepted`, `Duplicate` or `Rejected`;
+  whichever copy of a receipt arrives first may settle, and once one has settled the other is a `Duplicate`. The
+  server **MUST** take each through deduplication and, when deduplication does not answer it,
+  receipt signature verification and the re-validation gate, then settle it — never above what its authorization allowed — and
+  only then score it for fraud, which never changes the settled amount. A debit that
+  leaves the wallet below zero leaves its transaction pending until the user next tops up.
+  See [`reconciliation.md`](profiles/offline/reconciliation.md) and
+  [`app-contract.md` §4](profiles/offline/app-contract.md#4-receipt-upload).
 
 **REQUEST**
 : A message type that initiates an operation and expects exactly one **RESPONSE**

@@ -140,7 +140,7 @@ Make sure you understand:
 | [03 — Messages](../spec/03-messages.md) | All 40 messages with field definitions | When implementing each message |
 | [04 — Flows](../spec/04-flows.md) | 15 end-to-end protocol flows | When implementing each flow |
 | [06 — Security](../spec/06-security.md) | Crypto, HMAC, OfflinePass, receipts | Before writing any crypto code |
-| [07 — Errors](../spec/07-errors.md) | 120 error codes, retry policies, circuit breaker | When implementing error handling |
+| [07 — Errors](../spec/07-errors.md) | 118 error codes, retry policies, circuit breaker | When implementing error handling |
 
 ---
 
@@ -153,7 +153,7 @@ A station needs:
 - **Network connectivity** — Ethernet (preferred), WiFi, or cellular for MQTT
 - **BLE 4.2+** (recommended 5.0+) — For offline mode. LE Secure Connections (LESC) pairing is OPTIONAL — channel security is application-layer (ECDH + StationIdentity certificate + ChaCha20-Poly1305 AEAD), not link-layer pairing
 - **Secure storage (NVS)** — For TLS certificates, ECDSA private keys, configuration
-- **Real-time clock** — Accuracy matters for OfflinePass validation (synced via Heartbeat)
+- **Real-time clock** — Accuracy matters for OfflinePass validation (synced via Heartbeat). Offline durations use a **monotonic** timer instead: `OfflineWindowHours` and a receipt's `durationSeconds` never read the wall clock
 - **1+ bays** — Each bay has relay-controlled services (pumps, valves, etc.)
 - **Meter hardware** — Liquid flow, electricity, consumable dispensing (for MeterValues)
 
@@ -378,7 +378,7 @@ If MQTT drops during an active session:
 
 1. **Do NOT stop the hardware.** The service continues.
 2. Switch to BLE-available mode (accept offline sessions)
-3. Buffer the **MUST-buffer** categories — TransactionEvent (min 1000, **never** discard), SessionEnded (one per session that ended while you could not send, **never** discard — it is the sole billing source for a session that ended with no StopService to answer), SecurityEvent (200, FIFO). StatusNotification and MeterValues are **regenerable and MAY be discarded**; do not spend the buffer on them. The `MUST` storage level is **512 KB** — and **it does not hold the categories in this bullet.** [`01-architecture.md` §6.5](../spec/01-architecture.md) derives what they cost: 1000 TransactionEvents (1.2 MB) + 1000 SessionEnded (250 KB) + 200 SecurityEvents (120 KB) + overhead = **~1.6 MB**, and §6.5 records the gap between the two as OPEN because raising a mandatory storage level changes the bill of materials of every station. **Size new hardware to the derived figure, not to the 512 KB level row.** At 90% of the TransactionEvent buffer, reject new StartService with `5111 BUFFER_FULL`; at 100%, enter degraded mode and refuse all new sessions (§6.5)
+3. Buffer the **MUST-buffer** categories — TransactionEvent (min 1000, **never** discard), SessionEnded (one per session that ended while you could not send, **never** discard — it is the sole billing source for a session that ended with no StopService to answer), SecurityEvent (200, FIFO). StatusNotification and MeterValues are **regenerable and MAY be discarded**; do not spend the buffer on them. The `MUST` storage level is **512 KB** — and **it does not hold the categories in this bullet.** [`01-architecture.md` §6.5](../spec/01-architecture.md#65-offline-message-buffering) derives what they cost: 1000 TransactionEvents (1.3 MB) + 1000 SessionEnded (250 KB) + 200 SecurityEvents (120 KB) + overhead = **~1.7 MB**, and §6.5 records the gap between the two as OPEN because raising a mandatory storage level changes the bill of materials of every station. **Size new hardware to the derived figure, not to the 512 KB level row.** At 90% of the TransactionEvent buffer, reject new StartService with `5111 BUFFER_FULL`; at 100%, enter degraded mode and refuse all new sessions (§6.5)
 4. Attempt reconnection with exponential backoff: 1s → 2s → 4s → 8s → 16s → 30s max, with 30% jitter
 5. On reconnect: Full boot sequence (BootNotification, StatusNotification per bay)
 6. Flush buffered messages after boot completes
@@ -408,7 +408,7 @@ Station notifies FFF4: Challenge {stationNonce, stationCert, stationEphemeralPub
   → App verifies stationCert (aborts, sends no pass, if invalid)
   → both derive SessionKey via ECDH + HKDF; AEAD channel established
 App writes FFF3: OfflineAuthRequest {offlinePass, counter, sessionProof}   [AEAD-encrypted]
-  → Station validates OfflinePass (10 checks)
+  → Station validates OfflinePass (nine checks)
 Station notifies FFF4: AuthResponse {result: "Accepted"}   [AEAD-encrypted]
 App writes FFF3: StartServiceRequest {bayId, serviceId, programNumber,
                                       requestedDurationSeconds}          [AEAD-encrypted]
@@ -443,29 +443,43 @@ sessionProof = Base64( HMAC-SHA256( SessionKey,
 
 If the proof doesn't match, reject immediately — it means the sender didn't participate in the BLE handshake. The canonical formula lives in `spec/profiles/offline/ble-handshake.md` §4.1 (`spec/06-security.md` §6.5.1 points to it). The prior 4-input hex form (binding `bayId`/`serviceId`) is **withdrawn** in v0.6.0 — bay/service selection moved to the authenticated `StartService` step inside the AEAD channel.
 
-### 2.10 OfflinePass Validation (10 checks, 9 of which a station can perform)
+### 2.10 OfflinePass Validation (10 checks, #5 withdrawn: a station performs nine)
 
-When you receive an OfflineAuthRequest, validate the OfflinePass in this order:
+When you receive an OfflineAuthRequest, validate the OfflinePass in this order
+([`06-security.md` §6.1.1](../spec/06-security.md#611-offlinepass-validation--10-checks)):
 
 | # | Check | Reject Code | What to Verify |
 |:-:|-------|:-----------:|----------------|
-| 1 | Signature | `2002` | ECDSA P-256 signature valid against `OfflinePassPublicKey` (cached previous key also accepted during the grace period) |
-| 2 | Expiry | `2003` | `expiresAt` is in the future |
-| 3 | Epoch | `2004` | `revocationEpoch` >= your station's configured `RevocationEpoch` |
+| 1 | Signature | `2002` | ECDSA P-256 signature valid under the key of your `OfflinePassPublicKey` set that the pass's `keyId` names; a `keyId` naming no key of the set fails |
+| 2 | Expiry | `2003` | `expiresAt` is in the future, and the pass is no older than your `OfflinePassMaxAge` |
+| 3 | Epoch | `2004` | `revocationEpoch` >= the platform `RevocationEpoch` your station holds |
 | 4 | Device | `2002` | `deviceId` matches the `deviceId` from the Hello message |
-| 5 | Station | `2006` | **Not evaluable offline — skip it.** The allowlist is `allowed_station_ids` on the *server's* pass record, not a wire field; `offline-pass.schema.json` has no member for it and is `additionalProperties: false` at both levels ([`06-security.md` §6.1.1](../spec/06-security.md), KNOWN-ISSUES B-2). The server enforces it at reconcile (`reconciliation.md` §6.1 check #8) |
-| 6 | Uses | `4002` | This pass hasn't exceeded `maxUses` on your station |
-| 7 | Total credits | `4002` | Cumulative credits from this pass haven't exceeded `maxTotalCredits` |
+| 5 | *Withdrawn* | — | A pass carries no station or organization scope and is valid at any station that accepts offline passes ([`offline-pass.md` §2.3](../spec/profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)). The number is not reused |
+| 6 | Uses | `4002` | The transactions already counted against this pass on your station are fewer than `maxUses` |
+| 7 | Total credits | `4002` | Credits already counted for this pass **plus** this request's estimated cost do not exceed `maxTotalCredits` |
 | 8 | Per-TX credits | `4004` | Requested service cost <= `maxCreditsPerTx` |
 | 9 | Interval | `4003` | Time since last TX from this pass >= `minIntervalSec` |
 | 10 | Counter | `2005` | `counter` > last seen counter for this pass on your station |
 
 **Stop at the first failure.** Don't reveal which checks passed.
 
+**A request above a limit is refused, never reduced** — do not shorten or re-price the service to
+fit `maxCreditsPerTx` or what remains of `maxTotalCredits`
+([`offline-pass.md` §2.1](../spec/profiles/offline/offline-pass.md#21-offlineallowance-object)).
+**Your own offline limits apply as well:** refuse a pass you would otherwise accept on your own
+validation with `4002` when `OfflineModeEnabled` is `false`, when more than `OfflineWindowHours`
+have elapsed since your last successful MQTT connection, or when you already hold
+`OfflineTransactionLimit` offline transactions the server has not yet answered `Accepted`, `Duplicate` or `Rejected`
+([`offline-pass.md` §2.2](../spec/profiles/offline/offline-pass.md#22-constraints-object)). What
+you cannot check offline — a block or an individual revocation, whenever issued, an epoch the
+platform moved after you last received configuration, use at other stations, the user's balance —
+the server acts on at Partial-B authorize time and at reconciliation, except the balance, which
+gates no wash on a pass ([`offline-pass.md` §5](../spec/profiles/offline/offline-pass.md#5-revocation)).
+
 You need to persist (in flash/NVS):
 - Per-pass usage counters (uses, total credits, last counter, last timestamp)
-- Your station's `RevocationEpoch` value
-- The server's ECDSA P-256 verify key (`OfflinePassPublicKey`)
+- The platform `RevocationEpoch` you last received
+- The server key set (`OfflinePassPublicKey`): every value you receive is the whole set and replaces the one you hold; there is no cached previous key and no grace period ([`06-security.md` §6.7](../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256))
 
 ### 2.11 Receipt Signing
 
@@ -476,6 +490,11 @@ The signed field set is **discriminated** — pass-form (`offlinePassId` + `pass
 [`06-security.md` §6.2](../spec/06-security.md) and
 [`schemas/common/receipt-data.schema.json`](../schemas/common/receipt-data.schema.json). Read it there;
 this guide does not reproduce it, for the same reason §2.6 does not reproduce the bay transition table.
+Both forms sign four fields that settlement reads and that no envelope repeats, the TransactionEvent's
+and the FFF6 Receipt's included: `stationId`, `endReason` (a stop the customer requested over BLE is
+`Local`), `bookedDurationSeconds` and `clockState` — `Synchronized` when your clock has been set from
+the server since you booted, `Unsynchronized` otherwise
+([`06-security.md` §6.2](../spec/06-security.md#62-transaction-receipt-signing--ecdsa-p-256)).
 
 ```
 1. Build receipt_fields for the applicable form (06-security.md §6.2 Note 2).
@@ -507,13 +526,13 @@ Each offline transaction has a monotonically increasing `txCounter`:
 ```
 txCounter: monotonically increasing integer (1, 2, 3, ...)
 
-It starts at 1 for the first offline transaction after a station BOOT or sync
-— not once per lifetime — and increments by exactly 1 thereafter.
+It starts at 1 for the station's first offline transaction and increments
+by exactly 1 thereafter — across reboots and across syncs. It is never reset.
 The counter is signed into the receipt and recorded by the server as
 forensic evidence. It does NOT gate settlement.
 ```
 
-The counter is monotonic *within a boot epoch*, and restarting it at 1 after a reboot is conforming, not a fault ([`reconciliation.md` §4.1](../spec/profiles/offline/reconciliation.md) step 1). Do not persist it across reboots in the belief that it must never repeat: §4.2 of the same document states that a lower or repeated `txCounter` **MUST NOT** be answered `Duplicate`, precisely because a rebooted station legitimately restarts at 1. A discontinuity (e.g. 3 -> 5) raises an operator alert on the **station** and the transaction settles normally — it is not scored against the user, and it never withholds money. Be clear about what it does *not* buy you: a counter you generate and sign yourself cannot prove to anyone else that you reported everything. Replay protection comes from `(offlinePassId, passCounter)` uniqueness, on a counter the **app** generates ([`06-security.md` §6.3.1](../spec/06-security.md)).
+Persist it to NVS before you sign the receipt that carries it, and never reset it — not at a reboot, not at a sync ([`reconciliation.md` §4.1](../spec/profiles/offline/reconciliation.md#41-txcounter)). The server still never answers a lower or repeated `txCounter` `Duplicate` ([§4.2](../spec/profiles/offline/reconciliation.md#42-what-the-server-does-with-it)): a station whose store was lost or whose board was replaced starts again at 1, and `Duplicate` would tell it to delete a payment nobody settled. A discontinuity (e.g. 3 -> 5) raises an operator alert on the **station** and the transaction settles normally — it is not scored against the user, and it never withholds money. Be clear about what it does *not* buy you: a counter you generate and sign yourself cannot prove to anyone else that you reported everything. Replay protection comes from `(offlinePassId, passCounter)` uniqueness, on a counter the **app** generates ([`06-security.md` §6.3.1](../spec/06-security.md)).
 
 ### 2.13 Configuration Keys
 
@@ -527,8 +546,12 @@ Supported keys:
 | `MeterValuesInterval` | int (seconds) | 60 | How often to send MeterValues during session |
 | `MaxSessionDurationSeconds` | int (seconds) | 900 | Maximum allowed session duration |
 | `ReservationDefaultTTL` | int (seconds) | 300 | Reservation expiry |
-| `OfflineModeEnabled` | bool | true | Accept BLE offline sessions |
-| `RevocationEpoch` | int | 0 | Minimum accepted OfflinePass epoch |
+| `OfflineModeEnabled` | bool | true | Whether you accept an OfflinePass on your **own** validation — Full Offline, and the local fallback of a Partial-B authorization that timed out. It does not govern forwarding a Partial-B pass to the server, nor accepting a Partial-A ServerSignedAuth |
+| `OfflineWindowHours` | int (hours) | 240 | How long after your last successful MQTT connection you may keep accepting passes on your own validation, measured on your monotonic timer |
+| `OfflineTransactionLimit` | int | 1000 | How many offline transactions not yet answered `Accepted`, `Duplicate` or `Rejected` you may hold before you refuse further passes on your own validation |
+| `OfflinePassMaxAge` | int (seconds) | 864000 | Your own, stricter age limit on a pass (check #2); inert at the default |
+| `RevocationEpoch` | int | 0 | The platform revocation epoch: one value, the same on every station of every tenant. A pass whose `revocationEpoch` is lower is refused |
+| `OfflinePassPublicKey` | CSV (write-only) | — | The server key set: each key's DER `SubjectPublicKeyInfo`, Base64, comma-separated. Every value is the whole set and replaces the one you hold |
 | `MessageSigningMode` | string | `"All"` | HMAC signing: `"All"` or `"None"`. Static — takes effect at the next reboot |
 | `LogLevel` | string | `"Info"` | Log verbosity: `"Debug"`, `"Info"`, `"Warn"`, `"Error"` |
 
@@ -731,9 +754,9 @@ QoS: 1 (always)
    - `serverTime` (ISO 8601 UTC) — station syncs its clock to this
    - `heartbeatIntervalSec` (default 30s)
    - `sessionKey` (Base64-encoded) — station uses this for HMAC-SHA256
-   - Optional `configuration` overrides (key-value pairs)
+   - `configuration` (key-value pairs): any overrides, and — for an Offline/BLE station, on every `Accepted` boot — the five offline keys: the whole server key set `OfflinePassPublicKey`, the platform `RevocationEpoch`, and the station's own `OfflineModeEnabled`, `OfflineWindowHours` and `OfflineTransactionLimit`, which is how a station that was offline or missed a push catches up ([`08-configuration.md` §8.3](../spec/08-configuration.md#83-configuration-via-bootnotification)) ([`06-security.md` §6.6](../spec/06-security.md#66-epoch-based-revocation), [§6.7](../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256))
 6. Or respond `Pending` — for a station awaiting operator approval — with `serverTime`, `heartbeatIntervalSec`, **`retryInterval`**, and **`sessionKey`**. Both are schema-enforced: `boot-notification-response.schema.json` requires `sessionKey` for `Accepted` **and** `Pending`, and `retryInterval` for `Pending`. A `Pending` station answers signed commands — that channel is how the operator repairs whatever is holding the boot — and it cannot answer them without a key. A `Pending` response without one is schema-invalid, and a conforming station must treat it as malformed and refuse to enter `Pending` ([`boot-notification.md` §5.3](../spec/profiles/core/boot-notification.md)), so the approval window never opens and the station boot-loops.
-7. Mark station as online in your database
+7. Mark station as online in your database, and store its clock offset: this BootNotification's envelope `timestamp` minus your receive time. The receipts of the offline period that just ended are judged through it ([`reconciliation.md` §6.8](../spec/profiles/offline/reconciliation.md#68-station-clock-offset))
 
 **On Heartbeat REQUEST:**
 
@@ -780,12 +803,12 @@ When you receive StopService RESPONSE (user-initiated stop):
 When you receive SessionEnded EVENT [MSG-040], switch on `reason`. **The arms below are the `UserDuration` case.** If the session's service kind is `FixedDuration` or `MultiUnit`, settlement is all-or-nothing and three of these arms change — see *Settlement by Service Kind* in [`04-flows.md §6`](../spec/04-flows.md), which governs. Do not implement this list without reading that section first: it is the pro-rata baseline, not the whole rule.
 
 1. **`TimerExpired`** — Session ran to its booked timer. Charge the **full pre-authorized amount**, *not* the station-reported `creditsCharged`: the user received the booked duration, so `refund = 0` regardless of what the event or the meter values say. The low-delivery override does not apply. Session → `completed`. Bay → `Available`.
-2. **`Fault`** — Hardware fault during session. Charge `creditsCharged` from event UNLESS `actualDurationSeconds < faultFullRefundThreshold * durationSeconds` — in that case override `creditsCharged` to 0 and refund 100%. Read the threshold from configuration; do not compile the default `0.50` in. Session → `failed`. Bay → `Faulted`.
-3. **`Local`** (v0.4.0+) — User manually stopped at the station. Treat identically to a user-initiated StopService for billing purposes: charge pro-rated `creditsCharged` from event, refund the unused portion. Session → `completed`. Bay → `Available`.
+2. **`Fault`** — Hardware fault during session. Charge the server's recomputation (the event's `creditsCharged` is advisory) UNLESS `actualDurationSeconds < faultFullRefundThreshold * durationSeconds` — in that case charge 0 and refund 100%. Read the threshold from configuration; do not compile the default `0.50` in. Session → `failed`. Bay → `Faulted`.
+3. **`Local`** (v0.4.0+) — User manually stopped at the station. Treat identically to a user-initiated StopService for billing purposes: charge the pro-rated amount, recomputed by the server (the event's `creditsCharged` is advisory), refund the unused portion. Session → `completed`. Bay → `Available`.
 4. **`LocalOutOfCredit`** (v0.4.0+) — Offline credit pool exhausted mid-session. Station MUST emit `creditsCharged: 0`; if a non-zero value arrives, log a CRITICAL anomaly and override to 0 server-side. Refund 100% of the pre-authorized amount. Session → `completed`. Bay → `Available`.
 5. **`Deauthorized`** (v0.4.0+) — Offline pass revoked mid-session. Station MUST emit `creditsCharged: 0`. Refund 100% of pre-auth. Flag the session record for security review (mid-session revocation usually indicates fraud or compromise). Session → `failed`. Bay → `Available`.
 
-6. **`OperatorStopped`** — An operator ended the session deliberately (a Reset carrying `force: true`, or a station disable). Charge the pro-rated `creditsCharged` from the event and refund the unused portion, exactly as for `Local`: the customer received a real wash and the operator's reason for ending it is not theirs to absorb. This is the ONLY reason in this list that bills non-zero for a session the station did not run to completion — do not group it with `LocalOutOfCredit` or `Deauthorized`, which both mandate zero. Session -> `completed`. Bay -> `Available`.
+6. **`OperatorStopped`** — An operator ended the session deliberately (a Reset carrying `force: true`, or a station disable). Charge the pro-rated amount, recomputed by the server (the event's `creditsCharged` is advisory), and refund the unused portion, exactly as for `Local`: the customer received a real wash and the operator's reason for ending it is not theirs to absorb. This is the ONLY reason in this list that bills non-zero for a session the station did not run to completion — do not group it with `LocalOutOfCredit` or `Deauthorized`, which both mandate zero. Session -> `completed`. Bay -> `Available`.
 
 Note: `creditsCharged` from the station is **advisory** — the server is the authoritative billing engine and applies the active tariff (see [Billing Authority in `04-flows.md`](../spec/04-flows.md)).
 
@@ -832,29 +855,30 @@ PG → POST /webhooks/payment-gateway/notification (HMAC-SHA512 signed)
 
 ### 3.6 Offline Reconciliation
 
-When a station reconnects after being offline, it sends TransactionEvent REQUESTs for each offline session:
+When a station reconnects after being offline, it sends TransactionEvent REQUESTs for each offline session, and the app uploads its own copy of each receipt ([`app-contract.md` §4](../spec/profiles/offline/app-contract.md#4-receipt-upload)). Process both the same way, in this order — [`reconciliation.md`](../spec/profiles/offline/reconciliation.md) is normative:
 
-1. **Record the txCounter:** Persist it on the transaction row as forensic evidence. Do **not** gate on it — no watermark, no continuity check, no "last reconciled counter". If it is discontinuous with what you already hold for that station, alert the operator on the **station** and carry on. A low or repeated `txCounter` is **not** a duplicate: a station that reboots legitimately restarts at 1, and answering `Duplicate` tells it to delete a payment you never settled.
-2. **Verify the receipt signature:** Use a **receipt-signing** ECDSA P-256 public key — never the station's mTLS key; the two are required to be distinct. Which one is not a given: a station that has been re-provisioned has more than one retained key, and the receipt may predate the current one. Select from the **server-authoritative anchor**, per [Chapter 06 — Security §4.3](../spec/06-security.md): for a pass-form receipt that is the OfflinePass's own `issuedAt`/`expiresAt` window, and for an auth-form receipt the server-issued authorization record named by `authId`. Take only the key(s) bound during that window. Do **not** default to the station's current key, do **not** use a station-supplied timestamp such as the receipt's `endedAt`, and do **not** try every retained key — try-all makes every superseded key valid forever. If the receipt carries `keyId`, treat it as a hint only: check it matches the key the anchor selected, and reject on disagreement rather than following it.
-3. **Verify the OfflinePass:** Check that it was valid at the time of the transaction (signature, epoch, limits).
-4. **Debit user wallets:** The credits weren't debited at session time (user was offline), so debit them now. If the user's balance goes negative, record it as a debt.
-5. **Run fraud scoring:** Check for anomalies (broken chain, excessive credits, suspiciously fast intervals).
-6. **Respond with `Accepted`** (the TransactionEvent RESPONSE only has `status` and `reason`). A repeat of an `offlineTxId` you already hold is `Duplicate` if the signed `receipt.data` is byte-identical to the stored one, and `Rejected` if it is not — the second case is a collision or tampering, so retain both records and alert an operator rather than answering `Duplicate`, which would tell the station to delete the copy you want to compare against (`reconciliation.md` §3, §9).
+1. **Deduplicate by `offlineTxId`,** whichever channel either copy came by. A repeat whose signed `receipt.data` is byte-identical to the stored one is `Duplicate` — no second debit. One whose data differs is `Rejected`: a collision or tampering, so retain both records and alert an operator rather than answering `Duplicate`, which would tell the station to delete the copy you want to compare against ([`reconciliation.md` §3](../spec/profiles/offline/reconciliation.md#3-deduplication-offlinetxid), §9). The first copy to arrive is the one that may settle.
+2. **Verify the receipt signature:** Use a **receipt-signing** ECDSA P-256 public key of the station the signed receipt names (`stationId`) — never the station's mTLS key; the two are required to be distinct. Which one is not a given: a station that has been re-provisioned has more than one retained key, and the receipt may predate the current one. Select from the **server-authoritative anchor**, per [Chapter 06 — Security §4.3](../spec/06-security.md): for a pass-form receipt that is the OfflinePass's own `issuedAt`/`expiresAt` window, and for an auth-form receipt the server-issued authorization record named by `authId`. Take only the key(s) bound during that window. Do **not** default to the station's current key, do **not** use a station-supplied timestamp such as the receipt's `endedAt`, and do **not** try every retained key — try-all makes every superseded key valid forever. If the receipt carries `keyId`, treat it as a hint only: check it matches the key the anchor selected, and reject on disagreement rather than following it. A receipt whose signature does not verify is `Rejected` — not persisted, not debited, **never scored** — with an `OfflinePassRejected` SecurityEvent (`2002`) and an operator alert ([`reconciliation.md` §5](../spec/profiles/offline/reconciliation.md#5-receipt-signature-verification)).
+3. **Record the txCounter:** Persist it on the transaction row as forensic evidence. Do **not** gate on it — no watermark, no continuity check, no "last reconciled counter". If it is discontinuous with what you already hold for that station, alert the operator on the **station** and carry on. A low or repeated `txCounter` is **not** a duplicate: a station whose store was lost or whose board was replaced starts again at 1, and answering `Duplicate` tells it to delete a payment you never settled.
+4. **Apply the reconcile-time gate** ([`reconciliation.md` §6](../spec/profiles/offline/reconciliation.md#6-reconcile-time-re-validation-gate)): eleven checks for a pass-form receipt (#1–#6, #9–#13; #7 and #8 are withdrawn), #1–#6 and #9 for the auth-form. Expiry and epoch are judged at the transaction's signed time — corrected by the station's clock offset for a `Synchronized` receipt, as signed and flagged for review for an `Unsynchronized` one ([§6.8](../spec/profiles/offline/reconciliation.md#68-station-clock-offset)). A pass-form transaction is never rejected because of which station, or which tenant's station, delivered it; only a Partial-A authorization, issued for one station, keeps that binding (check #4). The pass limits are **not** a gate here: the wash was delivered, so they cap settlement and feed fraud scoring.
+5. **Settle** ([`reconciliation.md` §8](../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)): recompute the cost by service kind from the signed receipt (`endReason`, `durationSeconds`, `bookedDurationSeconds`; the station's `creditsCharged` is advisory), and never charge more than the authorization allowed at the wash — the pass's `maxCreditsPerTx`, the `creditsAuthorized` of Partial B, or the signed `creditsAuthorized` of Partial A — and, on a pass, never more than what remains of its `maxTotalCredits` (the limit less what its settled transactions were charged) and `maxUses` when it settles, its transactions taken in the order they arrive. Where the wallet was debited at authorization (Partial A; a Partial-B session that fell back offline), settlement is a refund-only true-up, never a second debit. A debit may leave the wallet below zero: the transaction whose debit did so stays **pending** until the user next tops up — no time limit, never written off, collected by neither the station's tenant nor the platform meanwhile — and no pass is issued while the balance is below zero ([§8.1](../spec/profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
+6. **Score the settled transaction** ([`06-security.md` §7.4](../spec/06-security.md#74-fraud-detection--offline-transactions)); scoring never changes the settled amount. For the Review, Alert and Block bands, record a server-originated `FraudDetected` SecurityEvent and take the band's action; alert the operator for Alert and Block. A Block-band wash stays settled and flagged: the user is charged, the user is blocked and every pass of the user revoked ([`reconciliation.md` §7](../spec/profiles/offline/reconciliation.md#7-fraud-detection)).
+7. **Respond with `Accepted`** to every transaction that passed steps 1–4, whatever its score (the TransactionEvent RESPONSE only has `status` and `reason`).
 
 **Fraud scoring model.** The authoritative model — its factors, the cross-station cumulative `maxUses` / `maxTotalCredits` computation, the `0.00`–`1.00` score scale, and the threshold → action bands — is defined **once** in [`06-security.md` §7.4](../spec/06-security.md#74-fraud-detection--offline-transactions). This guide does not restate it (finding F3: one authoritative source; `reconciliation.md` §7 and `04-flows.md` §10 are the other two pointers).
 
-The model deliberately does **not** score deterministic security-property violations: an invalid receipt signature, an expired pass, an epoch-at-tx revocation, or same-value counter reuse are **hard-reject gate checks** (`reconciliation.md` §6 — `Rejected` + a SecurityEvent), never probabilistic fraud factors. (The earlier inline 8-factor table here scored several of these; it diverged from §7.4 and is removed.)
+The model deliberately does **not** score deterministic security-property violations: an invalid receipt signature, an expired pass, an epoch-at-tx revocation, or same-value counter reuse are **hard rejections** (`reconciliation.md` §5 and §6 — `Rejected` + a SecurityEvent), never probabilistic fraud factors. (The earlier inline 8-factor table here scored several of these; it diverged from §7.4 and is removed.)
 
 ### 3.7 Epoch-Based Revocation
 
-To invalidate all outstanding OfflinePasses:
+The revocation epoch belongs to the **platform**: a pass is valid at any station whatever its tenant, so every station holds the same value ([`06-security.md` §6.6](../spec/06-security.md#66-epoch-based-revocation)). To invalidate all outstanding OfflinePasses:
 
-1. Increment the `RevocationEpoch` value **for that tenant** in your database — never a single shared counter. One shared counter makes any tenant's revocation revoke every tenant's passes, which is a platform-wide outage reachable from an ordinary tenant permission ([`06-security.md` §6.6](../spec/06-security.md#66-epoch-based-revocation))
-2. Push the new epoch to all online stations via `ChangeConfiguration` (keys: `[{key: "RevocationEpoch", value: "new_value"}]`)
+1. Increment the platform's single `RevocationEpoch` — only a Platform Admin may; no tenant-level role can reach it — and record when the increment took effect: reconciliation judges each transaction against the epoch in force at its `endedAt`, so a bump after a wash flags that wash for review instead of rejecting it
+2. Push the new epoch to every connected station, whatever its tenant, via `ChangeConfiguration` (keys: `[{key: "RevocationEpoch", value: "new_value"}]`); a station that is offline receives it in the configuration of its next `Accepted` BootNotification RESPONSE
 3. Stations will reject any OfflinePass with `revocationEpoch < new_epoch`
-4. When users reconnect, their app requests a fresh OfflinePass (with the new epoch)
+4. When users reconnect, their app uploads the receipts it holds, then requests a fresh OfflinePass (with the new epoch)
 
-This is a "nuclear option" — it invalidates ALL existing passes, not just one user's. Use it for security incidents. For per-user revocation, just don't issue them a new pass.
+This is a "nuclear option" — it invalidates every pass on the platform, not just one user's. Use it for security incidents. To revoke one user's passes, mark them revoked on the server; blocking a user revokes every pass of that user. The server enforces that mark wherever it is in the loop — at Partial-B authorize time (check #12) and at reconciliation (check #11), both `2014` — but a station validating offline cannot learn it, and the pass it accepts meanwhile is still bound to its device and capped by its limits ([`offline-pass.md` §5](../spec/profiles/offline/offline-pass.md#5-revocation)).
 
 ### 3.8 Circuit Breakers
 
@@ -903,14 +927,14 @@ Return `429 Too Many Requests` with a `Retry-After` header.
 
 Your app needs to:
 
-1. **Pre-arm an OfflinePass** while online — call `POST /me/offline-pass/refresh`. Store the pass securely (encrypted at rest, device keychain).
+1. **Pre-arm an OfflinePass** while online — `POST /api/v1/offline/passes` with your `deviceId` and `devicePublicKey` ([`app-contract.md` §3](../spec/profiles/offline/app-contract.md#3-pass-issuance)). The device key is a P-256 key pair you generate once in the phone's hardware-backed keystore, with a non-exportable private key; a phone that cannot hold one gets no offline pass ([§3.2](../spec/profiles/offline/app-contract.md#32-the-device-key)). The response carries the pass and a **trust bundle** — the Station CA certificate and CRL and the server key set — which you replace on every issuance and never merge ([§3.4](../spec/profiles/offline/app-contract.md#34-the-trust-bundle)). Request a fresh pass at app start, after each use and after each top-up, once you have uploaded the receipts you hold (step 8; [`offline-pass.md` §6](../spec/profiles/offline/offline-pass.md#6-lifecycle)). Store the pass securely (encrypted at rest, device keychain).
 2. **Detect connectivity** — Know whether the phone and station are online/offline (4 scenarios).
 3. **BLE scanning** — Filter for service UUID `0000FFF0-0000-1000-8000-00805F9B34FB`.
-4. **HELLO/CHALLENGE handshake** — Exchange nonces + per-handshake ephemeral P-256 keys; verify the StationIdentity certificate before sending any pass.
+4. **HELLO/CHALLENGE handshake** — Exchange nonces + per-handshake ephemeral P-256 keys; verify the StationIdentity certificate, under a key of your trust bundle, before sending any pass.
 5. **Derive session key** — `HKDF-SHA256(es ‖ ee ‖ appNonce ‖ stationNonce)` over the two ECDH secrets (the BLE LTK is **not** used); then send all post-Challenge messages through the ChaCha20-Poly1305 AEAD channel.
-6. **Authenticate** — Send OfflineAuthRequest (Full Offline, Partial B) or ServerSignedAuth (Partial A).
+6. **Authenticate** — Send OfflineAuthRequest (Full Offline, Partial B) or ServerSignedAuth (Partial A). Before the customer chooses a service, show the pass's limits — the per-wash limit, the credits remaining and the uses remaining — and request nothing the pass cannot cover by your own count of the receipts you have read against it, uploaded or not, and nothing sooner than `minIntervalSec` after its last use; present only the latest pass you were issued; a request above a limit is refused, never reduced ([`offline-pass.md` §2.1](../spec/profiles/offline/offline-pass.md#21-offlineallowance-object)).
 7. **Store receipts** — After an offline session, store the signed receipt in a local transaction log.
-8. **Sync when online** — Upload offline receipts to the server via `POST /me/offline-txs`.
+8. **Upload every receipt** — as soon as you have connectivity, and before you request a pass, `POST /api/v1/offline/receipts` with the Receipt exactly as you read it from FFF6; stop once it is answered `Accepted`, `Duplicate` or `Rejected`, and retry after a backoff on `RetryLater` — an upload so answered has been made, and does not hold back your pass request ([`app-contract.md` §4](../spec/profiles/offline/app-contract.md#4-receipt-upload)). Whichever copy — yours or the station's — reaches the server first may settle; once one has settled, the other is answered `Duplicate`.
 
 **The four connectivity scenarios:**
 
@@ -919,7 +943,7 @@ Your app needs to:
 | Online | Online | **Online** | HTTP → server → MQTT → station |
 | Online | Offline | **Partial A** | HTTP → server signs auth → BLE → station verifies ECDSA P-256 |
 | Offline | Online | **Partial B** (Complete compliance only) | BLE → station → MQTT → server validates → station relays |
-| Offline | Offline | **Full Offline** | BLE → station validates OfflinePass locally (10 checks) |
+| Offline | Offline | **Full Offline** | BLE → station validates OfflinePass locally (nine checks) |
 
 Detect which scenario you're in by:
 1. Checking phone connectivity (can you reach `api.example.com`?)
@@ -981,7 +1005,7 @@ Test cases are named `TC-{PROFILE}-{NNN}`:
 
 ### 5.2 Schema Validation
 
-All 86 JSON Schemas are in `/schemas/`. Use them to validate every message you send and receive:
+All 88 JSON Schemas are in `/schemas/`. Use them to validate every message you send and receive:
 
 ```bash
 # Install ajv-cli
@@ -1042,7 +1066,7 @@ Walk through each flow using the narrative examples in `/examples/flows/`:
 3. **Web payment** — Does the reservation → payment → start flow work end-to-end?
 4. **Full offline** — Can your station validate an OfflinePass, run a session, and sign a receipt?
 5. **Partial A/B** — Do the hybrid online/offline flows work?
-6. **Reconciliation** — Can you replay offline transactions, including out of order and after a counter reset?
+6. **Reconciliation** — Can you replay offline transactions, including out of order, with a discontinuous or restarted `txCounter` (a replaced board), and with the app's upload of the same receipt arriving before or after the station's?
 
 ### 5.5 Error Scenario Testing
 
@@ -1061,9 +1085,9 @@ Test the error scenarios in `/examples/error-scenarios/`:
 - [ ] Revocation — does the broker reject a station whose certificate is on the CRL? And when the list goes stale, does it alert on entering the grace period and refuse once the grace expires? (`spec/06-security.md` §2.1.1)
 - [ ] HMAC verification — does your station reject a message with a bad `mac`?
 - [ ] Replay protection — does your deduplication catch a replayed `messageId`?
-- [ ] OfflinePass validation — do all 10 checks work? Test each failure mode individually.
+- [ ] OfflinePass validation — do the nine checks a station performs (#1–#4, #6–#10; #5 is withdrawn) work, and do your own offline limits refuse with `4002`? Test each failure mode individually.
 - [ ] Receipt verification — can the server verify ECDSA P-256 signatures from your station?
-- [ ] txCounter is forensic — does an out-of-order or reset counter still settle, with an operator alert and no `Duplicate`?
+- [ ] txCounter is forensic — does the station's counter survive a reboot and a sync unreset? Server-side, does an out-of-order or restarted counter still settle, with an operator alert and no `Duplicate`?
 - [ ] Constant-time comparison — are you using timing-safe HMAC comparison?
 
 ---
@@ -1096,14 +1120,14 @@ Test the error scenarios in `/examples/error-scenarios/`:
 
 **Using TLS 0-RTT.** TLS 1.3 offers 0-RTT resumption, which is vulnerable to replay attacks. OSPP explicitly forbids it. Don't enable it.
 
-**Counting a bare `Accepted` as proof that a station took your new OfflinePass signing key.** This is the one place in OSPP where a per-key status decides whether a **cryptographic key may be destroyed**, and reading it wrongly takes a station offline for every offline authorization it will ever be asked to perform. `06-security.md` §6.7 rotates the key by pushing `OfflinePassPublicKey` via ChangeConfiguration and revoking the old key once every station has confirmed. But ChangeConfiguration is **atomic**: a `results` entry of `Accepted` is that key's *validation verdict*, and if any other entry in the same batch is `Rejected` or `NotSupported`, **the station stored nothing** — while still answering `Accepted` for your key. Count that as rolled out, revoke the previous key, and that station can verify no pass signed by either key.
+**Counting a bare `Accepted` as proof that a station took your new server key set.** `OfflinePassPublicKey` is the server's **key set** — every key a live pass may be signed under, each named by the `keyId` a pass carries — and every value replaces the whole set the station holds, with no cached previous key and no grace period ([`06-security.md` §6.7](../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)). Rotation runs on time, not on confirmations: a new key is published for at least the maximum pass lifetime (864000 s) plus your worst station sync gap before it signs anything, and an old key stays in the set until everything it signed — passes, ServerSignedAuth, StationIdentity certificates — has expired. What can still go wrong is the push. ChangeConfiguration is **atomic**: a `results` entry of `Accepted` is that key's *validation verdict*, and if any other entry in the same batch is `Rejected` or `NotSupported`, **the station stored nothing** — while still answering `Accepted` for your key. That station keeps its old set until the next push or its next boot, and if it goes offline first it refuses, with `2002`, every pass whose `keyId` its old set does not name.
 
 Two things follow, and the second is the one to implement:
 
-1. A station counts as updated only when its RESPONSE reported `Accepted` for `OfflinePassPublicKey` **and no entry in the same `results` array was `Rejected` or `NotSupported`**.
-2. **Push `OfflinePassPublicKey` in a batch of exactly one key.** §6.7 makes this RECOMMENDED precisely so the question cannot arise. Note that this cuts against the general advice in [§2.13](#213-configuration-keys) to batch correlated settings: `OfflinePassPublicKey` + `RevocationEpoch` *are* correlated, and batching them is right for the station — but if you batch them you MUST apply check 1 before revoking, because a rejected `RevocationEpoch` silently discards the key push.
+1. A station holds the new set only when its RESPONSE reported `Accepted` for `OfflinePassPublicKey` **and no entry in the same `results` array was `Rejected` or `NotSupported`**.
+2. **Pushing `OfflinePassPublicKey` alone makes the question disappear; batching it makes check 1 mandatory.** The general advice in [§2.13](#213-configuration-keys) is to batch correlated settings, and `OfflinePassPublicKey` + `RevocationEpoch` is this specification's own example of a correlated pair — if you batch them, apply check 1 to the whole batch, because a rejected `RevocationEpoch` silently discards the key push. Either way the station receives the whole set again at its next boot.
 
-If you are auditing an existing implementation, the question to ask is narrow: *does the code that decides "this station has the new key" look at any entry other than its own?* If it does not, it is wrong for every batch of more than one key. Server-side this is the rotation finalizer — the routine that overwrites and unlinks the previous key file — not the code that sends the push.
+If you are auditing an existing implementation, the question to ask is narrow: *does the code that decides "this station has the new set" look at any entry other than its own?* If it does not, it is wrong for every batch of more than one key.
 
 **Logging sensitive fields in plaintext.** Never log session tokens, payment credentials, MAC values, HMAC session keys, certificate private keys, or full OfflinePass content. Redaction rules per `spec/06-security.md` §8.5:
 
@@ -1131,9 +1155,9 @@ If you are auditing an existing implementation, the question to ask is narrow: *
 
 **Not persisting offline state.** If the station loses power during an offline session, it needs crash recovery. Persist the current session state, offline pass usage counters, and transaction log to flash/NVS. On power-up, check for unfinished sessions.
 
-**Not initializing txCounter correctly.** The first offline transaction after each **boot or sync** must use `txCounter: 1` — not the first after provisioning ([`reconciliation.md` §4.1](../spec/profiles/offline/reconciliation.md) step 1). Starting at 0 or skipping values will not cost you a settlement — the server records the counter and does not gate on it — but it produces operator alerts on your station and makes your own offline log harder to audit.
+**Resetting txCounter.** The counter starts at 1 for the station's first offline transaction and is never reset — not at a reboot, not at a sync; persist it to NVS before you sign each receipt ([`reconciliation.md` §4.1](../spec/profiles/offline/reconciliation.md#41-txcounter)). A reset, a start at 0 or a skipped value will not cost you a settlement — the server records the counter and does not gate on it — but it produces operator alerts on your station and makes your own offline log harder to audit.
 
-**Treating `maxCreditsPerTx` as a cap.** Check #8 is a hard reject, not a clamp: if the estimated cost of the requested service exceeds `maxCreditsPerTx`, reject with `4004 OFFLINE_PER_TX_EXCEEDED` ([`offline-pass.md` §4](../spec/profiles/offline/offline-pass.md) check #8, and the same check in `authorize-offline-pass.md` §5 and `06-security.md` §6.1.1). This guide previously said to cap silently, which contradicted its own §2.10 table. The only clamp in the offline path is `requestedDurationSeconds` against the **server-authorized** `durationSeconds` on Partial A / Partial B ([`ble-session.md` §1](../spec/profiles/offline/ble-session.md) *Starting a Service*, processing rule 2 — §2 is *Monitoring Progress* and carries no clamp) — Full Offline has no server-authorized value to clamp against.
+**Treating `maxCreditsPerTx` as a cap at the station.** Check #8 is a hard reject, not a clamp: if the estimated cost of the requested service exceeds `maxCreditsPerTx`, reject with `4004 OFFLINE_PER_TX_EXCEEDED` ([`offline-pass.md` §4](../spec/profiles/offline/offline-pass.md#4-validation-checks-10) check #8, and the same check in `authorize-offline-pass.md` §5 and `06-security.md` §6.1.1) — and check #7 rejects with `4002` a cost above what remains of `maxTotalCredits`. A request above a limit is refused, never shortened or re-priced to fit ([`offline-pass.md` §2.1](../spec/profiles/offline/offline-pass.md#21-offlineallowance-object)). This guide previously said to cap silently, which contradicted its own §2.10 table. The cap belongs to the **server**, at settlement, where a delivered wash is never charged above the limits ([`reconciliation.md` §8](../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)). The only clamp at the station is `requestedDurationSeconds` against the **server-authorized** `durationSeconds` on Partial A / Partial B ([`ble-session.md` §1](../spec/profiles/offline/ble-session.md#1-starting-a-service) — §2 is *Monitoring Progress* and carries no clamp) — Full Offline has no server-authorized value to clamp against.
 
 ### 6.5 Server Pitfalls
 
@@ -1168,7 +1192,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** Message deduplication (1000+ IDs or 1 hour window)
 - [ ] **[MUST]** Exponential backoff with jitter for reconnection (1s → 30s max)
 - [ ] **[MUST]** Continue active sessions during MQTT disconnect (do NOT stop hardware)
-- [ ] **[MUST]** Buffer TransactionEvent (1000, never discard), SessionEnded (never discard) and SecurityEvent (200, FIFO) during disconnect; StatusNotification and MeterValues MAY be discarded. **512 KB** is the `MUST` storage level and does **not** hold that buffer — [`01-architecture.md` §6.5](../spec/01-architecture.md) derives **~1.6 MB** and flags the gap as OPEN; build to the derived figure
+- [ ] **[MUST]** Buffer TransactionEvent (1000, never discard), SessionEnded (never discard) and SecurityEvent (200, FIFO) during disconnect; StatusNotification and MeterValues **MAY** be discarded. **512 KB** is the `MUST` storage level and does **not** hold that buffer — [`01-architecture.md` §6.5](../spec/01-architecture.md#65-offline-message-buffering) derives **~1.7 MB** and flags the gap as OPEN; build to the derived figure
 - [ ] **[MUST]** Message expiry intervals set per action category
 - [ ] **[MUST]** 0-RTT TLS resumption NOT used
 - [ ] **[SHOULD]** Max Packet Size = 65,536 bytes
@@ -1234,7 +1258,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[SHOULD]** Shared subscriptions (`$share/...`) for horizontal scaling
 - [ ] **[SHOULD]** Rate limiting on REST API
 - [ ] **[SHOULD]** Anti-abuse layers for web payment (5 layers)
-- [ ] **[MUST]** OfflinePass key rotation: before revoking the previous signing key, confirm each station returned `Accepted` for `OfflinePassPublicKey` **in a batch where no other entry was `Rejected` or `NotSupported`** — an `Accepted` inside a refused batch means the station stored nothing ([§6.2](#62-security-pitfalls), [`06-security.md` §6.7](../spec/06-security.md))
+- [ ] **[MUST]** OfflinePass signing keys as a **key set** ([`06-security.md` §6.7](../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)): each new key published at least 864000 s plus the worst station sync gap before its first signature, each old key kept until everything it signed has expired, the whole set in every `Accepted` BootNotification RESPONSE. An `Accepted` inside a refused batch means the station stored nothing ([§6.2](#62-security-pitfalls))
 
 ### Offline / BLE
 
@@ -1245,14 +1269,14 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[OFFLINE]** MTU negotiation to 247 bytes; fragmentation for messages > MTU-3
 - [ ] **[OFFLINE]** HELLO/CHALLENGE handshake with fresh nonces
 - [ ] **[OFFLINE]** Session key derivation: ECDH P-256 + HKDF-SHA256(es ‖ ee ‖ appNonce ‖ stationNonce) — NOT the LTK
-- [ ] **[OFFLINE]** OfflinePass validation: the 10 checks in order — 9 performable offline; #5 (station allowlist) is server-side only (§2.10)
-- [ ] **[OFFLINE]** ECDSA P-256 signature verification for OfflinePass
-- [ ] **[OFFLINE]** Key rotation support: accept `OfflinePassPublicKey` and cached previous key during grace period (300 s)
-- [ ] **[OFFLINE]** ECDSA P-256 receipt signing
-- [ ] **[OFFLINE]** Monotonic txCounter: increment by exactly 1 per offline transaction (forensic evidence; the server records it and does not gate on it)
+- [ ] **[OFFLINE]** OfflinePass validation: the nine checks in order — #1–#4 and #6–#10; #5 is withdrawn, a pass carries no station scope — and your own offline limits (`OfflineModeEnabled`, `OfflineWindowHours`, `OfflineTransactionLimit`), refused with `4002` (§2.10)
+- [ ] **[OFFLINE]** ECDSA P-256 signature verification for OfflinePass, with the key its `keyId` names
+- [ ] **[OFFLINE]** Server key set: replace the whole set on every `OfflinePassPublicKey` value received, in a BootNotification RESPONSE or by ChangeConfiguration; no cached previous key, no grace period
+- [ ] **[OFFLINE]** ECDSA P-256 receipt signing, including the signed-only `stationId`, `endReason`, `bookedDurationSeconds` and `clockState` (§2.11)
+- [ ] **[OFFLINE]** Monotonic txCounter: increment by exactly 1 per offline transaction, persisted to NVS and never reset — not at a reboot, not at a sync (forensic evidence; the server records it and does not gate on it)
 - [ ] **[OFFLINE]** Receipt retention on FFF6 for **at least 10 minutes** after service completion, or until the next session begins on the same bay ([`ble-session.md` §5](../spec/profiles/offline/ble-session.md) rule 3)
 - [ ] **[OFFLINE]** Persist offline state: pass usage counters, transaction log, session state
-- [ ] **[OFFLINE]** Reject with `4004` when the estimated cost exceeds `maxCreditsPerTx` (check #8 is a reject, not a cap)
+- [ ] **[OFFLINE]** Refuse, never reduce: `4004` when the estimated cost exceeds `maxCreditsPerTx`, `4002` when it exceeds what remains of `maxTotalCredits` (checks #7 and #8 are rejects, not caps)
 - [ ] **[OFFLINE]** Reconciliation via TransactionEvent after connectivity restored
 
 ### User Agent
@@ -1265,10 +1289,12 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** Exponential backoff for 5xx and network errors (max 3 attempts)
 - [ ] **[OFFLINE]** BLE scan filtering by service UUID
 - [ ] **[OFFLINE]** ConnectivityDetector: detect 4 scenarios (Online, Partial A, Partial B, Full Offline)
-- [ ] **[OFFLINE]** Pre-arm OfflinePass while online
+- [ ] **[OFFLINE]** Pre-arm OfflinePass while online (`POST /api/v1/offline/passes`), bound to a P-256 device key generated in the hardware-backed keystore, non-exportable — no such key, no offline pass
 - [ ] **[OFFLINE]** Store OfflinePass encrypted at rest (device keychain)
+- [ ] **[OFFLINE]** Replace the trust bundle on every pass issuance; never merge it with the one held
+- [ ] **[OFFLINE]** Show the pass's limits before the customer chooses a service
 - [ ] **[OFFLINE]** Store offline receipts locally
-- [ ] **[OFFLINE]** Sync offline receipts to server when online (`POST /me/offline-txs`)
+- [ ] **[OFFLINE]** Upload every receipt when online (`POST /api/v1/offline/receipts`) until it is answered `Accepted`, `Duplicate` or `Rejected`
 - [ ] **[OFFLINE]** Biometric/PIN gate before offline authentication
 
 ---
@@ -1293,7 +1319,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 | BLE fragment | 5s |
 | JWT access token | 15 min |
 | Web session token | 10 min |
-| OfflinePass validity | max 24 hours |
+| OfflinePass validity | 3 days default, 10 days max (platform lifetime; a station's `OfflinePassMaxAge` may refuse sooner) |
 | Reservation TTL | 300s default (`ReservationDefaultTTL`, 60–1800); the web-payment flow uses 180s |
 | BLE receipt retention | 10 min minimum (or until next session on the bay) |
 

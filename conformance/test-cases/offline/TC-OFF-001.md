@@ -1,6 +1,6 @@
 # TC-OFF-001 — Full Offline BLE Session
 
-> **Status: EXPERIMENTAL artefact.** This case exercises the BLE surface, which is EXPERIMENTAL in 0.44 and carries three blockers — see [Release status](../../../README.md#ble-is-experimental) and [KNOWN-ISSUES](../../../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-three-defects). It is published for review, not for certification, and **Extended and Complete compliance cannot be claimed against 0.44**.
+> **Status: EXPERIMENTAL artefact.** This case exercises the BLE surface, which is EXPERIMENTAL in 0.44 and carries two blockers — see [Release status](../../../README.md#ble-is-experimental) and [KNOWN-ISSUES](../../../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-two-defects). It is published for review, not for certification, and **Extended and Complete compliance cannot be claimed against 0.44**.
 
 
 ## Profile
@@ -20,7 +20,7 @@ Verify the complete full-offline BLE session lifecycle: BLE scan and discovery, 
 - `spec/profiles/offline/ble-session.md` — START_SERVICE, SERVICE_STATUS, STOP_SERVICE, Receipt
 - `spec/profiles/offline/offline-pass.md` — OfflinePass structure and ECDSA P-256 signature
 - `spec/07-errors.md` §5.4 — BLE retry policies
-- `spec/07-errors.md` §3.2 — Error codes 2002-2006, 2013 for BLE auth failures
+- `spec/07-errors.md` §3.2 — Error codes 2002-2005, 2013 for BLE auth failures
 - `schemas/common/offline-pass.schema.json`
 - `schemas/common/receipt.schema.json`
 - **`schemas/ble/hello.schema.json`, `schemas/ble/challenge.schema.json`, `schemas/ble/auth-response.schema.json`, `schemas/ble/start-service-request.schema.json` — the fixtures below are members of these schemas, which are closed (`additionalProperties: false`).**
@@ -31,14 +31,15 @@ Verify the complete full-offline BLE session lifecycle: BLE scan and discovery, 
 1. Station is powered on but MQTT is disconnected (simulating full offline mode).
 2. Station BLE radio is active and advertising the OSPP service UUID (0000FFF0).
 3. The app (test client) has a valid OfflinePass:
-   - Signed with ECDSA P-256 by the server.
-   - `expiresAt` is in the future, `revocationEpoch` >= station's stored epoch.
+   - Signed with ECDSA P-256 by a key of the server key set the station holds (`OfflinePassPublicKey`), named by the pass's `keyId`.
+   - `expiresAt` is in the future, the pass is no older than the station's `OfflinePassMaxAge` ([`08-configuration.md` §5](../../../spec/08-configuration.md#5-offline--ble-configuration-keys)), and `revocationEpoch` >= the platform epoch the station holds.
    - `maxUses` > 0, `maxTotalCredits` sufficient for the test session.
-   - Station-scoping constraint includes the test station.
+   - Names no station and no organization: a pass carries no station or organization scope ([`offline-pass.md` §2.3](../../../spec/profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)).
    - `deviceId` matches the test client device.
 4. Station has at least one bay (`bay_a1b2c3d4`) in `Available` state.
 5. Service catalog includes `svc_basic` on `bay_a1b2c3d4`.
 6. The test client BLE stack is initialized and ready to scan.
+7. No station limit is reached: the station's `OfflineModeEnabled` is `true`, fewer than `OfflineWindowHours` have elapsed since its last MQTT connection, and it holds fewer than `OfflineTransactionLimit` offline transactions the server has not yet answered `Accepted`, `Duplicate` or `Rejected` ([`offline-pass.md` §2.2](../../../spec/profiles/offline/offline-pass.md#22-constraints-object)).
 
 ## Steps
 
@@ -86,7 +87,7 @@ Verify the complete full-offline BLE session lifecycle: BLE scan and discovery, 
       "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY"
     }
     ```
-    **Verify `stationCert` now, before step 14 transmits the OfflinePass.** The app **MUST** verify its signature against a server signing key in its trusted set and check that it is unexpired ([`ble-handshake.md` §3](../../../spec/profiles/offline/ble-handshake.md), [`06-security.md` §6.5.2](../../../spec/06-security.md#652-stationidentity-certificate)). On failure the app aborts with `2013 BLE_AUTH_FAILED` **and sends no credential**. This is the only thing authenticating the station; a handshake that skips it hands an OfflinePass to whatever answered the advertisement.
+    **Verify `stationCert` now, before step 14 transmits the OfflinePass.** The app **MUST** verify its signature against a key of the server key set in its trust bundle ([`app-contract.md` §3.4](../../../spec/profiles/offline/app-contract.md#34-the-trust-bundle)) and check that it is unexpired ([`ble-handshake.md` §3](../../../spec/profiles/offline/ble-handshake.md), [`06-security.md` §6.5.2](../../../spec/06-security.md#652-stationidentity-certificate)). On failure the app aborts with `2013 BLE_AUTH_FAILED` **and sends no credential**. This is the only thing authenticating the station; a handshake that skips it hands an OfflinePass to whatever answered the advertisement.
 13. Derive the session key via HKDF-SHA256 over a **two-operation ECDH P-256 exchange**. The BLE Long-Term Key is **not** an input — it is unobtainable by a mobile app ([ADR-002](../../../adr/ADR-002-ble-handshake-security-architecture.md)):
     - `es = ECDH(appEphemeralPriv, stationCert.stationPubKey)` — the certified static key
     - `ee = ECDH(appEphemeralPriv, stationEphemeralPubKey)` — forward secrecy

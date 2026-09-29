@@ -234,7 +234,7 @@ The Receipt characteristic provides a signed transaction receipt after service c
 | `startedAt` | string | Yes | ISO 8601 timestamp of service start. |
 | `endedAt` | string | Yes | ISO 8601 timestamp of service end. |
 | `durationSeconds` | integer | Yes | Actual duration in seconds. |
-| `creditsCharged` | integer | Yes | Total credits charged. |
+| `creditsCharged` | integer | Yes | Credits the station computed; advisory — the server settles its own recomputation ([`reconciliation.md` §8](reconciliation.md#8-wallet-reconciliation)). |
 | `meterValues` | object | No | Final meter readings. |
 | `receipt` | object | Yes | Signed receipt object (see below). |
 | `txCounter` | integer | Yes | Monotonic transaction counter. |
@@ -264,8 +264,8 @@ The `receipt` object contains:
     "energyWh": 150
   },
   "receipt": {
-    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQ2hhcmdlZCI6NTAsImRldmljZUlkIjoiZGV2X2Q0ZTVmNmE3IiwiZHVyYXRpb25TZWNvbmRzIjoyOTgsImVuZGVkQXQiOiIyMDI2LTAyLTEzVDEwOjA0OjU4LjAwMFoiLCJtZXRlclZhbHVlcyI6eyJjb25zdW1hYmxlTWwiOjUwMCwiZW5lcmd5V2giOjE1MCwibGlxdWlkTWwiOjQ1MjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzXzkyZGYwZDVjMDExZWFmNzQiLCJvZmZsaW5lVHhJZCI6Im90eF9kNGU1ZjZhN2I4YzkiLCJwYXNzQ291bnRlciI6MzYsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDEwOjAwOjAwLjAwMFoiLCJ0eENvdW50ZXIiOjUsInVzZXJJZCI6InN1Yl8wNjA3MmE4MjllMzkxOGE4In0=",
-    "signature": "MEUCIQDSRvP/bEpvafY6VUIUGn7TD7O7VC6TmI/P94Dzy+mhNwIgOK0Sdt86gUUMiG+JVehka2U2S3uKAKJgxNJfR7u4/D8=",
+    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjMwMCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjo1MCwiZGV2aWNlSWQiOiJkZXZfZDRlNWY2YTciLCJkdXJhdGlvblNlY29uZHMiOjI5OCwiZW5kUmVhc29uIjoiTG9jYWwiLCJlbmRlZEF0IjoiMjAyNi0wMi0xM1QxMDowNDo1OC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjo1MDAsImVuZXJneVdoIjoxNTAsImxpcXVpZE1sIjo0NTIwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc185MmRmMGQ1YzAxMWVhZjc0Iiwib2ZmbGluZVR4SWQiOiJvdHhfZDRlNWY2YTdiOGM5IiwicGFzc0NvdW50ZXIiOjM2LCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic3RhdGlvbklkIjoic3RuX2ExYjJjM2Q0IiwidHhDb3VudGVyIjo1LCJ1c2VySWQiOiJzdWJfMDYwNzJhODI5ZTM5MThhOCJ9",
+    "signature": "MEQCIC1xFC3JI43P6xTt1RR6xpxe4u/FIo2Otj7bEq7waOATAiBfKgayOnnmSVHyJFMZrbHtG65GRFCWwwt3KkXlqq4hIQ==",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "txCounter": 5,

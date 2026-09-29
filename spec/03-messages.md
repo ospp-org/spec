@@ -209,7 +209,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
 | `retryInterval` | integer | Cond. | Seconds to wait before retry (REQUIRED when `Rejected` or `Pending`) |
 | `errorCode` | integer | Cond. | OSPP error code explaining the outcome (1000–9999). REQUIRED when `Rejected`. Carried on a `Pending` response when the reason is `3018 TOPOLOGY_MISMATCH`. |
 | `errorText` | string | Cond. | Machine-readable error name in `UPPER_SNAKE_CASE`. REQUIRED when `Rejected`; accompanies `errorCode` whenever that is present. |
-| `configuration` | object | No | Key-value pairs to apply immediately (see [Chapter 08](08-configuration.md)) |
+| `configuration` | object | Cond. | Key-value pairs to apply immediately (see [Chapter 08](08-configuration.md)). **REQUIRED** on an `Accepted` response to a station that declares the Offline / BLE profile, carrying the five offline keys ([Chapter 08 §8.3](08-configuration.md#83-configuration-via-bootnotification)). |
 | `sessionKey` | string | Cond. | Base64-encoded 32-byte HMAC session key. **REQUIRED on every `Accepted` and every `Pending` response**, unconditionally — a `Pending` station answers signed commands. Absent on `Rejected`. See [Core profile §5.3](profiles/core/boot-notification.md) |
 | `supportedVersions` | array | Cond. | Protocol versions supported by server. Array of semver strings (e.g., `["0.1.0", "0.2.0"]`). REQUIRED when `Rejected` with error `1007 PROTOCOL_VERSION_MISMATCH` — [`boot-notification.md` §6](profiles/core/boot-notification.md). Unlike the sibling rows in this table, this condition is stated only in prose: the response schema carries no `if`/`then` for it. |
 | `details` | object | Cond. | Diagnostic detail for `errorCode`. REQUIRED on a `Pending` response carrying `3018 TOPOLOGY_MISMATCH`, where it carries `expected` and `declared` — the provisioned topology and the one this boot declared, each shaped like the request's `bays[]`. Absent otherwise. The object is **closed**, like every other object in this schema set: a future error code that needs its own detail adds its member to the schema. |
@@ -274,6 +274,10 @@ The station MAY include a human-readable name configurable via `StationName` (se
   "heartbeatIntervalSec": 30,
   "configuration": {
     "RevocationEpoch": "42",
+    "OfflinePassPublicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/HdgUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==",
+    "OfflineModeEnabled": "true",
+    "OfflineWindowHours": "240",
+    "OfflineTransactionLimit": "1000",
     "MaxSessionDurationSeconds": "900"
   },
   "sessionKey": "dGhpcyBpcyBhIDMyLWJ5dGUga2V5IGZvciBITUFD..."
@@ -335,7 +339,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
 | **Trigger** | Partial B scenario — station receives an OfflinePass via BLE from a mobile app while the station is online |
 | **Expected Response** | AuthorizeOfflinePass RESPONSE |
 | **Timeout** | 15 seconds |
-| **Idempotency** | Yes, on the **`(offlinePassId, counter)`** pair — a retransmission carries the same `counter` and **MUST** get the same answer. **Not** on `offlinePassId` alone, which this row said until `0.25.0` and which the validation checks contradict by construction: a pass legitimately returns `Accepted` and then `4002` once check #6's `maxUses` is reached, and a replayed `counter` returns `2005` where the first use returned `Accepted` ([`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks-11-checks)). |
+| **Idempotency** | Yes, on the **`(offlinePassId, counter)`** pair — a retransmission carries the same `counter` and **MUST** get the same answer. **Not** on `offlinePassId` alone, which this row said until `0.25.0` and which the validation checks contradict by construction: a pass legitimately returns `Accepted` and then `4002` once check #6's `maxUses` is reached, and a replayed `counter` returns `2005` where the first use returned `Accepted` ([`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks)). |
 | **Message Expiry** | 30 seconds (no [`02-transport.md` §5.1](02-transport.md) category covers this action; Appendix B is the cross-check) |
 
 In the **Partial B** offline scenario (phone offline, station online), the mobile app presents an OfflinePass to the station via BLE. The station forwards it to the server for real-time validation instead of performing local validation.
@@ -372,6 +376,8 @@ In the **Partial B** offline scenario (phone offline, station online), the mobil
     "passId": "opass_a8b9c0d1e2f3",
     "sub": "sub_xyz789",
     "deviceId": "device_uuid_123",
+    "devicePublicKey": "A2u60879V0X/ICo5l5yABRI04caYZh2Yhy5nmr1E84CQ",
+    "keyId": "YjX5pR0TzmU3ubs17wImQQ",
     "issuedAt": "2026-02-05T10:00:00.000Z",
     "expiresAt": "2026-02-06T10:00:00.000Z",
     "policyVersion": 1,
@@ -379,19 +385,13 @@ In the **Partial B** offline scenario (phone offline, station online), the mobil
     "offlineAllowance": {
       "maxTotalCredits": 100,
       "maxUses": 5,
-      "maxCreditsPerTx": 30,
-      "allowedServiceTypes": [
-        "svc_eco",
-        "svc_standard"
-      ]
+      "maxCreditsPerTx": 30
     },
     "constraints": {
-      "minIntervalSec": 60,
-      "stationOfflineWindowHours": 72,
-      "stationMaxOfflineTx": 100
+      "minIntervalSec": 60
     },
     "signatureAlgorithm": "ECDSA-P256-SHA256",
-    "signature": "MEUCIQDXKT0ewRBp/nkPY/qh6mBjwSn4BE7fmjDTdjcP1dhIyQIgPyXM1VnFZtrG6WaOgpRwiQIeFF2I2zeFsb05dyel1rE="
+    "signature": "MEQCIGDt8n5JEeRrYMqlom+5pC9kQhSWxhscTNcNLx+W5jHvAiAnniRsf8oUWO8B2I9JwL0XwPPpirbfTYvSHbuNWZrLkg=="
   },
   "deviceId": "device_uuid_123",
   "counter": 5,
@@ -426,10 +426,10 @@ In the **Partial B** offline scenario (phone offline, station online), the mobil
 |------------|-----------|
 | `1005` | `INVALID_MESSAGE_FORMAT` — request is not valid JSON or missing required fields |
 | `2002` | `OFFLINE_PASS_INVALID` — signature verification failed |
-| `2003` | `OFFLINE_PASS_EXPIRED` — pass has expired |
+| `2003` | `OFFLINE_PASS_EXPIRED` — pass has expired, or is older than the forwarding station's `OfflinePassMaxAge` |
 | `2004` | `OFFLINE_EPOCH_REVOKED` — revocation epoch is newer than pass epoch |
 | `2005` | `OFFLINE_COUNTER_REPLAY` — counter replay detected |
-| `2006` | `OFFLINE_STATION_MISMATCH` — OfflinePass stationId constraint does not match |
+| `2014` | `OFFLINE_PASS_REVOKED` — the pass is revoked on the server, individually or by a block on its user |
 | `4002` | `OFFLINE_LIMIT_EXCEEDED` — max uses or max credits exceeded |
 | `4003` | `OFFLINE_RATE_LIMITED` — min interval between transactions not met |
 | `4004` | `OFFLINE_PER_TX_EXCEEDED` — per-transaction credit limit exceeded |
@@ -808,7 +808,7 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
 | `startedAt` | string | Yes | Session start time (ISO 8601 UTC) |
 | `endedAt` | string | Yes | Session end time (ISO 8601 UTC) |
 | `durationSeconds` | integer | Yes | Actual session duration in seconds |
-| `creditsCharged` | integer | Yes | Credits debited from user |
+| `creditsCharged` | integer | Yes | Credits the station computed; advisory — the server settles its own recomputation from the signed receipt ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)) |
 | `receipt` | object | Yes | Signed receipt — see fields below |
 | `receipt.data` | string | Yes | Base64-encoded canonical JSON of receipt data |
 | `receipt.signature` | string | Yes | Base64-encoded ECDSA P-256 signature |
@@ -838,17 +838,17 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
 | Status | Station Action |
 |--------|---------------|
 | `Accepted` | Do not send again; delete the local record (deletion MAY be deferred up to 72 h) |
-| `Duplicate` | Do not send again; delete the local record (the server already holds this same transaction) |
+| `Duplicate` | Do not send again; delete the local record (the server's ledger already holds this same transaction) |
 | `Rejected` | Do not send again; **retain** the local record, marked rejected and flagged for manual investigation |
 | `RetryLater` | Keep in queue; retry with exponential backoff (initial 5 s, cap 300 s). The response carries **no** retry interval — `transaction-event-response.schema.json` is closed over `status` and `reason` — so the backoff is the station's, not a server-supplied value |
 
-**Server-side processing:**
+**Server-side processing** ([`reconciliation.md`](profiles/offline/reconciliation.md) is normative; this is its order):
 1. Deduplicate by `offlineTxId`
-2. Verify ECDSA receipt signature (CRITICAL if invalid)
-3. Record `txCounter` (WARNING if the sequence is discontinuous, process anyway)
-4. Validate OfflinePass (was it valid at transaction time?)
-5. Calculate credits, debit user wallet (allow negative balance)
-6. Run fraud scoring (see [Chapter 06](06-security.md), Section on fraud detection)
+2. Verify ECDSA receipt signature — reject if it does not verify; never scored
+3. Record `txCounter` (operator alert on the station if the sequence is discontinuous; process anyway)
+4. Apply the reconcile-time gate (was the pass valid at transaction time, read through the station's clock offset?)
+5. Settle: recompute the cost by service kind from the signed receipt, never above what the authorization allowed, and debit the user wallet — or, where the authorization already debited it, refund only ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)) — (a debit that leaves it below zero leaves the transaction pending until the user tops up)
+6. Run fraud scoring ([Chapter 06 §7.4](06-security.md#74-fraud-detection--offline-transactions)) — record `FraudDetected` and act on the band; the settled amount does not change
 7. Create session record
 8. Respond `Accepted`
 
@@ -868,8 +868,8 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
   "durationSeconds": 298,
   "creditsCharged": 50,
   "receipt": {
-    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQ2hhcmdlZCI6NTAsImRldmljZUlkIjoiZGV2X2Q0ZTVmNmE3IiwiZHVyYXRpb25TZWNvbmRzIjoyOTgsImVuZGVkQXQiOiIyMDI2LTAxLTMwVDE0OjA1OjAwLjAwMFoiLCJtZXRlclZhbHVlcyI6eyJjb25zdW1hYmxlTWwiOjUwMCwiZW5lcmd5V2giOjE1MCwibGlxdWlkTWwiOjQ1MjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2E4YjljMGQxZTJmMyIsIm9mZmxpbmVUeElkIjoib3R4X2Q0ZTVmNmE3YjhjOSIsInBhc3NDb3VudGVyIjozNiwic2VydmljZUlkIjoic3ZjX2VjbyIsInN0YXJ0ZWRBdCI6IjIwMjYtMDEtMzBUMTQ6MDA6MDAuMDAwWiIsInR4Q291bnRlciI6NSwidXNlcklkIjoic3ViX3h5ejc4OSJ9",
-    "signature": "MEQCIC8m3LyrXnETmcPy0Sg9HYJtRVELvy8uvihcLwyNXfwIAiA2TuLFn/z+7EgxOXsebVqj1SUy+Ej7eLuC17nzjSJGkg==",
+    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjMwMCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjo1MCwiZGV2aWNlSWQiOiJkZXZfZDRlNWY2YTciLCJkdXJhdGlvblNlY29uZHMiOjI5OCwiZW5kUmVhc29uIjoiTG9jYWwiLCJlbmRlZEF0IjoiMjAyNi0wMS0zMFQxNDowNTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjo1MDAsImVuZXJneVdoIjoxNTAsImxpcXVpZE1sIjo0NTIwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19hOGI5YzBkMWUyZjMiLCJvZmZsaW5lVHhJZCI6Im90eF9kNGU1ZjZhN2I4YzkiLCJwYXNzQ291bnRlciI6MzYsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAxLTMwVDE0OjAwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJ0eENvdW50ZXIiOjUsInVzZXJJZCI6InN1Yl94eXo3ODkifQ==",
+    "signature": "MEUCIQDCz0NIRSXDloI4I9aOklLKjXqKEm1zCoWA6KyFYrx2NgIgaYXuggVoVBnr88ZxDJXuCCyZsrUitgl7l1ztekazauQ=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "txCounter": 5,
@@ -1344,6 +1344,7 @@ Reports security incidents to the server for audit and automated response. The s
 | `HardwareFault` | Critical | Critical hardware error (pump overcurrent, electrical fault, emergency stop) |
 | `SoftwareFault` | Critical | Critical software error (firmware crash, watchdog reset, memory exhaustion) |
 | `ClockSkew` | Warning | Station clock differs from server by more than 300 seconds |
+| `FraudDetected` | Warning, Error or Critical, by band | **Server-originated only** — never published by a station. The server's record of a reconciled offline transaction scored in the Review, Alert or Block band ([`06-security.md` §7.4](06-security.md#74-fraud-detection--offline-transactions); [`security-event.md` §4](profiles/security/security-event.md#4-event-types)) |
 
 > **Automated response:** 3+ `MacVerificationFailure` events from the same station within 60 seconds SHOULD trigger a security review and MAY flag the station as potentially compromised.
 
@@ -1449,7 +1450,7 @@ The station **MUST** apply ALL keys or NONE. If any key in the request would res
 ```json
 {
   "keys": [
-    { "key": "OfflinePassPublicKey", "value": "BPkKbj...base64..." },
+    { "key": "OfflinePassPublicKey", "value": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/HdgUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==" },
     { "key": "RevocationEpoch", "value": "5" }
   ]
 }
@@ -2709,15 +2710,15 @@ The app MUST request biometric or PIN confirmation from the user before sending 
 | `counter` | integer | Yes | Monotonically increasing counter (anti-replay) |
 | `sessionProof` | string | Yes | HMAC-SHA256 proof binding this request to the BLE session key. Canonical construction: [ble-handshake.md §4.1](profiles/offline/ble-handshake.md) — `Base64(HMAC-SHA256(SessionKey, LP(UTF8("OfflineAuthRequest")) ‖ LP(UTF8(passId)) ‖ LP(UTF8(decimal(counter)))))`, where `LP(x) = U16BE(byteLength(x)) ‖ x` (same length-prefix as §6.5 Pin 3/4). Base64-encoded, exactly 44 characters. (N1: the prior 64-char hex/4-input form is withdrawn.) |
 
-**Station-side validation (Full Offline)** — the station MUST perform all 10 checks:
+**Station-side validation (Full Offline)** — the station **MUST** perform the nine checks of [Chapter 06 §6.1.1](06-security.md#611-offlinepass-validation--10-checks); check #5 is withdrawn, since a pass carries no station or organization scope:
 
-1. ECDSA P-256 signature valid (against server public key)
-2. `expiresAt` not passed
-3. `revocationEpoch` >= station's `RevocationEpoch` configuration
+1. ECDSA P-256 signature valid (against the key of the station's server key set named by the pass's `keyId`)
+2. `expiresAt` not passed, and the pass no older than the station's `OfflinePassMaxAge`
+3. `revocationEpoch` >= the platform `RevocationEpoch` the station holds
 4. `deviceId` matches Hello `deviceId`
-5. `stationId` matches this station (if station-restricted in pass)
-6. `maxUses` not exceeded
-7. `maxTotalCredits` not exceeded
+5. *(withdrawn)*
+6. fewer than `maxUses` transactions already counted against this pass
+7. credits already counted plus this transaction's estimated cost not above `maxTotalCredits`
 8. `maxCreditsPerTx` not exceeded for this transaction
 9. `minIntervalSec` elapsed since last transaction from this pass
 10. `counter` > `lastSeenCounter` (anti-replay)
@@ -2731,6 +2732,8 @@ The app MUST request biometric or PIN confirmation from the user before sending 
     "passId": "opass_a8b9c0d1e2f3",
     "sub": "sub_xyz789",
     "deviceId": "device_uuid_123",
+    "devicePublicKey": "A2u60879V0X/ICo5l5yABRI04caYZh2Yhy5nmr1E84CQ",
+    "keyId": "YjX5pR0TzmU3ubs17wImQQ",
     "issuedAt": "2026-02-05T10:00:00.000Z",
     "expiresAt": "2026-02-06T10:00:00.000Z",
     "policyVersion": 1,
@@ -2738,19 +2741,13 @@ The app MUST request biometric or PIN confirmation from the user before sending 
     "offlineAllowance": {
       "maxTotalCredits": 100,
       "maxUses": 5,
-      "maxCreditsPerTx": 30,
-      "allowedServiceTypes": [
-        "svc_eco",
-        "svc_standard"
-      ]
+      "maxCreditsPerTx": 30
     },
     "constraints": {
-      "minIntervalSec": 60,
-      "stationOfflineWindowHours": 72,
-      "stationMaxOfflineTx": 100
+      "minIntervalSec": 60
     },
     "signatureAlgorithm": "ECDSA-P256-SHA256",
-    "signature": "MEUCIQDXKT0ewRBp/nkPY/qh6mBjwSn4BE7fmjDTdjcP1dhIyQIgPyXM1VnFZtrG6WaOgpRwiQIeFF2I2zeFsb05dyel1rE="
+    "signature": "MEQCIGDt8n5JEeRrYMqlom+5pC9kQhSWxhscTNcNLx+W5jHvAiAnniRsf8oUWO8B2I9JwL0XwPPpirbfTYvSHbuNWZrLkg=="
   },
   "counter": 5,
   "sessionProof": "ObgxpE1Ad+xl6P8fRWtBstqMY2Tjan9oK/LIWofxvrI="
@@ -2789,7 +2786,7 @@ The `signedAuthorization` blob contains:
 - `issuedAt`, `expiresAt` — validity window
 - Server ECDSA P-256 signature (RFC 6979 deterministic nonce)
 
-The station MUST verify the signature using its stored `OfflinePassPublicKey` (during key rotation the station also accepts the internally cached previous key for a grace period; see §6.7 in Chapter 06).
+The station **MUST** verify the signature using a key of its stored `OfflinePassPublicKey` set (Chapter 06 §6.7).
 
 #### Example
 
@@ -2835,12 +2832,11 @@ Authentication result from the station. On `Accepted`, the app MAY proceed to st
 | Error Code | Reason | Description |
 |------------|--------|-------------|
 | `2002` | `OFFLINE_PASS_INVALID` | Signature verification failed |
-| `2003` | `OFFLINE_PASS_EXPIRED` | Pass has expired |
+| `2003` | `OFFLINE_PASS_EXPIRED` | Pass has expired, or is older than this station's `OfflinePassMaxAge` |
 | `2004` | `OFFLINE_EPOCH_REVOKED` | Revocation epoch check failed |
 | `4002` | `OFFLINE_LIMIT_EXCEEDED` | Max uses or credits exceeded |
 | `4003` | `OFFLINE_RATE_LIMITED` | Too soon after previous transaction |
 | `2005` | `OFFLINE_COUNTER_REPLAY` | Counter replay detected |
-| `2006` | `OFFLINE_STATION_MISMATCH` | OfflinePass stationId constraint does not match the connected station |
 | `2013` | `BLE_AUTH_FAILED` | Session key derivation or session proof invalid |
 | `4004` | `OFFLINE_PER_TX_EXCEEDED` | Per-transaction credit limit exceeded |
 
@@ -3009,7 +3005,7 @@ Final billing information for the session. After this, the station generates a s
 | `type` | string | Yes | `"StopServiceResponse"` |
 | `result` | string | Yes | `"Accepted"` or `"Rejected"` |
 | `actualDurationSeconds` | integer | Cond. | Actual service duration in seconds (when `Accepted`) |
-| `creditsCharged` | integer | Cond. | Total credits debited (when `Accepted`) |
+| `creditsCharged` | integer | Cond. | Credits the station computed for the session (when `Accepted`); advisory — the server settles its own recomputation ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)) |
 
 #### Example
 
@@ -3106,30 +3102,36 @@ Real-time service status updates during an active BLE session. The app subscribe
 
 A cryptographically signed transaction receipt generated by the station after every offline session. The receipt is signed with the station's ECDSA P-256 private key and includes a monotonic `txCounter` carried as forensic evidence.
 
-The app MUST store the receipt in its offline transaction log and sync it to the server when connectivity is restored.
+The app **MUST** store the receipt in its offline transaction log and sync it to the server when connectivity is restored, by the receipt upload of [`app-contract.md` §4](profiles/offline/app-contract.md#4-receipt-upload).
 
 #### Payload
 
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
 | `offlineTxId` | string | Yes | Offline transaction identifier (`otx_{uuid}`) |
+| `offlinePassId` | string | Pass-form | The OfflinePass the session ran on (Full Offline, Partial B) |
+| `passCounter` | integer | Pass-form | The pass counter the app presented in OfflineAuthRequest |
+| `authId` | string | Auth-form | The ServerSignedAuth the session ran on (Partial A) |
+| `sessionId` | string | Auth-form | The server-issued session that authorization settles |
+| `userId` | string | Yes | The pass's or the authorization's user |
+| `deviceId` | string | Yes | The device the session was authorized for |
 | `bayId` | string | Yes | Bay where service was provided (`bay_{uuid}`) |
 | `serviceId` | string | Yes | Service that was activated (`svc_{id}`) |
 | `startedAt` | string | Yes | Session start time (ISO 8601 UTC) |
 | `endedAt` | string | Yes | Session end time (ISO 8601 UTC) |
 | `durationSeconds` | integer | Yes | Actual session duration in seconds |
-| `creditsCharged` | integer | Yes | Credits debited from user |
+| `creditsCharged` | integer | Yes | Credits the station computed; advisory — the server settles its own recomputation ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)) |
 | `meterValues` | object | No | Final consumption readings |
 | `meterValues.liquidMl` | integer | No | Liquid consumed in milliliters |
 | `meterValues.consumableMl` | integer | No | Consumable consumed in milliliters |
 | `meterValues.energyWh` | integer | No | Energy consumed in watt-hours |
 | `receipt` | object | Yes | Cryptographic receipt |
-| `receipt.data` | string | Yes | Base64-encoded canonical JSON of the receipt fields above |
+| `receipt.data` | string | Yes | Base64 of the OSPP Canonical Form of `receipt_fields` ([Chapter 06 §6.2](06-security.md#62-transaction-receipt-signing--ecdsa-p-256)), which holds, besides the fields of this table that it signs, four signed-only fields — `stationId`, `endReason`, `bookedDurationSeconds`, `clockState` — carried in no envelope |
 | `receipt.signature` | string | Yes | Base64-encoded ECDSA P-256 signature over the SHA-256 digest of the **canonical bytes** that `data` encodes — not of the base64 string itself |
 | `receipt.signatureAlgorithm` | string | Yes | `"ECDSA-P256-SHA256"` |
 | `txCounter` | integer | Yes | Monotonically increasing transaction counter (included in signed receipt data) |
 
-> **Receipt signing:** `receipt_data = canonical_json(fields)` where fields include `txCounter`;
+> **Receipt signing:** `receipt_data = canonical_json(receipt_fields)` — the fields of Chapter 06 §6.2, `txCounter` and the four signed-only fields among them;
 > `digest = SHA-256(receipt_data)`, `signature = ECDSA-P256-Sign(station_private_key, digest)` using
 > an RFC 6979 deterministic nonce, and `receipt.data = base64(receipt_data)`.
 >
@@ -3139,7 +3141,7 @@ The app MUST store the receipt in its offline transaction log and sync it to the
 > normative and which this note previously contradicted. A station built to the older form signs
 > `SHA-256(base64(canonical))`, which no server will verify.
 
-> **Counter discontinuity:** The server records `txCounter` during reconciliation and does not gate on it. A discontinuity is worth an operator alert on the **station** — the usual causes are reboot, NVS corruption or a board swap — and the transaction is processed normally either way. It is not a fraud signal against the user and cannot prove completeness (`06-security.md` §6.3.1).
+> **Counter discontinuity:** The server records `txCounter` during reconciliation and does not gate on it. A discontinuity is worth an operator alert on the **station** — the usual causes are a power loss that interrupts a write, NVS corruption or a board swap, since the counter continues across reboots — and the transaction is processed normally either way. It is not a fraud signal against the user and cannot prove completeness (`06-security.md` §6.3.1).
 
 #### Example
 
@@ -3158,13 +3160,14 @@ The app MUST store the receipt in its offline transaction log and sync it to the
     "energyWh": 150
   },
   "receipt": {
-    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQ2hhcmdlZCI6NTAsImRldmljZUlkIjoiZGV2X2Q0ZTVmNmE3IiwiZHVyYXRpb25TZWNvbmRzIjoyOTgsImVuZGVkQXQiOiIyMDI2LTAxLTMwVDE0OjA0OjU4LjAwMFoiLCJtZXRlclZhbHVlcyI6eyJjb25zdW1hYmxlTWwiOjUwMCwiZW5lcmd5V2giOjE1MCwibGlxdWlkTWwiOjQ1MjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzXzkyZGYwZDVjMDExZWFmNzQiLCJvZmZsaW5lVHhJZCI6Im90eF9kNGU1ZjZhN2I4YzkiLCJwYXNzQ291bnRlciI6MzYsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAxLTMwVDE0OjAwOjAwLjAwMFoiLCJ0eENvdW50ZXIiOjUsInVzZXJJZCI6InN1Yl8wNjA3MmE4MjllMzkxOGE4In0=",
-    "signature": "MEQCIEAom60l588MWMqdsctH4zpEpTa6OdbeaaX7nAzxtFjRAiAKO1boLTVgKMP+26XbaUXSNa5g+6lQ45fwUWaA5vlw5Q==",
+    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjMwMCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjo1MCwiZGV2aWNlSWQiOiJkZXZfZDRlNWY2YTciLCJkdXJhdGlvblNlY29uZHMiOjI5OCwiZW5kUmVhc29uIjoiTG9jYWwiLCJlbmRlZEF0IjoiMjAyNi0wMS0zMFQxNDowNDo1OC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjo1MDAsImVuZXJneVdoIjoxNTAsImxpcXVpZE1sIjo0NTIwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc185MmRmMGQ1YzAxMWVhZjc0Iiwib2ZmbGluZVR4SWQiOiJvdHhfZDRlNWY2YTdiOGM5IiwicGFzc0NvdW50ZXIiOjM2LCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic3RhcnRlZEF0IjoiMjAyNi0wMS0zMFQxNDowMDowMC4wMDBaIiwic3RhdGlvbklkIjoic3RuX2ExYjJjM2Q0IiwidHhDb3VudGVyIjo1LCJ1c2VySWQiOiJzdWJfMDYwNzJhODI5ZTM5MThhOCJ9",
+    "signature": "MEUCIQCYdlcViuPoUBG3SPEHWIWNBRuov99Hg2ikDySVNVfCFgIgVyL9hEeAE+KEvy0DR31K9Yqgzduz8aNpZe32lmzMbMs=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "txCounter": 5,
   "offlinePassId": "opass_92df0d5c011eaf74",
   "userId": "sub_06072a829e3918a8",
+  "deviceId": "dev_d4e5f6a7",
   "passCounter": 36
 }
 ```
@@ -3249,12 +3252,10 @@ Error codes referenced in this chapter. For the full catalog, see [Chapter 07 �
 | 2003 | `OFFLINE_PASS_EXPIRED` | AuthorizeOfflinePass, BLE AuthResponse |
 | 2004 | `OFFLINE_EPOCH_REVOKED` | AuthorizeOfflinePass, TransactionEvent, BLE AuthResponse |
 | 2005 | `OFFLINE_COUNTER_REPLAY` | AuthorizeOfflinePass, TransactionEvent, BLE AuthResponse |
-| 2006 | `OFFLINE_STATION_MISMATCH` | AuthorizeOfflinePass, BLE AuthResponse |
 | 2007 | `COMMAND_NOT_SUPPORTED` | All Server→Station commands (implicit) |
 | 2008 | `ACTION_NOT_PERMITTED` | ChangeConfiguration |
 | 2013 | `BLE_AUTH_FAILED` | BLE AuthResponse |
 | 2014 | `OFFLINE_PASS_REVOKED` | AuthorizeOfflinePass, TransactionEvent, BLE AuthResponse |
-| 2015 | `OFFLINE_ORG_MISMATCH` | AuthorizeOfflinePass, TransactionEvent, BLE AuthResponse |
 | 2016 | `OFFLINE_USER_MISMATCH` | TransactionEvent |
 | 2017 | `OFFLINE_RECEIPT_MISMATCH` | TransactionEvent |
 | 2018 | `SERVER_AUTH_NONCE_MISMATCH` | BLE AuthResponse (Partial A ServerSignedAuth) |

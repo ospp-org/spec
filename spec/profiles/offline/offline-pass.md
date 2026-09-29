@@ -4,7 +4,7 @@
 
 ## 1. Overview
 
-An **OfflinePass** is a server-signed credential that authorizes a user to start sessions on specific stations without real-time server connectivity. It is issued by the server, stored on the mobile app in encrypted secure storage, and validated by the station (either locally in the Full Offline scenario or via MQTT in the Partial B scenario). The OfflinePass is the cornerstone of OSPP's offline authorization model.
+An **OfflinePass** is a server-signed credential that authorizes a user to start sessions without real-time server connectivity, at **any station that accepts offline passes** (§2.3). It belongs to the user it is issued to and to that user's device, and to nothing else: it names no station and no organization. It is issued by the server together with a trust bundle ([`app-contract.md`](app-contract.md)), stored on the mobile app in encrypted secure storage, and validated either by the station locally (Full Offline) or by the server over MQTT (Partial B). The OfflinePass is the cornerstone of OSPP's offline authorization model.
 
 ## 2. OfflinePass Fields
 
@@ -12,13 +12,15 @@ An **OfflinePass** is a server-signed credential that authorizes a user to start
 |----------------------|----------|----------|-----------------------------------------------|
 | `passId` | string | Yes | Unique pass identifier (`opass_` prefix). |
 | `sub` | string | Yes | User subject identifier the pass is issued to (`sub_` prefix). |
-| `deviceId` | string | Yes | Bound device identifier (prevents sharing across devices). |
+| `deviceId` | string | Yes | Identifier of the device the pass is issued to; compared with the presenting device (§4 check #4). |
+| `devicePublicKey` | string | Yes | The device's P-256 public key, compressed SEC1, Base64 (44 characters; [`06-security.md` §6.5.2](../../06-security.md#652-stationidentity-certificate)). Its private key was generated in, and cannot be exported from, the phone's hardware-backed keystore (§6), so the key binds the pass to the one device that holds it. |
+| `keyId` | string | Yes | Identifier of the server signing key that signed the pass (§3; [`06-security.md` §6.7](../../06-security.md#67-server-signing-key-rotation-ecdsa-p-256)). |
 | `issuedAt` | string | Yes | ISO 8601 timestamp of when the pass was issued. |
-| `expiresAt` | string | Yes | ISO 8601 timestamp of when the pass expires. Maximum validity is 24 hours from `issuedAt`. |
+| `expiresAt` | string | Yes | ISO 8601 timestamp of when the pass expires: `issuedAt` plus the platform pass lifetime — 3 days by default, never more than 10 days (§6). |
 | `policyVersion` | integer | Yes | Version of the offline policy used to generate this pass (minimum 1). |
-| `revocationEpoch` | integer | Yes | Revocation epoch number at time of issuance (minimum 0). |
-| `offlineAllowance` | object | Yes | Spending and usage limits (see below). |
-| `constraints` | object | Yes | Operational constraints (see below). |
+| `revocationEpoch` | integer | Yes | The platform revocation epoch at the time of issuance (minimum 0; §5). |
+| `offlineAllowance` | object | Yes | The pass's limits (see below). |
+| `constraints` | object | Yes | The pass's rate constraint (see below). |
 | `signatureAlgorithm` | string | Yes | Signature algorithm identifier. **MUST** be `ECDSA-P256-SHA256`. |
 | `signature` | string | Yes | ECDSA P-256 signature over all fields above (excluding `signature` and `signatureAlgorithm`), Base64-encoded. |
 
@@ -26,112 +28,78 @@ An **OfflinePass** is a server-signed credential that authorizes a user to start
 
 | Field | Type | Required | Description |
 |------------------------|----------|----------|-----------------------------------------------|
-| `maxTotalCredits` | integer | Yes | Maximum total credits across all sessions (minimum 1). |
+| `maxTotalCredits` | integer | Yes | Maximum total credits across all sessions — any number of sessions until it is reached (minimum 1). |
 | `maxUses` | integer | Yes | Maximum number of sessions allowed (minimum 1). |
-| `maxCreditsPerTx` | integer | Yes | Maximum credits per single session (minimum 1). |
+| `maxCreditsPerTx` | integer | Yes | Maximum credits for a single session — the per-session limit (minimum 1). |
 | `allowedServiceTypes` | string[] | **No — withdrawn** | **WITHDRAWN in `0.25.0`.** Accepted and ignored for one transition step, then removed. Servers **MUST NOT** issue it; receivers **MUST NOT** reject on it. No validation check in this specification has ever read it — see [`06-security.md` §6.1.1](../../06-security.md#611-offlinepass-validation--10-checks). |
+
+**A request above a limit is refused, never reduced (Normative).** A validator that finds the cost of a requested service above `maxCreditsPerTx`, or above what remains of `maxTotalCredits`, **MUST** refuse the request (§4 checks #7 and #8) and **MUST NOT** shorten the service, lower its price or otherwise reduce the request until it fits. The customer chooses; the protocol does not choose for them. The app **MUST** show the pass's limits — the per-session limit, the credits remaining under `maxTotalCredits` and the uses remaining under `maxUses` — before the customer chooses a service, so that a refusal on a limit is one the customer could have foreseen. A station counts only its own use of a pass (§5), so across stations it is the app that keeps the pass within its limits: the app **MUST NOT** request a service when, by its own count — the receipts it has read against that pass, whether or not it has uploaded them — the pass has no use left, the service's estimated cost exceeds the credits it has left, or less than `minIntervalSec` has passed since its last use, and **MUST** present only the latest pass it was issued.
 
 ### 2.2 constraints Object
 
 | Field | Type | Required | Description |
 |------------------------------|---------|----------|-----------------------------------------------|
-| `minIntervalSec` | integer | Yes | Minimum seconds between consecutive uses (minimum 0). |
-| `stationOfflineWindowHours` | integer | Yes | Maximum hours a station can operate offline (minimum 1). Measured by the station as a **monotonic** delta from its last successful MQTT connection, not as a wall-clock difference — see §4, check #2. |
-| `stationMaxOfflineTx` | integer | Yes | Maximum offline transactions a station accepts before requiring sync (minimum 1). |
+| `minIntervalSec` | integer | Yes | Minimum seconds between consecutive uses of this pass (minimum 0). |
 
-**The two station-scoped constraints refuse with `4002`, and until now they refused with nothing.**
-`stationOfflineWindowHours` and `stationMaxOfflineTx` are the only two ceilings in this object that
-no server evaluates: they bound the **station**, they are checked by the station alone, and they
-appear in none of the ten checks of [`06-security.md` §6.1.1](../../06-security.md), which is where
-every other ceiling gets its code. That left a station obliged to emit a code it had no value for —
-[`auth-response.schema.json`](../../../schemas/ble/auth-response.schema.json) makes `errorCode`
-**REQUIRED** whenever `result` is `Rejected`, and
-[`start-service-response.schema.json`](../../../schemas/ble/start-service-response.schema.json)
-requires `errorCode` **and** an `errorText` matching the registry's
-`^[A-Z][A-Z0-9_]+$`. A station **MUST** therefore refuse with `4002 OFFLINE_LIMIT_EXCEEDED` when
-either is reached, and **MUST** name which one in `details.constraint`, using the field name
-verbatim. **No new code is introduced**: the condition is an offline ceiling being reached, which is
-what `4002` already means; what was missing was the statement that it covers these two.
+**The station's own offline limits are configuration, not pass fields.** Whether a station accepts a pass on its own validation, for how long after losing its server connection it may keep doing so, and how many offline transactions the server has not yet answered `Accepted`, `Duplicate` or `Rejected` it may hold are properties of the **station**. Its operator sets them and the server pushes them as configuration — `OfflineModeEnabled`, `OfflineWindowHours` and `OfflineTransactionLimit` ([`08-configuration.md` §5](../../08-configuration.md#5-offline--ble-configuration-keys)). A pass carries none of them: it is presented at stations of every tenant (§2.3), so no issuer could sign one station's limits into it. Earlier revisions carried two of them in the pass, as `constraints.stationOfflineWindowHours` and `constraints.stationMaxOfflineTx`; both are removed.
 
-**Why the distinction has to travel, and why a second code is the wrong way to carry it.** The two
-families differ in what the app can do about the refusal. A pass-scoped ceiling is exhausted for
-**that pass**, and a newly issued pass clears it. A station-scoped ceiling is a property of the
-**station** — it has been offline too long, or has buffered too many transactions — and no pass
-issued to anyone clears it until that station reconnects. An app that retries with a fresh pass
-against a station-scoped refusal loops without progress, and the user is told nothing. Splitting the
-code would make that visible at the cost of a registry entry, a conformance vector set and a
-lockstep SDK release ([ADR-001](../../../adr/ADR-001-cross-repo-lockstep-versioning.md)); `details`
-is already an open object on both carriers and already the place per-occurrence context travels, so
-the distinction is carried there.
+**Refusing on a station limit (Normative).** A station **MUST** refuse an OfflinePass it would otherwise accept on its own validation when `OfflineModeEnabled` is `false`, when more than `OfflineWindowHours` have elapsed since its last successful MQTT connection — measured on its **monotonic** timer, not its wall clock (the note on §4 check #2) — or when it already holds `OfflineTransactionLimit` offline transactions the server has not yet answered `Accepted`, `Duplicate` or `Rejected` — one answered `RetryLater` still counts ([`08-configuration.md` §5](../../08-configuration.md#5-offline--ble-configuration-keys)). It refuses with `4002 OFFLINE_LIMIT_EXCEEDED` and **MUST** name the limit in `details.constraint`, using the configuration key name verbatim. **No new code is introduced**: the condition is an offline ceiling being reached, which is what `4002` already means.
 
-**Upper bounds, and what happens when a pass asks for more than a station can give.** Every field in §2.1 and §2.2 stated a *minimum* and no *maximum* until 0.30.0, so a pass could be signed authorising more offline transactions than any conformant station is able to buffer — a contradiction between two obligations of this same specification, and one no station could resolve locally. The rule is precedence, not a new number:
+**Why the distinction has to travel, and why a second code is the wrong way to carry it.** The two families of ceiling differ in what the app can do about the refusal. A pass ceiling (§2.1) is exhausted for **that pass**, and a newly issued pass clears it. A station ceiling is a property of the **station** — its operator has switched local acceptance off, or it has been offline too long, or it holds too many transactions the server has not yet answered `Accepted`, `Duplicate` or `Rejected` — and no pass issued to anyone clears it until that station reconnects or its operator changes it. An app that retries with a fresh pass against a station refusal loops without progress, and the user is told nothing. Splitting the code would make that visible at the cost of a registry entry, a conformance vector set and a lockstep SDK release ([ADR-001](../../../adr/ADR-001-cross-repo-lockstep-versioning.md)); `details` is already an open object on the MQTT carriers and already the place per-occurrence context travels, so the distinction is carried there. The BLE rejection shapes carry no `details` today, which is part of blocker [B-3](../../../KNOWN-ISSUES.md#b-3--the-three-ble-response-schemas-disagree-with-each-other-and-with-chapter-07).
 
-- **The station's own configuration bounds the pass, never the other way round.** For each constraint the station **MUST** enforce the **lower** of the pass value and its own configured limit, and **MUST NOT** raise a local limit because a pass asked it to. A pass is an authorisation, not a reconfiguration.
-- `stationMaxOfflineTx` **MUST NOT** exceed the station's `MaxOfflineTransactions` ([`08-configuration.md` §5](../../08-configuration.md)); above it the pass authorises transactions the station is separately forbidden to discard and has no room to hold. An issuer that does not know the station's value **SHOULD** issue at the normative floor, **1000**.
-- `stationOfflineWindowHours` **MUST NOT** exceed **24**, and a larger value is inert rather than useful: a pass's signed validity is itself capped at 24 hours from `issuedAt` (§1), so a station offline longer than that holds only expired passes.
-- `minIntervalSec` **MUST NOT** exceed **86400**, the same 24-hour bound, for the same reason.
-- `maxTotalCredits`, `maxUses` and `maxCreditsPerTx` are **issuer policy** and this specification sets no ceiling on them. That is deliberate — a protocol maximum on money would be a limit on the operator's business rather than on the wire — but it is stated rather than left silent, because the absence otherwise reads as an oversight of the same kind as the three above.
+**Upper bounds.** The station's configuration bounds the station and the pass bounds the user; neither raises the other, and a station **MUST NOT** raise a local limit because a pass asked it to. `minIntervalSec` **MUST NOT** exceed **864000**, the maximum pass lifetime (§6): a longer interval could never elapse inside a valid pass. `maxTotalCredits`, `maxUses` and `maxCreditsPerTx` are **issuer policy** and this specification sets no ceiling on them. That is deliberate — a protocol maximum on money would be a limit on the operator's business rather than on the wire — and it is stated rather than left silent, because the absence otherwise reads as an oversight.
 
-None of this changes [`offline-pass.schema.json`](../../../schemas/common/offline-pass.schema.json): the bounds are normative prose enforced at issuance and re-checked at validation, exactly as the 24-hour validity cap already is. Writing them into the schema instead would bind receivers that vendored an older copy to a different verdict on the same pass.
+None of this is written into [`offline-pass.schema.json`](../../../schemas/common/offline-pass.schema.json): the ceiling on `minIntervalSec` is normative prose enforced at issuance and re-checked at validation, exactly as the lifetime cap is. Writing it into the schema instead would bind receivers that vendored an older copy to a different verdict on the same pass.
 
-### 2.3 Server-Side Record Fields (not on the wire)
+### 2.3 Scope: any station that accepts offline passes (Normative)
 
-The tables above are the **complete** OfflinePass wire structure: they match
-[`offline-pass.schema.json`](../../../schemas/common/offline-pass.schema.json) member for member, and that
-schema sets `additionalProperties: false` at both levels, so a pass carrying anything else is
-schema-invalid and its signature (§3) covers nothing else.
+**An OfflinePass belongs to the user it is issued to (`sub`) and to that user's device (`deviceId`, `devicePublicKey`), and to nothing else.** It names no station and no organization, and no server record binds it to either. A user whose offline use the server has enabled may present it at **any** station that accepts offline passes, whatever tenant operates that station. Therefore:
 
-Two constraints bind a pass without appearing in it. Both live on the **server's stored pass record**
-and are read from there by the gates that enforce them — never from the presented pass:
+- a station **MUST NOT** refuse a pass, and a server **MUST NOT** refuse a pass at authorize time or a transaction at reconciliation, on the ground of which station or which organization presented or reported it;
+- a server **MUST NOT** issue a pass restricted to stations or to an organization, and **MUST NOT** require the user to belong to an organization in order to issue one ([`app-contract.md` §3](app-contract.md#3-pass-issuance)).
 
-| Record field | Bounds the pass to | Enforced by |
-|---|---|---|
-| `organization_id` | its issuing organization (`org_<uuid>`), for scoped and unscoped passes alike | [`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks-11-checks) check #11 and [`reconciliation.md` §6.1](reconciliation.md#61-check-list) check #7, both `2015 OFFLINE_ORG_MISMATCH` |
-| `allowed_station_ids` | the listed stations, when non-empty | [`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks-11-checks) check #5 and [`reconciliation.md` §6.1](reconciliation.md#61-check-list) check #8, both `2006 OFFLINE_STATION_MISMATCH` |
+The tables above are the **complete** OfflinePass wire structure: they match [`offline-pass.schema.json`](../../../schemas/common/offline-pass.schema.json) member for member, and that schema sets `additionalProperties: false` at both levels, so a pass carrying anything else is schema-invalid and its signature (§3) covers nothing else.
 
-A station validating a pass locally over BLE has no server to ask and can read only the pass itself,
-so it can perform neither check. For `organization_id` that is the deferred **D5** decision recorded in
-§4; for `allowed_station_ids` it is [`KNOWN-ISSUES.md` B-2](../../../KNOWN-ISSUES.md#b-2--a-station-scoped-offlinepass-is-unrepresentable-in-the-authoritative-schema),
-which §4 check #5 states as a station obligation the wire format cannot support.
+> **What this replaced.** Earlier revisions bound every pass to its issuing organization, and optionally to a list of stations, through two fields of the server's stored pass record — `organization_id` and `allowed_station_ids` — checked at authorize time and at reconciliation with `2015 OFFLINE_ORG_MISMATCH` and `2006 OFFLINE_STATION_MISMATCH`. A station validating offline could perform neither check, because neither value was in the pass. The scope, the checks and both codes are withdrawn together, and the check numbers they held are not reused (§4).
 
 ## 3. Signing (ECDSA P-256)
 
 The server signs the OfflinePass using ECDSA P-256 with SHA-256 (FIPS 186-4). The signing process is as follows:
 
 1. **Canonical JSON serialization** -- all fields of the OfflinePass (excluding `signature` and `signatureAlgorithm`) are serialized using the **OSPP Canonical Form** defined in [`06-security.md §4.8`](../../06-security.md). The canonicalization is applied recursively across the whole pass body; the resulting UTF-8 byte sequence is the input to the SHA-256 + ECDSA-P256 signing primitive in step 2.
-2. **ECDSA P-256 signing** -- the SHA-256 digest of the canonical JSON byte sequence is signed using the server's ECDSA P-256 private key. Software implementations **MUST** use RFC 6979 deterministic nonces and **MUST** apply low-s normalisation (`s := n - s` when `s > n/2`) before DER-encoding, per [`06-security.md §6.2 Note 6`](../../06-security.md). These two requirements together make the produced signature byte-reproducible across compliant implementations.
+2. **ECDSA P-256 signing** -- the SHA-256 digest of the canonical JSON byte sequence is signed using the private key of the server signing key named by `keyId`. Software implementations **MUST** use RFC 6979 deterministic nonces and **MUST** apply low-s normalisation (`s := n - s` when `s > n/2`) before DER-encoding, per [`06-security.md` §6.2](../../06-security.md#62-transaction-receipt-signing--ecdsa-p-256). These two requirements together make the produced signature byte-reproducible across compliant implementations.
 3. **Base64 encoding** -- the resulting DER-encoded signature is Base64-encoded and placed in the `signature` field.
-4. **Verification** -- the station verifies the signature using the server's ECDSA P-256 public key, which is provisioned during BootNotification or via ChangeConfiguration. The station **MUST** reject any pass that fails signature verification with error `2002 OFFLINE_PASS_INVALID`. Verification is malleability-agnostic — it MUST accept any valid DER ECDSA P-256 signature regardless of which half of the order `s` lies in; low-s normalisation is a signing-time requirement only.
+4. **Verification** -- the verifier selects, from the server key set it holds, the key whose identifier equals the pass's `keyId`, and verifies the signature with it. The station holds the set as `OfflinePassPublicKey` ([`08-configuration.md` §4](../../08-configuration.md#4-security-configuration-keys)). The station **MUST** reject a pass whose `keyId` names no key of its set, or whose signature does not verify, with error `2002 OFFLINE_PASS_INVALID`. Verification is malleability-agnostic — it **MUST** accept any valid DER ECDSA P-256 signature regardless of which half of the order `s` lies in; low-s normalisation is a signing-time requirement only.
 
-The server **MUST** rotate signing keys periodically. Key rotation is communicated to stations via ChangeConfiguration with the `OfflinePassPublicKey` key (an ECDSA P-256 public key in uncompressed or compressed SEC1 format). Stations **MUST** accept passes signed by the current key, and the immediately previous key **for the grace period only** (to handle rotation race conditions). The window is bounded by [`06-security.md` §6.7](../../06-security.md) step 4, which is its only statement; when the grace period expires the station **MUST** discard the cached previous key. An unbounded reading would leave a superseded key — including one an attacker holds ([`06-security.md` §6.7.1](../../06-security.md)) — acceptable indefinitely, until a second rotation displaced it.
+The server **MUST** rotate its signing key periodically, and it manages its keys as a **set**: a new key enters the set well before it signs anything, and an old key leaves only when everything it signed has expired. [`06-security.md` §6.7](../../06-security.md#67-server-signing-key-rotation-ecdsa-p-256) states the windows, how the set reaches stations — at provisioning, at every boot and by ChangeConfiguration — and the compromise response; it is the only statement of them.
 
 ## 4. Validation Checks (10)
 
-**Who performs how many.** The list below is ten checks, and the count a validator owes depends on what it can read:
+**Who performs how many.** The list below has ten numbered checks. Check #5 is **withdrawn** — a pass carries no station or organization scope (§2.3) — and its number is not reused: a check number is cited as an identifier (see the note on check #2 below). The count a validator owes:
 
-| Validator | Checks it **MUST** perform | Why the difference |
-|---|---|---|
-| **Station**, validating locally over BLE (Full Offline) | **nine** — #1--#4 and #6--#10 | Check #5 compares against `allowed_station_ids`, which lives on the server's stored pass record and has no member in the signed pass (§2.3). A station has nothing to read and no server to ask: the obligation is not waived for convenience, it is unrepresentable ([`KNOWN-ISSUES.md` B-2](../../../KNOWN-ISSUES.md#b-2--a-station-scoped-offlinepass-is-unrepresentable-in-the-authoritative-schema)). |
-| **Server**, at Partial-B authorize-time | **eleven** — all ten, plus org binding | It reads the stored pass record, so #5 is evaluable, and it adds check #11 (`2015 OFFLINE_ORG_MISMATCH`) — see [`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks-11-checks). |
+| Validator | Checks it **MUST** perform |
+|---|---|
+| **Station**, validating locally over BLE (Full Offline) | **nine** — #1--#4 and #6--#10 |
+| **Server**, at Partial-B authorize-time | the same nine — the age bound of #2 against the forwarding station's `OfflinePassMaxAge` — and individual revocation — [`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks) |
 
-Processing **MUST** stop at the first failure. The org check is server-side because it compares against the server's stored pass record; the station, validating offline, cannot perform it without `organization_id` in the signed pass, which is deferred to D5.
-
-This is stated as a table because the sentence it replaces — *"the station MUST perform all 10 checks below"* — was contradicted by §2.3 of this same document sixteen lines above it, and by the note under the [`06-security.md` §6.1.1](../../06-security.md#611-offlinepass-validation--10-checks) copy of the same table, which already called the list *"ten checks, nine of which a station can perform"*. The analysis was right in both places; only the count-bearing sentence had not been brought into line with it.
+Processing **MUST** stop at the first failure.
 
 > **Implementation note:** Implementations **SHOULD** validate structural integrity (required fields, types, valid base64 signature) before check #1. This avoids the expensive ECDSA verification on malformed payloads. Structural failures use `2002 OFFLINE_PASS_INVALID`.
 
 | # | Check | Error on Failure | Description |
 |:--:|-----------------------------------------------|-------------------------------|-----------------------------------------------|
-| 1 | **Signature verification** | `2002 OFFLINE_PASS_INVALID` | Verify ECDSA P-256 signature against server public key. |
-| 2 | **Within its temporal bounds** | `2003 OFFLINE_PASS_EXPIRED` | Both bounds, and either failing is this check failing: `expiresAt` **MUST** be greater than the current time, **and** `now - issuedAt` **MUST NOT** exceed the station's `OfflinePassMaxAge` (§8). See the note below on why the age bound lives here rather than as an eleventh check. |
-| 3 | **Revocation epoch valid** | `2004 OFFLINE_EPOCH_REVOKED` | `revocationEpoch` **MUST** be >= the station's stored `RevocationEpoch`. |
-| 4 | **Device binding** | `2002 OFFLINE_PASS_INVALID` | `deviceId` in the pass **MUST** match the device presenting it. |
-| 5 | **Station allowed** | `2006 OFFLINE_STATION_MISMATCH` | The station's ID **MUST** be permitted by pass constraints (when station-scoped). |
+| 1 | **Signature verification** | `2002 OFFLINE_PASS_INVALID` | Verify the ECDSA P-256 signature with the key of the server key set named by the pass's `keyId` (§3). |
+| 2 | **Within its temporal bounds** | `2003 OFFLINE_PASS_EXPIRED` | Both bounds, and either failing is this check failing: `expiresAt` **MUST** be greater than the current time, **and** `now - issuedAt` **MUST NOT** exceed the station's `OfflinePassMaxAge` ([`08-configuration.md` §5](../../08-configuration.md#5-offline--ble-configuration-keys)). See the note below on why the age bound lives here rather than as an eleventh check. |
+| 3 | **Revocation epoch valid** | `2004 OFFLINE_EPOCH_REVOKED` | `revocationEpoch` **MUST** be >= the platform `RevocationEpoch` the station holds (§5). |
+| 4 | **Device binding** | `2002 OFFLINE_PASS_INVALID` | `deviceId` in the pass **MUST** match the device presenting it. See the note below on `devicePublicKey`. |
+| 5 | **Withdrawn** | — | A pass carries no station or organization scope (§2.3). The number is not reused. |
 | 6 | **Usage count** | `4002 OFFLINE_LIMIT_EXCEEDED` | The transactions **already** counted against this pass **MUST** be fewer than `maxUses`; a pass permits `maxUses` transactions in total. |
 | 7 | **Total credits** | `4002 OFFLINE_LIMIT_EXCEEDED` | The credits already counted **plus** this transaction's estimated cost **MUST NOT** exceed `maxTotalCredits`; a pass permits `maxTotalCredits` credits in total. |
 | 8 | **Per-transaction credits** | `4004 OFFLINE_PER_TX_EXCEEDED` | This transaction's estimated cost **MUST NOT** exceed `maxCreditsPerTx`. |
 | 9 | **Rate limit** | `4003 OFFLINE_RATE_LIMITED` | At least `minIntervalSec` seconds **MUST** have elapsed since last use of this pass. |
 | 10 | **Counter anti-replay** | `2005 OFFLINE_COUNTER_REPLAY` | `counter` **MUST** be strictly greater than `lastSeenCounter` for this pass on this station. |
+
+> **Check #4 and the device key.** The pass carries `devicePublicKey`, the public half of a key the phone's hardware-backed keystore generated and will not export (§6). The device that holds the private key is the pass's device, and using that key is what proves it: a `deviceId` alone proves nothing, because any radio in range of a `Hello` can read it ([`06-security.md` T14](../../06-security.md#t14---ble-presence-tracking)). No BLE message defined in this revision carries a proof of possession of that key — the BLE profile is EXPERIMENTAL and has not been revised for it — so check #4 compares `deviceId` as the table states.
 
 > **Which clock check #2 reads, and what happens when it cannot be trusted.** Both bounds are
 > **wall-clock** comparisons, and the station evaluating them is by definition offline: its only
@@ -145,78 +113,89 @@ This is stated as a table because the sentence it replaces — *"the station MUS
 >    refuse a pass for want of confidence in that clock. A rule that withheld service whenever the
 >    clock was unverified would withhold it for the whole of every outage, which is the one condition
 >    this profile exists to serve.
-> 2. `constraints.stationOfflineWindowHours` is **not** a wall-clock quantity and **MUST NOT** be
+> 2. `OfflineWindowHours` (§2.2) is **not** a wall-clock quantity and **MUST NOT** be
 >    evaluated as one. It is an elapsed duration, and the station **MUST** measure it as a
 >    **monotonic** delta from its last successful MQTT connection — the same mechanism
 >    [`heartbeat.md` §6](../core/heartbeat.md#6-clock-synchronization) rule 5 already mandates for
 >    session elapsed time. A monotonic timer is unaffected by the drift and by any correction applied
 >    on reconnection, so this bound stays sound exactly where the wall-clock ones weaken.
-> 3. A station **SHOULD** record, in each receipt it signs while offline, that it was offline — the
->    `bootReason` and the buffered-event ordering already carry this — so that an operator reviewing a
->    disputed transaction can see which clock produced its timestamps.
+> 3. The station **MUST** record, in each receipt it signs, the state of its clock — `clockState`
+>    ([`06-security.md` §6.2](../../06-security.md#62-transaction-receipt-signing--ecdsa-p-256)) — so
+>    that the server knows whether the offset it measures at reconnection applies to that receipt's
+>    timestamps.
 >
-> **What this does not fix, stated rather than papered over.** The server's backstop for temporal
-> validity is [`reconciliation.md` §6.1](reconciliation.md#61-check-list) check #9, and that check
-> compares the pass's `expiresAt` against the envelope's `endedAt` — a timestamp the **station**
-> produced from the same wall clock. A station running days slow passes check #2 on an expired pass
-> and then reports an `endedAt` that passes check #9, so the backstop is not independent of the fault
-> it backs up. The guards that *are* independent are the ones that read no clock: checks #10-#13 and
-> the cumulative cross-station factors of [`06-security.md` §7.4](../../06-security.md#74-fraud-detection--offline-transactions).
-> Closing the gap properly needs a server-side decision about how far a station timestamp may sit from
-> the server's receipt-processing time before the transaction is held for review, and that decision is
-> recorded in [`KNOWN-ISSUES.md`](../../../KNOWN-ISSUES.md#open--offlinepass-temporal-validity-rides-a-wall-clock-with-no-offline-correction-and-the-servers-backstop-reads-the-same-clock)
-> rather than guessed at here.
+> **What the server does about it.** The server's backstop for temporal validity is
+> [`reconciliation.md` §6.1](reconciliation.md#61-check-list) check #9, and it does not read the
+> station's clock alone: it judges the signed `endedAt` corrected by the offset the server measured
+> when the station reconnected, for a receipt whose clock was synchronized, and flags the receipt for
+> review when its clock was not ([`reconciliation.md` §6.8](reconciliation.md#68-station-clock-offset)).
+> The signed times themselves are never rewritten. The guards that read no clock at all — checks
+> #10-#13 at reconciliation and the cumulative cross-station factors of
+> [`06-security.md` §7.4](../../06-security.md#74-fraud-detection--offline-transactions) — are
+> unchanged.
 
 > **Why the age bound is part of check #2 and not a check #11.** It is the same question — is this
-> pass temporally valid — with the same error code, and for a **conformant** pass the expiry bound
-> already implies it, because §6 step 1 caps issued validity at `OfflinePassMaxAge`. What the age
-> bound catches is the pass issued under a *longer* cap than this station currently holds: an
-> operator who has just lowered the policy, or a station whose configuration has not caught up.
-> That is a belt on the same buckle, not a separate obligation. It is also the reason the list is
-> still ten: "10 checks" is a cited count — it names a conformance case (`TC-OFF-002`), two chapter
-> cross-references and ten further citations across the specification and the implementor's guide —
-> and an ordinal that is cited is an identifier.
+> pass temporally valid — with the same error code. A pass is valid until its `expiresAt`, up to ten
+> days after issue (§6); what the age bound adds is the **station's own stricter limit**: an
+> operator who wants a station to hold offline authority to a shorter window lowers its
+> `OfflinePassMaxAge`, and the station refuses passes older than that. That is a belt on the same
+> buckle, not a separate obligation. It is also the reason the list is still ten, and the reason
+> check #5 is withdrawn in place rather than removed: "10 checks" is a cited count — it names a
+> conformance case (`TC-OFF-002`), two chapter cross-references and further citations across the
+> specification and the implementor's guide — and an ordinal that is cited is an identifier.
 
-## 5. Epoch Revocation
+## 5. Revocation
 
-The epoch-based revocation mechanism provides a lightweight way to invalidate all outstanding OfflinePasses without distributing a Certificate Revocation List (CRL):
+**The revocation epoch belongs to the platform.** [Chapter 06 §6.6](../../06-security.md#66-epoch-based-revocation) is normative and this section summarizes it:
 
-1. The server maintains an integer `RevocationEpoch` **per tenant**, starting at 0 ([Chapter 06 §6.6](../../06-security.md#66-epoch-based-revocation) — a single shared counter makes one tenant's revocation a platform-wide outage). A station belongs to one tenant and holds one value.
-2. When the server issues an OfflinePass, it embeds the current `RevocationEpoch` in the pass's `revocationEpoch` field.
-3. To revoke all outstanding passes, the server increments `RevocationEpoch` by 1 and pushes the new value to all connected stations via ChangeConfiguration.
-4. Stations store the latest `RevocationEpoch` in non-volatile memory. During validation check #3, any pass with `revocationEpoch` less than the station's stored epoch is rejected with `2004 OFFLINE_EPOCH_REVOKED`.
-5. Stations that are offline when the epoch is bumped will receive the updated epoch upon their next BootNotification or ChangeConfiguration.
+1. The platform holds **one** `RevocationEpoch`, starting at 0. Only the platform increments it — no tenant, and no tenant-level permission, can — and every station of every tenant holds the platform value.
+2. When the server issues an OfflinePass, it embeds the current platform epoch in the pass's `revocationEpoch` field.
+3. To revoke every outstanding pass, the platform increments `RevocationEpoch` by 1 and the server pushes the new value to every connected station via ChangeConfiguration.
+4. Stations store the latest `RevocationEpoch` in non-volatile memory. During validation check #3, any pass with `revocationEpoch` less than the stored epoch is rejected with `2004 OFFLINE_EPOCH_REVOKED`.
+5. A station that is offline when the epoch moves receives the new value when it reconnects, in the configuration of its BootNotification RESPONSE, or by ChangeConfiguration.
 
-**Trade-off:** Epoch revocation is coarse-grained -- it revokes ALL passes issued before the bump, not individual passes. This is acceptable because OfflinePasses have short lifetimes (maximum 24 hours). For individual pass revocation, the server relies on the `maxUses` limit and pass expiry.
+**Per-user revocation is enforced where the server is reachable.** Revoking one user's passes — one pass, or every pass of a user the server has blocked — marks the passes revoked on the server, and that mark is read wherever the server is in the loop: on the online path, at Partial-B authorize time ([`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks) check #12, `2014 OFFLINE_PASS_REVOKED`) and at reconciliation ([`reconciliation.md` §6.1](reconciliation.md#61-check-list) check #11, `2014`). A station validating offline has no server to ask and does not learn it.
+
+**What an offline station can refuse, and what it cannot.** A station validating a pass with no server connection can refuse on what it holds:
+
+- the signature, against its server key set (check #1);
+- expiry, and age against its own `OfflinePassMaxAge`, on its own clock (check #2);
+- the last platform epoch it received (check #3);
+- device binding (check #4);
+- its own offline switch and limits (§2.2);
+- the per-pass counters it keeps itself (checks #6--#10);
+- the availability of the bay and service requested.
+
+It **cannot** refuse on what only the server knows: a block or an individual revocation, whenever it was issued; an epoch the platform moved after the station last received configuration; use of the same pass at other stations; the user's current wallet balance; or which tenant's customer the user is — the last by design (§2.3). The server acts on the first three where it is reachable: at Partial-B authorize time, where each refuses ([`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks)), and at reconciliation, where revocation and the epoch refuse ([`reconciliation.md` §6.1](reconciliation.md#61-check-list)) and use at other stations caps what is settled ([`reconciliation.md` §8](reconciliation.md#8-wallet-reconciliation)). The wallet balance gates no wash on a pass, on either path: a debit that leaves the wallet below zero leaves its transaction pending until the user next tops up ([`reconciliation.md` §8.1](reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
+
+**Trade-off.** Epoch revocation is coarse-grained: it revokes every pass issued before the bump, not one user's. That is acceptable because a pass that escapes a revocation — one presented to a station that has not heard of it — is still **bound to its device** (§2, `devicePublicKey`; at the station check #4 compares `deviceId` until a BLE message carries a proof of possession of that key — see the note on §4 check #4) and **capped by its own limits** (§2.1): what it can be charged for is bounded by `maxUses`, `maxTotalCredits` and `maxCreditsPerTx`, because settlement never charges above them ([`reconciliation.md` §8](reconciliation.md#8-wallet-reconciliation)), and what it can be delivered is bounded at each station by that station's own count of the pass (checks #6--#8) and its own offline limits (§2.2). Its acceptability does not rest on a short lifetime: a pass may live ten days.
 
 ## 6. Lifecycle
 
 The full lifecycle of an OfflinePass is as follows:
 
-1. **Issuance:** The server creates the pass, populates all fields based on the user's wallet balance and the operator's offline policy, signs it with ECDSA P-256, and delivers it to the app via HTTPS. The server **MUST NOT** issue a pass whose `expiresAt` is more than 24 hours after its `issuedAt`. (§2 and [`06-security.md` §6.1](../../06-security.md) both state this cap; it is stated normatively here because JSON Schema cannot express a relation between two members, so no schema can enforce it.)
+1. **Issuance:** The server issues the pass through the operation of [`app-contract.md` §3](app-contract.md#3-pass-issuance), which also returns the trust bundle the app needs offline. The server **MUST**:
 
-   **Consistency with `OfflinePassMaxAge` (Normative).** Signed validity and the station's age
-   refusal are **independent**: validity is the issuer's, fixed at signing; `OfflinePassMaxAge`
-   (§8) is a station's own refusal threshold, which an operator may change at any time. They are
-   not one bound and neither caps the other. What the server owes is consistency **at the moment it
-   signs**: it **MUST NOT** issue a pass whose signed validity exceeds the `OfflinePassMaxAge`
-   configured on the stations that will validate it. Signing longer than that is signing a
-   credential its own fleet refuses — and the refusal lands at the station, in the window where the
-   app has no network to ask for another, with the user standing in front of it.
+   - issue a pass only to a user whose offline use it has enabled, and **MUST NOT** bind the pass to, or require the user to belong to, an organization (§2.3);
+   - bind the pass to a device key: `devicePublicKey` **MUST** be the P-256 public key of a key pair the app generated in the phone's **hardware-backed keystore** with a **non-exportable** private key — the Secure Enclave on iOS, the hardware-backed Android Keystore on Android, StrongBox where the device has it. A phone that cannot hold such a key **MUST NOT** be issued an offline pass;
+   - set `expiresAt` to `issuedAt` plus the **platform pass lifetime** — one platform-wide value, `offlinePassLifetimeSeconds`, applied to every pass at issuance. It defaults to **3 days** (`259200`) and **MUST NOT** exceed **10 days** (`864000`); a server **MUST NOT** issue a pass whose `expiresAt` is more than 864000 seconds after its `issuedAt`;
+   - sign with a key of its current key set and set `keyId` to that key's identifier (§3);
+   - populate the allowance from the user's wallet and the platform's offline policy.
 
-   > This is an obligation on the **issuer at issue time**, not a ceiling that rewrites pass
-   > lifetime. Where the fleet's `OfflinePassMaxAge` is at or above 24 hours the obligation is
-   > satisfied by the 24-hour cap alone and constrains nothing further. Lowering the fleet's
-   > `OfflinePassMaxAge` **does** shorten the usable life of passes already issued above the new
-   > value; that is the intended effect and the reason the key exists — it is how an operator
-   > withdraws stale spending authority without waiting for expiry.
-2. **Storage:** The app stores the pass in encrypted secure storage (e.g., Android Keystore / iOS Keychain). The pass **MUST NOT** be stored in plaintext or in application-accessible storage.
+   `offlinePassLifetimeSeconds` is a **server-local** value, like `faultFullRefundThreshold` ([`04-flows.md` §6](../../04-flows.md#refund-policy)): named where an operator can find it and read from configuration, and deliberately **not** a Chapter 08 key, because no station holds it. JSON Schema cannot express a relation between two members, so no schema enforces the cap; it is stated normatively here.
+
+   Both mobile platforms provide such a key. On iOS the Secure Enclave generates and holds P-256 private keys that cannot be exported, and signs with them. On Android the Keystore generates EC P-256 keys whose key material never enters the application process, can bind them to secure hardware — the Trusted Execution Environment, or StrongBox — and lets the app and, through key attestation, the server check that a key is hardware-backed. The platform documentation this rests on is cited in [`app-contract.md` §3.2](app-contract.md#32-the-device-key).
+
+   **A station's own age limit is not the issuer's concern.** `OfflinePassMaxAge` ([`08-configuration.md` §5](../../08-configuration.md#5-offline--ble-configuration-keys)) is each station's own, stricter refusal threshold, which its operator may change at any time. The issuer cannot know which station will validate a pass — any station that accepts offline passes may (§2.3) — so it signs the platform lifetime and nothing else. A station whose `OfflinePassMaxAge` is below a pass's age refuses that pass with `2003` — on the Partial-B path the server refuses it for the station, with a `reason` rather than a code ([`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks), [§7](authorize-offline-pass.md#7-error-codes)) — and the refusal tells the app that its pass is too old for that station, not what the station's limit is.
+2. **Storage:** The app stores the pass in encrypted secure storage (e.g., Android Keystore / iOS Keychain). The pass **MUST NOT** be stored in plaintext or in application-accessible storage. The private half of the device key never leaves the hardware-backed keystore.
 3. **Pre-arming:** The app **MAY** request a new OfflinePass proactively (background pre-arming) before going offline, ensuring the user always has a valid pass available.
 
    3a. **Re-issuance (Normative).** The allowance in a pass is a **snapshot of the wallet at issue
    time**, and a snapshot is only as good as its age. Whenever it has connectivity, the app
-   **MUST** request a fresh pass on each of the following, and the server **MUST** issue one
-   reflecting the wallet as it stands at that moment:
+   **MUST** request a fresh pass on each of the following, after uploading the receipts it holds
+   ([`app-contract.md` §4.3](app-contract.md#43-rules)), and the server **MUST** issue one
+   reflecting the wallet as it stands at that moment, unless it refuses issuance
+   ([`app-contract.md` §3.5](app-contract.md#35-refusals)):
 
    | Trigger | Why |
    |---|---|
@@ -226,32 +205,39 @@ The full lifecycle of an OfflinePass is as follows:
 
    The app **SHOULD** treat a failed re-issuance as non-fatal and keep the pass it holds: the
    existing pass is still valid within its own bounds, and refusing to use it would deny service
-   for a network failure. This cadence is what makes the recomputation in
+   for a network failure. A re-issuance the server refuses ([`app-contract.md` §3.5](app-contract.md#35-refusals))
+   leaves the pass the app holds as it was: valid within its own bounds unless the server revokes it, and
+   still the latest the app was issued. This cadence is what makes the recomputation in
    [`reconciliation.md` §8.1](reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)
    affordable — for as long as the app has had a network, the figure the station validates against
    tracks the wallet, and the only divergence left is the window in which it has not, which §4
    check #2 bounds.
-4. **Presentation:** During the BLE handshake, the app presents the OfflinePass to the station via the OfflineAuthRequest message.
+4. **Presentation:** During the BLE handshake, the app presents the OfflinePass to the station via the OfflineAuthRequest message. Before the customer chooses a service, the app **MUST** show the pass's limits (§2.1).
 5. **Consumption:** The station (or server) decrements the remaining uses and credits. The station tracks per-pass usage locally via the `passId` and `counter`.
 
-   > **One transaction consumes exactly one use (Normative).** A single offline transaction is counted against `maxUses` and `maxTotalCredits` **once**, however many times the server sees it. The server may meet the same transaction twice — at authorize-time in Partial B ([`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks-11-checks) check #6, where the count is the server's cumulative usage) and again at reconcile ([`06-security.md` §7.4](../../06-security.md#74-fraud-detection--offline-transactions), where the cumulative factors sum reconciled transactions fleet-wide) — and those are two views of one counter, not two counters. An implementation **MUST NOT** advance usage twice for one transaction. The value that makes this decidable is already on both wires and under the station's signature: `(passId, counter)` at authorize-time is `(offlinePassId, passCounter)` at reconcile, and [`reconciliation.md` §6.1](reconciliation.md#61-check-list) check #13 already requires that pair be globally unique. Advancing the counter under that key is idempotent by construction.
+   > **One transaction consumes exactly one use (Normative).** A single offline transaction is counted against `maxUses` and `maxTotalCredits` **once**, however many times the server sees it. The server may meet the same transaction twice — at authorize-time in Partial B ([`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks) check #6, where the count is the server's cumulative usage) and again when the transaction settles ([`06-security.md` §7.4](../../06-security.md#74-fraud-detection--offline-transactions), whose cumulative factors count the pass's settled transactions fleet-wide) — and those are two views of one counter, not two counters. An implementation **MUST NOT** advance usage twice for one transaction. The value that makes this decidable is already on both wires and under the station's signature: `(passId, counter)` at authorize-time is `(offlinePassId, passCounter)` at reconcile, and [`reconciliation.md` §6.1](reconciliation.md#61-check-list) check #13 already requires that pair be globally unique. Advancing the counter under that key is idempotent by construction. A Partial-B session that settles online reports its end in a SessionEnded — or in the StopService RESPONSE, when the server stopped it — and neither carries that pair; the server joins it to its authorization through the `sessionId` of its AuthorizeOfflinePass answer, which the station uses in the session's MeterValues and SessionEnded and which a server StopService names ([`authorize-offline-pass.md` §6](authorize-offline-pass.md#6-processing-rules); [`04-flows.md` §5c](../../04-flows.md#5c-partial-b--phone-offline-station-online)).
    >
    > **The two counters also hold two different quantities, and that is the second half of the
    > defect.** At authorize-time the only figure available is an **estimate** — the cost the server
-   > projects for the requested service and duration. At reconcile the figure is the **actual**
-   > delivered cost, recomputed by the server from the signed duration
-   > ([`reconciliation.md` §8.1](reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
+   > projects for the requested service and duration. At settlement the figure is what the transaction
+   > **settled** for: the actual delivered cost, recomputed by the server — from the signed receipt at
+   > reconciliation ([`reconciliation.md` §8.1](reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)), or from the
+   > reported end when a Partial-B session settles online
+   > ([`04-flows.md` §5c](../../04-flows.md#5c-partial-b--phone-offline-station-online)) — and capped as [`reconciliation.md` §8](reconciliation.md#8-wallet-reconciliation) states,
+   > since the pass's limits bound what settlement charges.
    > Adding the second to the first counts one transaction twice **and** at two different
    > valuations. The authorize-time advance is therefore **provisional**: the server **MUST**
-   > replace it with the recomputed actual when the transaction settles, and **MUST NOT** add to
-   > it. A pass that was authorized and never reconciled keeps its provisional figure, which is the
-   > conservative direction and the one that cannot overspend.
+   > replace it with the settled amount when the transaction settles, and **MUST NOT** add to
+   > it. A pass that was authorized and whose transaction never settled keeps its provisional figure, which is the
+   > conservative direction and the one that cannot overspend. The cumulative credits factor of
+   > [`06-security.md` §7.4](../../06-security.md#74-fraud-detection--offline-transactions) reads the same transactions at their cost before the cap,
+   > since settled amounts can never show an overrun.
    >
    > This is stated because the two sites read as independent obligations and were implemented as
    > independent counters — measured, a `maxUses: 5` pass burns two uses per transaction and sums
    > an estimate with an actual into one `maxTotalCredits` total.
-6. **Expiry:** The pass becomes invalid after `expiresAt`, and separately once it is older than `OfflinePassMaxAge` (§4 check #2 applies both bounds; §8 Configuration holds the key). These are two **independent** bounds: `expiresAt` is signed into the pass and fixed at issue, while `OfflinePassMaxAge` is station configuration the operator can lower at any time. Neither caps the other; step 1's consistency obligation only keeps the server from signing a validity its own fleet would refuse on the day it is issued. The app **SHOULD** request a new pass before the current one expires, and step 3a makes that the normal case rather than the exception.
-7. **Revocation:** The pass becomes invalid when the server bumps the `RevocationEpoch` above the pass's `revocationEpoch`.
+6. **Expiry:** The pass becomes invalid after `expiresAt`, and at a given station once it is older than that station's `OfflinePassMaxAge` (§4 check #2 applies both bounds). These are two **independent** bounds: `expiresAt` is the platform lifetime, signed into the pass at issue, while `OfflinePassMaxAge` is the station's own stricter limit, which its operator can lower at any time. Neither caps the other. The app **SHOULD** request a new pass before the current one expires, and re-issuing it at every app start, use and top-up makes that the normal case rather than the exception.
+7. **Revocation:** The pass becomes invalid at every station once the platform epoch exceeds the pass's `revocationEpoch`, and wherever the server is reachable once the pass is individually revoked (§5).
 
 ## 7. Security Properties
 
@@ -259,14 +245,12 @@ The OfflinePass provides the following security guarantees:
 
 | Property | Mechanism | Description |
 |----------------------|-----------------------------|--------------------------------------------|
-| **Non-transferable** | `deviceId` binding | The pass is bound to a specific device. A different device presenting the same pass will fail validation check #4. |
-| **Non-forgeable** | ECDSA P-256 signature | The pass is cryptographically signed by the server. Modifying any field invalidates the signature (check #1). |
-| **Time-limited** | `expiresAt` | The pass has a maximum validity of 24 hours. After expiry, it is rejected (check #2). |
-| **Revocable** | `revocationEpoch` | A tenant's passes can all be batch-revoked by incrementing that tenant's epoch (check #3). |
-| **Usage-limited** | `maxUses`, `maxTotalCredits` | The pass limits the total number of sessions and credits that can be consumed (checks #6, #7). |
+| **Non-transferable** | `devicePublicKey` and `deviceId` binding | The pass is bound to the device whose hardware-backed keystore holds the private key of `devicePublicKey` (§6). A device presenting a different `deviceId` fails check #4. A copied pass presented with its `deviceId` is refused only once a BLE message carries a proof of possession of `devicePublicKey` (the note on check #4). |
+| **Non-forgeable** | ECDSA P-256 signature, `keyId` | The pass is signed by a key of the server's key set, named by `keyId`. Modifying any field invalidates the signature (check #1). |
+| **Time-limited** | `expiresAt`, `OfflinePassMaxAge` | The pass is valid for the platform lifetime — 3 days by default, never more than 10 days — and at each station for no longer than that station's own `OfflinePassMaxAge` (check #2). |
+| **Revocable** | `revocationEpoch`, the server's revoked mark | Every outstanding pass can be batch-revoked by incrementing the platform epoch (check #3); one user's passes are revoked individually wherever the server is reachable (§5). |
+| **Usage-limited** | `maxUses`, `maxTotalCredits`, `maxCreditsPerTx` | The pass limits the number of sessions, the credits across them and the credits of any one (checks #6, #7, #8). A request above a limit is refused, never reduced (§2.1), and settlement never charges above the limits ([`reconciliation.md` §8](reconciliation.md#8-wallet-reconciliation)). |
 | **Rate-limited** | `minIntervalSec` | Prevents rapid consecutive use that could indicate abuse (check #9). |
-| **Station-scoped** | Station ID validation | When the **pass record's** `allowed_station_ids` (§2.3 — server-side, not a wire field) is non-empty, the pass is only valid at the listed stations. Enforced at authorize-time per `authorize-offline-pass.md` §5 check #5 AND at reconcile-time per `reconciliation.md` §6 check #8. Both read the server record; a station validating offline cannot (§2.3). |
-| **Org-scoped** | Organization binding via `organization_id` | The pass is bound to its issuing organization by the **pass record's** `organization_id` (§2.3 — server-side, not a wire field). Enforced at authorize-time per `authorize-offline-pass.md` §5 check #11 AND at reconcile-time per `reconciliation.md` §6 check #7. This applies to ALL passes — scoped and unscoped. An "unscoped" pass (`allowed_station_ids` `null` or `[]`) means "any station of the issuing organization," not "any station globally." |
 | **Replay-protected** | Monotonic counter | The `counter` field in OfflineAuthRequest prevents replaying the same pass presentation (check #10). |
 
 ## 8. Related Schemas
@@ -274,5 +258,5 @@ The OfflinePass provides the following security guarantees:
 - OfflinePass: [`offline-pass.schema.json`](../../../schemas/common/offline-pass.schema.json)
 - OfflinePass ID: [`offline-pass-id.schema.json`](../../../schemas/common/offline-pass-id.schema.json)
 - BLE Auth Request: [`offline-auth-request.schema.json`](../../../schemas/ble/offline-auth-request.schema.json)
-- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 2002--2006, 4002--4004)
+- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 2002--2005, 2014, 4002--4004)
 - Security model: [Chapter 06 — Security](../../06-security.md) (section 6, Offline Security)
