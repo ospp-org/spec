@@ -292,6 +292,11 @@ The server recognizes this as a reconnection rather than a cold boot from `bootR
     "heartbeatIntervalSec": 30,
     "sessionKey": "cmVjb25uZWN0LXNlc3Npb24ta2V5LTIwMjYtMDItMTNUMTA6MDM=",
     "configuration": {
+      "OfflinePassPublicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/HdgUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==",
+      "RevocationEpoch": "42",
+      "OfflineModeEnabled": "true",
+      "OfflineWindowHours": "240",
+      "OfflineTransactionLimit": "1000",
       "sessionReconciliation": "{\"sess_f7e8d9c0\":{\"serverStatus\":\"Active\",\"action\":\"continue\",\"message\":\"Session still active on server. Continue normally.\"}}",
       "replayBufferedMessages": "true"
     }

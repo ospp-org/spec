@@ -95,21 +95,21 @@
         "properties": { "type": { "const": "FraudDetected" }, "details": { "type": "object", "properties": { "band": { "const": "Review" } }, "required": ["band"] } },
         "required": ["type", "details"]
       },
-      "then": { "properties": { "severity": { "const": "Warning" } } }
+      "then": { "properties": { "severity": { "const": "Warning" }, "details": { "type": "object", "properties": { "action": { "const": "FlaggedForReview" } } } } }
     },
     {
       "if": {
         "properties": { "type": { "const": "FraudDetected" }, "details": { "type": "object", "properties": { "band": { "const": "Alert" } }, "required": ["band"] } },
         "required": ["type", "details"]
       },
-      "then": { "properties": { "severity": { "const": "Error" } } }
+      "then": { "properties": { "severity": { "const": "Error" }, "details": { "type": "object", "properties": { "action": { "const": "OfflineDisabledForUser" } } } } }
     },
     {
       "if": {
         "properties": { "type": { "const": "FraudDetected" }, "details": { "type": "object", "properties": { "band": { "const": "Block" } }, "required": ["band"] } },
         "required": ["type", "details"]
       },
-      "then": { "properties": { "severity": { "const": "Critical" } } }
+      "then": { "properties": { "severity": { "const": "Critical" }, "details": { "type": "object", "properties": { "action": { "const": "UserBlocked" } } } } }
     }
   ]
 }

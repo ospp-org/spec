@@ -30,18 +30,20 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-09-29  (unreleased)  420 unbolded, 1396 bolded spans — the offline model and
-                                   its money rules rewritten. Unbolded FALLS BY TEN and BASELINE
-                                   follows it down to 420: `06-security.md` 80 -> 77,
-                                   `profiles/offline/reconciliation.md` 8 -> 5,
-                                   `profiles/offline/offline-pass.md` 2 -> 0, `03-messages.md`
-                                   38 -> 37 and `08-configuration.md` 41 -> 40, each a plain keyword
-                                   in a sentence the rewrite replaced or withdrew; every keyword it
-                                   adds is bolded on the way in. Both numbers RE-DERIVED on this tree.
-                                   The companion rises by 45 from v0.44.0 (436d785), which reads 430
-                                   and 1351 from a clean `git archive` of the tag. No row records
-                                   v0.40.0 to v0.44.0, so the 48 spans between the row below and
-                                   v0.44.0 are recorded here, not attributed to a release.
+    (this HEAD) 2026-09-29  (unreleased)  406 unbolded, 1414 bolded spans — the offline model and
+                                   its money rules rewritten, and its consistency review. Unbolded
+                                   FALLS BY TWENTY-FOUR and BASELINE follows it down to 406:
+                                   `06-security.md` 80 -> 73, `profiles/offline/reconciliation.md`
+                                   8 -> 0, `03-messages.md` 38 -> 35, `01-architecture.md` 44 -> 42,
+                                   `08-configuration.md` 41 -> 39 and `profiles/offline/offline-pass.md`
+                                   2 -> 0 — each a plain keyword in a sentence the rewrite replaced,
+                                   withdrew or rewrote, bolded where it still binds and put in
+                                   backticks where it is quoted; every keyword the rewrite adds is
+                                   bolded on the way in. Both numbers RE-DERIVED on this tree. The
+                                   companion rises by 63 from v0.44.0 (436d785), which reads 430 and
+                                   1351 from a clean `git archive` of the tag. No row records v0.40.0
+                                   to v0.44.0, so the 48 spans between the row below and v0.44.0 are
+                                   recorded here, not attributed to a release.
     ab69db0  2026-09-10  v0.39.1   430 unbolded, 1303 bolded spans — the two counts 0.39.0
                                    invalidated. Both numbers UNCHANGED from the row below: 0.39.1
                                    moves no normative prose at all, only figures the specification
@@ -280,7 +282,7 @@ import re
 import sys
 from collections import Counter
 
-BASELINE = 420
+BASELINE = 406
 
 KEYWORD = re.compile(r'\b(MUST NOT|MUST|SHALL NOT|SHALL)\b')
 FENCE = re.compile(r'```.*?```', re.S)

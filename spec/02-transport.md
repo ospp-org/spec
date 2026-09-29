@@ -136,11 +136,11 @@ Station                                              Broker
 > speak.
 >
 > **A retrospective wire carrier is a schema change and is deliberately not made here.** Adding a
-> fourteenth `type` member — `FraudDetected`, server-originated only, is the thirteenth — would move: **1** schema, **1** example payload, **5** conformance
-> vectors, **3** prose files that enumerate the members, and **8** files across the two SDKs
-> (including `sdk-ts`'s byte-identical vendored copy of the schema and three of its test vectors) —
-> a coordinated lockstep release under [ADR-001](../adr/ADR-001-cross-repo-lockstep-versioning.md),
-> not an editorial fix. It is named here with its cost so the decision is visible rather than
+> `type` member moves the schema, its example payloads and conformance vectors, the prose files that
+> enumerate the members, and both SDKs' copies of the schema and their tests — a coordinated lockstep
+> release under [ADR-001](../adr/ADR-001-cross-repo-lockstep-versioning.md), not an editorial fix.
+> `FraudDetected`, the thirteenth member, server-originated only, is such a change, and the next SDK
+> pair carries it. It is named here with its cost so the decision is visible rather than
 > rediscovered.
 
 ### 1.4 Port

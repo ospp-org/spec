@@ -1,11 +1,12 @@
 {
-  "eventId": "sec_5d0f3a9c1e7b2469",
+  "eventId": "sec_a990564a2e24c08f",
   "type": "FraudDetected",
   "severity": "Warning",
   "timestamp": "2026-03-01T11:02:13.000Z",
   "details": {
     "factors": [
-      "RapidConsecutive"
+      "RapidConsecutive",
+      "ExceedsPerTxLimit"
     ],
     "band": "Review",
     "action": "FlaggedForReview",

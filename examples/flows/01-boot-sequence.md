@@ -212,7 +212,11 @@ The server validates the station: certificate matches the registered station ID,
     "configuration": {
       "MeterValuesInterval": "60",
       "MaxOfflineTransactions": "1000",
-      "OfflineModeEnabled": "true"
+      "OfflinePassPublicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/HdgUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==",
+      "RevocationEpoch": "42",
+      "OfflineModeEnabled": "true",
+      "OfflineWindowHours": "240",
+      "OfflineTransactionLimit": "1000"
     }
   }
 }

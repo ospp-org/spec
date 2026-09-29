@@ -79,7 +79,7 @@
     },
     "stationIdentity": {
       "$ref": "ble/station-identity.schema.json",
-      "description": "OPTIONAL. The server-signed StationIdentity certificate for the BLE handshake (Chapter 06 — Security §6.5.2), issued over the station's dedicated static BLE ECDH public key (which the station generated on-device and submitted in the provisioning request, like its TLS CSR). Present for stations implementing the Offline/BLE profile; absent otherwise. Rotated out-of-band via ChangeConfiguration [MSG-013] (key `StationIdentityCertificate`), mirroring OfflinePassPublicKey rotation (§6.7)."
+      "description": "OPTIONAL. The server-signed StationIdentity certificate for the BLE handshake (Chapter 06 — Security §6.5.2), issued over the station's dedicated static BLE ECDH public key (which the station generated on-device and submitted in the provisioning request, like its TLS CSR). Present for stations implementing the Offline/BLE profile; absent otherwise. Re-issued before expiry via ChangeConfiguration [MSG-013] (key `StationIdentityCertificate`) (§6.5.2)."
     },
     "mqttConfig": {
       "type": "object",

@@ -210,6 +210,8 @@ The server **MUST NOT** create, extend or trim bay records from a BootNotificati
       "OfflinePassPublicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/HdgUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==",
       "MaxSessionDurationSeconds": "900",
       "OfflineModeEnabled": "true",
+      "OfflineWindowHours": "240",
+      "OfflineTransactionLimit": "1000",
       "MeterValuesInterval": "60"
     },
     "sessionKey": "dGFwbHktc2Vzc2lvbi1rZXktMjAyNi0wMi0xM1QxMDowMDowMC4wMDBa"

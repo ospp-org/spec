@@ -153,7 +153,7 @@ sequenceDiagram
 4. Broker authenticates the client certificate, returns CONNACK success
 5. SSP subscribes to `ospp/v1/stations/{station_id}/to-station` with QoS 1
 6. SSP sends **BootNotification REQUEST** [MSG-001] with station identity, firmware version, capabilities, and `pendingOfflineTransactions` count
-7. Server validates the station, returns **BootNotification RESPONSE** [MSG-001] with `status: "Accepted"`, `serverTime`, `heartbeatIntervalSec`, optional `configuration` overrides, and `sessionKey` — which is **REQUIRED on every `Accepted` and every `Pending`**, unconditionally. It is not conditional on `MessageSigningMode`: that is station configuration rather than a field of this message, so the condition was never expressible in the schema, and under `None` the key is simply unused ([`boot-notification-response.schema.json`](../schemas/mqtt/boot-notification-response.schema.json), and [`boot-notification.md` §5](profiles/core/boot-notification.md), which makes a keyless `Accepted` **malformed**)
+7. Server validates the station, returns **BootNotification RESPONSE** [MSG-001] with `status: "Accepted"`, `serverTime`, `heartbeatIntervalSec`, a `configuration` block — optional, except that to a station declaring the Offline / BLE profile it carries the five offline keys ([08 §8.3](08-configuration.md#83-configuration-via-bootnotification)) — and `sessionKey` — which is **REQUIRED on every `Accepted` and every `Pending`**, unconditionally. It is not conditional on `MessageSigningMode`: that is station configuration rather than a field of this message, so the condition was never expressible in the schema, and under `None` the key is simply unused ([`boot-notification-response.schema.json`](../schemas/mqtt/boot-notification-response.schema.json), and [`boot-notification.md` §5](profiles/core/boot-notification.md), which makes a keyless `Accepted` **malformed**)
 8. SSP synchronizes its clock to `serverTime`, applies any configuration overrides, stores the HMAC session key
 9. SSP sends one **StatusNotification EVENT** [MSG-009] per bay, reporting `bayNumber`, `status`, and every `programs[]` entry with its availability — programs, because a service is server-minted and at first boot the station has been told none
 10. SSP starts the heartbeat timer at `heartbeatIntervalSec` seconds
@@ -729,7 +729,7 @@ sequenceDiagram
 - Station BLE is advertising
 - Station holds the server key set (`OfflinePassPublicKey`) in NVS
 - Station `OfflineModeEnabled` configuration is `true`
-- Station is within its own offline limits: `OfflineWindowHours` has not elapsed since its last MQTT connection, and it holds fewer than `OfflineTransactionLimit` unsynced offline transactions ([`offline-pass.md` §2.2](profiles/offline/offline-pass.md#22-constraints-object))
+- Station is within its own offline limits: `OfflineWindowHours` has not elapsed since its last MQTT connection, and it holds fewer than `OfflineTransactionLimit` offline transactions the server has not answered ([`offline-pass.md` §2.2](profiles/offline/offline-pass.md#22-constraints-object))
 - App has biometric/PIN capability
 
 ### Sequence Diagram
@@ -988,9 +988,9 @@ sequenceDiagram
 
 | Step | Error | Action |
 |:----:|-------|--------|
-| 6 | MQTT send failure | SSP falls back to local validation (like Full Offline) |
+| 6 | MQTT send failure | SSP **MAY** fall back to local validation (like Full Offline) if its `OfflineModeEnabled` is `true`, within its own offline limits ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)) |
 | 7 | Pass rejected by server | SSP relays rejection to App with error code |
-| 7 | AuthorizeOfflinePass timeout (15s) | SSP falls back to local validation (degraded mode) |
+| 7 | AuthorizeOfflinePass timeout (15s) | SSP **MAY** fall back to local validation (degraded mode) if its `OfflineModeEnabled` is `true`, within its own offline limits ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)) |
 
 ### Postconditions
 

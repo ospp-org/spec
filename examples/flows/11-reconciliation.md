@@ -112,7 +112,14 @@ The server acknowledges the reconnection. Since the station reported `pendingOff
     "status": "Accepted",
     "serverTime": "2026-02-13T14:00:02.800Z",
     "heartbeatIntervalSec": 30,
-    "sessionKey": "cmVjb25jaWxlLXNlc3Npb24ta2V5LTIwMjYtMDItMTNUMTQ6MDA="
+    "sessionKey": "cmVjb25jaWxlLXNlc3Npb24ta2V5LTIwMjYtMDItMTNUMTQ6MDA=",
+    "configuration": {
+      "OfflinePassPublicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/HdgUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==",
+      "RevocationEpoch": "42",
+      "OfflineModeEnabled": "true",
+      "OfflineWindowHours": "240",
+      "OfflineTransactionLimit": "1000"
+    }
   }
 }
 ```
