@@ -57,7 +57,7 @@ When the server detects a ConnectionLost event (via LWT or heartbeat timeout), i
 2. **Record the disconnect timestamp:** The server **MUST** store the time of disconnection for audit and billing purposes.
 3. **Notify operators:** The server **MUST** send an operator alert via the fleet management dashboard. The alert **SHOULD** include the station ID, last known bay states, and time of disconnection.
 4. **Handle active sessions:** For each active session on the disconnected station:
-   - The server **MUST** start a **session recovery timer** (default: 300 seconds, configurable via `ConnectionLostGracePeriod`).
+   - The server **MUST** start a **session recovery timer** (default: 300 seconds, configurable via `ConnectionLostGracePeriod`) — except for a **Partial-B session**, one the server authorized through AuthorizeOfflinePass. The loss does not end such a session: the server starts no timer for it, does not close it as `failed`, and settles it once, on the first of its end records to arrive — the SessionEnded the station sends when it reconnects, the StopService RESPONSE of a stop the server commanded, which the station sends again when the server repeats the REQUEST after the reconnection ([`authorize-offline-pass.md` §6](../offline/authorize-offline-pass.md#6-processing-rules)), or the session's signed receipt, which the app uploads ([`reconciliation.md` §3](../offline/reconciliation.md#3-deduplication-offlinetxid)).
    - If the station reconnects before the timer expires, the session is reconciled (see section 6).
    - If the timer expires without reconnection, the server **MUST** close the session with status `failed` and bill **pro-rata on the time delivered**, refunding the remainder of the pre-authorization.
    - The low-delivery full-refund override (`faultFullRefundThreshold`, [`04-flows.md §6`](../../04-flows.md)) **MUST NOT** be applied here, however little was delivered. That override is keyed on a SessionEnded `reason` of `Fault` — the service itself failing — and a grace-period expiry produces no SessionEnded at all. What failed here is the *communication*, which says nothing about what the customer received; they received what they received, and are billed for it. An earlier revision applied the override on this path, which made a station's network fault a free wash.
@@ -65,7 +65,7 @@ When the server detects a ConnectionLost event (via LWT or heartbeat timeout), i
 6. **Log the event:** The server **MUST** log the ConnectionLost event with severity `Warning` for monitoring and analytics -- except for a `PlannedShutdown`, which the server **SHOULD** log at `Info`: nothing is wrong with a station that said it was leaving.
 7. **Record which mechanism reported it.** The server **MUST** record whether the station was declared offline on a `PlannedShutdown`, on an `UnexpectedDisconnect` will, or on a heartbeat timeout, and **MUST NOT** collapse the three into one record. They assert opposite things about the station -- one says its firmware or network is implicated, one says nothing about the connection at all, and one says the departure was intended -- and an operator explaining an outage cannot recover the distinction afterwards from `is_online = false`.
 
-Steps 1 to 5 are identical for all three. **A planned shutdown is not a lighter event for a customer mid-wash**: a station that announces its departure with a session running owes exactly the settlement of step 4, on the same timer. What the announcement changes is the diagnosis, not the money.
+Steps 1 to 5 are identical for all three. **A planned shutdown is not a lighter event for a customer mid-wash**: a station that announces its departure with a session running owes exactly the settlement of step 4, as step 4 states it for that session. What the announcement changes is the diagnosis, not the money.
 
 ## 6. Session Recovery on Reconnect
 
@@ -74,10 +74,10 @@ When a previously disconnected station reconnects:
 1. The station **MUST** send a BootNotification as the first message on the new connection (standard boot sequence).
 2. After the server responds with `Accepted`, the station **MUST** send a StatusNotification for each bay to report the current actual bay states.
 3. The server **MUST** compare the reported bay states against the `Unknown` states set during disconnection and reconcile:
-   - If a bay reports `Available` and the server had an active session, the session ended during the disconnection. The server **MUST** close the session and apply pro-rated billing based on the estimated time delivered.
+   - If a bay reports `Available` and the server had an active session, the session ended during the disconnection. The server **MUST** close the session and apply pro-rated billing based on the estimated time delivered — except a Partial-B session, which it settles on the first of its end records (§5).
    - If a bay reports `Occupied` and the server has a matching active session, the session is still running. The server **MUST** resume tracking and cancel the recovery timer.
    - If a bay reports `Faulted`, the server **MUST** log the fault and notify operators.
-4. The station **MUST** replay any buffered events (StatusNotification, MeterValues, TransactionEvent) in chronological order after the initial bay state reports.
+4. The station **MUST** replay any buffered events (StatusNotification, MeterValues, SessionEnded, TransactionEvent) in chronological order after the initial bay state reports.
 5. The server **MUST** process replayed events to fill in gaps in session metering data and transaction records.
 
 ## 7. Offline Detection Timing
@@ -87,7 +87,7 @@ When a previously disconnected station reconnects:
 | MQTT keep-alive | 30s | 10--60s | MQTT-level keep-alive for TCP liveness. |
 | LWT detection latency | ~45s | 15--90s | 1.5x MQTT keep-alive before broker publishes LWT. |
 | Heartbeat timeout threshold | 3.5× `heartbeatIntervalSec` | 35--12600s | No-message threshold before server declares offline. |
-| Session recovery timer | 300s | 60--600s | Grace period before closing a session whose station has not returned. |
+| Session recovery timer | 300s | 60--600s | Grace period before closing a session whose station has not returned — none runs for a Partial-B session (§5). |
 
 **Trade-offs:**
 

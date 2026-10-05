@@ -34,8 +34,7 @@ before claiming conformance.
 > revision and carries two blockers that make it unimplementable as written — see
 > [Release status](../README.md#ble-is-experimental) and
 > [KNOWN-ISSUES](../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-two-defects).
-> `TC-OFF-001`, `TC-OFF-002` and `TC-OFF-005` exercise that surface and are experimental artefacts
-> with it.
+> `TC-OFF-001` and `TC-OFF-002` exercise that surface and are experimental artefacts with it.
 >
 > **Development and Standard are unaffected and remain claimable.** Their required cases —
 > `TC-CORE-*`, `TC-TX-*`, `TC-SEC-*` — run over MQTT and HTTPS only. Two are worth naming because
@@ -258,8 +257,7 @@ conforming — it may say so, which is the whole point of requiring the answer, 
 | TC-DM-007 | Set Maintenance Mode | Device Management | Extended |
 | TC-DM-008 | Update Service Catalog | Device Management | Extended |
 | TC-DM-009 | Get Configuration | Device Management | Extended |
-| TC-OFF-001 | Full Offline BLE Session | Offline | Complete — **EXPERIMENTAL, not claimable in 0.44** |
-| TC-OFF-002 | OfflinePass Validation (10 Checks) | Offline | Complete — **EXPERIMENTAL, not claimable in 0.44**; check 5 withdrawn |
+| TC-OFF-001 | Full Offline BLE Session | Offline | Complete — **EXPERIMENTAL, not claimable in 0.8** |
+| TC-OFF-002 | OfflinePass Validation (10 Checks) | Offline | Complete — **EXPERIMENTAL, not claimable in 0.8**; check 5 withdrawn |
 | TC-OFF-003 | Reconciliation: Server-Side Processing | Offline | Complete — MQTT, stable |
 | TC-OFF-004 | Reconciliation: Station Upload & Recovery | Offline | Complete — MQTT, stable |
-| TC-OFF-005 | Partial B: Station-Relayed Authorization | Offline | Complete — **EXPERIMENTAL, not claimable in 0.44** |

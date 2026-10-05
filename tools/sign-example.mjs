@@ -163,11 +163,14 @@ function signOfflinePass(outer, keyPem) {
 // ServerSignedAuth mode (profiles/offline/ble-handshake.md §4.2.1)
 // -----------------------------------------------------------------------------
 //
-// 10 required claims canonicalised and signed by the server. Claim values for
-// this synthetic conformance corpus are derived deterministically from the
-// outer envelope's sessionId so the test vectors are reproducible end-to-end
-// without external inputs (the production server sources them from the
-// `POST /sessions/offline-auth` request + its own state).
+// 12 required claims canonicalised and signed by the server. The claims a
+// fixture already signs win: a fixture depicts one authorization, and its claims
+// must agree with the document around it — the appNonce and deviceId of its Hello,
+// the station that verifies it, the bay, service, user and pre-debit of its flow
+// (ble-handshake.md §4.2.1, §4.2.2). Only a fixture that carries no claims yet gets
+// synthetic ones, derived deterministically from the outer envelope's sessionId so
+// a new vector is reproducible without external inputs (the production server
+// sources them from the `POST /sessions/offline-auth` request + its own state).
 
 const SSA_ISSUED_AT = '2026-02-13T10:00:00.000Z';
 const SSA_EXPIRES_AT = '2026-02-13T10:05:00.000Z'; // issuedAt + 5 min — §4.2.1 cap
@@ -176,10 +179,33 @@ function sha256Hex(input) {
   return createHash('sha256').update(input).digest('hex');
 }
 
+const SSA_CLAIM_KEYS = [
+  'appNonce', 'authId', 'bayId', 'creditsAuthorized', 'deviceId', 'durationSeconds',
+  'expiresAt', 'issuedAt', 'serviceId', 'sessionId', 'stationId', 'sub',
+];
+
+// The claims the fixture already signs, when it carries a complete claim set.
+function signedSsaClaims(outer) {
+  const data = outer.signedAuthorization && outer.signedAuthorization.data;
+  if (typeof data !== 'string') return null;
+  let claims;
+  try {
+    claims = JSON.parse(Buffer.from(data, 'base64').toString('utf-8'));
+  } catch {
+    return null;
+  }
+  if (!claims || typeof claims !== 'object' || Array.isArray(claims)) return null;
+  const keys = Object.keys(claims).sort();
+  if (keys.length !== SSA_CLAIM_KEYS.length || keys.some((k, i) => k !== SSA_CLAIM_KEYS[i])) return null;
+  return claims;
+}
+
 function deriveSsaClaims(outer, file) {
   if (typeof outer.sessionId !== 'string' || outer.sessionId.length === 0) {
     throw new Error(`${file}: outer.sessionId is required for ServerSignedAuth claim derivation`);
   }
+  const signed = signedSsaClaims(outer);
+  if (signed) return signed;
   const seed = outer.sessionId;
   const h = (label) => sha256Hex(`${label}|${seed}`);
 

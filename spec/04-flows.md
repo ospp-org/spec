@@ -864,7 +864,7 @@ sequenceDiagram
 
     App->>Server: POST /sessions/offline-auth {bayId, serviceId}
     Server->>Server: Validate, debit wallet, sign authorization (ECDSA P-256)
-    Server-->>App: {signedAuthorization, sessionId}
+    Server-->>App: {signedAuthorization, sessionId, trustBundle}
 
     App->>SSP: BLE connect
     App->>SSP: Read FFF1 [MSG-027] → connectivity: "Offline"
@@ -892,8 +892,8 @@ sequenceDiagram
 ### Happy Path
 
 1. **App** sends `POST /sessions/offline-auth` to Server with `bayId` and `serviceId`
-2. **Server** validates the user, debits the issue-time pre-debit, signs the ServerSignedAuth authorization blob with ECDSA P-256 server key — the signed claims carry `durationSeconds` (which the station clamps the session duration to) and `creditsAuthorized` (the pre-debit, and the cap on what the session may be charged: the server recomputes final billing per the Billing Authority §6 / reconciliation §8.2 and refunds any difference, never debiting more), alongside `authId`, `sessionId`, `bayId`, `serviceId`, `appNonce`, `issuedAt`, `expiresAt` (full claim set: `server-signed-auth-claims.schema.json`, finding N3)
-3. **Server** returns `signedAuthorization` (Base64) and `sessionId` to the App
+2. **Server** validates the user, debits the issue-time pre-debit, signs the ServerSignedAuth authorization blob with ECDSA P-256 server key — the signed claims carry `durationSeconds` (the authorized duration: the station refuses a longer request and never reduces it — [`ble-session.md` §1](profiles/offline/ble-session.md#1-starting-a-service)) and `creditsAuthorized` (the pre-debit, and the cap on what the session may be charged: the server recomputes final billing per the Billing Authority §6 / reconciliation §8.2 and refunds any difference, never debiting more), alongside `authId`, `sessionId`, `bayId`, `serviceId`, `appNonce`, `issuedAt`, `expiresAt` (full claim set: `server-signed-auth-claims.schema.json`, finding N3)
+3. **Server** returns the `signedAuthorization` object, its `sessionId` and the trust bundle — the Station CA certificate, its CRL and the server key set — to the App ([`app-contract.md` §5](profiles/offline/app-contract.md#5-the-partial-a-authorization)), which replaces the bundle it holds and authenticates the station against it before it relays the authorization
 4. **App** connects to the SSP via BLE
 5. **App** reads **StationInfo** [MSG-027] — confirms `connectivity: "Offline"`
 6. **App** writes **HELLO** [MSG-029] → SSP responds with **CHALLENGE** [MSG-030]
@@ -982,7 +982,7 @@ sequenceDiagram
 9. **SSP** relays result as **AuthResponse** [MSG-033] `Accepted` to App via BLE
 10. **App** writes **StartServiceRequest** [MSG-034] → SSP starts service
 11. Service runs with **ServiceStatus** [MSG-038] updates, then stop/receipt
-12. Since the station is online, the session is tracked in real time by the Server and settled when the station reports its end — by service kind, never above the `creditsAuthorized` of the authorization and within the pass's limits, as a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)). If the station loses MQTT before then, it reconciles the transaction through TransactionEvent, and the server applies no second debit — only a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback))
+12. Since the station is online, the session is tracked in real time by the Server and settled when the station reports its end — by service kind, never above the `creditsAuthorized` of the authorization, as a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)). If the station loses its connection, the loss does not end the session: the wash continues, and the station sends the session's end when it reconnects — its SessionEnded under the server's `sessionId`, or, when the server stopped the session, the StopService RESPONSE it sends again when the server repeats the REQUEST. The session settles once, on the first of its end records to arrive — that SessionEnded, the StopService RESPONSE when the server stopped the session, or the session's signed receipt, which the app uploads when it has a network — and the other is a duplicate ([`reconciliation.md` §3](profiles/offline/reconciliation.md#3-deduplication-offlinetxid)); either way the server applies no second debit, only a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback))
 
 ### Error Paths
 
@@ -998,7 +998,7 @@ sequenceDiagram
 |-----------|-------|
 | User Wallet | Debited by Server (real-time, step 7) |
 | Server Session | `active` (real-time tracking) |
-| SSP | Online session — reconciled through TransactionEvent only if MQTT is lost before it ends |
+| SSP | Online session — its end reported by SessionEnded or StopService RESPONSE, at reconnection when the connection was lost; its receipt, uploaded by the app, is a duplicate once the session has settled |
 
 ---
 
@@ -1085,7 +1085,7 @@ This separation ensures that a misconfigured or compromised station cannot overc
 
 **A2 — MQTT disconnect during session:** SSP continues the service (does NOT stop the service). On reconnection, SSP re-boots (BootNotification [MSG-001]) and reports the session outcome.
 
-**A3 — StopService timeout:** If Server sends StopService and SSP does not respond within 10 seconds, Server marks the session as `failed`. SSP will report the actual outcome on next reconnection.
+**A3 — StopService timeout:** If Server sends StopService and SSP does not respond within 10 seconds, Server marks the session as `failed`. SSP will report the actual outcome on next reconnection. A Partial-B session is not marked `failed`: the server repeats the StopService REQUEST once the station has reconnected, and settles the session on the first of its end records ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)).
 
 ### The operator-disable policy
 
@@ -1137,7 +1137,7 @@ of by what was delivered.
 | All retry attempts fail | Full | 100% |
 | ACK_TIMEOUT (no response) | Full | 100% |
 | Hardware error during active (SessionEnded `reason=Fault`) | Partial (pro-rated) | Based on time used |
-| Station offline during active | Partial (pro-rated) | Based on time used |
+| Station offline during active | Partial (pro-rated) | Based on time used — not a Partial-B session, which settles on the first of its end records ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) |
 | User manual stop at station (SessionEnded `reason=Local`) | Partial (pro-rated) | Based on time used, recomputed by the server (the event's `creditsCharged` is advisory) |
 | Offline credit exhausted mid-session (SessionEnded `reason=LocalOutOfCredit`) | Full | 100% (no charge — `creditsCharged` MUST be 0) |
 | Offline pass revoked mid-session (SessionEnded `reason=Deauthorized`) | Full | 100% (no charge — session not billable; `creditsCharged` MUST be 0) |
@@ -1182,7 +1182,7 @@ For `UserDuration`, settlement is exactly the reason-keyed matrix above. `FixedD
 
 Only the `Local`, `Inactivity`, `Fault` and `OperatorStopped` rows diverge; `TimerExpired` (full charge) and `LocalOutOfCredit` / `Deauthorized` (full refund) are already kind-invariant. An all-or-nothing override is always the pre-authorized amount **in full** or **`0`** — never a partial amount.
 
-**A stop the server issues for an operator settles as `OperatorStopped`.** An operator can also end a session through the server rather than at the station — from an operator console, or by a station disable the server carries out — and the server then sends StopService [MSG-006]. That stop produces no SessionEnded ([Chapter 03 §5.4](03-messages.md#54-sessionended)) and StopService carries no reason, so only the server knows an operator asked for it. The server **MUST** settle such a session as it settles `OperatorStopped`, by service kind — pro-rata on delivered time for `UserDuration`, a full refund for `FixedDuration` and `MultiUnit` — and **MUST NOT** settle it as the customer's own stop. A stop the station refuses while the session is still running is not settled as `OperatorStopped`, because the operator did not end the service: the session settles as a delivered session of its kind — a `FixedDuration` or `MultiUnit` session keeps its full charge, and a `UserDuration` session is pro-rata on its delivered time. A `3006 SESSION_NOT_FOUND` refusal is not that case: the station holds no such session, which may already have ended ([`07-errors.md` §3.3](07-errors.md#33-session--bay-errors-3xxx)).
+**A stop the server issues for an operator settles as `OperatorStopped`.** An operator can also end a session through the server rather than at the station — from an operator console, or by a station disable the server carries out — and the server then sends StopService [MSG-006]. That stop produces no SessionEnded ([Chapter 03 §5.4](03-messages.md#54-sessionended)) and StopService carries no reason, so only the server knows an operator asked for it. The server **MUST** settle such a session as it settles `OperatorStopped`, by service kind — pro-rata on delivered time for `UserDuration`, a full refund for `FixedDuration` and `MultiUnit` — and **MUST NOT** settle it as the customer's own stop. A stop the station refuses while the session is still running is not settled as `OperatorStopped`, because the operator did not end the service: the session settles as a delivered session of its kind — a `FixedDuration` or `MultiUnit` session keeps its full charge, and a `UserDuration` session is pro-rata on its delivered time. A `3006 SESSION_NOT_FOUND` refusal is not that case: the station holds no such session, which may already have ended ([`07-errors.md` §3.3](07-errors.md#33-session--bay-errors-3xxx)). The signed receipt of a BLE session the server stopped carries `endReason` `ServerStopped` ([Chapter 06 §6.2](06-security.md#62-transaction-receipt-signing--ecdsa-p-256)), and the server settles that session as this section settles the stop it issued.
 
 **Delivery outcome (`MultiUnit`).** A `MultiUnit` session additionally records what physically happened — `Dispensed` on a clean `TimerExpired`, `Missed` on a `Fault`. When the physical outcome is genuinely ambiguous from control-plane signals alone (e.g. a mid-pulse voluntary stop) it is left unrecorded rather than guessed; settlement never depends on it (it stays derived from the kind). A jam the firmware does not itself detect runs the timer to expiry and is therefore billed as delivered; the corrective path is an operator-issued refund, not an automatic one.
 
@@ -1258,14 +1258,14 @@ sequenceDiagram
 | 8 | Webhook timeout (5 min) | PaymentIntent → expired, no credits |
 | 8 | HMAC verification failed | Reject webhook, log SecurityEvent |
 
-A top-up also releases for collection the user's **pending** transactions — those whose debit left the wallet below zero ([`reconciliation.md` §8.1](profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)). Until the user tops up, neither the tenant whose station delivered such a wash nor the platform collects it.
+A top-up — like every credit that raises the balance — also releases the user's **pending** transactions, those whose debit left the wallet below zero, oldest first: each one it covers in full is closed, and the one where the credit runs out is covered for the part the credit reaches and stays pending for the rest ([`reconciliation.md` §8.1](profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)). Once the balance is positive, the user is issued an offline pass again.
 
 ### Postconditions
 
 | Component | State |
 |-----------|-------|
 | User Wallet | Balance increased by `packageCredits + bonusCredits` |
-| Pending transactions | Released for collection by the top-up |
+| Pending transactions | Released oldest first: covered in full and closed, or covered in part and pending for the rest |
 | PaymentIntent | `captured` → `settled` |
 | Fiscal Invoice | Generated for local-currency amount |
 
@@ -1458,20 +1458,20 @@ sequenceDiagram
 
         alt Accepted
             Server-->>SSP: TransactionEvent RESPONSE (Accepted) [MSG-007]
-            Note over SSP: Stop sending it, delete the record (MAY defer 72 h)
+            Note over SSP: Remove from local queue
         else Duplicate
             Server-->>SSP: TransactionEvent RESPONSE (Duplicate) [MSG-007]
-            Note over SSP: Stop sending it, delete the record (already processed)
+            Note over SSP: Remove from local queue (already processed)
         else Rejected
             Server-->>SSP: TransactionEvent RESPONSE (Rejected, reason) [MSG-007]
-            Note over SSP: Do NOT retry; retain the record, flagged for investigation
+            Note over SSP: Flag for investigation, do NOT retry
         else RetryLater
             Server-->>SSP: TransactionEvent RESPONSE (RetryLater) [MSG-007]
-            Note over SSP: Keep the record, retry later
+            Note over SSP: Keep in queue, retry later
         end
     end
 
-    Note over SSP: Nothing left to send; Rejected records retained
+    Note over SSP: Local sync queue cleared
 ```
 
 ### Happy Path
@@ -1484,14 +1484,14 @@ sequenceDiagram
    - **Step 1:** Deduplicate by `offlineTxId`. The ledger holds the `offlineTxId` and the signed `receipt.data` matches → `Duplicate`; it holds it and the data differs → `Rejected`, retain both records, alert the operator ([`reconciliation.md` §3](profiles/offline/reconciliation.md#3-deduplication-offlinetxid))
    - **Step 2:** Verify ECDSA P-256 receipt signature — reject if it does not verify; never scored ([`reconciliation.md` §5](profiles/offline/reconciliation.md#5-receipt-signature-verification))
    - **Step 3:** Record `txCounter` as forensic evidence — never gated on. If discontinuous: WARNING + operator alert on the **station**, process anyway (`profiles/offline/reconciliation.md` §4.2)
-   - **Step 4:** Apply the reconcile-time gate — was the OfflinePass valid at transaction time: epoch, expiry, individual revocation, read through the station's clock offset ([`reconciliation.md` §6](profiles/offline/reconciliation.md#6-reconcile-time-re-validation-gate)). Limits are not a gate here: they cap settlement and feed fraud scoring
-   - **Step 5:** Settle — recompute by service kind from the signed receipt, never above what the authorization allowed, and debit the user wallet — or, where the authorization already debited it, refund only ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)) — (negative balance allowed; a debit that leaves it below zero leaves the transaction pending until the user tops up)
+   - **Step 4:** Apply the reconcile-time gate — was the OfflinePass valid at transaction time: epoch, expiry, individual revocation, read through the station's clock offset ([`reconciliation.md` §6](profiles/offline/reconciliation.md#6-reconcile-time-re-validation-gate)). Limits are not a gate here: the per-wash limit caps what a wash is charged, the pass-wide totals cap nothing, and both feed fraud scoring
+   - **Step 5:** Settle — recompute by service kind from the signed receipt, never above what the authorization allowed, and debit the user wallet — or, where the authorization already debited it, refund only ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)) — (negative balance allowed; a debit that leaves it below zero leaves the transaction pending until a credit to the wallet covers it)
    - **Step 6:** Run fraud scoring on the settled transaction (see below)
    - **Step 7:** Create session record
 6. Server responds `Accepted`
-7. SSP stops sending the transaction and deletes its record — deletion **MAY** be deferred by up to 72 hours ([`transaction-event.md` §5.1](profiles/transaction/transaction-event.md#51-response-status-values))
+7. SSP removes the transaction from its local queue
 8. Repeat for all pending transactions
-9. When every transaction has been answered, nothing remains to send. The records answered `Rejected` stay on the station, marked for investigation
+9. When all transactions are processed, SSP clears its local sync queue
 
 ### Fraud Scoring
 
@@ -1509,9 +1509,9 @@ When the mobile app regains connectivity, it **MUST** upload every receipt it ho
 
 | Component | State |
 |-----------|-------|
-| SSP Offline Log | Nothing left to send; records answered `Accepted` or `Duplicate` deleted (MAY be deferred up to 72 h), records answered `Rejected` retained |
+| SSP Offline Queue | Empty (all transactions synced) |
 | Server | Session records created, user wallets debited |
-| User Wallets | Debited; a wallet may be negative, and a transaction whose debit left it below zero stays pending until the user tops up |
+| User Wallets | Debited; a wallet may be negative, and a transaction whose debit left it below zero stays pending until a credit to the wallet covers it |
 | Fraud records | `FraudDetected` for scores in the Review, Alert and Block bands (`0.30` and above); operator alert for Alert and Block (`0.60` and above) — [06-security.md §7.4](06-security.md#74-fraud-detection--offline-transactions) |
 
 ---
@@ -1799,7 +1799,7 @@ Consolidated timeout values across all flows:
 | Reserved → 3DS (web) | 3 min | CancelReservation |
 | Reserved → start (mobile) | 30s | CancelReservation |
 | StartService (pending_ack) | 10s | Refund, session → failed |
-| StopService (stopping) | 10s | Session → failed |
+| StopService (stopping) | 10s | Session → failed; a Partial-B session stays open (§6) |
 | Active session (max) | durationSeconds | Station auto-stops |
 | Session token (web) | 10 min | Session expired |
 | BayLock fallback | 3 min | Auto-released |

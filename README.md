@@ -34,9 +34,8 @@ The BLE surface — [`ble-transport.md`](spec/profiles/offline/ble-transport.md)
 [`ble-session.md`](spec/profiles/offline/ble-session.md), the 15 schemas under
 [`schemas/ble/`](schemas/ble/), [Chapter 02 §8](spec/02-transport.md),
 [ADR-002](adr/ADR-002-ble-handshake-security-architecture.md), and conformance cases
-[TC-OFF-001](conformance/test-cases/offline/TC-OFF-001.md),
-[TC-OFF-002](conformance/test-cases/offline/TC-OFF-002.md) and
-[TC-OFF-005](conformance/test-cases/offline/TC-OFF-005.md) — is **EXPERIMENTAL**. It is
+[TC-OFF-001](conformance/test-cases/offline/TC-OFF-001.md) and
+[TC-OFF-002](conformance/test-cases/offline/TC-OFF-002.md) — is **EXPERIMENTAL**. It is
 published for review, **not** for implementation, and it may change incompatibly without a MAJOR
 bump.
 
@@ -71,7 +70,7 @@ OSPP is an **open, vendor-neutral communication protocol** for self-service stat
 
 Think of it as **OCPP for self-service industries**. Where OCPP standardized EV charger-to-server communication, OSPP does the same for any station that delivers a time-bounded service through a physical bay. The protocol supports **online operation** (MQTT 5.0 over TLS 1.2+, TLS 1.3 recommended), **offline operation** (BLE 4.2+ GATT with cryptographically signed passes), and **four hybrid connectivity scenarios** — ensuring service continuity even when internet is unavailable.
 
-OSPP covers **40 messages** (27 MQTT + 13 BLE), **88 JSON Schemas**, **118 error codes**, **5 compliance profiles**, and a complete security model with mTLS, selective HMAC-SHA256 message signing, ECDSA P-256 offline authorization and receipt signing, and ECDSA P-384 root CA. Apart from the two exchanges the offline model depends on — pass issuance and receipt upload, defined in [`app-contract.md`](spec/profiles/offline/app-contract.md) — it does NOT cover server-to-app REST APIs, payment gateway integration, business logic, or hardware internals; those are implementation-specific.
+OSPP covers **40 messages** (27 MQTT + 13 BLE), **89 JSON Schemas**, **118 error codes**, **5 compliance profiles**, and a complete security model with mTLS, selective HMAC-SHA256 message signing, ECDSA P-256 offline authorization and receipt signing, and ECDSA P-384 root CA. Apart from the exchanges the offline model depends on — pass issuance with its attestation challenge, receipt upload, and the trust bundle of a Partial-A authorization, defined in [`app-contract.md`](spec/profiles/offline/app-contract.md) — it does NOT cover server-to-app REST APIs, payment gateway integration, business logic, or hardware internals; those are implementation-specific.
 
 ---
 
@@ -242,11 +241,11 @@ Full definitions: [Chapter 03 — Message Catalog](spec/03-messages.md)
 
 ## JSON Schemas
 
-**88 schema files** in [`schemas/`](schemas/) — JSON Schema Draft 2020-12, strict validation (`additionalProperties: false`).
+**89 schema files** in [`schemas/`](schemas/) — JSON Schema Draft 2020-12, strict validation (`additionalProperties: false`).
 
 | Directory | Count | Content |
 |-----------|:-----:|---------|
-| [`schemas/`](schemas/) (top level) | 4 | HTTPS request and response bodies: station provisioning, and offline pass issuance |
+| [`schemas/`](schemas/) (top level) | 5 | HTTPS request and response bodies: station provisioning, offline pass issuance, and the device key attestation challenge |
 | [`schemas/common/`](schemas/common/) | 22 | Shared types: identifiers, timestamps, credit amounts, error objects, OfflinePass, receipt, envelope |
 | [`schemas/mqtt/`](schemas/mqtt/) | 47 | REQUEST/RESPONSE/EVENT payload schemas for all 27 MQTT actions |
 | [`schemas/ble/`](schemas/ble/) | 15 | BLE message schemas for all 13 BLE message types, plus the StationIdentity certificate and secure-frame structures |
@@ -257,13 +256,13 @@ Full index: [schemas/README.md](schemas/README.md)
 
 ## Examples
 
-**75 example files** in [`examples/`](examples/) — realistic, production-quality data.
+**72 example files** in [`examples/`](examples/) — realistic, production-quality data.
 
 | Directory | Count | Content |
 |-----------|:-----:|---------|
-| [`examples/payloads/mqtt/`](examples/payloads/mqtt/) | 40 | JSON payloads for every MQTT message |
+| [`examples/payloads/mqtt/`](examples/payloads/mqtt/) | 36 | JSON payloads for every MQTT message |
 | [`examples/payloads/ble/`](examples/payloads/ble/) | 15 | JSON payloads for every BLE message |
-| [`examples/payloads/http/`](examples/payloads/http/) | 3 | The provisioning request, and the offline pass issuance request and response of the app–server contract |
+| [`examples/payloads/http/`](examples/payloads/http/) | 4 | The provisioning request; the offline pass issuance request and response, and the attestation challenge response, of the app–server contract |
 | [`examples/flows/`](examples/flows/) | 12 | Narrative walkthroughs with complete message sequences |
 | [`examples/error-scenarios/`](examples/error-scenarios/) | 5 | Common error scenarios with full messages |
 
@@ -383,15 +382,15 @@ ospp/
 │       ├── security/                4 actions (SecurityEvent, SignCertificate, ...)
 │       ├── device-management/       9 actions (Config, Firmware, Diagnostics, ...)
 │       └── offline/                 7 docs (AuthorizeOfflinePass, app–server contract, BLE transport, handshake, ...)
-├── schemas/                 JSON Schema definitions (88 files)
-│   ├── *.schema.json            4 HTTPS request/response schemas (provisioning, offline pass issuance)
+├── schemas/                 JSON Schema definitions (89 files)
+│   ├── *.schema.json            5 HTTPS request/response schemas (provisioning, offline pass issuance, attestation challenge)
 │   ├── common/                  22 shared type schemas ($ref targets)
 │   ├── mqtt/                    47 MQTT message payload schemas
 │   └── ble/                     15 BLE message schemas
-├── examples/                Example payloads and narrative flows (75 files)
-│   ├── payloads/mqtt/           40 MQTT payload examples
+├── examples/                Example payloads and narrative flows (72 files)
+│   ├── payloads/mqtt/           36 MQTT payload examples
 │   ├── payloads/ble/            15 BLE payload examples
-│   ├── payloads/http/           3 HTTPS examples (provisioning request; offline pass issuance request and response)
+│   ├── payloads/http/           4 HTTPS examples (provisioning request; offline pass issuance request and response; attestation challenge response)
 │   ├── flows/                   12 end-to-end flow narratives
 │   └── error-scenarios/         5 error scenario walkthroughs
 ├── guides/                  Developer guides

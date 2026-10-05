@@ -70,6 +70,7 @@ Naming convention: `{action}.{type}.json`
 |------|-------------|
 | `provisioning.request.json` | Station → Server provisioning request |
 | `offline-pass-issuance.request.json`, `offline-pass-issuance.response.json` | App → Server OfflinePass issuance, and the pass with its trust bundle ([`app-contract.md` §3](../spec/profiles/offline/app-contract.md#3-pass-issuance)) |
+| `offline-attestation-challenge.response.json` | Server → App one-time challenge for the device key's attestation ([`app-contract.md` §3.6](../spec/profiles/offline/app-contract.md#36-device-key-attestation)) |
 
 ## 3. Flow Examples
 

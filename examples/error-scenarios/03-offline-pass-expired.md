@@ -205,7 +205,9 @@ at the top suggests:
 2. **Pass issuance:** Once online, the app calls `POST /api/v1/offline/passes`
    ([`app-contract.md` §3](../../spec/profiles/offline/app-contract.md#3-pass-issuance))
    with its device identifier and the public key of its hardware-backed device key,
-   the same key for every pass it requests on this phone:
+   the same key for every pass it requests on this phone — the server verified the
+   platform's attestation of that key with the first of them
+   ([`app-contract.md` §3.6](../../spec/profiles/offline/app-contract.md#36-device-key-attestation)):
 
    ```json
    {
@@ -225,7 +227,7 @@ at the top suggests:
 
 4. **Prevention -- re-issuance and pre-arming:** Whenever it has connectivity, the app
    uploads the receipts it holds and requests a fresh pass at application start, after each use
-   of the pass and after each top-up ([`offline-pass.md` §6](../../spec/profiles/offline/offline-pass.md#6-lifecycle)),
+   of the pass and after each credit to the wallet ([`offline-pass.md` §6](../../spec/profiles/offline/offline-pass.md#6-lifecycle)),
    and its BackgroundPreArmingService requests one before the current pass
    expires, reducing the chance of this scenario occurring.
 

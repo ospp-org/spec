@@ -37,7 +37,7 @@ Alice is at "Station Alpha -- Example City" and wants to start the Eco Program s
 14:30:05.000  App detects Partial A scenario (phone online + station offline)
 14:30:05.200  App sends POST /sessions/offline-auth to server
 14:30:05.800  Server validates, debits 50 credits, signs ECDSA P-256 authorization
-14:30:06.000  Server responds with signedAuthorization + sessionId
+14:30:06.000  Server responds with signedAuthorization, sessionId and the trust bundle
 14:30:06.500  App writes Hello to FFF3
 14:30:06.800  Station responds with Challenge on FFF4 (connectivity: "Offline")
 14:30:07.200  App writes ServerSignedAuth to FFF3
@@ -164,9 +164,12 @@ X-Request-Id: req_offauth_7d8e9f01
   "stationId": "stn_a1b2c3d4",
   "bayId": "bay_c1d2e3f4a5b6",
   "serviceId": "svc_eco",
-  "requestedDurationSeconds": 300
+  "requestedDurationSeconds": 300,
+  "appNonce": "XwmXIvgMokhZYNANPS8kzhlgT9dVDATP4Bd6Ed3mE34="
 }
 ```
+
+The body carries the `appNonce` the app will write in its Hello in Step 6: the server signs it into the authorization, and the station compares the two ([`ble-handshake.md` §4.2](../../spec/profiles/offline/ble-handshake.md#42-serversignedauth-partial-a)). The app fetches the authorization before the handshake, which keeps the server round trip out of the 10-second handshake budget.
 
 ---
 
@@ -182,7 +185,7 @@ The server performs the following:
 6. Creates session record `sess_c4d5e6f7a8b9` with `status: pending` (awaiting reconciliation from station)
 7. Signs an authorization blob with its current server signing key (ECDSA P-256)
 
-Among its claims, the authorization blob carries `stationId`, `bayId`, `serviceId`, `durationSeconds`, `creditsAuthorized` (50: the pre-debit, and the most the session may be charged), `issuedAt` and `expiresAt` (5-minute validity window), under the server's ECDSA P-256 signature.
+The authorization carries the twelve claims of [`ble-handshake.md` §4.2.1](../../spec/profiles/offline/ble-handshake.md#421-signing-process-server-side) under the server's ECDSA P-256 signature: `authId` `auth_c89731927892`; Alice's `sub`; her device's `deviceId`; `sessionId` `sess_c4d5e6f7a8b9`; `stationId`, `bayId` and `serviceId` from the request; `durationSeconds` 300; `creditsAuthorized` 50, the pre-debit and the most the session may be charged; the request's `appNonce`; and `issuedAt` and `expiresAt`, five minutes apart. The response carries the same `signedAuthorization` object the app relays in Step 8.
 
 **HTTP Response:**
 
@@ -193,13 +196,29 @@ X-Request-Id: req_offauth_7d8e9f01
 
 {
   "sessionId": "sess_c4d5e6f7a8b9",
-  "signedAuthorization": "eyJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJiYXlJZCI6ImJheV94MXkyejMiLCJzZXJ2aWNlSWQiOiJzdmNfZm9hbSIsImR1cmF0aW9uU2Vjb25kcyI6MzAwLCJpc3N1ZWRBdCI6IjIwMjYtMDItMTNUMTQ6MzA6MDUuODAwWiIsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTQ6MzU6MDUuODAwWiIsInNpZ25hdHVyZSI6IlRWUnNWbFV5VVhsUFJFVjNUa1JCTlUxRVVURk9SRTB4VGtSbk1rNTZaM2hOYWxrd1RtcEJNVTFVVVRWTmVtUm9UbnBKZVU1dFJUMD0ifQ==",
+  "signedAuthorization": {
+    "data": "eyJhcHBOb25jZSI6Ilh3bVhJdmdNb2toWllOQU5QUzhremhsZ1Q5ZFZEQVRQNEJkNkVkM21FMzQ9IiwiYXV0aElkIjoiYXV0aF9jODk3MzE5Mjc4OTIiLCJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6NTAsImRldmljZUlkIjoiZGV2aWNlX2E4ZjNiYzEyZTQ1Njc4OTAiLCJkdXJhdGlvblNlY29uZHMiOjMwMCwiZXhwaXJlc0F0IjoiMjAyNi0wMi0xM1QxNDozNTowNS44MDBaIiwiaXNzdWVkQXQiOiIyMDI2LTAyLTEzVDE0OjMwOjA1LjgwMFoiLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic2Vzc2lvbklkIjoic2Vzc19jNGQ1ZTZmN2E4YjkiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJzdWIiOiJzdWJfYWxpY2UyMDI2In0=",
+    "signature": "MEUCIQDwtBwQh4ljGq64jztmJ5qxZYKH1viSpN+G9Ou3CAU3/QIgScy1OwVmud8d5JMBpohjd5X/UcaIC0r58DrDPcuPdek=",
+    "signatureAlgorithm": "ECDSA-P256-SHA256"
+  },
+  "trustBundle": {
+    "stationCaCertificate": "-----BEGIN CERTIFICATE-----\nMIIBqTCCAU+gAwIBAgICBVAwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBU\nZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjA5MjkxMjA0\nMjBaFw0zMTA5MjkxMjA0MjBaMDMxEjAQBgNVBAoMCU9TUFAgVGVzdDEdMBsGA1UE\nAwwUT1NQUCBUZXN0IFN0YXRpb24gQ0EwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNC\nAASV+9CgAE4tgTzAKWwxVGw9wkyvqJhltZhs/62oD8EQ144coXVZ5S7LcVowOBB6\nRCV30pndUexf5mPlLvNrPAYuo1MwUTAdBgNVHQ4EFgQUF8cBGg8AqgEQ2/dlYB9f\nNDJLxlgwHwYDVR0jBBgwFoAUF8cBGg8AqgEQ2/dlYB9fNDJLxlgwDwYDVR0TAQH/\nBAUwAwEB/zAKBggqhkjOPQQDAgNIADBFAiEAwMWP7Ia0x9Uc4exjPV3AUGcuX+Dq\nBeI79s+WLLw7Fw4CIG36K8XxqbRQQVr+Bja//n3WB6h4Cqs3woRRNJpDWTsi\n-----END CERTIFICATE-----\n",
+    "stationCaCrl": "-----BEGIN X509 CRL-----\nMIHKMHMCAQEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYD\nVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQRcNMjYwOTI5MTIwNDIwWhcNMjYxMDA2\nMTIwNDIwWqAPMA0wCwYDVR0UBAQCAhAAMAoGCCqGSM49BAMCA0cAMEQCIGxNLjLG\nKr78hLgo9gHhuQ0yK57f3WC6Wk9q7ZkALnyFAiBdmVe0Isvro7QrabTxOXPs9bkG\nDDkAZ+DdNR/8/72kqQ==\n-----END X509 CRL-----\n",
+    "serverKeys": [
+      {
+        "keyId": "YjX5pR0TzmU3ubs17wImQQ",
+        "publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/HdgUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA=="
+      }
+    ]
+  },
   "wallet": {
     "previousBalance": 120,
     "newBalance": 70
   }
 }
 ```
+
+The response carries the trust bundle too — the Station CA certificate, its CRL and the server key set — because Alice's phone needs it to authenticate the station before it relays the authorization, and a phone may hold no pass, and so no bundle, at all ([`app-contract.md` §5](../../spec/profiles/offline/app-contract.md#5-the-partial-a-authorization)). The app replaces the bundle it holds with this one.
 
 ---
 
@@ -264,8 +283,8 @@ The app delivers the server-signed authorization obtained in Step 5.
 {
   "type": "ServerSignedAuth",
   "signedAuthorization": {
-    "data": "eyJhcHBOb25jZSI6IjJYa2VZRjZsaG9rQk9KcEs5THNieEg1L1c1YlFOS3VxOERXdENNQ1FSaWM9IiwiYXV0aElkIjoiYXV0aF9jODk3MzE5Mjc4OTIiLCJiYXlJZCI6ImJheV9jNDE1MzA5YWVlZmQiLCJjcmVkaXRzQXV0aG9yaXplZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9iZjFhMTU0NjZjNmQ3OGVmIiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfYzRkNWU2ZjdhOGI5Iiwic3RhdGlvbklkIjoic3RuXzA1NTU1MDcwIiwic3ViIjoic3ViX2E5YTFiZWI1NzlmNGViMmYifQ==",
-    "signature": "MEUCIQC8+ZHjLSsejgsx5ffg5lWgUuMn3iH5jpo1TLi3uWmqkgIgZYKFrdlZPB3A4ccR9Wi0vE/39+UR+0g4nFoBloENBhw=",
+    "data": "eyJhcHBOb25jZSI6Ilh3bVhJdmdNb2toWllOQU5QUzhremhsZ1Q5ZFZEQVRQNEJkNkVkM21FMzQ9IiwiYXV0aElkIjoiYXV0aF9jODk3MzE5Mjc4OTIiLCJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6NTAsImRldmljZUlkIjoiZGV2aWNlX2E4ZjNiYzEyZTQ1Njc4OTAiLCJkdXJhdGlvblNlY29uZHMiOjMwMCwiZXhwaXJlc0F0IjoiMjAyNi0wMi0xM1QxNDozNTowNS44MDBaIiwiaXNzdWVkQXQiOiIyMDI2LTAyLTEzVDE0OjMwOjA1LjgwMFoiLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic2Vzc2lvbklkIjoic2Vzc19jNGQ1ZTZmN2E4YjkiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJzdWIiOiJzdWJfYWxpY2UyMDI2In0=",
+    "signature": "MEUCIQDwtBwQh4ljGq64jztmJ5qxZYKH1viSpN+G9Ou3CAU3/QIgScy1OwVmud8d5JMBpohjd5X/UcaIC0r58DrDPcuPdek=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "sessionId": "sess_c4d5e6f7a8b9"
@@ -276,16 +295,16 @@ The app delivers the server-signed authorization obtained in Step 5.
 
 ### Step 9: Station Verifies ECDSA P-256 Signature (14:30:07.500)
 
-The station decodes the `signedAuthorization` Base64 blob and performs the following checks:
+The station decodes `signedAuthorization.data` and performs the six checks of [`ble-handshake.md` §4.2.2](../../spec/profiles/offline/ble-handshake.md#422-verification-station-side), in order:
 
 1. **ECDSA P-256 signature verification** — with a key of the server key set (`OfflinePassPublicKey`) the station holds. A ServerSignedAuth names no `keyId`, so the station tries the keys of its set; there is no cached previous key and no grace period ([`06-security.md` §6.7](../../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256))
-2. **stationId matches** — the authorization is for `stn_a1b2c3d4` (this station)
-3. **bayId is valid** — `bay_c1d2e3f4a5b6` exists on this station
-4. **serviceId is valid** — `svc_eco` is in the local catalog
-5. **Not expired** — `expiresAt` (14:35:05.800Z) is in the future
-6. **Duration is within limits** — 300 seconds does not exceed `MaxSessionDurationSeconds`
+2. **appNonce matches** — the claim equals the `appNonce` of the Hello in Step 6
+3. **stationId matches** — the authorization is for `stn_a1b2c3d4` (this station)
+4. **deviceId matches** — the claim equals the Hello's `device_a8f3bc12e4567890`
+5. **sessionId matches** — the claim equals the message's `sessionId`, `sess_c4d5e6f7a8b9`
+6. **Not expired** — `expiresAt` (14:35:05.800Z) is in the future
 
-All checks pass. The station accepts the authorization.
+All checks pass. The station accepts the authorization, and runs the session under the server-issued `sessionId` and within the signed `durationSeconds`.
 
 ---
 
@@ -331,7 +350,7 @@ The station's bay controller:
 1. Validates that Bay 1 is still `Available`
 2. Activates the dispenser relay on Bay 1
 3. Starts the session timer at 300 seconds
-4. Assigns local session ID `sess_f1a2b3c4d5e6` and offline transaction ID `otx_e5f6a7b8c9d0`
+4. Uses the server-issued session ID `sess_c4d5e6f7a8b9` from the verified claims ([`ble-session.md` §1](../../spec/profiles/offline/ble-session.md#1-starting-a-service)) and assigns offline transaction ID `otx_e5f6a7b8c9d0`
 
 **BLE Notify FFF4 [MSG-038]:**
 
@@ -339,7 +358,7 @@ The station's bay controller:
 {
   "type": "StartServiceResponse",
   "result": "Accepted",
-  "sessionId": "sess_f1a2b3c4d5e6",
+  "sessionId": "sess_c4d5e6f7a8b9",
   "offlineTxId": "otx_e5f6a7b8c9d0"
 }
 ```
@@ -375,7 +394,7 @@ The station sends periodic status updates over BLE FFF5.
 {
   "bayId": "bay_c1d2e3f4a5b6",
   "status": "Running",
-  "sessionId": "sess_f1a2b3c4d5e6",
+  "sessionId": "sess_c4d5e6f7a8b9",
   "elapsedSeconds": 60,
   "remainingSeconds": 240,
   "meterValues": {
@@ -391,7 +410,7 @@ The station sends periodic status updates over BLE FFF5.
 {
   "bayId": "bay_c1d2e3f4a5b6",
   "status": "Running",
-  "sessionId": "sess_f1a2b3c4d5e6",
+  "sessionId": "sess_c4d5e6f7a8b9",
   "elapsedSeconds": 120,
   "remainingSeconds": 180,
   "meterValues": {
@@ -423,7 +442,7 @@ Alice taps "Stop".
 {
   "type": "StopServiceRequest",
   "bayId": "bay_c1d2e3f4a5b6",
-  "sessionId": "sess_f1a2b3c4d5e6"
+  "sessionId": "sess_c4d5e6f7a8b9"
 }
 ```
 
@@ -467,7 +486,7 @@ The station generates a signed receipt:
 {
   "bayId": "bay_c1d2e3f4a5b6",
   "status": "ReceiptReady",
-  "sessionId": "sess_f1a2b3c4d5e6",
+  "sessionId": "sess_c4d5e6f7a8b9",
   "elapsedSeconds": 174,
   "remainingSeconds": 0
 }
@@ -617,7 +636,8 @@ On the Operator Dashboard, Charlie sees:
      |--------------------->|                          |
      |                      | validate, debit 50cr     |
      |                      | sign ECDSA P-256 auth        |
-     |  200 OK (signedAuth) |                          |
+     |  200 OK (signedAuth, |                          |
+     |   trustBundle)       |                          |
      |<---------------------|                          |
      |                      |                          |
      | -- Write FFF3: Hello -------------------------->|

@@ -114,10 +114,10 @@ stateDiagram-v2
 
     Active --> Stopping : StopService requested
     Active --> Completed : SessionEnded (Local, LocalOutOfCredit)
-    Active --> Failed : Hardware fault / connection lost / Deauthorized
+    Active --> Failed : Hardware fault / connection lost (not Partial B) / Deauthorized
 
     Stopping --> Completed : Station confirms stop
-    Stopping --> Failed : Stop timeout (10s)
+    Stopping --> Failed : Stop timeout (10s, not Partial B)
 
     Completed --> [*]
     Failed --> [*]
@@ -315,7 +315,7 @@ sequenceDiagram
     rect rgb(255, 243, 224)
         Note over Station: Station buffers messages offline
         Station->>Station: Buffer MeterValues, StatusNotifications
-        Station->>Station: Complete sessions, buffer TransactionEvents
+        Station->>Station: Complete sessions, buffer SessionEnded and TransactionEvents
     end
 
     rect rgb(232, 245, 233)

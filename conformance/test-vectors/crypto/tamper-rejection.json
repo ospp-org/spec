@@ -1,6 +1,6 @@
 {
   "_comment": "Cryptographic TAMPER-REJECTION vectors. Each document below is STRUCTURALLY VALID — it satisfies its JSON Schema — and CRYPTOGRAPHICALLY WRONG. That is what separates this file from everything under invalid/, where every vector fails schema validation and all three vector gates assert only that SOMETHING failed. Verification of each document here MUST be refused. Regenerate with `node tools/generate-tamper-vectors.mjs`; check with `node tools/verify-tamper-rejection.mjs`.",
-  "_why": "conformance/test-cases/security/TC-SEC-001.md#part-c--station-rejects-invalid-hmac, TC-SEC-004.md#a1--macverificationfailure-critical, and conformance/test-cases/offline/TC-OFF-002.md#expected-results, TC-OFF-005.md#expected-results each instruct an implementer to prove a tampered message is rejected. Before this file, no machine-readable vector and no gate existed for any of them: tools/verify-all-signatures.sh names only conformance/test-vectors/valid/** paths, and tools/verify-ble-crypto.mjs has no tamper branch. The corpus asked for a test it could not itself pass.",
+  "_why": "conformance/test-cases/security/TC-SEC-001.md:50-51, TC-SEC-004.md:34, and conformance/test-cases/offline/TC-OFF-002.md#expected-results, TC-OFF-005.md#expected-results each instruct an implementer to prove a tampered message is rejected. Before this file, no machine-readable vector and no gate existed for any of them: tools/verify-all-signatures.sh names only conformance/test-vectors/valid/** paths, and tools/verify-ble-crypto.mjs has no tamper branch. The corpus asked for a test it could not itself pass.",
   "_classes": {
     "BODY": "the message changes, the signature stays well-formed — proves the signature is bound to CONTENT",
     "SIG": "the signature changes, the message stays byte-identical — proves the signature is CHECKED, not merely present",
@@ -306,21 +306,21 @@
       "mutation": "body.creditsAuthorized 200 → 400",
       "mutatedPointer": "signedAuthorization/data",
       "was": "200",
-      "now": "eyJhcHBOb25jZSI6Ik5Cblo1N3p2eVczUXNrS2oxWnlxYktDKzAwTFhYMzV6TXQ3OCt1R3dDTjQ9IiwiYXV0aElkIjoiYXV0aF8yZTdiODg4ZjdiYmMiLCJiYXlJZCI6ImJheV84NmQxY2RjYTlhNjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6NDAwLCJkZXZpY2VJZCI6ImRldl9kNWQyZWZhY2JiNDAxMTM1IiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfZjFlMmQzYzRiNWE2ZjdlOGQ5YzAiLCJzdGF0aW9uSWQiOiJzdG5fZjY1NDVjMTkiLCJzdWIiOiJzdWJfNmI3ZmQyNGU2MzM4NmRlMyJ9",
+      "now": "eyJhcHBOb25jZSI6Inl4WTJSUWl5Zm1ieXhHd3dkMHJPN0g1dS9PNngzbXkxTEo4VkdpY3BTWjQ9IiwiYXV0aElkIjoiYXV0aF8yZTdiODg4ZjdiYmMiLCJiYXlJZCI6ImJheV9hMWIyYzNkNGU1ZjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6NDAwLCJkZXZpY2VJZCI6ImQ3ZThmOWEwYjFjMmQzZTRmNWE2YjdjOGQ5ZTBmMWEyIiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzZXNzaW9uSWQiOiJzZXNzX2YxZTJkM2M0YjVhNmY3ZThkOWMwIiwic3RhdGlvbklkIjoic3RuX2I2OGVjMTUzMzBjNiIsInN1YiI6InN1Yl82YjdmZDI0ZTYzMzg2ZGUzIn0=",
       "schema": "schemas/ble/server-signed-auth.schema.json",
       "portable": {
         "algorithm": "ECDSA-P256-SHA256",
         "key": "conformance/test-keys/server-test-pub.pem",
         "base": {
-          "signedBytesBase64": "eyJhcHBOb25jZSI6Ik5Cblo1N3p2eVczUXNrS2oxWnlxYktDKzAwTFhYMzV6TXQ3OCt1R3dDTjQ9IiwiYXV0aElkIjoiYXV0aF8yZTdiODg4ZjdiYmMiLCJiYXlJZCI6ImJheV84NmQxY2RjYTlhNjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9kNWQyZWZhY2JiNDAxMTM1IiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfZjFlMmQzYzRiNWE2ZjdlOGQ5YzAiLCJzdGF0aW9uSWQiOiJzdG5fZjY1NDVjMTkiLCJzdWIiOiJzdWJfNmI3ZmQyNGU2MzM4NmRlMyJ9",
-          "signature": "MEQCIF/LitwxL21QUpnorhbSdAVPyf+niNE1isy2hkos4Rk4AiBkCMCXxJoKibKPwxOFc7BBWhoiyA6L7nO38ByllP3AUw==",
+          "signedBytesBase64": "eyJhcHBOb25jZSI6Inl4WTJSUWl5Zm1ieXhHd3dkMHJPN0g1dS9PNngzbXkxTEo4VkdpY3BTWjQ9IiwiYXV0aElkIjoiYXV0aF8yZTdiODg4ZjdiYmMiLCJiYXlJZCI6ImJheV9hMWIyYzNkNGU1ZjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6MjAwLCJkZXZpY2VJZCI6ImQ3ZThmOWEwYjFjMmQzZTRmNWE2YjdjOGQ5ZTBmMWEyIiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzZXNzaW9uSWQiOiJzZXNzX2YxZTJkM2M0YjVhNmY3ZThkOWMwIiwic3RhdGlvbklkIjoic3RuX2I2OGVjMTUzMzBjNiIsInN1YiI6InN1Yl82YjdmZDI0ZTYzMzg2ZGUzIn0=",
+          "signature": "MEUCIQDm2qGLEGPeL2CPc+gWS2NiAXH5kT5pBAAfRtauKrzYUwIgKroogMcefemZyBjC2P23xoldMWBELYHd2sTYLcZBwhs=",
           "key": "conformance/test-keys/server-test-pub.pem",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/Hd\ngUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==\n-----END PUBLIC KEY-----\n",
           "mustVerify": true
         },
         "tampered": {
-          "signedBytesBase64": "eyJhcHBOb25jZSI6Ik5Cblo1N3p2eVczUXNrS2oxWnlxYktDKzAwTFhYMzV6TXQ3OCt1R3dDTjQ9IiwiYXV0aElkIjoiYXV0aF8yZTdiODg4ZjdiYmMiLCJiYXlJZCI6ImJheV84NmQxY2RjYTlhNjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6NDAwLCJkZXZpY2VJZCI6ImRldl9kNWQyZWZhY2JiNDAxMTM1IiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfZjFlMmQzYzRiNWE2ZjdlOGQ5YzAiLCJzdGF0aW9uSWQiOiJzdG5fZjY1NDVjMTkiLCJzdWIiOiJzdWJfNmI3ZmQyNGU2MzM4NmRlMyJ9",
-          "signature": "MEQCIF/LitwxL21QUpnorhbSdAVPyf+niNE1isy2hkos4Rk4AiBkCMCXxJoKibKPwxOFc7BBWhoiyA6L7nO38ByllP3AUw==",
+          "signedBytesBase64": "eyJhcHBOb25jZSI6Inl4WTJSUWl5Zm1ieXhHd3dkMHJPN0g1dS9PNngzbXkxTEo4VkdpY3BTWjQ9IiwiYXV0aElkIjoiYXV0aF8yZTdiODg4ZjdiYmMiLCJiYXlJZCI6ImJheV9hMWIyYzNkNGU1ZjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6NDAwLCJkZXZpY2VJZCI6ImQ3ZThmOWEwYjFjMmQzZTRmNWE2YjdjOGQ5ZTBmMWEyIiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzZXNzaW9uSWQiOiJzZXNzX2YxZTJkM2M0YjVhNmY3ZThkOWMwIiwic3RhdGlvbklkIjoic3RuX2I2OGVjMTUzMzBjNiIsInN1YiI6InN1Yl82YjdmZDI0ZTYzMzg2ZGUzIn0=",
+          "signature": "MEUCIQDm2qGLEGPeL2CPc+gWS2NiAXH5kT5pBAAfRtauKrzYUwIgKroogMcefemZyBjC2P23xoldMWBELYHd2sTYLcZBwhs=",
           "key": "conformance/test-keys/server-test-pub.pem",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/Hd\ngUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==\n-----END PUBLIC KEY-----\n",
           "mustVerify": false
@@ -329,8 +329,8 @@
       "document": {
         "type": "ServerSignedAuth",
         "signedAuthorization": {
-          "data": "eyJhcHBOb25jZSI6Ik5Cblo1N3p2eVczUXNrS2oxWnlxYktDKzAwTFhYMzV6TXQ3OCt1R3dDTjQ9IiwiYXV0aElkIjoiYXV0aF8yZTdiODg4ZjdiYmMiLCJiYXlJZCI6ImJheV84NmQxY2RjYTlhNjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6NDAwLCJkZXZpY2VJZCI6ImRldl9kNWQyZWZhY2JiNDAxMTM1IiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfZjFlMmQzYzRiNWE2ZjdlOGQ5YzAiLCJzdGF0aW9uSWQiOiJzdG5fZjY1NDVjMTkiLCJzdWIiOiJzdWJfNmI3ZmQyNGU2MzM4NmRlMyJ9",
-          "signature": "MEQCIF/LitwxL21QUpnorhbSdAVPyf+niNE1isy2hkos4Rk4AiBkCMCXxJoKibKPwxOFc7BBWhoiyA6L7nO38ByllP3AUw==",
+          "data": "eyJhcHBOb25jZSI6Inl4WTJSUWl5Zm1ieXhHd3dkMHJPN0g1dS9PNngzbXkxTEo4VkdpY3BTWjQ9IiwiYXV0aElkIjoiYXV0aF8yZTdiODg4ZjdiYmMiLCJiYXlJZCI6ImJheV9hMWIyYzNkNGU1ZjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6NDAwLCJkZXZpY2VJZCI6ImQ3ZThmOWEwYjFjMmQzZTRmNWE2YjdjOGQ5ZTBmMWEyIiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzZXNzaW9uSWQiOiJzZXNzX2YxZTJkM2M0YjVhNmY3ZThkOWMwIiwic3RhdGlvbklkIjoic3RuX2I2OGVjMTUzMzBjNiIsInN1YiI6InN1Yl82YjdmZDI0ZTYzMzg2ZGUzIn0=",
+          "signature": "MEUCIQDm2qGLEGPeL2CPc+gWS2NiAXH5kT5pBAAfRtauKrzYUwIgKroogMcefemZyBjC2P23xoldMWBELYHd2sTYLcZBwhs=",
           "signatureAlgorithm": "ECDSA-P256-SHA256"
         },
         "sessionId": "sess_f1e2d3c4b5a6f7e8d9c0"
@@ -346,22 +346,22 @@
       "what": "signedAuthorization signature s-scalar bit flipped",
       "mutation": "signature[-1] ^= 0x01",
       "mutatedPointer": "signedAuthorization/signature",
-      "was": "MEQCIF/LitwxL21QUpnorhbSdAVPyf+niNE1isy2hkos4Rk4AiBkCMCXxJoKibKPwxOFc7BBWhoiyA6L7nO38ByllP3AUw==",
-      "now": "MEQCIF/LitwxL21QUpnorhbSdAVPyf+niNE1isy2hkos4Rk4AiBkCMCXxJoKibKPwxOFc7BBWhoiyA6L7nO38ByllP3AUg==",
+      "was": "MEUCIQDm2qGLEGPeL2CPc+gWS2NiAXH5kT5pBAAfRtauKrzYUwIgKroogMcefemZyBjC2P23xoldMWBELYHd2sTYLcZBwhs=",
+      "now": "MEUCIQDm2qGLEGPeL2CPc+gWS2NiAXH5kT5pBAAfRtauKrzYUwIgKroogMcefemZyBjC2P23xoldMWBELYHd2sTYLcZBwho=",
       "schema": "schemas/ble/server-signed-auth.schema.json",
       "portable": {
         "algorithm": "ECDSA-P256-SHA256",
         "key": "conformance/test-keys/server-test-pub.pem",
         "base": {
-          "signedBytesBase64": "eyJhcHBOb25jZSI6Ik5Cblo1N3p2eVczUXNrS2oxWnlxYktDKzAwTFhYMzV6TXQ3OCt1R3dDTjQ9IiwiYXV0aElkIjoiYXV0aF8yZTdiODg4ZjdiYmMiLCJiYXlJZCI6ImJheV84NmQxY2RjYTlhNjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9kNWQyZWZhY2JiNDAxMTM1IiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfZjFlMmQzYzRiNWE2ZjdlOGQ5YzAiLCJzdGF0aW9uSWQiOiJzdG5fZjY1NDVjMTkiLCJzdWIiOiJzdWJfNmI3ZmQyNGU2MzM4NmRlMyJ9",
-          "signature": "MEQCIF/LitwxL21QUpnorhbSdAVPyf+niNE1isy2hkos4Rk4AiBkCMCXxJoKibKPwxOFc7BBWhoiyA6L7nO38ByllP3AUw==",
+          "signedBytesBase64": "eyJhcHBOb25jZSI6Inl4WTJSUWl5Zm1ieXhHd3dkMHJPN0g1dS9PNngzbXkxTEo4VkdpY3BTWjQ9IiwiYXV0aElkIjoiYXV0aF8yZTdiODg4ZjdiYmMiLCJiYXlJZCI6ImJheV9hMWIyYzNkNGU1ZjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6MjAwLCJkZXZpY2VJZCI6ImQ3ZThmOWEwYjFjMmQzZTRmNWE2YjdjOGQ5ZTBmMWEyIiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzZXNzaW9uSWQiOiJzZXNzX2YxZTJkM2M0YjVhNmY3ZThkOWMwIiwic3RhdGlvbklkIjoic3RuX2I2OGVjMTUzMzBjNiIsInN1YiI6InN1Yl82YjdmZDI0ZTYzMzg2ZGUzIn0=",
+          "signature": "MEUCIQDm2qGLEGPeL2CPc+gWS2NiAXH5kT5pBAAfRtauKrzYUwIgKroogMcefemZyBjC2P23xoldMWBELYHd2sTYLcZBwhs=",
           "key": "conformance/test-keys/server-test-pub.pem",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/Hd\ngUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==\n-----END PUBLIC KEY-----\n",
           "mustVerify": true
         },
         "tampered": {
-          "signedBytesBase64": "eyJhcHBOb25jZSI6Ik5Cblo1N3p2eVczUXNrS2oxWnlxYktDKzAwTFhYMzV6TXQ3OCt1R3dDTjQ9IiwiYXV0aElkIjoiYXV0aF8yZTdiODg4ZjdiYmMiLCJiYXlJZCI6ImJheV84NmQxY2RjYTlhNjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9kNWQyZWZhY2JiNDAxMTM1IiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfZjFlMmQzYzRiNWE2ZjdlOGQ5YzAiLCJzdGF0aW9uSWQiOiJzdG5fZjY1NDVjMTkiLCJzdWIiOiJzdWJfNmI3ZmQyNGU2MzM4NmRlMyJ9",
-          "signature": "MEQCIF/LitwxL21QUpnorhbSdAVPyf+niNE1isy2hkos4Rk4AiBkCMCXxJoKibKPwxOFc7BBWhoiyA6L7nO38ByllP3AUg==",
+          "signedBytesBase64": "eyJhcHBOb25jZSI6Inl4WTJSUWl5Zm1ieXhHd3dkMHJPN0g1dS9PNngzbXkxTEo4VkdpY3BTWjQ9IiwiYXV0aElkIjoiYXV0aF8yZTdiODg4ZjdiYmMiLCJiYXlJZCI6ImJheV9hMWIyYzNkNGU1ZjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6MjAwLCJkZXZpY2VJZCI6ImQ3ZThmOWEwYjFjMmQzZTRmNWE2YjdjOGQ5ZTBmMWEyIiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzZXNzaW9uSWQiOiJzZXNzX2YxZTJkM2M0YjVhNmY3ZThkOWMwIiwic3RhdGlvbklkIjoic3RuX2I2OGVjMTUzMzBjNiIsInN1YiI6InN1Yl82YjdmZDI0ZTYzMzg2ZGUzIn0=",
+          "signature": "MEUCIQDm2qGLEGPeL2CPc+gWS2NiAXH5kT5pBAAfRtauKrzYUwIgKroogMcefemZyBjC2P23xoldMWBELYHd2sTYLcZBwho=",
           "key": "conformance/test-keys/server-test-pub.pem",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/Hd\ngUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==\n-----END PUBLIC KEY-----\n",
           "mustVerify": false
@@ -370,8 +370,8 @@
       "document": {
         "type": "ServerSignedAuth",
         "signedAuthorization": {
-          "data": "eyJhcHBOb25jZSI6Ik5Cblo1N3p2eVczUXNrS2oxWnlxYktDKzAwTFhYMzV6TXQ3OCt1R3dDTjQ9IiwiYXV0aElkIjoiYXV0aF8yZTdiODg4ZjdiYmMiLCJiYXlJZCI6ImJheV84NmQxY2RjYTlhNjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9kNWQyZWZhY2JiNDAxMTM1IiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfZjFlMmQzYzRiNWE2ZjdlOGQ5YzAiLCJzdGF0aW9uSWQiOiJzdG5fZjY1NDVjMTkiLCJzdWIiOiJzdWJfNmI3ZmQyNGU2MzM4NmRlMyJ9",
-          "signature": "MEQCIF/LitwxL21QUpnorhbSdAVPyf+niNE1isy2hkos4Rk4AiBkCMCXxJoKibKPwxOFc7BBWhoiyA6L7nO38ByllP3AUg==",
+          "data": "eyJhcHBOb25jZSI6Inl4WTJSUWl5Zm1ieXhHd3dkMHJPN0g1dS9PNngzbXkxTEo4VkdpY3BTWjQ9IiwiYXV0aElkIjoiYXV0aF8yZTdiODg4ZjdiYmMiLCJiYXlJZCI6ImJheV9hMWIyYzNkNGU1ZjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6MjAwLCJkZXZpY2VJZCI6ImQ3ZThmOWEwYjFjMmQzZTRmNWE2YjdjOGQ5ZTBmMWEyIiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzZXNzaW9uSWQiOiJzZXNzX2YxZTJkM2M0YjVhNmY3ZThkOWMwIiwic3RhdGlvbklkIjoic3RuX2I2OGVjMTUzMzBjNiIsInN1YiI6InN1Yl82YjdmZDI0ZTYzMzg2ZGUzIn0=",
+          "signature": "MEUCIQDm2qGLEGPeL2CPc+gWS2NiAXH5kT5pBAAfRtauKrzYUwIgKroogMcefemZyBjC2P23xoldMWBELYHd2sTYLcZBwho=",
           "signatureAlgorithm": "ECDSA-P256-SHA256"
         },
         "sessionId": "sess_f1e2d3c4b5a6f7e8d9c0"
@@ -668,7 +668,7 @@
       "class": "SIG",
       "base": "conformance/test-vectors/crypto/mqtt-mac.json",
       "key": "inline: mqtt-mac.json .key.sessionKeyBase64",
-      "what": "the §5.4 message MAC with its last byte flipped — literally \"alter one byte of the `mac` value\" (TC-SEC-001.md#part-c--station-rejects-invalid-hmac)",
+      "what": "the §5.4 message MAC with its last byte flipped — literally \"alter one byte of the `mac` value\" (TC-SEC-001.md:50-51)",
       "mutatedPointer": "mac",
       "was": "erTp0jMKlFrA76eJfDpMoZ+3tr1ZwGvvvuooJWSREB0=",
       "now": "erTp0jMKlFrA76eJfDpMoZ+3tr1ZwGvvvuooJWSREBw=",

@@ -116,8 +116,7 @@ fi
 #     in section 1 is under conformance/test-vectors/valid/**, and verify-ble-crypto
 #     has no tamper branch, so until this section existed the corpus could show that
 #     a good signature passes and could not show that a bad one is refused — while
-#     TC-SEC-001.md#part-c--station-rejects-invalid-hmac, TC-SEC-004.md#a1--macverificationfailure-critical,
-#     TC-OFF-002.md#expected-results and TC-OFF-005.md#expected-results
+#     TC-SEC-001.md:50-51, TC-SEC-004.md:34, TC-OFF-002.md#expected-results and TC-OFF-005.md#expected-results
 #     each ask an implementer to prove exactly that. We asked for a test we could
 #     not pass ourselves.
 #

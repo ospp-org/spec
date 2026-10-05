@@ -10,7 +10,11 @@
 # went stale: `9 FAIL / 6 SKIP` was true at v0.20.0 and was still being quoted after 0.20.1
 # and 0.20.2 had closed three of them.
 #
-#   (this HEAD) 2026-09-29  (unreleased)  5 FAIL, 6 SKIP  (4750 checks, 4739 PASS) — the offline
+#   (this HEAD) 2026-10-05  (unreleased)  5 FAIL, 6 SKIP  (4813 checks, 4802 PASS) — the offline
+#                                  follow-up: Gabi's decisions of 2026-10-05 and their review. The
+#                                  failure SET is the one measured at 7a65f09; +63 checks, all
+#                                  passing.
+#   (superseded) 2026-09-29  (unreleased)  5 FAIL, 6 SKIP  (4750 checks, 4739 PASS) — the offline
 #                                  model and its consistency review. 03-messages.md §7.13's Receipt
 #                                  table now names every member of ble/receipt.schema.json, the body
 #                                  the app uploads, so `receipt` leaves the failure SET; against

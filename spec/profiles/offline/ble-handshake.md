@@ -161,7 +161,7 @@ The prior 4-input hex construction (which additionally bound `bayId`/`serviceId`
 
 ### 4.2 ServerSignedAuth (Partial A)
 
-Used when the app is online but the station is offline. The app obtains a server-signed authorization (via `POST /sessions/offline-auth`, supplying the same `appNonce` it uses in the `Hello` of this handshake so the server binds the authorization to it — see **Acquisition ordering** below) and relays it to the station over BLE. The station verifies the ECDSA P-256 signature using a key of the server key set it holds ([06-security.md §6.7](../../06-security.md#67-server-signing-key-rotation-ecdsa-p-256)) and re-checks each claim against the live handshake state. Like every post-Challenge message, `ServerSignedAuth` is relayed **inside the AEAD channel** ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)).
+Used when the app is online but the station is offline. The app obtains a server-signed authorization (via `POST /sessions/offline-auth`, supplying the same `appNonce` it uses in the `Hello` of this handshake so the server binds the authorization to it — see **Acquisition ordering** below), with the trust bundle it authenticates the station against ([`app-contract.md` §5](app-contract.md#5-the-partial-a-authorization)), and relays the authorization to the station over BLE. The station verifies the ECDSA P-256 signature using a key of the server key set it holds ([06-security.md §6.7](../../06-security.md#67-server-signing-key-rotation-ecdsa-p-256)) and re-checks each claim against the live handshake state. Like every post-Challenge message, `ServerSignedAuth` is relayed **inside the AEAD channel** ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)).
 
 **Acquisition ordering (Normative).** The `appNonce` is chosen by the app and is the sole binding between the `POST` and the BLE handshake (§4.2.2 check #2), so the `POST /sessions/offline-auth` and the `Hello` write **MAY** occur in either order, provided the `appNonce` in the POST body equals the `appNonce` in the `Hello`. Two orderings are conformant:
 
@@ -223,8 +223,8 @@ The station **MUST** apply the following checks before accepting a `ServerSigned
 {
   "type": "ServerSignedAuth",
   "signedAuthorization": {
-    "data": "eyJhcHBOb25jZSI6IjdKbm1rUlNyUkw0MmZocVI4VklYeTBMbmJFRHN4U2FYMTlOK1Y5b2dJUWc9IiwiYXV0aElkIjoiYXV0aF80YzE1OWMxNTlkNzAiLCJiYXlJZCI6ImJheV9lZDMwOTY5ZDljMGIiLCJjcmVkaXRzQXV0aG9yaXplZCI6MjAwLCJkZXZpY2VJZCI6ImRldl82NmU5Zjg4MzliODhhNWQ1IiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfYjNjNGQ1ZTYiLCJzdGF0aW9uSWQiOiJzdG5fYWFlMTc3YjUiLCJzdWIiOiJzdWJfZTMxZTc3ZjMxZTkyMjY3NiJ9",
-    "signature": "MEQCIFITZQ1OSAW5H0RbWVm5sd5mfhI6NxmxMEP8T5y4f2m/AiBi6eJozvUjYO7L4I777IC1b8FCwX6fJD1oW48Tr1jgaA==",
+    "data": "eyJhcHBOb25jZSI6ImJLc3h4QU9DQ05rV05weWVQZ2U4TnB0N09rWDNQc0ZKRkVoY2dXMnJwSUk9IiwiYXV0aElkIjoiYXV0aF80YzE1OWMxNTlkNzAiLCJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6NTAsImRldmljZUlkIjoiZGV2X2E4ZjNiYzEyZTQ1Njc4OTAiLCJkdXJhdGlvblNlY29uZHMiOjMwMCwiZXhwaXJlc0F0IjoiMjAyNi0wMi0xM1QxMDowNTowMC4wMDBaIiwiaXNzdWVkQXQiOiIyMDI2LTAyLTEzVDEwOjAwOjAwLjAwMFoiLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic2Vzc2lvbklkIjoic2Vzc19iM2M0ZDVlNiIsInN0YXRpb25JZCI6InN0bl9hMWIyYzNkNCIsInN1YiI6InN1Yl9lMzFlNzdmMzFlOTIyNjc2In0=",
+    "signature": "MEUCIQDAoT8e/D+o5EZa4Yx3zH22+qCuA4lhymkFe/oPrKHULQIgXnVojf5wVRf5uqPeQZVsziDtm/Xe8UwUb6+Q62Ukbhg=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "sessionId": "sess_b3c4d5e6"
@@ -372,6 +372,7 @@ The following rejection reason codes **MAY** appear in the AuthResponse `reason`
       |--- POST /sessions/offline-auth -->|           |
       |                      |            |           |
       |<-- signedAuthorization ----------|           |
+      |    + sessionId, trustBundle      |           |
       |                      |                        |
       |--- ServerSignedAuth (FFF3) --------------->|
       |    { signedAuthorization, sessionId }         |

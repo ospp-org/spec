@@ -339,7 +339,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
 | **Trigger** | Partial B scenario — station receives an OfflinePass via BLE from a mobile app while the station is online |
 | **Expected Response** | AuthorizeOfflinePass RESPONSE |
 | **Timeout** | 15 seconds |
-| **Idempotency** | Yes, on the **`(offlinePassId, counter)`** pair — a retransmission carries the same `counter` and **MUST** get the same answer. **Not** on `offlinePassId` alone, which this row said until `0.25.0` and which the validation checks contradict by construction: a pass legitimately returns `Accepted` and then `4002` once check #6's `maxUses` is reached, and a replayed `counter` returns `2005` where the first use returned `Accepted` ([`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks)). |
+| **Idempotency** | Yes, on the REQUEST's **`messageId`** — a retransmission carries the same `messageId` and **MUST** get the same answer, which the transport's deduplication gives it ([`02-transport.md` §3.3](02-transport.md#33-deduplication)). **Not** on the `(offlinePassId, counter)` pair: a new REQUEST that presents a `counter` already seen for the pass is a replay, refused at check #10 whether the first presentation was accepted or refused ([`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks)). **Not** on `offlinePassId` alone, which this row said until `0.25.0` and which the validation checks contradict by construction: a pass legitimately returns `Accepted` and then `4002` once check #6's `maxUses` is reached, and a replayed `counter` returns `2005` where the first use returned `Accepted` ([`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks)). |
 | **Message Expiry** | 30 seconds (no [`02-transport.md` §5.1](02-transport.md) category covers this action; Appendix B is the cross-check) |
 
 In the **Partial B** offline scenario (phone offline, station online), the mobile app presents an OfflinePass to the station via BLE. The station forwards it to the server for real-time validation instead of performing local validation.
@@ -845,9 +845,9 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
 **Server-side processing** ([`reconciliation.md`](profiles/offline/reconciliation.md) is normative; this is its order):
 1. Deduplicate by `offlineTxId`
 2. Verify ECDSA receipt signature — reject if it does not verify; never scored
-3. Record `txCounter` (operator alert on the station if the sequence is discontinuous; process anyway)
+3. Record `txCounter` (WARNING if the sequence is discontinuous, process anyway)
 4. Apply the reconcile-time gate (was the pass valid at transaction time, read through the station's clock offset?)
-5. Settle: recompute the cost by service kind from the signed receipt, never above what the authorization allowed, and debit the user wallet — or, where the authorization already debited it, refund only ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)) — (a debit that leaves it below zero leaves the transaction pending until the user tops up)
+5. Settle: recompute the cost by service kind from the signed receipt, never above what the authorization allowed, and debit the user wallet — or, where the authorization already debited it, refund only ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)) — (a debit that leaves it below zero leaves the transaction pending until a credit to the wallet covers it)
 6. Run fraud scoring ([Chapter 06 §7.4](06-security.md#74-fraud-detection--offline-transactions)) — record `FraudDetected` and act on the band; the settled amount does not change
 7. Create session record
 8. Respond `Accepted`
@@ -2616,7 +2616,7 @@ First message of the BLE handshake. The app sends its identity and a random nonc
 {
   "type": "Hello",
   "deviceId": "device_uuid_123",
-  "appNonce": "dGhpcyBpcyBhIDMyLWJ5dGUgcmFuZG9tIG5vbmNl...",
+  "appNonce": "DTUrT0MOKRizF27RH0/XTpUHw0ZrhJXt1K1OCXIxrmw=",
   "appVersion": "2.1.0",
   "appEphemeralPubKey": "AjRkc2Vzc2lvbi1lcGhlbWVyYWwtcHVia2V5LWFwcDEy"
 }
@@ -2769,7 +2769,7 @@ The app MUST request biometric or PIN confirmation from the user before sending 
 | **Expected Response** | [AuthResponse](#77-authresponse) on FFF4 |
 | **Timeout** | 10 seconds |
 
-Used in the **Partial A** offline scenario where the phone has internet connectivity but the station does not. The app first calls `POST /sessions/offline-auth` on the server, which returns a signed authorization blob. The app then delivers this to the station via BLE.
+Used in the **Partial A** offline scenario where the phone has internet connectivity but the station does not. The app first calls `POST /sessions/offline-auth` on the server, which returns the signed authorization and, with it, the trust bundle the app authenticates the station against ([`app-contract.md` §5](profiles/offline/app-contract.md#5-the-partial-a-authorization)). The app then delivers the authorization to the station via BLE.
 
 The station verifies the server's ECDSA P-256 signature without needing network access.
 
@@ -2778,13 +2778,10 @@ The station verifies the server's ECDSA P-256 signature without needing network 
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
 | `type` | string | Yes | `"ServerSignedAuth"` |
-| `signedAuthorization` | string | Yes | Base64-encoded server-signed authorization blob (ECDSA P-256) |
+| `signedAuthorization` | object | Yes | The server-signed authorization `{data, signature, signatureAlgorithm}` ([`server-signed-auth.schema.json`](../schemas/common/server-signed-auth.schema.json)): `data` is the Base64 of the OSPP Canonical Form of its claims, and `signature` the server's ECDSA P-256 signature over those bytes (RFC 6979 deterministic nonce) |
 | `sessionId` | string | Yes | Server-assigned session ID (`sess_{uuid}`) |
 
-The `signedAuthorization` blob contains:
-- `bayId`, `serviceId`, `durationSeconds` — authorized session parameters
-- `issuedAt`, `expiresAt` — validity window
-- Server ECDSA P-256 signature (RFC 6979 deterministic nonce)
+The signed claims are the twelve of [ble-handshake.md §4.2.1](profiles/offline/ble-handshake.md#421-signing-process-server-side) — `authId`, `sub`, `deviceId`, `sessionId`, `stationId`, `bayId`, `serviceId`, `durationSeconds`, `creditsAuthorized`, `appNonce`, `issuedAt` and `expiresAt` ([`server-signed-auth-claims.schema.json`](../schemas/common/server-signed-auth-claims.schema.json)) — and the station checks them as [ble-handshake.md §4.2.2](profiles/offline/ble-handshake.md#422-verification-station-side) states.
 
 The station **MUST** verify the signature using a key of its stored `OfflinePassPublicKey` set (Chapter 06 §6.7).
 
@@ -2794,8 +2791,8 @@ The station **MUST** verify the signature using a key of its stored `OfflinePass
 {
   "type": "ServerSignedAuth",
   "signedAuthorization": {
-    "data": "eyJhcHBOb25jZSI6IkRUVXJUME1PS1JpekYyN1JIMC9YVHBVSHcwWnJoSlh0MUsxT0NYSXhybXc9IiwiYXV0aElkIjoiYXV0aF80YTRjOTE3YmY4N2YiLCJiYXlJZCI6ImJheV85M2EwMGMxNjJjNmMiLCJjcmVkaXRzQXV0aG9yaXplZCI6MjAwLCJkZXZpY2VJZCI6ImRldl8zZTMwOTE1ODc1YzdhYjMyIiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfZjFhMmIzYzRlNWQ2Iiwic3RhdGlvbklkIjoic3RuX2E4OTVmYTRkIiwic3ViIjoic3ViX2RjYzIyNjhhM2Q5MDlkYzgifQ==",
-    "signature": "MEUCIQD+EA9zECEYWXwf8kdX6rtClmSWF06EqDQXYKHgpU9+fQIgFM3UX/MtfM8en2XbYZeCkd4vIMfXH8kfc38Xa17rD7o=",
+    "data": "eyJhcHBOb25jZSI6IkRUVXJUME1PS1JpekYyN1JIMC9YVHBVSHcwWnJoSlh0MUsxT0NYSXhybXc9IiwiYXV0aElkIjoiYXV0aF80YTRjOTE3YmY4N2YiLCJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6NTAsImRldmljZUlkIjoiZGV2aWNlX3V1aWRfMTIzIiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfZjFhMmIzYzRlNWQ2Iiwic3RhdGlvbklkIjoic3RuX2ExYjJjM2Q0Iiwic3ViIjoic3ViX2RjYzIyNjhhM2Q5MDlkYzgifQ==",
+    "signature": "MEQCIH/9+N9tI3KDd7D9jSUhhnLGIFw2gYO6BPyDk6Te2qrzAiBnJakISC8hWI0cVLxI1vz04A9Z400yQHUJp4ZJJHTMfQ==",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "sessionId": "sess_f1a2b3c4e5d6"
@@ -3141,7 +3138,7 @@ The app **MUST** store the receipt in its offline transaction log and sync it to
 > normative and which this note previously contradicted. A station built to the older form signs
 > `SHA-256(base64(canonical))`, which no server will verify.
 
-> **Counter discontinuity:** The server records `txCounter` during reconciliation and does not gate on it. A discontinuity is worth an operator alert on the **station** — the usual causes are a power loss that interrupts a write, NVS corruption or a board swap, since the counter continues across reboots — and the transaction is processed normally either way. It is not a fraud signal against the user and cannot prove completeness (`06-security.md` §6.3.1).
+> **Counter discontinuity:** The server records `txCounter` during reconciliation and does not gate on it. A discontinuity is worth an operator alert on the **station** — the usual causes are reboot, NVS corruption or a board swap — and the transaction is processed normally either way. It is not a fraud signal against the user and cannot prove completeness (`06-security.md` §6.3.1).
 
 #### Example
 

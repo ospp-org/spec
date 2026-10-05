@@ -31,7 +31,7 @@
     "durationSeconds": {
       "type": "integer",
       "minimum": 1,
-      "description": "Advisory copy of the authorized service duration for app UX (finding N3). UNSIGNED — relayed by the station from the SIGNED ServerSignedAuth claims (Partial A) or the AuthorizeOfflinePass response (Partial B). The station's clamp enforcement is rooted in the SIGNED durationSeconds (server-signed-auth-claims.schema.json), NOT this advisory field. MAY be present when result is Accepted."
+      "description": "Advisory copy of the authorized service duration for app UX (finding N3). UNSIGNED — relayed by the station from the SIGNED ServerSignedAuth claims (Partial A) or the AuthorizeOfflinePass response (Partial B). The station checks a StartServiceRequest against the SIGNED durationSeconds (server-signed-auth-claims.schema.json) or the AuthorizeOfflinePass response value, NOT this advisory field, and refuses a longer request (profiles/offline/ble-session.md §1). MAY be present when result is Accepted."
     },
     "creditsAuthorized": {
       "type": "integer",

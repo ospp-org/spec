@@ -12,7 +12,7 @@ Verify that the station correctly performs offline transaction reconciliation af
 
 - `spec/profiles/offline/reconciliation.md` — Reconciliation behavior
 - `spec/profiles/transaction/transaction-event.md` — TransactionEvent message
-- `spec/profiles/offline/reconciliation.md` §2 — **response timeout 60 s**: the TransactionEvent timeout of `spec/03-messages.md` §4.1, which is the only timeout this action has, since TransactionEvent is used for reconciliation alone.
+- `spec/profiles/offline/reconciliation.md` §2 — **response timeout 30 s on this path.** This is a reconciliation case, and the reconciliation profile sets **30 s**, not §4.1's 60 s, and says so explicitly. Note that TransactionEvent is defined as an offline-reconciliation message only, so 30 s is in practice the timeout for every TransactionEvent that exists; §4.1's 60 s is a general-table entry with no message left to govern.
 - `spec/03-messages.md` §4.1 — TransactionEvent payload
 - `spec/07-errors.md` §5 — Retry policies
 - `schemas/mqtt/transaction-event-response.schema.json`
@@ -58,7 +58,7 @@ Verify that the station correctly performs offline transaction reconciliation af
 }
 ```
 3. Verify `txCounter` is 1 (first in sequence).
-4. Send `Accepted` response within 60 seconds.
+4. Send `Accepted` response within 30 seconds.
 5. Observe TransactionEvent with `txCounter: 2`.
 6. Verify `txCounter` is sequential (2 follows 1).
 7. Send `Accepted` response.
@@ -81,7 +81,7 @@ Verify that the station correctly performs offline transaction reconciliation af
       "reason": "Transaction otx_a1b2c3d4e5f6 already reconciled"
     }
     ```
-18. Verify the station does not send the transaction again and deletes its local record of it — a deletion it **MAY** defer by up to 72 hours ([`transaction-event.md` §5.1](../../../spec/profiles/transaction/transaction-event.md#51-response-status-values)).
+18. Verify the station removes the transaction from its local queue.
 19. Verify the station proceeds to the next transaction without retry.
 
 ### Part C — Partial Failure with RetryLater
@@ -102,7 +102,7 @@ Verify that the station correctly performs offline transaction reconciliation af
 27. On retry, send `Accepted` response.
 28. Observe TransactionEvent with `txCounter: 8`.
 29. Send `Accepted` response.
-30. Verify nothing remains to be sent: every transaction has been answered, and none answered `Accepted` or `Duplicate` is sent again.
+30. Verify the reconciliation queue is fully drained.
 
 ### Part D — Full Offline-to-Online Transition
 
@@ -137,13 +137,13 @@ Verify that the station correctly performs offline transaction reconciliation af
 4. `RetryLater` response causes the station to retry with backoff.
 5. All 5 transactions in Part A are successfully reconciled.
 6. After reconciliation, the station operates normally in online mode.
-7. TransactionEvent response timeout is 60 seconds per message (`reconciliation.md` §2).
+7. TransactionEvent response timeout is 30 seconds per message on the reconciliation path (`reconciliation.md` §2).
 
 ## Failure Criteria
 
-1. The station fails to increment `txCounter` by exactly 1 per offline transaction, or does not continue it across a reboot and across a sync ([`reconciliation.md` §4.1](../../../spec/profiles/offline/reconciliation.md#41-txcounter)). (Transmission **order** is not a failure criterion — only the counter the station assigns is.)
+1. The station fails to increment `txCounter` by exactly 1 per offline transaction, or fails to persist it across a reboot. (Transmission **order** is not a failure criterion — only the counter the station assigns is.)
 2. Station sends the next TransactionEvent before receiving RESPONSE for the previous one.
 3. Station retries after `Duplicate` response.
 4. Station does not retry after `RetryLater` response.
-5. A transaction remains unsent after every response has been received, or a transaction answered `Accepted` or `Duplicate` is sent again.
+5. Reconciliation queue is not fully drained after all responses are sent.
 6. Station does not resume normal online operation after reconciliation.

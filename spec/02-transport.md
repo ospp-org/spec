@@ -414,7 +414,7 @@ The station MUST configure an LWT message at MQTT CONNECT time:
 **Server processing on LWT receipt:**
 
 1. Mark all bays of the station as `Unknown` status.
-2. If any session is active, start a session timeout timer (per [Chapter 05](05-state-machines.md)).
+2. If any session is active, start a session timeout timer (per [Chapter 05](05-state-machines.md)) — not for a Partial-B session, which the loss does not end ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)).
 3. Log the disconnect event.
 
 ### 4.4 Reconnection Strategy
@@ -823,7 +823,7 @@ When the station has both MQTT and BLE available:
 
 ## 9. HTTPS Transport (Server ↔ Clients)
 
-OSPP does not normatively define the HTTPS API between the server and end-user clients (mobile app, web payment page), as this is implementation-specific — with one exception: the two exchanges the offline model depends on, pass issuance and receipt upload, which [`app-contract.md`](profiles/offline/app-contract.md) defines normatively. The following transport-level requirements apply to any OSPP-compliant server that exposes an HTTP API.
+OSPP does not normatively define the HTTPS API between the server and end-user clients (mobile app, web payment page), as this is implementation-specific — with one exception: the exchanges the offline model depends on — pass issuance with its attestation challenge, receipt upload, and the trust bundle of a Partial-A authorization — which [`app-contract.md`](profiles/offline/app-contract.md) defines normatively. The following transport-level requirements apply to any OSPP-compliant server that exposes an HTTP API.
 
 ### 9.1 General Requirements
 
@@ -872,14 +872,12 @@ This approach avoids cookies and localStorage for GDPR compliance and simplicity
 
 #### 9.2.3 Station REST Fallback — mTLS
 
-For the rare case where a station needs to communicate with the server via HTTPS instead of MQTT:
+For the rare case where a station needs to communicate with the server via HTTPS instead of MQTT (e.g., offline transaction sync when MQTT is unavailable but HTTPS is reachable):
 
 | Parameter | Value |
 |-----------|-------|
 | **Authentication** | mTLS — same X.509 client certificate used for MQTT |
-| **Endpoints** | Limited: config fetch |
-
-Offline transactions are not among them. A station reconciles them only by TransactionEvent over MQTT ([`reconciliation.md` §2](profiles/offline/reconciliation.md#2-sync-procedure)); the app's copy of a receipt reaches the server by the receipt upload of [`app-contract.md` §4](profiles/offline/app-contract.md#4-receipt-upload).
+| **Endpoints** | Limited: offline-txs sync, config fetch |
 
 ### 9.3 Idempotency
 

@@ -14,8 +14,8 @@
 > pass is valid at any station that accepts offline passes
 > ([`offline-pass.md` §2.3](../spec/profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)).
 >
-> `offline-pass-issuance-request.schema.json` and `offline-pass-issuance-response.schema.json`
-> belong to the offline app–server contract, which is **Draft**
+> `offline-pass-issuance-request.schema.json`, `offline-pass-issuance-response.schema.json` and
+> `offline-attestation-challenge-response.schema.json` belong to the offline app–server contract, which is **Draft**
 > ([`profiles/offline/README.md`](../spec/profiles/offline/README.md)).
 >
 > Every other schema here is **stable**.
@@ -35,10 +35,11 @@ schemas/
 ├── provisioning-response.schema.json    HTTP provisioning response (Flow §2)
 ├── offline-pass-issuance-request.schema.json    HTTP offline pass issuance request (app–server contract §3)
 ├── offline-pass-issuance-response.schema.json   HTTP offline pass issuance response (app–server contract §3)
+├── offline-attestation-challenge-response.schema.json  HTTP device key attestation challenge (app–server contract §3.6)
 └── README.md                            This file
 ```
 
-**Total: 88 schema files.**
+**Total: 89 schema files.**
 
 ---
 
@@ -78,6 +79,7 @@ Schemas for HTTP request/response bodies that fall outside the MQTT envelope: st
 | [`provisioning-response.schema.json`](provisioning-response.schema.json) | `POST /api/v1/stations/provision` | Server → Station | [04-flows.md §2](../spec/04-flows.md#2-station-provisioning) |
 | [`offline-pass-issuance-request.schema.json`](offline-pass-issuance-request.schema.json) | `POST /api/v1/offline/passes` | App → Server | [app-contract.md §3](../spec/profiles/offline/app-contract.md#3-pass-issuance) |
 | [`offline-pass-issuance-response.schema.json`](offline-pass-issuance-response.schema.json) | `POST /api/v1/offline/passes` | Server → App | [app-contract.md §3](../spec/profiles/offline/app-contract.md#3-pass-issuance) |
+| [`offline-attestation-challenge-response.schema.json`](offline-attestation-challenge-response.schema.json) | `POST /api/v1/offline/attestation-challenges` | Server → App | [app-contract.md §3.6](../spec/profiles/offline/app-contract.md#36-device-key-attestation) |
 
 The contract's receipt upload, `POST /api/v1/offline/receipts`, has no schema of its own: its body is [`ble/receipt.schema.json`](ble/receipt.schema.json) and its response body [`mqtt/transaction-event-response.schema.json`](mqtt/transaction-event-response.schema.json) ([app-contract.md §4](../spec/profiles/offline/app-contract.md#4-receipt-upload)).
 
@@ -302,4 +304,4 @@ if (!valid) {
 | [02 — Transport](../spec/02-transport.md) | `common/mqtt-envelope.schema.json` (envelope), `provisioning-response.schema.json` (MQTT connection parameters returned by provisioning) |
 | [04 — Protocol Flows](../spec/04-flows.md) | `provisioning-request.schema.json` + `provisioning-response.schema.json` (Flow §2) |
 | [06 — Security](../spec/06-security.md) | `common/offline-pass.schema.json`, `common/receipt.schema.json` |
-| [Offline app–server contract](../spec/profiles/offline/app-contract.md) | `offline-pass-issuance-request.schema.json` + `offline-pass-issuance-response.schema.json` (§3) |
+| [Offline app–server contract](../spec/profiles/offline/app-contract.md) | `offline-pass-issuance-request.schema.json` + `offline-pass-issuance-response.schema.json` (§3), `offline-attestation-challenge-response.schema.json` (§3.6) |

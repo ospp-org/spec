@@ -84,6 +84,14 @@ function receiptDataErrors(body) {
   return receiptDataValidator(body) ? null : receiptDataAjv.errorsText(receiptDataValidator.errors);
 }
 
+// Decoded ServerSignedAuth claims are held to server-signed-auth-claims.schema.json the same way,
+// on the same ajv instance: a fixture's claims must agree with the specification, not merely verify.
+function ssaClaimsErrors(claims) {
+  receiptDataErrors({});
+  const v = receiptDataAjv.getSchema('https://ospp-standard.org/schemas/v1/common/server-signed-auth-claims.schema.json');
+  return v(claims) ? null : receiptDataAjv.errorsText(v.errors);
+}
+
 function hmacBase64(keyBytes, msg) {
   return createHmac('sha256', keyBytes).update(msg).digest('base64');
 }
@@ -427,6 +435,17 @@ function verifyServerSignedAuth(outer, file, pubPem) {
   }
   if (canonicalForm(claims) !== canonicalBytes.toString('utf-8')) {
     return { file, ok: false, reason: 'signedAuthorization.data is not OSPP-canonical' };
+  }
+
+  // The claims are held to their schema and to ble-handshake.md §4.2.1's bound: an
+  // authorization expires no later than five minutes after it was issued.
+  const claimErrors = ssaClaimsErrors(claims);
+  if (claimErrors) {
+    return { file, ok: false, reason: `decoded signedAuthorization.data fails server-signed-auth-claims.schema.json: ${claimErrors}` };
+  }
+  const lifetimeMs = Date.parse(claims.expiresAt) - Date.parse(claims.issuedAt);
+  if (!(lifetimeMs > 0 && lifetimeMs <= 300 * 1000)) {
+    return { file, ok: false, reason: `§4.2.1: expiresAt is not within five minutes after issuedAt (${lifetimeMs} ms)` };
   }
 
   // Cross-checks mandated by §4.2.2 for the parts visible from the envelope.
