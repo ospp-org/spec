@@ -180,10 +180,36 @@ function sha256Hex(input) {
   return createHash('sha256').update(input).digest('hex');
 }
 
+// The claims a fixture already signs win, as in sign-example.mjs: an inline
+// ServerSignedAuth depicts one authorization, and its claims must agree with the
+// document around it (ble-handshake.md §4.2.1, §4.2.2). Only a block that carries no
+// complete claim set yet gets synthetic claims derived from its sessionId.
+const SSA_CLAIM_KEYS = [
+  'appNonce', 'authId', 'bayId', 'creditsAuthorized', 'deviceId', 'durationSeconds',
+  'expiresAt', 'issuedAt', 'serviceId', 'sessionId', 'stationId', 'sub',
+];
+
+function signedSsaClaims(outer) {
+  const data = outer.signedAuthorization && outer.signedAuthorization.data;
+  if (typeof data !== 'string') return null;
+  let claims;
+  try {
+    claims = JSON.parse(Buffer.from(data, 'base64').toString('utf-8'));
+  } catch {
+    return null;
+  }
+  if (!claims || typeof claims !== 'object' || Array.isArray(claims)) return null;
+  const keys = Object.keys(claims).sort();
+  if (keys.length !== SSA_CLAIM_KEYS.length || keys.some((k, i) => k !== SSA_CLAIM_KEYS[i])) return null;
+  return claims;
+}
+
 function deriveSsaClaims(outer) {
   if (typeof outer.sessionId !== 'string') {
     throw new Error('ServerSignedAuth requires outer.sessionId');
   }
+  const signed = signedSsaClaims(outer);
+  if (signed) return signed;
   const seed = outer.sessionId;
   const h = (label) => sha256Hex(`${label}|${seed}`);
   return {
