@@ -6,9 +6,8 @@ Alice is 120 seconds into a 300-second service session when the high-pressure pu
 Bay 1 draws excessive current (8.2A against a 6A safety threshold). The station's
 hardware protection circuit trips immediately, cutting power to the pump. The
 station reports the failure as a critical security event and transitions the bay
-to a faulted state. The server detects the interrupted session, calculates the
-refund — in full, since less than half the service was delivered — and notifies
-both Alice and the station operator.
+to a faulted state. The server detects the interrupted session, calculates a
+pro-rated refund, and notifies both Alice and the station operator.
 
 > **Note:** This example uses a self-service station, but the same error flow applies to any self-service station type (laundromat, EV charger, vending, etc.). The `PUMP_SYSTEM` error code is domain-agnostic — it covers any pump type (water, air, vacuum, fuel).
 
@@ -165,16 +164,16 @@ Reason: hardware_fault (5001 PUMP_SYSTEM)
 
 Billing data source: SessionEnded EVENT [MSG-040] (received at 10:17:01.000)
   - actualDurationSeconds: 120  (from SessionEnded payload)
-  - creditsCharged:        20   (from SessionEnded payload; advisory, the server recomputes)
+  - creditsCharged:        20   (from SessionEnded payload)
 
 Refund calculation:
   - Pre-authorized:    50 credits
-  - Station computed:  20 credits (from SessionEnded; advisory)
+  - Station charged:   20 credits (from SessionEnded)
   - Planned duration:  300 seconds
   - Actual duration:   120 seconds (from SessionEnded)
   - Delivery ratio:    120 / 300 = 0.40 (40%)
   - Policy:            delivery < faultFullRefundThreshold (default 0.50)
-                       -> full refund (charge 0)
+                       -> full refund (override creditsCharged)
   - Refund amount:     50 credits (100% of pre-authorized)
 ```
 

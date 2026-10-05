@@ -27,7 +27,7 @@
 //
 // Usage:
 //   node tools/sign-inline-md.mjs <file.md...>          # explicit list
-//   node tools/sign-inline-md.mjs --all                  # every file in ALL_FILES below
+//   node tools/sign-inline-md.mjs --all                  # the eight known files
 //
 // =============================================================================
 

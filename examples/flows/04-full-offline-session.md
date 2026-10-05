@@ -499,19 +499,23 @@ The station's dispenser was already auto-stopped at the 180-second mark (the aut
 
 ### Step 19: Station Generates Signed Receipt (18:35:19.000)
 
-The station performs the following operations:
+The station performs the following cryptographic operations:
 
-**1. Assign the txCounter.** `txCounter` becomes 8 (the station's 8th offline transaction) and is persisted to NVS before the receipt is signed ([`06-security.md` §6.3](../../spec/06-security.md#63-signed-counter--forensic-evidence)).
+**1. Serialize the receipt fields.** The station serializes the pass-form `receipt_fields` of [`06-security.md` §6.2](../../spec/06-security.md#62-transaction-receipt-signing--ecdsa-p-256) in the OSPP Canonical Form: `offlineTxId`, `offlinePassId`, `passCounter`, `userId`, `deviceId`, `stationId`, `bayId`, `serviceId`, `startedAt`, `endedAt`, `durationSeconds`, `bookedDurationSeconds`, `endReason`, `clockState`, `creditsCharged`, `meterValues` and `txCounter`. Four of them are **signed only**: they appear in no envelope, neither the FFF6 Receipt's nor the TransactionEvent's, and the server reads them from the signed body — `stationId` (`stn_a1b2c3d4`), `endReason` (`TimerExpired`: the service ran its booked time), `bookedDurationSeconds` (180) and `clockState` (`Synchronized`: the clock has been set from the server since the station last booted). `durationSeconds` (180) is measured on the station's monotonic timer.
 
-**2. Serialize the receipt fields.** The station serializes the pass-form `receipt_fields` of [`06-security.md` §6.2](../../spec/06-security.md#62-transaction-receipt-signing--ecdsa-p-256) in the OSPP Canonical Form: `offlineTxId`, `offlinePassId`, `passCounter`, `userId`, `deviceId`, `stationId`, `bayId`, `serviceId`, `startedAt`, `endedAt`, `durationSeconds`, `bookedDurationSeconds`, `endReason`, `clockState`, `creditsCharged`, `meterValues` and `txCounter`. Four of them are **signed only**: they appear in no envelope, neither the FFF6 Receipt's nor the TransactionEvent's, and the server reads them from the signed body — `stationId` (`stn_a1b2c3d4`), `endReason` (`TimerExpired`: the service ran its booked time), `bookedDurationSeconds` (180) and `clockState` (`Synchronized`: the clock has been set from the server since the station last booted). `durationSeconds` (180) is measured on the station's monotonic timer.
+**2. Base64-encode the canonical bytes.** The result is `receipt.data`, shown in Step 21.
 
-**3. Base64-encode the canonical bytes.** The result is `receipt.data`, shown in Step 21.
-
-**4. Sign with ECDSA P-256:**
+**3. Sign with ECDSA P-256:**
 
 ```
-digest    = SHA-256(canonical bytes)       // the canonical bytes, not their Base64 form
+digest = SHA-256(receipt.data)
 signature = ECDSA-P256-Sign(station_private_key, digest)
+```
+
+**4. Increment txCounter:**
+
+```
+txCounter:           8 (station's 8th offline transaction)
 ```
 
 ---
@@ -673,7 +677,7 @@ The server, in the order of [`reconciliation.md` §2](../../spec/profiles/offlin
 7. Creates a session record
 8. Responds `Accepted`
 
-The station stops sending the transaction and deletes its record; the deletion **MAY** be deferred by up to 72 hours ([`transaction-event.md` §5.1](../../spec/profiles/transaction/transaction-event.md#51-response-status-values)).
+The station removes the transaction from its local queue.
 
 ## Message Sequence Diagram
 

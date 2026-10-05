@@ -1458,20 +1458,20 @@ sequenceDiagram
 
         alt Accepted
             Server-->>SSP: TransactionEvent RESPONSE (Accepted) [MSG-007]
-            Note over SSP: Stop sending it, delete the record (MAY defer 72 h)
+            Note over SSP: Remove from local queue
         else Duplicate
             Server-->>SSP: TransactionEvent RESPONSE (Duplicate) [MSG-007]
-            Note over SSP: Stop sending it, delete the record (already processed)
+            Note over SSP: Remove from local queue (already processed)
         else Rejected
             Server-->>SSP: TransactionEvent RESPONSE (Rejected, reason) [MSG-007]
-            Note over SSP: Do NOT retry; retain the record, flagged for investigation
+            Note over SSP: Flag for investigation, do NOT retry
         else RetryLater
             Server-->>SSP: TransactionEvent RESPONSE (RetryLater) [MSG-007]
-            Note over SSP: Keep the record, retry later
+            Note over SSP: Keep in queue, retry later
         end
     end
 
-    Note over SSP: Nothing left to send; Rejected records retained
+    Note over SSP: Local sync queue cleared
 ```
 
 ### Happy Path
@@ -1489,9 +1489,9 @@ sequenceDiagram
    - **Step 6:** Run fraud scoring on the settled transaction (see below)
    - **Step 7:** Create session record
 6. Server responds `Accepted`
-7. SSP stops sending the transaction and deletes its record — deletion **MAY** be deferred by up to 72 hours ([`transaction-event.md` §5.1](profiles/transaction/transaction-event.md#51-response-status-values))
+7. SSP removes the transaction from its local queue
 8. Repeat for all pending transactions
-9. When every transaction has been answered, nothing remains to send. The records answered `Rejected` stay on the station, marked for investigation
+9. When all transactions are processed, SSP clears its local sync queue
 
 ### Fraud Scoring
 
@@ -1509,7 +1509,7 @@ When the mobile app regains connectivity, it **MUST** upload every receipt it ho
 
 | Component | State |
 |-----------|-------|
-| SSP Offline Log | Nothing left to send; records answered `Accepted` or `Duplicate` deleted (MAY be deferred up to 72 h), records answered `Rejected` retained |
+| SSP Offline Queue | Empty (all transactions synced) |
 | Server | Session records created, user wallets debited |
 | User Wallets | Debited; a wallet may be negative, and a transaction whose debit left it below zero stays pending until the user tops up |
 | Fraud records | `FraudDetected` for scores in the Review, Alert and Block bands (`0.30` and above); operator alert for Alert and Block (`0.60` and above) — [06-security.md §7.4](06-security.md#74-fraud-detection--offline-transactions) |

@@ -6,10 +6,10 @@
 // WHY THIS EXISTS. conformance/test-cases asks an implementer, in four places, to
 // prove that a tampered message is REJECTED:
 //
-//   TC-SEC-001.md#part-c--station-rejects-invalid-hmac  "alter one byte of the `mac` value"
-//   TC-SEC-004.md#a1--macverificationfailure-critical
+//   TC-SEC-001.md:50-51  "alter one byte of the `mac` value"
+//   TC-SEC-004.md:34
 //   TC-OFF-002.md#expected-results
-//   TC-OFF-005.md#expected-results
+//   TC-OFF-005.md:220
 //
 // Until this file existed the corpus could not answer that request. Every vector
 // under invalid/ is SCHEMA-invalid — a missing field, a wrong type — and all three
@@ -378,7 +378,7 @@ function mqttMacCase() {
     surface: 'mqttMessageMac', class: 'SIG',
     base: 'conformance/test-vectors/crypto/mqtt-mac.json',
     key: 'inline: mqtt-mac.json .key.sessionKeyBase64',
-    what: 'the §5.4 message MAC with its last byte flipped — literally "alter one byte of the `mac` value" (TC-SEC-001.md#part-c--station-rejects-invalid-hmac)',
+    what: 'the §5.4 message MAC with its last byte flipped — literally "alter one byte of the `mac` value" (TC-SEC-001.md:50-51)',
     mutatedPointer: 'mac',
     was: v.mac,
     now: flipLastBit(v.mac),
@@ -465,7 +465,7 @@ function build() {
     _comment:
       'Cryptographic TAMPER-REJECTION vectors. Each document below is STRUCTURALLY VALID — it satisfies its JSON Schema — and CRYPTOGRAPHICALLY WRONG. That is what separates this file from everything under invalid/, where every vector fails schema validation and all three vector gates assert only that SOMETHING failed. Verification of each document here MUST be refused. Regenerate with `node tools/generate-tamper-vectors.mjs`; check with `node tools/verify-tamper-rejection.mjs`.',
     _why:
-      'conformance/test-cases/security/TC-SEC-001.md#part-c--station-rejects-invalid-hmac, TC-SEC-004.md#a1--macverificationfailure-critical, and conformance/test-cases/offline/TC-OFF-002.md#expected-results, TC-OFF-005.md#expected-results each instruct an implementer to prove a tampered message is rejected. Before this file, no machine-readable vector and no gate existed for any of them: tools/verify-all-signatures.sh names only conformance/test-vectors/valid/** paths, and tools/verify-ble-crypto.mjs has no tamper branch. The corpus asked for a test it could not itself pass.',
+      'conformance/test-cases/security/TC-SEC-001.md:50-51, TC-SEC-004.md:34, and conformance/test-cases/offline/TC-OFF-002.md#expected-results, TC-OFF-005.md:220 each instruct an implementer to prove a tampered message is rejected. Before this file, no machine-readable vector and no gate existed for any of them: tools/verify-all-signatures.sh names only conformance/test-vectors/valid/** paths, and tools/verify-ble-crypto.mjs has no tamper branch. The corpus asked for a test it could not itself pass.',
     _classes: {
       BODY: 'the message changes, the signature stays well-formed — proves the signature is bound to CONTENT',
       SIG: 'the signature changes, the message stays byte-identical — proves the signature is CHECKED, not merely present',

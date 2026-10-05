@@ -872,14 +872,12 @@ This approach avoids cookies and localStorage for GDPR compliance and simplicity
 
 #### 9.2.3 Station REST Fallback — mTLS
 
-For the rare case where a station needs to communicate with the server via HTTPS instead of MQTT:
+For the rare case where a station needs to communicate with the server via HTTPS instead of MQTT (e.g., offline transaction sync when MQTT is unavailable but HTTPS is reachable):
 
 | Parameter | Value |
 |-----------|-------|
 | **Authentication** | mTLS — same X.509 client certificate used for MQTT |
-| **Endpoints** | Limited: config fetch |
-
-Offline transactions are not among them. A station reconciles them only by TransactionEvent over MQTT ([`reconciliation.md` §2](profiles/offline/reconciliation.md#2-sync-procedure)); the app's copy of a receipt reaches the server by the receipt upload of [`app-contract.md` §4](profiles/offline/app-contract.md#4-receipt-upload).
+| **Endpoints** | Limited: offline-txs sync, config fetch |
 
 ### 9.3 Idempotency
 

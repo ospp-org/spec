@@ -34,9 +34,8 @@ The BLE surface — [`ble-transport.md`](spec/profiles/offline/ble-transport.md)
 [`ble-session.md`](spec/profiles/offline/ble-session.md), the 15 schemas under
 [`schemas/ble/`](schemas/ble/), [Chapter 02 §8](spec/02-transport.md),
 [ADR-002](adr/ADR-002-ble-handshake-security-architecture.md), and conformance cases
-[TC-OFF-001](conformance/test-cases/offline/TC-OFF-001.md),
-[TC-OFF-002](conformance/test-cases/offline/TC-OFF-002.md) and
-[TC-OFF-005](conformance/test-cases/offline/TC-OFF-005.md) — is **EXPERIMENTAL**. It is
+[TC-OFF-001](conformance/test-cases/offline/TC-OFF-001.md) and
+[TC-OFF-002](conformance/test-cases/offline/TC-OFF-002.md) — is **EXPERIMENTAL**. It is
 published for review, **not** for implementation, and it may change incompatibly without a MAJOR
 bump.
 
@@ -261,7 +260,7 @@ Full index: [schemas/README.md](schemas/README.md)
 
 | Directory | Count | Content |
 |-----------|:-----:|---------|
-| [`examples/payloads/mqtt/`](examples/payloads/mqtt/) | 40 | JSON payloads for every MQTT message |
+| [`examples/payloads/mqtt/`](examples/payloads/mqtt/) | 36 | JSON payloads for every MQTT message |
 | [`examples/payloads/ble/`](examples/payloads/ble/) | 15 | JSON payloads for every BLE message |
 | [`examples/payloads/http/`](examples/payloads/http/) | 3 | The provisioning request, and the offline pass issuance request and response of the app–server contract |
 | [`examples/flows/`](examples/flows/) | 12 | Narrative walkthroughs with complete message sequences |
@@ -388,8 +387,8 @@ ospp/
 │   ├── common/                  22 shared type schemas ($ref targets)
 │   ├── mqtt/                    47 MQTT message payload schemas
 │   └── ble/                     15 BLE message schemas
-├── examples/                Example payloads and narrative flows (75 files)
-│   ├── payloads/mqtt/           40 MQTT payload examples
+├── examples/                Example payloads and narrative flows (71 files)
+│   ├── payloads/mqtt/           36 MQTT payload examples
 │   ├── payloads/ble/            15 BLE payload examples
 │   ├── payloads/http/           3 HTTPS examples (provisioning request; offline pass issuance request and response)
 │   ├── flows/                   12 end-to-end flow narratives

@@ -443,6 +443,7 @@ The MQTT broker MUST enforce topic-level access control based on the client cert
 | `/admin/users/*` | Support Agent+ | JWT Bearer + RBAC |
 | `/webhooks/*` | Payment Processor | HMAC-SHA512 signature |
 | `/api/v1/offline/*` | User | JWT Bearer ([`app-contract.md`](profiles/offline/app-contract.md)) |
+| `/station/{id}/offline-txs` | Station | mTLS certificate |
 | `/station/{id}/config` | Station | mTLS certificate |
 | `/api/v1/stations/provision` | Station (unprovisioned) | Provisioning token |
 
@@ -1275,7 +1276,7 @@ Every offline transaction produces a cryptographically signed receipt, ensuring 
    // `passCounter` (finding N7) is the pass's app-global monotonic usage counter,
    // signed so the server enforces global (offlinePassId, passCounter) uniqueness
    // at reconcile (reconciliation.md §6.1 checks #12/#13). Distinct from
-   // `txCounter`, the station's own monotonic transaction counter (§6.3).
+   // `txCounter`, the per-station boot counter.
    // `stationId`, `endReason`, `bookedDurationSeconds` and `clockState` are what
    // settlement and the clock rule read (the note on the four settlement fields,
    // below); they are signed only.
@@ -1348,7 +1349,7 @@ Completeness and anti-replay are carried elsewhere, on values the station does n
 - **The app-side receipt upload** ([`app-contract.md` §4](profiles/offline/app-contract.md#4-receipt-upload)), which puts a station-signed receipt in the hands of an independent party before the station reconciles at all. A station cannot renumber bytes it has already signed and handed to a third party.
 
 **Station requirements:**
-- The station **MUST** maintain a monotonically increasing `txCounter` per station, starting at 1 and never reset — not at a reboot, not at a sync ([reconciliation.md §4.1](profiles/offline/reconciliation.md#41-txcounter)).
+- The station MUST maintain a monotonically increasing `txCounter` per station, starting at 1.
 - The `txCounter` MUST be persisted to NVS before the transaction receipt is signed.
 - The `txCounter` MUST be included in the `receipt_fields` before signing (see §6.2).
 
@@ -1864,7 +1865,7 @@ Diagnostic uploads via GetDiagnostics [MSG-018] **MUST** apply the same redactio
 - [ ] ECDSA P-256 signature verification for ServerSignedAuth
 - [ ] ECDSA P-256 receipt signing for all offline transactions
 - [ ] All submitted provisioning keys are **pairwise distinct** key pairs — no public key is submitted as more than one of the `tlsCsr` subject key, `receiptSigningPublicKey`, and (BLE stations) `stationPubKey`; the server rejects any collision with `422` / `4016` (§4.3, §6.5.2); costs one additional secure-element slot per role
-- [ ] txCounter maintenance (monotonically increasing, persisted to NVS, never reset)
+- [ ] txCounter maintenance (monotonically increasing, persisted to NVS)
 - [ ] Every offline receipt carries `stationId`, `endReason`, `bookedDurationSeconds` and `clockState` in its signed body (§6.2)
 - [ ] BLE handshake: ECDH P-256 (ephemeral) + StationIdentity certificate + ChaCha20-Poly1305 AEAD channel (§6.5); dedicated static BLE ECDH key (separate from **both** ECDSA keys — the mTLS client key and the receipt-signing key, §4.3); BLE pairing OPTIONAL (never assumed)
 - [ ] Tamper detection (if hardware supports it)

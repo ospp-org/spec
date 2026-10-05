@@ -568,7 +568,7 @@ Transaction 3 (offline):
 
 Each transaction's `txCounter` increments by exactly 1, and the counter is inside the ECDSA-signed receipt, so a station cannot restate a counter it already emitted. A discontinuity (e.g. 3 -> 5) is surfaced to the operator as a **station** alert; the transactions on either side of it settle normally.
 
-What this does **not** provide is a completeness guarantee. An operator suppressing a transaction before it is ever counted produces a contiguous sequence and no alert, and the discontinuities that occur in practice come from a power loss that interrupts a write, NVS corruption and board swaps — the counter continues across reboots and syncs ([`reconciliation.md` §4.1](../../spec/profiles/offline/reconciliation.md#41-txcounter)). Tamper resistance for the *financial* record comes from the signed receipt itself, from `(offlinePassId, passCounter)` uniqueness on an app-generated counter, and from the app-side upload path — see [`06-security.md` §6.3.1](../../spec/06-security.md).
+What this does **not** provide is a completeness guarantee. An operator suppressing a transaction before it is ever counted produces a contiguous sequence and no alert, and the discontinuities that occur in practice are reboots, NVS corruption and board swaps. Tamper resistance for the *financial* record comes from the signed receipt itself, from `(offlinePassId, passCounter)` uniqueness on an app-generated counter, and from the app-side upload path — see [`06-security.md` §6.3.1](../../spec/06-security.md).
 
 ## Message Sequence Diagram
 

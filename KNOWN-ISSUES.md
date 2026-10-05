@@ -172,9 +172,9 @@ the fourth remedy of [the class below](#class--an-obligation-no-field-no-code-an
 raised.**
 
 Validation check 5 requires the station's ID to be permitted by the pass
-([`offline-pass.md` §4](spec/profiles/offline/offline-pass.md#4-validation-checks-10), rejecting with
+([`offline-pass.md`:66](spec/profiles/offline/offline-pass.md), rejecting with
 `2006 OFFLINE_STATION_MISMATCH`), and
-[`TC-OFF-002`](conformance/test-cases/offline/TC-OFF-002.md) instructs a tester to "Create
+[`TC-OFF-002`:17-19](conformance/test-cases/offline/TC-OFF-002.md) instructs a tester to "Create
 an OfflinePass whose station-scoping constraint does not include the test station".
 
 [`offline-pass.schema.json`](schemas/common/offline-pass.schema.json) has no member that can
@@ -183,9 +183,9 @@ carry that constraint — not at the top level, not inside `constraints` — and
 cannot be constructed and remain schema-valid.
 
 This bites on the **BLE** path only. On the MQTT path the constraint is server-side state, not a
-wire field — [`authorize-offline-pass.md` §5](spec/profiles/offline/authorize-offline-pass.md#5-validation-checks)
+wire field — [`authorize-offline-pass.md`:49](spec/profiles/offline/authorize-offline-pass.md)
 is explicit that `allowed_station_ids` belongs to "the **server's stored pass record** (not a
-wire field)", and [`reconciliation.md` §6.2](spec/profiles/offline/reconciliation.md#62-withdrawn-station-and-organization-binding) reads it from
+wire field)", and [`reconciliation.md`:92](spec/profiles/offline/reconciliation.md) reads it from
 there. A station validating a pass locally over BLE has no server to ask and can only read the
 pass, which cannot say.
 

@@ -445,8 +445,7 @@ If the proof doesn't match, reject immediately — it means the sender didn't pa
 
 ### 2.10 OfflinePass Validation (10 checks, #5 withdrawn: a station performs nine)
 
-When you receive an OfflineAuthRequest, validate the OfflinePass in this order
-([`06-security.md` §6.1.1](../spec/06-security.md#611-offlinepass-validation--10-checks)):
+When you receive an OfflineAuthRequest, validate the OfflinePass in this order:
 
 | # | Check | Reject Code | What to Verify |
 |:-:|-------|:-----------:|----------------|
@@ -526,13 +525,13 @@ Each offline transaction has a monotonically increasing `txCounter`:
 ```
 txCounter: monotonically increasing integer (1, 2, 3, ...)
 
-It starts at 1 for the station's first offline transaction and increments
-by exactly 1 thereafter — across reboots and across syncs. It is never reset.
+It starts at 1 for the first offline transaction after a station BOOT or sync
+— not once per lifetime — and increments by exactly 1 thereafter.
 The counter is signed into the receipt and recorded by the server as
 forensic evidence. It does NOT gate settlement.
 ```
 
-Persist it to NVS before you sign the receipt that carries it, and never reset it — not at a reboot, not at a sync ([`reconciliation.md` §4.1](../spec/profiles/offline/reconciliation.md#41-txcounter)). The server still never answers a lower or repeated `txCounter` `Duplicate` ([§4.2](../spec/profiles/offline/reconciliation.md#42-what-the-server-does-with-it)): a station whose store was lost or whose board was replaced starts again at 1, and `Duplicate` would tell it to delete a payment nobody settled. A discontinuity (e.g. 3 -> 5) raises an operator alert on the **station** and the transaction settles normally — it is not scored against the user, and it never withholds money. Be clear about what it does *not* buy you: a counter you generate and sign yourself cannot prove to anyone else that you reported everything. Replay protection comes from `(offlinePassId, passCounter)` uniqueness, on a counter the **app** generates ([`06-security.md` §6.3.1](../spec/06-security.md)).
+The counter is monotonic *within a boot epoch*, and restarting it at 1 after a reboot is conforming, not a fault ([`reconciliation.md` §4.1](../spec/profiles/offline/reconciliation.md) step 1). Do not persist it across reboots in the belief that it must never repeat: §4.2 of the same document states that a lower or repeated `txCounter` **MUST NOT** be answered `Duplicate`, precisely because a rebooted station legitimately restarts at 1. A discontinuity (e.g. 3 -> 5) raises an operator alert on the **station** and the transaction settles normally — it is not scored against the user, and it never withholds money. Be clear about what it does *not* buy you: a counter you generate and sign yourself cannot prove to anyone else that you reported everything. Replay protection comes from `(offlinePassId, passCounter)` uniqueness, on a counter the **app** generates ([`06-security.md` §6.3.1](../spec/06-security.md)).
 
 ### 2.13 Configuration Keys
 
@@ -859,7 +858,7 @@ When a station reconnects after being offline, it sends TransactionEvent REQUEST
 
 1. **Deduplicate by `offlineTxId`,** whichever channel either copy came by. A repeat whose signed `receipt.data` is byte-identical to the stored one is `Duplicate` — no second debit. One whose data differs is `Rejected`: a collision or tampering, so retain both records and alert an operator rather than answering `Duplicate`, which would tell the station to delete the copy you want to compare against ([`reconciliation.md` §3](../spec/profiles/offline/reconciliation.md#3-deduplication-offlinetxid), §9). The first copy to arrive is the one that may settle.
 2. **Verify the receipt signature:** Use a **receipt-signing** ECDSA P-256 public key of the station the signed receipt names (`stationId`) — never the station's mTLS key; the two are required to be distinct. Which one is not a given: a station that has been re-provisioned has more than one retained key, and the receipt may predate the current one. Select from the **server-authoritative anchor**, per [Chapter 06 — Security §4.3](../spec/06-security.md): for a pass-form receipt that is the OfflinePass's own `issuedAt`/`expiresAt` window, and for an auth-form receipt the server-issued authorization record named by `authId`. Take only the key(s) bound during that window. Do **not** default to the station's current key, do **not** use a station-supplied timestamp such as the receipt's `endedAt`, and do **not** try every retained key — try-all makes every superseded key valid forever. If the receipt carries `keyId`, treat it as a hint only: check it matches the key the anchor selected, and reject on disagreement rather than following it. A receipt whose signature does not verify is `Rejected` — not persisted, not debited, **never scored** — with an `OfflinePassRejected` SecurityEvent (`2002`) and an operator alert ([`reconciliation.md` §5](../spec/profiles/offline/reconciliation.md#5-receipt-signature-verification)).
-3. **Record the txCounter:** Persist it on the transaction row as forensic evidence. Do **not** gate on it — no watermark, no continuity check, no "last reconciled counter". If it is discontinuous with what you already hold for that station, alert the operator on the **station** and carry on. A low or repeated `txCounter` is **not** a duplicate: a station whose store was lost or whose board was replaced starts again at 1, and answering `Duplicate` tells it to delete a payment you never settled.
+3. **Record the txCounter:** Persist it on the transaction row as forensic evidence. Do **not** gate on it — no watermark, no continuity check, no "last reconciled counter". If it is discontinuous with what you already hold for that station, alert the operator on the **station** and carry on. A low or repeated `txCounter` is **not** a duplicate: a station that reboots legitimately restarts at 1, and answering `Duplicate` tells it to delete a payment you never settled.
 4. **Apply the reconcile-time gate** ([`reconciliation.md` §6](../spec/profiles/offline/reconciliation.md#6-reconcile-time-re-validation-gate)): eleven checks for a pass-form receipt (#1–#6, #9–#13; #7 and #8 are withdrawn), #1–#6 and #9 for the auth-form. Expiry and epoch are judged at the transaction's signed time — corrected by the station's clock offset for a `Synchronized` receipt, as signed and flagged for review for an `Unsynchronized` one ([§6.8](../spec/profiles/offline/reconciliation.md#68-station-clock-offset)). A pass-form transaction is never rejected because of which station, or which tenant's station, delivered it; only a Partial-A authorization, issued for one station, keeps that binding (check #4). The pass limits are **not** a gate here: the wash was delivered, so they cap settlement and feed fraud scoring.
 5. **Settle** ([`reconciliation.md` §8](../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)): recompute the cost by service kind from the signed receipt (`endReason`, `durationSeconds`, `bookedDurationSeconds`; the station's `creditsCharged` is advisory), and never charge more than the authorization allowed at the wash — the pass's `maxCreditsPerTx`, the `creditsAuthorized` of Partial B, or the signed `creditsAuthorized` of Partial A — and, on a pass, never more than what remains of its `maxTotalCredits` (the limit less what its settled transactions were charged) and `maxUses` when it settles, its transactions taken in the order they arrive. Where the wallet was debited at authorization (Partial A; a Partial-B session that fell back offline), settlement is a refund-only true-up, never a second debit. A debit may leave the wallet below zero: the transaction whose debit did so stays **pending** until the user next tops up — no time limit, never written off, collected by neither the station's tenant nor the platform meanwhile — and no pass is issued while the balance is below zero ([§8.1](../spec/profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
 6. **Score the settled transaction** ([`06-security.md` §7.4](../spec/06-security.md#74-fraud-detection--offline-transactions)); scoring never changes the settled amount. For the Review, Alert and Block bands, record a server-originated `FraudDetected` SecurityEvent and take the band's action; alert the operator for Alert and Block. A Block-band wash stays settled and flagged: the user is charged, the user is blocked and every pass of the user revoked ([`reconciliation.md` §7](../spec/profiles/offline/reconciliation.md#7-fraud-detection)).
@@ -1066,7 +1065,7 @@ Walk through each flow using the narrative examples in `/examples/flows/`:
 3. **Web payment** — Does the reservation → payment → start flow work end-to-end?
 4. **Full offline** — Can your station validate an OfflinePass, run a session, and sign a receipt?
 5. **Partial A/B** — Do the hybrid online/offline flows work?
-6. **Reconciliation** — Can you replay offline transactions, including out of order, with a discontinuous or restarted `txCounter` (a replaced board), and with the app's upload of the same receipt arriving before or after the station's?
+6. **Reconciliation** — Can you replay offline transactions, including out of order and after a counter reset, and with the app's upload of the same receipt arriving before or after the station's?
 
 ### 5.5 Error Scenario Testing
 
@@ -1087,7 +1086,7 @@ Test the error scenarios in `/examples/error-scenarios/`:
 - [ ] Replay protection — does your deduplication catch a replayed `messageId`?
 - [ ] OfflinePass validation — do the nine checks a station performs (#1–#4, #6–#10; #5 is withdrawn) work, and do your own offline limits refuse with `4002`? Test each failure mode individually.
 - [ ] Receipt verification — can the server verify ECDSA P-256 signatures from your station?
-- [ ] txCounter is forensic — does the station's counter survive a reboot and a sync unreset? Server-side, does an out-of-order or restarted counter still settle, with an operator alert and no `Duplicate`?
+- [ ] txCounter is forensic — does an out-of-order or reset counter still settle, with an operator alert and no `Duplicate`?
 - [ ] Constant-time comparison — are you using timing-safe HMAC comparison?
 
 ---
@@ -1155,7 +1154,7 @@ If you are auditing an existing implementation, the question to ask is narrow: *
 
 **Not persisting offline state.** If the station loses power during an offline session, it needs crash recovery. Persist the current session state, offline pass usage counters, and transaction log to flash/NVS. On power-up, check for unfinished sessions.
 
-**Resetting txCounter.** The counter starts at 1 for the station's first offline transaction and is never reset — not at a reboot, not at a sync; persist it to NVS before you sign each receipt ([`reconciliation.md` §4.1](../spec/profiles/offline/reconciliation.md#41-txcounter)). A reset, a start at 0 or a skipped value will not cost you a settlement — the server records the counter and does not gate on it — but it produces operator alerts on your station and makes your own offline log harder to audit.
+**Not initializing txCounter correctly.** The first offline transaction after each **boot or sync** must use `txCounter: 1` — not the first after provisioning ([`reconciliation.md` §4.1](../spec/profiles/offline/reconciliation.md) step 1). Starting at 0 or skipping values will not cost you a settlement — the server records the counter and does not gate on it — but it produces operator alerts on your station and makes your own offline log harder to audit.
 
 **Treating `maxCreditsPerTx` as a cap at the station.** Check #8 is a hard reject, not a clamp: if the estimated cost of the requested service exceeds `maxCreditsPerTx`, reject with `4004 OFFLINE_PER_TX_EXCEEDED` ([`offline-pass.md` §4](../spec/profiles/offline/offline-pass.md#4-validation-checks-10) check #8, and the same check in `authorize-offline-pass.md` §5 and `06-security.md` §6.1.1) — and check #7 rejects with `4002` a cost above what remains of `maxTotalCredits`. A request above a limit is refused, never shortened or re-priced to fit ([`offline-pass.md` §2.1](../spec/profiles/offline/offline-pass.md#21-offlineallowance-object)). This guide previously said to cap silently, which contradicted its own §2.10 table. The cap belongs to the **server**, at settlement, where a delivered wash is never charged above the limits ([`reconciliation.md` §8](../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)). The only clamp at the station is `requestedDurationSeconds` against the **server-authorized** `durationSeconds` on Partial A / Partial B ([`ble-session.md` §1](../spec/profiles/offline/ble-session.md#1-starting-a-service) — §2 is *Monitoring Progress* and carries no clamp) — Full Offline has no server-authorized value to clamp against.
 
@@ -1273,7 +1272,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[OFFLINE]** ECDSA P-256 signature verification for OfflinePass, with the key its `keyId` names
 - [ ] **[OFFLINE]** Server key set: replace the whole set on every `OfflinePassPublicKey` value received, in a BootNotification RESPONSE or by ChangeConfiguration; no cached previous key, no grace period
 - [ ] **[OFFLINE]** ECDSA P-256 receipt signing, including the signed-only `stationId`, `endReason`, `bookedDurationSeconds` and `clockState` (§2.11)
-- [ ] **[OFFLINE]** Monotonic txCounter: increment by exactly 1 per offline transaction, persisted to NVS and never reset — not at a reboot, not at a sync (forensic evidence; the server records it and does not gate on it)
+- [ ] **[OFFLINE]** Monotonic txCounter: increment by exactly 1 per offline transaction (forensic evidence; the server records it and does not gate on it)
 - [ ] **[OFFLINE]** Receipt retention on FFF6 for **at least 10 minutes** after service completion, or until the next session begins on the same bay ([`ble-session.md` §5](../spec/profiles/offline/ble-session.md) rule 3)
 - [ ] **[OFFLINE]** Persist offline state: pass usage counters, transaction log, session state
 - [ ] **[OFFLINE]** Refuse, never reduce: `4004` when the estimated cost exceeds `maxCreditsPerTx`, `4002` when it exceeds what remains of `maxTotalCredits` (checks #7 and #8 are rejects, not caps)
