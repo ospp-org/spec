@@ -148,9 +148,9 @@ Processing **MUST** stop at the first failure.
 
 **The revocation epoch belongs to the platform.** [Chapter 06 §6.6](../../06-security.md#66-epoch-based-revocation) is normative and this section summarizes it:
 
-1. The platform holds **one** `RevocationEpoch`, starting at 0. Only the platform increments it — no tenant, and no tenant-level permission, can — and every station of every tenant holds the platform value.
+1. The platform holds **one** `RevocationEpoch`, starting at 0. Raising it is a platform governance action: only a Platform Admin ([`06-security.md` §3.1](../../06-security.md#31-rbac-roles)) raises it — no organization-scoped role can — and every station of every tenant holds the platform value.
 2. When the server issues an OfflinePass, it embeds the current platform epoch in the pass's `revocationEpoch` field.
-3. To revoke every outstanding pass, the platform increments `RevocationEpoch` by 1 and the server pushes the new value to every connected station via ChangeConfiguration.
+3. To revoke every outstanding pass, a Platform Admin raises `RevocationEpoch` by 1 and the server pushes the new value to every connected station via ChangeConfiguration.
 4. Stations store the latest `RevocationEpoch` in non-volatile memory. During validation check #3, any pass with `revocationEpoch` less than the stored epoch is rejected with `2004 OFFLINE_EPOCH_REVOKED`.
 5. A station that is offline when the epoch moves receives the new value when it reconnects, in the configuration of its BootNotification RESPONSE, or by ChangeConfiguration.
 

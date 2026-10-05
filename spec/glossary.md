@@ -126,8 +126,8 @@ specification. Where a definition involves a requirement, normative language
 **Epoch Revocation**
 : A mechanism for revoking every outstanding **OfflinePass** at once by advancing one
   monotonic counter, the `RevocationEpoch`. The counter belongs to the platform: there is
-  one for the whole platform, only a Platform Admin increments it, and every station of
-  every tenant holds the platform value. A station rejects any OfflinePass whose
+  one for the whole platform, raising it is a platform governance action that only a Platform
+  Admin takes, and every station of every tenant holds the platform value. A station rejects any OfflinePass whose
   `revocationEpoch` is lower than the value it holds. Revoking one user's passes is not an
   epoch: the server marks them revoked and reads the mark wherever it is in the loop — at
   Partial-B authorize time and at reconciliation.

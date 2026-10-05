@@ -388,7 +388,7 @@ OSPP defines 7 roles with scoped permissions:
 
 | Role | Scope | Description |
 |------|-------|-------------|
-| **Platform Admin** | Global | Full access to all resources across all organizations |
+| **Platform Admin** | Global | Full access to all resources across all organizations, and the only role that takes a **platform governance action** — an act that binds every tenant at once, such as raising the platform revocation epoch (§6.6) |
 | **Operator Admin** | All owned locations | Manage stations, bays, prices, sessions for their locations |
 | **Location Manager** | Assigned locations | Bay status, maintenance mode, view sessions |
 | **Accounting** | Financial data | View transactions, reports, issue refunds |
@@ -1558,18 +1558,18 @@ OSPP uses one platform-wide **revocation epoch** for batch OfflinePass invalidat
 | Property | Value |
 |----------|-------|
 | **Mechanism** | Monotonically increasing integer, one for the whole platform |
-| **Owner** | The platform: only a Platform Admin (§3.1) increments it |
+| **Owner** | The platform. Raising it is a platform governance action: only a Platform Admin (§3.1) raises it |
 | **Storage** | Station: `RevocationEpoch` configuration key, holding the platform value. Server: database, with the history of every increment ([`reconciliation.md` §6.6](profiles/offline/reconciliation.md#66-revocation-epoch-at-transaction-time-finding-n8)) |
 | **Distribution** | Pushed to every station that declares the Offline / BLE profile, whatever its tenant, via ChangeConfiguration [MSG-013], and delivered in the configuration of every `Accepted` BootNotification RESPONSE [MSG-001] ([Chapter 08 §8.3](08-configuration.md#83-configuration-via-bootnotification)) |
 | **Validation** | OfflinePass `revocationEpoch` **MUST** be >= the platform epoch — at the station (§6.1.1 check #3), at Partial-B authorize time, and at reconciliation, where the epoch in force at the transaction's time applies |
 
-**The epoch belongs to the platform, because the pass does.** A pass is issued to a user and is valid at any station that accepts offline passes, whatever tenant operates it ([`offline-pass.md` §2.3](profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)), so the value it is judged against has to be one value that every station holds. A server **MUST** hold a single `RevocationEpoch` for the platform, **MUST** let only the platform increment it — a Platform Admin, and no Operator Admin or other organization-scoped role (§3.1) — and **MUST** push each new value to every station, whatever its tenant. A per-tenant epoch would judge a pass against a counter it was not issued under: refused at one tenant's stations for no reason, or surviving a revocation at another's.
+**The epoch belongs to the platform, because the pass does.** A pass is issued to a user and is valid at any station that accepts offline passes, whatever tenant operates it ([`offline-pass.md` §2.3](profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)), so the value it is judged against has to be one value that every station holds. A server **MUST** hold a single `RevocationEpoch` for the platform, **MUST** treat raising it as a platform governance action that only a Platform Admin takes — never an Operator Admin or any other organization-scoped role (§3.1) — and **MUST** push each new value to every station, whatever its tenant. A per-tenant epoch would judge a pass against a counter it was not issued under: refused at one tenant's stations for no reason, or surviving a revocation at another's.
 
 > **What changed, and what stays true.** Earlier revisions held one epoch per tenant, because a pass was bound to its issuing organization and a platform-wide counter reachable from a tenant-level permission would have let one operator's revocation invalidate every pass on the platform. Both premises are gone: a pass belongs to its user, not to a tenant, and no tenant-level permission can reach the counter. The station is unaffected and nothing changes on the wire: a station holds one `RevocationEpoch`, and the constant-time check below is unchanged.
 
 **Workflow:**
 1. Security incident occurs (e.g., a compromised issuing path, mass fraud)
-2. The platform increments `RevocationEpoch`
+2. A Platform Admin raises `RevocationEpoch` — a platform governance action (§3.1)
 3. The server pushes the new epoch to every online station via ChangeConfiguration [MSG-013] (`key: "RevocationEpoch"`)
 4. Offline stations receive the new epoch on next BootNotification [MSG-001]
 5. Every OfflinePass issued before the new epoch is now invalid, at every station
@@ -1881,7 +1881,7 @@ Diagnostic uploads via GetDiagnostics [MSG-018] **MUST** apply the same redactio
 - [ ] JWT ES256 signing with key rotation
 - [ ] Refresh token one-time-use enforcement
 - [ ] ECDSA P-256 key generation and rotation for OfflinePass signing, as a key set with `keyId`s and the publish-before and keep-after windows; the whole set delivered at every boot (§6.7)
-- [ ] One platform `RevocationEpoch`, incremented only by the platform and pushed to every station (§6.6)
+- [ ] One platform `RevocationEpoch`, raised only by a Platform Admin as a platform governance action, and pushed to every station (§6.6)
 - [ ] OfflinePasses issued with the platform lifetime, bound to a hardware-backed device key, with a trust bundle ([`app-contract.md` §3](profiles/offline/app-contract.md#3-pass-issuance))
 - [ ] ECDSA P-256 receipt verification during reconciliation
 - [ ] Reject provisioning requests in which **any two** submitted keys are the same key — CSR subject key / `receiptSigningPublicKey`, CSR subject key / `stationPubKey`, or `receiptSigningPublicKey` / `stationPubKey` — comparing **decoded** keys, not transmitted encodings; `422` / `4016 PROVISIONING_KEY_REUSE`, no certificate issued, token NOT consumed (§4.3, §6.5.2)
