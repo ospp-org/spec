@@ -1,0 +1,33 @@
+{
+  "type": "OfflineAuthRequest",
+  "offlinePass": {
+    "passId": "opass_a1b2c3d4e5f6a7b8",
+    "sub": "sub_user1234abcdef",
+    "deviceId": "d7e8f9a0b1c2d3e4f5a6b7c8",
+    "devicePublicKey": "A0beUh945M53aQSA61iuiEj6c9hxJsEZS5Taj7I5qOY+",
+    "keyId": "YjX5pR0TzmU3ubs17wImQQ",
+    "issuedAt": "2026-02-10T08:00:00.000Z",
+    "expiresAt": "2026-02-11T08:00:00.000Z",
+    "policyVersion": 1,
+    "revocationEpoch": 0,
+    "offlineAllowance": {
+      "maxTotalCredits": 500,
+      "maxUses": 5,
+      "maxCreditsPerTx": 200
+    },
+    "constraints": {
+      "minIntervalSec": 300
+    },
+    "signatureAlgorithm": "ECDSA-P256-SHA256",
+    "signature": "MEQCIDKcveVTEaaIaU0TJkUwBTMO3nU+AGFwgBnlN0s3w/RIAiAPyXNvjroFYWGQIjP+5hqbowvukOsiDn1Cgalj54kKsg=="
+  },
+  "counter": 0,
+  "bayId": "bay_c1d2e3f4a5b6",
+  "serviceId": "svc_eco",
+  "requestedDurationSeconds": 60,
+  "sessionProof": "G7jn3V5239evl6QtKrc6W+y1tqn7qOTR3LHkVDFR5bE=",
+  "deviceProof": {
+    "format": "apple-appattest",
+    "signature": "MEUCIQD1Z1c/UAz7WcvHCXig0QgZafbf1n9PUIcvYRgrJaVc+AIgNynHOuTCpIJpFx8AUuSrgSoC/OmvB5LVTXQfreB9eBQ="
+  }
+}

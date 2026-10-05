@@ -2,13 +2,12 @@
 
 > **OSPP Version:** 0.44.0 | **JSON Schema Draft:** 2020-12
 >
-> **The 15 schemas under [`ble/`](ble/) are EXPERIMENTAL artefacts** — published for review, not
-> for implementation, and subject to incompatible change without a MAJOR bump. Three of them are
-> blocker [B-3](../KNOWN-ISSUES.md#b-3--the-three-ble-response-schemas-disagree-with-each-other-and-with-chapter-07):
-> `auth-response`, `start-service-response` and `stop-service-response` define rejections three
-> different ways, none matching [Chapter 07 §2.3](../spec/07-errors.md), and
-> `stop-service-response` cannot express a rejection at all. See
-> [Release status](../README.md#ble-is-experimental).
+> **The 16 schemas under [`ble/`](ble/) are EXPERIMENTAL artefacts** — published for review, not
+> for implementation, and subject to incompatible change without a MAJOR bump. Every BLE response
+> that refuses carries one shape — `errorCode`, `errorText` and an optional `details` object
+> ([Chapter 07 §2.3](../spec/07-errors.md#23-ble-error-response)) — which closed blocker
+> [B-3](../KNOWN-ISSUES.md#b-3--the-three-ble-response-schemas-disagree-with-each-other-and-with-chapter-07).
+> See [Release status](../README.md#ble-is-experimental).
 >
 > `common/offline-pass.schema.json` is **stable** and carries no station or organization scope: a
 > pass is valid at any station that accepts offline passes
@@ -28,9 +27,9 @@ This directory contains JSON Schema definitions for every message in the OSPP pr
 
 ```
 schemas/
-├── common/                              22 shared type definitions ($ref targets)
+├── common/                              23 shared type definitions ($ref targets)
 ├── mqtt/                                47 MQTT message payload schemas
-├── ble/                                 15 BLE schemas (13 message types + StationIdentity + secure frame) — EXPERIMENTAL
+├── ble/                                 16 BLE schemas (15 message types + secure frame) — EXPERIMENTAL
 ├── provisioning-request.schema.json     HTTP provisioning request (Flow §2)
 ├── provisioning-response.schema.json    HTTP provisioning response (Flow §2)
 ├── offline-pass-issuance-request.schema.json    HTTP offline pass issuance request (app–server contract §3)
@@ -39,7 +38,7 @@ schemas/
 └── README.md                            This file
 ```
 
-**Total: 89 schema files.**
+**Total: 91 schema files.**
 
 ---
 
@@ -64,6 +63,7 @@ Shared definitions referenced by message schemas via `$ref`.
 | [`meter-values.schema.json`](common/meter-values.schema.json) | object | Consumption readings (liquidMl, consumableMl, energyWh) |
 | [`offline-pass.schema.json`](common/offline-pass.schema.json) | object | Complete OfflinePass: the user, the device and its public key (`devicePublicKey`), the signing key's `keyId`, the allowance, the rate constraint and the ECDSA P-256 signature. No station and no organization |
 | [`receipt.schema.json`](common/receipt.schema.json) | object | ECDSA P-256 signed receipt (data + signature + algorithm) |
+| [`device-proof.schema.json`](common/device-proof.schema.json) | object | The phone's proof of the pass's device key over a BLE handshake: an Android Keystore signature or an App Attest assertion ([06-security.md §6.5.4](../spec/06-security.md#654-device-proof-of-possession)) |
 | [`service-item.schema.json`](common/service-item.schema.json) | object | Service catalog entry with dual pricing (credits + local currency) |
 | [`mqtt-envelope.schema.json`](common/mqtt-envelope.schema.json) | object | MQTT message envelope (messageId, messageType, action, timestamp, source, protocolVersion, payload, mac) |
 
@@ -161,13 +161,12 @@ Each MQTT action has separate schemas for REQUEST and RESPONSE payloads. EVENT m
 
 BLE messages do not use the MQTT envelope. Each message is a standalone JSON payload exchanged via GATT characteristics.
 
-### Read Characteristics (Static)
+### Before the Handshake (FFF1 Read, FFF2 Write → Notify)
 
 | # | File | Characteristic | Description |
 |:-:|------|----------------|-------------|
-| 37 | [`station-info.schema.json`](ble/station-info.schema.json) | FFF1 (Read) | Station identity, firmware, connectivity status |
-| 38 | [`available-services.schema.json`](ble/available-services.schema.json) | FFF2 (Read) | Service catalog with pricing per bay |
-| 49 | [`receipt.schema.json`](ble/receipt.schema.json) | FFF6 (Read) | ECDSA P-256 signed transaction receipt |
+| 37 | [`station-info.schema.json`](ble/station-info.schema.json) | FFF1 (Read) | Station identity, firmware, connectivity status — unauthenticated |
+| 38 | [`available-services.schema.json`](ble/available-services.schema.json) | FFF2 (Write, Notify) | Service catalog with pricing per bay |
 
 ### Handshake (FFF3 Write → FFF4 Notify)
 
@@ -198,6 +197,20 @@ BLE messages do not use the MQTT envelope. Each message is a standalone JSON pay
 | # | File | Characteristic | Direction |
 |:-:|------|----------------|-----------|
 | 48 | [`service-status.schema.json`](ble/service-status.schema.json) | FFF5 (Notify) | Station → App |
+
+### Receipt (FFF6 Write → FFF6 Notify)
+
+| # | File | Characteristic | Direction |
+|:-:|------|----------------|-----------|
+| 49 | [`receipt.schema.json`](ble/receipt.schema.json) | FFF6 (Notify), in a ReceiptResponse | ECDSA P-256 signed transaction receipt |
+| 50 | [`receipt-request.schema.json`](ble/receipt-request.schema.json) | FFF6 (Write) | App → Station |
+| 51 | [`receipt-response.schema.json`](ble/receipt-response.schema.json) | FFF6 (Notify) | Station → App |
+
+### Secure Frame
+
+| # | File | Characteristic | Direction |
+|:-:|------|----------------|-----------|
+| 52 | [`ble-secure-frame.schema.json`](ble/ble-secure-frame.schema.json) | every characteristic, after the Challenge | Both — the AEAD wrapper of every post-Challenge message ([06-security.md §6.5.3](../spec/06-security.md#653-ble-aead-channel)) |
 
 ---
 

@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/ble/receipt-response.schema.json",
+  "title": "ReceiptResponse",
+  "description": "Answer to a ReceiptRequest, notified by the station to the app on BLE characteristic FFF6, inside the channel (profiles/offline/ble-transport.md §8): the session's signed receipt, or a refusal in the one BLE error shape (07-errors.md §2.3).",
+  "type": "object",
+  "required": [
+    "type",
+    "result"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "ReceiptResponse",
+      "description": "Message type discriminator"
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "Accepted",
+        "Rejected"
+      ],
+      "description": "Outcome of the receipt request"
+    },
+    "receipt": {
+      "$ref": "receipt.schema.json",
+      "description": "The session's receipt, exactly as the station signed it - the object the app stores and uploads (spec/profiles/offline/app-contract.md §4). Present when result is Accepted."
+    },
+    "errorCode": {
+      "type": "integer",
+      "minimum": 1000,
+      "maximum": 9999,
+      "description": "3006 SESSION_NOT_FOUND when the station serves no receipt for the requested session (07-errors.md §4.3). Present when result is Rejected."
+    },
+    "errorText": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]+$",
+      "maxLength": 64,
+      "description": "The registry name of errorCode, in UPPER_SNAKE_CASE. Present when result is Rejected."
+    },
+    "details": {
+      "type": "object",
+      "description": "Per-occurrence context of the refusal (07-errors.md §2.3). MAY be present when result is Rejected."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "result": {
+            "const": "Accepted"
+          }
+        },
+        "required": [
+          "result"
+        ]
+      },
+      "then": {
+        "required": [
+          "receipt"
+        ],
+        "properties": {
+          "errorCode": false,
+          "errorText": false,
+          "details": false
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "result": {
+            "const": "Rejected"
+          }
+        },
+        "required": [
+          "result"
+        ]
+      },
+      "then": {
+        "required": [
+          "errorCode",
+          "errorText"
+        ],
+        "properties": {
+          "receipt": false
+        }
+      }
+    }
+  ]
+}

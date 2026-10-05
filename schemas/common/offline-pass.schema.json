@@ -34,7 +34,7 @@
     },
     "devicePublicKey": {
       "$ref": "ec-public-key.schema.json",
-      "description": "The device's P-256 public key, compressed SEC1, Base64 (06-security.md 6.5.2). Its private key was generated in, and cannot be exported from, the phone's hardware-backed keystore; the pass is bound to the device holding it (spec/profiles/offline/offline-pass.md 2 and 6)."
+      "description": "The device's P-256 public key, compressed SEC1, Base64 (06-security.md 6.5, Pin 2). Its private key was generated in, and cannot be exported from, the phone's hardware-backed keystore, and every presentation of the pass proves possession of it (06-security.md 6.5.4); the pass is bound to the device holding it (spec/profiles/offline/offline-pass.md 2 and 6)."
     },
     "keyId": {
       "type": "string",

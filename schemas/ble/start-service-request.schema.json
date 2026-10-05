@@ -2,14 +2,13 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/ble/start-service-request.schema.json",
   "title": "StartServiceRequest",
-  "description": "Request to start a service, sent by the app to the station via BLE characteristic FFF3 (Write).",
+  "description": "Request to start the authorized service, written by the app to the station on BLE characteristic FFF3, inside the channel. It names the bay and the service of the session's authorization; the station resolves the program from its own bindings (profiles/offline/ble-session.md §1).",
   "type": "object",
   "required": [
     "type",
     "bayId",
     "serviceId",
-    "requestedDurationSeconds",
-    "programNumber"
+    "requestedDurationSeconds"
   ],
   "additionalProperties": false,
   "properties": {
@@ -19,21 +18,17 @@
       "description": "Message type discriminator"
     },
     "bayId": {
-      "$ref": "../common/bay-id.schema.json"
+      "$ref": "../common/bay-id.schema.json",
+      "description": "The bay of the session's authorization - the OfflineAuthRequest's, or the ServerSignedAuth's signed claim."
     },
     "serviceId": {
-      "$ref": "../common/service-id.schema.json"
-    },
-    "programNumber": {
-      "type": "integer",
-      "minimum": 1,
-      "maximum": 32,
-      "description": "The ordinal of the PHYSICAL PROGRAM to run on the target bay, as the station declared it at provisioning. Carried explicitly so the station acts on a field rather than indexing its own catalog by serviceId, and so a service minted since the last catalog push still starts. The station MUST verify the ordinal was declared for that bay and, if it was not, MUST reject with 3017 PROGRAM_NOT_DECLARED — never accept and do nothing, which is a customer who paid and got no wash."
+      "$ref": "../common/service-id.schema.json",
+      "description": "The service of the session's authorization - the OfflineAuthRequest's, or the ServerSignedAuth's signed claim. The station resolves the program to run from the bindings of the catalog it holds."
     },
     "requestedDurationSeconds": {
       "type": "integer",
       "minimum": 1,
-      "description": "Requested service duration in seconds"
+      "description": "Requested service duration in seconds. Above the session's authorized duration it is refused with 3010, never reduced (profiles/offline/ble-session.md §1)."
     }
   }
 }

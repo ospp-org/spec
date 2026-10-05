@@ -8,7 +8,9 @@
 #   * inline `json fenced block in a spec .md whose signature does not verify
 #   * sign-inline-md.mjs is non-idempotent (re-run drift)
 #   * residual placeholder text pattern (Example, Placeholder, "...") in any
-#     signature / signedAuthorization / sessionProof / sessionKeyConfirmation
+#     signature / signedAuthorization / sessionProof / sessionKeyConfirmation,
+#     or in any BLE handshake member: a nonce, an ephemeral key, the station's
+#     certificate and signature, a device proof, a forwarded transcriptHash
 #   * schema regression (tools/verify-schemas.py reports any failure)
 #
 # Designed to run from the spec/ repo root, in CI and on the dev box.
@@ -41,10 +43,14 @@ verify_group() {
 
 verify_group "station receipts" conformance/test-keys/station-test-pub.pem \
   examples/payloads/ble/receipt.json \
+  examples/payloads/ble/receipt-response.json \
   examples/payloads/mqtt/transaction-event.request.json \
   conformance/test-vectors/valid/offline/receipt-full.json \
   conformance/test-vectors/valid/offline/receipt-minimal.json \
   conformance/test-vectors/valid/offline/receipt-auth-form.json \
+  conformance/test-vectors/valid/offline/receipt-response-full.json \
+  conformance/test-vectors/valid/offline/receipt-response-auth-form.json \
+  conformance/test-vectors/valid/offline/receipt-response-rejected.json \
   conformance/test-vectors/valid/transaction/transaction-event-request-full.json \
   conformance/test-vectors/valid/transaction/transaction-event-request-minimal.json \
   conformance/test-vectors/valid/transaction/transaction-event-request-auth-form.json
@@ -63,13 +69,15 @@ verify_group "server ServerSignedAuth" conformance/test-keys/server-test-pub.pem
   conformance/test-vectors/valid/offline/server-signed-auth-full.json \
   conformance/test-vectors/valid/offline/server-signed-auth-minimal.json
 
-# StationIdentity certificates carried in the BLE Challenge (FFF4). Signed by the
-# SAME server key that signs OfflinePasses, verified with server-test-pub.pem
-# (06-security.md §6.5.2, station-identity mode).
-verify_group "station identity certs" conformance/test-keys/server-test-pub.pem \
+# The station's signature over the handshake, carried in the BLE Challenge (FFF4) with
+# its mTLS certificate. Judged as the app judges it: the certificate against the test
+# Station CA and its CRL, the signature over the Hello beside each Challenge
+# (06-security.md §6.5.2, station-signature mode).
+verify_group "station signatures (Challenge)" conformance/test-keys/station-ca-test-cert.pem \
   examples/payloads/ble/challenge.json \
   conformance/test-vectors/valid/offline/challenge-full.json \
-  conformance/test-vectors/valid/offline/challenge-minimal.json
+  conformance/test-vectors/valid/offline/challenge-minimal.json \
+  conformance/test-vectors/valid/offline/challenge-empty-catalog.json
 
 verify_group "firmware" conformance/test-keys/firmware-test-pub.pem \
   examples/payloads/mqtt/update-firmware.request.json \
@@ -78,8 +86,31 @@ verify_group "firmware" conformance/test-keys/firmware-test-pub.pem \
 
 verify_group "HMAC sessionKeyConfirmation" conformance/test-keys/session-test-key.bin \
   examples/payloads/ble/auth-response.accepted.json \
+  examples/payloads/ble/auth-response.rejected.json \
   conformance/test-vectors/valid/offline/auth-response-full.json \
-  conformance/test-vectors/valid/offline/auth-response-minimal.json
+  conformance/test-vectors/valid/offline/auth-response-minimal.json \
+  conformance/test-vectors/valid/offline/auth-response-rejected.json \
+  conformance/test-vectors/valid/offline/auth-response-rejected-limit.json \
+  conformance/test-vectors/valid/offline/auth-response-rejected-version.json
+
+# The device proof (06-security.md §6.5.4): the pass verified under the server key that
+# anchors its devicePublicKey, then the proof under that key — over the handshake beside
+# an OfflineAuthRequest, or over a forward's own transcriptHash at the station that
+# forwarded it.
+if node tools/verify-example-signatures.mjs \
+    --key conformance/test-keys/server-test-pub.pem \
+    --mode device-proof \
+    examples/payloads/ble/offline-auth-request.json \
+    examples/payloads/mqtt/authorize-offline-pass.request.json \
+    conformance/test-vectors/valid/offline/offline-auth-request-full.json \
+    conformance/test-vectors/valid/offline/offline-auth-request-minimal.json \
+    conformance/test-vectors/valid/security/authorize-offline-pass-request-full.json \
+    conformance/test-vectors/valid/security/authorize-offline-pass-request-minimal.json \
+    >/tmp/vas-out 2>&1; then
+  ok "device proofs (6 file(s))"
+else
+  err "device proofs failed:"; sed 's/^/      /' /tmp/vas-out
+fi
 
 # sessionProof — same files as server OfflinePass, but verified with the
 # session key and --mode session-proof. Two different signatures live on
@@ -104,7 +135,7 @@ fi
 section "BLE crypto oracle (key schedule + AEAD, RFC-anchored)"
 
 if node tools/verify-ble-crypto.mjs >/tmp/vas-crypto 2>&1; then
-  ok "BLE key schedule + AEAD + StationIdentity re-derived (RFC 5903/5869/8439 anchored)"
+  ok "$(tail -1 /tmp/vas-crypto | sed 's/^═══ //;s/ ═══$//')"
 else
   err "BLE crypto oracle FAILED:"; sed 's/^/      /' /tmp/vas-crypto
 fi
@@ -176,7 +207,12 @@ INLINE_FILES=(
 )
 
 before=$(for f in "${INLINE_FILES[@]}"; do sha256sum "$f"; done | sha256sum | cut -d' ' -f1)
-node tools/sign-inline-md.mjs --all >/dev/null
+# A signer that stops on a document — a BLE handshake message not yet in its schema's
+# shape, a placeholder nonce — is reported here and the remaining sections still run.
+if ! node tools/sign-inline-md.mjs --all >/tmp/vas-inline 2>&1; then
+  err "sign-inline-md.mjs --all stopped:"
+  grep -E '^Error|^error' /tmp/vas-inline | sed 's/^/      /'
+fi
 after=$(for f in "${INLINE_FILES[@]}"; do sha256sum "$f"; done | sha256sum | cut -d' ' -f1)
 if [[ "$before" == "$after" ]]; then
   ok "sign-inline-md.mjs --all is idempotent (zero drift across ${#INLINE_FILES[@]} files)"
@@ -210,6 +246,15 @@ if hits=$(grep -rnE '"(signature|signedAuthorization|sessionProof|sessionKeyConf
   echo "$hits" | sed 's/^/      /'
 else
   ok "no residual placeholder text in any signature / HMAC field"
+fi
+
+# The BLE handshake members. Long Base64 values (a certificate is ~700 characters) can
+# carry a short word like "xxx" by chance, so these are held to the unambiguous markers only.
+if hits=$(grep -rnE '"(stationSignature|stationCertificate|appEphemeralPubKey|stationEphemeralPubKey|appNonce|stationNonce|transcriptHash|authenticatorData)"\s*:\s*"[^"]*(Example|Placeholder|placeholder|\.\.\.)' spec/ examples/ conformance/ 2>/dev/null); then
+  err "placeholder patterns still present in BLE handshake members:"
+  echo "$hits" | sed 's/^/      /'
+else
+  ok "no residual placeholder text in any BLE handshake member"
 fi
 
 # -----------------------------------------------------------------------------

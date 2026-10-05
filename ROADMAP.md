@@ -150,7 +150,9 @@ A registry-wide audit was attempted in the 0.8.0 cycle and its output was discar
 4. **Withdrawal is explicitly permitted and expected.** The re-read that retracted five of eleven sampled findings only worked because retraction was allowed; a pass that treats its own output as something to defend will over-report.
 5. **Report what the pass does not cover.** Reachability depends on §4, which is itself unsound (above), so any reachability-based verdict inherits that uncertainty and should say so rather than presenting a count.
 
-### BLE response schemas cannot carry the errors the protocol assigns them
+### ~~BLE response schemas cannot carry the errors the protocol assigns them~~ — done with the BLE wire revision
+
+**Taken 2026-10-05.** Every BLE response that refuses carries one flat shape — `result: "Rejected"`, `errorCode`, `errorText` and an optional `details` object — on the AuthResponse, the StartServiceResponse, the StopServiceResponse, which gained its `Rejected` branch, and the new ReceiptResponse; `07-errors.md` §2.3 states that shape, with no `error` wrapper, and the AuthResponse lost `reason` ([KNOWN-ISSUES, B-3](KNOWN-ISSUES.md#b-3--the-three-ble-response-schemas-disagree-with-each-other-and-with-chapter-07)). The ripple below was measured before the change and is kept as the record of what it cost; the SDK re-vendor rides the next release. **What follows is the item as it stood.**
 
 Deferred deliberately: it needs schema changes and therefore an SDK re-vendor, and BLE is spec-ahead-of-code — the server accepts no `stationPubKey` and issues no StationIdentity. But the production station declares `bleSupported: true`, so this becomes live the moment BLE is implemented.
 

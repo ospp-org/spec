@@ -1,0 +1,10 @@
+{
+  "type": "Hello",
+  "bleVersions": [
+    "0.3.0"
+  ],
+  "appNonce": "yxY2RQiyfmbyxGwwd0rO7H5u/O6x3my1LJ8VGicpSZ4=",
+  "appVersion": "2.5.3",
+  "appEphemeralPubKey": "A/cUFXImC4RNsZ73h9F3OC7NlDkjONgQqYt893+O8ijr",
+  "deviceId": "d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2"
+}

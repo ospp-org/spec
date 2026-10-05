@@ -20,7 +20,7 @@ Position is the point of the case, not merely the code. A bare key that parses a
 - `spec/07-errors.md` §1.4 — recommended actions are per-code and must hold on every path; branching entries and their fail-safe default
 - `spec/07-errors.md` §2.4 — canonical flat REST error envelope, and the HTTP status mapping
 - `spec/07-errors.md` Appendix C — the Error Object schema, including the `4019` conditional block requiring `details.phase`
-- `spec/06-security.md` §4.3 / §6.5.2 — submitted keys are decoded before comparison; the static BLE ECDH public key
+- `spec/06-security.md` §4.3 — submitted keys are decoded before comparison
 
 ## Preconditions
 
@@ -79,13 +79,12 @@ Position is the point of the case, not merely the code. A bare key that parses a
 26. Verify the originally-issued certificate is unchanged and that **no second certificate** exists against `T3`.
 27. Verify a subsequent retry on `T3` carrying the **originally bound** `K_rcpt_3` returns `200 OK` with the byte-identical certificate — the `4019` rejection altered no binding.
 
-### Part G — Wrong-form `stationPubKey` (conditional)
+### Part G — Withdrawn
 
-> Applicable only where the station profile declares `bleSupported`, so that `stationPubKey` is carried (`06-security.md` §6.5.2). Skip otherwise, and record it as skipped.
-
-28. Construct a 44-character Base64 string over the permitted alphabet whose decoded 33 bytes do **not** form a valid compressed P-256 point (for example, a leading byte other than `0x02`/`0x03`).
-29. `POST` on a fresh token with a valid CSR, a valid `receiptSigningPublicKey`, and that `stationPubKey`.
-30. Verify the response is **`400`** / `4019`, with `details.field` naming `stationPubKey`. The `ec-public-key` schema constrains length and alphabet only, so this value passes schema validation.
+> Part G submitted a `stationPubKey` that was not a P-256 point. Provisioning no longer takes that key:
+> the BLE wire revision withdrew it with the StationIdentity it certified
+> ([`06-security.md` §6.5.2](../../../spec/06-security.md#652-station-authentication--the-stations-certificate)).
+> Its steps, 28–30, are not reused.
 
 ## Expected Results
 
@@ -102,7 +101,7 @@ Position is the point of the case, not merely the code. A bare key that parses a
 The implementation **fails** this test case if any of the following occur:
 
 1. A wrong-curve or wrong-algorithm bare key is accepted, or a certificate is issued over it.
-2. The response status is other than `400`, or `errorCode` is other than `4019`, on Parts A, B, C, E, F or G.
+2. The response status is other than `400`, or `errorCode` is other than `4019`, on Parts A, B, C, E or F.
 3. Part D answers `4019` rather than `4010` — the precedence between the two decodability steps is not implemented.
 4. Part E answers `4016`, or Part F answers `4015` — a comparison was run on a key that had not been decoded.
 5. `details.phase` is absent on any `4019` response, or reports `first-provision` on the Part F retry.

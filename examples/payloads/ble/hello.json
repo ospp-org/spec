@@ -1,6 +1,8 @@
 {
   "type": "Hello",
-  "deviceId": "device_a8f3bc12e4567890",
+  "bleVersions": [
+    "0.3.0"
+  ],
   "appNonce": "V1ONdJeyzwHyryZY3mCknd+IGXSod7H4+CgnPAjwj0M=",
   "appVersion": "2.1.0",
   "appEphemeralPubKey": "AkBtkt8D/Y8dFrOhCj6eLc+/IyCC+Jk0SsGdXerVcJEA"

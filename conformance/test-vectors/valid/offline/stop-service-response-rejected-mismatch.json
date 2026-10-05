@@ -1,0 +1,6 @@
+{
+  "type": "StopServiceResponse",
+  "result": "Rejected",
+  "errorCode": 3007,
+  "errorText": "SESSION_MISMATCH"
+}

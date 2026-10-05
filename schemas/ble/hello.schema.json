@@ -2,11 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/ble/hello.schema.json",
   "title": "Hello",
-  "description": "Hello message sent by the mobile app to the station via BLE characteristic FFF3 (Write). Initiates the authentication handshake.",
+  "description": "Hello message written by the mobile app to the station on BLE characteristic FFF3. Opens the handshake. It is plaintext and any radio in range can read it, so it carries nothing that identifies the device or its user (06-security.md T14); the device is identified only inside the channel, by the credential it presents.",
   "type": "object",
   "required": [
     "type",
-    "deviceId",
+    "bleVersions",
     "appNonce",
     "appVersion",
     "appEphemeralPubKey"
@@ -18,8 +18,17 @@
       "const": "Hello",
       "description": "Message type discriminator"
     },
-    "deviceId": {
-      "$ref": "../common/device-id.schema.json"
+    "bleVersions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^\\d+\\.\\d+\\.\\d+$",
+        "maxLength": 32
+      },
+      "description": "The BLE protocol versions the app supports, most preferred first (VERSIONING.md, 'BLE Protocol Version'). The station names one of them in the Challenge's bleVersion, or refuses the Hello with 1007 when it supports none (profiles/offline/ble-handshake.md §3)."
     },
     "appNonce": {
       "type": "string",
@@ -34,7 +43,7 @@
     },
     "appEphemeralPubKey": {
       "$ref": "../common/ec-public-key.schema.json",
-      "description": "The app's per-handshake ephemeral P-256 public key (compressed SEC1, Base64). Combined with the station's keys to derive the session key (06-security.md §6.5). Freshly generated per handshake and discarded after the session."
+      "description": "The app's per-handshake ephemeral P-256 public key (compressed SEC1, Base64). Its ECDH with the station's ephemeral key is the session key's input (06-security.md §6.5). Freshly generated per handshake and discarded after the session."
     }
   }
 }

@@ -1,27 +1,32 @@
 {
-  "offlinePassId": "opass_a1b2c3d4e5f6",
+  "offlinePassId": "opass_e7f8a9b0c1d2e3f4",
   "offlinePass": {
-    "passId": "opass_a1b2c3d4e5f6",
-    "sub": "sub_user01abc",
-    "deviceId": "device-iphone-14-pro-001",
-    "devicePublicKey": "A+aNWTS04CWiEzjfjaEOhm0Pa/YPB572UNMlcx1ZffgT",
+    "passId": "opass_e7f8a9b0c1d2e3f4",
+    "sub": "sub_user42xyz",
+    "deviceId": "device-pixel-8-pro-042",
+    "devicePublicKey": "Ahurv7k0oBBFvNCQfsnfOGAwuGqkpsdr4Z+2VPLI9uUg",
     "keyId": "YjX5pR0TzmU3ubs17wImQQ",
-    "issuedAt": "2026-02-15T08:00:00.000Z",
-    "expiresAt": "2026-02-16T08:00:00.000Z",
-    "policyVersion": 1,
-    "revocationEpoch": 0,
+    "issuedAt": "2026-02-14T12:30:00.000Z",
+    "expiresAt": "2026-02-15T12:30:00.000Z",
+    "policyVersion": 3,
+    "revocationEpoch": 7,
     "offlineAllowance": {
-      "maxTotalCredits": 500,
-      "maxUses": 3,
-      "maxCreditsPerTx": 200
+      "maxTotalCredits": 1000,
+      "maxUses": 5,
+      "maxCreditsPerTx": 300
     },
     "constraints": {
-      "minIntervalSec": 300
+      "minIntervalSec": 600
     },
     "signatureAlgorithm": "ECDSA-P256-SHA256",
-    "signature": "MEUCIQCQobJNkoPnS/crg26Ec25LamGzfiUfLR/lLyPYVtdWTwIgWnzon0WI3eMKrOk4zxdwizLCFRDVURdkZJHvK4svVO8="
+    "signature": "MEQCID778pQN3cNah5VB3WTbOosc1KuMigKRjkSe+gjKDpAbAiBq6S2ezzBbXlz5q8AzbjrncuHITr3WZ+OkV8hjO+vgzQ=="
   },
-  "deviceId": "device-iphone-14-pro-001",
-  "bayId": "bay_a1b2c3d4e5f6",
-  "serviceId": "svc_basic"
+  "counter": 3,
+  "bayId": "bay_f9e8d7c6b5a4",
+  "serviceId": "svc_premium",
+  "requestedDurationSeconds": 600,
+  "deviceProof": {
+    "format": "android-key",
+    "signature": "MEQCIBRxcCy//1PzLtQiZ2O2plD6IlSRsO7A0w4pE2MPJblJAiAR9lSyKUvrkG7/2tg8+QESQhF7zch33hPSoTo2c9oR2g=="
+  }
 }

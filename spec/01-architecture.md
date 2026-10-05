@@ -77,7 +77,7 @@ A **Station** is a logical self-service installation, identified by a stable `st
 - **Controller** — The embedded computing unit that runs the station firmware, manages bay hardware, maintains the MQTT connection to the server, and optionally advertises a BLE interface. Each station has exactly one controller.
 - **One or more Bays** — The individual service points where consumers receive services. A station MUST have at least one bay.
 - **Network Connectivity** — Ethernet, WiFi, or cellular. The controller MUST support at least one network interface and SHOULD support failover between interfaces where hardware permits.
-- **BLE Interface** (OPTIONAL) — A Bluetooth Low Energy peripheral for offline authorization scenarios. Stations that declare `capabilities.bleSupported: true` in their BootNotification MUST implement the BLE GATT service defined in [Chapter 02 — Transport](02-transport.md), Section 8.
+- **BLE Interface** (OPTIONAL) — A Bluetooth Low Energy peripheral for offline authorization scenarios. Stations that declare `capabilities.bleSupported: true` in their BootNotification MUST implement the BLE GATT service defined in [`profiles/offline/ble-transport.md`](profiles/offline/ble-transport.md), which [Chapter 02 — Transport §8](02-transport.md#8-ble-transport-offline-mode) summarises.
 
 A station is identified by a unique `stationId` with the `stn_` prefix (see Section 3). The station reports its hardware metadata — `stationModel`, `stationVendor`, `serialNumber`, `firmwareVersion`, its declared physical topology in `bays`, capabilities, and network information — in the BootNotification message sent at startup (see [Chapter 03 — Message Catalog](03-messages.md), Section 1.1).
 
@@ -326,10 +326,10 @@ For full transport details — connection parameters, TLS requirements, topic st
 The **offline path** provides a fallback channel between the mobile app and the station when MQTT connectivity is degraded or unavailable. The mobile app communicates directly with the station's BLE GATT service to authorize sessions, start services, and retrieve receipts.
 
 - **Direction:** Bidirectional via GATT characteristics (Read, Write, Notify).
-- **Security:** Application-layer ECDH P-256 handshake + server-signed StationIdentity certificate + ChaCha20-Poly1305 AEAD channel (Chapter 06 — Security §6.5). Session keys are derived via HKDF-SHA256 from the ECDH shared secrets and fresh per-handshake nonces. BLE link-layer pairing (LESC) is OPTIONAL and is not a security premise.
+- **Security:** Application-layer handshake — an ephemeral ECDH P-256 exchange the station authenticates with its mTLS certificate and a signature — + ChaCha20-Poly1305 AEAD channel, and the phone's proof of its device key (Chapter 06 — Security §6.5). Session keys are derived via HKDF-SHA256 from the ECDH shared secret, fresh per-handshake nonces and the handshake transcript. BLE link-layer pairing (LESC) is OPTIONAL and is not a security premise.
 - **Scope:** The offline path supports only the Offline profile. Configuration, firmware updates, and diagnostics are NOT available over BLE.
 
-For BLE GATT service definition, characteristic UUIDs, MTU, and fragmentation — see [Chapter 02 — Transport](02-transport.md), Section 8.
+For BLE GATT service definition, characteristic UUIDs, advertising, MTU, and fragmentation — see [`profiles/offline/ble-transport.md`](profiles/offline/ble-transport.md), which defines each once; [Chapter 02 — Transport §8](02-transport.md#8-ble-transport-offline-mode) summarises them.
 
 ### 5.4 Application Profiles
 
@@ -487,9 +487,8 @@ Upon successful reconnection, the station transmits in the following order:
 
 ### 6.7 BLE Advertising (Optional)
 
-- If the station declares `bleSupported: true`, it MUST advertise the OSPP BLE GATT service when the station is operational.
-- The station MAY disable BLE advertising when all bays are in `Unavailable` or `Faulted` state.
-- BLE advertising behavior is defined in [Chapter 02 — Transport](02-transport.md), Section 8.
+- If the station declares `bleSupported: true`, it MUST advertise the OSPP BLE GATT service continuously while the BLE profile is enabled, whether or not any of its bays can start a service: an app learns availability from the authenticated Challenge, not from the advertisement.
+- What the advertisement carries is defined once, in [`profiles/offline/ble-transport.md` §9](profiles/offline/ble-transport.md#9-advertising-data).
 
 ---
 

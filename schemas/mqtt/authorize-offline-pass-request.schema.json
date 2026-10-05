@@ -2,16 +2,18 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/mqtt/authorize-offline-pass-request.schema.json",
   "title": "AuthorizeOfflinePassRequest",
-  "description": "Sent by the station to the server to validate an offline pass presented via BLE, including chain integrity fields for replay protection.",
+  "description": "Sent by the station to the server to validate an OfflinePass presented over BLE (Partial B), with the bay, service and duration the customer chose and the phone's proof of the pass's device key, which the server verifies (spec/profiles/offline/authorize-offline-pass.md §3).",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "offlinePassId",
     "offlinePass",
-    "deviceId",
     "counter",
     "bayId",
-    "serviceId"
+    "serviceId",
+    "requestedDurationSeconds",
+    "deviceProof",
+    "transcriptHash"
   ],
   "properties": {
     "offlinePassId": {
@@ -21,10 +23,6 @@
     "offlinePass": {
       "$ref": "../common/offline-pass.schema.json",
       "description": "The offline pass payload containing authorization data."
-    },
-    "deviceId": {
-      "$ref": "../common/device-id.schema.json",
-      "description": "Identifier of the mobile device presenting the offline pass."
     },
     "counter": {
       "type": "integer",
@@ -38,6 +36,20 @@
     "serviceId": {
       "$ref": "../common/service-id.schema.json",
       "description": "Identifier of the service being requested."
+    },
+    "requestedDurationSeconds": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "The duration the customer chose, from the BLE OfflineAuthRequest, in seconds. The server estimates the cost from it and authorizes exactly this duration or refuses (spec/profiles/offline/authorize-offline-pass.md §5)."
+    },
+    "deviceProof": {
+      "$ref": "../common/device-proof.schema.json",
+      "description": "The device proof of the BLE OfflineAuthRequest, unmodified. The server verifies it under the pass's devicePublicKey (check #4)."
+    },
+    "transcriptHash": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]{43}=$",
+      "description": "The transcript hash of the BLE handshake in which the pass was presented, Base64 of 32 bytes (06-security.md §6.5): an input of the device proof, which the server needs to verify it."
     }
   }
 }

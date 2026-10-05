@@ -1,0 +1,6 @@
+{
+  "type": "ReceiptResponse",
+  "result": "Rejected",
+  "errorCode": 3006,
+  "errorText": "SESSION_NOT_FOUND"
+}

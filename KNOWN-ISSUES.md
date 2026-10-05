@@ -1,8 +1,8 @@
 # OSPP Known Issues
 
-**Date:** 2026-09-28
+**Date:** 2026-10-05
 **Specification-document version:** 0.44.0 (release tag `v0.44.0`)
-**Status:** 2 blockers open (all BLE), **20** non-blocking issues open, **29** decisions recorded (one of
+**Status:** no blocker open, **20** non-blocking issues open, **29** decisions recorded (one of
 them reversing another), and one named defect **class** with **eighteen** instances, **four** still open. **The counts are
 re-derived from the headings on every release, never incremented** — the `0.43.0` revision read 27
 open against 26 `## OPEN` headings, which is how a summary drifts
@@ -16,17 +16,18 @@ the arcs since
 
 | Severity | Count | Where |
 |----------|------:|-------|
-| BLOCKER | 2 | [BLE surface](#blocker--the-ble-surface-is-not-implementable-as-written-two-defects) — B-1, B-3; B-2 is closed (see CLOSED) |
-| OPEN | 20 | [the conformance harness is two directories and a placeholder](#open--the-conformance-harness-is-two-directories-and-a-zero-byte-placeholder-so-nobody-outside-this-project-can-run-conformance) · [three absences with no urgency](#open--three-absences-with-no-urgency-recorded-together-so-they-stop-being-rediscovered) · **[no gate range-checks a config value inside an example payload](#open--no-gate-range-checks-a-configuration-value-that-sits-inside-an-example-payload)** · **[the hardware storage levels do not hold the Category-1 floors](#open--the-hardware-storage-levels-do-not-hold-the-category-1-floors-they-are-said-to-size)** · **[`5019` has no carrier on either side](#open--5019-upload_failed-names-a-condition-that-cannot-exist-when-its-response-is-sent-and-its-real-carrier-has-no-code-field)** · [4xxx grouping](#open--4xxx-grouping-the-provisioning-codes-sit-under-a-payment-heading-and-the-sdks-derive-category-from-the-range) · [provisioning station-side conformance](#open--no-conformance-case-exercises-the-provisioning-success-path-from-the-stations-side) · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [no gate parses JSON out of a markdown fence](#open--no-gate-parses-json-out-of-a-markdown-fence-and-511-payloads-live-there) · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · [`bayCount` on BLE StationInfo](#open--ble-stationinfo-still-carries-baycount-which-cannot-name-a-bay-and-agrees-with-nothing) · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) · **[the anti-downgrade guard verifies one artefact and decides on another](#open--the-anti-downgrade-guard-verifies-one-artefact-and-decides-on-another-and-no-field-is-missing)** · **[the firmware signing certificate rotates annually and no message can deliver it](#open--the-firmware-signing-certificate-is-stated-to-rotate-annually-and-no-message-can-deliver-the-new-one)** · **[UpdateFirmware is both idempotent and `5107`](#open--updatefirmware-is-documented-as-idempotent-and-as-rejected-with-5107-for-the-same-second-command)** · **[no code describes a non-HTTPS firmware URL](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal)** · **[a station whose hardware changes has no route back into service](#open--a-station-whose-hardware-genuinely-changes-has-no-route-back-into-service-because-the-two-rules-that-guard-topology-point-at-each-other)** · **[`offeredVersion` vs `attemptedVersion`](#open--the-firmwaredowngradeattempt-securityevent-names-the-offered-version-with-two-different-member-names-and-nothing-can-tell)** |
-| CLOSED | 10 | **[B-2 — a station-scoped OfflinePass](#b-2--a-station-scoped-offlinepass-is-unrepresentable-in-the-authoritative-schema)** — closed 2026-09-29 by withdrawing the demand: a pass carries no station or organization scope, and check #5 and codes `2006`/`2015` are withdrawn. A subsection of the BLOCKER entry, so it is listed here and not counted among the ten `## CLOSED` headings · **[the signing toolchain canonicalized with the SDK](#closed-0440--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself)** — closed in 0.44.0; the six tools canonicalize with `tools/canonical-form.mjs` and 0 committed bytes moved · **[nothing checked a per-message `Message Expiry` against its category](#closed-0440--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** — closed in 0.44.0 by `tools/check-message-expiry.py` · [Device Management Required vs RECOMMENDED](#closed-0160--the-device-management-profile-was-required-in-chapter-08-and-recommended-not-mandatory-in-its-own-readme) — closed in 0.16.0 in favour of the capability · [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
+| BLOCKER | 0 | The BLE blockers B-1 and B-3 closed on 2026-10-05, with the BLE wire revision (see CLOSED) |
+| OPEN | 20 | **[the trust bundle's server key set has no reader in the app](#open--the-trust-bundles-server-key-set-has-no-reader-in-the-app-since-the-stationidentity-was-withdrawn)** · [the conformance harness is two directories and a placeholder](#open--the-conformance-harness-is-two-directories-and-a-zero-byte-placeholder-so-nobody-outside-this-project-can-run-conformance) · [three absences with no urgency](#open--three-absences-with-no-urgency-recorded-together-so-they-stop-being-rediscovered) · **[no gate range-checks a config value inside an example payload](#open--no-gate-range-checks-a-configuration-value-that-sits-inside-an-example-payload)** · **[the hardware storage levels do not hold the Category-1 floors](#open--the-hardware-storage-levels-do-not-hold-the-category-1-floors-they-are-said-to-size)** · **[`5019` has no carrier on either side](#open--5019-upload_failed-names-a-condition-that-cannot-exist-when-its-response-is-sent-and-its-real-carrier-has-no-code-field)** · [4xxx grouping](#open--4xxx-grouping-the-provisioning-codes-sit-under-a-payment-heading-and-the-sdks-derive-category-from-the-range) · [provisioning station-side conformance](#open--no-conformance-case-exercises-the-provisioning-success-path-from-the-stations-side) · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [no gate parses JSON out of a markdown fence](#open--no-gate-parses-json-out-of-a-markdown-fence-and-511-payloads-live-there) · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) · **[the anti-downgrade guard verifies one artefact and decides on another](#open--the-anti-downgrade-guard-verifies-one-artefact-and-decides-on-another-and-no-field-is-missing)** · **[the firmware signing certificate rotates annually and no message can deliver it](#open--the-firmware-signing-certificate-is-stated-to-rotate-annually-and-no-message-can-deliver-the-new-one)** · **[UpdateFirmware is both idempotent and `5107`](#open--updatefirmware-is-documented-as-idempotent-and-as-rejected-with-5107-for-the-same-second-command)** · **[no code describes a non-HTTPS firmware URL](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal)** · **[a station whose hardware changes has no route back into service](#open--a-station-whose-hardware-genuinely-changes-has-no-route-back-into-service-because-the-two-rules-that-guard-topology-point-at-each-other)** · **[`offeredVersion` vs `attemptedVersion`](#open--the-firmwaredowngradeattempt-securityevent-names-the-offered-version-with-two-different-member-names-and-nothing-can-tell)** |
+| CLOSED | 12 | **[the BLE surface was not implementable as written](#closed--the-ble-surface-was-not-implementable-as-written-two-defects)** — closed 2026-10-05 by the BLE wire revision: one fragmentation protocol, one BLE error shape, and the device proof check #4 had lacked; its subsection **[B-2 — a station-scoped OfflinePass](#b-2--a-station-scoped-offlinepass-is-unrepresentable-in-the-authoritative-schema)** closed 2026-09-29 by withdrawing the demand · **[`bayCount` on BLE StationInfo](#closed--ble-stationinfo-carried-baycount-which-could-not-name-a-bay-and-agreed-with-nothing)** — closed 2026-10-05, deleted with nothing in its place · **[the signing toolchain canonicalized with the SDK](#closed-0440--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself)** — closed in 0.44.0; the six tools canonicalize with `tools/canonical-form.mjs` and 0 committed bytes moved · **[nothing checked a per-message `Message Expiry` against its category](#closed-0440--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** — closed in 0.44.0 by `tools/check-message-expiry.py` · [Device Management Required vs RECOMMENDED](#closed-0160--the-device-management-profile-was-required-in-chapter-08-and-recommended-not-mandatory-in-its-own-readme) — closed in 0.16.0 in favour of the capability · [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
 | **CLASS** | 18 | **[an obligation no field, no code and no actor can carry](#class--an-obligation-no-field-no-code-and-no-actor-can-carry)** — an index of the eighteen instances; **4** still open, none a blocker. On 2026-09-29 instance 1, the station-scoped pass, closed by withdrawing its demand, and instance 3, dual signing across a single-valued key, already closed by saying so, closed by construction: the server key set, and the `keyId` every pass now carries. `0.35.0` closed instance 18 and recorded 17 with it — the same defect on two of the fourteen Server → Station actions, and 18 closed **without** the contract relaxation it appeared to need. `0.32.0` closed instances 15 and 16, the same defect on the two halves of one session, and supplied the **fourth remedy** the class had not recorded: withdraw the demand. The fourth sub-shape, named at 0.30.0 — a closed enumeration in which no legal value is true — still holds **three** instances, all closed at 0.31.0 |
 | DECIDED | 29 | **[the server judges offline times through the clock offset it measures at reconnection](#decided--the-server-judges-offline-times-through-the-clock-offset-it-measures-at-reconnection-and-never-rewrites-them)** — option 1 of the entry's own list, in the form of `reconciliation.md` §6.8: `Synchronized` receipts judged through the offset, `Unsynchronized` ones as signed and flagged, signed times never rewritten · **[`FraudDetected` is a server-originated record, and a Block-band transaction is settled and flagged](#decided--frauddetected-is-a-server-originated-record-and-a-block-band-transaction-is-settled-and-flagged)** — no station emits it, the operator is alerted in the Alert and Block bands, and the fraud model's contradictions were fixed with it · **[`httpStatus()` and `category()` stay SDK extensions](#decided-0440--httpstatus-and-category-model-properties-the-spec-declines-to-give-a-code-and-the-two-sdks-invented-different-answers)** — no new status is named; the SDK pair settles `2001` at `422` and aligns the PHP category labels to Appendix A · **[`errorText` is prose on two messages, the documented exception](#decided-0440--two-messages-carry-errordescription-semantics-under-the-name-errortext)** — `07-errors.md` §1.3; no schema moves · **[`2008` was listed under two statuses and the licence permitting it could not be broken](#decided-0320--2008-was-listed-under-two-statuses-and-the-licence-that-permitted-it-could-not-be-broken)** — §4.4's truthfulness obligation un-scoped and the multi-status licence given a checkable condition; the row fell out as a consequence; prose only, zero schema bytes · **[a start that energised and a boot that cannot say what happened](#decided-0320--a-start-that-energised-a-boot-that-cannot-say-what-happened-and-the-two-remedies-that-were-refused)** — the third arm of the §3.5 partition, reported through two messages that already exist; a new `SessionEnded.reason` and a queryable session state both refused with their costs · **[§10.1 required receivers to ignore unknown fields, and every schema forbids it](#decided-0290--02-transportmd-101-required-receivers-to-ignore-unknown-fields-and-every-schema-in-this-repository-forbids-it)** — every object schema is closed (75 of 75 at this revision), and three decisions already taken (§2.1's known gap, exact-match negotiation, the `0.26.0` triple refusal) rest on receivers *not* ignoring; prose only, zero schema bytes · **[the broker MUST check revocation, the list is bounded twice, and a stale list buys one alerted hour](#decided-0270--the-broker-must-check-revocation-the-list-is-bounded-twice-and-a-list-that-goes-stale-buys-one-alerted-hour-before-the-door-shuts)** — axis 1a + 2a&2b + 3c; verified by declaration because no message can carry it, and the two bounds are broker settings deliberately outside the Chapter 08 registry · **[`allowedServiceTypes` withdrawn in two steps](#decided-0250--offlineallowanceallowedservicetypes-is-withdrawn-in-two-steps-because-nobody-ever-asked-for-the-constraint)** — step two, the schema removal, still pending · **[ownership transfer and decommissioning stay undefined, and §1.3 now says so](#decided-0250--station-ownership-transfer-and-decommissioning-stay-undefined-and-the-specification-now-says-so)** · **[the server is the billing authority on the offline path too](#decided-0240--the-server-is-the-billing-authority-on-the-offline-path-too-and-81-was-the-outlier)** — superseded in part: settlement is now capped per wash, and a debit that leaves the wallet below zero leaves its transaction pending · **[`OfflinePassMaxAge` kept, wired into check #2, defaulted to inert](#decided-0240--offlinepassmaxage-is-kept-wired-into-check-2-and-defaulted-to-inert)** — superseded in part: the pass lifetime is the platform's, 3 days by default and never more than 10 · **[`DiagnosticsUploadUrl` withdrawn — a key nothing reads](#decided-0230--diagnosticsuploadurl-had-no-reachable-consumer-and-is-withdrawn-rather-than-defined)** · **[UpdateFirmware to a `Pending` station is `Accepted`, notifications suppressed](#decided-0210--updatefirmware-to-a-pending-station-was-refused-on-a-premise-the-same-chapter-contradicts-and-with-a-response-no-error-code-could-carry)** — **reverses the `0.20.0` row below**: the `Rejected` it mandated needed an `errorCode` no registry entry supplies, and §6.6 already reported the outcome on BootNotification; the discriminator's second clause survives, its reading did not · **[nine gates in `tools/` were reachable from no job](#decided-0201--two-validation-scripts-reported-100-failure-and-no-workflow-ran-them-the-workflows-now-call-the-scripts-and-a-census-guards-the-class)** — the workflows now call the scripts, and `check-tool-callers.py` guards the class · **[the firmware gate is on the INSTALL, not the download](#decided-0200--the-active-session-gate-named-three-stages-it-gates-the-install-and-scheduledat-defers-the-install-with-it)** — and `scheduledAt` defers the install with it; the stall rule scoped rather than `Verified` given a wire value · **[~~UpdateFirmware to a `Pending` station is `Rejected`~~ — REVERSED in `0.21.0`](#decided-0200--updatefirmware-had-no-row-in-the-pending-command-table-it-is-rejected-and-the-discriminator-gained-the-clause-that-says-why)** — kept as the record; the row it added was right, the verdict in it was not · **[a restricted station may renew its own certificate](#decided-0190--one-table-gave-the-same-act-opposite-verdicts-and-a-certificate-renewal-could-not-conclude-in-the-state-the-spec-keeps-open-for-repairs)** — the exception's *reason* restated to cover both members rather than a second name added to a list · [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it; superseded, since a station now holds a key set and keeps no grace period · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
-| **Total open** | **23** | the 2 open blocker subsections (B-1, B-3), the 20 `## OPEN` headings, and the one CLASS, which still has open instances — the same sum that gave `0.44.0`'s 26 (3 + 22 + 1) |
+| **Total open** | **21** | the 20 `## OPEN` headings and the one CLASS, which still has open instances — the same sum that gave the previous revision's 23 (2 open blocker subsections + 20 + 1) |
 
-**The two open blockers are confined to BLE, and are the reason the BLE artefacts ship as
-EXPERIMENTAL in 0.44** — see [BLE release status](README.md#ble-is-experimental). They do
-not affect the MQTT surface, offline reconciliation, or provisioning, all of which are
-implemented and exercised against a second implementation.
+**No blocker is open.** The two BLE blockers that made the BLE artefacts ship as EXPERIMENTAL in
+0.44 are closed; the artefacts stay EXPERIMENTAL until their cryptographic construction has passed
+the review of [`06-security.md` Appendix B](spec/06-security.md#appendix-b--ble-cryptographic-review-checklist)
+— see [BLE release status](README.md#ble-is-experimental). The MQTT surface, offline
+reconciliation and provisioning are implemented and exercised against a second implementation.
 
 The 0.2.x audit issues below are all resolved and retained for history: all 3 CRITICAL
 (AUDIT-V2-001, V2-009, V2-024) and all 31 MAJOR/MINOR.
@@ -117,7 +118,21 @@ The following 30 issues were resolved in the backlog batch fix.
 
 ---
 
-## BLOCKER — the BLE surface is not implementable as written (two defects)
+## CLOSED — the BLE surface was not implementable as written (two defects)
+
+**Closed 2026-10-05, by the BLE wire revision (BLE protocol version `0.3.0`).** Both open defects are
+repaired, each by the one definition the revision keeps: fragmentation is defined once, in
+[`ble-transport.md` §11](spec/profiles/offline/ble-transport.md#11-fragmentation-protocol), and every
+BLE response that refuses carries one flat shape — `errorCode`, `errorText` and an optional
+`details` object ([`07-errors.md` §2.3](spec/07-errors.md#23-ble-error-response)), the
+StopServiceResponse included. The note recorded beside them is closed too: the OfflineAuthRequest
+carries a proof of possession of the pass's device key, and check #4 verifies it
+([`06-security.md` §6.5.4](spec/06-security.md#654-device-proof-of-possession)). The BLE surface stays
+**EXPERIMENTAL** for a different reason, which is not a defect of the text: its cryptographic
+construction has not yet passed the review of
+[`06-security.md` Appendix B](spec/06-security.md#appendix-b--ble-cryptographic-review-checklist), and
+no implementation exercises it ([README, *BLE is experimental*](README.md#ble-is-experimental)).
+**What follows is the record, as raised.**
 
 **Raised 2026-07-28, scoping the 0.8.0 tag. These are the reason the BLE artefacts are marked
 EXPERIMENTAL — see [BLE release status](README.md#ble-is-experimental). Recorded, not
@@ -135,6 +150,13 @@ states ([`offline-pass.md` §4](spec/profiles/offline/offline-pass.md#4-validati
 note on check #4).
 
 ### B-1 — two incompatible fragmentation protocols are simultaneously normative
+
+**CLOSED 2026-10-05.** `ble-transport.md` §11 is kept and repaired — a lost, repeated or
+out-of-sequence fragment aborts the message and the session, the header's three fields obey one
+consistency rule, reassembly state is kept per characteristic and per direction, the
+characteristics it covers are named, and a fragment carries `ATT_MTU − 6` octets — and Chapter 02
+§8.6 and the copy in Chapter 03 are withdrawn, their references repointed. **What follows is the
+record, as raised.**
 
 [`02-transport.md` §8.6](spec/02-transport.md) and
 [`profiles/offline/ble-transport.md` §11](spec/profiles/offline/ble-transport.md) both define, as
@@ -191,6 +213,14 @@ pass, which cannot say.
 
 ### B-3 — the three BLE response schemas disagree with each other and with Chapter 07
 
+**CLOSED 2026-10-05.** One shape: `result: "Rejected"` with `errorCode`, `errorText` — the registry
+name — and an optional `details` object, on the AuthResponse, the StartServiceResponse, the
+StopServiceResponse, which gains its `Rejected` branch (`3006`, `3007`), and the new
+ReceiptResponse. Chapter 07 §2.3 states that shape and nothing nested; the BLE codes are listed once,
+in [Chapter 07 §4.3](spec/07-errors.md#43-ble-message-types); the AuthResponse loses `reason`. A Hello
+refused before any key exists is answered by a plaintext AuthResponse in the same shape, instead of
+the Challenge. **What follows is the record, as raised.**
+
 [`07-errors.md` §2.3](spec/07-errors.md) defines the BLE error shape as a **nested** `error`
 object carrying seven fields. No BLE schema implements it, and no two agree:
 
@@ -210,6 +240,32 @@ Fixing this means choosing whether BLE carries the full Error Object under MTU p
 already concedes truncation of `errorDescription` — or a deliberate subset, and then applying one
 answer to all three schemas plus the profile prose that mirrors them
 ([`ble-session.md`:29-33](spec/profiles/offline/ble-session.md) and `:146-147`).
+
+---
+
+## OPEN — the trust bundle's server key set has no reader in the app since the StationIdentity was withdrawn
+
+**Raised 2026-10-05, by the BLE wire revision.** The app received the server key set in its trust
+bundle, `serverKeys` ([`app-contract.md` §3.4](spec/profiles/offline/app-contract.md#34-the-trust-bundle)),
+to verify the StationIdentity a station presented over BLE. The revision withdrew the StationIdentity:
+the app authenticates a station by the Station CA certificate and CRL of the same bundle
+([`06-security.md` §6.5.2](spec/06-security.md#652-station-authentication--the-stations-certificate)).
+Measured, nothing in the specification now reads `serverKeys` on the phone:
+
+- `app-contract.md` §3.4 keeps `serverKeys` REQUIRED in the bundle of every issuance and every
+  Partial-A authorization, and rule 3 names only the CA certificate and the CRL;
+- `06-security.md` §6.7's delivery table keeps a row *The app … the trust bundle's `serverKeys`*;
+- the first term of §6.7's publish-before window, the maximum pass lifetime, is justified as
+  *"The first term covers the app — a trust bundle issued before the key was published belongs to
+  passes that have all expired by then"*: it protected an app verifying a StationIdentity signed
+  under a key its bundle lacked, and the stations are covered by the second term;
+- §6.7.1 already says *"The app authenticates stations by the Station CA, not by this key"*.
+
+**The decision needed.** Either (a) remove `serverKeys` from the trust bundle and the first term
+from the publish-before window — a breaking change of the pass-issuance and Partial-A responses and
+of a window decided on 2026-09-29 — or (b) keep both and state what the app reads the set for.
+Neither is taken here: both change a decided rule or an HTTP response, and the revision's brief
+decided neither.
 
 ---
 
@@ -1910,6 +1966,11 @@ rather than being absorbed into a repair pass.
 
 ## CLOSED (0.30.0) — `StationIdentityCertificate` is named as a ChangeConfiguration key but is not in the Chapter 08 registry
 
+> **The key is withdrawn, 2026-10-05.** The BLE wire revision withdrew the StationIdentity it carried:
+> a station authenticates itself over BLE with its mTLS certificate ([`06-security.md` §6.5.2](spec/06-security.md#652-station-authentication--the-stations-certificate);
+> [`08-configuration.md` §4](spec/08-configuration.md#4-security-configuration-keys)). The entry is the
+> record of the registration.
+
 `06-security.md` §6.5.2, *Issuance, delivery, and rotation*, defines how the BLE StationIdentity
 certificate reaches the station:
 
@@ -2670,7 +2731,15 @@ have short lifetimes (maximum 24 hours)"*), and the key-rotation retention windo
 
 ---
 
-## OPEN — BLE StationInfo still carries `bayCount`, which cannot name a bay and agrees with nothing
+## CLOSED — BLE StationInfo carried `bayCount`, which could not name a bay and agreed with nothing
+
+**Closed 2026-10-05, by the BLE wire revision.** `bayCount` is deleted from StationInfo and from the
+advertisement, as the entry's last paragraph proposed, and nothing replaces it: FFF2 carries every
+bay the station declared, and the Challenge carries what each can start
+([`ble-transport.md` §3, §4](spec/profiles/offline/ble-transport.md#3-station-info-fff1)).
+`bleProtocolVersion` went with it: the BLE version is now negotiated in the handshake
+([VERSIONING.md, *BLE Protocol Version*](VERSIONING.md#ble-protocol-version)). **What follows is
+the record, as raised.**
 
 **Raised 2026-08-07, by the twelve-defects sweep, while checking that `bayCount` was gone
 everywhere the 4020 rewrite touched.** It is gone from the MQTT and provisioning surfaces. It

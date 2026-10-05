@@ -39,7 +39,7 @@ python3 tools/verify-schemas.py
 ```bash
 node tools/verify-canonical-form.mjs # OSPP Canonical Form — Category 20
 node tools/verify-mqtt-mac.mjs       # MQTT message MAC — Category 19
-node tools/verify-ble-crypto.mjs     # BLE key schedule against its RFC anchors
+node tools/verify-ble-crypto.mjs     # BLE handshake: station signature and gate, key schedule, device proof, AEAD — against its RFC anchors
 ```
 
 `verify-mqtt-mac.mjs` recomputes `conformance/test-vectors/crypto/mqtt-mac.json`: the §4.8 canonical form, the MAC under the **decoded** session key, and — the check that gives the vector its point — the different MAC produced by keying with the Base64 *text*. A vector nothing recomputes is a claim, so this is spawned by Category 19 rather than duplicated into it.

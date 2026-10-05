@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/ble/receipt.schema.json",
   "title": "Receipt",
-  "description": "Transaction receipt read from the station via BLE characteristic FFF6 (Read). Contains the complete record of a completed service session for offline reconciliation. v0.4.2: outer wrapper includes offlinePassId / userId / deviceId for symmetry with the signed inner body (06-security.md §6.2 receipt_fields). v0.6.0: discriminated (oneOf) — pass-form carries {offlinePassId, passCounter} (N7); auth-form (Partial A) carries {authId, sessionId} (Q4); both mirror the signed receipt.data body. The four settlement fields of 06-security.md §6.2 (stationId, endReason, bookedDurationSeconds, clockState) are signed only: they are inside receipt.data and not in this wrapper.",
+  "description": "Transaction receipt the station signs for every BLE session and carries to the app in a ReceiptResponse on BLE characteristic FFF6. Contains the complete record of a completed service session for offline reconciliation. v0.4.2: outer wrapper includes offlinePassId / userId / deviceId for symmetry with the signed inner body (06-security.md §6.2 receipt_fields). v0.6.0: discriminated (oneOf) — pass-form carries {offlinePassId, passCounter} (N7); auth-form (Partial A) carries {authId, sessionId} (Q4); both mirror the signed receipt.data body. The four settlement fields of 06-security.md §6.2 (stationId, endReason, bookedDurationSeconds, clockState) are signed only: they are inside receipt.data and not in this wrapper.",
   "type": "object",
   "required": [
     "offlineTxId",
@@ -21,13 +21,25 @@
   "oneOf": [
     {
       "title": "pass-form (Full Offline / Partial B)",
-      "required": ["offlinePassId", "passCounter"],
-      "properties": { "authId": false, "sessionId": false }
+      "required": [
+        "offlinePassId",
+        "passCounter"
+      ],
+      "properties": {
+        "authId": false,
+        "sessionId": false
+      }
     },
     {
       "title": "auth-form (Partial A — ServerSignedAuth)",
-      "required": ["authId", "sessionId"],
-      "properties": { "offlinePassId": false, "passCounter": false }
+      "required": [
+        "authId",
+        "sessionId"
+      ],
+      "properties": {
+        "offlinePassId": false,
+        "passCounter": false
+      }
     }
   ],
   "properties": {
@@ -62,7 +74,7 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 128,
-      "description": "Device identifier from the BLE Hello / OfflinePass binding. Matches the value signed into receipt.data per 06-security.md §6.2 (v0.4.2)."
+      "description": "The device the session was authorized for - the pass's deviceId, or the authorization's. Matches the value signed into receipt.data per 06-security.md §6.2 (v0.4.2)."
     },
     "bayId": {
       "$ref": "../common/bay-id.schema.json"

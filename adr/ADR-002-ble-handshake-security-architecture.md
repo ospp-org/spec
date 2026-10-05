@@ -4,7 +4,7 @@ status: Accepted
 date: 2026-06-19
 deciders: OSPP Authors
 supersedes: —
-superseded-by: —
+superseded-by: ADR-003 (decision items 1 and 2)
 ---
 
 # ADR-002 — BLE Handshake Security Architecture (application-layer ECDH, not LTK)
@@ -62,9 +62,11 @@ Two hygiene properties are borrowed from Noise **explicitly, without the framewo
 
 **Status note, 2026-09-29.** Two premises of the Context and Consequences above have since moved, and the decision is unchanged. A pass now names no station and no organization and is valid at any station that accepts offline passes ([`offline-pass.md` §2.3](../spec/profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)), so the objection to option (II) applies to every pass. And the app verifies a station against the server **key set** of the trust bundle it receives with every pass and every Partial-A authorization ([`app-contract.md` §3.4](../spec/profiles/offline/app-contract.md#34-the-trust-bundle)), not against one server key.
 
+**Status note, 2026-10-05.** Decision items 1 and 2 are superseded by [ADR-003](ADR-003-ble-station-authentication-by-certificate.md): the station authenticates itself with its mTLS certificate and a signature over the handshake, the key schedule has one ECDH, between the two ephemeral keys, under the salt `OSPP_BLE_SESSION_V3`, and the StationIdentity, the static BLE key and `es` are withdrawn. Items 3 and 4 — the AEAD channel and P-256 — stand, and so do the eight pins, of which Pin 3 now states the new key schedule. The review gate above is satisfied by an adversarial review performed by the project's own team against the checklist of [`06-security.md` Appendix B](../spec/06-security.md#appendix-b--ble-cryptographic-review-checklist), recorded item by item ([ADR-003, *Review gate*](ADR-003-ble-station-authentication-by-certificate.md#review-gate)). The Context and Consequences above describe the construction as it was decided.
+
 ## References
 
-- `spec/06-security.md` §6.4 (BLE Transport Security), §6.5 / §6.5.1 / §6.5.2 / §6.5.3 (ECDH derivation, sessionProof, StationIdentity, AEAD channel).
+- `spec/06-security.md` §6.4 (BLE Transport Security), §6.5 / §6.5.1 / §6.5.2 / §6.5.3 (ECDH derivation, sessionProof, station authentication — the StationIdentity until ADR-003, AEAD channel).
 - `spec/profiles/offline/ble-handshake.md` (handshake messages + canonical `sessionProof` §4.1).
 - `CHANGELOG.md` — `0.6.0` entry.
 - `ADR-001` — cross-repo lockstep versioning (the `v0.6.0` tag lands on all three repos together).

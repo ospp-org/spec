@@ -1,83 +1,70 @@
 {
-  "_comment": "OSPP BLE v0.6.0 handshake key-schedule + AEAD ORACLE (the cross-platform golden corpus). Every value is reproducible from the inputs by any conformant implementation; verify-ble-crypto.mjs re-derives all of it. helloWire/challengeWire (Base64) are the EXACT octets the transcript (Pin 4) hashes — compact JSON, NOT the pretty-printed schema fixture, NOT OSPP-canonicalised (Pin 4 hashes raw wire bytes; the schema fixtures conformance/test-vectors/valid/offline/{hello,challenge}-*.json carry the SAME logical message for schema validation). Private keys are test-only, derived deterministically as scalar = SHA-256(label) reduced into [1,n-1]. *Hex = lowercase hex of raw bytes.",
-  "specRef": "v0.6.0",
-  "specSection": "06-security.md §6.5 (Pin 1/2/3/4), §6.5.1 (sessionProof), §6.5.3 (Pin 5/6/7 AEAD); ble-handshake.md §4.1",
-  "serverSigningKey": "conformance/test-keys/server-test-pub.pem (the SAME key that signs OfflinePasses)",
-  "stationIdentity": {
-    "cert": {
-      "stationId": "stn_b68ec15330c6",
-      "organizationId": "org_f10717404764df62",
-      "stationPubKey": "A4uNiuL54JiaHTu74LVygnWNTorzDF2U2pBZaW085HD9",
-      "issuedAt": "2026-02-13T10:00:00.000Z",
-      "expiresAt": "2026-03-15T10:00:00.000Z",
-      "signatureAlgorithm": "ECDSA-P256-SHA256",
-      "signature": "MEUCIQCnquT+s/g6e11zNBzgR7UhmK4f42FQVrIuTLwQGIZMEgIgTIYCZFRfqmQy9Gv4p9216oxT31UEBF43CiIO/TCTEcU="
+  "_comment": "OSPP BLE handshake ORACLE for BLE protocol version 0.3.0 (the cross-platform golden corpus). Every value is reproducible from the inputs by any conformant implementation; verify-ble-crypto.mjs re-derives all of it. hello.wireBase64 / challenge.wireBase64 are the EXACT octets the transcript (Pin 4) hashes — compact JSON, the Challenge with its stationSignature, not OSPP-canonicalised (Pin 4 hashes raw wire bytes; the station signature covers the Hello wire bytes and the OSPP Canonical Form of the Challenge without its signature, 06-security.md §6.5.2). The schema fixtures under conformance/test-vectors/valid/ carry the same messages. Ephemeral private keys are test-only, derived as scalar = SHA-256(label) reduced into [1,n-1]; the station key and certificates are the files named under trust; a device key is derived from its deviceId (conformance/test-keys/README.md). The fixture OfflineAuthRequests carry a sessionProof under the synthetic session key (session-test-key.bin); the frames carry the one under each handshake's own SessionKey. *Hex = lowercase hex of raw bytes.",
+  "specRef": "BLE protocol version 0.3.0",
+  "specSection": "06-security.md §6.5 (Pins 1-7), §6.5.1, §6.5.2, §6.5.3, §6.5.4; profiles/offline/ble-handshake.md §2-§6",
+  "evaluationTime": "2026-02-13T10:00:00.000Z",
+  "constants": {
+    "saltUtf8": "OSPP_BLE_SESSION_V3",
+    "kdfLabelAppToStation": "OSPP-BLE-v0.6.0-key-app-to-station",
+    "kdfLabelStationToApp": "OSPP-BLE-v0.6.0-key-station-to-app",
+    "sessionKeyConfirmationLabel": "AuthResponse_OK",
+    "stationSignatureContext": "OSPP BLE station, Challenge signature",
+    "deviceProofLabel": "OSPP BLE device proof v1",
+    "idKpOsppBleStation": "2.25.57399134409609390163880398392748054115",
+    "deviceProofFormats": {
+      "android": "android-key",
+      "apple": "apple-appattest"
     },
-    "canonicalBodyUtf8": "{\"expiresAt\":\"2026-03-15T10:00:00.000Z\",\"issuedAt\":\"2026-02-13T10:00:00.000Z\",\"organizationId\":\"org_f10717404764df62\",\"stationId\":\"stn_b68ec15330c6\",\"stationPubKey\":\"A4uNiuL54JiaHTu74LVygnWNTorzDF2U2pBZaW085HD9\"}",
-    "note": "signature = ECDSA-P256-SHA256 (RFC 6979, low-s) over OSPP Canonical Form of the body (Pin 8); verifies under server-test-pub.pem"
+    "appAttestAppId": "OSPPTEST01.org.ospp.app"
   },
-  "keys": {
-    "note": "P-256. privateKeyHex = raw 32-byte scalar; publicKeyCompressedBase64 = on-wire encoding (compressed SEC1, Pin 2)",
-    "stationStatic": {
-      "label": "OSPP_BLE_STATION_STATIC_V1",
-      "privateKeyHex": "fb73b9f7c0d9a3d9cffc5e0a67362283323fb39ac5caff98e4c38acb73ed7c19",
-      "publicKeyCompressedBase64": "A4uNiuL54JiaHTu74LVygnWNTorzDF2U2pBZaW085HD9",
-      "publicKeyUncompressedHex": "048b8d8ae2f9e0989a1d3bbbe0b57282758d4e8af30c5d94da9059696d3ce470fd81cdd1b071388d85a81d36f3b5707442d8900a9b81b4d320b4ac3cd379b8d969"
-    },
-    "appEphemeralFull": {
-      "label": "OSPP_BLE_APP_EPH_FULL_V1",
-      "privateKeyHex": "f7e0e4e5af9f504578949245ccee898a637dd0729b8c7daf98a48ae1bdc5010f",
-      "publicKeyCompressedBase64": "A/cUFXImC4RNsZ73h9F3OC7NlDkjONgQqYt893+O8ijr",
-      "publicKeyUncompressedHex": "04f7141572260b844db19ef787d177382ecd94392338d810a98b7cf77f8ef228eb6a52d0864b88dd1b06b0a0cb126d7cc01f590e7a3c54ef4dc8004db64930fdb3"
-    },
-    "stationEphemeralFull": {
-      "label": "OSPP_BLE_STATION_EPH_FULL_V1",
-      "privateKeyHex": "8644155f0b7fe77e4b379ed3350133021b8aeb20ce0b62028ce393cba40956bf",
-      "publicKeyCompressedBase64": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
-      "publicKeyUncompressedHex": "04db53d4e9470b88d3b99558f1891001dd5fecaaff9ca86f9f123eed542dd07918b78ea79f30a7fa59bba3497cac2fa4ce8889ce71a85f1e8a45b7abb5500b9a41"
-    },
-    "appEphemeralMinimal": {
-      "label": "OSPP_BLE_APP_EPH_MINIMAL_V1",
-      "privateKeyHex": "6c0f0b7fa80f57697a27075954413f107f1fca8a7989b3ca1b6ee5bee7332a1e",
-      "publicKeyCompressedBase64": "Aukr6rsx+Awya9X7RtdexB+xIEJMNHLw7Ps2Z5zUZS2a",
-      "publicKeyUncompressedHex": "04e92beabb31f80c326bd5fb46d75ec41fb120424c3472f0ecfb36679cd4652d9acdce0faf35579c2da27ae4c7ed3418befd439988aa64eaf6cc232aad1c751e82"
-    },
-    "stationEphemeralMinimal": {
-      "label": "OSPP_BLE_STATION_EPH_MINIMAL_V1",
-      "privateKeyHex": "88c4e20d219ed1a5a8a82bcd6a601d46d345f40c72e033b14db03895c7cd57c7",
-      "publicKeyCompressedBase64": "A/L8+I3WLIy9eoibSZfFg+QPG/aIjqzvi8HrmbN9VboQ",
-      "publicKeyUncompressedHex": "04f2fcf88dd62c8cbd7a889b4997c583e40f1bf6888eacef8bc1eb99b37d55ba10023b0d938c0bd3360d85cb1fc4f7ecb8fc09dc28142671c01b05385893479b91"
-    }
+  "trust": {
+    "stationCaCertificate": "conformance/test-keys/station-ca-test-cert.pem",
+    "crl": "conformance/test-keys/station-ca-test-crl.pem",
+    "stationCertificate": "conformance/test-keys/station-mtls-test-cert.pem",
+    "stationKey": "conformance/test-keys/station-mtls-test-key.pem",
+    "stationId": "stn_a1b2c3d4",
+    "receiptKey": "conformance/test-keys/station-test-pub.pem",
+    "note": "The app holds the Station CA certificate and its CRL from its trust bundle; the station presents its mTLS certificate in the Challenge and signs with its key. The receipt is signed with the separate station receipt key."
   },
   "scenarios": [
     {
       "scenario": "full",
+      "stationConnectivity": "Offline",
+      "keys": {
+        "appEphemeral": {
+          "label": "OSPP_BLE_APP_EPH_FULL_V1",
+          "privateKeyHex": "f7e0e4e5af9f504578949245ccee898a637dd0729b8c7daf98a48ae1bdc5010f",
+          "publicKeyCompressedBase64": "A/cUFXImC4RNsZ73h9F3OC7NlDkjONgQqYt893+O8ijr",
+          "publicKeyUncompressedHex": "04f7141572260b844db19ef787d177382ecd94392338d810a98b7cf77f8ef228eb6a52d0864b88dd1b06b0a0cb126d7cc01f590e7a3c54ef4dc8004db64930fdb3"
+        },
+        "stationEphemeral": {
+          "label": "OSPP_BLE_STATION_EPH_FULL_V1",
+          "privateKeyHex": "8644155f0b7fe77e4b379ed3350133021b8aeb20ce0b62028ce393cba40956bf",
+          "publicKeyCompressedBase64": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
+          "publicKeyUncompressedHex": "04db53d4e9470b88d3b99558f1891001dd5fecaaff9ca86f9f123eed542dd07918b78ea79f30a7fa59bba3497cac2fa4ce8889ce71a85f1e8a45b7abb5500b9a41"
+        }
+      },
       "hello": {
         "message": {
           "type": "Hello",
-          "deviceId": "d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2",
+          "bleVersions": [
+            "0.3.0"
+          ],
           "appNonce": "yxY2RQiyfmbyxGwwd0rO7H5u/O6x3my1LJ8VGicpSZ4=",
           "appVersion": "2.5.3",
           "appEphemeralPubKey": "A/cUFXImC4RNsZ73h9F3OC7NlDkjONgQqYt893+O8ijr"
         },
-        "wireBase64": "eyJ0eXBlIjoiSGVsbG8iLCJkZXZpY2VJZCI6ImQ3ZThmOWEwYjFjMmQzZTRmNWE2YjdjOGQ5ZTBmMWEyIiwiYXBwTm9uY2UiOiJ5eFkyUlFpeWZtYnl4R3d3ZDByTzdINXUvTzZ4M215MUxKOFZHaWNwU1o0PSIsImFwcFZlcnNpb24iOiIyLjUuMyIsImFwcEVwaGVtZXJhbFB1YktleSI6IkEvY1VGWEltQzRSTnNaNzNoOUYzT0M3TmxEa2pPTmdRcVl0ODkzK084aWpyIn0=",
-        "wireByteLength": 209
+        "wireBase64": "eyJ0eXBlIjoiSGVsbG8iLCJibGVWZXJzaW9ucyI6WyIwLjMuMCJdLCJhcHBOb25jZSI6Inl4WTJSUWl5Zm1ieXhHd3dkMHJPN0g1dS9PNngzbXkxTEo4VkdpY3BTWjQ9IiwiYXBwVmVyc2lvbiI6IjIuNS4zIiwiYXBwRXBoZW1lcmFsUHViS2V5IjoiQS9jVUZYSW1DNFJOc1o3M2g5RjNPQzdObERrak9OZ1FxWXQ4OTMrTzhpanIifQ==",
+        "wireByteLength": 187
       },
       "challenge": {
         "message": {
           "type": "Challenge",
+          "bleVersion": "0.3.0",
           "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
-          "stationConnectivity": "Offline",
-          "stationCert": {
-            "stationId": "stn_b68ec15330c6",
-            "organizationId": "org_f10717404764df62",
-            "stationPubKey": "A4uNiuL54JiaHTu74LVygnWNTorzDF2U2pBZaW085HD9",
-            "issuedAt": "2026-02-13T10:00:00.000Z",
-            "expiresAt": "2026-03-15T10:00:00.000Z",
-            "signatureAlgorithm": "ECDSA-P256-SHA256",
-            "signature": "MEUCIQCnquT+s/g6e11zNBzgR7UhmK4f42FQVrIuTLwQGIZMEgIgTIYCZFRfqmQy9Gv4p9216oxT31UEBF43CiIO/TCTEcU="
-          },
           "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
+          "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+          "stationConnectivity": "Offline",
           "availableServices": [
             {
               "bayId": "bay_a1b2c3d4e5f6",
@@ -87,161 +74,1928 @@
             {
               "bayId": "bay_a1b2c3d4e5f6",
               "serviceId": "svc_premium",
-              "available": false
+              "available": true
             },
             {
               "bayId": "bay_f6e5d4c3b2a1",
               "serviceId": "svc_auxiliary",
-              "available": true
+              "available": false
             }
-          ]
+          ],
+          "stationSignature": "MEQCIDRzJnuqRRbY4IwdeAX/pP+ajdHnQw2I+QEfxsenbDKuAiAD0siOY72i5e4weFlUtWXpoZJC2Er7K/i2eqEjeXYFeA=="
         },
-        "wireBase64": "eyJ0eXBlIjoiQ2hhbGxlbmdlIiwic3RhdGlvbk5vbmNlIjoiZW9RVGQwRm9PYmtvb29GNmg5bWx5eXlBUnYrczlPalRiaHlocDJBK25XUT0iLCJzdGF0aW9uQ29ubmVjdGl2aXR5IjoiT2ZmbGluZSIsInN0YXRpb25DZXJ0Ijp7InN0YXRpb25JZCI6InN0bl9iNjhlYzE1MzMwYzYiLCJvcmdhbml6YXRpb25JZCI6Im9yZ19mMTA3MTc0MDQ3NjRkZjYyIiwic3RhdGlvblB1YktleSI6IkE0dU5pdUw1NEppYUhUdTc0TFZ5Z25XTlRvcnpERjJVMnBCWmFXMDg1SEQ5IiwiaXNzdWVkQXQiOiIyMDI2LTAyLTEzVDEwOjAwOjAwLjAwMFoiLCJleHBpcmVzQXQiOiIyMDI2LTAzLTE1VDEwOjAwOjAwLjAwMFoiLCJzaWduYXR1cmVBbGdvcml0aG0iOiJFQ0RTQS1QMjU2LVNIQTI1NiIsInNpZ25hdHVyZSI6Ik1FVUNJUUNucXVUK3MvZzZlMTF6TkJ6Z1I3VWhtSzRmNDJGUVZySXVUTHdRR0laTUVnSWdUSVlDWkZSZnFtUXk5R3Y0cDkyMTZveFQzMVVFQkY0M0NpSU8vVENURWNVPSJ9LCJzdGF0aW9uRXBoZW1lcmFsUHViS2V5IjoiQTl0VDFPbEhDNGpUdVpWWThZa1FBZDFmN0tyL25LaHZueEkrN1ZRdDBIa1kiLCJhdmFpbGFibGVTZXJ2aWNlcyI6W3siYmF5SWQiOiJiYXlfYTFiMmMzZDRlNWY2Iiwic2VydmljZUlkIjoic3ZjX2Jhc2ljIiwiYXZhaWxhYmxlIjp0cnVlfSx7ImJheUlkIjoiYmF5X2ExYjJjM2Q0ZTVmNiIsInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwiYXZhaWxhYmxlIjpmYWxzZX0seyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEiLCJzZXJ2aWNlSWQiOiJzdmNfYXV4aWxpYXJ5IiwiYXZhaWxhYmxlIjp0cnVlfV19",
-        "wireByteLength": 804
+        "wireBase64": "eyJ0eXBlIjoiQ2hhbGxlbmdlIiwiYmxlVmVyc2lvbiI6IjAuMy4wIiwic3RhdGlvbk5vbmNlIjoiZW9RVGQwRm9PYmtvb29GNmg5bWx5eXlBUnYrczlPalRiaHlocDJBK25XUT0iLCJzdGF0aW9uRXBoZW1lcmFsUHViS2V5IjoiQTl0VDFPbEhDNGpUdVpWWThZa1FBZDFmN0tyL25LaHZueEkrN1ZRdDBIa1kiLCJzdGF0aW9uQ2VydGlmaWNhdGUiOiJNSUlDRnpDQ0FiNmdBd0lCQWdJQ0NnRXdDZ1lJS29aSXpqMEVBd0l3TXpFU01CQUdBMVVFQ2d3SlQxTlFVQ0JVWlhOME1SMHdHd1lEVlFRRERCUlBVMUJRSUZSbGMzUWdVM1JoZEdsdmJpQkRRVEFlRncweU5qQXhNREV3TURBd01EQmFGdzB5TmpFeU16RXlNelU1TlRsYU1Dc3hFakFRQmdOVkJBb01DVTlUVUZBZ1ZHVnpkREVWTUJNR0ExVUVBd3dNYzNSdVgyRXhZakpqTTJRME1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRXZXNXhWckZVUHFiU1ZndXJla0VGR1UydkVkQW5PS2lKenp4Y21aY2EzL3NiRTRlLzg1K3QrZDN1SWJSR3NyaWhOVUpvL0hQZi90NlluTTF3OHlUYmNLT0J5VENCeGpBTUJnTlZIUk1CQWY4RUFqQUFNQTRHQTFVZER3RUIvd1FFQXdJSGdEQW9CZ05WSFNVRUlUQWZCZ2dyQmdFRkJRY0RBZ1lUYWRhdTFmVENsOUtPbTVHQ3hmdjF6L3FzWXpBOEJnTlZIUjhFTlRBek1ER2dMNkF0aGl0b2RIUndPaTh2WTNKc0xtOXpjSEF0ZEdWemRDNXBiblpoYkdsa0wzTjBZWFJwYjI0dFkyRXVZM0pzTUIwR0ExVWREZ1FXQkJRZXNQZDJJODlGcVV3YXYxSG5JNk1NRnUvd1BqQWZCZ05WSFNNRUdEQVdnQlFYeHdFYUR3Q3FBUkRiOTJWZ0gxODBNa3ZHV0RBS0JnZ3Foa2pPUFFRREFnTkhBREJFQWlCL250YWNmZjRBa3BvQ0ZlRzM2YmUzT1BxL1NuUzM2WXg0SjAreHlENlMxd0lnVDJDcjYxMld2NUJwV2RlWGFlODBoZ09wdlJQdmNaOVVRQ3M0MVQyZUZTST0iLCJzdGF0aW9uQ29ubmVjdGl2aXR5IjoiT2ZmbGluZSIsImF2YWlsYWJsZVNlcnZpY2VzIjpbeyJiYXlJZCI6ImJheV9hMWIyYzNkNGU1ZjYiLCJzZXJ2aWNlSWQiOiJzdmNfYmFzaWMiLCJhdmFpbGFibGUiOnRydWV9LHsiYmF5SWQiOiJiYXlfYTFiMmMzZDRlNWY2Iiwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJhdmFpbGFibGUiOnRydWV9LHsiYmF5SWQiOiJiYXlfZjZlNWQ0YzNiMmExIiwic2VydmljZUlkIjoic3ZjX2F1eGlsaWFyeSIsImF2YWlsYWJsZSI6ZmFsc2V9XSwic3RhdGlvblNpZ25hdHVyZSI6Ik1FUUNJRFJ6Sm51cVJSYlk0SXdkZUFYL3BQK2FqZEhuUXcySStRRWZ4c2VuYkRLdUFpQUQwc2lPWTcyaTVlNHdlRmxVdFdYcG9aSkMyRXI3Sy9pMmVxRWplWFlGZUE9PSJ9",
+        "wireByteLength": 1308,
+        "signedContentHex": "202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020204f53505020424c452073746174696f6e2c204368616c6c656e6765207369676e61747572650037fc396be921df7b789b2cd7ad8a55c14d922088e3a6f2c6b856e13be871a0e2",
+        "stationSignatureLowS": true
+      },
+      "gate": {
+        "at": "2026-02-13T10:00:00.000Z",
+        "ok": true,
+        "stationId": "stn_a1b2c3d4"
       },
       "transcript": {
         "construction": "SHA-256( U16BE(len(helloWire))‖helloWire ‖ U16BE(len(challengeWire))‖challengeWire )",
-        "transcriptHashHex": "04b27faa51dbf1dcb69b9f3e4bd1b6d5bf08a81dfc58b38402b92c36c5c81d15"
+        "transcriptHashHex": "c9a8f448f73e10b8e73bb0fa733d20b005768c55acdc8085e849874373faf8af",
+        "transcriptHashBase64": "yaj0SPc+ELjnO7D6cz0gsAV2jFWs3ICF6EmHQ3P6+K8="
       },
       "ecdh": {
-        "esHex": "416a6d669617e53b287d54dbf861585c0fb10f928ff0a97c25c4b27005f056a7",
         "eeHex": "1af3bb6fca84095a06c48372556e43b002142021da808e4f2a8a88ddf61bbb01",
-        "note": "es = ECDH(appEphemeralPriv, stationStaticPub); ee = ECDH(appEphemeralPriv, stationEphemeralPub); X-only, 32B, left-padded (Pin 1)"
+        "note": "ee = ECDH(appEphemeralPriv, stationEphemeralPub) = ECDH(stationEphemeralPriv, appEphemeralPub); X-only, 32B, left-padded (Pin 1)"
       },
       "keySchedule": {
-        "ikmHex": "416a6d669617e53b287d54dbf861585c0fb10f928ff0a97c25c4b27005f056a71af3bb6fca84095a06c48372556e43b002142021da808e4f2a8a88ddf61bbb01cb16364508b27e66f2c46c30774aceec7e6efceeb1de6cb52c9f151a2729499e7a841377416839b928a2817a87d9a5cb2c8046ffacf4e8d36e1ca1a7603e9d64",
-        "saltUtf8": "OSPP_BLE_SESSION_V2",
-        "infoHex": "00206437653866396130623163326433653466356136623763386439653066316132002004b27faa51dbf1dcb69b9f3e4bd1b6d5bf08a81dfc58b38402b92c36c5c81d15",
-        "infoNote": "LP(deviceId)‖LP(transcriptHash); LP(x)=U16BE(len)‖x (Pin 3)",
-        "sessionKeyHex": "f9cbf4eeeb75e68223c9a5173bae15977225058955efabc775be94a01d50de61",
-        "sessionKeyBase64": "+cv07ut15oIjyaUXO64Vl3IlBYlV76vHdb6UoB1Q3mE=",
-        "kAppToStationHex": "57934130495b6bd91b7b2ec0a15839ae8565a15883c5621d9c081563457037f6",
-        "kStationToAppHex": "d7335630365ecd9d82bf7188dd21552547e4e2497684f920090671e94514106c",
-        "sessionKeyConfirmationBase64": "8+XKsvp2Jem04ka4lthHBBQ2KfXTbWyaxI3HMVMM77Q="
+        "ikmHex": "1af3bb6fca84095a06c48372556e43b002142021da808e4f2a8a88ddf61bbb01cb16364508b27e66f2c46c30774aceec7e6efceeb1de6cb52c9f151a2729499e7a841377416839b928a2817a87d9a5cb2c8046ffacf4e8d36e1ca1a7603e9d64",
+        "saltUtf8": "OSPP_BLE_SESSION_V3",
+        "infoHex": "0020c9a8f448f73e10b8e73bb0fa733d20b005768c55acdc8085e849874373faf8af",
+        "infoNote": "LP(transcriptHash); LP(x)=U16BE(len)‖x (Pin 3)",
+        "sessionKeyHex": "59de037e348dc9919f969d07fea1e66a7481849f76983172d3bb5d63cf3286b5",
+        "sessionKeyBase64": "Wd4DfjSNyZGflp0H/qHmanSBhJ92mDFy07tdY88yhrU=",
+        "kAppToStationHex": "d2cda0736a6e265030c9644c57141d2b29d28e701d6adb9aa16064f7990d6f81",
+        "kStationToAppHex": "ccac9b8c018ee12f6197deb3a430fff53a90914d1b81d7b85a0ce79bdc88010e",
+        "sessionKeyConfirmationBase64": "EPP8TIv6DlbL7z5GvZ5Sf/xi0zOc3DzYBMXqJ2P4gK8="
       },
       "sessionProof": {
         "passId": "opass_e4d3c2b1a0f9e8d7c6b5",
         "counter": 7,
         "messageHex": "00124f66666c696e654175746852657175657374001a6f706173735f6534643363326231613066396538643763366235000137",
-        "sessionProofBase64": "952XYMHgSAxA5pb4Vzkif5Eima1j6N2m1GKnn/sQmiY=",
+        "sessionProofBase64": "2ttaDVpESMgBhhibcktbvS/GzmMT4Lskk7eoqCn1Oaw=",
         "note": "HMAC-SHA256(SessionKey, LP(\"OfflineAuthRequest\")‖LP(passId)‖LP(decimal(counter))) (§6.5.1)"
+      },
+      "deviceProof": {
+        "deviceId": "d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2",
+        "devicePublicKey": "Ak1wIBZUEjiPnqJJaQEVkUCxNdBSRFuiqdMMyNeXWK5U",
+        "stationId": "stn_a1b2c3d4",
+        "request": {
+          "passId": "opass_e4d3c2b1a0f9e8d7c6b5",
+          "counter": 7,
+          "bayId": "bay_a1b2c3d4e5f6",
+          "serviceId": "svc_basic",
+          "requestedDurationSeconds": 300
+        },
+        "proofInputHex": "00184f53505020424c45206465766963652070726f6f662076310020c9a8f448f73e10b8e73bb0fa733d20b005768c55acdc8085e849874373faf8af000c73746e5f6131623263336434001a6f706173735f653464336332623161306639653864376336623500013700106261795f61316232633364346535663600097376635f62617369630003333030",
+        "proof": {
+          "format": "android-key",
+          "signature": "MEQCIHy3mCn7p/2/IvZ4z/P4ypgAit414qRMxB0obXIuJ3TNAiAuomdYYnhaN2A5c7Ta3zZoGGfYEWe9W6JouU9F40auZg=="
+        },
+        "signatureLowS": true
       },
       "aeadFrames": [
         {
           "direction": "app->station",
           "keyRef": "kAppToStation",
           "counter": 0,
+          "characteristic": "FFF3",
           "nonce96Hex": "000000000000000000000000",
           "aad": "transcriptHash",
-          "aadHex": "04b27faa51dbf1dcb69b9f3e4bd1b6d5bf08a81dfc58b38402b92c36c5c81d15",
-          "plaintextUtf8": "{\"type\":\"OfflineAuthRequest\",\"offlinePass\":{\"passId\":\"opass_e4d3c2b1a0f9e8d7c6b5\",\"sub\":\"sub_premiumUser42XyZ\",\"deviceId\":\"d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2\",\"devicePublicKey\":\"Ak1wIBZUEjiPnqJJaQEVkUCxNdBSRFuiqdMMyNeXWK5U\",\"keyId\":\"YjX5pR0TzmU3ubs17wImQQ\",\"issuedAt\":\"2026-02-12T14:30:00.000Z\",\"expiresAt\":\"2026-02-13T14:30:00.000Z\",\"policyVersion\":3,\"revocationEpoch\":2,\"offlineAllowance\":{\"maxTotalCredits\":2000,\"maxUses\":20,\"maxCreditsPerTx\":500},\"constraints\":{\"minIntervalSec\":60},\"signatureAlgorithm\":\"ECDSA-P256-SHA256\",\"signature\":\"MEQCIHoH4TWiuBQYEX7rD1zv56aiaafIR0wRzjGR8xrHrwQLAiAgAoy6nFpGQjExd9RcVOeGaUgPYtFbJhJUjRSDI+/KtA==\"},\"counter\":7,\"sessionProof\":\"952XYMHgSAxA5pb4Vzkif5Eima1j6N2m1GKnn/sQmiY=\"}",
+          "plaintextUtf8": "{\"type\":\"OfflineAuthRequest\",\"offlinePass\":{\"passId\":\"opass_e4d3c2b1a0f9e8d7c6b5\",\"sub\":\"sub_premiumUser42XyZ\",\"deviceId\":\"d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2\",\"devicePublicKey\":\"Ak1wIBZUEjiPnqJJaQEVkUCxNdBSRFuiqdMMyNeXWK5U\",\"keyId\":\"YjX5pR0TzmU3ubs17wImQQ\",\"issuedAt\":\"2026-02-12T14:30:00.000Z\",\"expiresAt\":\"2026-02-13T14:30:00.000Z\",\"policyVersion\":3,\"revocationEpoch\":2,\"offlineAllowance\":{\"maxTotalCredits\":2000,\"maxUses\":20,\"maxCreditsPerTx\":500},\"constraints\":{\"minIntervalSec\":60},\"signatureAlgorithm\":\"ECDSA-P256-SHA256\",\"signature\":\"MEQCIHoH4TWiuBQYEX7rD1zv56aiaafIR0wRzjGR8xrHrwQLAiAgAoy6nFpGQjExd9RcVOeGaUgPYtFbJhJUjRSDI+/KtA==\"},\"counter\":7,\"bayId\":\"bay_a1b2c3d4e5f6\",\"serviceId\":\"svc_basic\",\"requestedDurationSeconds\":300,\"sessionProof\":\"2ttaDVpESMgBhhibcktbvS/GzmMT4Lskk7eoqCn1Oaw=\",\"deviceProof\":{\"format\":\"android-key\",\"signature\":\"MEQCIHy3mCn7p/2/IvZ4z/P4ypgAit414qRMxB0obXIuJ3TNAiAuomdYYnhaN2A5c7Ta3zZoGGfYEWe9W6JouU9F40auZg==\"}}",
           "frame": {
             "n": 0,
-            "ct": "gModbJI3+5NJY9Oqe6BGwX3dr2pq4/ICaVebMByHUJQFmrNJs/6HtpaysZ9RfKYpGuzWJ1ALuJqtohKWx+eoC5rU2WkF97+lQ2WRwt5YayDtK5KIvnTKP+cr2iRjeVw4uiiCzwPyzaRgSOvrU2D/SsiJZ63MvwGTEpYBdjCEkcfc/jvRBsiRMjsb8bFq/7mpMkiX8NMy+ryA53tLkUbmkOeeZkuF/9b9HhW4kSVU4T76XSSF7WTf1pKZfz0cPRG8eESJOaQ2Zat9sgw7f9d/YIGhIC/2BvE5E7GSI98BLI30NZlfNFD913M0m18nveFZGc7/Tod8PnNACDofGK9dQmqLWeSBGIOmFnemCMaEmXlUhdlPKVvo6Xi0sYCbtRUETCs5r/ffjwt5KmCTLMTNMsYiOJ0CHDoFrb1alL1O7pbh9jiU8a5W7OpVmZy9zrDUh7utKad8FzSnWRysPwxYv8c98R8TujE6mZiHSPbXxxlpEy/nW4gOEc7u5Yd/HRZjxPqYW05YZeQmZEPpuHC8H5X+oTvbDhBaD1wIazjFarBSuv0nC98duPXLDM5V/bF6TplGb5q7xd5gAy4Pd+71Hh1GjPgtRaJWEUvWUCOAQbxsuo3pr9IhJwTFqq5zv4TlqVeWJ0cx2tB73C5RFX1g88RDZlg9dvboxPHttXqN4py5jCL7NzePAaIm4soikPpUNc9reiIkYNXlD9umBCh5uVoRU8o7dcX7P0k0hl3ZmQklP2iPtytp0f9JuNWVXEw6lFSd4Dv0LfTYQJyOl6c0T8SQcQZr3uGZFcV34bcUgjjtOrwAnIqYTRYzQhyv78Vm8+IQBXV9S8uqpfd2j8w7AtD+WNqEcqsibtJLGZGhIxNgpp1O4xKgPIEs3CHfUsmkGm8ovknTMpBUVsvoyQpHDKEUcPwXzM6wKTK9WFE1PTHqfDkIBtEjiB8C8n2TKh9SC/0WJg2/+QM="
+            "ct": "4AbXv1z4XSbsugQ6+PbmNeVDfsLScMdKgYrp3QHEpkcM4sxMzam0d2l8H9+kcrstSWq+FaXgPdkGfxuoC/sZGPRNSNhFAZqg3I1z+Uvs57zIxbQpaewU55y8Rx9Hqe0dFB9xNV8TS78do4GUm1rgV+dMd121gtP5CPf/7yk37XUR6A0YMyv2La87HDw6+c/SgHf94W8MiMBCP+NNs+xTRjqj0UhmXxvntMvwIxX1JRfgf+I548cFw+FAKj3/oTMzn+bo/0HWvyE972XYLButA/Q7fO/VDmIMIG7JcwvOUHHhDDVZqyegBzUBqkroF71kbKQicZ/B4Z7ad7pHQmqqP7z+8a0ZNjK4G7zC8/owLjBog26XWNE4KXVNSgAmZJaffnYKTGLjTXWV7dB/Tp/2EvMvjyKqMpNR4USKgxgB6TaMxyYi8xwtuqHz81FmFxZM6tPIkF2gO57C1OGx5LDImLqTrjzwrA+v9kd9f88ZjQ/1nUjdCUtCE9prQVge/VSxWq9H6haQKORGxlXz6TGB/OES7taGBzTATmwT4i3M2YyDSTKCkAVM9lWucC8n3u0lARpHjLJNK0I+EUgovgLCFgC5GhxNoEjOEhdZ7GktqC/eU4MXZx+41A/LWdE9IkLh6h0m+uJk/UjKW9vDi9Rah+h4868uFb3HCSGsJJZY3diV9kW0DOcr/516VJalxstdYJ2XU+wat7oXNW46n65x4BsfCxwF8noqBAZq+09DmETEu6Smi2n6lFY0UYs/yILZfzp9oiYG7JcP9xhbnyO861Ea0VVhA/sJAxhnPjRYuJWpp8Ra1GR2VmWzr4m5kGYChewF3VskpFR58q/hxllZOViZx8vuheTfSRVL414hn4pEKu9W/vRnS9YGs+oyZC8dllBDRmmkfrw1MsJs1UmqqnMEiK7VECk0h7Qfeci7c5NVooxHpkhabhCuKfnUAdUvQI/4Jgu8uV7q49w1tayG2SS4Kb2hqYMXvJEPcqnMZleEbeVOG+osUzvBO6ocDI+J3+0BowUgLfBFjjfMgMEreZICYfdMdeKgJXDJjoG5ok4Ijcs/+O/5nfV2IJr4aFqJU8pBX4JeW0UYiBcYHjUqeckH2BuGGHU0U0Uu3tOlH/gdEGk8GpLjYxejyJ0ETXdSIp2cGMIbTlNZglP52l/M//jNmbBMnJKSC1upcfm94mR1bqwRJ0uzK7Ay/IlxDtYtqzMe7+DZQ3+58gERlWSIplnocVATo6cL6m7ovlApQ4rkvmRTBCv6Mq97tzmHOv8I"
           }
         },
         {
           "direction": "station->app",
           "keyRef": "kStationToApp",
           "counter": 0,
+          "characteristic": "FFF4",
           "nonce96Hex": "000000000000000000000000",
           "aad": "transcriptHash",
-          "aadHex": "04b27faa51dbf1dcb69b9f3e4bd1b6d5bf08a81dfc58b38402b92c36c5c81d15",
-          "plaintextUtf8": "{\"type\":\"AuthResponse\",\"result\":\"Accepted\",\"sessionKeyConfirmation\":\"8+XKsvp2Jem04ka4lthHBBQ2KfXTbWyaxI3HMVMM77Q=\"}",
+          "plaintextUtf8": "{\"type\":\"AuthResponse\",\"result\":\"Accepted\",\"sessionKeyConfirmation\":\"EPP8TIv6DlbL7z5GvZ5Sf/xi0zOc3DzYBMXqJ2P4gK8=\"}",
           "frame": {
             "n": 0,
-            "ct": "k/fkvOSWVrR7goH296n/nI1qIP1ILg2st2W87BO0oKgO7UFeNq8xaWHRDKqAze/eosQh0vMkyCU90Mz4KG2d59e31xh0eJ3x66Zjvce7FVBSA1o7P1Tk+CMVo5txnHoaB6AJCsGAegTHnOJO91MCWrDKUGiSyw9AU/k0Ws8l8sOi9ms="
+            "ct": "AdqJCfgizBijCsJW0DHv2Q4g8bCn1uZwsWCd5bmoMGm/8HonFGjgNuA1b78nHYBh6Jj7shHSdXarJbxB59a6jwHmeaUfjuQLlIFzA5QeejjMq+vzmZDJRYrtPtiaVWmLnym+FZHZeipy7Jn2nBWve0W13Z7X16PmXWenMmNEmWREGKs="
+          }
+        },
+        {
+          "direction": "app->station",
+          "keyRef": "kAppToStation",
+          "counter": 1,
+          "characteristic": "FFF3",
+          "nonce96Hex": "000000000000000000000001",
+          "aad": "transcriptHash",
+          "plaintextUtf8": "{\"type\":\"StartServiceRequest\",\"bayId\":\"bay_a1b2c3d4e5f6\",\"serviceId\":\"svc_basic\",\"requestedDurationSeconds\":300}",
+          "frame": {
+            "n": 1,
+            "ct": "5uWurKOX9v/lHIxGYp9xLZxSmvDQITxbuhsSa/4HJ41eNs0NAKp1QGBGfKrVqIhCN2KNUmYH3yF/L4sV8RjXQwBZ7wipiqVJDGGji1xQy/I5kJflKrDO2PXdBSWfd8fKnSjKcIsE+vAdx34R6f6agnFX13xWYuHn4TH+iCeEqog="
+          }
+        },
+        {
+          "direction": "station->app",
+          "keyRef": "kStationToApp",
+          "counter": 1,
+          "characteristic": "FFF4",
+          "nonce96Hex": "000000000000000000000001",
+          "aad": "transcriptHash",
+          "plaintextUtf8": "{\"type\":\"StartServiceResponse\",\"result\":\"Accepted\",\"sessionId\":\"sess_1a80b51e926554da\",\"offlineTxId\":\"otx_fe437960b2298eaa\"}",
+          "frame": {
+            "n": 1,
+            "ct": "QSTwhYUIbjf64PLrUUZRP9CqD7KhltkUQL0aCe38PPnhKywi1Q4Upg04YtQ89iFgtW+TMXjbbQm4FR5YVQ2DtfEljnVL373c8j8yTzwpZLYeAnLRlFJgvKSgBmapAjgaFK9yIJ8s/IWq0k+IdvOA1/KTE7Q9oCVwK/cz4DRW2Y0Imq14UEQ1oMhr4b0="
+          }
+        },
+        {
+          "direction": "station->app",
+          "keyRef": "kStationToApp",
+          "counter": 2,
+          "characteristic": "FFF5",
+          "nonce96Hex": "000000000000000000000002",
+          "aad": "transcriptHash",
+          "plaintextUtf8": "{\"bayId\":\"bay_a1b2c3d4e5f6\",\"status\":\"ReceiptReady\",\"sessionId\":\"sess_1a80b51e926554da\",\"elapsedSeconds\":300,\"remainingSeconds\":0}",
+          "frame": {
+            "n": 2,
+            "ct": "FQux7R0KR/9yntUixZXV0VMbQd0fUZSws0robx3gmfXZjbhJcy/fTybF9/7eW+tF5RxD6PvGbNUIoOvlpn8Hdzgsr55VG92SuWJyR3u7UvB19YIZHn582UhHFUboTp2pHHmWg+h9Yl2ETmwShiCB0JjjOjP8uAOr+OxTELxd604Xjvrewli6urVz53hXHpQE8l4="
+          }
+        },
+        {
+          "direction": "app->station",
+          "keyRef": "kAppToStation",
+          "counter": 2,
+          "characteristic": "FFF6",
+          "nonce96Hex": "000000000000000000000002",
+          "aad": "transcriptHash",
+          "plaintextUtf8": "{\"type\":\"ReceiptRequest\",\"sessionId\":\"sess_1a80b51e926554da\"}",
+          "frame": {
+            "n": 2,
+            "ct": "9Nmc3nvM9tc8dmc4KxM+YqKOnffIco4lgbl3Fug133tEqdOcmnth9In/VHEtuVkPPCuz7iLzo7dtw0FYlMQaaUKImtxqYqxXqIn4lPI="
+          }
+        },
+        {
+          "direction": "station->app",
+          "keyRef": "kStationToApp",
+          "counter": 3,
+          "characteristic": "FFF6",
+          "nonce96Hex": "000000000000000000000003",
+          "aad": "transcriptHash",
+          "plaintextUtf8": "{\"type\":\"ReceiptResponse\",\"result\":\"Accepted\",\"receipt\":{\"offlineTxId\":\"otx_fe437960b2298eaa\",\"offlinePassId\":\"opass_e4d3c2b1a0f9e8d7c6b5\",\"passCounter\":7,\"userId\":\"sub_premiumUser42XyZ\",\"deviceId\":\"d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2\",\"bayId\":\"bay_a1b2c3d4e5f6\",\"serviceId\":\"svc_basic\",\"startedAt\":\"2026-02-13T10:00:00.000Z\",\"endedAt\":\"2026-02-13T10:05:00.000Z\",\"durationSeconds\":300,\"creditsCharged\":50,\"txCounter\":1,\"receipt\":{\"data\":\"eyJiYXlJZCI6ImJheV9hMWIyYzNkNGU1ZjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjMwMCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjo1MCwiZGV2aWNlSWQiOiJkN2U4ZjlhMGIxYzJkM2U0ZjVhNmI3YzhkOWUwZjFhMiIsImR1cmF0aW9uU2Vjb25kcyI6MzAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xM1QxMDowNTowMC4wMDBaIiwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDdjNmI1Iiwib2ZmbGluZVR4SWQiOiJvdHhfZmU0Mzc5NjBiMjI5OGVhYSIsInBhc3NDb3VudGVyIjo3LCJzZXJ2aWNlSWQiOiJzdmNfYmFzaWMiLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDEwOjAwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJ0eENvdW50ZXIiOjEsInVzZXJJZCI6InN1Yl9wcmVtaXVtVXNlcjQyWHlaIn0=\",\"signature\":\"MEUCIQCUMKQmASlNC7q4BguSNDZ7Z1ACudQR2buCkrUAykD7TwIgMYhcRNDgLh9w/KpKcxOYg+1Jbz6O4D1LEsh1wxJbVOY=\",\"signatureAlgorithm\":\"ECDSA-P256-SHA256\"}}}",
+          "frame": {
+            "n": 3,
+            "ct": "hJHnvawGcbLsBqMYSzbLdc5RSVvw+qOop0xWtjxpUZBJtwnou8tRwwLZeY4tMKakk+K+LBS6z3ZMqIogw8vlqPuZXiEHdsPS7WVYdTgmNQzC1+7ALEI+WJnlSYFnqLyZUGJfKsQHM2ItpZRFCbKcmyuy9mKfVuNM2EzV+u2slSUZ+3VyUQKHGU8XvXHHycV32kyhqf26DKC6CLftvrTQzO8XiP/NEHViHA+zG4+0jn7aavdcJ6FjWWqi+9QYS8rSRY8/yt1ZGFCK7UNTAXRAYcNWmOPCh0DVAxzHIJ5/8iIU++s+X9jccNJsNVble9J9Gy4ycHqqosntxA7rXRQ4o49u7fZiJdpVfYEKdeGIY8nRukx7UdIN/gxnnsWfJlhrd9yzIWisZcPZ4rdzghKxJOPKRrKNTyqitigOzittsnSmhr8qsVsn2pcbG2Fwnxqfn0+v55X0SN7l3c6afKFBb27jkOVdmDk7sARUDQmm1rc4TO5+RYgSfiUbTNL6PX5Ygg64t27gRmU58RJAQzf76Pn28bK5G7NlHAbAMwUcN7gnSCT+lAWxl7NdrUVdStLUVsw88dxXaP/04/tMqLdqsLfZO2BjZ8hYsKH9xX7XITQJ8K+u0Hv/1t+KAjq5vOXQhxMCyJkjuRgeuyVtxlFTqkaA9FSAQo4RaN0MN7rm7wjJwtfQ2lxaDTToHHeBZqOwlb4v2YM227CGpWdSenntVf9Z3nIQx0s53i/V0QXXGjZ38HvnyegqWaDtebdBqjVW+yL8GqvnuyfRe4AzoLAArjFKSj8zGOa73AesgKqbwoIZEMCX7LSGx4jmFjfyG/Q31Mf8l/+HVvGvMG0FdhB4teCLqDPsVg/q+vjNsptur8ghSV5sb0HUKik0B71v9wKZ4XiVEtxdw1PWDWsQwErdkk/Wv8XLveymb4O6yZuhr1b4V9WowYu74L/xAaM+YFaktfE/fL1rhr0hHOLPKQmVs133oHYmkcKazkxLTApnsBYWsgMQWltV2B9Zp8qFcFLbY5V/gZzScXmW2LyTYQo9pElXnVKjcV89ijsssOSuxMPDa6ImZq2D8WbDLnwze2W0CYHKxnfXX+P4sQajk8DEV2TeqIdsEuKlWqkYm9Gc2KCs5XGrUNYc3wOA5xbnLPI+TdxXAxofzRm6Vsow2sGQl8rvVh9lWyMkI6+jS/ec2v2+IJjd5yC8hZ56cGCOmpDToUVFLYwzIlkZ0JWods2wPzSBxyrbBY6FnEM9uV0ggJem/MX3KbDMgVdps4L0XjO/hAf0lkjqK/SnWhBXxwHMyE0J2Vkj89JLMCeH9YdPLBTMxjfys03/tR86l7mZa/XdjASc90rR27mA0fjr7ZClIyzPYmUkip/Okc8dkpGiMUL6L4vhEIUMr77xkD5grIuipR3O2uktB2mrpxUwGK4c4ftGYtwkdk03sBEQCRk94+lKK2DvAKALhFnPlY0qZavkUjDbO9HS92vFvHUnj1hGg17f4Ozm6saVQFMV1N1S2uw1GptUWstYrWqCuywIEy8Az5RnZ0q7QkHBWxZPX1s/jWXVuChkcDD5PCnrrUcQ2oEYA+XKuTTwlKPZJPChbdMzDREiU6EJFv7ZG1FegdjpwwAlPmrqFbqXCw24/PqtE3IVLhc="
           }
         }
       ]
     },
     {
       "scenario": "minimal",
+      "stationConnectivity": "Online",
+      "keys": {
+        "appEphemeral": {
+          "label": "OSPP_BLE_APP_EPH_MINIMAL_V1",
+          "privateKeyHex": "6c0f0b7fa80f57697a27075954413f107f1fca8a7989b3ca1b6ee5bee7332a1e",
+          "publicKeyCompressedBase64": "Aukr6rsx+Awya9X7RtdexB+xIEJMNHLw7Ps2Z5zUZS2a",
+          "publicKeyUncompressedHex": "04e92beabb31f80c326bd5fb46d75ec41fb120424c3472f0ecfb36679cd4652d9acdce0faf35579c2da27ae4c7ed3418befd439988aa64eaf6cc232aad1c751e82"
+        },
+        "stationEphemeral": {
+          "label": "OSPP_BLE_STATION_EPH_MINIMAL_V1",
+          "privateKeyHex": "88c4e20d219ed1a5a8a82bcd6a601d46d345f40c72e033b14db03895c7cd57c7",
+          "publicKeyCompressedBase64": "A/L8+I3WLIy9eoibSZfFg+QPG/aIjqzvi8HrmbN9VboQ",
+          "publicKeyUncompressedHex": "04f2fcf88dd62c8cbd7a889b4997c583e40f1bf6888eacef8bc1eb99b37d55ba10023b0d938c0bd3360d85cb1fc4f7ecb8fc09dc28142671c01b05385893479b91"
+        }
+      },
       "hello": {
         "message": {
           "type": "Hello",
-          "deviceId": "d7e8f9a0b1c2d3e4f5a6b7c8",
+          "bleVersions": [
+            "0.3.0"
+          ],
           "appNonce": "1sgvi5LS4ckBKmGZBOkcAUN4KqecimX1kuZ9lR923jI=",
           "appVersion": "1.0.0",
           "appEphemeralPubKey": "Aukr6rsx+Awya9X7RtdexB+xIEJMNHLw7Ps2Z5zUZS2a"
         },
-        "wireBase64": "eyJ0eXBlIjoiSGVsbG8iLCJkZXZpY2VJZCI6ImQ3ZThmOWEwYjFjMmQzZTRmNWE2YjdjOCIsImFwcE5vbmNlIjoiMXNndmk1TFM0Y2tCS21HWkJPa2NBVU40S3FlY2ltWDFrdVo5bFI5MjNqST0iLCJhcHBWZXJzaW9uIjoiMS4wLjAiLCJhcHBFcGhlbWVyYWxQdWJLZXkiOiJBdWtyNnJzeCtBd3lhOVg3UnRkZXhCK3hJRUpNTkhMdzdQczJaNXpVWlMyYSJ9",
-        "wireByteLength": 201
+        "wireBase64": "eyJ0eXBlIjoiSGVsbG8iLCJibGVWZXJzaW9ucyI6WyIwLjMuMCJdLCJhcHBOb25jZSI6IjFzZ3ZpNUxTNGNrQkttR1pCT2tjQVVONEtxZWNpbVgxa3VaOWxSOTIzakk9IiwiYXBwVmVyc2lvbiI6IjEuMC4wIiwiYXBwRXBoZW1lcmFsUHViS2V5IjoiQXVrcjZyc3grQXd5YTlYN1J0ZGV4Qit4SUVKTU5ITHc3UHMyWjV6VVpTMmEifQ==",
+        "wireByteLength": 187
       },
       "challenge": {
         "message": {
           "type": "Challenge",
+          "bleVersion": "0.3.0",
           "stationNonce": "d1Z/mZmaNLJ/SrntW22nb0sHNCbdMF+TsugI93zIm3k=",
+          "stationEphemeralPubKey": "A/L8+I3WLIy9eoibSZfFg+QPG/aIjqzvi8HrmbN9VboQ",
+          "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
           "stationConnectivity": "Online",
-          "stationCert": {
-            "stationId": "stn_b68ec15330c6",
-            "organizationId": "org_f10717404764df62",
-            "stationPubKey": "A4uNiuL54JiaHTu74LVygnWNTorzDF2U2pBZaW085HD9",
-            "issuedAt": "2026-02-13T10:00:00.000Z",
-            "expiresAt": "2026-03-15T10:00:00.000Z",
-            "signatureAlgorithm": "ECDSA-P256-SHA256",
-            "signature": "MEUCIQCnquT+s/g6e11zNBzgR7UhmK4f42FQVrIuTLwQGIZMEgIgTIYCZFRfqmQy9Gv4p9216oxT31UEBF43CiIO/TCTEcU="
-          },
-          "stationEphemeralPubKey": "A/L8+I3WLIy9eoibSZfFg+QPG/aIjqzvi8HrmbN9VboQ"
+          "availableServices": [
+            {
+              "bayId": "bay_c1d2e3f4a5b6",
+              "serviceId": "svc_eco",
+              "available": true
+            }
+          ],
+          "stationSignature": "MEQCIAGrOKhyBvshGLj8xcC4wAaaFhd0LrC25e6pUbbjCeKFAiAr7cErTuBi+woI/ZjaXGkzSEn8tny0Q0fMD+ztkGTErA=="
         },
-        "wireBase64": "eyJ0eXBlIjoiQ2hhbGxlbmdlIiwic3RhdGlvbk5vbmNlIjoiZDFaL21abWFOTEovU3JudFcyMm5iMHNITkNiZE1GK1RzdWdJOTN6SW0zaz0iLCJzdGF0aW9uQ29ubmVjdGl2aXR5IjoiT25saW5lIiwic3RhdGlvbkNlcnQiOnsic3RhdGlvbklkIjoic3RuX2I2OGVjMTUzMzBjNiIsIm9yZ2FuaXphdGlvbklkIjoib3JnX2YxMDcxNzQwNDc2NGRmNjIiLCJzdGF0aW9uUHViS2V5IjoiQTR1Tml1TDU0SmlhSFR1NzRMVnlnbldOVG9yekRGMlUycEJaYVcwODVIRDkiLCJpc3N1ZWRBdCI6IjIwMjYtMDItMTNUMTA6MDA6MDAuMDAwWiIsImV4cGlyZXNBdCI6IjIwMjYtMDMtMTVUMTA6MDA6MDAuMDAwWiIsInNpZ25hdHVyZUFsZ29yaXRobSI6IkVDRFNBLVAyNTYtU0hBMjU2Iiwic2lnbmF0dXJlIjoiTUVVQ0lRQ25xdVQrcy9nNmUxMXpOQnpnUjdVaG1LNGY0MkZRVnJJdVRMd1FHSVpNRWdJZ1RJWUNaRlJmcW1ReTlHdjRwOTIxNm94VDMxVUVCRjQzQ2lJTy9UQ1RFY1U9In0sInN0YXRpb25FcGhlbWVyYWxQdWJLZXkiOiJBL0w4K0kzV0xJeTllb2liU1pmRmcrUVBHL2FJanF6dmk4SHJtYk45VmJvUSJ9",
-        "wireByteLength": 564
+        "wireBase64": "eyJ0eXBlIjoiQ2hhbGxlbmdlIiwiYmxlVmVyc2lvbiI6IjAuMy4wIiwic3RhdGlvbk5vbmNlIjoiZDFaL21abWFOTEovU3JudFcyMm5iMHNITkNiZE1GK1RzdWdJOTN6SW0zaz0iLCJzdGF0aW9uRXBoZW1lcmFsUHViS2V5IjoiQS9MOCtJM1dMSXk5ZW9pYlNaZkZnK1FQRy9hSWpxenZpOEhybWJOOVZib1EiLCJzdGF0aW9uQ2VydGlmaWNhdGUiOiJNSUlDRnpDQ0FiNmdBd0lCQWdJQ0NnRXdDZ1lJS29aSXpqMEVBd0l3TXpFU01CQUdBMVVFQ2d3SlQxTlFVQ0JVWlhOME1SMHdHd1lEVlFRRERCUlBVMUJRSUZSbGMzUWdVM1JoZEdsdmJpQkRRVEFlRncweU5qQXhNREV3TURBd01EQmFGdzB5TmpFeU16RXlNelU1TlRsYU1Dc3hFakFRQmdOVkJBb01DVTlUVUZBZ1ZHVnpkREVWTUJNR0ExVUVBd3dNYzNSdVgyRXhZakpqTTJRME1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRXZXNXhWckZVUHFiU1ZndXJla0VGR1UydkVkQW5PS2lKenp4Y21aY2EzL3NiRTRlLzg1K3QrZDN1SWJSR3NyaWhOVUpvL0hQZi90NlluTTF3OHlUYmNLT0J5VENCeGpBTUJnTlZIUk1CQWY4RUFqQUFNQTRHQTFVZER3RUIvd1FFQXdJSGdEQW9CZ05WSFNVRUlUQWZCZ2dyQmdFRkJRY0RBZ1lUYWRhdTFmVENsOUtPbTVHQ3hmdjF6L3FzWXpBOEJnTlZIUjhFTlRBek1ER2dMNkF0aGl0b2RIUndPaTh2WTNKc0xtOXpjSEF0ZEdWemRDNXBiblpoYkdsa0wzTjBZWFJwYjI0dFkyRXVZM0pzTUIwR0ExVWREZ1FXQkJRZXNQZDJJODlGcVV3YXYxSG5JNk1NRnUvd1BqQWZCZ05WSFNNRUdEQVdnQlFYeHdFYUR3Q3FBUkRiOTJWZ0gxODBNa3ZHV0RBS0JnZ3Foa2pPUFFRREFnTkhBREJFQWlCL250YWNmZjRBa3BvQ0ZlRzM2YmUzT1BxL1NuUzM2WXg0SjAreHlENlMxd0lnVDJDcjYxMld2NUJwV2RlWGFlODBoZ09wdlJQdmNaOVVRQ3M0MVQyZUZTST0iLCJzdGF0aW9uQ29ubmVjdGl2aXR5IjoiT25saW5lIiwiYXZhaWxhYmxlU2VydmljZXMiOlt7ImJheUlkIjoiYmF5X2MxZDJlM2Y0YTViNiIsInNlcnZpY2VJZCI6InN2Y19lY28iLCJhdmFpbGFibGUiOnRydWV9XSwic3RhdGlvblNpZ25hdHVyZSI6Ik1FUUNJQUdyT0toeUJ2c2hHTGo4eGNDNHdBYWFGaGQwTHJDMjVlNnBVYmJqQ2VLRkFpQXI3Y0VyVHVCaSt3b0kvWmphWEdrelNFbjh0bnkwUTBmTUQrenRrR1RFckE9PSJ9",
+        "wireByteLength": 1158,
+        "signedContentHex": "202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020204f53505020424c452073746174696f6e2c204368616c6c656e6765207369676e61747572650018f3735525bff10c39f61d5dccb94394d1b5f91e30953f4e1832eb2b04289614",
+        "stationSignatureLowS": true
+      },
+      "gate": {
+        "at": "2026-02-13T10:00:00.000Z",
+        "ok": true,
+        "stationId": "stn_a1b2c3d4"
       },
       "transcript": {
         "construction": "SHA-256( U16BE(len(helloWire))‖helloWire ‖ U16BE(len(challengeWire))‖challengeWire )",
-        "transcriptHashHex": "d0566f1347080c7cd3854c8678e1b4e42720692557b8ce3a3de350b2cbeaeb07"
+        "transcriptHashHex": "b384a3210440293cd8fb7b65068ec669e56beb7027f01d6bbdd9a3386f7a928c",
+        "transcriptHashBase64": "s4SjIQRAKTzY+3tlBo7GaeVr63An8B1rvdmjOG96kow="
       },
       "ecdh": {
-        "esHex": "1787f4549f47f8a8e896467763962beb8359551bd68dd70cd57d87a808e767a0",
         "eeHex": "9f1c38ce3213b3a0622050041a0a495f50b772eb674dcdf00e7ec8d99fd45dc7",
-        "note": "es = ECDH(appEphemeralPriv, stationStaticPub); ee = ECDH(appEphemeralPriv, stationEphemeralPub); X-only, 32B, left-padded (Pin 1)"
+        "note": "ee = ECDH(appEphemeralPriv, stationEphemeralPub) = ECDH(stationEphemeralPriv, appEphemeralPub); X-only, 32B, left-padded (Pin 1)"
       },
       "keySchedule": {
-        "ikmHex": "1787f4549f47f8a8e896467763962beb8359551bd68dd70cd57d87a808e767a09f1c38ce3213b3a0622050041a0a495f50b772eb674dcdf00e7ec8d99fd45dc7d6c82f8b92d2e1c9012a619904e91c0143782aa79c8a65f592e67d951f76de3277567f99999a34b27f4ab9ed5b6da76f4b073426dd305f93b2e808f77cc89b79",
-        "saltUtf8": "OSPP_BLE_SESSION_V2",
-        "infoHex": "00186437653866396130623163326433653466356136623763380020d0566f1347080c7cd3854c8678e1b4e42720692557b8ce3a3de350b2cbeaeb07",
-        "infoNote": "LP(deviceId)‖LP(transcriptHash); LP(x)=U16BE(len)‖x (Pin 3)",
-        "sessionKeyHex": "fc08768d4557594d42aab70803410af5c3a8234f5b9ce4ad5dc9588e0091b15e",
-        "sessionKeyBase64": "/Ah2jUVXWU1CqrcIA0EK9cOoI09bnOStXclYjgCRsV4=",
-        "kAppToStationHex": "91de814882feeb5240057e1a4c85a6cbb444b49cb16ecdf69c0bfcc5bb09b20e",
-        "kStationToAppHex": "d4fc0a6b509d469adaf9e3f808d0c845ca5634fdee0b2bdd2bd7783d1ec00b05",
-        "sessionKeyConfirmationBase64": "or7D3h03SKW7WIltOGCHbRu8CODoPNuPYd6Ug/4H5iE="
+        "ikmHex": "9f1c38ce3213b3a0622050041a0a495f50b772eb674dcdf00e7ec8d99fd45dc7d6c82f8b92d2e1c9012a619904e91c0143782aa79c8a65f592e67d951f76de3277567f99999a34b27f4ab9ed5b6da76f4b073426dd305f93b2e808f77cc89b79",
+        "saltUtf8": "OSPP_BLE_SESSION_V3",
+        "infoHex": "0020b384a3210440293cd8fb7b65068ec669e56beb7027f01d6bbdd9a3386f7a928c",
+        "infoNote": "LP(transcriptHash); LP(x)=U16BE(len)‖x (Pin 3)",
+        "sessionKeyHex": "43bcb7cdf8b3264046de18b61d0fe61a8c50e6354d08b1183d96e438152f6fba",
+        "sessionKeyBase64": "Q7y3zfizJkBG3hi2HQ/mGoxQ5jVNCLEYPZbkOBUvb7o=",
+        "kAppToStationHex": "48153d39d0019e4b8090c8309095e7d95e37560a150f390e0339822b58f161b4",
+        "kStationToAppHex": "5b1707fc84ca0acb9b10e9827ee3093b5cc7cc58d6556f225bb17c63cd879183",
+        "sessionKeyConfirmationBase64": "e5a4RYrCeE6UaWVr1O6wC+WAyJd8VEf58+871Lto3uw="
       },
       "sessionProof": {
         "passId": "opass_a1b2c3d4e5f6a7b8",
         "counter": 0,
         "messageHex": "00124f66666c696e65417574685265717565737400166f706173735f61316232633364346535663661376238000130",
-        "sessionProofBase64": "taY7YFeKc4sjGgtcGriOv0rk6uJrrYONtTsxLWXu93s=",
+        "sessionProofBase64": "2rcnLzhYeBNtXqyX42qFqLU1yNbiufQEe+wIYDuDr64=",
         "note": "HMAC-SHA256(SessionKey, LP(\"OfflineAuthRequest\")‖LP(passId)‖LP(decimal(counter))) (§6.5.1)"
+      },
+      "deviceProof": {
+        "deviceId": "d7e8f9a0b1c2d3e4f5a6b7c8",
+        "devicePublicKey": "A0beUh945M53aQSA61iuiEj6c9hxJsEZS5Taj7I5qOY+",
+        "stationId": "stn_a1b2c3d4",
+        "request": {
+          "passId": "opass_a1b2c3d4e5f6a7b8",
+          "counter": 0,
+          "bayId": "bay_c1d2e3f4a5b6",
+          "serviceId": "svc_eco",
+          "requestedDurationSeconds": 60
+        },
+        "proofInputHex": "00184f53505020424c45206465766963652070726f6f662076310020b384a3210440293cd8fb7b65068ec669e56beb7027f01d6bbdd9a3386f7a928c000c73746e5f613162326333643400166f706173735f6131623263336434653566366137623800013000106261795f63316432653366346135623600077376635f65636f00023630",
+        "clientDataHashHex": "8ae0ad28f0214389bbee78383fe584dfd7158b63557ed9546620cb418328feb3",
+        "signedNonceHex": "091de932bb6120b767ab202490866e5a3bd95d66fe59965f5dfefa8c5962d1cf",
+        "proof": {
+          "format": "apple-appattest",
+          "signature": "MEUCIQD1Z1c/UAz7WcvHCXig0QgZafbf1n9PUIcvYRgrJaVc+AIgNynHOuTCpIJpFx8AUuSrgSoC/OmvB5LVTXQfreB9eBQ=",
+          "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
+        },
+        "signatureLowS": true
       },
       "aeadFrames": [
         {
           "direction": "app->station",
           "keyRef": "kAppToStation",
           "counter": 0,
+          "characteristic": "FFF3",
           "nonce96Hex": "000000000000000000000000",
           "aad": "transcriptHash",
-          "aadHex": "d0566f1347080c7cd3854c8678e1b4e42720692557b8ce3a3de350b2cbeaeb07",
-          "plaintextUtf8": "{\"type\":\"OfflineAuthRequest\",\"offlinePass\":{\"passId\":\"opass_a1b2c3d4e5f6a7b8\",\"sub\":\"sub_user1234abcdef\",\"deviceId\":\"d7e8f9a0b1c2d3e4f5a6b7c8\",\"devicePublicKey\":\"A0beUh945M53aQSA61iuiEj6c9hxJsEZS5Taj7I5qOY+\",\"keyId\":\"YjX5pR0TzmU3ubs17wImQQ\",\"issuedAt\":\"2026-02-10T08:00:00.000Z\",\"expiresAt\":\"2026-02-11T08:00:00.000Z\",\"policyVersion\":1,\"revocationEpoch\":0,\"offlineAllowance\":{\"maxTotalCredits\":500,\"maxUses\":5,\"maxCreditsPerTx\":200},\"constraints\":{\"minIntervalSec\":300},\"signatureAlgorithm\":\"ECDSA-P256-SHA256\",\"signature\":\"MEQCIDKcveVTEaaIaU0TJkUwBTMO3nU+AGFwgBnlN0s3w/RIAiAPyXNvjroFYWGQIjP+5hqbowvukOsiDn1Cgalj54kKsg==\"},\"counter\":0,\"sessionProof\":\"taY7YFeKc4sjGgtcGriOv0rk6uJrrYONtTsxLWXu93s=\"}",
+          "plaintextUtf8": "{\"type\":\"OfflineAuthRequest\",\"offlinePass\":{\"passId\":\"opass_a1b2c3d4e5f6a7b8\",\"sub\":\"sub_user1234abcdef\",\"deviceId\":\"d7e8f9a0b1c2d3e4f5a6b7c8\",\"devicePublicKey\":\"A0beUh945M53aQSA61iuiEj6c9hxJsEZS5Taj7I5qOY+\",\"keyId\":\"YjX5pR0TzmU3ubs17wImQQ\",\"issuedAt\":\"2026-02-10T08:00:00.000Z\",\"expiresAt\":\"2026-02-11T08:00:00.000Z\",\"policyVersion\":1,\"revocationEpoch\":0,\"offlineAllowance\":{\"maxTotalCredits\":500,\"maxUses\":5,\"maxCreditsPerTx\":200},\"constraints\":{\"minIntervalSec\":300},\"signatureAlgorithm\":\"ECDSA-P256-SHA256\",\"signature\":\"MEQCIDKcveVTEaaIaU0TJkUwBTMO3nU+AGFwgBnlN0s3w/RIAiAPyXNvjroFYWGQIjP+5hqbowvukOsiDn1Cgalj54kKsg==\"},\"counter\":0,\"bayId\":\"bay_c1d2e3f4a5b6\",\"serviceId\":\"svc_eco\",\"requestedDurationSeconds\":60,\"sessionProof\":\"2rcnLzhYeBNtXqyX42qFqLU1yNbiufQEe+wIYDuDr64=\",\"deviceProof\":{\"format\":\"apple-appattest\",\"signature\":\"MEUCIQD1Z1c/UAz7WcvHCXig0QgZafbf1n9PUIcvYRgrJaVc+AIgNynHOuTCpIJpFx8AUuSrgSoC/OmvB5LVTXQfreB9eBQ=\",\"authenticatorData\":\"bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ==\"}}",
           "frame": {
             "n": 0,
-            "ct": "mbwbBbB/i1OS0VZEX/PCT7jHUD6c6oHk5/gtVE7pTlxeC6h1SOY6rPvioEd7gpulruYOO0RBpzOKXt+ZcVL1JHTSQJPzquok3G4hQKCkJimhsYXDah30t0Os/No+oD0orVrszjALXfazmUhc2RnKPMuaon++BqrSNJ+4MVgiNdTMbTxeGTFrLR7ai13AYAzQG+ax1ViOKFjYb7eH0QAljgzmZ+K3rQrNRChNOLmgEYyqDgvA4bc+JLzrF1wbrjz5qEU822jYsvLPCNDuviNHakEiRGI+6INoIpNz1uRbYjZ/TogehJBuHLqCeAAvSUvc5wAo9cqigWkKgbccsTusTyJDss93dNZBR7B5okgBoCKyHnOoVrwEIqnk/afd1/cnUw1zJWsfnYDNUuKtdUBINrWNspUoMsHvn49vgEFxyb287PVAHZJyobwpm+n9VJarbFqb/fMobInPIVId724mxESh4JBCTitNhZS07iZBTMYQx6oOoTBB7hEgKnBIwpnttf1fQ0BPYsPE7pmUATYABoVpW5HM2WwtVdz78dPyclDwD8OllkxwU8rDzRNtZ1+aw33CPkG2qLounMRX1HR1MxGpoE96NzjK6Q7wY0ntmK9gjNpiOT59pYcBIUJH1FgYZ68rdGZepgpRaO6Ud12o8bbHhLX3CMZRN1AgBsl2TEytE3Bstt4dTVx6Y63pmBw6DPZ9ZV9YAcJC9Zn1bpg3zGBcDLjK8IvpE4RdpSf5njGPB/CUJjVghZGGGrK+SDFIrKk2tZn3AH9QIW/JCRiVbq/UfdSflp5VsEYzD2RwMJxKJwWQk6Ym0ULxSmgLMkrdXrCvaeKAddtDJeATtt8lZuwlK6UY9DgUwQWgrayW6YtfVHPeAC6SbhGQ6ZByELBrITjsr/BCVO41Wuw2aVCZmPuMwGeGdtmlW3wDn9yvEtlmKjSCS2CMavo="
+            "ct": "k+pyKuQ/nYcmc3NNgtwCQ8iCMa6Efl171vUTLp9r0G6MIMc3aBZe2Zm6iAG4B8thf4Fmpex9RpnW3Fm6I/SSkCRRlwd7iw78UqmXwkP9Nraktq35skXac/EmMHWc10T8dVdhWMv/z6iN2PHOjQPVMqGG5UvKg26E5SEjrmQJwDQR8/qaKRkLyeOV3EbBvwz/pyFdNtlBoBPkRLttc8a2Z+Vb6NGheQ418WX5N+Owid6HbpoFwpD65rPldO7B/vKx02+z0ejXqaCsDIb5yVeT9ZqhNwZfwDc02voysG7WzkcwnYwn6tMWZs5hGJEqwj5qGxCgSw6S8eF16RenVL8UmvUY0OxlhpvWf96vwiNZ65U7nLEZaRsQ4FNUN8C7Ff0CyMeh073rxfxzUhZM5k9V0ZghoWurZ1ThoOILXE9MmEy3NUaXqtRoGeT9VGLECBZi4SLSymz8v3PSlkN3rbmn4m+pkHlpiprkie5s85vte6iawJgjCZQy85Q4IZZnXOGZVNtNkUBcaZYh7yt3GUn/0lU6muDWkVXiWfMNy5PiGi6dPHBCn+p7b7Ns1Os6hr0iaVoGdqC7l9Oa1+JsqUy/JhQTdZOuFPqzG5ickMoQhRN7avZWW8/sLsfLraLnYTCOnRGHRxMlvRz0NgxK8nMmh+HDGVNd3LDg7gQIdUJkBoE7PAuhNj3mEI5icHjyYkK1Xi4miz55eGRc+qltXbtS6cUhTEALdaECvZsiFQ1EKtBC5WiXo87tT7c2PwZpOxQLAWMTduJLX+iT38mguqnBhh+qFAdOWjOput7Slsoyj2nhziohzc7YdavpvUg3td8FXuN4Ql8h7kiJWkqcndzOp1H8t9vcBsu1FS7ouHmUML6nJ5xiy/uuWxTgd4H3OpcZMPAlfiX8DeXXOr4brbO62+Caw82gx+GS3ip35O9e5GjFXka4+GY+hE8RgvWee4iLL1o3eqBuU8iwBVklTATvBvb3HI+J2YsSyzK0adoxlcS3EWxyjAU3AGbsO8QNUWceb2OTN3n4yxs54gyWOMIuf2fzmpfZQJJg7F7G/bebAv/1O/G4SQJ/zU65HnWzjUpkEKqileex+tjiE3BL77H45tA6BVwrHqeHrirMx702jCojFcrm92addZ2tRPHp4/94MIlaTMlYay/Sv96NBstZijWExSz4Z67w0ZS6RLuoQA71MJc1IlsB/E7aXUMV14T0uuBcOZ9k2qzEbt3+gSl7qokaiV7uSmDH9g9AyWzIXSCusMAG4armTQ0TLBolVbUxHM06ZSzyc3Ugfs3fA53GYRYWXZ0siL0Nr22kwTREmIopIcd12uDvC3MN9G3ds+x1v7yZGb4WvHZcbzCYOg=="
           }
         },
         {
           "direction": "station->app",
           "keyRef": "kStationToApp",
           "counter": 0,
+          "characteristic": "FFF4",
           "nonce96Hex": "000000000000000000000000",
           "aad": "transcriptHash",
-          "aadHex": "d0566f1347080c7cd3854c8678e1b4e42720692557b8ce3a3de350b2cbeaeb07",
-          "plaintextUtf8": "{\"type\":\"AuthResponse\",\"result\":\"Accepted\",\"sessionKeyConfirmation\":\"or7D3h03SKW7WIltOGCHbRu8CODoPNuPYd6Ug/4H5iE=\"}",
+          "plaintextUtf8": "{\"type\":\"AuthResponse\",\"result\":\"Accepted\",\"sessionKeyConfirmation\":\"e5a4RYrCeE6UaWVr1O6wC+WAyJd8VEf58+871Lto3uw=\"}",
           "frame": {
             "n": 0,
-            "ct": "iOaDpZDk1kD+l1Srkjz3Tla88vyitZjKQWcuMje0kKdGEiHzKaJpmt6k3iY7Hcheq1gkoYNZHGYev9heNzAAo0n5roB04hoe9tg7jP1r+icOKCDYDKWf3IX+FS9ecX2ABcPAWAM92hE6ry9kY2zKEMQwFopRY6O4Q9MMomJ8fjNqekc="
+            "ct": "Z8m463H+qYTtscvnSInEFvxJMroo0lVoW4kWqwFwBGBo9Qvnd59E7VtdrWMeCCvWO39BPZhZbKjRBPzznLJ2zeJr698Un4dxFuS7F3eejoadYOCrSu94lLkEXPIngF5aA9RWzOCJv3EhHIT4pRKvsi8IcI0HquVZLzxPtbwxUJ7lRwY="
+          }
+        }
+      ],
+      "forward": {
+        "payload": {
+          "offlinePassId": "opass_a1b2c3d4e5f6a7b8",
+          "offlinePass": {
+            "passId": "opass_a1b2c3d4e5f6a7b8",
+            "sub": "sub_user1234abcdef",
+            "deviceId": "d7e8f9a0b1c2d3e4f5a6b7c8",
+            "devicePublicKey": "A0beUh945M53aQSA61iuiEj6c9hxJsEZS5Taj7I5qOY+",
+            "keyId": "YjX5pR0TzmU3ubs17wImQQ",
+            "issuedAt": "2026-02-10T08:00:00.000Z",
+            "expiresAt": "2026-02-11T08:00:00.000Z",
+            "policyVersion": 1,
+            "revocationEpoch": 0,
+            "offlineAllowance": {
+              "maxTotalCredits": 500,
+              "maxUses": 5,
+              "maxCreditsPerTx": 200
+            },
+            "constraints": {
+              "minIntervalSec": 300
+            },
+            "signatureAlgorithm": "ECDSA-P256-SHA256",
+            "signature": "MEQCIDKcveVTEaaIaU0TJkUwBTMO3nU+AGFwgBnlN0s3w/RIAiAPyXNvjroFYWGQIjP+5hqbowvukOsiDn1Cgalj54kKsg=="
+          },
+          "counter": 0,
+          "bayId": "bay_c1d2e3f4a5b6",
+          "serviceId": "svc_eco",
+          "requestedDurationSeconds": 60,
+          "deviceProof": {
+            "format": "apple-appattest",
+            "signature": "MEUCIQD1Z1c/UAz7WcvHCXig0QgZafbf1n9PUIcvYRgrJaVc+AIgNynHOuTCpIJpFx8AUuSrgSoC/OmvB5LVTXQfreB9eBQ=",
+            "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
+          },
+          "transcriptHash": "s4SjIQRAKTzY+3tlBo7GaeVr63An8B1rvdmjOG96kow="
+        },
+        "serverCheck": {
+          "forwardingStationId": "stn_a1b2c3d4",
+          "ok": true
+        }
+      }
+    },
+    {
+      "scenario": "forward-full",
+      "stationConnectivity": "Online",
+      "keys": {
+        "appEphemeral": {
+          "label": "OSPP_BLE_APP_EPH_FORWARD_FULL_V1",
+          "privateKeyHex": "10d6e82fb25843b251cc2431dc964399051546fa50db05f30cfaf7ca579b07e5",
+          "publicKeyCompressedBase64": "A5bV4fEOG73UcUI5uOCZ/qCL7KYtpL4rrYwK6BnEuW89",
+          "publicKeyUncompressedHex": "0496d5e1f10e1bbdd4714239b8e099fea08beca62da4be2bad8c0ae819c4b96f3d3ced81a1c92182a3d867bc5924d8da91e7469d43c55b747c6d9e750f0e730493"
+        },
+        "stationEphemeral": {
+          "label": "OSPP_BLE_STATION_EPH_FORWARD_FULL_V1",
+          "privateKeyHex": "18112fdf1cf43519ae7ba826ed9280cbc1c54245065599dd7d4830c0ee9ca68f",
+          "publicKeyCompressedBase64": "AooC6OUNMV1zVqYOE2PGNRl+Z/2sCBDv6AqDtfrEZGKJ",
+          "publicKeyUncompressedHex": "048a02e8e50d315d7356a60e1363c635197e67fdac0810efe80a83b5fac4646289936b244cefafa155662f7e80bc2ec097e31a2d3c93e78e9983ebe071288c9f16"
+        }
+      },
+      "hello": {
+        "message": {
+          "type": "Hello",
+          "bleVersions": [
+            "0.3.0"
+          ],
+          "appNonce": "jPqJKmEUsFM0IO8/c3KzBctz5vyZyn8Ogr+0Oxd/XVA=",
+          "appVersion": "3.0.1",
+          "appEphemeralPubKey": "A5bV4fEOG73UcUI5uOCZ/qCL7KYtpL4rrYwK6BnEuW89"
+        },
+        "wireBase64": "eyJ0eXBlIjoiSGVsbG8iLCJibGVWZXJzaW9ucyI6WyIwLjMuMCJdLCJhcHBOb25jZSI6ImpQcUpLbUVVc0ZNMElPOC9jM0t6QmN0ejV2eVp5bjhPZ3IrME94ZC9YVkE9IiwiYXBwVmVyc2lvbiI6IjMuMC4xIiwiYXBwRXBoZW1lcmFsUHViS2V5IjoiQTViVjRmRU9HNzNVY1VJNXVPQ1ovcUNMN0tZdHBMNHJyWXdLNkJuRXVXODkifQ==",
+        "wireByteLength": 187
+      },
+      "challenge": {
+        "message": {
+          "type": "Challenge",
+          "bleVersion": "0.3.0",
+          "stationNonce": "5c1OjA6H06h+FoMF5/Cq2Flx8l7ldKdipECRPTrCIIg=",
+          "stationEphemeralPubKey": "AooC6OUNMV1zVqYOE2PGNRl+Z/2sCBDv6AqDtfrEZGKJ",
+          "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+          "stationConnectivity": "Online",
+          "availableServices": [
+            {
+              "bayId": "bay_f9e8d7c6b5a4",
+              "serviceId": "svc_premium",
+              "available": true
+            },
+            {
+              "bayId": "bay_f9e8d7c6b5a4",
+              "serviceId": "svc_basic",
+              "available": true
+            }
+          ],
+          "stationSignature": "MEQCIA9CL0LoRr9HQOLi2pj5Ysvng7bRKNwfjLrixAkRyjXPAiB/YGGl3jvxbgf3BbYKBymwBVyMU+1tiyxBLg0W4KBuDA=="
+        },
+        "wireBase64": "eyJ0eXBlIjoiQ2hhbGxlbmdlIiwiYmxlVmVyc2lvbiI6IjAuMy4wIiwic3RhdGlvbk5vbmNlIjoiNWMxT2pBNkgwNmgrRm9NRjUvQ3EyRmx4OGw3bGRLZGlwRUNSUFRyQ0lJZz0iLCJzdGF0aW9uRXBoZW1lcmFsUHViS2V5IjoiQW9vQzZPVU5NVjF6VnFZT0UyUEdOUmwrWi8yc0NCRHY2QXFEdGZyRVpHS0oiLCJzdGF0aW9uQ2VydGlmaWNhdGUiOiJNSUlDRnpDQ0FiNmdBd0lCQWdJQ0NnRXdDZ1lJS29aSXpqMEVBd0l3TXpFU01CQUdBMVVFQ2d3SlQxTlFVQ0JVWlhOME1SMHdHd1lEVlFRRERCUlBVMUJRSUZSbGMzUWdVM1JoZEdsdmJpQkRRVEFlRncweU5qQXhNREV3TURBd01EQmFGdzB5TmpFeU16RXlNelU1TlRsYU1Dc3hFakFRQmdOVkJBb01DVTlUVUZBZ1ZHVnpkREVWTUJNR0ExVUVBd3dNYzNSdVgyRXhZakpqTTJRME1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRXZXNXhWckZVUHFiU1ZndXJla0VGR1UydkVkQW5PS2lKenp4Y21aY2EzL3NiRTRlLzg1K3QrZDN1SWJSR3NyaWhOVUpvL0hQZi90NlluTTF3OHlUYmNLT0J5VENCeGpBTUJnTlZIUk1CQWY4RUFqQUFNQTRHQTFVZER3RUIvd1FFQXdJSGdEQW9CZ05WSFNVRUlUQWZCZ2dyQmdFRkJRY0RBZ1lUYWRhdTFmVENsOUtPbTVHQ3hmdjF6L3FzWXpBOEJnTlZIUjhFTlRBek1ER2dMNkF0aGl0b2RIUndPaTh2WTNKc0xtOXpjSEF0ZEdWemRDNXBiblpoYkdsa0wzTjBZWFJwYjI0dFkyRXVZM0pzTUIwR0ExVWREZ1FXQkJRZXNQZDJJODlGcVV3YXYxSG5JNk1NRnUvd1BqQWZCZ05WSFNNRUdEQVdnQlFYeHdFYUR3Q3FBUkRiOTJWZ0gxODBNa3ZHV0RBS0JnZ3Foa2pPUFFRREFnTkhBREJFQWlCL250YWNmZjRBa3BvQ0ZlRzM2YmUzT1BxL1NuUzM2WXg0SjAreHlENlMxd0lnVDJDcjYxMld2NUJwV2RlWGFlODBoZ09wdlJQdmNaOVVRQ3M0MVQyZUZTST0iLCJzdGF0aW9uQ29ubmVjdGl2aXR5IjoiT25saW5lIiwiYXZhaWxhYmxlU2VydmljZXMiOlt7ImJheUlkIjoiYmF5X2Y5ZThkN2M2YjVhNCIsInNlcnZpY2VJZCI6InN2Y19wcmVtaXVtIiwiYXZhaWxhYmxlIjp0cnVlfSx7ImJheUlkIjoiYmF5X2Y5ZThkN2M2YjVhNCIsInNlcnZpY2VJZCI6InN2Y19iYXNpYyIsImF2YWlsYWJsZSI6dHJ1ZX1dLCJzdGF0aW9uU2lnbmF0dXJlIjoiTUVRQ0lBOUNMMExvUnI5SFFPTGkycGo1WXN2bmc3YlJLTndmakxyaXhBa1J5alhQQWlCL1lHR2wzanZ4YmdmM0JiWUtCeW13QlZ5TVUrMXRpeXhCTGcwVzRLQnVEQT09In0=",
+        "wireByteLength": 1232,
+        "signedContentHex": "202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020204f53505020424c452073746174696f6e2c204368616c6c656e6765207369676e617475726500b69b13b7eed1aefb772dc932b9608553521ebcaedf1dd113a1feddc924780d00",
+        "stationSignatureLowS": true
+      },
+      "gate": {
+        "at": "2026-02-13T10:00:00.000Z",
+        "ok": true,
+        "stationId": "stn_a1b2c3d4"
+      },
+      "transcript": {
+        "construction": "SHA-256( U16BE(len(helloWire))‖helloWire ‖ U16BE(len(challengeWire))‖challengeWire )",
+        "transcriptHashHex": "d59e9c8d13add3342d2d1b80540fcf4d473c0f6e5f7cdba931a48458bf57bb06",
+        "transcriptHashBase64": "1Z6cjROt0zQtLRuAVA/PTUc8D25ffNupMaSEWL9XuwY="
+      },
+      "ecdh": {
+        "eeHex": "a9fce5678f0f2ecd54d997b4e0d16eb986bf4499bf0626bbfdad0c36ab0bbf3c",
+        "note": "ee = ECDH(appEphemeralPriv, stationEphemeralPub) = ECDH(stationEphemeralPriv, appEphemeralPub); X-only, 32B, left-padded (Pin 1)"
+      },
+      "keySchedule": {
+        "ikmHex": "a9fce5678f0f2ecd54d997b4e0d16eb986bf4499bf0626bbfdad0c36ab0bbf3c8cfa892a6114b0533420ef3f7372b305cb73e6fc99ca7f0e82bfb43b177f5d50e5cd4e8c0e87d3a87e168305e7f0aad85971f25ee574a762a440913d3ac22088",
+        "saltUtf8": "OSPP_BLE_SESSION_V3",
+        "infoHex": "0020d59e9c8d13add3342d2d1b80540fcf4d473c0f6e5f7cdba931a48458bf57bb06",
+        "infoNote": "LP(transcriptHash); LP(x)=U16BE(len)‖x (Pin 3)",
+        "sessionKeyHex": "be9de1acb0097f2a2b709f41d1f44061e7d514950564c522c2ea6eeb7c75db7c",
+        "sessionKeyBase64": "vp3hrLAJfyorcJ9B0fRAYefVFJUFZMUiwupu63x123w=",
+        "kAppToStationHex": "20545280b20fe482aff861a9688f2d15c01b040d5a415ebddde16c01a156fa4f",
+        "kStationToAppHex": "f373dac17475081738d7e1fb1e20b43ad03a48a5e9e4369b7e90701f3a922e12",
+        "sessionKeyConfirmationBase64": "golDBXHiNOt+7eHh85GOhr1DghmrGgdQfovQfegCmlE="
+      },
+      "sessionProof": {
+        "passId": "opass_e7f8a9b0c1d2e3f4",
+        "counter": 3,
+        "messageHex": "00124f66666c696e65417574685265717565737400166f706173735f65376638613962306331643265336634000133",
+        "sessionProofBase64": "xLVIdU1HZ+nODEaQs61PtaXGh9CrfipX9s26vSbcCV4=",
+        "note": "HMAC-SHA256(SessionKey, LP(\"OfflineAuthRequest\")‖LP(passId)‖LP(decimal(counter))) (§6.5.1)"
+      },
+      "deviceProof": {
+        "deviceId": "device-pixel-8-pro-042",
+        "devicePublicKey": "Ahurv7k0oBBFvNCQfsnfOGAwuGqkpsdr4Z+2VPLI9uUg",
+        "stationId": "stn_a1b2c3d4",
+        "request": {
+          "passId": "opass_e7f8a9b0c1d2e3f4",
+          "counter": 3,
+          "bayId": "bay_f9e8d7c6b5a4",
+          "serviceId": "svc_premium",
+          "requestedDurationSeconds": 600
+        },
+        "proofInputHex": "00184f53505020424c45206465766963652070726f6f662076310020d59e9c8d13add3342d2d1b80540fcf4d473c0f6e5f7cdba931a48458bf57bb06000c73746e5f613162326333643400166f706173735f6537663861396230633164326533663400013300106261795f663965386437633662356134000b7376635f7072656d69756d0003363030",
+        "proof": {
+          "format": "android-key",
+          "signature": "MEQCIBRxcCy//1PzLtQiZ2O2plD6IlSRsO7A0w4pE2MPJblJAiAR9lSyKUvrkG7/2tg8+QESQhF7zch33hPSoTo2c9oR2g=="
+        },
+        "signatureLowS": true
+      },
+      "aeadFrames": [
+        {
+          "direction": "app->station",
+          "keyRef": "kAppToStation",
+          "counter": 0,
+          "characteristic": "FFF3",
+          "nonce96Hex": "000000000000000000000000",
+          "aad": "transcriptHash",
+          "plaintextUtf8": "{\"type\":\"OfflineAuthRequest\",\"offlinePass\":{\"passId\":\"opass_e7f8a9b0c1d2e3f4\",\"sub\":\"sub_user42xyz\",\"deviceId\":\"device-pixel-8-pro-042\",\"devicePublicKey\":\"Ahurv7k0oBBFvNCQfsnfOGAwuGqkpsdr4Z+2VPLI9uUg\",\"keyId\":\"YjX5pR0TzmU3ubs17wImQQ\",\"issuedAt\":\"2026-02-14T12:30:00.000Z\",\"expiresAt\":\"2026-02-15T12:30:00.000Z\",\"policyVersion\":3,\"revocationEpoch\":7,\"offlineAllowance\":{\"maxTotalCredits\":1000,\"maxUses\":5,\"maxCreditsPerTx\":300},\"constraints\":{\"minIntervalSec\":600},\"signatureAlgorithm\":\"ECDSA-P256-SHA256\",\"signature\":\"MEQCID778pQN3cNah5VB3WTbOosc1KuMigKRjkSe+gjKDpAbAiBq6S2ezzBbXlz5q8AzbjrncuHITr3WZ+OkV8hjO+vgzQ==\"},\"counter\":3,\"bayId\":\"bay_f9e8d7c6b5a4\",\"serviceId\":\"svc_premium\",\"requestedDurationSeconds\":600,\"sessionProof\":\"xLVIdU1HZ+nODEaQs61PtaXGh9CrfipX9s26vSbcCV4=\",\"deviceProof\":{\"format\":\"android-key\",\"signature\":\"MEQCIBRxcCy//1PzLtQiZ2O2plD6IlSRsO7A0w4pE2MPJblJAiAR9lSyKUvrkG7/2tg8+QESQhF7zch33hPSoTo2c9oR2g==\"}}",
+          "frame": {
+            "n": 0,
+            "ct": "r5UrvnIyD6OxprqZ/ubBufQnhK33DAkw441/InzbOII34kabJ8HxtMJd/ndTesZfa8NSnw0Y8z3hnWQpD1uz/yXKo3c4i1Cke3K9eJqal4i+SchJeJP3zD/ZUJEhh+N1cR/LM56z+N8w9N8SLlVmweYk0wJ0adTDxor9QyeZgrKgLeTmyPlL3uKU16n3dYBs998y5iP21zMQWAUiqmk0ExQrMU5RRQ9tkaCS+Pl7qfMditSaaytzCrAZZeJPrUCEYXc++3qBvNawoMBs2E/PmJvZCe1N36FH0G7rgoVdSddS5x8Grzk+lpnL8qpQZaxQcSO7moV8+Tc3YLaNvseSFbHjUssENqxu7WyzsTyupC7H89UT/6fDsdiEbV4hstEZoNF/UlXUxpuFVax+EXmHBoZYqvwqyKJgaymlztrrQOKqxcHJUcawDi96OcdncHYBVJm1x0B9YE2IQK5oFwBeFqhfLct1fHg6mqgKFohhfmdqn5+x0fmAs/3KunTR/Czg2um3ltBDQ/QjlC51L4Jhkwp25rxmG4B7wKEViwuBpIfcPjEcGt+B/vMQjmJWbXGoWU7WCt8qcTcYW2/keldhY1CSYP+Q77L2accJNDpK2ReKZOil4Qq02AFfTpHt1j/xD2vXyemjTL1i8Ta9crZMHYCYIOB//027ejYPWglc1vn6xyknyJvQVCUHKM+1BcUacc/GA28+CvfKVSiex3VdLx7NsVJ/Q2DRdohdiowyf/075GY3eO0e0D/oKHtiljvs1eDNV9LkfdWNCo9Uz1bKdHyIj2wiH4tGMm0fY36zhCAJqCVpSIyaHhcOUBfKHD74NKbCijc/ZgyHQuwzPtj9aMsL8KqUbEPsR86MiLQE4Dsgtq6SIiXBlJ84D+4Uo5nb2gEbqXWQ/Si+68balR7XlEHeZmVlkdO3gW05VCGUIhta7Sg9dWJ6EBEH2/rT+e4lOlaNKi9U61OlJdDVKhFHAYCXOOxScZ6tFQpIoTVrscysIVBniwImQ6+1CFaOnsY0+kdG3tTsy4LEGTCVEKjUXgWZXzv31GaFTWkqhMS94VaPGem8vm2gRD2YoTlLPdPk560pB9p/cNDOCjuv8ful8gvLatO1qStqFfVp37E2n7AAxyRaqTLS/po4TosIcnvNGXu2ezpwJHkk+wvWFGu8Z1z5B9oKlO7esavk1RWJRY3YGt0xZGwGJRhoPfsKt/5VMi/EUjm+BFY2xKAhObcMlbuWAXl/D/SktQUoke0="
+          }
+        },
+        {
+          "direction": "station->app",
+          "keyRef": "kStationToApp",
+          "counter": 0,
+          "characteristic": "FFF4",
+          "nonce96Hex": "000000000000000000000000",
+          "aad": "transcriptHash",
+          "plaintextUtf8": "{\"type\":\"AuthResponse\",\"result\":\"Accepted\",\"sessionKeyConfirmation\":\"golDBXHiNOt+7eHh85GOhr1DghmrGgdQfovQfegCmlE=\"}",
+          "frame": {
+            "n": 0,
+            "ct": "k2QmRSOSiVZ+ZPSTpS2RZUm2R25P19d/hXTWTiE71EygkgvjY1CPbG4nzqLzUKUUmgZGSZMK9I4T2hJKbiC2f+lsIdzykChceb7EqH1/fAvu7ZJ6fQcVQX+yPq7zw3HRIa1HuBRVI1JxuhGBjzd0YKR6XFVF0AwtX4rs/e+6K4pvZWs="
+          }
+        }
+      ],
+      "forward": {
+        "payload": {
+          "offlinePassId": "opass_e7f8a9b0c1d2e3f4",
+          "offlinePass": {
+            "passId": "opass_e7f8a9b0c1d2e3f4",
+            "sub": "sub_user42xyz",
+            "deviceId": "device-pixel-8-pro-042",
+            "devicePublicKey": "Ahurv7k0oBBFvNCQfsnfOGAwuGqkpsdr4Z+2VPLI9uUg",
+            "keyId": "YjX5pR0TzmU3ubs17wImQQ",
+            "issuedAt": "2026-02-14T12:30:00.000Z",
+            "expiresAt": "2026-02-15T12:30:00.000Z",
+            "policyVersion": 3,
+            "revocationEpoch": 7,
+            "offlineAllowance": {
+              "maxTotalCredits": 1000,
+              "maxUses": 5,
+              "maxCreditsPerTx": 300
+            },
+            "constraints": {
+              "minIntervalSec": 600
+            },
+            "signatureAlgorithm": "ECDSA-P256-SHA256",
+            "signature": "MEQCID778pQN3cNah5VB3WTbOosc1KuMigKRjkSe+gjKDpAbAiBq6S2ezzBbXlz5q8AzbjrncuHITr3WZ+OkV8hjO+vgzQ=="
+          },
+          "counter": 3,
+          "bayId": "bay_f9e8d7c6b5a4",
+          "serviceId": "svc_premium",
+          "requestedDurationSeconds": 600,
+          "deviceProof": {
+            "format": "android-key",
+            "signature": "MEQCIBRxcCy//1PzLtQiZ2O2plD6IlSRsO7A0w4pE2MPJblJAiAR9lSyKUvrkG7/2tg8+QESQhF7zch33hPSoTo2c9oR2g=="
+          },
+          "transcriptHash": "1Z6cjROt0zQtLRuAVA/PTUc8D25ffNupMaSEWL9XuwY="
+        },
+        "serverCheck": {
+          "forwardingStationId": "stn_a1b2c3d4",
+          "ok": true
+        }
+      }
+    },
+    {
+      "scenario": "forward-minimal",
+      "stationConnectivity": "Online",
+      "keys": {
+        "appEphemeral": {
+          "label": "OSPP_BLE_APP_EPH_FORWARD_MINIMAL_V1",
+          "privateKeyHex": "1f51c48ad5737a2584543c1dc51149349dfa652d3c888a761e63e07d842902b9",
+          "publicKeyCompressedBase64": "A5X6HSKUPGkysI0T0FppgsJlVr/2ayZZ2y0I0giswptR",
+          "publicKeyUncompressedHex": "0495fa1d22943c6932b08d13d05a6982c26556bff66b2659db2d08d208acc29b518627c984489d31f6545ba3ce85397bf16a5a61ce2577dc78a7dd471dc6ebdd3f"
+        },
+        "stationEphemeral": {
+          "label": "OSPP_BLE_STATION_EPH_FORWARD_MINIMAL_V1",
+          "privateKeyHex": "9894070e73fb0c623131a9620d97c941a54b7c1b8e446e9ca5c6365fa8d7465e",
+          "publicKeyCompressedBase64": "A00AAuyGnUGAT3+TGRK3N+v+kEmIFlELaTN4tn3XtIfv",
+          "publicKeyUncompressedHex": "044d0002ec869d41804f7f931912b737ebfe90498816510b693378b67dd7b487eff8e7a6882336536e014f088d05a6a127001d8fc777df90d96a3a6ecc43b23ced"
+        }
+      },
+      "hello": {
+        "message": {
+          "type": "Hello",
+          "bleVersions": [
+            "0.3.0"
+          ],
+          "appNonce": "4HlYprkLaAFo3KzV5cCgoNfMjbtjZijLvNcKxsOJ228=",
+          "appVersion": "3.0.1",
+          "appEphemeralPubKey": "A5X6HSKUPGkysI0T0FppgsJlVr/2ayZZ2y0I0giswptR"
+        },
+        "wireBase64": "eyJ0eXBlIjoiSGVsbG8iLCJibGVWZXJzaW9ucyI6WyIwLjMuMCJdLCJhcHBOb25jZSI6IjRIbFlwcmtMYUFGbzNLelY1Y0Nnb05mTWpidGpaaWpMdk5jS3hzT0oyMjg9IiwiYXBwVmVyc2lvbiI6IjMuMC4xIiwiYXBwRXBoZW1lcmFsUHViS2V5IjoiQTVYNkhTS1VQR2t5c0kwVDBGcHBnc0psVnIvMmF5WloyeTBJMGdpc3dwdFIifQ==",
+        "wireByteLength": 187
+      },
+      "challenge": {
+        "message": {
+          "type": "Challenge",
+          "bleVersion": "0.3.0",
+          "stationNonce": "10/v43hMQu9cREsVSuswWYbVXZSMy+9nqZSKoxXLTiI=",
+          "stationEphemeralPubKey": "A00AAuyGnUGAT3+TGRK3N+v+kEmIFlELaTN4tn3XtIfv",
+          "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+          "stationConnectivity": "Online",
+          "availableServices": [
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_basic",
+              "available": true
+            }
+          ],
+          "stationSignature": "MEQCIC6e7i961yDtw4n5thVUvBTvKAe6qyYAKmc9hj3l2hIwAiA1XNFIXr6Z9reX5uoonUzGZ3UAu9nmPbHouTLKZswhOw=="
+        },
+        "wireBase64": "eyJ0eXBlIjoiQ2hhbGxlbmdlIiwiYmxlVmVyc2lvbiI6IjAuMy4wIiwic3RhdGlvbk5vbmNlIjoiMTAvdjQzaE1RdTljUkVzVlN1c3dXWWJWWFpTTXkrOW5xWlNLb3hYTFRpST0iLCJzdGF0aW9uRXBoZW1lcmFsUHViS2V5IjoiQTAwQUF1eUduVUdBVDMrVEdSSzNOK3Yra0VtSUZsRUxhVE40dG4zWHRJZnYiLCJzdGF0aW9uQ2VydGlmaWNhdGUiOiJNSUlDRnpDQ0FiNmdBd0lCQWdJQ0NnRXdDZ1lJS29aSXpqMEVBd0l3TXpFU01CQUdBMVVFQ2d3SlQxTlFVQ0JVWlhOME1SMHdHd1lEVlFRRERCUlBVMUJRSUZSbGMzUWdVM1JoZEdsdmJpQkRRVEFlRncweU5qQXhNREV3TURBd01EQmFGdzB5TmpFeU16RXlNelU1TlRsYU1Dc3hFakFRQmdOVkJBb01DVTlUVUZBZ1ZHVnpkREVWTUJNR0ExVUVBd3dNYzNSdVgyRXhZakpqTTJRME1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRXZXNXhWckZVUHFiU1ZndXJla0VGR1UydkVkQW5PS2lKenp4Y21aY2EzL3NiRTRlLzg1K3QrZDN1SWJSR3NyaWhOVUpvL0hQZi90NlluTTF3OHlUYmNLT0J5VENCeGpBTUJnTlZIUk1CQWY4RUFqQUFNQTRHQTFVZER3RUIvd1FFQXdJSGdEQW9CZ05WSFNVRUlUQWZCZ2dyQmdFRkJRY0RBZ1lUYWRhdTFmVENsOUtPbTVHQ3hmdjF6L3FzWXpBOEJnTlZIUjhFTlRBek1ER2dMNkF0aGl0b2RIUndPaTh2WTNKc0xtOXpjSEF0ZEdWemRDNXBiblpoYkdsa0wzTjBZWFJwYjI0dFkyRXVZM0pzTUIwR0ExVWREZ1FXQkJRZXNQZDJJODlGcVV3YXYxSG5JNk1NRnUvd1BqQWZCZ05WSFNNRUdEQVdnQlFYeHdFYUR3Q3FBUkRiOTJWZ0gxODBNa3ZHV0RBS0JnZ3Foa2pPUFFRREFnTkhBREJFQWlCL250YWNmZjRBa3BvQ0ZlRzM2YmUzT1BxL1NuUzM2WXg0SjAreHlENlMxd0lnVDJDcjYxMld2NUJwV2RlWGFlODBoZ09wdlJQdmNaOVVRQ3M0MVQyZUZTST0iLCJzdGF0aW9uQ29ubmVjdGl2aXR5IjoiT25saW5lIiwiYXZhaWxhYmxlU2VydmljZXMiOlt7ImJheUlkIjoiYmF5X2ExYjJjM2Q0ZTVmNiIsInNlcnZpY2VJZCI6InN2Y19iYXNpYyIsImF2YWlsYWJsZSI6dHJ1ZX1dLCJzdGF0aW9uU2lnbmF0dXJlIjoiTUVRQ0lDNmU3aTk2MXlEdHc0bjV0aFZVdkJUdktBZTZxeVlBS21jOWhqM2wyaEl3QWlBMVhORklYcjZaOXJlWDV1b29uVXpHWjNVQXU5bm1QYkhvdVRMS1pzd2hPdz09In0=",
+        "wireByteLength": 1160,
+        "signedContentHex": "202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020204f53505020424c452073746174696f6e2c204368616c6c656e6765207369676e61747572650012a91fb6972278f92bb090c97cbc4e5bd65fe4da4ec0dcfa1140b21260e0eea6",
+        "stationSignatureLowS": true
+      },
+      "gate": {
+        "at": "2026-02-13T10:00:00.000Z",
+        "ok": true,
+        "stationId": "stn_a1b2c3d4"
+      },
+      "transcript": {
+        "construction": "SHA-256( U16BE(len(helloWire))‖helloWire ‖ U16BE(len(challengeWire))‖challengeWire )",
+        "transcriptHashHex": "d9826f05683e8c54bb8efe81c46f09e6778bd88a36c321377a6b9e9ebb193ab1",
+        "transcriptHashBase64": "2YJvBWg+jFS7jv6BxG8J5neL2Io2wyE3emuenrsZOrE="
+      },
+      "ecdh": {
+        "eeHex": "ded71d0f65f6711ce84ff6ae701fe40db889217c69c8b62daa37e01b03988547",
+        "note": "ee = ECDH(appEphemeralPriv, stationEphemeralPub) = ECDH(stationEphemeralPriv, appEphemeralPub); X-only, 32B, left-padded (Pin 1)"
+      },
+      "keySchedule": {
+        "ikmHex": "ded71d0f65f6711ce84ff6ae701fe40db889217c69c8b62daa37e01b03988547e07958a6b90b680168dcacd5e5c0a0a0d7cc8dbb636628cbbcd70ac6c389db6fd74fefe3784c42ef5c444b154aeb305986d55d948ccbef67a9948aa315cb4e22",
+        "saltUtf8": "OSPP_BLE_SESSION_V3",
+        "infoHex": "0020d9826f05683e8c54bb8efe81c46f09e6778bd88a36c321377a6b9e9ebb193ab1",
+        "infoNote": "LP(transcriptHash); LP(x)=U16BE(len)‖x (Pin 3)",
+        "sessionKeyHex": "068231e2ecc948d336d5b79364739af4f587589dcd47b5da8895cbd9fb195474",
+        "sessionKeyBase64": "BoIx4uzJSNM21beTZHOa9PWHWJ3NR7XaiJXL2fsZVHQ=",
+        "kAppToStationHex": "81991e8b04d4940b8fcdb1353f49383dadbbe9577cd2bbdd9457ff72e8ddf33b",
+        "kStationToAppHex": "33a7208340f3e458eb347cba8e875af995a4835101a9c7b7a875df4c2d9a5405",
+        "sessionKeyConfirmationBase64": "uQ9U06Uvm2pnSD/raQQyK0iopQ7mVTVcofHt2ui3iXs="
+      },
+      "sessionProof": {
+        "passId": "opass_a1b2c3d4e5f6",
+        "counter": 0,
+        "messageHex": "00124f66666c696e65417574685265717565737400126f706173735f613162326333643465356636000130",
+        "sessionProofBase64": "Md1/2jiBZi8uNKTEy5dTMaiYTzeZ8sJwVnrou+dMkcg=",
+        "note": "HMAC-SHA256(SessionKey, LP(\"OfflineAuthRequest\")‖LP(passId)‖LP(decimal(counter))) (§6.5.1)"
+      },
+      "deviceProof": {
+        "deviceId": "device-iphone-14-pro-001",
+        "devicePublicKey": "A+aNWTS04CWiEzjfjaEOhm0Pa/YPB572UNMlcx1ZffgT",
+        "stationId": "stn_a1b2c3d4",
+        "request": {
+          "passId": "opass_a1b2c3d4e5f6",
+          "counter": 0,
+          "bayId": "bay_a1b2c3d4e5f6",
+          "serviceId": "svc_basic",
+          "requestedDurationSeconds": 120
+        },
+        "proofInputHex": "00184f53505020424c45206465766963652070726f6f662076310020d9826f05683e8c54bb8efe81c46f09e6778bd88a36c321377a6b9e9ebb193ab1000c73746e5f613162326333643400126f706173735f61316232633364346535663600013000106261795f61316232633364346535663600097376635f62617369630003313230",
+        "clientDataHashHex": "210cae3420452f91ee77710965ccc621ffaffeb3f2262f3b2879b22e736afec6",
+        "signedNonceHex": "0e31c00a6d9df35f325c31340607e8c4b9e536b6040feb076cb00cb0346d085b",
+        "proof": {
+          "format": "apple-appattest",
+          "signature": "MEUCIQDVAYpfIj0rzkBCiqrNi0dmwaQA0sJv8llbRTHvImG5aAIgPDo2C3FxKqgGkre/XvhQIXU5mFcryXcD/q/iXxCo6Yo=",
+          "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
+        },
+        "signatureLowS": true
+      },
+      "aeadFrames": [
+        {
+          "direction": "app->station",
+          "keyRef": "kAppToStation",
+          "counter": 0,
+          "characteristic": "FFF3",
+          "nonce96Hex": "000000000000000000000000",
+          "aad": "transcriptHash",
+          "plaintextUtf8": "{\"type\":\"OfflineAuthRequest\",\"offlinePass\":{\"passId\":\"opass_a1b2c3d4e5f6\",\"sub\":\"sub_user01abc\",\"deviceId\":\"device-iphone-14-pro-001\",\"devicePublicKey\":\"A+aNWTS04CWiEzjfjaEOhm0Pa/YPB572UNMlcx1ZffgT\",\"keyId\":\"YjX5pR0TzmU3ubs17wImQQ\",\"issuedAt\":\"2026-02-15T08:00:00.000Z\",\"expiresAt\":\"2026-02-16T08:00:00.000Z\",\"policyVersion\":1,\"revocationEpoch\":0,\"offlineAllowance\":{\"maxTotalCredits\":500,\"maxUses\":3,\"maxCreditsPerTx\":200},\"constraints\":{\"minIntervalSec\":300},\"signatureAlgorithm\":\"ECDSA-P256-SHA256\",\"signature\":\"MEUCIQCQobJNkoPnS/crg26Ec25LamGzfiUfLR/lLyPYVtdWTwIgWnzon0WI3eMKrOk4zxdwizLCFRDVURdkZJHvK4svVO8=\"},\"counter\":0,\"bayId\":\"bay_a1b2c3d4e5f6\",\"serviceId\":\"svc_basic\",\"requestedDurationSeconds\":120,\"sessionProof\":\"Md1/2jiBZi8uNKTEy5dTMaiYTzeZ8sJwVnrou+dMkcg=\",\"deviceProof\":{\"format\":\"apple-appattest\",\"signature\":\"MEUCIQDVAYpfIj0rzkBCiqrNi0dmwaQA0sJv8llbRTHvImG5aAIgPDo2C3FxKqgGkre/XvhQIXU5mFcryXcD/q/iXxCo6Yo=\",\"authenticatorData\":\"bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ==\"}}",
+          "frame": {
+            "n": 0,
+            "ct": "9cqmNzx/BdSbiaVBEyPDRtfiUrzX1qrICuO7XV06xzX0oLM5QccmlWXd6HlpQbdPU9y1bNFmd/wFQ4q+tKwp9DjhPPlSgsa4UfFKbJFOvcN9zrxNwnsW6l7U43uquXyBwAxpE6sA4Ufydgzs1/un5PcZW1/qG4gcsOQgbpxSpuP793FBKbHc2wp1uECnbUL2lDTsaeFeZS9LFreonEfnZePhSsZbjzfKYV1amARKD/ptiNCycw6GuTSafND0ggNtxS8iGswAvdI0dB+IC/WQCC/YI0ri/z5aygOPoBGhejmO1VNgnjLjgw9eskn6bCxfdjSwVCk68MYdVdIloL+CUFjSQcTNPyGRfpMQHElD49k1VLTiXqOyzha5sg21170jguoL634K4Rhz01CdnPWtZiS3wyPN65bHfVzX8kmPBKbxkB31E6xK0eNf+v6bOuGcVl/QT0Orpa7TDo9NmgRwf9wVnoi6cDBXxZnOWibeiV/02QnC594OdhOaVQmtxGLVTztTwcWOKtX0VOl6NyzPosRNVLQ0J86S/7GhNdx4eo2oetqDByMwbjesqrv8/0PMQv5cAujHEWMVCrKLV/63Gs1ye/uAELBdPO4DiE8TYA+N0XgQIUP+8UO8sj1v28mdfzOU4ENlrWSl2sBm70zOFh0UhOMb6Vth3QgPHzE7Yd0MwsPIANNzCrPyeGlBTS2lTkH3iN/wkAe3dfmvGPQegL1Yv89BAaAyFzE8/tPw/Bh163r4XdYvCUoTnGfI26HXEMA5UChoIonBUXS82jVdx/CwuWJkxNGWSd+uaTzE/eNZXMktbIJOv8948TeJyPrrAEGDfXmgSQ2MYh292GgojgyvIZVzZZP5oVg05AO9Ph5YxK7R6LrCdy9HdNe/P7FCQpslgnjpM2/StVf+ZVnWYyWjqgxiLqszhy538cOGMsvsG8NPE2uSG1gpBcQPRnKP4LZaidDEFcEWQutJLKQ+DZ4ViEqivRXcVsqCH2B/pS6QtT/45xvm0RYUL1nox+I3M9sOrAliZBSzzCdQembydcJjDHdpXuDAQudxts2jKoVV5DLvKHtCHZaxOzMDNCtFtu+hL7vyp4WgX0Lu/0goc7yvFFihvyyGCS6QphjPiTf6FaWgQBFSTW4kyscGGx5pCrr7xi1IuYQKSl1ekRWhd0D+qdMB9EvyNLOzQF/8wSnsPs4G1WSeZeX6Jka5UNWMMWMi2nulThrdyh9jZghh5dJorrXcI0ls30F+BgcvSGsX//G3MaPko5ZAH+CM8HHRSp3If0P5/VxT10+NAqO0zM2AUc1vOTDBqOcsmf9RAk6v4C5wrSR7Q4zl14CZY62GnlmDU8JAxA=="
+          }
+        },
+        {
+          "direction": "station->app",
+          "keyRef": "kStationToApp",
+          "counter": 0,
+          "characteristic": "FFF4",
+          "nonce96Hex": "000000000000000000000000",
+          "aad": "transcriptHash",
+          "plaintextUtf8": "{\"type\":\"AuthResponse\",\"result\":\"Accepted\",\"sessionKeyConfirmation\":\"uQ9U06Uvm2pnSD/raQQyK0iopQ7mVTVcofHt2ui3iXs=\"}",
+          "frame": {
+            "n": 0,
+            "ct": "VMDy40zy9OG2MoOtezQh8xUjOIIyFpugS/EGP22L6AJu98rdg5l+3WYOD4q4o5uQbwcjcTrEdL2MKSjicFDT6G/2GTdUhhDbfibDPqFPqVOBl49/y7Dt0nX0gY15ZemNJmYmZ8DLpDJHA3l2zoeicL9QGzmR5imSbTBc5ORLU1mU3Ds="
+          }
+        }
+      ],
+      "forward": {
+        "payload": {
+          "offlinePassId": "opass_a1b2c3d4e5f6",
+          "offlinePass": {
+            "passId": "opass_a1b2c3d4e5f6",
+            "sub": "sub_user01abc",
+            "deviceId": "device-iphone-14-pro-001",
+            "devicePublicKey": "A+aNWTS04CWiEzjfjaEOhm0Pa/YPB572UNMlcx1ZffgT",
+            "keyId": "YjX5pR0TzmU3ubs17wImQQ",
+            "issuedAt": "2026-02-15T08:00:00.000Z",
+            "expiresAt": "2026-02-16T08:00:00.000Z",
+            "policyVersion": 1,
+            "revocationEpoch": 0,
+            "offlineAllowance": {
+              "maxTotalCredits": 500,
+              "maxUses": 3,
+              "maxCreditsPerTx": 200
+            },
+            "constraints": {
+              "minIntervalSec": 300
+            },
+            "signatureAlgorithm": "ECDSA-P256-SHA256",
+            "signature": "MEUCIQCQobJNkoPnS/crg26Ec25LamGzfiUfLR/lLyPYVtdWTwIgWnzon0WI3eMKrOk4zxdwizLCFRDVURdkZJHvK4svVO8="
+          },
+          "counter": 0,
+          "bayId": "bay_a1b2c3d4e5f6",
+          "serviceId": "svc_basic",
+          "requestedDurationSeconds": 120,
+          "deviceProof": {
+            "format": "apple-appattest",
+            "signature": "MEUCIQDVAYpfIj0rzkBCiqrNi0dmwaQA0sJv8llbRTHvImG5aAIgPDo2C3FxKqgGkre/XvhQIXU5mFcryXcD/q/iXxCo6Yo=",
+            "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
+          },
+          "transcriptHash": "2YJvBWg+jFS7jv6BxG8J5neL2Io2wyE3emuenrsZOrE="
+        },
+        "serverCheck": {
+          "forwardingStationId": "stn_a1b2c3d4",
+          "ok": true
+        }
+      }
+    },
+    {
+      "scenario": "example",
+      "stationConnectivity": "Offline",
+      "keys": {
+        "appEphemeral": {
+          "label": "OSPP_BLE_APP_EPH_EXAMPLE_V1",
+          "privateKeyHex": "ae01d6411b1dd0483a9f9ea722053a37911d3668cf9141e9e188655760c0bf8a",
+          "publicKeyCompressedBase64": "AkBtkt8D/Y8dFrOhCj6eLc+/IyCC+Jk0SsGdXerVcJEA",
+          "publicKeyUncompressedHex": "04406d92df03fd8f1d16b3a10a3e9e2dcfbf232082f899344ac19d5dead57091009322bc2adce98f8885efa3e00fac88542e3e48951b5845b0780b07cc8dd190ec"
+        },
+        "stationEphemeral": {
+          "label": "OSPP_BLE_STATION_EPH_EXAMPLE_V1",
+          "privateKeyHex": "daf81eb4de52d8e695d3003dd07e2264ecda2a988d3d81ab0e0f7b09d787757f",
+          "publicKeyCompressedBase64": "AzyEriXrkQpo/5PSBUoWswYVBwSK4V0Ftwriou88Pm/l",
+          "publicKeyUncompressedHex": "043c84ae25eb910a68ff93d2054a16b3061507048ae15d05b70ae2a2ef3c3e6fe586fdcc306199e6a2df965a5eb0b328814135b18960e1203578395ffcd49ee7b1"
+        }
+      },
+      "hello": {
+        "message": {
+          "type": "Hello",
+          "bleVersions": [
+            "0.3.0"
+          ],
+          "appNonce": "V1ONdJeyzwHyryZY3mCknd+IGXSod7H4+CgnPAjwj0M=",
+          "appVersion": "2.1.0",
+          "appEphemeralPubKey": "AkBtkt8D/Y8dFrOhCj6eLc+/IyCC+Jk0SsGdXerVcJEA"
+        },
+        "wireBase64": "eyJ0eXBlIjoiSGVsbG8iLCJibGVWZXJzaW9ucyI6WyIwLjMuMCJdLCJhcHBOb25jZSI6IlYxT05kSmV5endIeXJ5WlkzbUNrbmQrSUdYU29kN0g0K0NnblBBandqME09IiwiYXBwVmVyc2lvbiI6IjIuMS4wIiwiYXBwRXBoZW1lcmFsUHViS2V5IjoiQWtCdGt0OEQvWThkRnJPaENqNmVMYysvSXlDQytKazBTc0dkWGVyVmNKRUEifQ==",
+        "wireByteLength": 187
+      },
+      "challenge": {
+        "message": {
+          "type": "Challenge",
+          "bleVersion": "0.3.0",
+          "stationNonce": "wxdN6r13kRS8BBYE6WtBX0D8uUBIZ+FCdt3wFCAWI6E=",
+          "stationEphemeralPubKey": "AzyEriXrkQpo/5PSBUoWswYVBwSK4V0Ftwriou88Pm/l",
+          "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+          "stationConnectivity": "Offline",
+          "availableServices": [
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_eco",
+              "available": true
+            },
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_standard",
+              "available": true
+            },
+            {
+              "bayId": "bay_f6e5d4c3b2a1",
+              "serviceId": "svc_eco",
+              "available": false
+            },
+            {
+              "bayId": "bay_f6e5d4c3b2a1",
+              "serviceId": "svc_deluxe",
+              "available": false
+            }
+          ],
+          "stationSignature": "MEQCICCcI5greuzobyrsC+llGAi9+NspO5tWlfQBpkjjquBvAiAHj50n+k0IRnFp2AamQqIB2Vol5GrpAYU2Y8/xvbm5XA=="
+        },
+        "wireBase64": "eyJ0eXBlIjoiQ2hhbGxlbmdlIiwiYmxlVmVyc2lvbiI6IjAuMy4wIiwic3RhdGlvbk5vbmNlIjoid3hkTjZyMTNrUlM4QkJZRTZXdEJYMEQ4dVVCSVorRkNkdDN3RkNBV0k2RT0iLCJzdGF0aW9uRXBoZW1lcmFsUHViS2V5IjoiQXp5RXJpWHJrUXBvLzVQU0JVb1dzd1lWQndTSzRWMEZ0d3Jpb3U4OFBtL2wiLCJzdGF0aW9uQ2VydGlmaWNhdGUiOiJNSUlDRnpDQ0FiNmdBd0lCQWdJQ0NnRXdDZ1lJS29aSXpqMEVBd0l3TXpFU01CQUdBMVVFQ2d3SlQxTlFVQ0JVWlhOME1SMHdHd1lEVlFRRERCUlBVMUJRSUZSbGMzUWdVM1JoZEdsdmJpQkRRVEFlRncweU5qQXhNREV3TURBd01EQmFGdzB5TmpFeU16RXlNelU1TlRsYU1Dc3hFakFRQmdOVkJBb01DVTlUVUZBZ1ZHVnpkREVWTUJNR0ExVUVBd3dNYzNSdVgyRXhZakpqTTJRME1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRXZXNXhWckZVUHFiU1ZndXJla0VGR1UydkVkQW5PS2lKenp4Y21aY2EzL3NiRTRlLzg1K3QrZDN1SWJSR3NyaWhOVUpvL0hQZi90NlluTTF3OHlUYmNLT0J5VENCeGpBTUJnTlZIUk1CQWY4RUFqQUFNQTRHQTFVZER3RUIvd1FFQXdJSGdEQW9CZ05WSFNVRUlUQWZCZ2dyQmdFRkJRY0RBZ1lUYWRhdTFmVENsOUtPbTVHQ3hmdjF6L3FzWXpBOEJnTlZIUjhFTlRBek1ER2dMNkF0aGl0b2RIUndPaTh2WTNKc0xtOXpjSEF0ZEdWemRDNXBiblpoYkdsa0wzTjBZWFJwYjI0dFkyRXVZM0pzTUIwR0ExVWREZ1FXQkJRZXNQZDJJODlGcVV3YXYxSG5JNk1NRnUvd1BqQWZCZ05WSFNNRUdEQVdnQlFYeHdFYUR3Q3FBUkRiOTJWZ0gxODBNa3ZHV0RBS0JnZ3Foa2pPUFFRREFnTkhBREJFQWlCL250YWNmZjRBa3BvQ0ZlRzM2YmUzT1BxL1NuUzM2WXg0SjAreHlENlMxd0lnVDJDcjYxMld2NUJwV2RlWGFlODBoZ09wdlJQdmNaOVVRQ3M0MVQyZUZTST0iLCJzdGF0aW9uQ29ubmVjdGl2aXR5IjoiT2ZmbGluZSIsImF2YWlsYWJsZVNlcnZpY2VzIjpbeyJiYXlJZCI6ImJheV9hMWIyYzNkNGU1ZjYiLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwiYXZhaWxhYmxlIjp0cnVlfSx7ImJheUlkIjoiYmF5X2ExYjJjM2Q0ZTVmNiIsInNlcnZpY2VJZCI6InN2Y19zdGFuZGFyZCIsImF2YWlsYWJsZSI6dHJ1ZX0seyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEiLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwiYXZhaWxhYmxlIjpmYWxzZX0seyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEiLCJzZXJ2aWNlSWQiOiJzdmNfZGVsdXhlIiwiYXZhaWxhYmxlIjpmYWxzZX1dLCJzdGF0aW9uU2lnbmF0dXJlIjoiTUVRQ0lDQ2NJNWdyZXV6b2J5cnNDK2xsR0FpOStOc3BPNXRXbGZRQnBrampxdUJ2QWlBSGo1MG4razBJUm5GcDJBYW1RcUlCMlZvbDVHcnBBWVUyWTgveHZibTVYQT09In0=",
+        "wireByteLength": 1373,
+        "signedContentHex": "202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020204f53505020424c452073746174696f6e2c204368616c6c656e6765207369676e617475726500f3177b10869145584f8e5e4c41e879de9e4fcb8903c6e20a5c30399020ec1916",
+        "stationSignatureLowS": true
+      },
+      "gate": {
+        "at": "2026-02-13T10:00:00.000Z",
+        "ok": true,
+        "stationId": "stn_a1b2c3d4"
+      },
+      "transcript": {
+        "construction": "SHA-256( U16BE(len(helloWire))‖helloWire ‖ U16BE(len(challengeWire))‖challengeWire )",
+        "transcriptHashHex": "7fb7464620ce7b3cfab3844050ef2a4b1695b44d26c46b583cc0f929f17eb3f2",
+        "transcriptHashBase64": "f7dGRiDOezz6s4RAUO8qSxaVtE0mxGtYPMD5KfF+s/I="
+      },
+      "ecdh": {
+        "eeHex": "0007dfb67ebd385226c48a24305becbf796eb7f22e2f8f8d44671614ca556919",
+        "note": "ee = ECDH(appEphemeralPriv, stationEphemeralPub) = ECDH(stationEphemeralPriv, appEphemeralPub); X-only, 32B, left-padded (Pin 1)"
+      },
+      "keySchedule": {
+        "ikmHex": "0007dfb67ebd385226c48a24305becbf796eb7f22e2f8f8d44671614ca55691957538d7497b2cf01f2af2658de60a49ddf881974a877b1f8f828273c08f08f43c3174deabd779114bc041604e96b415f40fcb9404867e14276ddf014201623a1",
+        "saltUtf8": "OSPP_BLE_SESSION_V3",
+        "infoHex": "00207fb7464620ce7b3cfab3844050ef2a4b1695b44d26c46b583cc0f929f17eb3f2",
+        "infoNote": "LP(transcriptHash); LP(x)=U16BE(len)‖x (Pin 3)",
+        "sessionKeyHex": "8a4ff7441e881d1fe45d70389074a1aaefc0be4d868f80488b7ac86702247eec",
+        "sessionKeyBase64": "ik/3RB6IHR/kXXA4kHShqu/Avk2Gj4BIi3rIZwIkfuw=",
+        "kAppToStationHex": "2613c23fec6d2a7943472edfe87eda13e0c5549d2a2689a61c4a5376cb3b3ba6",
+        "kStationToAppHex": "09162919d98bc9fa286840190b0b7fd72531bcaf6901680d662c615bbf47b97c",
+        "sessionKeyConfirmationBase64": "/nH3jCMJG7EOk5nsCM2OMY6geVeISu3nOq7brZ+mbBg="
+      },
+      "sessionProof": {
+        "passId": "opass_a1b2c3d4e5f6a7b8",
+        "counter": 5,
+        "messageHex": "00124f66666c696e65417574685265717565737400166f706173735f61316232633364346535663661376238000135",
+        "sessionProofBase64": "Jg5YS28Y6RhgD06M4d7xTxao2arQPkN27j73A9FdEc8=",
+        "note": "HMAC-SHA256(SessionKey, LP(\"OfflineAuthRequest\")‖LP(passId)‖LP(decimal(counter))) (§6.5.1)"
+      },
+      "deviceProof": {
+        "deviceId": "device_a8f3bc12e4567890",
+        "devicePublicKey": "A0xX3DTR7Imb4hzGyaH1WyUX/5U/CIghk7B/cZV11KFi",
+        "stationId": "stn_a1b2c3d4",
+        "request": {
+          "passId": "opass_a1b2c3d4e5f6a7b8",
+          "counter": 5,
+          "bayId": "bay_a1b2c3d4e5f6",
+          "serviceId": "svc_eco",
+          "requestedDurationSeconds": 300
+        },
+        "proofInputHex": "00184f53505020424c45206465766963652070726f6f6620763100207fb7464620ce7b3cfab3844050ef2a4b1695b44d26c46b583cc0f929f17eb3f2000c73746e5f613162326333643400166f706173735f6131623263336434653566366137623800013500106261795f61316232633364346535663600077376635f65636f0003333030",
+        "proof": {
+          "format": "android-key",
+          "signature": "MEUCIQC+MQGJ5PDEs0i2RRW3k213HqcayCCHBpSiKRo/RlYUFgIgJsAQPXgwrLahH7Tbfd+g6GqPQoG2LdzeQQRPHZh2VmU="
+        },
+        "signatureLowS": true
+      },
+      "aeadFrames": [
+        {
+          "direction": "app->station",
+          "keyRef": "kAppToStation",
+          "counter": 0,
+          "characteristic": "FFF3",
+          "nonce96Hex": "000000000000000000000000",
+          "aad": "transcriptHash",
+          "plaintextUtf8": "{\"type\":\"OfflineAuthRequest\",\"offlinePass\":{\"passId\":\"opass_a1b2c3d4e5f6a7b8\",\"sub\":\"sub_xyz789\",\"deviceId\":\"device_a8f3bc12e4567890\",\"devicePublicKey\":\"A0xX3DTR7Imb4hzGyaH1WyUX/5U/CIghk7B/cZV11KFi\",\"keyId\":\"YjX5pR0TzmU3ubs17wImQQ\",\"issuedAt\":\"2026-02-13T06:00:00.000Z\",\"expiresAt\":\"2026-02-14T06:00:00.000Z\",\"policyVersion\":1,\"revocationEpoch\":42,\"offlineAllowance\":{\"maxTotalCredits\":100,\"maxUses\":5,\"maxCreditsPerTx\":30},\"constraints\":{\"minIntervalSec\":60},\"signatureAlgorithm\":\"ECDSA-P256-SHA256\",\"signature\":\"MEQCIEdmkzFrxGI2oFsnkRwMay8MkqW1LNqYOnpwGkx/0fyRAiAfeKR7knNY/2igxjLMVp3FLthLwOMLIbFrOyft/MwYEQ==\"},\"counter\":5,\"bayId\":\"bay_a1b2c3d4e5f6\",\"serviceId\":\"svc_eco\",\"requestedDurationSeconds\":300,\"sessionProof\":\"Jg5YS28Y6RhgD06M4d7xTxao2arQPkN27j73A9FdEc8=\",\"deviceProof\":{\"format\":\"android-key\",\"signature\":\"MEUCIQC+MQGJ5PDEs0i2RRW3k213HqcayCCHBpSiKRo/RlYUFgIgJsAQPXgwrLahH7Tbfd+g6GqPQoG2LdzeQQRPHZh2VmU=\"}}",
+          "frame": {
+            "n": 0,
+            "ct": "qy5avx+cMG/DcNkIYEMqFsNk4VpR3skcIHEPXg9/1vcWCLBy7CItR15kGu+h64+tp041BjOX2n4GRg4wkN0Xtf5TTm4Y+db+iBDdb+HSh78zNlQP3dacQQ0X7EA+s5eYYrqHWgREn20M8pzmlCUirE53GdsE1VfsMVWswR+nycaqsx4QENFSoTQIXi5wHArXEM/M7GuYL6czPbGAsp9HVUucVKBMElAsPV+xkpXmJ8QM6RgP7WLhCZruuhUQFFSG94Dis42N51TJdCc1rOKNHTskS0mK89UeyOyWkM6vk0CMVjaLJkfMjfxR916NMP4z+bty1cj9qwUNenf294/y/OQDqA4scMA2/mNHDdI5/mPdkwYC9bNpeOIIyFqjngoOGoCB82v8Awq0Btei7HFnr7HFHrsZD1xznUQOp6Lg478gouRq3yCYNW/O5+T/sOXMV12Q+d5LPI2bIyC6uCn/0ryRgaOvU8S7k5SMeuBDQmG3uD3Xpu1WyLLKHdjtyQPPdeXgdF3TNqnIR5JLOo4py/p/UJW6bwRtJSnWOdMC9mLgwnm7iFuQB+AZB1u4MYIQ3h9Z19L9VmHhSdzguc/wC15ImOmvyMrgodMwtnoEtpHkl/Po2zf9AaRCTfCzUnNwcFeHLHert9XqI1/P1hcf1i/JQnBoFe1q8APzLI1RIuGMYab2QqKUd/PA6KK/zuQsS8sV9n/sXaVQ+vdU26mqJOCikcYUofy6OUVyrChvbDwYbQqiGkgdVCZB/l37FUV3hH85atcyGkp/X9V3EhCHUY8X2dAymCCzNHLH7I1azGunli2GyVrwYEIKh6PyeR3R2CHXLPkQE2ci3IQqHFV+FIaf4ggZGVEQhj0qukVnCZM9aWf8HUb/JA3bSsNkUVzGQcq1/DiC3DbEXZFlHgCVKBc18HhNjqGLzWsyNGIFZSmnCm+q4B65JtKvTN3OZdkJVLNYwxB3+wfQIMOKjOu2ZdF7hjQ7pJAnObWPqlCU6/eJJoQAXgo49mHgGYGmk9xo/TjG+WEc6F8F/CGKOvRCHW1J0kaIOQGDBTszTu7V43eGOxJo8Q5iFOWf5xQmxXX5I36128s83bcpPOmt9DkHF3Bqjsm8yOkNAEo8eEpHL9Fnajkts8I88h7PN0glTiBIHhizA9Z0rG1hf4gLLU+iNEYQ3Nx4Pv0aX0Hoc1BrUGIMPXX65M9PrZKQ7Vyu4jHMq0aEVcRZA3jyo4EnHK/En/BEJgZY"
+          }
+        },
+        {
+          "direction": "station->app",
+          "keyRef": "kStationToApp",
+          "counter": 0,
+          "characteristic": "FFF4",
+          "nonce96Hex": "000000000000000000000000",
+          "aad": "transcriptHash",
+          "plaintextUtf8": "{\"type\":\"AuthResponse\",\"result\":\"Accepted\",\"sessionKeyConfirmation\":\"/nH3jCMJG7EOk5nsCM2OMY6geVeISu3nOq7brZ+mbBg=\"}",
+          "frame": {
+            "n": 0,
+            "ct": "YbxpJ8jJjoMmbSfSLfCP16anBBEsQNjLSwvJBZ7440ZI7tlWPGGNeZBpnDCTHfJe1XPVXWeT8htORB7dp0h7RZc3/Q55L9xMFIoOgVCN7nMu6oHjIyFuqLjz77Eo84fFrUPOw50MFy78VnRmDFebs2WrCZaLF0eb45N1CjtbNQWSF+8="
           }
         }
       ]
+    },
+    {
+      "scenario": "example-partial-b",
+      "stationConnectivity": "Online",
+      "keys": {
+        "appEphemeral": {
+          "label": "OSPP_BLE_APP_EPH_EXAMPLE_PARTIAL_B_V1",
+          "privateKeyHex": "bcacf5892df2d33da16ccd3328e02c5bb6c40368a831e1b72ddcb5465903b437",
+          "publicKeyCompressedBase64": "AwETQQB3tLvxUwmmDDvityY4Fmh18TThbkwQHi+ohqQL",
+          "publicKeyUncompressedHex": "040113410077b4bbf15309a60c3be2b72638166875f134e16e4c101e2fa886a40b8066267f515651fb06bdd1b6f53850fbf6eb5cb39093b07b76b8422443896385"
+        },
+        "stationEphemeral": {
+          "label": "OSPP_BLE_STATION_EPH_EXAMPLE_PARTIAL_B_V1",
+          "privateKeyHex": "1fddf916ca8f2b9d645810c8e0a1f81f1031131e5a61b5aedc12d71a6b2ef325",
+          "publicKeyCompressedBase64": "A6Z+Lf3TDSf12jz6kFS8iBEuxzKu+pDE+M3bD5jsfh7e",
+          "publicKeyUncompressedHex": "04a67e2dfdd30d27f5da3cfa9054bc88112ec732aefa90c4f8cddb0f98ec7e1edeb82455c155adbde67ac07e6d9b4dc209f97d429378cefae10fadba62767a3dd5"
+        }
+      },
+      "hello": {
+        "message": {
+          "type": "Hello",
+          "bleVersions": [
+            "0.3.0"
+          ],
+          "appNonce": "wpgzLcJpjHxT87rOQ5d3QiI0PmE+aw/n681O2ZdWVXM=",
+          "appVersion": "2.1.0",
+          "appEphemeralPubKey": "AwETQQB3tLvxUwmmDDvityY4Fmh18TThbkwQHi+ohqQL"
+        },
+        "wireBase64": "eyJ0eXBlIjoiSGVsbG8iLCJibGVWZXJzaW9ucyI6WyIwLjMuMCJdLCJhcHBOb25jZSI6IndwZ3pMY0pwakh4VDg3ck9RNWQzUWlJMFBtRSthdy9uNjgxTzJaZFdWWE09IiwiYXBwVmVyc2lvbiI6IjIuMS4wIiwiYXBwRXBoZW1lcmFsUHViS2V5IjoiQXdFVFFRQjN0THZ4VXdtbUREdml0eVk0Rm1oMThUVGhia3dRSGkrb2hxUUwifQ==",
+        "wireByteLength": 187
+      },
+      "challenge": {
+        "message": {
+          "type": "Challenge",
+          "bleVersion": "0.3.0",
+          "stationNonce": "lR8n9f8nkPDUO4mZha0/w5MG8WPpC0MADclB311UlfA=",
+          "stationEphemeralPubKey": "A6Z+Lf3TDSf12jz6kFS8iBEuxzKu+pDE+M3bD5jsfh7e",
+          "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+          "stationConnectivity": "Online",
+          "availableServices": [
+            {
+              "bayId": "bay_a1b2c3d4",
+              "serviceId": "svc_eco",
+              "available": true
+            }
+          ],
+          "stationSignature": "MEUCIQCM830tnptfY17rnTtnfZwnvplZ+Yo/H4fODgS2u6+LIgIgUQCaJqj8VG72vJ1ltQ/X7n2SgN0Znz2y8+oDgv5jnyc="
+        },
+        "wireBase64": "eyJ0eXBlIjoiQ2hhbGxlbmdlIiwiYmxlVmVyc2lvbiI6IjAuMy4wIiwic3RhdGlvbk5vbmNlIjoibFI4bjlmOG5rUERVTzRtWmhhMC93NU1HOFdQcEMwTUFEY2xCMzExVWxmQT0iLCJzdGF0aW9uRXBoZW1lcmFsUHViS2V5IjoiQTZaK0xmM1REU2YxMmp6NmtGUzhpQkV1eHpLdStwREUrTTNiRDVqc2ZoN2UiLCJzdGF0aW9uQ2VydGlmaWNhdGUiOiJNSUlDRnpDQ0FiNmdBd0lCQWdJQ0NnRXdDZ1lJS29aSXpqMEVBd0l3TXpFU01CQUdBMVVFQ2d3SlQxTlFVQ0JVWlhOME1SMHdHd1lEVlFRRERCUlBVMUJRSUZSbGMzUWdVM1JoZEdsdmJpQkRRVEFlRncweU5qQXhNREV3TURBd01EQmFGdzB5TmpFeU16RXlNelU1TlRsYU1Dc3hFakFRQmdOVkJBb01DVTlUVUZBZ1ZHVnpkREVWTUJNR0ExVUVBd3dNYzNSdVgyRXhZakpqTTJRME1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRXZXNXhWckZVUHFiU1ZndXJla0VGR1UydkVkQW5PS2lKenp4Y21aY2EzL3NiRTRlLzg1K3QrZDN1SWJSR3NyaWhOVUpvL0hQZi90NlluTTF3OHlUYmNLT0J5VENCeGpBTUJnTlZIUk1CQWY4RUFqQUFNQTRHQTFVZER3RUIvd1FFQXdJSGdEQW9CZ05WSFNVRUlUQWZCZ2dyQmdFRkJRY0RBZ1lUYWRhdTFmVENsOUtPbTVHQ3hmdjF6L3FzWXpBOEJnTlZIUjhFTlRBek1ER2dMNkF0aGl0b2RIUndPaTh2WTNKc0xtOXpjSEF0ZEdWemRDNXBiblpoYkdsa0wzTjBZWFJwYjI0dFkyRXVZM0pzTUIwR0ExVWREZ1FXQkJRZXNQZDJJODlGcVV3YXYxSG5JNk1NRnUvd1BqQWZCZ05WSFNNRUdEQVdnQlFYeHdFYUR3Q3FBUkRiOTJWZ0gxODBNa3ZHV0RBS0JnZ3Foa2pPUFFRREFnTkhBREJFQWlCL250YWNmZjRBa3BvQ0ZlRzM2YmUzT1BxL1NuUzM2WXg0SjAreHlENlMxd0lnVDJDcjYxMld2NUJwV2RlWGFlODBoZ09wdlJQdmNaOVVRQ3M0MVQyZUZTST0iLCJzdGF0aW9uQ29ubmVjdGl2aXR5IjoiT25saW5lIiwiYXZhaWxhYmxlU2VydmljZXMiOlt7ImJheUlkIjoiYmF5X2ExYjJjM2Q0Iiwic2VydmljZUlkIjoic3ZjX2VjbyIsImF2YWlsYWJsZSI6dHJ1ZX1dLCJzdGF0aW9uU2lnbmF0dXJlIjoiTUVVQ0lRQ004MzB0bnB0ZlkxN3JuVHRuZlp3bnZwbForWW8vSDRmT0RnUzJ1NitMSWdJZ1VRQ2FKcWo4Vkc3MnZKMWx0US9YN24yU2dOMFpuejJ5OCtvRGd2NWpueWM9In0=",
+        "wireByteLength": 1154,
+        "signedContentHex": "202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020204f53505020424c452073746174696f6e2c204368616c6c656e6765207369676e61747572650095878752f263e38954cd6e1420f75a71a487fc066da5d3f44b1656dfa7793112",
+        "stationSignatureLowS": true
+      },
+      "gate": {
+        "at": "2026-02-13T10:00:00.000Z",
+        "ok": true,
+        "stationId": "stn_a1b2c3d4"
+      },
+      "transcript": {
+        "construction": "SHA-256( U16BE(len(helloWire))‖helloWire ‖ U16BE(len(challengeWire))‖challengeWire )",
+        "transcriptHashHex": "148e851241f560ba5caf0d705339ed674c17d2805f848afdbb4b1fc00c4194f8",
+        "transcriptHashBase64": "FI6FEkH1YLpcrw1wUzntZ0wX0oBfhIr9u0sfwAxBlPg="
+      },
+      "ecdh": {
+        "eeHex": "8bf1958576096462afb29a9a6ddc40e74234193abbe9d4577288acf01cc3fb32",
+        "note": "ee = ECDH(appEphemeralPriv, stationEphemeralPub) = ECDH(stationEphemeralPriv, appEphemeralPub); X-only, 32B, left-padded (Pin 1)"
+      },
+      "keySchedule": {
+        "ikmHex": "8bf1958576096462afb29a9a6ddc40e74234193abbe9d4577288acf01cc3fb32c298332dc2698c7c53f3bace4397774222343e613e6b0fe7ebcd4ed997565573951f27f5ff2790f0d43b899985ad3fc39306f163e90b43000dc941df5d5495f0",
+        "saltUtf8": "OSPP_BLE_SESSION_V3",
+        "infoHex": "0020148e851241f560ba5caf0d705339ed674c17d2805f848afdbb4b1fc00c4194f8",
+        "infoNote": "LP(transcriptHash); LP(x)=U16BE(len)‖x (Pin 3)",
+        "sessionKeyHex": "9f392f88101ee97528f188340f4e44a82145777573d858875fa3d70b7f976033",
+        "sessionKeyBase64": "nzkviBAe6XUo8Yg0D05EqCFFd3Vz2FiHX6PXC3+XYDM=",
+        "kAppToStationHex": "792160da63813fedce55c87304da4295617ddbf395f6f310b295dfc66ef28572",
+        "kStationToAppHex": "5771bbf0c03a674685fb16759b3abf75f35717efd9d6a83446859c693f2c4836",
+        "sessionKeyConfirmationBase64": "3M+Swuv+w31Y89RSuqSkWVxVG5+ZDZrYkRLgDB9rj2I="
+      },
+      "sessionProof": {
+        "passId": "opass_a8b9c0d1e2f3",
+        "counter": 5,
+        "messageHex": "00124f66666c696e65417574685265717565737400126f706173735f613862396330643165326633000135",
+        "sessionProofBase64": "lv+j2mJXX7Sg4p1sMM0RuS+xBf3bedJRV1HvuSUahdA=",
+        "note": "HMAC-SHA256(SessionKey, LP(\"OfflineAuthRequest\")‖LP(passId)‖LP(decimal(counter))) (§6.5.1)"
+      },
+      "deviceProof": {
+        "deviceId": "dev_android_abc123",
+        "devicePublicKey": "AnqCJkURKXFi9hQaO5EzjzvZXf8V0LCdzMg496b+y2rN",
+        "stationId": "stn_a1b2c3d4",
+        "request": {
+          "passId": "opass_a8b9c0d1e2f3",
+          "counter": 5,
+          "bayId": "bay_a1b2c3d4",
+          "serviceId": "svc_eco",
+          "requestedDurationSeconds": 300
+        },
+        "proofInputHex": "00184f53505020424c45206465766963652070726f6f662076310020148e851241f560ba5caf0d705339ed674c17d2805f848afdbb4b1fc00c4194f8000c73746e5f613162326333643400126f706173735f613862396330643165326633000135000c6261795f613162326333643400077376635f65636f0003333030",
+        "proof": {
+          "format": "android-key",
+          "signature": "MEUCIQC4BGCAo/8BKPpd6P7F7GOMnXku+2VwoSGyPqVDX3Bj1wIgFPSsjsoOCF6k0yvBYIoHbQebFcA3DFxWBoUEqD3YAVU="
+        },
+        "signatureLowS": true
+      },
+      "aeadFrames": [
+        {
+          "direction": "app->station",
+          "keyRef": "kAppToStation",
+          "counter": 0,
+          "characteristic": "FFF3",
+          "nonce96Hex": "000000000000000000000000",
+          "aad": "transcriptHash",
+          "plaintextUtf8": "{\"type\":\"OfflineAuthRequest\",\"offlinePass\":{\"passId\":\"opass_a8b9c0d1e2f3\",\"sub\":\"sub_9a8b7c6d\",\"deviceId\":\"dev_android_abc123\",\"devicePublicKey\":\"AnqCJkURKXFi9hQaO5EzjzvZXf8V0LCdzMg496b+y2rN\",\"keyId\":\"YjX5pR0TzmU3ubs17wImQQ\",\"issuedAt\":\"2026-02-13T09:50:00.000Z\",\"expiresAt\":\"2026-02-13T10:50:00.000Z\",\"policyVersion\":1,\"revocationEpoch\":42,\"offlineAllowance\":{\"maxTotalCredits\":200,\"maxUses\":5,\"maxCreditsPerTx\":50},\"constraints\":{\"minIntervalSec\":60},\"signatureAlgorithm\":\"ECDSA-P256-SHA256\",\"signature\":\"MEQCIHtTBR62/kj2qeB7M2BXb1yek5fh7ryc+lhz5N0sJLPNAiAHnbvbzTENpzKRSUflA/9BsgokbMZbDR1BdsxN4tZlPg==\"},\"counter\":5,\"bayId\":\"bay_a1b2c3d4\",\"serviceId\":\"svc_eco\",\"requestedDurationSeconds\":300,\"sessionProof\":\"lv+j2mJXX7Sg4p1sMM0RuS+xBf3bedJRV1HvuSUahdA=\",\"deviceProof\":{\"format\":\"android-key\",\"signature\":\"MEUCIQC4BGCAo/8BKPpd6P7F7GOMnXku+2VwoSGyPqVDX3Bj1wIgFPSsjsoOCF6k0yvBYIoHbQebFcA3DFxWBoUEqD3YAVU=\"}}",
+          "frame": {
+            "n": 0,
+            "ct": "Or/3skBryHTDVyXoLAomI2W8Acom5KoWFVKunapigiyKDqlM5E/WS7EDk76bTe2shmvuHGdRRMXhS/eS3ONZUk570+XYO6RRaUgskjkEj12FPIOxYamNsVNlXxI/WUE1q9l9L9JAo06E+BxhV5MxMCxungU2gM4/7MT6ixs2cEr2irQfarWE7aCovvzxnQJDb3ipio/xcpss8A5hsF0WGccc6rzj7asN1tdRDNv6aAZkHKDHgD4KN8QR79RxKZ9HN0UVuF6ynIhd2d66YomhL+4HLXkeswOIbDtQZEug79fZ2AWIq2aQ8TxGNRx3VdoOsSRIzwWGiQxH8rPtQR1qpqKNdHVIsIc9ENKoTzKDMwbhepd462YVmseZ0rMDu+Ofn7WwnmOT/R2aMnnACeW3eUMlgsyLufkA618h5t6NX5goMiJVHtAgnqlAIC7QQfi7pMJfHiP8HMtlff05cgeilzy9f7RofvTZagbfjHTkluM62e3URzo/KDzFvkfZ4+m1vgdiz8F85C7zUIs5yTQhaU0sHuTDjGOy9AnVFDBaAkuPpIgL004OwymMbfZz8W1CUZHBfPnwHPmajyat+fg3YQmZh80t50EZn7i8K5sacZElB8rTg+SUiagC4GbWZW8QgZmTmdgnGM0KKmpxyMfkqaqtJm6hiOuFKzZb02eJJ8Hhcsai8A1XuAN4cujgIDHoPXRN4Hh/r3Tuyw0m+In+s3s7P4kyGraDn9J12DUuE5AB4rMtueU+ki5iaQ6hmKvakszEezmJYR91pcCG8hJPaozzb+Ht6UF+YE30whvXrwS3jENj8wqvXc+bahTOfrRyr7JdnvY660dZ52toQ76aIfwJdQc059zYN1pCLt1ai4QkRpUgnE6UVpCrsz2HaNnn6DDQbPXTm4y12N8BixGtybLKg2eiqWBK0gs2pAtyhWrkb+YZBc2Y7mCCCUYYR9DCjSEJ/3kdHg3+3ra3hqpNHXXHNa5mNBYyFrTgIYs8e57VkoYm5UI0lTL1RheecA7vDXSFA3+fYHSKnjPGpMHmUujC0/pavBoTY+P4CTvbLtnyIrJ430NIX66kJocckgU0zsK0t7C6icR7N9Uba+zvq2jecOA3npbkPMAzwT/0REdjechVxkd/SM5nEu6PPfabZyFrD3LL1P0TutfTEabg+uppb6yzS87o8WeORUPf590YR5/9KHS5ljXeB3NlQL3ww8dca0DoCFGKow=="
+          }
+        },
+        {
+          "direction": "station->app",
+          "keyRef": "kStationToApp",
+          "counter": 0,
+          "characteristic": "FFF4",
+          "nonce96Hex": "000000000000000000000000",
+          "aad": "transcriptHash",
+          "plaintextUtf8": "{\"type\":\"AuthResponse\",\"result\":\"Accepted\",\"sessionKeyConfirmation\":\"3M+Swuv+w31Y89RSuqSkWVxVG5+ZDZrYkRLgDB9rj2I=\"}",
+          "frame": {
+            "n": 0,
+            "ct": "6VK+E56VtnDyYuE+7LxRe3DUS/uY7EJk9Pz7RT24nGQXfATdw4PWt/THl2QlclHLajEV8EEpwcA4ZpnhjQ3T2MbLJQX5HU9vpt/JDglc+NdKVkDcGH17rOgKAc2ZY9ofRL4k3I21JZY4z3QyloeJgVWK7Bu6PoipZXwk2Ln+9as1lPo="
+          }
+        }
+      ],
+      "forward": {
+        "payload": {
+          "offlinePassId": "opass_a8b9c0d1e2f3",
+          "offlinePass": {
+            "passId": "opass_a8b9c0d1e2f3",
+            "sub": "sub_9a8b7c6d",
+            "deviceId": "dev_android_abc123",
+            "devicePublicKey": "AnqCJkURKXFi9hQaO5EzjzvZXf8V0LCdzMg496b+y2rN",
+            "keyId": "YjX5pR0TzmU3ubs17wImQQ",
+            "issuedAt": "2026-02-13T09:50:00.000Z",
+            "expiresAt": "2026-02-13T10:50:00.000Z",
+            "policyVersion": 1,
+            "revocationEpoch": 42,
+            "offlineAllowance": {
+              "maxTotalCredits": 200,
+              "maxUses": 5,
+              "maxCreditsPerTx": 50
+            },
+            "constraints": {
+              "minIntervalSec": 60
+            },
+            "signatureAlgorithm": "ECDSA-P256-SHA256",
+            "signature": "MEQCIHtTBR62/kj2qeB7M2BXb1yek5fh7ryc+lhz5N0sJLPNAiAHnbvbzTENpzKRSUflA/9BsgokbMZbDR1BdsxN4tZlPg=="
+          },
+          "counter": 5,
+          "bayId": "bay_a1b2c3d4",
+          "serviceId": "svc_eco",
+          "requestedDurationSeconds": 300,
+          "deviceProof": {
+            "format": "android-key",
+            "signature": "MEUCIQC4BGCAo/8BKPpd6P7F7GOMnXku+2VwoSGyPqVDX3Bj1wIgFPSsjsoOCF6k0yvBYIoHbQebFcA3DFxWBoUEqD3YAVU="
+          },
+          "transcriptHash": "FI6FEkH1YLpcrw1wUzntZ0wX0oBfhIr9u0sfwAxBlPg="
+        },
+        "serverCheck": {
+          "forwardingStationId": "stn_a1b2c3d4",
+          "ok": true
+        }
+      }
+    },
+    {
+      "scenario": "empty-catalog",
+      "stationConnectivity": "Offline",
+      "keys": {
+        "appEphemeral": {
+          "label": "OSPP_BLE_APP_EPH_EMPTY_CATALOG_V1",
+          "privateKeyHex": "6d91fe63d72c517d14079fd5944b4f69aa36f2b1f4043d2a2efe832698932cae",
+          "publicKeyCompressedBase64": "A8eNzNB8jMpU7wdzdWx56v0PlKVHxgLbjakilPWMtKm+",
+          "publicKeyUncompressedHex": "04c78dccd07c8cca54ef0773756c79eafd0f94a547c602db8da92294f58cb4a9be65cfd60e4276c4b43f9566e48b659aea1d7834af888f7adce732652e2edef823"
+        },
+        "stationEphemeral": {
+          "label": "OSPP_BLE_STATION_EPH_EMPTY_CATALOG_V1",
+          "privateKeyHex": "6a5d1f20680d4b0833f1caf01f7d244a3702fe1226876e488f607af7cee9ab0a",
+          "publicKeyCompressedBase64": "Ap6b/PXlKfqVO14ofK32SHweG+mUCdbgjJwN/696kqbg",
+          "publicKeyUncompressedHex": "049e9bfcf5e529fa953b5e287cadf6487c1e1be99409d6e08c9c0dffaf7a92a6e09ab2d8e24f632193bf6898fb8f21d13c40b40ac74637350ff050acf79d45ffe4"
+        }
+      },
+      "hello": {
+        "message": {
+          "type": "Hello",
+          "bleVersions": [
+            "0.3.0"
+          ],
+          "appNonce": "AoDnPEVcpsI/JbeUQ6OfYwIujqhM9hwYHMfKUktWsP0=",
+          "appVersion": "2.5.3",
+          "appEphemeralPubKey": "A8eNzNB8jMpU7wdzdWx56v0PlKVHxgLbjakilPWMtKm+"
+        },
+        "wireBase64": "eyJ0eXBlIjoiSGVsbG8iLCJibGVWZXJzaW9ucyI6WyIwLjMuMCJdLCJhcHBOb25jZSI6IkFvRG5QRVZjcHNJL0piZVVRNk9mWXdJdWpxaE05aHdZSE1mS1VrdFdzUDA9IiwiYXBwVmVyc2lvbiI6IjIuNS4zIiwiYXBwRXBoZW1lcmFsUHViS2V5IjoiQThlTnpOQjhqTXBVN3dkemRXeDU2djBQbEtWSHhnTGJqYWtpbFBXTXRLbSsifQ==",
+        "wireByteLength": 187
+      },
+      "challenge": {
+        "message": {
+          "type": "Challenge",
+          "bleVersion": "0.3.0",
+          "stationNonce": "qirZfzgil4ZA4y85ubxoK3/RvcrY2fGX7Z3T32wDyb8=",
+          "stationEphemeralPubKey": "Ap6b/PXlKfqVO14ofK32SHweG+mUCdbgjJwN/696kqbg",
+          "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+          "stationConnectivity": "Offline",
+          "availableServices": [],
+          "stationSignature": "MEQCIDxOJxUXAyBUUjk03sG8foOv/aRoKmJSvfGB5JI2sLpgAiAtP6SqiaDNMxkTQWJWIeio8kY3oHrIrse6NPxPqTcQNw=="
+        },
+        "wireBase64": "eyJ0eXBlIjoiQ2hhbGxlbmdlIiwiYmxlVmVyc2lvbiI6IjAuMy4wIiwic3RhdGlvbk5vbmNlIjoicWlyWmZ6Z2lsNFpBNHk4NXVieG9LMy9SdmNyWTJmR1g3WjNUMzJ3RHliOD0iLCJzdGF0aW9uRXBoZW1lcmFsUHViS2V5IjoiQXA2Yi9QWGxLZnFWTzE0b2ZLMzJTSHdlRyttVUNkYmdqSndOLzY5NmtxYmciLCJzdGF0aW9uQ2VydGlmaWNhdGUiOiJNSUlDRnpDQ0FiNmdBd0lCQWdJQ0NnRXdDZ1lJS29aSXpqMEVBd0l3TXpFU01CQUdBMVVFQ2d3SlQxTlFVQ0JVWlhOME1SMHdHd1lEVlFRRERCUlBVMUJRSUZSbGMzUWdVM1JoZEdsdmJpQkRRVEFlRncweU5qQXhNREV3TURBd01EQmFGdzB5TmpFeU16RXlNelU1TlRsYU1Dc3hFakFRQmdOVkJBb01DVTlUVUZBZ1ZHVnpkREVWTUJNR0ExVUVBd3dNYzNSdVgyRXhZakpqTTJRME1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRXZXNXhWckZVUHFiU1ZndXJla0VGR1UydkVkQW5PS2lKenp4Y21aY2EzL3NiRTRlLzg1K3QrZDN1SWJSR3NyaWhOVUpvL0hQZi90NlluTTF3OHlUYmNLT0J5VENCeGpBTUJnTlZIUk1CQWY4RUFqQUFNQTRHQTFVZER3RUIvd1FFQXdJSGdEQW9CZ05WSFNVRUlUQWZCZ2dyQmdFRkJRY0RBZ1lUYWRhdTFmVENsOUtPbTVHQ3hmdjF6L3FzWXpBOEJnTlZIUjhFTlRBek1ER2dMNkF0aGl0b2RIUndPaTh2WTNKc0xtOXpjSEF0ZEdWemRDNXBiblpoYkdsa0wzTjBZWFJwYjI0dFkyRXVZM0pzTUIwR0ExVWREZ1FXQkJRZXNQZDJJODlGcVV3YXYxSG5JNk1NRnUvd1BqQWZCZ05WSFNNRUdEQVdnQlFYeHdFYUR3Q3FBUkRiOTJWZ0gxODBNa3ZHV0RBS0JnZ3Foa2pPUFFRREFnTkhBREJFQWlCL250YWNmZjRBa3BvQ0ZlRzM2YmUzT1BxL1NuUzM2WXg0SjAreHlENlMxd0lnVDJDcjYxMld2NUJwV2RlWGFlODBoZ09wdlJQdmNaOVVRQ3M0MVQyZUZTST0iLCJzdGF0aW9uQ29ubmVjdGl2aXR5IjoiT2ZmbGluZSIsImF2YWlsYWJsZVNlcnZpY2VzIjpbXSwic3RhdGlvblNpZ25hdHVyZSI6Ik1FUUNJRHhPSnhVWEF5QlVVamswM3NHOGZvT3YvYVJvS21KU3ZmR0I1Skkyc0xwZ0FpQXRQNlNxaWFETk14a1RRV0pXSWVpbzhrWTNvSHJJcnNlNk5QeFBxVGNRTnc9PSJ9",
+        "wireByteLength": 1092,
+        "signedContentHex": "202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020204f53505020424c452073746174696f6e2c204368616c6c656e6765207369676e617475726500387e8ee788b120af04153c7fcf442012a52bc78077b8ddf93fc75c76055d7c6b",
+        "stationSignatureLowS": true
+      },
+      "gate": {
+        "at": "2026-02-13T10:00:00.000Z",
+        "ok": true,
+        "stationId": "stn_a1b2c3d4"
+      },
+      "transcript": {
+        "construction": "SHA-256( U16BE(len(helloWire))‖helloWire ‖ U16BE(len(challengeWire))‖challengeWire )",
+        "transcriptHashHex": "a969d6457c065bc2c36c23a118951028507e1888697406b077fb987b4d1f72c5",
+        "transcriptHashBase64": "qWnWRXwGW8LDbCOhGJUQKFB+GIhpdAawd/uYe00fcsU="
+      },
+      "ecdh": {
+        "eeHex": "e39e162e2c26c732f05892bcdfe858f96d48dd9e4c84ec619db43da1065de364",
+        "note": "ee = ECDH(appEphemeralPriv, stationEphemeralPub) = ECDH(stationEphemeralPriv, appEphemeralPub); X-only, 32B, left-padded (Pin 1)"
+      },
+      "keySchedule": {
+        "ikmHex": "e39e162e2c26c732f05892bcdfe858f96d48dd9e4c84ec619db43da1065de3640280e73c455ca6c23f25b79443a39f63022e8ea84cf61c181cc7ca524b56b0fdaa2ad97f3822978640e32f39b9bc682b7fd1bdcad8d9f197ed9dd3df6c03c9bf",
+        "saltUtf8": "OSPP_BLE_SESSION_V3",
+        "infoHex": "0020a969d6457c065bc2c36c23a118951028507e1888697406b077fb987b4d1f72c5",
+        "infoNote": "LP(transcriptHash); LP(x)=U16BE(len)‖x (Pin 3)",
+        "sessionKeyHex": "c819bbb67223b484d55efb3c3d42d1571273a6ffd08823856fe2e4370fce3d52",
+        "sessionKeyBase64": "yBm7tnIjtITVXvs8PULRVxJzpv/QiCOFb+LkNw/OPVI=",
+        "kAppToStationHex": "f74b6f31ffd9a0c5dd468314381255d188d0b70285d0c8fb91e1d604ccd518b2",
+        "kStationToAppHex": "b2d55bd0e3435d0d1b81619dc38f7c83201114bab34f579a4d12d87a397c66b1",
+        "sessionKeyConfirmationBase64": "XdAAHAm1FKH2n6ySjaiBqUg0dm8UXmRghoL5XY1dP/8="
+      }
     }
-  ]
+  ],
+  "stationAuthentication": {
+    "note": "The app verification gate of 06-security.md §6.5.2, steps 1-6, over the Hello of the full scenario. Positive controls first: a refusal is evidence only when the same path accepts the genuine Challenge.",
+    "caCertificate": "conformance/test-keys/station-ca-test-cert.pem",
+    "cases": [
+      {
+        "id": "genuine-bundle-crl",
+        "what": "genuine Challenge, the bundle CRL",
+        "hello": "scenarios[full].hello",
+        "crl": "conformance/test-keys/station-ca-test-crl.pem",
+        "at": "2026-02-13T10:00:00.000Z",
+        "intendedStationId": null,
+        "challenge": {
+          "type": "Challenge",
+          "bleVersion": "0.3.0",
+          "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
+          "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
+          "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+          "stationConnectivity": "Offline",
+          "availableServices": [
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_basic",
+              "available": true
+            },
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_premium",
+              "available": true
+            },
+            {
+              "bayId": "bay_f6e5d4c3b2a1",
+              "serviceId": "svc_auxiliary",
+              "available": false
+            }
+          ],
+          "stationSignature": "MEQCIDRzJnuqRRbY4IwdeAX/pP+ajdHnQw2I+QEfxsenbDKuAiAD0siOY72i5e4weFlUtWXpoZJC2Er7K/i2eqEjeXYFeA=="
+        },
+        "expected": {
+          "ok": true,
+          "stationId": "stn_a1b2c3d4"
+        },
+        "observedReason": null
+      },
+      {
+        "id": "genuine-revoking-crl",
+        "what": "genuine Challenge, the CRL that revokes another certificate",
+        "hello": "scenarios[full].hello",
+        "crl": "conformance/test-keys/station-ca-test-crl-revoking.pem",
+        "at": "2026-02-13T10:00:00.000Z",
+        "intendedStationId": null,
+        "challenge": {
+          "type": "Challenge",
+          "bleVersion": "0.3.0",
+          "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
+          "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
+          "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+          "stationConnectivity": "Offline",
+          "availableServices": [
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_basic",
+              "available": true
+            },
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_premium",
+              "available": true
+            },
+            {
+              "bayId": "bay_f6e5d4c3b2a1",
+              "serviceId": "svc_auxiliary",
+              "available": false
+            }
+          ],
+          "stationSignature": "MEQCIDRzJnuqRRbY4IwdeAX/pP+ajdHnQw2I+QEfxsenbDKuAiAD0siOY72i5e4weFlUtWXpoZJC2Er7K/i2eqEjeXYFeA=="
+        },
+        "expected": {
+          "ok": true,
+          "stationId": "stn_a1b2c3d4"
+        },
+        "observedReason": null
+      },
+      {
+        "id": "genuine-intended-station",
+        "what": "genuine Challenge, the intended stationId of a scanned code equal to the certificate",
+        "hello": "scenarios[full].hello",
+        "crl": "conformance/test-keys/station-ca-test-crl.pem",
+        "at": "2026-02-13T10:00:00.000Z",
+        "intendedStationId": "stn_a1b2c3d4",
+        "challenge": {
+          "type": "Challenge",
+          "bleVersion": "0.3.0",
+          "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
+          "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
+          "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+          "stationConnectivity": "Offline",
+          "availableServices": [
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_basic",
+              "available": true
+            },
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_premium",
+              "available": true
+            },
+            {
+              "bayId": "bay_f6e5d4c3b2a1",
+              "serviceId": "svc_auxiliary",
+              "available": false
+            }
+          ],
+          "stationSignature": "MEQCIDRzJnuqRRbY4IwdeAX/pP+ajdHnQw2I+QEfxsenbDKuAiAD0siOY72i5e4weFlUtWXpoZJC2Er7K/i2eqEjeXYFeA=="
+        },
+        "expected": {
+          "ok": true,
+          "stationId": "stn_a1b2c3d4"
+        },
+        "observedReason": null
+      },
+      {
+        "id": "certificate-from-another-ca",
+        "what": "the station key, certified by a CA the bundle does not hold",
+        "hello": "scenarios[full].hello",
+        "crl": "conformance/test-keys/station-ca-test-crl.pem",
+        "at": "2026-02-13T10:00:00.000Z",
+        "intendedStationId": null,
+        "challenge": {
+          "type": "Challenge",
+          "bleVersion": "0.3.0",
+          "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
+          "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
+          "stationCertificate": "MIICHjCCAcSgAwIBAgICCgYwCgYIKoZIzj0EAwIwOTESMBAGA1UECgwJT1NQUCBUZXN0MSMwIQYDVQQDDBpPU1BQIFRlc3QgT3RoZXIgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQVePtNhEEMfGI3R6fJMUN+ZkYA0zAKBggqhkjOPQQDAgNIADBFAiA6NSgNz0FTAWUmFS4NiPf44DXTz/j8k2N07GfJ8dOrEgIhANtoDsbQLKaFsKW5LizPOLakiXssPRD+nY8qgOXGb2o5",
+          "stationConnectivity": "Offline",
+          "availableServices": [
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_basic",
+              "available": true
+            },
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_premium",
+              "available": true
+            },
+            {
+              "bayId": "bay_f6e5d4c3b2a1",
+              "serviceId": "svc_auxiliary",
+              "available": false
+            }
+          ],
+          "stationSignature": "MEUCIQCJn9YHXFFDjT4ryYtxJMs6pUFeednqzB16k8xdSIe+ygIgKskwHRk4OjVB6429Duuth1L0xPH47bCaZZfmkidh2Vk="
+        },
+        "expected": {
+          "ok": false,
+          "step": 1,
+          "errorCode": 2013,
+          "errorText": "BLE_AUTH_FAILED"
+        },
+        "observedReason": "issuer is not the Station CA subject"
+      },
+      {
+        "id": "certificate-expired",
+        "what": "a certificate that expired before the handshake",
+        "hello": "scenarios[full].hello",
+        "crl": "conformance/test-keys/station-ca-test-crl.pem",
+        "at": "2026-02-13T10:00:00.000Z",
+        "intendedStationId": null,
+        "challenge": {
+          "type": "Challenge",
+          "bleVersion": "0.3.0",
+          "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
+          "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
+          "stationCertificate": "MIICGTCCAb6gAwIBAgICCgQwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNTA5MDEwMDAwMDBaFw0yNjAyMTIyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNJADBGAiEA70Mvf8NAuX7fJtgOTTVhlMXkwrDLKrc+k1LuBmEfgUsCIQCu7qT9XJYLychnoU474gQPh7Df5gLlPbYoPSM2G/bO5A==",
+          "stationConnectivity": "Offline",
+          "availableServices": [
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_basic",
+              "available": true
+            },
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_premium",
+              "available": true
+            },
+            {
+              "bayId": "bay_f6e5d4c3b2a1",
+              "serviceId": "svc_auxiliary",
+              "available": false
+            }
+          ],
+          "stationSignature": "MEUCIQCDPBK4rybaiFysZZEP8iKdC58igLJNggEJiX4/Nj1dcwIgLslklwirz8M3IewPHBxO+dXW1IP5dixdk/KKM7Az3i4="
+        },
+        "expected": {
+          "ok": false,
+          "step": 1,
+          "errorCode": 2013,
+          "errorText": "BLE_AUTH_FAILED"
+        },
+        "observedReason": "expired at 2026-02-12T23:59:59.000Z"
+      },
+      {
+        "id": "certificate-revoked",
+        "what": "a certificate whose serial the CRL lists",
+        "hello": "scenarios[full].hello",
+        "crl": "conformance/test-keys/station-ca-test-crl-revoking.pem",
+        "at": "2026-02-13T10:00:00.000Z",
+        "intendedStationId": null,
+        "challenge": {
+          "type": "Challenge",
+          "bleVersion": "0.3.0",
+          "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
+          "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
+          "stationCertificate": "MIICGDCCAb6gAwIBAgICCgMwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNIADBFAiEA6IOfbjmWC5Fv/ckStwngcKHqE6Ec70258gS5DNFNdeYCIFVtEZKAzb1XGgRLUSdfeghISMBJdABzviuLPYrWxrnk",
+          "stationConnectivity": "Offline",
+          "availableServices": [
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_basic",
+              "available": true
+            },
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_premium",
+              "available": true
+            },
+            {
+              "bayId": "bay_f6e5d4c3b2a1",
+              "serviceId": "svc_auxiliary",
+              "available": false
+            }
+          ],
+          "stationSignature": "MEUCIQCXr4toV9aXlj+X7mz/FDjh4bmtvVl+2ScgbAjOqEXqYgIgAejkAzxMMrX0LriJZnzbpNkPyRq391xy7Br2qVzAVK8="
+        },
+        "expected": {
+          "ok": false,
+          "step": 2,
+          "errorCode": 2013,
+          "errorText": "BLE_AUTH_FAILED"
+        },
+        "observedReason": "serial 0A03 is on the CRL"
+      },
+      {
+        "id": "certificate-without-ospp-purpose",
+        "what": "extended key usage clientAuth only, without id-kp-osppBleStation",
+        "hello": "scenarios[full].hello",
+        "crl": "conformance/test-keys/station-ca-test-crl.pem",
+        "at": "2026-02-13T10:00:00.000Z",
+        "intendedStationId": null,
+        "challenge": {
+          "type": "Challenge",
+          "bleVersion": "0.3.0",
+          "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
+          "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
+          "stationCertificate": "MIICAzCCAamgAwIBAgICCgIwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOBtDCBsTAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAjA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNIADBFAiEAsKthojjHHGAihqxAkx0k5RpT2wfGB7YaHrk2yQzkcSUCIDuKHaEA5iyjCRmAKt/Eivb9pQsSg9Xb7ZHg5e5xkqVW",
+          "stationConnectivity": "Offline",
+          "availableServices": [
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_basic",
+              "available": true
+            },
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_premium",
+              "available": true
+            },
+            {
+              "bayId": "bay_f6e5d4c3b2a1",
+              "serviceId": "svc_auxiliary",
+              "available": false
+            }
+          ],
+          "stationSignature": "MEQCIHyyvojNEFJF22LSTKGuewQtGK6J5q7oSa/quZ/BqMjgAiAHzA2p2J3fwYI9bApjxP4X6cgJZvZ6jnKzu2cDtIHKuA=="
+        },
+        "expected": {
+          "ok": false,
+          "step": 3,
+          "errorCode": 2013,
+          "errorText": "BLE_AUTH_FAILED"
+        },
+        "observedReason": "extended key usage does not include id-kp-osppBleStation"
+      },
+      {
+        "id": "certificate-without-digital-signature",
+        "what": "key usage keyAgreement, without digitalSignature",
+        "hello": "scenarios[full].hello",
+        "crl": "conformance/test-keys/station-ca-test-crl.pem",
+        "at": "2026-02-13T10:00:00.000Z",
+        "intendedStationId": null,
+        "challenge": {
+          "type": "Challenge",
+          "bleVersion": "0.3.0",
+          "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
+          "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
+          "stationCertificate": "MIICGTCCAb6gAwIBAgICCgUwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIDCDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNJADBGAiEAzD84sjgYDR9gCUedA0aPVxDh6zWkOj4jtCW+rmZ7v0gCIQCrfl10fxy1ubVs0Mhs4nn0gCxwXh1juRHqoiyPIMwk9w==",
+          "stationConnectivity": "Offline",
+          "availableServices": [
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_basic",
+              "available": true
+            },
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_premium",
+              "available": true
+            },
+            {
+              "bayId": "bay_f6e5d4c3b2a1",
+              "serviceId": "svc_auxiliary",
+              "available": false
+            }
+          ],
+          "stationSignature": "MEQCIFBVEVw41lZ2gMcj8GIHxHyNTxdwVMjBVcuiFoLOknf3AiAcjxZ+Q6ncZ8m7+oxHJD9tj3ujKJpX3Fxin3K1n8b92w=="
+        },
+        "expected": {
+          "ok": false,
+          "step": 3,
+          "errorCode": 2013,
+          "errorText": "BLE_AUTH_FAILED"
+        },
+        "observedReason": "key usage does not include digitalSignature"
+      },
+      {
+        "id": "certificate-p384-key",
+        "what": "a P-384 key, signed with it",
+        "hello": "scenarios[full].hello",
+        "crl": "conformance/test-keys/station-ca-test-crl.pem",
+        "at": "2026-02-13T10:00:00.000Z",
+        "intendedStationId": null,
+        "challenge": {
+          "type": "Challenge",
+          "bleVersion": "0.3.0",
+          "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
+          "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
+          "stationCertificate": "MIICNjCCAdugAwIBAgICCgcwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEOk04DIvmVBKpzbBFe4eS1Cq/ZnDWUywQL8rb2gb0r44/tqJoCSsZ2ARDQ5ycmGpbjqC87UpxgD6MJq6pgODsSmfCOZ75Tryi2NAHk1et84talnnJe1GZYhscwz6wUyKeo4HJMIHGMAwGA1UdEwEB/wQCMAAwDgYDVR0PAQH/BAQDAgeAMCgGA1UdJQQhMB8GCCsGAQUFBwMCBhNp1q7V9MKX0o6bkYLF+/XP+qxjMDwGA1UdHwQ1MDMwMaAvoC2GK2h0dHA6Ly9jcmwub3NwcC10ZXN0LmludmFsaWQvc3RhdGlvbi1jYS5jcmwwHQYDVR0OBBYEFP/p/f1zccgGX6qIA+/AC/CFqaXgMB8GA1UdIwQYMBaAFBfHARoPAKoBENv3ZWAfXzQyS8ZYMAoGCCqGSM49BAMCA0kAMEYCIQC8EtlsR+9vD/g95e+udLXcGEsLjALV8K0iT7esaBhNwgIhAKGlDtD9E2ydJHNBe9S9pPVI2cabAWPbe0mXL56OnI3h",
+          "stationConnectivity": "Offline",
+          "availableServices": [
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_basic",
+              "available": true
+            },
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_premium",
+              "available": true
+            },
+            {
+              "bayId": "bay_f6e5d4c3b2a1",
+              "serviceId": "svc_auxiliary",
+              "available": false
+            }
+          ],
+          "stationSignature": "MGUCMQDpT07v9VwfvrreDqo77PWzFFXvtIDpBCq8EWqgCEPseIqBMy32tOSuBhC3N8ZsUx4CMBtFTT97vVM8XXbfDc+KOwZ55sJjYR/CpwFEuYcgFF0CT4/i1DItqWH3PHxpYIpMeg=="
+        },
+        "expected": {
+          "ok": false,
+          "step": 3,
+          "errorCode": 2013,
+          "errorText": "BLE_AUTH_FAILED"
+        },
+        "observedReason": "key is not P-256 (alg 1.2.840.10045.2.1, curve 1.3.132.0.34)"
+      },
+      {
+        "id": "certificate-names-another-station",
+        "what": "a genuine certificate of another station than the one the code scanned names",
+        "hello": "scenarios[full].hello",
+        "crl": "conformance/test-keys/station-ca-test-crl.pem",
+        "at": "2026-02-13T10:00:00.000Z",
+        "intendedStationId": "stn_e5f6a7b8c9d0",
+        "challenge": {
+          "type": "Challenge",
+          "bleVersion": "0.3.0",
+          "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
+          "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
+          "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+          "stationConnectivity": "Offline",
+          "availableServices": [
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_basic",
+              "available": true
+            },
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_premium",
+              "available": true
+            },
+            {
+              "bayId": "bay_f6e5d4c3b2a1",
+              "serviceId": "svc_auxiliary",
+              "available": false
+            }
+          ],
+          "stationSignature": "MEQCIDRzJnuqRRbY4IwdeAX/pP+ajdHnQw2I+QEfxsenbDKuAiAD0siOY72i5e4weFlUtWXpoZJC2Er7K/i2eqEjeXYFeA=="
+        },
+        "expected": {
+          "ok": false,
+          "step": 4,
+          "errorCode": 2013,
+          "errorText": "BLE_AUTH_FAILED"
+        },
+        "observedReason": "certificate names stn_a1b2c3d4, the intended station is stn_e5f6a7b8c9d0"
+      },
+      {
+        "id": "replayed-certificate-signed-by-another-key",
+        "what": "a genuine certificate replayed, the Challenge signed by a key that is not its key (the station receipt key)",
+        "hello": "scenarios[full].hello",
+        "crl": "conformance/test-keys/station-ca-test-crl.pem",
+        "at": "2026-02-13T10:00:00.000Z",
+        "intendedStationId": null,
+        "challenge": {
+          "type": "Challenge",
+          "bleVersion": "0.3.0",
+          "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
+          "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
+          "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+          "stationConnectivity": "Offline",
+          "availableServices": [
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_basic",
+              "available": true
+            },
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_premium",
+              "available": true
+            },
+            {
+              "bayId": "bay_f6e5d4c3b2a1",
+              "serviceId": "svc_auxiliary",
+              "available": false
+            }
+          ],
+          "stationSignature": "MEQCIDJ12Id2Ab/FzAGjJWU9ydF4zphgLcqgeRI+tTF6nDHLAiAIAo3hlCodrpYea/6TfP889o54o3wTK0lStYuXHySD3w=="
+        },
+        "expected": {
+          "ok": false,
+          "step": 5,
+          "errorCode": 2013,
+          "errorText": "BLE_AUTH_FAILED"
+        },
+        "observedReason": "stationSignature does not verify over the Hello and this Challenge"
+      },
+      {
+        "id": "signature-over-another-hello",
+        "what": "a genuine signature over a different Hello (appVersion 2.5.4), presented with this one",
+        "hello": "scenarios[full].hello",
+        "crl": "conformance/test-keys/station-ca-test-crl.pem",
+        "at": "2026-02-13T10:00:00.000Z",
+        "intendedStationId": null,
+        "challenge": {
+          "type": "Challenge",
+          "bleVersion": "0.3.0",
+          "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
+          "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
+          "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+          "stationConnectivity": "Offline",
+          "availableServices": [
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_basic",
+              "available": true
+            },
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_premium",
+              "available": true
+            },
+            {
+              "bayId": "bay_f6e5d4c3b2a1",
+              "serviceId": "svc_auxiliary",
+              "available": false
+            }
+          ],
+          "stationSignature": "MEQCIAKkAyma5dnxq2eIdYumOxZEIrVTE3tnxVer/2QYYF+iAiBz/Rpi7srBFOwhpus/ZCGwh70n3pgIModfBoL5y6aplA=="
+        },
+        "expected": {
+          "ok": false,
+          "step": 5,
+          "errorCode": 2013,
+          "errorText": "BLE_AUTH_FAILED"
+        },
+        "observedReason": "stationSignature does not verify over the Hello and this Challenge"
+      },
+      {
+        "id": "available-services-altered",
+        "what": "availableServices altered after signing (bay 2 shown available)",
+        "hello": "scenarios[full].hello",
+        "crl": "conformance/test-keys/station-ca-test-crl.pem",
+        "at": "2026-02-13T10:00:00.000Z",
+        "intendedStationId": null,
+        "challenge": {
+          "type": "Challenge",
+          "bleVersion": "0.3.0",
+          "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
+          "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
+          "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+          "stationConnectivity": "Offline",
+          "availableServices": [
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_basic",
+              "available": true
+            },
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_premium",
+              "available": true
+            },
+            {
+              "bayId": "bay_f6e5d4c3b2a1",
+              "serviceId": "svc_auxiliary",
+              "available": true
+            }
+          ],
+          "stationSignature": "MEQCIDRzJnuqRRbY4IwdeAX/pP+ajdHnQw2I+QEfxsenbDKuAiAD0siOY72i5e4weFlUtWXpoZJC2Er7K/i2eqEjeXYFeA=="
+        },
+        "expected": {
+          "ok": false,
+          "step": 5,
+          "errorCode": 2013,
+          "errorText": "BLE_AUTH_FAILED"
+        },
+        "observedReason": "stationSignature does not verify over the Hello and this Challenge"
+      },
+      {
+        "id": "connectivity-altered",
+        "what": "stationConnectivity altered after signing (Offline shown as Online, steering the app to Partial B)",
+        "hello": "scenarios[full].hello",
+        "crl": "conformance/test-keys/station-ca-test-crl.pem",
+        "at": "2026-02-13T10:00:00.000Z",
+        "intendedStationId": null,
+        "challenge": {
+          "type": "Challenge",
+          "bleVersion": "0.3.0",
+          "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
+          "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
+          "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+          "stationConnectivity": "Online",
+          "availableServices": [
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_basic",
+              "available": true
+            },
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_premium",
+              "available": true
+            },
+            {
+              "bayId": "bay_f6e5d4c3b2a1",
+              "serviceId": "svc_auxiliary",
+              "available": false
+            }
+          ],
+          "stationSignature": "MEQCIDRzJnuqRRbY4IwdeAX/pP+ajdHnQw2I+QEfxsenbDKuAiAD0siOY72i5e4weFlUtWXpoZJC2Er7K/i2eqEjeXYFeA=="
+        },
+        "expected": {
+          "ok": false,
+          "step": 5,
+          "errorCode": 2013,
+          "errorText": "BLE_AUTH_FAILED"
+        },
+        "observedReason": "stationSignature does not verify over the Hello and this Challenge"
+      },
+      {
+        "id": "ble-version-altered",
+        "what": "bleVersion altered after signing",
+        "hello": "scenarios[full].hello",
+        "crl": "conformance/test-keys/station-ca-test-crl.pem",
+        "at": "2026-02-13T10:00:00.000Z",
+        "intendedStationId": null,
+        "challenge": {
+          "type": "Challenge",
+          "bleVersion": "0.2.1",
+          "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
+          "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
+          "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+          "stationConnectivity": "Offline",
+          "availableServices": [
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_basic",
+              "available": true
+            },
+            {
+              "bayId": "bay_a1b2c3d4e5f6",
+              "serviceId": "svc_premium",
+              "available": true
+            },
+            {
+              "bayId": "bay_f6e5d4c3b2a1",
+              "serviceId": "svc_auxiliary",
+              "available": false
+            }
+          ],
+          "stationSignature": "MEQCIDRzJnuqRRbY4IwdeAX/pP+ajdHnQw2I+QEfxsenbDKuAiAD0siOY72i5e4weFlUtWXpoZJC2Er7K/i2eqEjeXYFeA=="
+        },
+        "expected": {
+          "ok": false,
+          "step": 5,
+          "errorCode": 2013,
+          "errorText": "BLE_AUTH_FAILED"
+        },
+        "observedReason": "stationSignature does not verify over the Hello and this Challenge"
+      }
+    ]
+  },
+  "deviceProofCases": {
+    "note": "The device proof of 06-security.md §6.5.4, verified under the pass devicePublicKey with one input changed at a time. Positive controls first.",
+    "cases": [
+      {
+        "id": "android-genuine",
+        "what": "the android-key proof of the full presentation",
+        "devicePublicKey": "Ak1wIBZUEjiPnqJJaQEVkUCxNdBSRFuiqdMMyNeXWK5U",
+        "input": {
+          "transcriptHash": "c9a8f448f73e10b8e73bb0fa733d20b005768c55acdc8085e849874373faf8af",
+          "stationId": "stn_a1b2c3d4",
+          "passId": "opass_e4d3c2b1a0f9e8d7c6b5",
+          "counter": 7,
+          "bayId": "bay_a1b2c3d4e5f6",
+          "serviceId": "svc_basic",
+          "requestedDurationSeconds": 300
+        },
+        "proofInputHex": "00184f53505020424c45206465766963652070726f6f662076310020c9a8f448f73e10b8e73bb0fa733d20b005768c55acdc8085e849874373faf8af000c73746e5f6131623263336434001a6f706173735f653464336332623161306639653864376336623500013700106261795f61316232633364346535663600097376635f62617369630003333030",
+        "deviceProof": {
+          "format": "android-key",
+          "signature": "MEQCIHy3mCn7p/2/IvZ4z/P4ypgAit414qRMxB0obXIuJ3TNAiAuomdYYnhaN2A5c7Ta3zZoGGfYEWe9W6JouU9F40auZg=="
+        },
+        "expected": {
+          "ok": true
+        },
+        "observedReason": null
+      },
+      {
+        "id": "apple-genuine",
+        "what": "the apple-appattest proof of the minimal presentation",
+        "devicePublicKey": "A0beUh945M53aQSA61iuiEj6c9hxJsEZS5Taj7I5qOY+",
+        "input": {
+          "transcriptHash": "b384a3210440293cd8fb7b65068ec669e56beb7027f01d6bbdd9a3386f7a928c",
+          "stationId": "stn_a1b2c3d4",
+          "passId": "opass_a1b2c3d4e5f6a7b8",
+          "counter": 0,
+          "bayId": "bay_c1d2e3f4a5b6",
+          "serviceId": "svc_eco",
+          "requestedDurationSeconds": 60
+        },
+        "proofInputHex": "00184f53505020424c45206465766963652070726f6f662076310020b384a3210440293cd8fb7b65068ec669e56beb7027f01d6bbdd9a3386f7a928c000c73746e5f613162326333643400166f706173735f6131623263336434653566366137623800013000106261795f63316432653366346135623600077376635f65636f00023630",
+        "deviceProof": {
+          "format": "apple-appattest",
+          "signature": "MEUCIQD1Z1c/UAz7WcvHCXig0QgZafbf1n9PUIcvYRgrJaVc+AIgNynHOuTCpIJpFx8AUuSrgSoC/OmvB5LVTXQfreB9eBQ=",
+          "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
+        },
+        "expected": {
+          "ok": true
+        },
+        "observedReason": null
+      },
+      {
+        "id": "android-other-transcript",
+        "what": "replayed into another handshake (the minimal transcript)",
+        "devicePublicKey": "Ak1wIBZUEjiPnqJJaQEVkUCxNdBSRFuiqdMMyNeXWK5U",
+        "input": {
+          "transcriptHash": "b384a3210440293cd8fb7b65068ec669e56beb7027f01d6bbdd9a3386f7a928c",
+          "stationId": "stn_a1b2c3d4",
+          "passId": "opass_e4d3c2b1a0f9e8d7c6b5",
+          "counter": 7,
+          "bayId": "bay_a1b2c3d4e5f6",
+          "serviceId": "svc_basic",
+          "requestedDurationSeconds": 300
+        },
+        "proofInputHex": "00184f53505020424c45206465766963652070726f6f662076310020b384a3210440293cd8fb7b65068ec669e56beb7027f01d6bbdd9a3386f7a928c000c73746e5f6131623263336434001a6f706173735f653464336332623161306639653864376336623500013700106261795f61316232633364346535663600097376635f62617369630003333030",
+        "deviceProof": {
+          "format": "android-key",
+          "signature": "MEQCIHy3mCn7p/2/IvZ4z/P4ypgAit414qRMxB0obXIuJ3TNAiAuomdYYnhaN2A5c7Ta3zZoGGfYEWe9W6JouU9F40auZg=="
+        },
+        "expected": {
+          "ok": false
+        },
+        "observedReason": "signature does not verify over the proof input"
+      },
+      {
+        "id": "android-other-station",
+        "what": "presented by a station that learnt it to another station",
+        "devicePublicKey": "Ak1wIBZUEjiPnqJJaQEVkUCxNdBSRFuiqdMMyNeXWK5U",
+        "input": {
+          "transcriptHash": "c9a8f448f73e10b8e73bb0fa733d20b005768c55acdc8085e849874373faf8af",
+          "stationId": "stn_e5f6a7b8c9d0",
+          "passId": "opass_e4d3c2b1a0f9e8d7c6b5",
+          "counter": 7,
+          "bayId": "bay_a1b2c3d4e5f6",
+          "serviceId": "svc_basic",
+          "requestedDurationSeconds": 300
+        },
+        "proofInputHex": "00184f53505020424c45206465766963652070726f6f662076310020c9a8f448f73e10b8e73bb0fa733d20b005768c55acdc8085e849874373faf8af001073746e5f653566366137623863396430001a6f706173735f653464336332623161306639653864376336623500013700106261795f61316232633364346535663600097376635f62617369630003333030",
+        "deviceProof": {
+          "format": "android-key",
+          "signature": "MEQCIHy3mCn7p/2/IvZ4z/P4ypgAit414qRMxB0obXIuJ3TNAiAuomdYYnhaN2A5c7Ta3zZoGGfYEWe9W6JouU9F40auZg=="
+        },
+        "expected": {
+          "ok": false
+        },
+        "observedReason": "signature does not verify over the proof input"
+      },
+      {
+        "id": "android-duration-raised",
+        "what": "requestedDurationSeconds raised after the proof (300 to 600)",
+        "devicePublicKey": "Ak1wIBZUEjiPnqJJaQEVkUCxNdBSRFuiqdMMyNeXWK5U",
+        "input": {
+          "transcriptHash": "c9a8f448f73e10b8e73bb0fa733d20b005768c55acdc8085e849874373faf8af",
+          "stationId": "stn_a1b2c3d4",
+          "passId": "opass_e4d3c2b1a0f9e8d7c6b5",
+          "counter": 7,
+          "bayId": "bay_a1b2c3d4e5f6",
+          "serviceId": "svc_basic",
+          "requestedDurationSeconds": 600
+        },
+        "proofInputHex": "00184f53505020424c45206465766963652070726f6f662076310020c9a8f448f73e10b8e73bb0fa733d20b005768c55acdc8085e849874373faf8af000c73746e5f6131623263336434001a6f706173735f653464336332623161306639653864376336623500013700106261795f61316232633364346535663600097376635f62617369630003363030",
+        "deviceProof": {
+          "format": "android-key",
+          "signature": "MEQCIHy3mCn7p/2/IvZ4z/P4ypgAit414qRMxB0obXIuJ3TNAiAuomdYYnhaN2A5c7Ta3zZoGGfYEWe9W6JouU9F40auZg=="
+        },
+        "expected": {
+          "ok": false
+        },
+        "observedReason": "signature does not verify over the proof input"
+      },
+      {
+        "id": "android-other-device-key",
+        "what": "signed by another device key over the same input",
+        "devicePublicKey": "Ak1wIBZUEjiPnqJJaQEVkUCxNdBSRFuiqdMMyNeXWK5U",
+        "input": {
+          "transcriptHash": "c9a8f448f73e10b8e73bb0fa733d20b005768c55acdc8085e849874373faf8af",
+          "stationId": "stn_a1b2c3d4",
+          "passId": "opass_e4d3c2b1a0f9e8d7c6b5",
+          "counter": 7,
+          "bayId": "bay_a1b2c3d4e5f6",
+          "serviceId": "svc_basic",
+          "requestedDurationSeconds": 300
+        },
+        "proofInputHex": "00184f53505020424c45206465766963652070726f6f662076310020c9a8f448f73e10b8e73bb0fa733d20b005768c55acdc8085e849874373faf8af000c73746e5f6131623263336434001a6f706173735f653464336332623161306639653864376336623500013700106261795f61316232633364346535663600097376635f62617369630003333030",
+        "deviceProof": {
+          "format": "android-key",
+          "signature": "MEUCIQDxvTO9dXMRuhKzi34vqp9PVva21ZtZE+hKKNYrsVcwqAIgR1sf4fzYx4/zoO4yjE/TjlUqoOCBXieNAub9fti+Tj8="
+        },
+        "expected": {
+          "ok": false
+        },
+        "observedReason": "signature does not verify over the proof input"
+      },
+      {
+        "id": "android-counter-replayed",
+        "what": "the counter changed (the same proof with counter + 1)",
+        "devicePublicKey": "Ak1wIBZUEjiPnqJJaQEVkUCxNdBSRFuiqdMMyNeXWK5U",
+        "input": {
+          "transcriptHash": "c9a8f448f73e10b8e73bb0fa733d20b005768c55acdc8085e849874373faf8af",
+          "stationId": "stn_a1b2c3d4",
+          "passId": "opass_e4d3c2b1a0f9e8d7c6b5",
+          "counter": 8,
+          "bayId": "bay_a1b2c3d4e5f6",
+          "serviceId": "svc_basic",
+          "requestedDurationSeconds": 300
+        },
+        "proofInputHex": "00184f53505020424c45206465766963652070726f6f662076310020c9a8f448f73e10b8e73bb0fa733d20b005768c55acdc8085e849874373faf8af000c73746e5f6131623263336434001a6f706173735f653464336332623161306639653864376336623500013800106261795f61316232633364346535663600097376635f62617369630003333030",
+        "deviceProof": {
+          "format": "android-key",
+          "signature": "MEQCIHy3mCn7p/2/IvZ4z/P4ypgAit414qRMxB0obXIuJ3TNAiAuomdYYnhaN2A5c7Ta3zZoGGfYEWe9W6JouU9F40auZg=="
+        },
+        "expected": {
+          "ok": false
+        },
+        "observedReason": "signature does not verify over the proof input"
+      },
+      {
+        "id": "apple-other-bay",
+        "what": "bayId changed after the proof",
+        "devicePublicKey": "A0beUh945M53aQSA61iuiEj6c9hxJsEZS5Taj7I5qOY+",
+        "input": {
+          "transcriptHash": "b384a3210440293cd8fb7b65068ec669e56beb7027f01d6bbdd9a3386f7a928c",
+          "stationId": "stn_a1b2c3d4",
+          "passId": "opass_a1b2c3d4e5f6a7b8",
+          "counter": 0,
+          "bayId": "bay_f6e5d4c3b2a1",
+          "serviceId": "svc_eco",
+          "requestedDurationSeconds": 60
+        },
+        "proofInputHex": "00184f53505020424c45206465766963652070726f6f662076310020b384a3210440293cd8fb7b65068ec669e56beb7027f01d6bbdd9a3386f7a928c000c73746e5f613162326333643400166f706173735f6131623263336434653566366137623800013000106261795f66366535643463336232613100077376635f65636f00023630",
+        "deviceProof": {
+          "format": "apple-appattest",
+          "signature": "MEUCIQD1Z1c/UAz7WcvHCXig0QgZafbf1n9PUIcvYRgrJaVc+AIgNynHOuTCpIJpFx8AUuSrgSoC/OmvB5LVTXQfreB9eBQ=",
+          "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
+        },
+        "expected": {
+          "ok": false
+        },
+        "observedReason": "signature does not verify over the nonce SHA-256(authenticatorData || SHA-256(proof input))"
+      },
+      {
+        "id": "apple-authenticator-data-altered",
+        "what": "authenticatorData counter altered",
+        "devicePublicKey": "A0beUh945M53aQSA61iuiEj6c9hxJsEZS5Taj7I5qOY+",
+        "input": {
+          "transcriptHash": "b384a3210440293cd8fb7b65068ec669e56beb7027f01d6bbdd9a3386f7a928c",
+          "stationId": "stn_a1b2c3d4",
+          "passId": "opass_a1b2c3d4e5f6a7b8",
+          "counter": 0,
+          "bayId": "bay_c1d2e3f4a5b6",
+          "serviceId": "svc_eco",
+          "requestedDurationSeconds": 60
+        },
+        "proofInputHex": "00184f53505020424c45206465766963652070726f6f662076310020b384a3210440293cd8fb7b65068ec669e56beb7027f01d6bbdd9a3386f7a928c000c73746e5f613162326333643400166f706173735f6131623263336434653566366137623800013000106261795f63316432653366346135623600077376635f65636f00023630",
+        "deviceProof": {
+          "format": "apple-appattest",
+          "signature": "MEUCIQD1Z1c/UAz7WcvHCXig0QgZafbf1n9PUIcvYRgrJaVc+AIgNynHOuTCpIJpFx8AUuSrgSoC/OmvB5LVTXQfreB9eBQ=",
+          "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAA=="
+        },
+        "expected": {
+          "ok": false
+        },
+        "observedReason": "signature does not verify over the nonce SHA-256(authenticatorData || SHA-256(proof input))"
+      },
+      {
+        "id": "apple-without-authenticator-data",
+        "what": "authenticatorData removed",
+        "devicePublicKey": "A0beUh945M53aQSA61iuiEj6c9hxJsEZS5Taj7I5qOY+",
+        "input": {
+          "transcriptHash": "b384a3210440293cd8fb7b65068ec669e56beb7027f01d6bbdd9a3386f7a928c",
+          "stationId": "stn_a1b2c3d4",
+          "passId": "opass_a1b2c3d4e5f6a7b8",
+          "counter": 0,
+          "bayId": "bay_c1d2e3f4a5b6",
+          "serviceId": "svc_eco",
+          "requestedDurationSeconds": 60
+        },
+        "proofInputHex": "00184f53505020424c45206465766963652070726f6f662076310020b384a3210440293cd8fb7b65068ec669e56beb7027f01d6bbdd9a3386f7a928c000c73746e5f613162326333643400166f706173735f6131623263336434653566366137623800013000106261795f63316432653366346135623600077376635f65636f00023630",
+        "deviceProof": {
+          "format": "apple-appattest",
+          "signature": "MEUCIQD1Z1c/UAz7WcvHCXig0QgZafbf1n9PUIcvYRgrJaVc+AIgNynHOuTCpIJpFx8AUuSrgSoC/OmvB5LVTXQfreB9eBQ="
+        },
+        "expected": {
+          "ok": false
+        },
+        "observedReason": "apple-appattest needs authenticatorData"
+      }
+    ]
+  }
 }

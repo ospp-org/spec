@@ -3,19 +3,15 @@
 > **Status: EXPERIMENTAL** | **OSPP Version:** 0.44.0
 >
 > Published for review, **not** for implementation. May change incompatibly without a MAJOR
-> bump. See [Release status](../../../README.md#ble-is-experimental) and the two
-> blockers in [KNOWN-ISSUES](../../../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-two-defects).
->
-> One bears directly on this document: the `AuthResponse` rejection shape is blocker
-> [B-3](../../../KNOWN-ISSUES.md#b-3--the-three-ble-response-schemas-disagree-with-each-other-and-with-chapter-07)
-> (its schema carries flat `reason` + `errorCode`, where [Chapter 07 §2.3](../../07-errors.md)
-> mandates a nested seven-field `error` object).
+> bump. See [Release status](../../../README.md#ble-is-experimental).
 
 ## 1. Handshake Overview
 
-The BLE handshake establishes a secure, authenticated session between the mobile app and the station. It follows a four-step sequence: HELLO, CHALLENGE, Authentication, and AuthResponse. The handshake **MUST** complete within 10 seconds from the first Hello write; if it does not, both parties **MUST** abort and the station **MUST** report error `2013 BLE_AUTH_FAILED`.
+The BLE handshake establishes a secure, authenticated session between the mobile app and the station. It follows a four-step sequence: Hello, Challenge, Authentication, and AuthResponse. The station authenticates itself in the Challenge, with its certificate and a signature over the handshake; the two ephemeral keys agree the session key; and the app authenticates its user and device with the credential it presents inside the channel ([06-security.md §6.5](../../06-security.md#65-ble-session-key-derivation--hkdf-sha256), [§6.5.2](../../06-security.md#652-station-authentication--the-stations-certificate), [§6.5.4](../../06-security.md#654-device-proof-of-possession)). The handshake **MUST** complete within 10 seconds from the first Hello write; if it does not, both parties **MUST** abort: the station closes the connection without a response and logs `2013 BLE_AUTH_FAILED`.
 
-**Timing model (Non-normative).** The station measures the 10-second budget from **t₀ = reception of the first `Hello` write**; the app measures the same budget from when it issues that write. Implementers MAY apportion the budget across the four steps as internal sub-deadlines (for example, a small fixed share to reach `Challenge` and the remainder for `Authentication` + `AuthResponse`), but any such per-step figures are guidance only, not normative limits. The 5-second fragmentation/reassembly timeout ([ble-transport.md §11](ble-transport.md)) is a **per-message** bound that runs *inside* this total budget rather than in addition to it: the fragments of any single message that take longer than 5 s are discarded, and the handshake as a whole still has only the one 10-second envelope to complete.
+**Timing model (Non-normative).** The station measures the 10-second budget from **t₀ = reception of the first `Hello` write**; the app measures the same budget from when it issues that write. Implementers MAY apportion the budget across the four steps as internal sub-deadlines (for example, a small fixed share to reach `Challenge` and the remainder for `Authentication` + `AuthResponse`), but any such per-step figures are guidance only, not normative limits. The 5-second fragmentation/reassembly timeout ([ble-transport.md §11](ble-transport.md#11-fragmentation-protocol)) is a **per-message** bound that runs *inside* this total budget rather than in addition to it: a single message whose fragments take longer than 5 s aborts the session, and the handshake as a whole still has only the one 10-second envelope to complete.
+
+**Version (Normative).** The handshake negotiates the BLE protocol version. The Hello lists the versions the app supports, the Challenge names the one the station chose, and both are inside the transcript the session key binds, so neither can be altered unseen ([VERSIONING.md, *BLE Protocol Version*](../../../VERSIONING.md#ble-protocol-version)). This revision is BLE protocol version `0.3.0`.
 
 ## 2. Step 1: Hello
 
@@ -26,30 +22,31 @@ The app initiates the handshake by writing a Hello message to characteristic FFF
 | Field | Type | Required | Description |
 |-------------|---------|----------|-----------------------------------------------|
 | `type` | string | Yes | `Hello` (constant). |
-| `deviceId` | string | Yes | Unique device identifier for the mobile app. |
+| `bleVersions` | array of string | Yes | The BLE protocol versions the app supports, most preferred first (1 to 8, each a semantic version). |
 | `appNonce` | string | Yes | Base64-encoded 32-byte cryptographically random nonce (exactly 44 Base64 characters). |
 | `appVersion` | string | Yes | Semantic version of the mobile application. |
-| `appEphemeralPubKey` | string | Yes | App's per-handshake ephemeral P-256 public key, compressed SEC1, Base64 (44 chars; [06-security.md §6.5.2](../../06-security.md#652-stationidentity-certificate) Pin 2). Combined with the station's keys to derive the session key (§6). Freshly generated per handshake; discarded after the session. |
+| `appEphemeralPubKey` | string | Yes | App's per-handshake ephemeral P-256 public key, compressed SEC1, Base64 (44 chars; [06-security.md §6.5](../../06-security.md#65-ble-session-key-derivation--hkdf-sha256) Pin 2). Its ECDH with the station's ephemeral key is the session key's input (§6). Freshly generated per handshake; discarded after the session. |
 
-The `appNonce` serves two purposes:
+**Nothing in the Hello identifies the device or its user (Normative).** The Hello is plaintext and any radio in range can read it ([06-security.md T14](../../06-security.md#t14---ble-presence-tracking)); the app **MUST NOT** add to it anything that identifies the device, the user or the pass. The device is identified inside the channel, by the credential the app presents — the pass's `deviceId` or the authorization's — and, for a pass, by its device proof (§4.1).
+
+The `appNonce` serves three purposes:
 1. **Replay protection** -- ensures each handshake is unique.
 2. **Key derivation input** -- combined with the station nonce in the IKM (see section 6).
-
-`appEphemeralPubKey` is the app's contribution to the ECDH exchange (§6); the app generates a fresh P-256 key pair per handshake.
+3. **Partial-A binding** -- a ServerSignedAuth names the `appNonce` of the handshake it is relayed in (§4.2.2 check #2).
 
 **Example:**
 
 ```json
 {
   "type": "Hello",
-  "deviceId": "dev_a8f3bc12e4567890",
+  "bleVersions": [
+    "0.3.0"
+  ],
   "appNonce": "bKsxxAOCCNkWNpyePge8Npt7OkX3PsFJFEhcgW2rpII=",
   "appVersion": "2.1.0",
-  "appEphemeralPubKey": "AjRkc2Vzc2lvbi1lcGhlbWVyYWwtcHVia2V5LWFwcDEy"
+  "appEphemeralPubKey": "ArqbFBft5MOhMV/H0NwuDn7c4ZySkf0v2CZx8twJKys2"
 }
 ```
-
-> The `appEphemeralPubKey` above is an illustrative 44-character Base64 placeholder; conformance vectors carry real compressed-SEC1 keys (regenerated under [`tools/`](../../../tools) per the v0.6.0 vector batch).
 
 ## 3. Step 2: Challenge
 
@@ -60,51 +57,59 @@ The station responds to the Hello by sending a Challenge notification on charact
 | Field | Type | Required | Description |
 |-----------------------|---------|----------|-----------------------------------------------|
 | `type` | string | Yes | `Challenge` (constant). |
+| `bleVersion` | string | Yes | The BLE protocol version of this session — one of the Hello's `bleVersions`, chosen by the station. |
 | `stationNonce` | string | Yes | Base64-encoded 32-byte cryptographically random nonce (exactly 44 Base64 characters). |
-| `stationCert` | object | Yes | Server-signed StationIdentity certificate ([06-security.md §6.5.2](../../06-security.md#652-stationidentity-certificate); [`station-identity.schema.json`](../../../schemas/ble/station-identity.schema.json)). The app **MUST** verify its signature and expiry before sending any credential. Carries the station's static BLE ECDH key (`stationPubKey`) and authenticated `stationId`/`organizationId`. |
-| `stationEphemeralPubKey` | string | Yes | Station's per-handshake ephemeral P-256 public key, compressed SEC1, Base64 (44 chars; §6.5.2 Pin 2). Provides forward secrecy (`ee` in §6). Freshly generated per handshake. |
+| `stationEphemeralPubKey` | string | Yes | Station's per-handshake ephemeral P-256 public key, compressed SEC1, Base64 (44 chars; Pin 2). Its ECDH with the app's ephemeral key is the session key's input (§6). Freshly generated per handshake. |
+| `stationCertificate` | string | Yes | The station's mTLS client certificate, DER, Base64 ([06-security.md §4.4](../../06-security.md#44-certificate-requirements)), carrying the extended key usage `id-kp-osppBleStation`. |
 | `stationConnectivity` | string | Yes | `"Online"` or `"Offline"` -- determines which auth path the app **MUST** use. |
-| `availableServices` | array | No | Optional snapshot of bay/service availability. |
+| `availableServices` | array | Yes | Every service the station's catalog binds to each of its bays, each `{bayId, serviceId, available}`, `available` saying whether the station can start it now — empty while the station holds no catalog. The app's one source of availability ([ble-transport.md §4](ble-transport.md#4-available-services-fff2)). |
+| `stationSignature` | string | Yes | The station's ECDSA P-256 signature, with its certificate key, over the Hello and this Challenge without this member ([06-security.md §6.5.2](../../06-security.md#652-station-authentication--the-stations-certificate)). |
+
+**Version selection (Normative).** The station **MUST** name in `bleVersion` a version that is in the Hello's `bleVersions`, the first of them it supports. If it supports none, it **MUST NOT** send a Challenge: it refuses the Hello with `1007 PROTOCOL_VERSION_MISMATCH` (§5) and closes the connection. An app that receives a Challenge whose `bleVersion` is not one it offered **MUST** abort the handshake and send no credential. This is the shape of TLS 1.3's version negotiation, where a client lists the versions it supports in preference order and *"Servers `MUST` only select a version of TLS present in that extension"* ([RFC 9846 §4.3.1](https://www.rfc-editor.org/rfc/rfc9846#section-4.3.1)), and of the Matter Bluetooth Transport Protocol's handshake ([Matter Specification 1.4.1](https://csa-iot.org/wp-content/uploads/2025/05/23-27349-007_matter-1-4-1-core-specification.pdf), §4.19.4.3).
+
+**The station's signature (Normative).** The station builds the signed content itself, from the Hello as it received it and from this Challenge, and signs it with the key of its certificate; it never signs a digest the app supplies ([06-security.md §6.5.2](../../06-security.md#652-station-authentication--the-stations-certificate), which defines the content).
 
 The `stationConnectivity` field is critical for path selection:
-- **`"Online"`** -- the station has MQTT connectivity. The app **MAY** use ServerSignedAuth (Partial A) or OfflineAuthRequest (Partial B, relayed to server).
-- **`"Offline"`** -- the station has no MQTT connectivity. The app **MUST** use OfflineAuthRequest with a locally-stored OfflinePass (Full Offline).
+- **`"Online"`** -- the station has MQTT connectivity. A phone with no network uses OfflineAuthRequest, which the station forwards to the server (Partial B).
+- **`"Offline"`** -- the station has no MQTT connectivity. A phone with no network uses OfflineAuthRequest with its stored OfflinePass (Full Offline); a phone with a network **MAY** obtain and use ServerSignedAuth instead (Partial A).
 
-`stationCert` and `stationEphemeralPubKey` together let the app authenticate the station and complete the ECDH exchange (§6). The app **MUST** verify `stationCert` (§6.5.2 app verification gate) **before** transmitting any OfflinePass or ServerSignedAuth; on verification failure it aborts with `2013 BLE_AUTH_FAILED` and sends no credential.
+A phone and a station that are both online use the online session flow, not BLE.
+
+**App verification gate (Normative).** Before it derives the session key, and before it sends any OfflinePass or ServerSignedAuth, the app **MUST** pass the gate of [06-security.md §6.5.2](../../06-security.md#652-station-authentication--the-stations-certificate): the certificate chains to the Station CA of its trust bundle, is valid now, is on no entry of the bundle's CRL, carries `digitalSignature` and `id-kp-osppBleStation`, names the intended station where the app holds one from an out-of-band channel, and `stationSignature` verifies under it. On any failure it aborts with `2013 BLE_AUTH_FAILED` and sends no credential.
 
 **Example:**
 
 ```json
 {
   "type": "Challenge",
+  "bleVersion": "0.3.0",
   "stationNonce": "bt8L0mYAoDDqk+6swnQMgM0lDWMe+tPXBvaj8A4TfR0=",
-  "stationCert": {
-    "stationId": "stn_a1b2c3d4",
-    "organizationId": "org_7f3a9c2e1b5d",
-    "stationPubKey": "AymtZXJ2ZXItZXBoZW1lcmFsLXB1YmtleS1zdGF0aW9u",
-    "issuedAt": "2026-02-13T00:00:00.000Z",
-    "expiresAt": "2026-02-20T00:00:00.000Z",
-    "signatureAlgorithm": "ECDSA-P256-SHA256",
-    "signature": "MEUCIQDXKT0ewRBp/nkPY/qh6mBjwSn4BE7fmjDTdjcP1dhIyQIgPyXM1VnFZtrG6WaOgpRwiQIeFF2I2zeFsb05dyel1rE="
-  },
-  "stationEphemeralPubKey": "AzN0YXRpb24tZXBoZW1lcmFsLXB1YmtleS1jaGFsbGVu",
+  "stationEphemeralPubKey": "AwwZpLQ0CxbV0HOXDPuQEv+418VzE/RupNS7oUHka6AX",
+  "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
   "stationConnectivity": "Offline",
   "availableServices": [
-    { "bayId": "bay_c1d2e3f4a5b6", "serviceId": "svc_eco", "available": true },
-    { "bayId": "bay_c1d2e3f4a5b6", "serviceId": "svc_standard", "available": true }
-  ]
+    {
+      "bayId": "bay_c1d2e3f4a5b6",
+      "serviceId": "svc_eco",
+      "available": true
+    },
+    {
+      "bayId": "bay_c1d2e3f4a5b6",
+      "serviceId": "svc_standard",
+      "available": true
+    }
+  ],
+  "stationSignature": "MEUCIQC6fzFIxpA+sw7OayxUe1/QSXNu93lwKzvbC2xGHZgLZAIgZxANFGOwJbYq0hO0bCqBqZl8gVhZSlFtgSLXbkht8JM="
 }
 ```
 
-> The `stationCert` signature and the two compressed-SEC1 public keys above are illustrative placeholders; conformance vectors carry real values regenerated under the v0.6.0 vector batch.
-
 ## 4. Step 3: Authentication
 
-After receiving the CHALLENGE, the app **MUST** derive the session key (section 6) and then send one of two authentication messages depending on the connectivity scenario.
+After receiving the Challenge and passing its verification gate (§3), the app **MUST** derive the session key (section 6) and then send one of two authentication messages depending on the connectivity scenario.
 
 ### 4.1 OfflineAuthRequest (Full Offline / Partial B)
 
-Used when the app has a locally-stored OfflinePass. In the **Full Offline** scenario, the station validates the pass locally. In the **Partial B** scenario (station online), the station forwards the pass to the server via the AuthorizeOfflinePass MQTT action.
+Used when the app has a locally-stored OfflinePass. In the **Full Offline** scenario, the station validates the pass locally. In the **Partial B** scenario (station online), the station forwards the pass to the server via the AuthorizeOfflinePass MQTT action, with the bay, the service, the requested duration and the device proof ([authorize-offline-pass.md §3](authorize-offline-pass.md#3-request-payload)).
 
 **Payload:**
 
@@ -112,8 +117,14 @@ Used when the app has a locally-stored OfflinePass. In the **Full Offline** scen
 |----------------|---------|----------|-----------------------------------------------|
 | `type` | string | Yes | `OfflineAuthRequest` (constant). |
 | `offlinePass` | object | Yes | Full OfflinePass object (see [offline-pass.md](offline-pass.md)). |
-| `counter` | integer | Yes | Monotonic usage counter (minimum 0). **MUST** be strictly greater than the last counter seen by the station for this pass. |
+| `counter` | integer | Yes | Monotonic usage counter (minimum 0). **MUST** be strictly greater than the last counter seen by the station for this pass. The app increments it on every presentation of the pass, accepted or refused, at any station ([06-security.md §6.1.1](../../06-security.md#611-offlinepass-validation--10-checks), counter model). |
+| `bayId` | string | Yes | The bay the customer chose. |
+| `serviceId` | string | Yes | The service the customer chose. |
+| `requestedDurationSeconds` | integer | Yes | The duration the customer chose, in seconds (minimum 1). The validator estimates the cost from it ([offline-pass.md §4](offline-pass.md#4-validation-checks-10) checks #7 and #8), and an authorization is for exactly this duration — refused, never reduced. |
 | `sessionProof` | string | Yes | Base64-encoded HMAC-SHA256 (exactly 44 chars) binding this request to the derived session key. Canonical construction defined in this section. |
+| `deviceProof` | object | Yes | Proof that the phone holds the private key of the pass's `devicePublicKey`, over this handshake, the station, the pass, the counter and the requested service ([06-security.md §6.5.4](../../06-security.md#654-device-proof-of-possession); [`device-proof.schema.json`](../../../schemas/common/device-proof.schema.json)). |
+
+The bay, the service and the duration are chosen before the handshake, from the station's catalog (FFF2), with the pass's limits shown ([offline-pass.md §2.1](offline-pass.md#21-offlineallowance-object)); after the Challenge the app confirms that the chosen service is available on the chosen bay in its `availableServices`, and sends no request when it is not. The session's StartServiceRequest names the same bay and service ([ble-session.md §1](ble-session.md#1-starting-a-service)). A station refuses, before it validates or forwards the pass, a request naming a bay it does not have (`3005 BAY_NOT_FOUND`) or a service its catalog does not bind to a program of that bay (`3004 INVALID_SERVICE`): it can neither estimate the cost of such a service nor start it.
 
 The `sessionProof` construction is **canonical and defined here** ([06-security.md §6.5.1](../../06-security.md#651-sessionproof-computation-normative) points to this section — finding N1):
 
@@ -124,7 +135,9 @@ sessionProof = Base64( HMAC-SHA256( SessionKey,
 
 where `SessionKey` is the ECDH-derived session key ([06-security.md §6.5](../../06-security.md#65-ble-session-key-derivation--hkdf-sha256)); `LP(x) = U16BE(byteLength(x)) ‖ x` is **the same length-prefix encoding used for the HKDF `info` and the transcript** ([06-security.md §6.5](../../06-security.md#65-ble-session-key-derivation--hkdf-sha256) Pin 3 / Pin 4); `"OfflineAuthRequest"` is the literal message-type string; `passId` is `offlinePass.passId`; and `decimal(counter)` is the `counter` value rendered as its **shortest base-10 ASCII string** (no leading zeros, no sign). Length-prefixing each component makes the input **injective** — no two distinct `(passId, counter)` tuples can ever produce the same byte string — which the v0.5.x empty concatenation did not guarantee (e.g. `("opass_a", 15)` and `("opass_a1", 5)` both concatenated to `…opass_a15`). The output is Base64 (RFC 4648, standard alphabet, with padding) — exactly **44 characters**. A `sessionProof` that does not match the station's own computation **MUST** be rejected with error `2013 BLE_AUTH_FAILED`.
 
-The prior 4-input hex construction (which additionally bound `bayId`/`serviceId`, output as 64 hex chars) is **withdrawn** in v0.6.0: under the AEAD channel ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)) bay/service selection happens at the authenticated `StartService` step, so the proof binds only `(passId, counter)` to the session. The reference tooling (`tools/verify-example-signatures.mjs`, `tools/sign-example.mjs`, `tools/sign-inline-md.mjs`) computes exactly this length-prefixed form; spec and tooling are aligned in the same change.
+The prior 4-input hex construction (which additionally bound `bayId`/`serviceId`, output as 64 hex chars) is **withdrawn** in v0.6.0: under the AEAD channel ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)) the request travels inside the authenticated channel, so the proof binds only `(passId, counter)` to the session; the device proof binds the bay, the service and the duration ([06-security.md §6.5.4](../../06-security.md#654-device-proof-of-possession)). The reference tooling (`tools/verify-example-signatures.mjs`, `tools/sign-example.mjs`, `tools/sign-inline-md.mjs`) computes exactly this length-prefixed form.
+
+**The device proof (Normative).** The `deviceProof` is defined in [06-security.md §6.5.4](../../06-security.md#654-device-proof-of-possession), which governs: on Android, a signature by the device key in the Android Keystore; on iOS, where the device key is the App Attest key, an App Attest assertion. The station verifies it before it validates or forwards the pass — it is check #4, device binding ([offline-pass.md §4](offline-pass.md#4-validation-checks-10)) — and a station that forwards the pass forwards the proof unchanged, with this handshake's `transcriptHash`.
 
 **Example:**
 
@@ -153,15 +166,22 @@ The prior 4-input hex construction (which additionally bound `bayId`/`serviceId`
     "signature": "MEQCIHHpbSBL42of8rUg+uBwTpxVYDJGPQ6oRlCZ+LuNmCkNAiA4AFsU/P4RvojF7wj2GG9wDxgQRDscL9T5pu8S8EvFPQ=="
   },
   "counter": 5,
-  "sessionProof": "ObgxpE1Ad+xl6P8fRWtBstqMY2Tjan9oK/LIWofxvrI="
+  "bayId": "bay_c1d2e3f4a5b6",
+  "serviceId": "svc_eco",
+  "requestedDurationSeconds": 300,
+  "sessionProof": "ObgxpE1Ad+xl6P8fRWtBstqMY2Tjan9oK/LIWofxvrI=",
+  "deviceProof": {
+    "format": "android-key",
+    "signature": "MEUCIQDfTp/15zU4iuW3aCPcUe/qq3ackPumaoSax2kVvBQ2tQIgOsqsYzbUIOBJ1pZf5eJPWfr0gYsq+8uy2yw786evMsc="
+  }
 }
 ```
 
-> The `sessionProof` above is illustrative (Base64-encoded HMAC-SHA256, 44 chars). It does not correspond to the example fields shown; the canonical construction is defined in §4.1 above. (On the wire this `OfflineAuthRequest` travels inside the §6.5.3 AEAD frame; the plaintext is shown here for clarity.)
+> The `sessionProof` above is computed under the synthetic test session key of `conformance/test-keys/`, as every worked document's is, and the `deviceProof` under the test device key of the pass's `deviceId` ([`conformance/test-keys/README.md`](../../../conformance/test-keys/README.md)), over the Hello and Challenge of §2 and §3. On the wire this `OfflineAuthRequest` travels inside the §6.5.3 AEAD frame; the plaintext is shown here for clarity.
 
 ### 4.2 ServerSignedAuth (Partial A)
 
-Used when the app is online but the station is offline. The app obtains a server-signed authorization (via `POST /sessions/offline-auth`, supplying the same `appNonce` it uses in the `Hello` of this handshake so the server binds the authorization to it — see **Acquisition ordering** below), with the trust bundle it authenticates the station against ([`app-contract.md` §5](app-contract.md#5-the-partial-a-authorization)), and relays the authorization to the station over BLE. The station verifies the ECDSA P-256 signature using a key of the server key set it holds ([06-security.md §6.7](../../06-security.md#67-server-signing-key-rotation-ecdsa-p-256)) and re-checks each claim against the live handshake state. Like every post-Challenge message, `ServerSignedAuth` is relayed **inside the AEAD channel** ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)).
+Used when the app is online but the station is offline. The app obtains a server-signed authorization (via `POST /sessions/offline-auth`, supplying the same `appNonce` it uses in the `Hello` of this handshake so the server binds the authorization to it — see **Acquisition ordering** below), with the trust bundle it authenticates the station against ([`app-contract.md` §5](app-contract.md#5-the-partial-a-authorization)), and relays the authorization to the station over BLE. The station verifies the ECDSA P-256 signature using a key of the server key set it holds ([06-security.md §6.7](../../06-security.md#67-server-signing-key-rotation-ecdsa-p-256)) and re-checks each claim against the live handshake state. Like every post-Challenge message, `ServerSignedAuth` is relayed **inside the AEAD channel** ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)). An authorization names no device key, so a Partial-A session carries no device proof ([06-security.md §6.5.4](../../06-security.md#654-device-proof-of-possession)).
 
 **Acquisition ordering (Normative).** The `appNonce` is chosen by the app and is the sole binding between the `POST` and the BLE handshake (§4.2.2 check #2), so the `POST /sessions/offline-auth` and the `Hello` write **MAY** occur in either order, provided the `appNonce` in the POST body equals the `appNonce` in the `Hello`. Two orderings are conformant:
 
@@ -211,7 +231,7 @@ The station **MUST** apply the following checks before accepting a `ServerSigned
 | 1 | ECDSA P-256 signature verifies over `base64_decode(signedAuthorization.data)` against a key of the server key set the station holds (`OfflinePassPublicKey`, [06-security.md §6.7](../../06-security.md#67-server-signing-key-rotation-ecdsa-p-256)); a `ServerSignedAuth` names no key, so the station tries the keys of the set | `2002 OFFLINE_PASS_INVALID` |
 | 2 | `claims.appNonce == Hello.appNonce` from the current handshake | **`2018 SERVER_AUTH_NONCE_MISMATCH`** |
 | 3 | `claims.stationId == STATION_OWN_ID` (no cross-station replay) | `2002 OFFLINE_PASS_INVALID` |
-| 4 | `claims.deviceId == Hello.deviceId` (device binding) | `2002 OFFLINE_PASS_INVALID` |
+| 4 | **Withdrawn** — the Hello carries no device identifier to compare `claims.deviceId` with, and the comparison bound nothing: the app chose both values. The authorization is bound to this handshake by check #2. The number is not reused. | — |
 | 5 | `claims.sessionId == envelope.sessionId` (envelope binding) | `2002 OFFLINE_PASS_INVALID` |
 | 6 | `claims.expiresAt > NOW` (clock-skew margin; `appNonce` is the primary defence) | `2002 OFFLINE_PASS_INVALID` |
 
@@ -223,8 +243,8 @@ The station **MUST** apply the following checks before accepting a `ServerSigned
 {
   "type": "ServerSignedAuth",
   "signedAuthorization": {
-    "data": "eyJhcHBOb25jZSI6ImJLc3h4QU9DQ05rV05weWVQZ2U4TnB0N09rWDNQc0ZKRkVoY2dXMnJwSUk9IiwiYXV0aElkIjoiYXV0aF80YzE1OWMxNTlkNzAiLCJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6NTAsImRldmljZUlkIjoiZGV2X2E4ZjNiYzEyZTQ1Njc4OTAiLCJkdXJhdGlvblNlY29uZHMiOjMwMCwiZXhwaXJlc0F0IjoiMjAyNi0wMi0xM1QxMDowNTowMC4wMDBaIiwiaXNzdWVkQXQiOiIyMDI2LTAyLTEzVDEwOjAwOjAwLjAwMFoiLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic2Vzc2lvbklkIjoic2Vzc19iM2M0ZDVlNiIsInN0YXRpb25JZCI6InN0bl9hMWIyYzNkNCIsInN1YiI6InN1Yl9lMzFlNzdmMzFlOTIyNjc2In0=",
-    "signature": "MEUCIQDAoT8e/D+o5EZa4Yx3zH22+qCuA4lhymkFe/oPrKHULQIgXnVojf5wVRf5uqPeQZVsziDtm/Xe8UwUb6+Q62Ukbhg=",
+    "data": "eyJhcHBOb25jZSI6ImJLc3h4QU9DQ05rV05weWVQZ2U4TnB0N09rWDNQc0ZKRkVoY2dXMnJwSUk9IiwiYXV0aElkIjoiYXV0aF80YzE1OWMxNTlkNzAiLCJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6NTAsImRldmljZUlkIjoiZGV2aWNlX2E4ZjNiYzEyZTQ1Njc4OTAiLCJkdXJhdGlvblNlY29uZHMiOjMwMCwiZXhwaXJlc0F0IjoiMjAyNi0wMi0xM1QxMDowNTowMC4wMDBaIiwiaXNzdWVkQXQiOiIyMDI2LTAyLTEzVDEwOjAwOjAwLjAwMFoiLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic2Vzc2lvbklkIjoic2Vzc19iM2M0ZDVlNiIsInN0YXRpb25JZCI6InN0bl9hMWIyYzNkNCIsInN1YiI6InN1Yl94eXo3ODkifQ==",
+    "signature": "MEUCIQDrjdWh6AXFZ4npsSZOK29h1tycMWyJ/4EoosdMI6ExUwIgMIL3phvPewSCee1jNZtRchnNIP7PYG79qIG3hicQ7JY=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "sessionId": "sess_b3c4d5e6"
@@ -244,12 +264,17 @@ The station evaluates the authentication request and sends an AuthResponse notif
 | `type` | string | Yes | `AuthResponse` (constant). |
 | `result` | string | Yes | `Accepted` or `Rejected`. |
 | `sessionKeyConfirmation` | string | Cond. | HMAC confirmation of the shared session key. **MUST** be present when `result` is `Accepted`; **MUST NOT** be present when `result` is `Rejected`. |
-| `reason` | string | Cond. | Human-readable rejection reason code. Present when `result` is `Rejected`. |
-| `errorCode` | integer | Cond. | Numeric OSPP error code. Present when `result` is `Rejected`. |
+| `durationSeconds` | integer | No | Advisory copy of the authorized duration for the app's display, when `result` is `Accepted` (finding N3). Unsigned: the station checks a StartServiceRequest against the signed claim or the server's value, never against this copy. |
+| `creditsAuthorized` | integer | No | Advisory copy of the authorized credit budget, when `result` is `Accepted`. Unsigned, like `durationSeconds`. |
+| `errorCode` | integer | Cond. | The registry code of the refusal. **MUST** be present when `result` is `Rejected`. |
+| `errorText` | string | Cond. | The registry name of `errorCode`, in `UPPER_SNAKE_CASE` ([Chapter 07 §1.3](../../07-errors.md#13-error-object-fields)). **MUST** be present when `result` is `Rejected`. |
+| `details` | object | No | Per-occurrence context of the refusal; with `4002`, `details.constraint` names the limit that refused ([Chapter 07 §2.3](../../07-errors.md#23-ble-error-response)). |
 
 On `Accepted`, the `sessionKeyConfirmation` field proves to the app that the station also derived the same session key. It is computed as `HMAC-SHA256(sessionKey, "AuthResponse_OK")`, Base64-encoded (44 chars), where the key is the **raw 32-byte session key** — the derived value itself, never its Base64 text ([`06-security.md` §5.4](../../06-security.md#54-mac-computation)). It **MUST** be present when `result` is `Accepted` and **MUST NOT** be present when `result` is `Rejected`. Because this AuthResponse travels inside the AEAD channel (§6.5.3), the frame's own Poly1305 tag already proves the station holds a key derived from the session key; `sessionKeyConfirmation` is therefore an explicit, defense-in-depth key-confirmation behind the channel, not the primary proof.
 
-The AuthResponse, like all post-Challenge messages, travels **inside the AEAD channel** ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)). A `Rejected` AuthResponse emitted after a completed handshake is therefore authenticated by the channel — a third party cannot forge or inject a fake rejection (finding N17). Only a pre-key rejection (e.g. a malformed Hello, rejected before any key is derived) is unauthenticated; this residual is acceptable and disclosed.
+**A refusal carries the one BLE error shape.** `errorCode`, `errorText` and, where the code calls for it, `details` — the shape every BLE response uses ([Chapter 07 §2.3](../../07-errors.md#23-ble-error-response)). In Partial B the station relays the server's refusal with the server's `errorCode`, `errorText` and `details` unchanged ([authorize-offline-pass.md §6](authorize-offline-pass.md#6-processing-rules) rule 5). The codes are those of [Chapter 07 §4.3](../../07-errors.md#43-ble-message-types).
+
+**A refusal before the session key (Normative).** A station that refuses a Hello — it supports none of the Hello's `bleVersions` (`1007 PROTOCOL_VERSION_MISMATCH`), or the Hello is malformed or carries an ephemeral key that fails validation, or the station cannot serve a handshake now (`2013 BLE_AUTH_FAILED`) — notifies, **instead of the Challenge**, a plaintext AuthResponse with `result: "Rejected"`, `errorCode` and `errorText`, fragmented by [ble-transport.md §11](ble-transport.md#11-fragmentation-protocol) and outside any secure frame, and then closes the connection. It is the one refusal that is not authenticated, because no key exists yet: the app **MUST** treat it as an indication, not as evidence — it **MAY** show it and **MUST NOT** act on it beyond ending the attempt. Every refusal after the Challenge is an AuthResponse inside the AEAD channel ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)), authenticated by the channel — a third party cannot forge or inject it (finding N17).
 
 **Example (Accepted):**
 
@@ -267,8 +292,8 @@ The AuthResponse, like all post-Challenge messages, travels **inside the AEAD ch
 {
   "type": "AuthResponse",
   "result": "Rejected",
-  "reason": "OFFLINE_PASS_EXPIRED",
-  "errorCode": 2003
+  "errorCode": 2003,
+  "errorText": "OFFLINE_PASS_EXPIRED"
 }
 ```
 
@@ -276,24 +301,23 @@ The AuthResponse, like all post-Challenge messages, travels **inside the AEAD ch
 
 > **Note:** The normative key-derivation construction is defined in [Chapter 06 — Security §6.5](../../06-security.md#65-ble-session-key-derivation--hkdf-sha256). This section mirrors it for implementer convenience; on any discrepancy, §6.5 governs.
 
-Both the app and the station **MUST** derive a shared session key using HKDF-SHA256 (RFC 5869) over a **two-operation ECDH P-256 exchange** (the BLE Long-Term Key is NOT used — it is unobtainable by a mobile app; see [ADR-002](../../../adr/ADR-002-ble-handshake-security-architecture.md)) with the following parameters:
+Both the app and the station **MUST** derive a shared session key using HKDF-SHA256 (RFC 5869) over an **ephemeral-ephemeral ECDH P-256 exchange** authenticated by the station's signature (the BLE Long-Term Key is NOT used — it is unobtainable by a mobile app; see [ADR-002](../../../adr/ADR-002-ble-handshake-security-architecture.md), [ADR-003](../../../adr/ADR-003-ble-station-authentication-by-certificate.md)) with the following parameters:
 
 | Parameter | Value |
 |-----------|-----------------------------------------------|
-| **IKM** | `es ‖ ee ‖ appNonce ‖ stationNonce` (4 × 32 bytes). `es = ECDH(appEphemeralPriv, stationStaticPub)`, `ee = ECDH(appEphemeralPriv, stationEphemeralPub)`. Each ECDH secret is the X-coordinate, big-endian, 32 bytes, zero-left-padded (06-security §6.5 Pin 1). `appNonce`/`stationNonce` are the decoded 32-byte nonce values. |
-| **Salt** | UTF-8 bytes of `"OSPP_BLE_SESSION_V2"` |
-| **Info** | `LP(deviceId) ‖ LP(transcriptHash)`, where `LP(x) = U16BE(len(x)) ‖ x` and `transcriptHash = SHA-256(LP16(helloBytes) ‖ LP16(challengeBytes))` over the raw reassembled wire bytes (06-security §6.5 Pin 3/Pin 4). `stationId` is **not** a separate `info` component — it is already bound via `transcriptHash`, which covers the whole Challenge including the StationIdentity certificate that carries the authenticated `stationId` (§3; [06-security.md §6.5.2](../../06-security.md#652-stationidentity-certificate)). |
+| **IKM** | `ee ‖ appNonce ‖ stationNonce` (3 × 32 bytes). `ee = ECDH(appEphemeralPriv, stationEphemeralPub)`, the X-coordinate, big-endian, 32 bytes, zero-left-padded (06-security §6.5 Pin 1). `appNonce`/`stationNonce` are the decoded 32-byte nonce values. |
+| **Salt** | UTF-8 bytes of `"OSPP_BLE_SESSION_V3"` |
+| **Info** | `LP(transcriptHash)`, where `LP(x) = U16BE(len(x)) ‖ x` and `transcriptHash = SHA-256(LP16(helloBytes) ‖ LP16(challengeBytes))` over the raw reassembled wire bytes (06-security §6.5 Pin 3/Pin 4). The station's identity is bound through `transcriptHash`, which covers the whole Challenge — its certificate and its signature. No device identifier enters it. |
 | **Output** | 32 bytes (256-bit session key) |
 
 **Pseudocode:**
 
 ```
-es = ECDH(appEphemeralPriv, stationStaticPub)    // station's certified static BLE key
-ee = ECDH(appEphemeralPriv, stationEphemeralPub) // forward secrecy
+ee = ECDH(appEphemeralPriv, stationEphemeralPub) // the only ECDH: both keys ephemeral
 SessionKey = HKDF-SHA256(
-  ikm    = es ‖ ee ‖ appNonce ‖ stationNonce,    // each 32 bytes, in this order
-  salt   = "OSPP_BLE_SESSION_V2",
-  info   = LP(deviceId) ‖ LP(transcriptHash),     // stationId is bound via transcriptHash, not duplicated
+  ikm    = ee ‖ appNonce ‖ stationNonce,          // each 32 bytes, in this order
+  salt   = "OSPP_BLE_SESSION_V3",
+  info   = LP(transcriptHash),                    // binds every byte of Hello and Challenge
   length = 32 bytes
 )
 ```
@@ -303,22 +327,11 @@ The derived session key is used for:
 2. Computing the `sessionKeyConfirmation` in AuthResponse (§5).
 3. Expanding the directional AEAD keys `k_app_to_station` / `k_station_to_app` that encrypt-and-authenticate **all** post-Challenge messages (06-security §6.5.3). Post-Challenge plaintext is NOT permitted.
 
-The app **MUST** verify the StationIdentity certificate (06-security §6.5.2) before sending any OfflinePass. Both parties **MUST** use cryptographically secure random number generators for the ephemeral key pairs and nonces. Ephemeral keys and nonces **MUST NOT** be reused across handshakes.
+The app **MUST** pass the verification gate of §3 before it derives the key or sends any credential. Both parties **MUST** use cryptographically secure random number generators for the ephemeral key pairs and nonces. Ephemeral keys and nonces **MUST NOT** be reused across handshakes.
 
-## 7. Rejection Reasons
+## 7. Error Codes
 
-The following rejection reason codes **MAY** appear in the AuthResponse `reason` field:
-
-| Reason Code | Error Code | Description |
-|----------------------------|:----------:|-----------------------------------------------|
-| `OFFLINE_PASS_INVALID` | 2002 | ECDSA P-256 signature verification failed. |
-| `OFFLINE_PASS_EXPIRED` | 2003 | Pass `expiresAt` has passed, or the pass is older than this station's `OfflinePassMaxAge`. |
-| `OFFLINE_EPOCH_REVOKED` | 2004 | Pass revocation epoch is below the station's stored epoch. |
-| `OFFLINE_COUNTER_REPLAY` | 2005 | Counter is not greater than the last seen value. |
-| `BLE_AUTH_FAILED` | 2013 | Session key derivation or session proof is invalid. |
-| `OFFLINE_LIMIT_EXCEEDED` | 4002 | Pass `maxUses` or `maxTotalCredits` exhausted. |
-| `OFFLINE_RATE_LIMITED` | 4003 | `minIntervalSec` not elapsed since last use. |
-| `OFFLINE_PER_TX_EXCEEDED` | 4004 | Requested service exceeds `maxCreditsPerTx`. |
+The codes a BLE response carries, for every BLE message, are listed once, in [Chapter 07 §4.3](../../07-errors.md#43-ble-message-types). The AuthResponse's are those of the station's pass validation ([offline-pass.md §4](offline-pass.md#4-validation-checks-10)), of the Partial-A verification (§4.2.2), of the server's refusal that a Partial-B station relays ([authorize-offline-pass.md §7](authorize-offline-pass.md#7-error-codes)), and of a refused Hello (§5).
 
 ## 8. Sequence Diagrams
 
@@ -328,26 +341,34 @@ The following rejection reason codes **MAY** appear in the AuthResponse `reason`
   App (Central)                       Station (Peripheral)
       |                                       |
       |--- Hello (FFF3 Write) -------------->|
-      |    { type, deviceId, appNonce,        |
+      |    { type, bleVersions, appNonce,     |
       |      appVersion, appEphemeralPubKey } |
       |                                       |
       |<-- Challenge (FFF4 Notify) ----------|
-      |    { type, stationNonce, stationCert, |
+      |    { type, bleVersion, stationNonce,  |
       |      stationEphemeralPubKey,          |
-      |      stationConnectivity: "Offline" } |
+      |      stationCertificate,              |
+      |      stationConnectivity: "Offline",  |
+      |      availableServices,               |
+      |      stationSignature }               |
       |                                       |
-      |  [App verifies stationCert; aborts    |
-      |   if invalid — no pass is sent]       |
+      |  [App verifies the certificate        |
+      |   against its Station CA and CRL, and |
+      |   the signature; aborts if invalid —  |
+      |   no pass is sent]                    |
       |  [Both derive SessionKey via ECDH+    |
-      |   HKDF; AEAD channel established]      |
+      |   HKDF; AEAD channel established]     |
       |                                       |
       |=== OfflineAuthRequest (FFF3) ======>|   (AEAD frame {n, ct})
       |    { type, offlinePass, counter,      |
-      |      sessionProof }                   |
+      |      bayId, serviceId,                |
+      |      requestedDurationSeconds,        |
+      |      sessionProof, deviceProof }      |
       |                                       |
       |    [Station validates locally:        |
-      |     signature, expiry, epoch,         |
-      |     counter, limits, sessionProof]    |
+      |     signature, expiry, epoch, device  |
+      |     proof, limits, interval, counter, |
+      |     sessionProof]                     |
       |                                       |
       |<== AuthResponse (FFF4 Notify) ======|   (AEAD frame {n, ct})
       |    { type, result: "Accepted",        |
@@ -357,7 +378,7 @@ The following rejection reason codes **MAY** appear in the AuthResponse `reason`
       |    §6.5.3; --- = plaintext )          |
 ```
 
-> The Partial A and Partial B diagrams below share §8.1's extended Hello/Challenge (carrying the ephemeral public keys and `stationCert`), the same mandatory `stationCert` verification before any credential is sent, and the same AEAD channel (§6.5.3) for every post-Challenge message. They omit those details for brevity.
+> The Partial A and Partial B diagrams below share §8.1's Hello and Challenge, the same mandatory verification of the station's certificate and signature before any credential is sent, and the same AEAD channel (§6.5.3) for every post-Challenge message. They omit those details for brevity.
 
 ### 8.2 Partial A Handshake (Station Offline, App Online)
 
@@ -396,11 +417,18 @@ The following rejection reason codes **MAY** appear in the AuthResponse `reason`
       |    stationConnectivity: "Online"                  |
       |                        |                          |
       |--- OfflineAuthRequest (FFF3) -->|               |
-      |    { offlinePass, counter,       |               |
-      |      sessionProof }              |               |
+      |    { offlinePass, counter, bayId,|               |
+      |      serviceId,                  |               |
+      |      requestedDurationSeconds,   |               |
+      |      sessionProof, deviceProof } |               |
+      |                        |                          |
+      |   [Station verifies the device proof]             |
       |                        |                          |
       |                        |--- AuthorizeOfflinePass ->|
-      |                        |    (MQTT REQUEST)         |
+      |                        |    (MQTT REQUEST: the pass,|
+      |                        |     bay, service, duration,|
+      |                        |     device proof and       |
+      |                        |     transcriptHash)        |
       |                        |                          |
       |                        |<-- RESPONSE (Accepted) --|
       |                        |    { sessionId,           |
@@ -417,6 +445,7 @@ The following rejection reason codes **MAY** appear in the AuthResponse `reason`
 - Hello: [`hello.schema.json`](../../../schemas/ble/hello.schema.json)
 - Challenge: [`challenge.schema.json`](../../../schemas/ble/challenge.schema.json)
 - Offline Auth Request: [`offline-auth-request.schema.json`](../../../schemas/ble/offline-auth-request.schema.json)
+- Device Proof: [`device-proof.schema.json`](../../../schemas/common/device-proof.schema.json)
 - Server Signed Auth: [`server-signed-auth.schema.json`](../../../schemas/ble/server-signed-auth.schema.json)
 - Auth Response: [`auth-response.schema.json`](../../../schemas/ble/auth-response.schema.json)
-- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 2002--2005, 2013, 4002--4004)
+- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) §4.3

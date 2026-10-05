@@ -140,6 +140,15 @@ two sides are moved to the matching version, and a fleet is never moved
 atomically.
 
 
+## BLE Protocol Version
+
+The BLE profile carries its own version, apart from `protocolVersion`: BLE messages carry no envelope, and the phone and the station that speak BLE are not the parties that negotiate `protocolVersion` at boot.
+
+- **Negotiated in the handshake.** The Hello lists the BLE versions the app supports, most preferred first (`bleVersions`); the Challenge names the one the station chose (`bleVersion`), which **MUST** be one of them. A station that supports none refuses the Hello, before any key exists, with `1007 PROTOCOL_VERSION_MISMATCH`; an app that receives a Challenge naming a version it did not offer aborts. Both members are in the handshake transcript, so neither can be altered unseen ([`ble-handshake.md` §3](spec/profiles/offline/ble-handshake.md#3-step-2-challenge)).
+- **Exact match, as for `protocolVersion`.** Two BLE versions are different versions, and neither implies the other.
+- **What moves it.** A change to the bytes either party sends, or to how it computes them — a message or a member, the key schedule, a signed content, the secure frame, the fragmentation. A change of prose that changes neither moves nothing. The BLE version is independent of this document's version: a release that leaves the BLE wire alone keeps it.
+- **`0.3.0`** is the first negotiated version: the station's certificate and its signature, one ephemeral ECDH, no device identifier in the Hello, the device proof, one fragmentation protocol and one error shape. Before it, the station stated a BLE version in its StationInfo, `bleProtocolVersion`, outside the handshake and unauthenticated, and nothing defined its values; the examples carried `0.2.1`.
+
 ## SDK Versions Are Not This Version
 
 This document versions the **specification**. The two SDKs — `ospp-sdk-php`

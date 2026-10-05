@@ -1,6 +1,6 @@
 # TC-OFF-005 — Partial B: Station-Relayed Authorization
 
-> **Status: EXPERIMENTAL artefact.** This case exercises the BLE surface, which is EXPERIMENTAL in 0.44 and carries two blockers — see [Release status](../../../README.md#ble-is-experimental) and [KNOWN-ISSUES](../../../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-two-defects). It is published for review, not for certification, and **Extended and Complete compliance cannot be claimed against 0.44**.
+> **Status: EXPERIMENTAL artefact.** This case exercises the BLE surface, which is EXPERIMENTAL until its cryptographic construction has passed the review of [Chapter 06, Appendix B](../../../spec/06-security.md#appendix-b--ble-cryptographic-review-checklist) — see [Release status](../../../README.md#ble-is-experimental). Its two blockers are closed ([KNOWN-ISSUES](../../../KNOWN-ISSUES.md#closed--the-ble-surface-was-not-implementable-as-written-two-defects)). It is published for review, not for certification, and **Complete compliance cannot be claimed against this revision**.
 
 > **The refusal's code travels on both legs.** [`authorize-offline-pass.md` §4](../../../spec/profiles/offline/authorize-offline-pass.md#4-response-payload) has the server carry `errorCode` and `errorText` — and, with `4002`, `details.constraint` — on every `Rejected` AuthorizeOfflinePass RESPONSE, and [§6](../../../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 5 has the station relay them unchanged in the BLE AuthResponse. Parts C–E assert the code on both legs.
 
@@ -40,7 +40,7 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
 - `spec/07-errors.md` §4.1 — the AuthorizeOfflinePass [MSG-002] row; `spec/07-errors.md` §4.3 — the AuthResponse (→ OfflineAuthRequest) row. Part E measures both against §7.
 - `spec/profiles/security/security-event.md` §3 / §4 — the `OfflinePassRejected` registry row and the `type` enum
 - **`schemas/mqtt/authorize-offline-pass-request.schema.json`, `schemas/mqtt/authorize-offline-pass-response.schema.json` — both closed (`additionalProperties: false`); the response's `allOf` requires `sessionId`/`durationSeconds`/`creditsAuthorized` on `Accepted` and `reason` on `Rejected`, and admits `errorCode`, `errorText` and `details` on `Rejected` only, `errorCode` and `errorText` together.**
-- **`schemas/ble/offline-auth-request.schema.json`, `schemas/ble/auth-response.schema.json` — both closed; AuthResponse requires *both* `reason` and `errorCode` when `Rejected`, and carries no `sessionId`.**
+- **`schemas/ble/offline-auth-request.schema.json`, `schemas/ble/auth-response.schema.json` — both closed; OfflineAuthRequest carries the bay, the service, the requested duration and the device proof; AuthResponse requires `errorCode` and `errorText` when `Rejected`, carries no `reason`, and carries no `sessionId`.**
 - **`schemas/mqtt/transaction-event-request.schema.json` — the `oneOf` that fixes the form. The pass-form branch sets `"authId": false` and `"sessionId": false`; Part G asserts an absence against it.**
 - **`conformance/test-vectors/valid/security/authorize-offline-pass-request-full.json` — the baseline REQUEST shape and signed pass body used below; `-request-minimal.json` is the same shape at its floor.**
 - **`conformance/test-vectors/valid/security/authorize-offline-pass-response-full.json` (the `Accepted` shape), `-response-rejected.json` (the `Rejected` shape of this revision: `status`, `reason`, `errorCode`, `errorText`) and `-response-minimal.json` (the `Rejected` shape of a server that predates the code: `status` + `reason`).**
@@ -50,7 +50,7 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
 1. Station `stn_a1b2c3d4` is booted and has received BootNotification `Accepted`, **declaring both `capabilities.bleSupported: true` and `capabilities.offlineModeSupported: true`** ([`profiles/README.md` §4.1](../../../spec/profiles/README.md); [`profiles/offline/README.md` §5](../../../spec/profiles/offline/README.md) rule 1). Both members are REQUIRED in [`boot-notification-request.schema.json`](../../../schemas/mqtt/boot-notification-request.schema.json), so a station always states a value for each; a station that states `false` for either has not declared the Offline / BLE profile and this case does not apply to it.
 2. MQTT session is stable: the station is subscribed to `ospp/v1/stations/stn_a1b2c3d4/to-station` and publishes on `ospp/v1/stations/stn_a1b2c3d4/to-server`.
 3. Bay `bay_c1d2e3f4a5b6` is in `Available` state, and service `svc_premium` is in the station's catalog with a known price.
-4. BLE advertising is active, and the test client can complete the HELLO/CHALLENGE handshake afresh for each sub-test.
+4. BLE advertising is active, and the test client can complete the HELLO/CHALLENGE handshake afresh for each sub-test, verifying the station's certificate and signature before it sends anything ([`06-security.md` §6.5.2](../../../spec/06-security.md#652-station-authentication--the-stations-certificate)), and can make the device proof of the baseline pass's device key ([§6.5.4](../../../spec/06-security.md#654-device-proof-of-possession)).
 5. The phone under test has **no** internet connectivity. Partial B is defined by phone Offline / station Online ([`profiles/offline/README.md` §2](../../../spec/profiles/offline/README.md)); a phone with connectivity would be the Online or Partial A scenario and would exercise nothing here.
 6. A baseline valid OfflinePass is prepared. Its shape and signed body are taken from [`authorize-offline-pass-request-full.json`](../../test-vectors/valid/security/authorize-offline-pass-request-full.json); the values this case depends on are:
    - `passId` = `"opass_e7f8a9b0c1d2e3f4"`, `sub` = `"sub_user42xyz"`, `deviceId` = `"device-pixel-8-pro-042"`, and `devicePublicKey` the key of that device.
@@ -73,13 +73,17 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
 
 1. Confirm the station's MQTT session is up, and that a read of FFF1 returns StationInfo [MSG-027] with `connectivity: "Online"`.
 2. Complete the BLE HELLO [MSG-029] / CHALLENGE [MSG-030] handshake. Verify CHALLENGE carries `stationConnectivity: "Online"`, as [`04-flows.md` §5c](../../../spec/04-flows.md) step 3 requires. This and `connectivity` on StationInfo are the two members that tell an offline app the station is online, and the enum on both is `["Online", "Offline"]`.
-3. Write OfflineAuthRequest [MSG-031] to FFF3 with the baseline pass and `counter: 4`:
+3. Write OfflineAuthRequest [MSG-031] to FFF3 with the baseline pass, `counter: 4`, bay `bay_c1d2e3f4a5b6`, service `svc_premium` and a requested duration of `600`:
    ```json
    {
      "type": "OfflineAuthRequest",
      "offlinePass": { "...": "the signed baseline pass of Precondition 6" },
      "counter": 4,
-     "sessionProof": "<Base64(HMAC-SHA256(SessionKey, \"OfflineAuthRequest\" || passId || \"4\"))>"
+     "bayId": "bay_c1d2e3f4a5b6",
+     "serviceId": "svc_premium",
+     "requestedDurationSeconds": 600,
+     "sessionProof": "<Base64(HMAC-SHA256(SessionKey, LP(\"OfflineAuthRequest\") || LP(passId) || LP(\"4\")))>",
+     "deviceProof": { "...": "the device proof over this handshake (06-security.md §6.5.4)" }
    }
    ```
 4. Observe an AuthorizeOfflinePass REQUEST [MSG-002] published on `ospp/v1/stations/stn_a1b2c3d4/to-server`:
@@ -87,14 +91,16 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
    {
      "offlinePassId": "opass_e7f8a9b0c1d2e3f4",
      "offlinePass": { "...": "the same signed pass, unmodified" },
-     "deviceId": "device-pixel-8-pro-042",
      "counter": 4,
      "bayId": "bay_c1d2e3f4a5b6",
-     "serviceId": "svc_premium"
+     "serviceId": "svc_premium",
+     "requestedDurationSeconds": 600,
+     "deviceProof": { "...": "the device proof of step 3, unmodified" },
+     "transcriptHash": "<Base64 of this handshake's transcript hash>"
    }
    ```
 5. Verify the forwarded `offlinePass` is **unmodified** (§6 rule 2). Compare the serialized member the app wrote against the serialized member the station published — not a re-serialization of a parsed copy. Re-ordering or re-formatting members would break the very signature the server is about to verify, and a comparison that normalizes both sides cannot see it.
-6. Verify `counter` equals the `counter` from the BLE OfflineAuthRequest (§6 rule 3). The value is the app's, and the station only echoes it.
+6. Verify `counter`, `bayId`, `serviceId`, `requestedDurationSeconds` and `deviceProof` equal the members of the BLE OfflineAuthRequest, and that `transcriptHash` is this handshake's (§6 rule 3). The values are the app's, and the station only echoes them; the device proof verifies at the server only over this handshake's transcript and the forwarding station's identity ([`authorize-offline-pass.md` §5](../../../spec/profiles/offline/authorize-offline-pass.md#5-validation-checks) check #4). Then present the baseline pass with a device proof made by another key: verify the station refuses it with `2002` and publishes **nothing** — it verifies the proof before it forwards (§6 rule 3).
 7. Verify the station emits **no** AuthResponse on FFF4 and starts **no** service before the server answers.
 8. **Negative control — this step is the case.** Verify that an AuthorizeOfflinePass REQUEST was in fact published. A station that validated the pass locally would answer the app inside its own handshake budget and put nothing on MQTT; the *presence of the publication* is the only observable that separates Partial B from Full Offline, and every later Part presumes it. If step 4 captured nothing, this case **fails here** and the remaining Parts are not run: they would be measuring a Full Offline station against a Partial B specification.
 
@@ -116,7 +122,7 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
 14. Verify the refusal was made against the value the **AuthorizeOfflinePass response** carried. Then write StartServiceRequest with `requestedDurationSeconds: 600`, verify `Accepted`, and verify the auto-stop timer initializes to `600` ([`ble-session.md` §6](../../../spec/profiles/offline/ble-session.md#6-auto-stop-timer)).
 
     > **There is no signed duration on this path.** For Partial A the check roots in the signed `durationSeconds` claim of `server-signed-auth-claims.schema.json`. Partial B has no signed authorization blob at all: the AuthorizeOfflinePass response is an ordinary MQTT RESPONSE whose integrity comes from the transport, not from a signature over its payload. The rule accommodates this — it names "the `durationSeconds` from the AuthorizeOfflinePass response" for Partial B — and the test asserts exactly that, not a signature that does not exist here.
-15. Let the service run and stop normally. Verify that the SessionEnded for the session, and any MeterValues the station sends for it, carry the `sessionId` of step 9 ([`authorize-offline-pass.md` §6](../../../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules)), and that the server tracks the session in real time and settles it when the station reports its end — never above the `creditsAuthorized` of step 9, adjusting the authorize-time debit by refund only — and that **no** TransactionEvent is emitted for it ([`04-flows.md` §5c](../../../spec/04-flows.md#5c-partial-b--phone-offline-station-online): a Partial-B session reports its end by SessionEnded, at reconnection when its station lost MQTT). Upload the receipt read from FFF6, as the app would, and verify the answer is `Duplicate`, with no effect ([`reconciliation.md` §3](../../../spec/profiles/offline/reconciliation.md#3-deduplication-offlinetxid)). Part G covers a station that loses MQTT, and the fallback. Then authorize a second session the same way and, while it runs, stop it with a StopService [MSG-006] naming the `sessionId` of its answer: verify the station reports its end in the StopService RESPONSE, sends no SessionEnded for it, and signs `endReason` `ServerStopped` in the receipt the app reads from FFF6 ([`06-security.md` §6.2](../../../spec/06-security.md#62-transaction-receipt-signing--ecdsa-p-256)).
+15. Let the service run and stop normally. Verify that the SessionEnded for the session, and any MeterValues the station sends for it, carry the `sessionId` of step 9 ([`authorize-offline-pass.md` §6](../../../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules)), and that the server tracks the session in real time and settles it when the station reports its end — never above the `creditsAuthorized` of step 9, adjusting the authorize-time debit by refund only — and that **no** TransactionEvent is emitted for it ([`04-flows.md` §5c](../../../spec/04-flows.md#5c-partial-b--phone-offline-station-online): a Partial-B session reports its end by SessionEnded, at reconnection when its station lost MQTT). Upload the receipt the app received on FFF6, in a ReceiptResponse to its ReceiptRequest, as the app would, and verify the answer is `Duplicate`, with no effect ([`reconciliation.md` §3](../../../spec/profiles/offline/reconciliation.md#3-deduplication-offlinetxid)). Part G covers a station that loses MQTT, and the fallback. Then authorize a second session the same way and, while it runs, stop it with a StopService [MSG-006] naming the `sessionId` of its answer: verify the station reports its end in the StopService RESPONSE, sends no SessionEnded for it, and signs `endReason` `ServerStopped` in the receipt the app receives on FFF6 ([`06-security.md` §6.2](../../../spec/06-security.md#62-transaction-receipt-signing--ecdsa-p-256)).
 
 ### Part C — Refusal: Expired Pass (check #2 → `2003 OFFLINE_PASS_EXPIRED`)
 
@@ -132,7 +138,7 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
     }
     ```
 19. Verify the station starts **no** service (§6 rule 5), and that the bay remains `Available`.
-20. Verify an AuthResponse on FFF4 with `result: "Rejected"` carrying **both** `reason` and `errorCode` — the closed BLE schema requires both on this branch, so a response missing either is schema-invalid regardless of what the station knew.
+20. Verify an AuthResponse on FFF4 with `result: "Rejected"` carrying **both** `errorCode` and `errorText`, and no `reason` — the closed BLE schema requires the first two on this branch and admits no third, so a response that differs is schema-invalid regardless of what the station knew.
 21. Verify the AuthResponse carries the code the server sent, unchanged: `errorCode` `2003` and `errorText` `OFFLINE_PASS_EXPIRED` ([`authorize-offline-pass.md` §5](../../../spec/profiles/offline/authorize-offline-pass.md) check #2 and §7; §6 rule 5). A station that substitutes a code of its own, or drops the server's, fails.
 22. Verify the server emits **no** SecurityEvent for this refusal. [`authorize-offline-pass.md` §6](../../../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) is explicit: expiry, epoch revocation, individual revocation, usage limits and rate limit are policy decisions and **MUST NOT** be emitted as SecurityEvents by the server at authorize time. Only checks #1 and #10 emit.
 
@@ -178,7 +184,7 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
 > ([`reconciliation.md` §2](../../../spec/profiles/offline/reconciliation.md)), not §4.1's 60 s.
 
 40. **Arm 1 — authorized, then MQTT lost mid-session.** Re-run Part A and Part B through step 14 so that an authorize-time grant exists for `counter: 4` and a session runs under the `sessionId` the server granted, then drop MQTT while the service is running.
-41. Verify the station does **not** end the session for the loss: the wash runs on to its stop or its timer ([`authorize-offline-pass.md` §6](../../../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules)). Let it complete, and verify the station generates an ECDSA-P256-SHA256 signed receipt and makes it available on FFF6.
+41. Verify the station does **not** end the session for the loss: the wash runs on to its stop or its timer ([`authorize-offline-pass.md` §6](../../../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules)). Let it complete, and verify the station generates an ECDSA-P256-SHA256 signed receipt and serves it on FFF6.
 42. Verify the server does not close the session on `ConnectionLostGracePeriod`, and does not close it as `failed`, while the station is away and the session's authorized duration has not ended ([`connection-lost.md` §5](../../../spec/profiles/core/connection-lost.md#5-server-side-handling)).
 43. Restore MQTT. After BootNotification `Accepted`, verify the station sends the session's end — a SessionEnded [MSG-040] under the `sessionId` the server granted, buffered while it could not transmit — and **no** TransactionEvent for it: the session's receipt reaches the server as the app's upload.
 44. **Arm 1a — the SessionEnded first.** Verify the server settles the session on the SessionEnded. Then upload the receipt read from FFF6 when the wash completed, as the app would ([`app-contract.md` §4](../../../spec/profiles/offline/app-contract.md#4-receipt-upload)), and verify the answer is `Duplicate`, with no effect: no second settlement, no score, no SecurityEvent ([`reconciliation.md` §3](../../../spec/profiles/offline/reconciliation.md#3-deduplication-offlinetxid)).
@@ -221,7 +227,7 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
 ## Failure Criteria
 
 1. **The station answers the app without publishing an AuthorizeOfflinePass REQUEST.** This is local validation wearing Partial B's name, and it is the single defect this case exists to catch: every downstream server-side guarantee — individual revocation (check #12), the platform's current epoch, cross-station usage — is silently discarded, and nothing on the BLE leg looks any different to the user.
-2. The station alters the OfflinePass before forwarding it, or normalizes/re-serializes it in a way that would invalidate the signature.
+2. The station alters the OfflinePass before forwarding it, or normalizes/re-serializes it in a way that would invalidate the signature, or forwards a presentation whose device proof does not verify, or alters the bay, the service, the duration or the device proof it forwards.
 3. The station substitutes its own `counter` instead of echoing the app's, breaking the value the reconcile-time uniqueness gate depends on.
 4. The station starts a service, or emits an AuthResponse, before the server's answer arrives.
 5. The station starts a service on a `Rejected` response.

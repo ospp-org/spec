@@ -27,16 +27,16 @@ All MQTT messages use **QoS 1** (at-least-once delivery).
 
 ### BLE Messages
 
-BLE messages are JSON payloads written to or read from GATT characteristics (see [Chapter 02 — Transport](02-transport.md), Section 8). BLE messages do **not** use the MQTT envelope. Each BLE message includes a `type` field for identification.
+BLE messages are JSON payloads carried on the GATT characteristics of the OSPP service, which [`ble-transport.md` §2](profiles/offline/ble-transport.md#2-gatt-service-definition) defines with their UUIDs. BLE messages do **not** use the MQTT envelope; §7 below states which of them carry a `type` field.
 
-| Characteristic | UUID | Direction | Properties |
-|----------------|------|-----------|------------|
-| Station Info | `0000FFF1-...` | Station → App | Read |
-| Available Services | `0000FFF2-...` | Station → App | Read |
-| TX Request | `0000FFF3-...` | App → Station | Write |
-| TX Response | `0000FFF4-...` | Station → App | Notify |
-| Service Status | `0000FFF5-...` | Station → App | Notify |
-| Receipt | `0000FFF6-...` | Station → App | Read |
+| Characteristic | Alias | Direction | Properties |
+|----------------|-------|-----------|------------|
+| Station Info | FFF1 | Station → App | Read |
+| Available Services | FFF2 | Station → App, at the app's request | Write, Notify |
+| TX Request | FFF3 | App → Station | Write |
+| TX Response | FFF4 | Station → App | Notify |
+| Service Status | FFF5 | Station → App | Notify |
+| Receipt | FFF6 | App → Station request, Station → App response | Write, Notify |
 
 ### Per-Message Documentation
 
@@ -109,12 +109,12 @@ Each message below includes:
 > so `GetDiagnostics` was "19" here and `MSG-018` everywhere else, and the number `27` named
 > TriggerMessage in one table of this chapter and StationInfo in the next.
 
-### BLE Messages (13 message types)
+### BLE Messages (15 message types)
 
 | MSG | Message | Direction | Characteristic | Category |
 |--:|---------|-----------|----------------|----------|
 | 27 | [StationInfo](#71-stationinfo-fff1) | Station → App | FFF1 (Read) | Offline |
-| 28 | [AvailableServices](#72-availableservices-fff2) | Station → App | FFF2 (Read) | Offline |
+| 28 | [AvailableServices](#72-availableservices-fff2) | Station → App | FFF2 (Write, Notify) | Offline |
 | 29 | [HELLO](#73-hello) | App → Station | FFF3 (Write) | Offline |
 | 30 | [CHALLENGE](#74-challenge) | Station → App | FFF4 (Notify) | Offline |
 | 31 | [OfflineAuthRequest](#75-offlineauthrequest) | App → Station | FFF3 (Write) | Offline |
@@ -125,7 +125,9 @@ Each message below includes:
 | 36 | [StopServiceRequest](#710-stopservicerequest) | App → Station | FFF3 (Write) | Offline |
 | 37 | [StopServiceResponse](#711-stopserviceresponse) | Station → App | FFF4 (Notify) | Offline |
 | 38 | [ServiceStatus](#712-servicestatus-fff5) | Station → App | FFF5 (Notify) | Offline |
-| 39 | [Receipt](#713-receipt-fff6) | Station → App | FFF6 (Read) | Offline |
+| 39 | [Receipt](#713-receipt-fff6) | Station → App | FFF6 (Notify), in a ReceiptResponse | Offline |
+| 41 | [ReceiptRequest](#714-receiptrequest) | App → Station | FFF6 (Write) | Offline |
+| 42 | [ReceiptResponse](#715-receiptresponse) | Station → App | FFF6 (Notify) | Offline |
 
 ---
 
@@ -350,10 +352,12 @@ In the **Partial B** offline scenario (phone offline, station online), the mobil
 |-------|------|:--------:|-------------|
 | `offlinePassId` | string | Yes | OfflinePass identifier (`opass_{uuid}`) |
 | `offlinePass` | object | Yes | Complete OfflinePass object (see [Chapter 06 — Security](06-security.md)) |
-| `deviceId` | string | Yes | Mobile device identifier from BLE Hello |
 | `counter` | integer | Yes | Monotonically increasing counter (anti-replay) |
-| `bayId` | string | Yes | Target bay identifier (`bay_{uuid}`) |
-| `serviceId` | string | Yes | Requested service identifier (`svc_{id}`) |
+| `bayId` | string | Yes | Target bay identifier (`bay_{uuid}`), from the BLE OfflineAuthRequest |
+| `serviceId` | string | Yes | Requested service identifier (`svc_{id}`), from the BLE OfflineAuthRequest |
+| `requestedDurationSeconds` | integer | Yes | The duration the customer chose, from the BLE OfflineAuthRequest; the server authorizes exactly it, or refuses |
+| `deviceProof` | object | Yes | The device proof of the BLE OfflineAuthRequest, unmodified; the server verifies it at check #4 ([Chapter 06 §6.5.4](06-security.md#654-device-proof-of-possession)) |
+| `transcriptHash` | string | Yes | The BLE handshake's transcript hash, Base64 of 32 bytes — an input of the device proof |
 
 #### RESPONSE Payload
 
@@ -361,7 +365,7 @@ In the **Partial B** offline scenario (phone offline, station online), the mobil
 |-------|------|:--------:|-------------|
 | `status` | string | Yes | `"Accepted"` or `"Rejected"` |
 | `sessionId` | string | Cond. | Server-assigned session ID (when `Accepted`) |
-| `durationSeconds` | integer | Cond. | Authorized session duration in seconds (when `Accepted`) |
+| `durationSeconds` | integer | Cond. | Authorized session duration in seconds — the request's `requestedDurationSeconds` (when `Accepted`) |
 | `creditsAuthorized` | integer | Cond. | Maximum credits authorized for this session (when `Accepted`) |
 | `reason` | string | Cond. | Human-readable description of the refusal, not for programmatic matching (when `Rejected`) |
 | `errorCode` | integer | Cond. | The refusal's registry code — see error codes below (when `Rejected`; [`authorize-offline-pass.md` §4](profiles/offline/authorize-offline-pass.md#4-response-payload)) |
@@ -396,10 +400,15 @@ In the **Partial B** offline scenario (phone offline, station online), the mobil
     "signatureAlgorithm": "ECDSA-P256-SHA256",
     "signature": "MEQCIGDt8n5JEeRrYMqlom+5pC9kQhSWxhscTNcNLx+W5jHvAiAnniRsf8oUWO8B2I9JwL0XwPPpirbfTYvSHbuNWZrLkg=="
   },
-  "deviceId": "device_uuid_123",
   "counter": 5,
   "bayId": "bay_c1d2e3f4a5b6",
-  "serviceId": "svc_eco"
+  "serviceId": "svc_eco",
+  "requestedDurationSeconds": 300,
+  "deviceProof": {
+    "format": "android-key",
+    "signature": "MEQCICH8vBBquJVWZz8sUQJrtPMjG0y6xV3t3bPuAYKNf0nPAiBi4x8PP+9T1GV9MRdjOFq3Z2NfM8HKzQLcG5sCuTfmhw=="
+  },
+  "transcriptHash": "tfsNPVcoz7vxxQXUNvR3HlaWHe7hJvupwJjv2GSnk3w="
 }
 ```
 
@@ -2458,14 +2467,11 @@ The server **SHOULD NOT** send more than **1 TriggerMessage per action type, per
 
 ## 7. Offline / BLE Operations
 
-All messages in this section use the **BLE GATT** transport. For BLE transport parameters (MTU, advertising, fragmentation, encryption), see [Chapter 02 — Transport](02-transport.md), Section 8.
+All messages in this section use the **BLE GATT** transport, defined in [`profiles/offline/ble-transport.md`](profiles/offline/ble-transport.md): the GATT service and its characteristics (§2), the advertising data (§9), MTU negotiation (§10) and fragmentation (§11). [Chapter 02 — Transport §8](02-transport.md#8-ble-transport-offline-mode) summarises the transport and points there.
 
-BLE messages do **not** use the MQTT envelope. Each BLE message written to FFF3 or notified on FFF4 includes a `type` field for identification. Readable characteristics (FFF1, FFF2, FFF6) contain static JSON structures.
+BLE messages do **not** use the MQTT envelope. Each BLE message written to FFF3 or FFF6 or notified on FFF4, FFF5 or FFF6 includes a `type` field for identification, except the ServiceStatus notification and the two values that are not requests and responses: StationInfo, read from FFF1, and AvailableServices, notified on FFF2 at the app's request.
 
-Messages exceeding the negotiated MTU MUST be fragmented using the OSPP fragmentation protocol (see [Chapter 02](02-transport.md), Section 8.5):
-- First fragment: `{F:1/N}` + data
-- Subsequent fragments: `{F:2/N}` + data
-- Last fragment: `{F:N/N}` + data
+Every message longer than one write or notification is fragmented by the one fragmentation protocol, [`ble-transport.md` §11](profiles/offline/ble-transport.md#11-fragmentation-protocol), and every message after the Challenge travels inside the AEAD channel of [Chapter 06 §6.5.3](06-security.md#653-ble-aead-channel). A response that refuses carries `errorCode`, `errorText` and, where the code calls for it, `details` ([Chapter 07 §2.3](07-errors.md#23-ble-error-response)); the codes each response carries are listed once, in [Chapter 07 §4.3](07-errors.md#43-ble-message-types).
 
 ---
 
@@ -2475,23 +2481,21 @@ Messages exceeding the negotiated MTU MUST be fragmented using the OSPP fragment
 |----------|-------|
 | **Direction** | Station → App |
 | **Transport** | BLE |
-| **Characteristic** | `0000FFF1-0000-1000-8000-00805F9B34FB` (Read) |
+| **Characteristic** | FFF1 (Read) |
 | **Trigger** | App reads characteristic after BLE connection |
 | **Expected Response** | N/A (read operation) |
 | **Timeout** | BLE read timeout (implementation-defined, RECOMMENDED 5s) |
 
-The app SHOULD read StationInfo immediately after connecting to verify the station identity and check connectivity status before initiating the handshake.
+The app MAY read StationInfo after connecting, to show the customer which station it reached. Nothing on it is authenticated: the app relies on none of it, and takes the station's identity from the certificate of its Challenge and its connectivity from the Challenge's `stationConnectivity` ([`ble-transport.md` §3](profiles/offline/ble-transport.md#3-station-info-fff1)).
 
 #### Payload
 
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
-| `stationId` | string | Yes | Station identifier (`stn_{uuid}`) |
+| `stationId` | string | Yes | Station identifier (`stn_{uuid}`), unauthenticated |
 | `stationModel` | string | Yes | Hardware model name |
 | `firmwareVersion` | string | Yes | Current firmware version (semver) |
-| `bayCount` | integer | Yes | Number of service bays |
-| `bleProtocolVersion` | string | Yes | BLE protocol version (e.g., `"0.2.1"`) |
-| `connectivity` | string | Yes | `"Online"` (MQTT connected) or `"Offline"` (MQTT disconnected) |
+| `connectivity` | string | Yes | `"Online"` (MQTT connected) or `"Offline"` (MQTT disconnected), unauthenticated |
 
 #### Example
 
@@ -2500,8 +2504,6 @@ The app SHOULD read StationInfo immediately after connecting to verify the stati
   "stationId": "stn_a1b2c3d4",
   "stationModel": "SSP-3000",
   "firmwareVersion": "1.2.3",
-  "bayCount": 3,
-  "bleProtocolVersion": "0.2.1",
   "connectivity": "Offline"
 }
 ```
@@ -2514,25 +2516,24 @@ The app SHOULD read StationInfo immediately after connecting to verify the stati
 |----------|-------|
 | **Direction** | Station → App |
 | **Transport** | BLE |
-| **Characteristic** | `0000FFF2-0000-1000-8000-00805F9B34FB` (Read) |
-| **Trigger** | App reads characteristic to display service catalog and prices |
-| **Expected Response** | N/A (read operation) |
-| **Timeout** | BLE read timeout (implementation-defined, RECOMMENDED 5s) |
+| **Characteristic** | FFF2 (Write, Notify) |
+| **Trigger** | App writes the octet `0x01` to FFF2 to request the catalog, before the handshake |
+| **Expected Response** | N/A (the station notifies the value on FFF2) |
+| **Timeout** | BLE response timeout (implementation-defined, RECOMMENDED 5s) |
 
-Returns the full service catalog with pricing for all bays. The app uses this to display available services and let the user select a bay and service before authentication.
+Returns the station's service catalog per bay, with prices: every bay the station declared, each with the services the catalog it holds binds to that bay's programs. The app uses it to show the customer what the station sells, and the customer chooses a bay and a service before the authentication. It carries **no availability** — that is the Challenge's signed `availableServices` — and before the first catalog push it carries no `catalogVersion` and no service ([`ble-transport.md` §4](profiles/offline/ble-transport.md#4-available-services-fff2)).
 
-> **Why this message carries services while [StatusNotification](#52-statusnotification) carries programs.** The two look alike and are not. AvailableServices is the station **echoing the catalog the server pushed it** ([UpdateServiceCatalog](#69-updateservicecatalog)) to an app that has no other way to reach it while offline — the station originates none of it, and if it holds no catalog it has nothing to serve here. StatusNotification is the station reporting **its own hardware**, which it always knows, in a message it is required to send before any catalog can have arrived. Same station, two different kinds of fact.
+> **Why this message carries services while [StatusNotification](#52-statusnotification) carries programs.** The two look alike and are not. AvailableServices is the station **echoing the catalog the server pushed it** ([UpdateServiceCatalog](#69-updateservicecatalog)) to an app that has no other way to reach it while offline — the station originates none of it, and if it holds no catalog it has nothing to offer here. StatusNotification is the station reporting **its own hardware**, which it always knows, in a message it is required to send before any catalog can have arrived. Same station, two different kinds of fact.
 
 #### Payload
 
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
-| `catalogVersion` | string | Yes | Catalog version identifier |
-| `bays` | array | Yes | List of bays — see fields below |
+| `catalogVersion` | string | No | Catalog version identifier — absent while the station holds no catalog |
+| `bays` | array | Yes | Every bay the station declared — see fields below |
 | `bays[].bayId` | string | Yes | Bay identifier (`bay_{uuid}`) |
 | `bays[].bayNumber` | integer | Yes | Physical bay number (1-indexed) |
-| `bays[].status` | string | Yes | Current bay status — one of the six reportable states (`"Available"`, `"Reserved"`, `"Occupied"`, `"Finishing"`, `"Faulted"`, `"Unavailable"`). `"Unknown"` is not among them ([Chapter 05 §2.2](05-state-machines.md)) |
-| `bays[].services` | array | Yes | Services available on this bay |
+| `bays[].services` | array | Yes | The services the catalog binds to this bay's programs — none while the station holds no catalog |
 | `bays[].services[].serviceId` | string | Yes | Service identifier (`svc_{id}`) |
 | `bays[].services[].serviceName` | string | Yes | Human-readable name |
 | `bays[].services[].pricingType` | string | Yes | `"PerMinute"` or `"Fixed"` |
@@ -2540,7 +2541,6 @@ Returns the full service catalog with pricing for all bays. The app uses this to
 | `bays[].services[].priceCreditsFixed` | integer | Cond. | Fixed credit price. Required when `pricingType` is `Fixed`; **MUST NOT** be present when it is `PerMinute` |
 | `bays[].services[].priceLocalPerMinute` | integer | No | Local-currency price in minor units per minute, informational. **MUST NOT** be present when `pricingType` is `Fixed` |
 | `bays[].services[].priceLocalFixed` | integer | No | Local-currency price in minor units fixed, informational. **MUST NOT** be present when `pricingType` is `PerMinute` |
-| `bays[].services[].available` | boolean | Yes | Whether the service is operational |
 
 #### Example
 
@@ -2551,38 +2551,33 @@ Returns the full service catalog with pricing for all bays. The app uses this to
     {
       "bayId": "bay_c1d2e3f4a5b6",
       "bayNumber": 1,
-      "status": "Available",
       "services": [
         {
           "serviceId": "svc_eco",
           "serviceName": "Eco Program",
           "pricingType": "PerMinute",
           "priceCreditsPerMinute": 10,
-          "priceLocalPerMinute": 50,
-          "available": true
+          "priceLocalPerMinute": 50
         },
         {
           "serviceId": "svc_standard",
           "serviceName": "Standard Program",
           "pricingType": "PerMinute",
           "priceCreditsPerMinute": 8,
-          "priceLocalPerMinute": 40,
-          "available": true
+          "priceLocalPerMinute": 40
         }
       ]
     },
     {
       "bayId": "bay_a2b3c4d5e6f7",
       "bayNumber": 2,
-      "status": "Occupied",
       "services": [
         {
           "serviceId": "svc_eco",
           "serviceName": "Eco Program",
           "pricingType": "PerMinute",
           "priceCreditsPerMinute": 10,
-          "priceLocalPerMinute": 50,
-          "available": true
+          "priceLocalPerMinute": 50
         }
       ]
     }
@@ -2598,19 +2593,19 @@ Returns the full service catalog with pricing for all bays. The app uses this to
 |----------|-------|
 | **Direction** | App → Station |
 | **Transport** | BLE |
-| **Characteristic** | `0000FFF3-0000-1000-8000-00805F9B34FB` (Write) |
-| **Trigger** | App initiates the BLE handshake after reading FFF1 and FFF2 |
-| **Expected Response** | [CHALLENGE](#74-challenge) on FFF4 |
+| **Characteristic** | FFF3 (Write) |
+| **Trigger** | App initiates the BLE handshake |
+| **Expected Response** | [CHALLENGE](#74-challenge) on FFF4, or an [AuthResponse](#77-authresponse) refusing the Hello |
 | **Timeout** | 10 seconds |
 
-First message of the BLE handshake. The app sends its identity and a random nonce for session key derivation.
+First message of the BLE handshake. The app sends the BLE versions it supports, a random nonce and its ephemeral key — and nothing that identifies the device or its user, since the Hello is plaintext ([Chapter 06 T14](06-security.md#t14---ble-presence-tracking)).
 
 #### Payload
 
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
 | `type` | string | Yes | `"Hello"` |
-| `deviceId` | string | Yes | Unique mobile device identifier (stable across sessions) |
+| `bleVersions` | array of string | Yes | The BLE protocol versions the app supports, most preferred first (1 to 8, semver) |
 | `appNonce` | string | Yes | Base64-encoded 32-byte random nonce |
 | `appVersion` | string | Yes | Mobile app version (semver) |
 | `appEphemeralPubKey` | string | Yes | App's per-handshake ephemeral P-256 public key (compressed SEC1, Base64). ECDH input for session-key derivation ([Chapter 06 §6.5](06-security.md#65-ble-session-key-derivation--hkdf-sha256)). |
@@ -2620,10 +2615,12 @@ First message of the BLE handshake. The app sends its identity and a random nonc
 ```json
 {
   "type": "Hello",
-  "deviceId": "device_uuid_123",
-  "appNonce": "DTUrT0MOKRizF27RH0/XTpUHw0ZrhJXt1K1OCXIxrmw=",
+  "bleVersions": [
+    "0.3.0"
+  ],
+  "appNonce": "gQG+zG9+pYMtsf/zjWFvZnjJKnlpKxdZ0deHPg2XrwY=",
   "appVersion": "2.1.0",
-  "appEphemeralPubKey": "AjRkc2Vzc2lvbi1lcGhlbWVyYWwtcHVia2V5LWFwcDEy"
+  "appEphemeralPubKey": "AhpNWsAWw5qMBXMrcbGJmfP4RzqXJfaxkURERMqmLA9k"
 }
 ```
 
@@ -2635,12 +2632,12 @@ First message of the BLE handshake. The app sends its identity and a random nonc
 |----------|-------|
 | **Direction** | Station → App |
 | **Transport** | BLE |
-| **Characteristic** | `0000FFF4-0000-1000-8000-00805F9B34FB` (Notify) |
+| **Characteristic** | FFF4 (Notify) |
 | **Trigger** | Station receives a valid Hello message |
 | **Expected Response** | [OfflineAuthRequest](#75-offlineauthrequest) or [ServerSignedAuth](#76-serversignedauth) on FFF3, depending on connectivity scenario |
 | **Timeout** | N/A (station sends immediately) |
 
-Second message of the BLE handshake. The station provides its nonce and tells the app whether the station is currently connected to the server.
+Second message of the BLE handshake. The station names the BLE version it chose, gives its nonce and ephemeral key, presents its certificate, says whether it is connected to the server and what it can start now, and signs all of it with its certificate key over the Hello it answers ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)).
 
 The `stationConnectivity` field determines which authentication flow the app MUST use:
 - `"Offline"` → App uses [OfflineAuthRequest](#75-offlineauthrequest) (Full Offline) or [ServerSignedAuth](#76-serversignedauth) (Partial A)
@@ -2651,39 +2648,43 @@ The `stationConnectivity` field determines which authentication flow the app MUS
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
 | `type` | string | Yes | `"Challenge"` |
+| `bleVersion` | string | Yes | The BLE protocol version of this session — one of the Hello's `bleVersions` |
 | `stationNonce` | string | Yes | Base64-encoded 32-byte random nonce |
-| `stationCert` | object | Yes | Server-signed StationIdentity certificate ([Chapter 06 §6.5.2](06-security.md#652-stationidentity-certificate)). App MUST verify before sending any credential. |
-| `stationEphemeralPubKey` | string | Yes | Station's per-handshake ephemeral P-256 public key (compressed SEC1, Base64). ECDH input for forward secrecy (§6.5). |
+| `stationEphemeralPubKey` | string | Yes | Station's per-handshake ephemeral P-256 public key (compressed SEC1, Base64). ECDH input for the session key (§6.5). |
+| `stationCertificate` | string | Yes | The station's mTLS client certificate, DER, Base64, carrying `id-kp-osppBleStation` ([Chapter 06 §4.4](06-security.md#44-certificate-requirements)). App MUST verify it against the Station CA and CRL of its trust bundle before sending any credential. |
 | `stationConnectivity` | string | Yes | `"Online"` or `"Offline"` |
-| `availableServices` | array | No | Simplified list of currently available services |
+| `availableServices` | array | Yes | Every service the station's catalog binds to each of its bays — the app's one source of availability; empty while the station holds no catalog |
 | `availableServices[].bayId` | string | Yes | Bay identifier |
 | `availableServices[].serviceId` | string | Yes | Service identifier |
-| `availableServices[].available` | boolean | Yes | Whether the service can be started |
+| `availableServices[].available` | boolean | Yes | Whether the station can start this service on this bay now |
+| `stationSignature` | string | Yes | ECDSA P-256 signature with the certificate key over the Hello and this Challenge without this member ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)) |
 
-> **Session key derivation:** Both sides derive the session key using HKDF-SHA256 over a two-operation ECDH P-256 exchange (the BLE LTK is NOT used — see [Chapter 06 — Security §6.5](06-security.md#65-ble-session-key-derivation--hkdf-sha256), which governs):
-> `SessionKey = HKDF-SHA256(ikm = es ‖ ee ‖ appNonce ‖ stationNonce, salt = "OSPP_BLE_SESSION_V2", info = LP(deviceId) ‖ LP(transcriptHash), length = 32)` — where `es = ECDH(appEphemeral, stationStatic[cert])`, `ee = ECDH(appEphemeral, stationEphemeral)`, and `stationId` is bound via `transcriptHash` (not a separate `info` field).
+> **Session key derivation:** Both sides derive the session key using HKDF-SHA256 over an ephemeral-ephemeral ECDH P-256 exchange authenticated by `stationSignature` (the BLE LTK is NOT used — see [Chapter 06 — Security §6.5](06-security.md#65-ble-session-key-derivation--hkdf-sha256), which governs):
+> `SessionKey = HKDF-SHA256(ikm = ee ‖ appNonce ‖ stationNonce, salt = "OSPP_BLE_SESSION_V3", info = LP(transcriptHash), length = 32)` — where `ee = ECDH(appEphemeral, stationEphemeral)`, and the station's identity is bound through `transcriptHash`, which covers its certificate and signature.
 
 #### Example
 
 ```json
 {
   "type": "Challenge",
-  "stationNonce": "c3RhdGlvbiBub25jZSAzMiBieXRlcyByYW5kb20u...",
-  "stationCert": {
-    "stationId": "stn_a1b2c3d4",
-    "organizationId": "org_7f3a9c2e1b5d",
-    "stationPubKey": "AymtZXJ2ZXItZXBoZW1lcmFsLXB1YmtleS1zdGF0aW9u",
-    "issuedAt": "2026-02-13T00:00:00.000Z",
-    "expiresAt": "2026-02-20T00:00:00.000Z",
-    "signatureAlgorithm": "ECDSA-P256-SHA256",
-    "signature": "MEUCIQDXKT0ewRBp/nkPY/qh6mBjwSn4BE7fmjDTdjcP1dhIyQIgPyXM1VnFZtrG6WaOgpRwiQIeFF2I2zeFsb05dyel1rE="
-  },
-  "stationEphemeralPubKey": "AzN0YXRpb24tZXBoZW1lcmFsLXB1YmtleS1jaGFsbGVu",
+  "bleVersion": "0.3.0",
+  "stationNonce": "7oplt8bFihuLtLP/TirYwqP8RsJOLs0L2rfEzgPoAKI=",
+  "stationEphemeralPubKey": "AoB8Dry2qCXwUlmOl0guXd7iJTsjpxcy9AD+RLMZUK1N",
+  "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
   "stationConnectivity": "Offline",
   "availableServices": [
-    { "bayId": "bay_c1d2e3f4a5b6", "serviceId": "svc_eco", "available": true },
-    { "bayId": "bay_c1d2e3f4a5b6", "serviceId": "svc_standard", "available": true }
-  ]
+    {
+      "bayId": "bay_c1d2e3f4a5b6",
+      "serviceId": "svc_eco",
+      "available": true
+    },
+    {
+      "bayId": "bay_c1d2e3f4a5b6",
+      "serviceId": "svc_standard",
+      "available": true
+    }
+  ],
+  "stationSignature": "MEQCID5pRZWu2j5U9YJv8tQatfi2C8HAEPKrflqELCed8HEQAiBi8cgoe/dOefXvXcNyTavrGOx3WAQdvdGxdRkDi8L64A=="
 }
 ```
 
@@ -2695,14 +2696,14 @@ The `stationConnectivity` field determines which authentication flow the app MUS
 |----------|-------|
 | **Direction** | App → Station |
 | **Transport** | BLE |
-| **Characteristic** | `0000FFF3-0000-1000-8000-00805F9B34FB` (Write) |
+| **Characteristic** | FFF3 (Write) |
 | **Trigger** | Full Offline or Partial B scenario — app presents OfflinePass after Challenge |
 | **Expected Response** | [AuthResponse](#77-authresponse) on FFF4 |
 | **Timeout** | 10 seconds |
 
-Presents an OfflinePass credential for authentication. Used in two scenarios:
+Presents an OfflinePass credential for authentication, with the bay, the service and the duration the customer chose, and proves the phone holds the pass's device key. Used in two scenarios:
 - **Full Offline** (phone + station both offline): Station validates the pass locally using the 10 validation checks.
-- **Partial B** (phone offline, station online): Station forwards the pass to the server via [AuthorizeOfflinePass](#21-authorizeofflinepass) MQTT message.
+- **Partial B** (phone offline, station online): Station forwards the pass to the server via [AuthorizeOfflinePass](#21-authorizeofflinepass) MQTT message, with the bay, the service, the duration, the device proof and the handshake's `transcriptHash`.
 
 The app MUST request biometric or PIN confirmation from the user before sending this message.
 
@@ -2713,14 +2714,18 @@ The app MUST request biometric or PIN confirmation from the user before sending 
 | `type` | string | Yes | `"OfflineAuthRequest"` |
 | `offlinePass` | object | Yes | Complete OfflinePass object (see [Chapter 06 — Security](06-security.md)) |
 | `counter` | integer | Yes | Monotonically increasing counter (anti-replay) |
+| `bayId` | string | Yes | The bay the customer chose (`bay_{uuid}`) |
+| `serviceId` | string | Yes | The service the customer chose (`svc_{id}`) |
+| `requestedDurationSeconds` | integer | Yes | The duration the customer chose, in seconds; an authorization is for exactly this duration, or refused |
 | `sessionProof` | string | Yes | HMAC-SHA256 proof binding this request to the BLE session key. Canonical construction: [ble-handshake.md §4.1](profiles/offline/ble-handshake.md) — `Base64(HMAC-SHA256(SessionKey, LP(UTF8("OfflineAuthRequest")) ‖ LP(UTF8(passId)) ‖ LP(UTF8(decimal(counter)))))`, where `LP(x) = U16BE(byteLength(x)) ‖ x` (same length-prefix as §6.5 Pin 3/4). Base64-encoded, exactly 44 characters. (N1: the prior 64-char hex/4-input form is withdrawn.) |
+| `deviceProof` | object | Yes | Proof of possession of the pass's device key, over the handshake, the station, the pass, the counter and the requested service ([Chapter 06 §6.5.4](06-security.md#654-device-proof-of-possession)): `format` (`android-key` or `apple-appattest`), `signature`, and `authenticatorData` for `apple-appattest` |
 
 **Station-side validation (Full Offline)** — the station **MUST** perform the nine checks of [Chapter 06 §6.1.1](06-security.md#611-offlinepass-validation--10-checks); check #5 is withdrawn, since a pass carries no station or organization scope:
 
 1. ECDSA P-256 signature valid (against the key of the station's server key set named by the pass's `keyId`)
 2. `expiresAt` not passed, and the pass no older than the station's `OfflinePassMaxAge`
 3. `revocationEpoch` >= the platform `RevocationEpoch` the station holds
-4. `deviceId` matches Hello `deviceId`
+4. `deviceProof` verifies under the pass's `devicePublicKey`
 5. *(withdrawn)*
 6. fewer than `maxUses` transactions already counted against this pass
 7. credits already counted plus this transaction's estimated cost not above `maxTotalCredits`
@@ -2755,11 +2760,18 @@ The app MUST request biometric or PIN confirmation from the user before sending 
     "signature": "MEQCIGDt8n5JEeRrYMqlom+5pC9kQhSWxhscTNcNLx+W5jHvAiAnniRsf8oUWO8B2I9JwL0XwPPpirbfTYvSHbuNWZrLkg=="
   },
   "counter": 5,
-  "sessionProof": "ObgxpE1Ad+xl6P8fRWtBstqMY2Tjan9oK/LIWofxvrI="
+  "bayId": "bay_c1d2e3f4a5b6",
+  "serviceId": "svc_eco",
+  "requestedDurationSeconds": 300,
+  "sessionProof": "ObgxpE1Ad+xl6P8fRWtBstqMY2Tjan9oK/LIWofxvrI=",
+  "deviceProof": {
+    "format": "android-key",
+    "signature": "MEQCICH8vBBquJVWZz8sUQJrtPMjG0y6xV3t3bPuAYKNf0nPAiBi4x8PP+9T1GV9MRdjOFq3Z2NfM8HKzQLcG5sCuTfmhw=="
+  }
 }
 ```
 
-> The `sessionProof` above is illustrative (Base64-encoded HMAC-SHA256, 44 chars), computed per [ble-handshake.md §4.1](profiles/offline/ble-handshake.md); it does not correspond to the example fields shown. On the wire this message travels inside the §6.5.3 AEAD frame.
+> The `sessionProof` above is computed under the synthetic test session key and the `deviceProof` under the test device key of the pass's `deviceId` ([`conformance/test-keys/README.md`](../conformance/test-keys/README.md)), over the Hello and Challenge of §7.3 and §7.4. On the wire this message travels inside the §6.5.3 AEAD frame.
 
 ---
 
@@ -2769,7 +2781,7 @@ The app MUST request biometric or PIN confirmation from the user before sending 
 |----------|-------|
 | **Direction** | App → Station |
 | **Transport** | BLE |
-| **Characteristic** | `0000FFF3-0000-1000-8000-00805F9B34FB` (Write) |
+| **Characteristic** | FFF3 (Write) |
 | **Trigger** | Partial A scenario (phone online, station offline) — app obtained server authorization via HTTPS |
 | **Expected Response** | [AuthResponse](#77-authresponse) on FFF4 |
 | **Timeout** | 10 seconds |
@@ -2796,8 +2808,8 @@ The station **MUST** verify the signature using a key of its stored `OfflinePass
 {
   "type": "ServerSignedAuth",
   "signedAuthorization": {
-    "data": "eyJhcHBOb25jZSI6IkRUVXJUME1PS1JpekYyN1JIMC9YVHBVSHcwWnJoSlh0MUsxT0NYSXhybXc9IiwiYXV0aElkIjoiYXV0aF80YTRjOTE3YmY4N2YiLCJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6NTAsImRldmljZUlkIjoiZGV2aWNlX3V1aWRfMTIzIiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfZjFhMmIzYzRlNWQ2Iiwic3RhdGlvbklkIjoic3RuX2ExYjJjM2Q0Iiwic3ViIjoic3ViX2RjYzIyNjhhM2Q5MDlkYzgifQ==",
-    "signature": "MEQCIH/9+N9tI3KDd7D9jSUhhnLGIFw2gYO6BPyDk6Te2qrzAiBnJakISC8hWI0cVLxI1vz04A9Z400yQHUJp4ZJJHTMfQ==",
+    "data": "eyJhcHBOb25jZSI6ImdRRyt6RzkrcFlNdHNmL3pqV0Z2Wm5qSktubHBLeGRaMGRlSFBnMlhyd1k9IiwiYXV0aElkIjoiYXV0aF80YTRjOTE3YmY4N2YiLCJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJjcmVkaXRzQXV0aG9yaXplZCI6NTAsImRldmljZUlkIjoiZGV2aWNlX3V1aWRfMTIzIiwiZHVyYXRpb25TZWNvbmRzIjozMDAsImV4cGlyZXNBdCI6IjIwMjYtMDItMTNUMTA6MDU6MDAuMDAwWiIsImlzc3VlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic2VydmljZUlkIjoic3ZjX2VjbyIsInNlc3Npb25JZCI6InNlc3NfZjFhMmIzYzRlNWQ2Iiwic3RhdGlvbklkIjoic3RuX2ExYjJjM2Q0Iiwic3ViIjoic3ViX3h5ejc4OSJ9",
+    "signature": "MEUCIQC+o5pPLrzMfnkIQrJOAAgpTWyC+knbse8PeSs+H9m6RwIgahDsgrggOhuEtrwbCY3p6QVmw8+AmgW9Fr9GxFlkiHk=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "sessionId": "sess_f1a2b3c4e5d6"
@@ -2812,12 +2824,12 @@ The station **MUST** verify the signature using a key of its stored `OfflinePass
 |----------|-------|
 | **Direction** | Station → App |
 | **Transport** | BLE |
-| **Characteristic** | `0000FFF4-0000-1000-8000-00805F9B34FB` (Notify) |
-| **Trigger** | Station completes validation of OfflineAuthRequest or ServerSignedAuth |
+| **Characteristic** | FFF4 (Notify) |
+| **Trigger** | Station completes validation of OfflineAuthRequest or ServerSignedAuth — or refuses a Hello before any key exists |
 | **Expected Response** | If `Accepted` → [StartServiceRequest](#78-startservicerequest) on FFF3 |
 | **Timeout** | N/A (station sends after validation) |
 
-Authentication result from the station. On `Accepted`, the app MAY proceed to start a service. On `Rejected`, the app MUST display the error and disconnect.
+Authentication result from the station. On `Accepted`, the app MAY proceed to start a service. On `Rejected`, the app MUST display the error and disconnect. A station that refuses a Hello sends an AuthResponse `Rejected` in plaintext instead of the Challenge, and closes the connection: the one refusal the AEAD channel does not authenticate ([ble-handshake.md §5](profiles/offline/ble-handshake.md#5-step-4-authresponse)).
 
 #### Payload
 
@@ -2826,21 +2838,11 @@ Authentication result from the station. On `Accepted`, the app MAY proceed to st
 | `type` | string | Yes | `"AuthResponse"` |
 | `result` | string | Yes | `"Accepted"` or `"Rejected"` |
 | `sessionKeyConfirmation` | string | Cond. | HMAC confirmation of shared session key (when `Accepted`) |
-| `reason` | string | Cond. | Rejection reason code (when `Rejected`) |
-| `errorCode` | integer | Cond. | Numeric error code (when `Rejected`) |
-
-**Rejection reasons (BLE-specific error codes):**
-
-| Error Code | Reason | Description |
-|------------|--------|-------------|
-| `2002` | `OFFLINE_PASS_INVALID` | Signature verification failed |
-| `2003` | `OFFLINE_PASS_EXPIRED` | Pass has expired, or is older than this station's `OfflinePassMaxAge` |
-| `2004` | `OFFLINE_EPOCH_REVOKED` | Revocation epoch check failed |
-| `4002` | `OFFLINE_LIMIT_EXCEEDED` | Max uses or credits exceeded |
-| `4003` | `OFFLINE_RATE_LIMITED` | Too soon after previous transaction |
-| `2005` | `OFFLINE_COUNTER_REPLAY` | Counter replay detected |
-| `2013` | `BLE_AUTH_FAILED` | Session key derivation or session proof invalid |
-| `4004` | `OFFLINE_PER_TX_EXCEEDED` | Per-transaction credit limit exceeded |
+| `durationSeconds` | integer | No | Advisory copy of the authorized duration (when `Accepted`); unsigned, never what the station checks |
+| `creditsAuthorized` | integer | No | Advisory copy of the authorized credit budget (when `Accepted`); unsigned |
+| `errorCode` | integer | Cond. | Registry code of the refusal (when `Rejected`) — [Chapter 07 §4.3](07-errors.md#43-ble-message-types) |
+| `errorText` | string | Cond. | Registry name of `errorCode`, `UPPER_SNAKE_CASE` (when `Rejected`) |
+| `details` | object | No | Per-occurrence context of the refusal; with `4002`, `constraint` ([Chapter 07 §2.3](07-errors.md#23-ble-error-response)) |
 
 #### Example
 
@@ -2860,8 +2862,8 @@ Authentication result from the station. On `Accepted`, the app MAY proceed to st
 {
   "type": "AuthResponse",
   "result": "Rejected",
-  "reason": "OFFLINE_PASS_EXPIRED",
-  "errorCode": 2003
+  "errorCode": 2003,
+  "errorText": "OFFLINE_PASS_EXPIRED"
 }
 ```
 
@@ -2873,22 +2875,21 @@ Authentication result from the station. On `Accepted`, the app MAY proceed to st
 |----------|-------|
 | **Direction** | App → Station |
 | **Transport** | BLE |
-| **Characteristic** | `0000FFF3-0000-1000-8000-00805F9B34FB` (Write) |
-| **Trigger** | User selects a service after successful authentication |
+| **Characteristic** | FFF3 (Write) |
+| **Trigger** | After a successful authentication, for the bay and service the session was authorized for |
 | **Expected Response** | [StartServiceResponse](#79-startserviceresponse) on FFF4 |
 | **Timeout** | 10 seconds |
 
-Requests the station to start a service on a specific bay. Only valid after a successful [AuthResponse](#77-authresponse).
+Requests the station to start the session's service on its bay. Only valid after a successful [AuthResponse](#77-authresponse), and only for the bay and the service of the session's authorization; the station resolves the program to run from the bindings of the catalog it holds ([ble-session.md §1](profiles/offline/ble-session.md#1-starting-a-service)).
 
 #### Payload
 
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
 | `type` | string | Yes | `"StartServiceRequest"` |
-| `bayId` | string | Yes | Target bay identifier (`bay_{uuid}`) |
-| `serviceId` | string | Yes | Catalog service to activate (`svc_{id}`) |
-| `programNumber` | integer | Yes | Ordinal of the physical program to run on that bay. Offline there is no StartService command, so the app reads the binding from the catalog the station holds |
-| `requestedDurationSeconds` | integer | Yes | Requested session duration in seconds |
+| `bayId` | string | Yes | The bay of the session's authorization (`bay_{uuid}`) |
+| `serviceId` | string | Yes | The service of the session's authorization (`svc_{id}`) |
+| `requestedDurationSeconds` | integer | Yes | Requested session duration in seconds, at most the authorized duration |
 
 #### Example
 
@@ -2909,7 +2910,7 @@ Requests the station to start a service on a specific bay. Only valid after a su
 |----------|-------|
 | **Direction** | Station → App |
 | **Transport** | BLE |
-| **Characteristic** | `0000FFF4-0000-1000-8000-00805F9B34FB` (Notify) |
+| **Characteristic** | FFF4 (Notify) |
 | **Trigger** | Station processes StartServiceRequest |
 | **Expected Response** | N/A (app monitors [ServiceStatus](#712-servicestatus-fff5) on FFF5) |
 | **Timeout** | N/A |
@@ -2922,11 +2923,11 @@ Confirmation that the service has started (or was rejected). On `Accepted`, the 
 |-------|------|:--------:|-------------|
 | `type` | string | Yes | `"StartServiceResponse"` |
 | `result` | string | Yes | `"Accepted"` or `"Rejected"` |
-| `sessionId` | string | Cond. | Local session identifier (when `Accepted`) |
+| `sessionId` | string | Cond. | The session's one identifier — the station's for Full Offline, the server's for Partial A and Partial B (when `Accepted`) |
 | `offlineTxId` | string | Cond. | Offline transaction identifier (`otx_{uuid}`) for receipt tracking (when `Accepted`) |
-| `errorCode` | integer | Cond. | Error code (when `Rejected`) |
-| `errorText` | string | Cond. | Error description (when `Rejected`) |
-| `programNumber` | integer | Cond. | **Echo** of the requested ordinal, so a refusal names what it refused |
+| `errorCode` | integer | Cond. | Registry code of the refusal (when `Rejected`) |
+| `errorText` | string | Cond. | Registry name of `errorCode`, `UPPER_SNAKE_CASE` (when `Rejected`) |
+| `details` | object | No | Per-occurrence context of the refusal |
 
 #### Example
 
@@ -2960,12 +2961,12 @@ Confirmation that the service has started (or was rejected). On `Accepted`, the 
 |----------|-------|
 | **Direction** | App → Station |
 | **Transport** | BLE |
-| **Characteristic** | `0000FFF3-0000-1000-8000-00805F9B34FB` (Write) |
-| **Trigger** | User requests to stop the active service, or session timer expires |
+| **Characteristic** | FFF3 (Write) |
+| **Trigger** | The customer stops the active service from the app |
 | **Expected Response** | [StopServiceResponse](#711-stopserviceresponse) on FFF4 |
 | **Timeout** | 10 seconds |
 
-Requests the station to stop the currently active service. The station MAY also auto-stop when the authorized duration expires.
+Requests the station to stop the currently active service — the customer's stop over BLE, which the station reports as `Local` ([Chapter 04 §6](04-flows.md#settlement-by-service-kind)). The station also auto-stops when the authorized duration expires.
 
 #### Payload
 
@@ -2993,12 +2994,12 @@ Requests the station to stop the currently active service. The station MAY also 
 |----------|-------|
 | **Direction** | Station → App |
 | **Transport** | BLE |
-| **Characteristic** | `0000FFF4-0000-1000-8000-00805F9B34FB` (Notify) |
-| **Trigger** | Station completes service stop |
-| **Expected Response** | App reads [Receipt](#713-receipt-fff6) from FFF6 after `ServiceStatus` shows `ReceiptReady` |
+| **Characteristic** | FFF4 (Notify) |
+| **Trigger** | Station completes service stop, or refuses it |
+| **Expected Response** | App asks for the [Receipt](#713-receipt-fff6) on FFF6 after `ServiceStatus` shows `ReceiptReady` |
 | **Timeout** | N/A |
 
-Final billing information for the session. After this, the station generates a signed receipt and makes it available on FFF6.
+Final billing information for the session, or the refusal of the stop. After an accepted stop, the station generates a signed receipt and serves it on FFF6.
 
 #### Payload
 
@@ -3008,6 +3009,9 @@ Final billing information for the session. After this, the station generates a s
 | `result` | string | Yes | `"Accepted"` or `"Rejected"` |
 | `actualDurationSeconds` | integer | Cond. | Actual service duration in seconds (when `Accepted`) |
 | `creditsCharged` | integer | Cond. | Credits the station computed for the session (when `Accepted`); advisory — the server settles its own recomputation ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)) |
+| `errorCode` | integer | Cond. | `3006 SESSION_NOT_FOUND` or `3007 SESSION_MISMATCH` (when `Rejected`) |
+| `errorText` | string | Cond. | Registry name of `errorCode` (when `Rejected`) |
+| `details` | object | No | Per-occurrence context of the refusal |
 
 #### Example
 
@@ -3028,7 +3032,7 @@ Final billing information for the session. After this, the station generates a s
 |----------|-------|
 | **Direction** | Station → App |
 | **Transport** | BLE |
-| **Characteristic** | `0000FFF5-0000-1000-8000-00805F9B34FB` (Notify) |
+| **Characteristic** | FFF5 (Notify) |
 | **Trigger** | Periodic during active session (every few seconds), and on status transitions |
 | **Expected Response** | None (informational, app updates UI) |
 | **Timeout** | N/A |
@@ -3056,7 +3060,7 @@ Real-time service status updates during an active BLE session. The app subscribe
 | `Starting` | Hardware is initializing |
 | `Running` | Service is active |
 | `Complete` | Service finished (timer expired or user stopped) |
-| `ReceiptReady` | Signed receipt is available to read from FFF6 |
+| `ReceiptReady` | The signed receipt can be asked for on FFF6 |
 | `Error` | Hardware error during service |
 
 #### Example
@@ -3097,12 +3101,12 @@ Real-time service status updates during an active BLE session. The app subscribe
 |----------|-------|
 | **Direction** | Station → App |
 | **Transport** | BLE |
-| **Characteristic** | `0000FFF6-0000-1000-8000-00805F9B34FB` (Read) |
-| **Trigger** | App reads after [ServiceStatus](#712-servicestatus-fff5) reports `ReceiptReady` |
-| **Expected Response** | N/A (read operation) |
-| **Timeout** | BLE read timeout (implementation-defined, RECOMMENDED 5s) |
+| **Characteristic** | FFF6 (Notify), inside a [ReceiptResponse](#715-receiptresponse) |
+| **Trigger** | App asks for it with a [ReceiptRequest](#714-receiptrequest) after [ServiceStatus](#712-servicestatus-fff5) reports `ReceiptReady` |
+| **Expected Response** | N/A |
+| **Timeout** | N/A |
 
-A cryptographically signed transaction receipt generated by the station after every offline session. The receipt is signed with the station's ECDSA P-256 private key and includes a monotonic `txCounter` carried as forensic evidence.
+A cryptographically signed transaction receipt generated by the station after every offline session. The receipt is signed with the station's ECDSA P-256 private key and includes a monotonic `txCounter` carried as forensic evidence. It reaches the app as the `receipt` of a [ReceiptResponse](#715-receiptresponse); the station serves it for at least 24 hours after signing it ([`ble-transport.md` §8](profiles/offline/ble-transport.md#8-receipt-fff6)).
 
 The app **MUST** store the receipt in its offline transaction log and sync it to the server when connectivity is restored, by the receipt upload of [`app-contract.md` §4](profiles/offline/app-contract.md#4-receipt-upload).
 
@@ -3128,7 +3132,7 @@ The app **MUST** store the receipt in its offline transaction log and sync it to
 | `meterValues.consumableMl` | integer | No | Consumable consumed in milliliters |
 | `meterValues.energyWh` | integer | No | Energy consumed in watt-hours |
 | `receipt` | object | Yes | Cryptographic receipt |
-| `receipt.data` | string | Yes | Base64 of the OSPP Canonical Form of `receipt_fields` ([Chapter 06 §6.2](06-security.md#62-transaction-receipt-signing--ecdsa-p-256)), which holds, besides the fields of this table that it signs, four signed-only fields — `stationId`, `endReason`, `bookedDurationSeconds`, `clockState` — carried in no envelope |
+| `receipt.data` | string | Yes | Base64 of the OSPP Canonical Form of `receipt_fields` ([Chapter 06 §6.2](06-security.md#62-transaction-receipt-signing--ecdsa-p-256)), which holds, besides the fields of this table that it signs, four signed-only fields — `stationId`, `endReason` (`ServerStopped` for a session the server stopped, `Local` for one the customer stopped from the app), `bookedDurationSeconds`, `clockState` — carried in no envelope |
 | `receipt.signature` | string | Yes | Base64-encoded ECDSA P-256 signature over the SHA-256 digest of the **canonical bytes** that `data` encodes — not of the base64 string itself |
 | `receipt.signatureAlgorithm` | string | Yes | `"ECDSA-P256-SHA256"` |
 | `txCounter` | integer | Yes | Monotonically increasing transaction counter (included in signed receipt data) |
@@ -3171,6 +3175,74 @@ The app **MUST** store the receipt in its offline transaction log and sync it to
   "userId": "sub_06072a829e3918a8",
   "deviceId": "dev_d4e5f6a7",
   "passCounter": 36
+}
+```
+
+---
+
+### 7.14 ReceiptRequest
+
+| Property | Value |
+|----------|-------|
+| **Direction** | App → Station |
+| **Transport** | BLE |
+| **Characteristic** | FFF6 (Write) |
+| **Trigger** | App asks for a session's receipt — after `ReceiptReady`, or after a fresh handshake on a reconnection |
+| **Expected Response** | [ReceiptResponse](#715-receiptresponse) on FFF6 |
+| **Timeout** | 10 seconds |
+
+Asks the station for the signed receipt of a session, named by the `sessionId` of the StartServiceResponse that started it ([`ble-transport.md` §8](profiles/offline/ble-transport.md#8-receipt-fff6)). It is not a session command: it may name a session another connection established.
+
+#### Payload
+
+| Field | Type | Required | Description |
+|-------|------|:--------:|-------------|
+| `type` | string | Yes | `"ReceiptRequest"` |
+| `sessionId` | string | Yes | The session whose receipt the app asks for |
+
+#### Example
+
+```json
+{
+  "type": "ReceiptRequest",
+  "sessionId": "sess_a1b2c3d4e5f6"
+}
+```
+
+---
+
+### 7.15 ReceiptResponse
+
+| Property | Value |
+|----------|-------|
+| **Direction** | Station → App |
+| **Transport** | BLE |
+| **Characteristic** | FFF6 (Notify) |
+| **Trigger** | Station answers a ReceiptRequest |
+| **Expected Response** | N/A |
+| **Timeout** | N/A |
+
+The session's signed receipt, or the refusal: `3006 SESSION_NOT_FOUND` when the station serves no receipt for the session named.
+
+#### Payload
+
+| Field | Type | Required | Description |
+|-------|------|:--------:|-------------|
+| `type` | string | Yes | `"ReceiptResponse"` |
+| `result` | string | Yes | `"Accepted"` or `"Rejected"` |
+| `receipt` | object | Cond. | The session's [Receipt](#713-receipt-fff6), exactly as the station signed it (when `Accepted`) |
+| `errorCode` | integer | Cond. | `3006` (when `Rejected`) |
+| `errorText` | string | Cond. | `SESSION_NOT_FOUND` (when `Rejected`) |
+| `details` | object | No | Per-occurrence context of the refusal |
+
+#### Example
+
+```json
+{
+  "type": "ReceiptResponse",
+  "result": "Rejected",
+  "errorCode": 3006,
+  "errorText": "SESSION_NOT_FOUND"
 }
 ```
 
@@ -3232,7 +3304,7 @@ Cross-reference table for MQTT Message Expiry Interval per action (see [Chapter 
 
 ## Appendix C — Error Code Quick Reference
 
-Error codes referenced in this chapter. For the full catalog, see [Chapter 07 — Error Codes](07-errors.md).
+Error codes referenced in this chapter. For the full catalog, see [Chapter 07 — Error Codes](07-errors.md). The codes of the BLE messages are listed once, in [Chapter 07 §4.3](07-errors.md#43-ble-message-types), and not repeated here.
 
 ### 1xxx Transport Errors
 
@@ -3250,32 +3322,32 @@ Error codes referenced in this chapter. For the full catalog, see [Chapter 07 �
 | Code | Text | Used By |
 |------|------|---------|
 | 2001 | `STATION_NOT_REGISTERED` | BootNotification |
-| 2002 | `OFFLINE_PASS_INVALID` | AuthorizeOfflinePass, TransactionEvent, BLE AuthResponse |
-| 2003 | `OFFLINE_PASS_EXPIRED` | AuthorizeOfflinePass, BLE AuthResponse |
-| 2004 | `OFFLINE_EPOCH_REVOKED` | AuthorizeOfflinePass, TransactionEvent, BLE AuthResponse |
-| 2005 | `OFFLINE_COUNTER_REPLAY` | AuthorizeOfflinePass, TransactionEvent, BLE AuthResponse |
+| 2002 | `OFFLINE_PASS_INVALID` | AuthorizeOfflinePass, TransactionEvent |
+| 2003 | `OFFLINE_PASS_EXPIRED` | AuthorizeOfflinePass |
+| 2004 | `OFFLINE_EPOCH_REVOKED` | AuthorizeOfflinePass, TransactionEvent |
+| 2005 | `OFFLINE_COUNTER_REPLAY` | AuthorizeOfflinePass, TransactionEvent |
 | 2007 | `COMMAND_NOT_SUPPORTED` | All Server→Station commands (implicit) |
 | 2008 | `ACTION_NOT_PERMITTED` | ChangeConfiguration |
-| 2013 | `BLE_AUTH_FAILED` | BLE AuthResponse |
-| 2014 | `OFFLINE_PASS_REVOKED` | AuthorizeOfflinePass, TransactionEvent, BLE AuthResponse |
+| 2013 | `BLE_AUTH_FAILED` | — (BLE only: [Chapter 07 §4.3](07-errors.md#43-ble-message-types)) |
+| 2014 | `OFFLINE_PASS_REVOKED` | AuthorizeOfflinePass, TransactionEvent |
 | 2016 | `OFFLINE_USER_MISMATCH` | TransactionEvent |
 | 2017 | `OFFLINE_RECEIPT_MISMATCH` | TransactionEvent |
-| 2018 | `SERVER_AUTH_NONCE_MISMATCH` | BLE AuthResponse (Partial A ServerSignedAuth) |
+| 2018 | `SERVER_AUTH_NONCE_MISMATCH` | — (BLE only: [Chapter 07 §4.3](07-errors.md#43-ble-message-types)) |
 
 ### 3xxx Session & Bay Errors
 
 | Code | Text | Used By |
 |------|------|---------|
-| 3001 | `BAY_BUSY` | StartService, ReserveBay, SetMaintenanceMode, BLE StartServiceResponse |
-| 3002 | `BAY_NOT_READY` | StartService, ReserveBay, SetMaintenanceMode, BLE StartServiceResponse |
-| 3003 | `SERVICE_UNAVAILABLE` | StartService, BLE StartServiceResponse |
-| 3004 | `INVALID_SERVICE` | StartService, BLE StartServiceResponse |
-| 3005 | `BAY_NOT_FOUND` | StartService, StopService, ReserveBay, CancelReservation, SetMaintenanceMode, BLE StartServiceResponse |
-| 3006 | `SESSION_NOT_FOUND` | StartService, StopService, BLE StopServiceResponse |
-| 3007 | `SESSION_MISMATCH` | StopService, BLE StopServiceResponse |
-| 3008 | `DURATION_INVALID` | StartService, BLE StartServiceResponse |
-| 3009 | `HARDWARE_ACTIVATION_FAILED` | StartService, BLE StartServiceResponse |
-| 3010 | `MAX_DURATION_EXCEEDED` | StartService, BLE StartServiceResponse |
+| 3001 | `BAY_BUSY` | StartService, ReserveBay, SetMaintenanceMode |
+| 3002 | `BAY_NOT_READY` | StartService, ReserveBay, SetMaintenanceMode |
+| 3003 | `SERVICE_UNAVAILABLE` | StartService |
+| 3004 | `INVALID_SERVICE` | StartService |
+| 3005 | `BAY_NOT_FOUND` | StartService, StopService, ReserveBay, CancelReservation, SetMaintenanceMode |
+| 3006 | `SESSION_NOT_FOUND` | StartService, StopService |
+| 3007 | `SESSION_MISMATCH` | StopService |
+| 3008 | `DURATION_INVALID` | StartService |
+| 3009 | `HARDWARE_ACTIVATION_FAILED` | StartService |
+| 3010 | `MAX_DURATION_EXCEEDED` | StartService |
 | 3011 | `BAY_MAINTENANCE` | StartService, ReserveBay, StopService |
 | 3012 | `RESERVATION_NOT_FOUND` | CancelReservation, StartService |
 | 3013 | `RESERVATION_EXPIRED` | StartService, CancelReservation |
@@ -3289,9 +3361,9 @@ Error codes referenced in this chapter. For the full catalog, see [Chapter 07 �
 
 | Code | Text | Used By |
 |------|------|---------|
-| 4002 | `OFFLINE_LIMIT_EXCEEDED` | AuthorizeOfflinePass, BLE AuthResponse |
-| 4003 | `OFFLINE_RATE_LIMITED` | AuthorizeOfflinePass, BLE AuthResponse |
-| 4004 | `OFFLINE_PER_TX_EXCEEDED` | AuthorizeOfflinePass, BLE AuthResponse |
+| 4002 | `OFFLINE_LIMIT_EXCEEDED` | AuthorizeOfflinePass |
+| 4003 | `OFFLINE_RATE_LIMITED` | AuthorizeOfflinePass |
+| 4004 | `OFFLINE_PER_TX_EXCEEDED` | AuthorizeOfflinePass |
 
 ### 5xxx Station Hardware & Software Errors
 

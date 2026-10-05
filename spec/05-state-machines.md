@@ -668,10 +668,10 @@ stateDiagram-v2
 |-------|-------------|
 | **Idle** | BLE interface is inactive. Not scanning or connected. This is the initial and reset state. |
 | **Scanning** | The app (central) is actively scanning for BLE peripherals advertising the OSPP service UUID. |
-| **Discovered** | A station peripheral has been discovered via its advertisement (`OSPP-{station_id_last6}`). The app has not yet initiated a connection. |
+| **Discovered** | A station peripheral has been discovered by the OSPP service UUID in its advertisement; its scan response names it `OSPP-{station_id_last6}` ([`ble-transport.md` §9](profiles/offline/ble-transport.md#9-advertising-data)). The app has not yet initiated a connection. |
 | **Connecting** | The app is establishing a GATT connection to the discovered peripheral. |
 | **Connected** | GATT connection is established. The app has discovered the OSPP service and characteristics, but no authentication has occurred. |
-| **Handshake** | ECDH key exchange and challenge-response authentication are in progress. The app has sent a Hello [MSG-029] and is processing the Challenge [MSG-030]. |
+| **Handshake** | ECDH key exchange and authentication are in progress. The app has sent a Hello [MSG-029] and is processing the Challenge [MSG-030] — verifying the station's certificate and signature before it sends any credential ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)). |
 | **Ready** | Mutual authentication is complete. The BLE session is encrypted and the app may exchange data (OfflineAuthRequest [MSG-031], ServerSignedAuth [MSG-032], START/StopServiceRequest [MSG-034/MSG-036], etc.). |
 | **Error** | A BLE error has occurred: scan timeout, connection failure, authentication failure, or unexpected disconnection. Recovery actions are pending. |
 | **Disconnected** | The BLE connection has been gracefully terminated by either side, or lost due to the station or app moving out of range. |
@@ -689,8 +689,8 @@ stateDiagram-v2
 | Connection timeout | Connecting | Error | 5 seconds elapsed without GATT connection | App cancels connection attempt, sets error `"connection_timeout"` |
 | ECDH key exchange initiated | Connected | Handshake | OSPP characteristics discovered successfully | App sends Hello [MSG-029] to station |
 | Handshake initiation failure | Connected | Error | Characteristic discovery fails or write fails | App sets error `"handshake_init_failed"` |
-| Mutual auth complete | Handshake | Ready | Station sends AuthResponse [MSG-033] with `success: true` | Shared secret established; BLE session encrypted |
-| Auth failure | Handshake | Error | Station sends AuthResponse with `success: false` or Challenge fails | App sets error `"auth_failed"` |
+| Mutual auth complete | Handshake | Ready | Station sends AuthResponse [MSG-033] with `result: "Accepted"` | Shared secret established; BLE session encrypted |
+| Auth failure | Handshake | Error | Station sends AuthResponse with `result: "Rejected"` — inside the channel, or in plaintext instead of the Challenge — or the Challenge fails the app's verification of the station's certificate or signature, or names a BLE version the app did not offer | App sets error `"auth_failed"`, and sends no credential after a failed Challenge |
 | Challenge timeout | Handshake | Error | 10 seconds elapsed without AuthResponse | App sets error `"challenge_timeout"` |
 | Graceful disconnect | Ready | Disconnected | User ends session or station terminates BLE link | App closes GATT connection cleanly |
 | Connection lost | Ready, Connected, Handshake, Scanning, Connecting | Error or Disconnected | BLE link lost unexpectedly (out of range, hardware failure) | App detects disconnection callback; if in Ready state, marks as Error for recovery |

@@ -109,12 +109,12 @@ You don't have to implement everything. OSPP uses a **profile** system:
 |-------|-------------------|-------------|
 | **Development** | Core | Testing and prototyping only. Security optional. **NOT for production.** |
 | **Standard** | Core + Transaction + Security | Online sessions, metering, TLS + mTLS + HMAC |
-| **Extended** | Standard + Device Management + Offline/BLE | + remote config, firmware OTA, diagnostics, BLE, OfflinePass (Online + Partial A + Full Offline) |
-| **Complete** | Extended + Partial B scenario | + phone offline / station online, relayed to the server over MQTT |
+| **Extended** | Standard + Device Management | + remote config, firmware OTA, diagnostics, maintenance |
+| **Complete** | Extended + Offline/BLE — every profile | + BLE, OfflinePass, offline sessions: Full Offline and Partial B (phone offline, station online, relayed to the server over MQTT), and Partial A where supported |
 
 **Standard is the normative floor for production** — a station MUST implement at least Standard
 ([`profiles/README.md` §2](../spec/profiles/README.md#2-compliance-levels)). Most production
-implementations should target **Extended**; add **Complete** if your users need Partial B.
+implementations should target **Extended**; add **Complete** if your users need offline sessions over BLE.
 
 These four names are the ones a conformance report records
 ([`conformance/README.md`](../conformance/README.md)) and the ones that determine which `TC-*`
@@ -151,7 +151,7 @@ Make sure you understand:
 A station needs:
 
 - **Network connectivity** — Ethernet (preferred), WiFi, or cellular for MQTT
-- **BLE 4.2+** (recommended 5.0+) — For offline mode. LE Secure Connections (LESC) pairing is OPTIONAL — channel security is application-layer (ECDH + StationIdentity certificate + ChaCha20-Poly1305 AEAD), not link-layer pairing
+- **BLE 4.2+** (recommended 5.0+) — For offline mode. LE Secure Connections (LESC) pairing is OPTIONAL — channel security is application-layer (ephemeral ECDH authenticated by your station certificate's signature, ChaCha20-Poly1305 AEAD, and the phone's device proof), not link-layer pairing
 - **Secure storage (NVS)** — For TLS certificates, ECDSA private keys, configuration
 - **Real-time clock** — Accuracy matters for OfflinePass validation (synced via Heartbeat). Offline durations use a **monotonic** timer instead: `OfflineWindowHours` and a receipt's `durationSeconds` never read the wall clock
 - **1+ bays** — Each bay has relay-controlled services (pumps, valves, etc.)
@@ -166,11 +166,10 @@ Before a station can connect, it needs to be provisioned:
 3. Station generates:
    - **TLS key pair** (ECDSA P-256) + Certificate Signing Request (CSR)
    - **ECDSA P-256 key pair** for receipt signing (private key NEVER leaves the device)
-   - **ECDSA P-256 key pair for the static BLE ECDH identity** — Offline/BLE profile only. Also generated on-device; its public half goes up as `stationPubKey` ([`06-security.md` §6.5.2](../spec/06-security.md))
-4. Station calls `POST /api/v1/stations/provision` with the token, serial number, the **declared `bays`** (the `bayNumber` list — it is `required`), CSR, receipt public key, and — for Offline/BLE — `stationPubKey`
-5. Server returns: `stationId`, `bays[]` (each member pairing a `bayId` with the `bayNumber` the station declared), signed TLS certificate, CA certificate, ECDSA P-256 server verify key, MQTT config — and, for Offline/BLE stations, the server-signed **`stationIdentity`** certificate you present in every BLE Challenge
+4. Station calls `POST /api/v1/stations/provision` with the token, serial number, the **declared `bays`** (the `bayNumber` list — it is `required`), CSR and receipt public key
+5. Server returns: `stationId`, `bays[]` (each member pairing a `bayId` with the `bayNumber` the station declared), signed TLS certificate, CA certificate, ECDSA P-256 server verify key and MQTT config
 
-   Without `stationIdentity` you cannot answer a single BLE Challenge: `challenge.schema.json` has `stationCert` in `required`, and it is the app's only trust anchor for the station ([`06-security.md` §6.5.2](../spec/06-security.md)). The failure shows up at first BLE integration, after provisioning, and re-provisioning is not something the station may initiate on its own.
+   The TLS certificate is also what you present in every BLE Challenge, and its key signs the Challenge: its extended key usage carries `clientAuth` **and** `id-kp-osppBleStation` ([`06-security.md` §4.4, §6.5.2](../spec/06-security.md#652-station-authentication--the-stations-certificate)). No other BLE key or document is provisioned.
 6. Station stores everything in NVS, reboots, proceeds to boot flow
 
 **Key rule:** The TLS private key and ECDSA receipt-signing private key are generated ON the station and never transmitted. The server only receives the public keys (CSR and receipt verify key).
@@ -387,30 +386,36 @@ If MQTT drops during an active session:
 
 If your station supports the Offline profile, you need a BLE GATT service:
 
-**Service UUID:** `0000FFF0-0000-1000-8000-00805F9B34FB`
+**Service UUID:** `6645FFF0-5AEB-4709-ACD5-02E03C3000F6` — each characteristic's UUID is the same base with its alias in place of `FFF0` ([`ble-transport.md` §2](../spec/profiles/offline/ble-transport.md#2-gatt-service-definition))
 
-| Characteristic | UUID | Properties | Purpose |
-|----------------|------|------------|---------|
-| Station Info | FFF1 | Read | Identity, firmware, connectivity status |
-| Available Services | FFF2 | Read | Service catalog with prices per bay |
+| Characteristic | Alias | Properties | Purpose |
+|----------------|-------|------------|---------|
+| Station Info | FFF1 | Read | Identity, firmware, connectivity status — unauthenticated |
+| Available Services | FFF2 | Write, Notify | Service catalog with prices per bay, notified when the app writes `0x01` |
 | TX Request | FFF3 | Write | All app-to-station messages |
 | TX Response | FFF4 | Notify | All station-to-app responses |
 | Service Status | FFF5 | Notify | Real-time session progress |
-| Receipt | FFF6 | Read | Signed transaction receipt |
+| Receipt | FFF6 | Write, Notify | A session's signed receipt, by ReceiptRequest and ReceiptResponse |
+
+Every message is fragmented by [`ble-transport.md` §11](../spec/profiles/offline/ble-transport.md#11-fragmentation-protocol): a lost or out-of-sequence fragment aborts the session, and nothing retransmits.
 
 **The BLE session flow:**
 
 ```
-App reads FFF1 (StationInfo) → confirms station identity
-App reads FFF2 (AvailableServices) → shows catalog to user
-App writes FFF3: Hello {deviceId, appNonce, appEphemeralPubKey}
-Station notifies FFF4: Challenge {stationNonce, stationCert, stationEphemeralPubKey, stationConnectivity}
-  → App verifies stationCert (aborts, sends no pass, if invalid)
+App reads FFF1 (StationInfo) → shows which station it reached (relies on nothing in it)
+App writes 0x01 to FFF2 → station notifies the catalog; user picks bay, service, duration
+App writes FFF3: Hello {bleVersions, appNonce, appVersion, appEphemeralPubKey}
+Station notifies FFF4: Challenge {bleVersion, stationNonce, stationEphemeralPubKey,
+                                  stationCertificate, stationConnectivity,
+                                  availableServices, stationSignature}
+  → App verifies the certificate (Station CA, CRL, EKU) and the signature
+    (aborts, sends no pass, if either fails)
   → both derive SessionKey via ECDH + HKDF; AEAD channel established
-App writes FFF3: OfflineAuthRequest {offlinePass, counter, sessionProof}   [AEAD-encrypted]
-  → Station validates OfflinePass (nine checks)
+App writes FFF3: OfflineAuthRequest {offlinePass, counter, bayId, serviceId,
+                 requestedDurationSeconds, sessionProof, deviceProof}  [AEAD-encrypted]
+  → Station verifies the device proof and validates the OfflinePass (nine checks)
 Station notifies FFF4: AuthResponse {result: "Accepted"}   [AEAD-encrypted]
-App writes FFF3: StartServiceRequest {bayId, serviceId, programNumber,
+App writes FFF3: StartServiceRequest {bayId, serviceId,
                                       requestedDurationSeconds}          [AEAD-encrypted]
 Station notifies FFF4: StartServiceResponse {sessionId, offlineTxId}     [AEAD-encrypted]
   → Station notifies FFF5 periodically: ServiceStatus {elapsed, remaining, meters}  [AEAD-encrypted]
@@ -418,15 +423,22 @@ App writes FFF3: StopServiceRequest (or timer expires)                   [AEAD-e
 Station notifies FFF4: StopServiceResponse {duration, credits}           [AEAD-encrypted]
   → Station signs receipt (ECDSA P-256), increments txCounter
 Station notifies FFF5: ServiceStatus {status: "ReceiptReady"}            [AEAD-encrypted]
-App reads FFF6: Receipt {receipt, txCounter}                             [AEAD-encrypted]
+App writes FFF6: ReceiptRequest {sessionId}                              [AEAD-encrypted]
+Station notifies FFF6: ReceiptResponse {result, receipt}                 [AEAD-encrypted]
 ```
+
+You resolve the program to run from your own service→program bindings; no BLE message carries a
+`programNumber`. A StartServiceRequest naming a bay or a service other than the OfflineAuthRequest's
+is refused with `3007`. A refusal in any BLE response carries `errorCode`, `errorText` and, where the
+code calls for it, `details` ([`07-errors.md` §2.3](../spec/07-errors.md#23-ble-error-response)).
 
 **Everything after the Challenge travels inside the AEAD channel** — `OfflineAuthRequest`,
 `ServerSignedAuth`, `AuthResponse`, Start/Stop request and response, the FFF5 notifications and the
-FFF6 receipt value. No post-Challenge message may be plaintext
+FFF6 request and response. No post-Challenge message may be plaintext
 ([`06-security.md` §6.5.3](../spec/06-security.md)). Leaving Start/Stop in the clear lets a
 co-located central forge a `StopServiceRequest` against another user's session, and leaves the FFF6
-receipt — which carries `userId`, `deviceId` and amounts — readable by anyone in range.
+receipt — which carries `userId`, `deviceId` and amounts — readable by anyone in range. The Hello is
+plaintext and carries nothing that identifies the phone or its user ([`06-security.md` T14](../spec/06-security.md#t14---ble-presence-tracking)).
 
 ### 2.9 sessionProof Computation
 
@@ -452,7 +464,7 @@ When you receive an OfflineAuthRequest, validate the OfflinePass in this order:
 | 1 | Signature | `2002` | ECDSA P-256 signature valid under the key of your `OfflinePassPublicKey` set that the pass's `keyId` names; a `keyId` naming no key of the set fails |
 | 2 | Expiry | `2003` | `expiresAt` is in the future, and the pass is no older than your `OfflinePassMaxAge` |
 | 3 | Epoch | `2004` | `revocationEpoch` >= the platform `RevocationEpoch` your station holds |
-| 4 | Device | `2002` | `deviceId` matches the `deviceId` from the Hello message |
+| 4 | Device | `2002` | The OfflineAuthRequest's `deviceProof` verifies under the pass's `devicePublicKey`, over this handshake, your station's identity and the request ([`06-security.md` §6.5.4](../spec/06-security.md#654-device-proof-of-possession)) |
 | 5 | *Withdrawn* | — | A pass carries no station or organization scope and is valid at any station that accepts offline passes ([`offline-pass.md` §2.3](../spec/profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)). The number is not reused |
 | 6 | Uses | `4002` | The transactions already counted against this pass on your station are fewer than `maxUses` |
 | 7 | Total credits | `4002` | Credits already counted for this pass **plus** this request's estimated cost do not exceed `maxTotalCredits` |
@@ -928,12 +940,12 @@ Your app needs to:
 
 1. **Pre-arm an OfflinePass** while online — `POST /api/v1/offline/passes` with your `deviceId` and `devicePublicKey` ([`app-contract.md` §3](../spec/profiles/offline/app-contract.md#3-pass-issuance)). The device key is a P-256 key pair you generate once in the phone's hardware-backed keystore, with a non-exportable private key — on iOS, the App Attest key — and the platform attests it: obtain a one-time challenge (`POST /api/v1/offline/attestation-challenges`) before you generate it, and send the attestation as `deviceKeyAttestation` with the first pass request for that key; a phone that cannot hold and attest such a key gets no offline pass ([§3.2](../spec/profiles/offline/app-contract.md#32-the-device-key), [§3.6](../spec/profiles/offline/app-contract.md#36-device-key-attestation)). The response carries the pass and a **trust bundle** — the Station CA certificate and CRL and the server key set — which you replace on every issuance and with every Partial-A authorization, and never merge ([§3.4](../spec/profiles/offline/app-contract.md#34-the-trust-bundle), [§5](../spec/profiles/offline/app-contract.md#5-the-partial-a-authorization)). Request a fresh pass at app start, after each use and after each credit to the wallet, once you have uploaded the receipts you hold (step 8; [`offline-pass.md` §6](../spec/profiles/offline/offline-pass.md#6-lifecycle)). Store the pass securely (encrypted at rest, device keychain).
 2. **Detect connectivity** — Know whether the phone and station are online/offline (4 scenarios).
-3. **BLE scanning** — Filter for service UUID `0000FFF0-0000-1000-8000-00805F9B34FB`.
-4. **HELLO/CHALLENGE handshake** — Exchange nonces + per-handshake ephemeral P-256 keys; verify the StationIdentity certificate, under a key of your trust bundle, before sending any pass.
-5. **Derive session key** — `HKDF-SHA256(es ‖ ee ‖ appNonce ‖ stationNonce)` over the two ECDH secrets (the BLE LTK is **not** used); then send all post-Challenge messages through the ChaCha20-Poly1305 AEAD channel.
-6. **Authenticate** — Send OfflineAuthRequest (Full Offline, Partial B) or ServerSignedAuth (Partial A). Before the customer chooses a service, show the pass's limits — the per-wash limit, the credits remaining and the uses remaining — and request nothing the pass cannot cover by your own count of the receipts you have read against it, uploaded or not, and nothing sooner than `minIntervalSec` after its last use; present only the latest pass you were issued; a request above a limit is refused, never reduced ([`offline-pass.md` §2.1](../spec/profiles/offline/offline-pass.md#21-offlineallowance-object)).
+3. **BLE scanning** — Filter for service UUID `6645FFF0-5AEB-4709-ACD5-02E03C3000F6`.
+4. **HELLO/CHALLENGE handshake** — Offer the BLE versions you support, exchange nonces + per-handshake ephemeral P-256 keys, and put nothing in the Hello that identifies the phone or its user. Verify the station's certificate against the Station CA and CRL of your trust bundle, its extended key usage, and its signature over the Hello and the Challenge, before sending any pass ([`06-security.md` §6.5.2](../spec/06-security.md#652-station-authentication--the-stations-certificate)).
+5. **Derive session key** — `HKDF-SHA256(ee ‖ appNonce ‖ stationNonce)` over the one ECDH secret of the two ephemeral keys, with the transcript hash as `info` (the BLE LTK is **not** used); then send all post-Challenge messages through the ChaCha20-Poly1305 AEAD channel.
+6. **Authenticate** — Send OfflineAuthRequest (Full Offline, Partial B), with the bay, the service and the duration the customer chose and the device proof — a Keystore signature on Android, an App Attest assertion on iOS ([`06-security.md` §6.5.4](../spec/06-security.md#654-device-proof-of-possession)) — or ServerSignedAuth (Partial A). Before the customer chooses a service, show the pass's limits — the per-wash limit, the credits remaining and the uses remaining — and request nothing the pass cannot cover by your own count of the receipts you have read against it, uploaded or not, and nothing sooner than `minIntervalSec` after its last use; present only the latest pass you were issued; a request above a limit is refused, never reduced ([`offline-pass.md` §2.1](../spec/profiles/offline/offline-pass.md#21-offlineallowance-object)).
 7. **Store receipts** — After an offline session, store the signed receipt in a local transaction log.
-8. **Upload every receipt** — as soon as you have connectivity, and before you request a pass, `POST /api/v1/offline/receipts` with the Receipt exactly as you read it from FFF6; stop once it is answered `Accepted`, `Duplicate` or `Rejected`, and retry after a backoff on `RetryLater` — an upload so answered has been made, and does not hold back your pass request ([`app-contract.md` §4](../spec/profiles/offline/app-contract.md#4-receipt-upload)). Whichever copy — yours or the station's — reaches the server first may settle; once one has settled, the other is answered `Duplicate`.
+8. **Upload every receipt** — as soon as you have connectivity, and before you request a pass, `POST /api/v1/offline/receipts` with the Receipt exactly as the station's ReceiptResponse on FFF6 carried it; stop once it is answered `Accepted`, `Duplicate` or `Rejected`, and retry after a backoff on `RetryLater` — an upload so answered has been made, and does not hold back your pass request ([`app-contract.md` §4](../spec/profiles/offline/app-contract.md#4-receipt-upload)). Whichever copy — yours or the station's — reaches the server first may settle; once one has settled, the other is answered `Duplicate`.
 
 **The four connectivity scenarios:**
 
@@ -941,7 +953,7 @@ Your app needs to:
 |-------|---------|----------|-----------|
 | Online | Online | **Online** | HTTP → server → MQTT → station |
 | Online | Offline | **Partial A** | HTTP → server signs auth → BLE → station verifies ECDSA P-256 |
-| Offline | Online | **Partial B** (Complete compliance only) | BLE → station → MQTT → server validates → station relays |
+| Offline | Online | **Partial B** | BLE → station → MQTT → server validates → station relays |
 | Offline | Offline | **Full Offline** | BLE → station validates OfflinePass locally (nine checks) |
 
 Detect which scenario you're in by:
@@ -1119,7 +1131,7 @@ Test the error scenarios in `/examples/error-scenarios/`:
 
 **Using TLS 0-RTT.** TLS 1.3 offers 0-RTT resumption, which is vulnerable to replay attacks. OSPP explicitly forbids it. Don't enable it.
 
-**Counting a bare `Accepted` as proof that a station took your new server key set.** `OfflinePassPublicKey` is the server's **key set** — every key a live pass may be signed under, each named by the `keyId` a pass carries — and every value replaces the whole set the station holds, with no cached previous key and no grace period ([`06-security.md` §6.7](../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)). Rotation runs on time, not on confirmations: a new key is published for at least the maximum pass lifetime (864000 s) plus your worst station sync gap before it signs anything, and an old key stays in the set until everything it signed — passes, ServerSignedAuth, StationIdentity certificates — has expired. What can still go wrong is the push. ChangeConfiguration is **atomic**: a `results` entry of `Accepted` is that key's *validation verdict*, and if any other entry in the same batch is `Rejected` or `NotSupported`, **the station stored nothing** — while still answering `Accepted` for your key. That station keeps its old set until the next push or its next boot, and if it goes offline first it refuses, with `2002`, every pass whose `keyId` its old set does not name.
+**Counting a bare `Accepted` as proof that a station took your new server key set.** `OfflinePassPublicKey` is the server's **key set** — every key a live pass may be signed under, each named by the `keyId` a pass carries — and every value replaces the whole set the station holds, with no cached previous key and no grace period ([`06-security.md` §6.7](../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)). Rotation runs on time, not on confirmations: a new key is published for at least the maximum pass lifetime (864000 s) plus your worst station sync gap before it signs anything, and an old key stays in the set until everything it signed — passes and ServerSignedAuth — has expired. What can still go wrong is the push. ChangeConfiguration is **atomic**: a `results` entry of `Accepted` is that key's *validation verdict*, and if any other entry in the same batch is `Rejected` or `NotSupported`, **the station stored nothing** — while still answering `Accepted` for your key. That station keeps its old set until the next push or its next boot, and if it goes offline first it refuses, with `2002`, every pass whose `keyId` its old set does not name.
 
 Two things follow, and the second is the one to implement:
 
@@ -1261,19 +1273,21 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 
 ### Offline / BLE
 
-- [ ] **[OFFLINE]** BLE 4.2+ (LESC pairing OPTIONAL — not a security premise; verify StationIdentity cert instead)
-- [ ] **[OFFLINE]** GATT Service UUID: `0000FFF0-0000-1000-8000-00805F9B34FB`
-- [ ] **[OFFLINE]** 6 characteristics: FFF1 (Read), FFF2 (Read), FFF3 (Write), FFF4 (Notify), FFF5 (Notify), FFF6 (Read)
-- [ ] **[OFFLINE]** BLE advertising name: `OSPP-{station_id_last6}`
-- [ ] **[OFFLINE]** MTU negotiation to 247 bytes; fragmentation for messages > MTU-3
-- [ ] **[OFFLINE]** HELLO/CHALLENGE handshake with fresh nonces
-- [ ] **[OFFLINE]** Session key derivation: ECDH P-256 + HKDF-SHA256(es ‖ ee ‖ appNonce ‖ stationNonce) — NOT the LTK
+- [ ] **[OFFLINE]** BLE 4.2+ (LESC pairing OPTIONAL — not a security premise; the app verifies your certificate and your signature instead)
+- [ ] **[OFFLINE]** GATT Service UUID: `6645FFF0-5AEB-4709-ACD5-02E03C3000F6`
+- [ ] **[OFFLINE]** 6 characteristics: FFF1 (Read), FFF2 (Write, Notify), FFF3 (Write), FFF4 (Notify), FFF5 (Notify), FFF6 (Write, Notify)
+- [ ] **[OFFLINE]** Advertising: Flags and the OSPP service UUID in the advertisement, the name `OSPP-{station_id_last6}` and the TX power level in the scan response; advertise continuously while BLE is enabled ([`ble-transport.md` §9](../spec/profiles/offline/ble-transport.md#9-advertising-data))
+- [ ] **[OFFLINE]** MTU negotiation to 247 bytes; every message fragmented by [`ble-transport.md` §11](../spec/profiles/offline/ble-transport.md#11-fragmentation-protocol), MTU − 6 octets of data per fragment, a lost or inconsistent fragment aborting the session
+- [ ] **[OFFLINE]** HELLO/CHALLENGE handshake with fresh nonces; choose a BLE version from the Hello's list, or refuse with `1007` before any key exists
+- [ ] **[OFFLINE]** Station certificate with `clientAuth` and `id-kp-osppBleStation`; sign only the Challenge content you build yourself, never a digest a peer supplies ([`06-security.md` §6.5.2](../spec/06-security.md#652-station-authentication--the-stations-certificate))
+- [ ] **[OFFLINE]** Session key derivation: ephemeral ECDH P-256 + HKDF-SHA256(ee ‖ appNonce ‖ stationNonce, info = LP(transcriptHash)) — NOT the LTK
+- [ ] **[OFFLINE]** Device proof verified before you validate or forward a pass (check #4; [`06-security.md` §6.5.4](../spec/06-security.md#654-device-proof-of-possession))
 - [ ] **[OFFLINE]** OfflinePass validation: the nine checks in order — #1–#4 and #6–#10; #5 is withdrawn, a pass carries no station scope — and your own offline limits (`OfflineModeEnabled`, `OfflineWindowHours`, `OfflineTransactionLimit`), refused with `4002` (§2.10)
 - [ ] **[OFFLINE]** ECDSA P-256 signature verification for OfflinePass, with the key its `keyId` names
 - [ ] **[OFFLINE]** Server key set: replace the whole set on every `OfflinePassPublicKey` value received, in a BootNotification RESPONSE or by ChangeConfiguration; no cached previous key, no grace period
 - [ ] **[OFFLINE]** ECDSA P-256 receipt signing, including the signed-only `stationId`, `endReason`, `bookedDurationSeconds` and `clockState` (§2.11)
 - [ ] **[OFFLINE]** Monotonic txCounter: increment by exactly 1 per offline transaction (forensic evidence; the server records it and does not gate on it)
-- [ ] **[OFFLINE]** Receipt retention on FFF6 for **at least 10 minutes** after service completion, or until the next session begins on the same bay ([`ble-session.md` §5](../spec/profiles/offline/ble-session.md) rule 3)
+- [ ] **[OFFLINE]** Serve a receipt on FFF6, to a ReceiptRequest naming its session, for **at least 24 hours** after you sign it, whether or not another session has begun on the bay ([`ble-transport.md` §8](../spec/profiles/offline/ble-transport.md#8-receipt-fff6))
 - [ ] **[OFFLINE]** Persist offline state: pass usage counters, transaction log, session state
 - [ ] **[OFFLINE]** Refuse, never reduce: `4004` when the estimated cost exceeds `maxCreditsPerTx`, `4002` when it exceeds what remains of `maxTotalCredits` (checks #7 and #8 are rejects, not caps)
 - [ ] **[OFFLINE]** Reconciliation via TransactionEvent after connectivity restored

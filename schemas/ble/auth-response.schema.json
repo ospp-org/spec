@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/ble/auth-response.schema.json",
   "title": "AuthResponse",
-  "description": "Authentication response sent by the station to the app via BLE characteristic FFF4 (Notify). Indicates whether the authentication handshake was accepted or rejected.",
+  "description": "Authentication response notified by the station to the app on BLE characteristic FFF4. Inside the channel it answers the OfflineAuthRequest or ServerSignedAuth; in plaintext, instead of a Challenge, it refuses a Hello before any key exists (profiles/offline/ble-handshake.md §5). A refusal carries the one BLE error shape: errorCode, errorText and optional details (07-errors.md §2.3).",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -31,40 +31,74 @@
     "durationSeconds": {
       "type": "integer",
       "minimum": 1,
-      "description": "Advisory copy of the authorized service duration for app UX (finding N3). UNSIGNED — relayed by the station from the SIGNED ServerSignedAuth claims (Partial A) or the AuthorizeOfflinePass response (Partial B). The station checks a StartServiceRequest against the SIGNED durationSeconds (server-signed-auth-claims.schema.json) or the AuthorizeOfflinePass response value, NOT this advisory field, and refuses a longer request (profiles/offline/ble-session.md §1). MAY be present when result is Accepted."
+      "description": "Advisory copy of the authorized service duration for app UX (finding N3). UNSIGNED - relayed by the station from the SIGNED ServerSignedAuth claims (Partial A) or the AuthorizeOfflinePass response (Partial B), or, for a pass the station validated itself, the duration the OfflineAuthRequest requested. The station checks a StartServiceRequest against the SIGNED durationSeconds or the AuthorizeOfflinePass response value, NOT this advisory field, and refuses a longer request (profiles/offline/ble-session.md §1). MAY be present when result is Accepted."
     },
     "creditsAuthorized": {
       "type": "integer",
       "minimum": 0,
-      "description": "Advisory copy of the authorized credit budget for app UX (finding N3). UNSIGNED — see durationSeconds. MAY be present when result is Accepted."
-    },
-    "reason": {
-      "type": "string",
-      "maxLength": 256,
-      "description": "Human-readable rejection reason code, present when result is Rejected"
+      "description": "Advisory copy of the authorized credit budget for app UX (finding N3). UNSIGNED - see durationSeconds. MAY be present when result is Accepted."
     },
     "errorCode": {
       "type": "integer",
-      "description": "Numeric error code, present when result is Rejected"
+      "minimum": 1000,
+      "maximum": 9999,
+      "description": "The registry code of the refusal (07-errors.md §4.3). Present when result is Rejected."
+    },
+    "errorText": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]+$",
+      "maxLength": 64,
+      "description": "The registry name of errorCode, in UPPER_SNAKE_CASE (07-errors.md §1.3). Present when result is Rejected."
+    },
+    "details": {
+      "type": "object",
+      "description": "Per-occurrence context of the refusal (07-errors.md §2.3). With 4002 OFFLINE_LIMIT_EXCEEDED it carries constraint: the pass field or the station configuration key whose limit refused (offline-pass.md §2.2). MAY be present when result is Rejected."
     }
   },
   "allOf": [
     {
       "if": {
-        "properties": { "result": { "const": "Accepted" } },
-        "required": ["result"]
+        "properties": {
+          "result": {
+            "const": "Accepted"
+          }
+        },
+        "required": [
+          "result"
+        ]
       },
       "then": {
-        "required": ["sessionKeyConfirmation"]
+        "required": [
+          "sessionKeyConfirmation"
+        ],
+        "properties": {
+          "errorCode": false,
+          "errorText": false,
+          "details": false
+        }
       }
     },
     {
       "if": {
-        "properties": { "result": { "const": "Rejected" } },
-        "required": ["result"]
+        "properties": {
+          "result": {
+            "const": "Rejected"
+          }
+        },
+        "required": [
+          "result"
+        ]
       },
       "then": {
-        "required": ["reason", "errorCode"]
+        "required": [
+          "errorCode",
+          "errorText"
+        ],
+        "properties": {
+          "sessionKeyConfirmation": false,
+          "durationSeconds": false,
+          "creditsAuthorized": false
+        }
       }
     }
   ]

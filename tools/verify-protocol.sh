@@ -10,7 +10,20 @@
 # went stale: `9 FAIL / 6 SKIP` was true at v0.20.0 and was still being quoted after 0.20.1
 # and 0.20.2 had closed three of them.
 #
-#   (this HEAD) 2026-10-05  (unreleased)  5 FAIL, 6 SKIP  (4813 checks, 4802 PASS) — the offline
+#   (this HEAD) 2026-10-05  (unreleased)  0 FAIL, 1 SKIP  (5405 checks, 5404 PASS) — the BLE
+#                                  wire revision. The whole failure SET leaves: ble-secure-frame has
+#                                  valid and invalid vectors, station-identity is withdrawn with the
+#                                  StationIdentity, and auth-response's creditsAuthorized is in
+#                                  ble-handshake.md §5's table. Two exemptions are added, each with
+#                                  its reason where it is declared: the device-proof formats
+#                                  `android-key` and `apple-appattest` (Category 3), identifiers OSPP
+#                                  carries from outside, and `ProtocolVersion` (Category 6), which
+#                                  passed only because the string occurred inside StationInfo's
+#                                  withdrawn `bleProtocolVersion`. The one SKIP is Category 8's
+#                                  `invalid/core/status-notification-available-program-with-error.json`,
+#                                  whose name maps to no schema; the BLE resolution noise is gone.
+#                                  +592 checks, all passing.
+#   (superseded) 2026-10-05  (unreleased)  5 FAIL, 6 SKIP  (4813 checks, 4802 PASS) — the offline
 #                                  follow-up: Gabi's decisions of 2026-10-05 and their review. The
 #                                  failure SET is the one measured at 7a65f09; +63 checks, all
 #                                  passing.
@@ -46,12 +59,12 @@
 #                                  `git archive`, NOT inherited
 #   (v0.20.0)            9 FAIL, 6 SKIP — superseded; 0.20.1 and 0.20.2 closed three
 #
-# The 5 are one root cause: ble-secure-frame and station-identity exist as schemas with
-# no 03-messages.md heading and no test vectors (4), plus auth-response (1); receipt left
-# the set on 2026-09-29, when 03-messages.md §7.13 named its members.
-# The 6 SKIPs are silent — SKIP(c, reason) discards the reason — and are BLE schema
-# resolution noise. Category 8 says 6 SKIP where verify-schemas.py says 0, and CI gates
-# on verify-schemas.py, so that discovery gap is invisible to the gate.
+# The failure set is empty since the BLE wire revision. Until then it held 5, one root cause:
+# ble-secure-frame and station-identity existed as schemas with no 03-messages.md heading and no
+# test vectors (4), plus auth-response (1); receipt left the set on 2026-09-29.
+# SKIPs are silent — SKIP(c, reason) discards the reason. The one left is a Category 8 vector
+# whose file name maps to no schema; Category 8 says 1 SKIP where verify-schemas.py says 0, and
+# CI gates on verify-schemas.py, so that discovery gap is invisible to the gate.
 cd "$(dirname "$0")/.."
 
 if ! node -e "require('ajv')" 2>/dev/null; then
@@ -103,9 +116,8 @@ function readSafe(p) { try { return fs.readFileSync(p, 'utf8'); } catch { return
 //
 // Categories 11 and 13 both used to assume spec/03-messages.md is the ONLY home a message can
 // have. It is not, and the BLE surface is the proof: ble-secure-frame is specified in
-// profiles/offline/ble-transport.md and 06-security.md, station-identity in ble-handshake.md
-// and 06-security.md, and the field tables for ble/auth-response and ble/receipt live in the
-// offline profile documents -- durationSeconds and creditsAuthorized appear in seven files
+// profiles/offline/ble-transport.md and 06-security.md, and the field tables for
+// ble/auth-response and ble/receipt live in the offline profile documents -- durationSeconds and creditsAuthorized appear in seven files
 // under spec/, the six receipt members in three. Four findings were therefore reported against
 // artefacts that are documented, just not where the checker looked. That is not an exception
 // to add; it is an assumption to correct, and it is the same instrument defect this repo has
@@ -113,7 +125,7 @@ function readSafe(p) { try { return fs.readFileSync(p, 'utf8'); } catch { return
 //
 // The criterion is deliberately exact rather than fuzzy: a document *documents* a schema when
 // it names the schema FILE. The offline profiles link them outright --
-// [`station-identity.schema.json`](../../../schemas/ble/station-identity.schema.json) -- so a
+// [`ble-secure-frame.schema.json`](../../../schemas/ble/ble-secure-frame.schema.json) -- so a
 // genuinely orphaned schema, named nowhere, still fails.
 let _specDocCache = null;
 function specDocs() {
@@ -305,10 +317,18 @@ function category3() {
   // Schemas where camelCase type values are expected
   const BLE_SCHEMA_DIRS = ['schemas/ble'];
 
+  // Identifiers OSPP carries verbatim from outside: the formats of a device key's attestation and
+  // of its device proof (app-contract.md §3.6; 06-security.md §6.5.4). `apple-appattest` is the
+  // `fmt` Apple's App Attest attestation object carries, and the pass issuance request already
+  // carries both as `const` members; renaming them to PascalCase in the device proof would give one
+  // platform two names.
+  const EXTERNAL_IDENTIFIERS = new Set(['android-key', 'apple-appattest']);
+
   function isPascalCase(s) {
     if (typeof s !== 'string' || s.length === 0) return true;
     if (/^\d/.test(s)) return true; // version strings, numbers
     if (BLE_TYPE_VALUES.has(s)) return true; // BLE type exception
+    if (EXTERNAL_IDENTIFIERS.has(s)) return true; // identifiers defined outside OSPP
     if (/^[a-z]/.test(s)) return false; // starts lowercase
     if (/_/.test(s)) return false; // has underscore (snake_case)
     return true;
@@ -708,6 +728,14 @@ function category6() {
       'branches on it, or reports it. It is exercised by TC-DM-009 as a readable/writable key, ' +
       'which is the whole of its contract. Restating it somewhere to satisfy this check would ' +
       'manufacture exactly the second copy check-config-defaults.py exists to police.',
+    ProtocolVersion:
+      'A read-only mirror of the protocolVersion the station declares in the envelope at boot. ' +
+      'Nothing in the protocol reads the key: the server negotiates on the envelope field ' +
+      '(VERSIONING.md), so no chapter, profile or flow has an occasion to name it. TC-DM-006 ' +
+      '(a write refused) and TC-DM-009 (read-only) exercise it, which is its whole contract. ' +
+      'Until the BLE wire revision this check passed only because the string occurred inside ' +
+      'StationInfo\'s bleProtocolVersion, a member the revision withdrew; the reference was ' +
+      'never one.',
   };
 
   for (const cfg of configKeys) {
@@ -2277,8 +2305,8 @@ log('Report saved to verification-report.md');
 // MEASURED BASELINE — see the header of this file for the full history and the rule that a
 // count without a measurement point goes stale. Re-measure by running this script on a clean
 // tree and diffing the failure SET entry by entry, never by trusting the total.
-const BASELINE = 5;       // FAIL, at the measurement point in this file's header
-const SKIP_BASELINE = 6;  // SKIP, all Category 8 BLE schema-resolution noise
+const BASELINE = 0;       // FAIL, at the measurement point in this file's header
+const SKIP_BASELINE = 1;  // SKIP, the one Category 8 vector whose name maps to no schema
 
 // Anti-vacuity. A discovery bug that finds no files reports 0 FAIL and would score as a pass,
 // which is the failure mode this repository has already produced twice — a markdownlint

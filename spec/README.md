@@ -20,13 +20,13 @@ ospp-version: 0.44.0
 > **Not all of this specification is at the same maturity.** The MQTT station↔server surface,
 > HTTPS provisioning, and offline reconciliation are **stable** — implemented and exercised
 > against an independent implementation. The **BLE transport, handshake and session are
-> EXPERIMENTAL**: published for review, not for implementation, and carrying two known
-> blockers that make them unimplementable as written. See
-> [Release status](../README.md#release-status) and
-> [KNOWN-ISSUES](../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-two-defects).
+> EXPERIMENTAL**: published for review, not for implementation, until their cryptographic
+> construction has passed the review of [Chapter 06, Appendix B](06-security.md#appendix-b--ble-cryptographic-review-checklist).
+> Their two blockers are closed. See [Release status](../README.md#release-status) and
+> [KNOWN-ISSUES](../KNOWN-ISSUES.md#closed--the-ble-surface-was-not-implementable-as-written-two-defects).
 >
-> **Extended** and **Complete** compliance cannot be claimed against 0.44, because both require
-> the BLE half of the Offline profile. **Development** and **Standard** are unaffected.
+> **Complete** compliance cannot be claimed against this revision, because it requires the BLE
+> half of the Offline profile. **Development**, **Standard** and **Extended** are unaffected.
 
 ## Document Map
 
@@ -41,7 +41,7 @@ domain-specific behavior.
 | -- | [glossary.md](glossary.md) | Glossary | Draft | Normative definitions of all terms used across the specification. |
 | 00 | [00-introduction.md](00-introduction.md) | Introduction | Draft | Scope, audience, document conventions, normative and informative references. |
 | 01 | [01-architecture.md](01-architecture.md) | Architecture | Draft | System topology, hardware model, identity scheme, controller topologies, communication stack. |
-| 02 | [02-transport.md](02-transport.md) | Transport | Draft | MQTT 5.0 / TLS 1.2+/1.3, HTTPS REST, topic structure, QoS, connection lifecycle, ACL. **§8 (BLE GATT) is EXPERIMENTAL** — and §8.6 is one of the two conflicting fragmentation definitions ([B-1](../KNOWN-ISSUES.md#b-1--two-incompatible-fragmentation-protocols-are-simultaneously-normative)). |
+| 02 | [02-transport.md](02-transport.md) | Transport | Draft | MQTT 5.0 / TLS 1.2+/1.3, HTTPS REST, topic structure, QoS, connection lifecycle, ACL. **§8 (BLE GATT) is EXPERIMENTAL**, and points to the BLE profile, which defines the GATT service, advertising and fragmentation once ([`ble-transport.md`](profiles/offline/ble-transport.md)). |
 | 03 | [03-messages.md](03-messages.md) | Message Catalog | Draft | Normative reference for every OSPP message: payload schemas, metadata, examples. |
 | 04 | [04-flows.md](04-flows.md) | Protocol Flows | Draft | End-to-end protocol flows for boot, sessions, reservations, offline scenarios. |
 | 05 | [05-state-machines.md](05-state-machines.md) | State Machines | Draft | Station, Bay, Session, Reservation, BLE Connection, and Firmware Update FSMs. |
@@ -57,7 +57,7 @@ domain-specific behavior.
 | Transaction | [profiles/transaction/README.md](profiles/transaction/README.md) | Session start/stop, meter values, reservation lifecycle. |
 | Device Management | [profiles/device-management/README.md](profiles/device-management/README.md) | Configuration, firmware update, diagnostics, remote commands. |
 | Security | [profiles/security/README.md](profiles/security/README.md) | Two things: security event reporting — real-time incident notifications (tamper, auth failure, firmware integrity) — and the certificate lifecycle (SignCertificate, CertificateInstall, TriggerCertificateRenewal). |
-| Offline | [profiles/offline/README.md](profiles/offline/README.md) | OfflinePass authorization, offline transaction log, reconciliation — **stable**. BLE transport, handshake and session — **EXPERIMENTAL**, see [B-1/B-3](../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-two-defects). |
+| Offline | [profiles/offline/README.md](profiles/offline/README.md) | OfflinePass authorization, offline transaction log, reconciliation — **stable**. BLE transport, handshake and session — **EXPERIMENTAL**, see [Release status](../README.md#ble-is-experimental). |
 
 ## Normative Language
 

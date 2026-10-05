@@ -43,15 +43,13 @@ This case does that.
 - `spec/06-security.md` §2.1 — which side presents `stationCaChain` and which side anchors on `brokerRootCa`
 - `spec/06-security.md` §4.4 — Certificate Requirements (CN, algorithm, key usage, EKU, validity, CRLDP)
 - `spec/06-security.md` §4.2 §6.1 §6.7 — the server signing key returned as `serverVerifyKey`
-- `spec/06-security.md` §6.5.2 — the StationIdentity certificate and the static BLE ECDH key it binds
-- `spec/06-security.md` §4.8 — OSPP Canonical Form, over which the StationIdentity signature is computed
+- `spec/06-security.md` §6.5.2 — the same certificate authenticates the station to the app over BLE, which is why it carries `id-kp-osppBleStation`
 - `spec/01-architecture.md` §3.2 — `bayId` values are server-assigned
 - `spec/01-architecture.md` §4.2 — maximum **64** bays per controller (`MUST NOT exceed 64`; the schemas agree — `maxItems: 64` in `provisioning-response`, both boot-notification schemas. This line read `255` from the initial commit until 0.30.0, four tags after the ceiling moved)
 - `profiles/core/README.md` CORE-004 and `profiles/core/status-notification.md` §7 — the station must
   emit `(bayId, bayNumber)` together, which is why the mapping must be established here
 - `schemas/provisioning-response.schema.json`, `schemas/provisioning-request.schema.json`
 - `schemas/common/station-id.schema.json`, `schemas/common/bay-id.schema.json`
-- `schemas/ble/station-identity.schema.json`
 
 ## Preconditions
 
@@ -62,11 +60,8 @@ This case does that.
    — the mapping the server assigned at registration. The sequence diagram in §2 shows the portal
    receiving `stationId, bays[]` at registration, so this is available to an operator; a direct read of
    the server's bay table is equally acceptable.
-3. Provisioning tokens `T1` and `T2` have been generated (single-use, unconsumed, within TTL), `T2`
-   against a second unprovisioned station entry.
-4. The harness can generate ECDSA P-256 key pairs, produce CSRs with CN = `stn_a1b2c3d4`, and generate a
-   static ECDH P-256 key pair (Part H only; required only where the station profile declares
-   `bleSupported`).
+3. A provisioning token `T1` has been generated (single-use, unconsumed, within TTL).
+4. The harness can generate ECDSA P-256 key pairs and produce CSRs with CN = `stn_a1b2c3d4`.
 5. The harness can capture the full HTTP response **including the raw body bytes**, and can validate a
    body against a JSON Schema.
 6. The harness can parse X.509 certificates and verify a certificate chain, and can verify an ECDSA
@@ -96,9 +91,9 @@ This case does that.
    verify the body is **not wrapped**: a body of the form `{"data": { … }}`, or one carrying the response
    under any other single enclosing member, fails here, because the enclosing member is itself an
    undeclared property and the six required members are then absent from the top level.
-7. Record which of the three **optional** members are present: `brokerRootCa`, `rootCaThumbprint`,
-   `stationIdentity`. Each is optional, and its absence is not a failure; each is subject to the checks
-   below **when present**.
+7. Record which of the two **optional** members are present: `brokerRootCa` and `rootCaThumbprint`.
+   Each is optional, and its absence is not a failure; each is subject to the checks below **when
+   present**.
 
 ### Part B — `stationId`
 
@@ -110,12 +105,15 @@ This case does that.
 
 10. Verify `clientCert` is a single PEM `CERTIFICATE` block that parses as X.509.
 11. Verify the certificate's **Subject CN equals the `stationId` returned in the same response**
-    (§4.4; also §6.5.2's premise that the CN is the broker's ACL principal).
+    (§4.4): the CN is the broker's ACL principal, and the station's identity to the app over BLE
+    (§6.5.2).
 12. Verify the certificate's **public key equals the `SubjectPublicKeyInfo` of `CSR_1`** — the server
     certified the key the station submitted, not one of its own choosing.
 13. Verify Version is **X.509 v3**, Key Algorithm is **ECDSA P-256**, and the Signature Algorithm is
     **ECDSA with SHA-256 or SHA-384**.
-14. Verify Key Usage asserts **`digitalSignature`** and Extended Key Usage asserts **`clientAuth`**.
+14. Verify Key Usage asserts **`digitalSignature`** and Extended Key Usage asserts **`clientAuth`** and
+    **`id-kp-osppBleStation`**, `2.25.57399134409609390163880398392748054115` (§4.4). Every station
+    certificate carries both, whether or not the station declares the Offline / BLE profile.
 15. Verify the validity period does not exceed **1 year**. §4.4 marks the 1-year bound RECOMMENDED
     rather than MUST; a longer validity is therefore recorded as a **deviation**, not a failure, and is
     reported with the observed period.
@@ -206,28 +204,12 @@ This case does that.
     normative statement requires the three to agree, so a disagreement is reported rather than failed —
     see *Open points* below.
 
-### Part H — `stationIdentity` (conditional — `bleSupported` only)
+### Part H — Withdrawn
 
-> Applicable only where the station profile declares `bleSupported`, so that `stationPubKey` is submitted
-> and the StationIdentity certificate is issued (§6.5.2). Skip otherwise, and record it as skipped.
-
-34. Repeat Part A on token `T2` and the second station entry, including
-    `stationPubKey: K_ble_1.pub` in the request.
-35. Verify `stationIdentity` is **present** in the response, and validates against
-    `ble/station-identity.schema.json`.
-36. Verify `stationIdentity.stationId` equals the **top-level `stationId`** of the same response.
-37. Verify `stationIdentity.stationPubKey` equals the **`stationPubKey` the request submitted** — the
-    certificate is issued over the station's bound BLE key, not over a key the server generated.
-38. Verify `stationIdentity.signatureAlgorithm` is the literal `"ECDSA-P256-SHA256"`, and that
-    `expiresAt` is strictly later than `issuedAt`, both ISO 8601 UTC.
-39. Verify `stationIdentity.signature` **verifies against `serverVerifyKey` from the same response**,
-    over the OSPP Canonical Form (§4.8) of the certificate body **minus** `signature` and
-    `signatureAlgorithm`. This is the check that ties Parts F and H together: `serverVerifyKey` is
-    asserted to be the key that signs StationIdentity, and only this step proves the server returned a
-    pair that actually corresponds.
-40. Verify `stationIdentity` is **absent** from the Part A response, where that station did not declare
-    `bleSupported` and submitted no `stationPubKey`. A StationIdentity certificate over a key that was
-    never submitted has nothing to bind.
+> Part H verified the `stationIdentity` a server returned to a station that submitted a static BLE key.
+> The BLE wire revision withdrew both: a station authenticates itself over BLE with the `clientCert` of
+> Part C ([`06-security.md` §6.5.2](../../../spec/06-security.md#652-station-authentication--the-stations-certificate)),
+> which step 14 checks for the OSPP purpose. Its steps, 34–40, are not reused.
 
 ### Part I — Replay: the frozen group is byte-identical
 
@@ -238,9 +220,8 @@ This case does that.
     - `bays` — each `bayId` still paired with the same `bayNumber` between the original
       response and a replay
     - `clientCert`
-    - `stationIdentity`, where present
 43. Re-send once more with **drifted descriptive fields** — `serialNumber: "SN-9999"` and every program `label` altered —
-    keys unchanged. Verify `200 OK` and that the four members above are **still** byte-identical, and in
+    keys unchanged. Verify `200 OK` and that the three members above are **still** byte-identical, and in
     particular that `bays` still has **3** elements. The request's program `label` values are descriptive and is
     ignored on a replay; it does not resize the bay set.
 
@@ -259,9 +240,7 @@ This case does that.
     server signs with the new key ([`06-security.md` §6.7](../../../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)),
     which a scheduled rotation reaches only after the publish-before window, and a
     compromise response at once (§6.7.1). Re-send on `T1` and verify `serverVerifyKey` is the **new** key,
-    the key currently signing. Where `stationIdentity` is present, verify its `signature` verifies against the
-    `serverVerifyKey` in **this** response — the two are returned together and must correspond in every
-    response, not only the first.
+    the key currently signing.
 48. Have the operator **re-anchor `brokerRootCa`**. Re-send on `T1` and verify `brokerRootCa` is the
     **new** anchor.
 
@@ -290,8 +269,8 @@ This case does that.
 1. A successful provision returns `200 OK` with a **flat, closed, schema-valid** body — the six required
    members at the top level, no enclosing wrapper, no undeclared member.
 2. `stationId` is the identifier the token was bound to, and is the Subject CN of `clientCert`.
-3. `clientCert` certifies the **submitted CSR key**, is ECDSA P-256, X.509 v3, asserts `digitalSignature`
-   and `clientAuth`, and carries a CRL Distribution Points extension.
+3. `clientCert` certifies the **submitted CSR key**, is ECDSA P-256, X.509 v3, asserts `digitalSignature`,
+   `clientAuth` and `id-kp-osppBleStation`, and carries a CRL Distribution Points extension.
 4. `bays` is an array of **objects**, each pairing a `bayId` with its `bayNumber`, unique in both, of
    length equal to the station's registered bay count, and carrying exactly the registered set of bay
    numbers — dense or not. No `bayIds` member is present.
@@ -299,20 +278,17 @@ This case does that.
    `bayNumber` read from each member are recorded against the right bays.
 6. `stationCaChain` verifies the `clientCert` returned **in the same response**, and `rootCaThumbprint`
    pins the apex of **that** chain.
-7. `serverVerifyKey` is an ECDSA P-256 public key distinct from every key the station submitted, and is
-   the key that verifies `stationIdentity` where that is present.
+7. `serverVerifyKey` is an ECDSA P-256 public key distinct from every key the station submitted.
 8. `mqttConfig` carries all eleven required members, with `qosLevel` 1, `cleanStart` false, `mqttVersion`
    "5.0", `clientIdTemplate` "{stationId}", a TLS floor of 1.2 or 1.3, and no plaintext MQTT.
-9. `stationIdentity` is present exactly where a BLE key was submitted, binds that key and that
-   `stationId`, and its signature verifies against the `serverVerifyKey` beside it.
-10. On a replay, `stationId`, `bays` (each pairing preserved), `clientCert` and `stationIdentity` are
-    byte-identical to the original response, and remain so under descriptive drift.
-11. On a replay, `brokerRootCa`, `serverVerifyKey` and `mqttConfig` reflect the server's **current**
+9. On a replay, `stationId`, `bays` (each pairing preserved) and `clientCert` are byte-identical to the
+   original response, and remain so under descriptive drift.
+10. On a replay, `brokerRootCa`, `serverVerifyKey` and `mqttConfig` reflect the server's **current**
     state.
-12. On a replay after a Station CA rotation, `stationCaChain` still verifies the frozen `clientCert`
+11. On a replay after a Station CA rotation, `stationCaChain` still verifies the frozen `clientCert`
     **and** additionally carries the current Station CA, with `rootCaThumbprint` pinning the apex of what
     was returned.
-13. No step of the replay parts mints a second certificate.
+12. No step of the replay parts mints a second certificate.
 
 ## Failure Criteria
 
@@ -321,8 +297,8 @@ The implementation **fails** this test case if any of the following occur:
 1. The success body is **wrapped** in an enclosing member, or carries any top-level member the schema
    does not declare, or omits any of the six required members.
 2. `clientCert` certifies a public key other than the one submitted in the CSR, or its Subject CN is not
-   the `stationId` returned beside it, or it lacks `clientAuth`, or it lacks a CRL Distribution Points
-   extension.
+   the `stationId` returned beside it, or it lacks `clientAuth` or `id-kp-osppBleStation`, or it lacks a
+   CRL Distribution Points extension.
 3. **`bays` is returned in any shape other than an array of `{bayId, bayNumber}` objects** — a bare
    array of bay-id strings, or a member carrying an additional property.
 4. `bays` contains a duplicate `bayId` or a duplicate `bayNumber`, or its set of `bayNumber` values is
@@ -334,19 +310,16 @@ The implementation **fails** this test case if any of the following occur:
    `rootCaThumbprint` pins an apex other than that of the chain returned in the same response.
 7. Any pinned `mqttConfig` value is other than its single conforming setting, or `brokerPort` is `1883`,
    or `brokerUri` uses a non-`mqtts://` scheme.
-8. `stationIdentity` is present where no BLE key was submitted, binds a key other than the submitted
-   `stationPubKey`, or carries a signature that does not verify against the `serverVerifyKey` in the same
-   response.
-9. Any member of the **frozen** group differs from the original response on a replay, under identical or
+8. Any member of the **frozen** group differs from the original response on a replay, under identical or
    descriptively drifted requests.
-10. Any member of the **current** group is **frozen** to its original value after the corresponding
+9. Any member of the **current** group is **frozen** to its original value after the corresponding
     server-side change — a replay carrying a superseded `serverVerifyKey`, a stale `brokerRootCa`, or an
     `mqttConfig` pointing at a broker that has moved. Freezing these is as much a failure as failing to
     freeze the identity group, and its consequence is worse: the station cannot connect, and cannot be
     told so in band.
-11. After a Station CA rotation, the replay returns a `stationCaChain` that does **not** verify the frozen
+10. After a Station CA rotation, the replay returns a `stationCaChain` that does **not** verify the frozen
     `clientCert`, or one that does not **also** carry the current Station CA.
-12. A second certificate is minted against the token by any replay.
+11. A second certificate is minted against the token by any replay.
 
 ---
 

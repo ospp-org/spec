@@ -21,8 +21,13 @@
     "signatureAlgorithm": "ECDSA-P256-SHA256",
     "signature": "MEQCID778pQN3cNah5VB3WTbOosc1KuMigKRjkSe+gjKDpAbAiBq6S2ezzBbXlz5q8AzbjrncuHITr3WZ+OkV8hjO+vgzQ=="
   },
-  "deviceId": "device-pixel-8-pro-042",
   "counter": 3,
   "bayId": "bay_f9e8d7c6b5a4",
-  "serviceId": "svc_premium"
+  "serviceId": "svc_premium",
+  "requestedDurationSeconds": 600,
+  "deviceProof": {
+    "format": "android-key",
+    "signature": "MEQCIBRxcCy//1PzLtQiZ2O2plD6IlSRsO7A0w4pE2MPJblJAiAR9lSyKUvrkG7/2tg8+QESQhF7zch33hPSoTo2c9oR2g=="
+  },
+  "transcriptHash": "1Z6cjROt0zQtLRuAVA/PTUc8D25ffNupMaSEWL9XuwY="
 }

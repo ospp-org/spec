@@ -40,7 +40,7 @@
     "authId":           { "type": "string", "pattern": "^auth_[a-f0-9]{8,}$", "minLength": 13, "maxLength": 64, "description": "Auth-form (Partial A) only. The server-issued ServerSignedAuth authId this transaction reconciles against (mirrors the claim in server-signed-auth-claims.schema.json). Signed (finding Q4) so the join key is non-spoofable; the reconcile gate resolves it against the issued-authorization registry (reconciliation.md §6.1 check #4 auth-branch)." },
     "sessionId":        { "$ref": "./session-id.schema.json", "description": "Auth-form (Partial A) only. The server-issued session this transaction settles. Signed (finding Q4); paired with authId as the Partial-A join key." },
     "userId":           { "$ref": "./user-id.schema.json" },
-    "deviceId":         { "type": "string", "minLength": 1, "maxLength": 128, "description": "Device identifier from the BLE Hello / OfflinePass binding. Cryptographically binds the receipt to the device that authorized the pass." },
+    "deviceId":         { "type": "string", "minLength": 1, "maxLength": 128, "description": "The device the session was authorized for: the pass's deviceId, or the ServerSignedAuth's. Cryptographically binds the receipt to that device." },
     "stationId":        { "$ref": "./station-id.schema.json", "description": "The station that signed this receipt. It names the signer inside the signature, so the server resolves the receipt-signing key from the receipt itself, whichever copy of it arrives (06-security.md §6.2; spec/profiles/offline/app-contract.md)." },
     "bayId":            { "$ref": "./bay-id.schema.json" },
     "serviceId":        { "$ref": "./service-id.schema.json" },

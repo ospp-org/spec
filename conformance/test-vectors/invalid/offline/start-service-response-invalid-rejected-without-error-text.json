@@ -1,0 +1,5 @@
+{
+  "type": "StartServiceResponse",
+  "result": "Rejected",
+  "errorCode": 3001
+}
