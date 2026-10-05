@@ -154,7 +154,7 @@ Processing **MUST** stop at the first failure.
 4. Stations store the latest `RevocationEpoch` in non-volatile memory. During validation check #3, any pass with `revocationEpoch` less than the stored epoch is rejected with `2004 OFFLINE_EPOCH_REVOKED`.
 5. A station that is offline when the epoch moves receives the new value when it reconnects, in the configuration of its BootNotification RESPONSE, or by ChangeConfiguration.
 
-**Per-user revocation is enforced where the server is reachable.** Revoking one user's passes — one pass, or every pass of a user the server has blocked — marks the passes revoked on the server, and that mark is read wherever the server is in the loop: on the online path, at Partial-B authorize time ([`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks) check #12, `2014 OFFLINE_PASS_REVOKED`) and at reconciliation ([`reconciliation.md` §6.1](reconciliation.md#61-check-list) check #11, `2014`). A station validating offline has no server to ask and does not learn it.
+**Per-user revocation is enforced where the server is reachable.** Revoking one user's passes — one pass, or every pass of a user the server has blocked — marks the passes revoked on the server, from a recorded revocation moment, and that mark is read wherever the server is in the loop: on the online path, at Partial-B authorize time ([`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks) check #12, `2014 OFFLINE_PASS_REVOKED`) and at reconciliation ([`reconciliation.md` §6.1](reconciliation.md#61-check-list) check #11, `2014`). **A revocation applies to the washes after its moment (Normative):** at reconciliation the server judges a wash's time through the station's clock offset ([`reconciliation.md` §6.8](reconciliation.md#68-station-clock-offset)), refuses a wash that ended after the revocation moment, and settles normally a wash that ended before it. A station validating offline has no server to ask and does not learn it.
 
 **What an offline station can refuse, and what it cannot.** A station validating a pass with no server connection can refuse on what it holds:
 
@@ -237,7 +237,7 @@ The full lifecycle of an OfflinePass is as follows:
    > independent counters — measured, a `maxUses: 5` pass burns two uses per transaction and sums
    > an estimate with an actual into one `maxTotalCredits` total.
 6. **Expiry:** The pass becomes invalid after `expiresAt`, and at a given station once it is older than that station's `OfflinePassMaxAge` (§4 check #2 applies both bounds). These are two **independent** bounds: `expiresAt` is the platform lifetime, signed into the pass at issue, while `OfflinePassMaxAge` is the station's own stricter limit, which its operator can lower at any time. Neither caps the other. The app **SHOULD** request a new pass before the current one expires, and re-issuing it at every app start, use and top-up makes that the normal case rather than the exception.
-7. **Revocation:** The pass becomes invalid at every station once the platform epoch exceeds the pass's `revocationEpoch`, and wherever the server is reachable once the pass is individually revoked (§5).
+7. **Revocation:** The pass becomes invalid at every station once the platform epoch exceeds the pass's `revocationEpoch`, and wherever the server is reachable, for the washes after it is individually revoked (§5).
 
 ## 7. Security Properties
 

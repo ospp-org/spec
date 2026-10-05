@@ -130,7 +130,7 @@ specification. Where a definition involves a requirement, normative language
   Admin takes, and every station of every tenant holds the platform value. A station rejects any OfflinePass whose
   `revocationEpoch` is lower than the value it holds. Revoking one user's passes is not an
   epoch: the server marks them revoked and reads the mark wherever it is in the loop — at
-  Partial-B authorize time and at reconciliation.
+  Partial-B authorize time, and at reconciliation for the washes after the revocation moment.
   See [Chapter 06 §6.6](06-security.md#66-epoch-based-revocation).
 
 **EVENT**

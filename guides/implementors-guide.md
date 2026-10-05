@@ -877,7 +877,7 @@ The revocation epoch belongs to the **platform**: a pass is valid at any station
 3. Stations will reject any OfflinePass with `revocationEpoch < new_epoch`
 4. When users reconnect, their app uploads the receipts it holds, then requests a fresh OfflinePass (with the new epoch)
 
-This is a "nuclear option" — it invalidates every pass on the platform, not just one user's. Use it for security incidents. To revoke one user's passes, mark them revoked on the server; blocking a user revokes every pass of that user. The server enforces that mark wherever it is in the loop — at Partial-B authorize time (check #12) and at reconciliation (check #11), both `2014` — but a station validating offline cannot learn it, and the pass it accepts meanwhile is still bound to its device and capped by its limits ([`offline-pass.md` §5](../spec/profiles/offline/offline-pass.md#5-revocation)).
+This is a "nuclear option" — it invalidates every pass on the platform, not just one user's. Use it for security incidents. To revoke one user's passes, mark them revoked on the server; blocking a user revokes every pass of that user. The server enforces that mark wherever it is in the loop — at Partial-B authorize time (check #12) and at reconciliation (check #11), both `2014`, the latter for the washes after the revocation moment, judged through the station's clock offset — but a station validating offline cannot learn it, and the pass it accepts meanwhile is still bound to its device and capped by its limits ([`offline-pass.md` §5](../spec/profiles/offline/offline-pass.md#5-revocation)).
 
 ### 3.8 Circuit Breakers
 

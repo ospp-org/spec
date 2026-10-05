@@ -106,7 +106,7 @@ When the station reports `pendingOfflineTransactions > 0` in BootNotification, t
 | Payload semantically invalid | `3015 PAYLOAD_INVALID` | Server responds with `Rejected`. |
 | OfflinePass expired | `2003 OFFLINE_PASS_EXPIRED` | Server responds with `Rejected`. |
 | Pass counter or `(authId, sessionId)` replayed | `2005 OFFLINE_COUNTER_REPLAY` | Server responds with `Rejected` and emits the gate SecurityEvent. |
-| OfflinePass individually revoked | `2014 OFFLINE_PASS_REVOKED` | Server responds with `Rejected`. |
+| OfflinePass revoked — individually or by a block on its user — before the transaction | `2014 OFFLINE_PASS_REVOKED` | Server responds with `Rejected`. |
 | Pass bound to a different user than the envelope claims | `2016 OFFLINE_USER_MISMATCH` | Server responds with `Rejected`. |
 | Signed receipt disagrees with the envelope or the pass's device binding | `2017 OFFLINE_RECEIPT_MISMATCH` | Server responds with `Rejected`; both records retained. |
 | Server internal error | `6001 SERVER_INTERNAL_ERROR` | Server responds with `RetryLater`. |
