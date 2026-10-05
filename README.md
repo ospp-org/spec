@@ -241,7 +241,7 @@ Full definitions: [Chapter 03 — Message Catalog](spec/03-messages.md)
 
 ## JSON Schemas
 
-**88 schema files** in [`schemas/`](schemas/) — JSON Schema Draft 2020-12, strict validation (`additionalProperties: false`).
+**89 schema files** in [`schemas/`](schemas/) — JSON Schema Draft 2020-12, strict validation (`additionalProperties: false`).
 
 | Directory | Count | Content |
 |-----------|:-----:|---------|
@@ -382,15 +382,15 @@ ospp/
 │       ├── security/                4 actions (SecurityEvent, SignCertificate, ...)
 │       ├── device-management/       9 actions (Config, Firmware, Diagnostics, ...)
 │       └── offline/                 7 docs (AuthorizeOfflinePass, app–server contract, BLE transport, handshake, ...)
-├── schemas/                 JSON Schema definitions (88 files)
-│   ├── *.schema.json            4 HTTPS request/response schemas (provisioning, offline pass issuance)
+├── schemas/                 JSON Schema definitions (89 files)
+│   ├── *.schema.json            5 HTTPS request/response schemas (provisioning, offline pass issuance, attestation challenge)
 │   ├── common/                  22 shared type schemas ($ref targets)
 │   ├── mqtt/                    47 MQTT message payload schemas
 │   └── ble/                     15 BLE message schemas
-├── examples/                Example payloads and narrative flows (71 files)
+├── examples/                Example payloads and narrative flows (72 files)
 │   ├── payloads/mqtt/           36 MQTT payload examples
 │   ├── payloads/ble/            15 BLE payload examples
-│   ├── payloads/http/           3 HTTPS examples (provisioning request; offline pass issuance request and response)
+│   ├── payloads/http/           4 HTTPS examples (provisioning request; offline pass issuance request and response; attestation challenge response)
 │   ├── flows/                   12 end-to-end flow narratives
 │   └── error-scenarios/         5 error scenario walkthroughs
 ├── guides/                  Developer guides
