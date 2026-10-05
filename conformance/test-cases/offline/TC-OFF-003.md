@@ -131,7 +131,10 @@ This is the path that destroyed money before 0.9.0: §4.1 step 1 resets the coun
 45. Reconcile an offline transaction with `creditsCharged: 12`.
 46. Verify the server allows the debit: a debit that would result in a negative balance is not rejected ([`reconciliation.md` §8.1](../../../spec/profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
 47. Verify the user's wallet is now `-7.0` credits.
-48. Verify the server triggers a top-up reminder notification for the user, records the transaction as **pending collection** — collected by neither the station's tenant nor the platform until the user next tops up — and issues the user no offline pass while the balance is below zero ([`reconciliation.md` §8.1](../../../spec/profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
+48. Verify the server triggers a top-up reminder notification for the user, records the transaction as **pending** for the 7 credits the wallet does not cover, and issues the user no offline pass while the balance is not positive ([`reconciliation.md` §8.1](../../../spec/profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
+49. Reconcile a second offline transaction whose recomputed cost is 5 credits. Verify the wallet is now `-12.0` credits and both transactions are pending — the first for 7 credits, the second for 5.
+50. Credit the wallet with 9 credits — a top-up, or any other credit such as a refund. Verify the credit releases the pending transactions **oldest first**: the first is covered in full and **closed**, the second is covered for 2 credits and stays pending for 3; the wallet is `-3.0` credits, and the user is still issued no offline pass ([`reconciliation.md` §8.1](../../../spec/profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
+51. Credit the wallet with 10 more credits. Verify the second transaction is closed, the wallet is `7.0` credits, and the user is issued an offline pass again on request, with `maxTotalCredits` not above 7 ([`offline-pass.md` §6](../../../spec/profiles/offline/offline-pass.md#6-lifecycle)).
 
 ## Expected Results
 
@@ -143,7 +146,7 @@ This is the path that destroyed money before 0.9.0: §4.1 step 1 resets the coun
 6. The server settles each transaction at its own recomputation from the signed receipt, capped at the pass's `maxCreditsPerTx` and at nothing pass-wide, and debits the user's wallet by the settled amounts.
 7. A transaction whose `txCounter` is discontinuous with the station's recorded history is settled normally, its money recorded, and an operator alert raised **on the station** — contributing nothing to the user's fraud score.
 8. A transaction whose `txCounter` is at or below previously recorded counters (station reboot) is settled and **never** answered `Duplicate`. Deduplication is keyed on `offlineTxId`, not on the counter.
-9. Negative wallet balances are permitted; the transaction whose debit left the wallet below zero stays pending until the user next tops up, the server notifies the user to top up, and it issues no offline pass while the balance is below zero.
+9. Negative wallet balances are permitted; a transaction whose debit left the wallet below zero stays pending for the part the wallet does not cover; every credit to the wallet releases pending transactions oldest first, closing each it covers in full and covering the last for the part it reaches; the server notifies the user to top up, issues no offline pass while the balance is not positive, and issues one again once it is, with `maxTotalCredits` not above the balance.
 
 ## Failure Criteria
 
@@ -158,4 +161,4 @@ This is the path that destroyed money before 0.9.0: §4.1 step 1 resets the coun
 9. Server rejects a transaction that would cause a negative wallet balance (should allow it).
 10. Station does not retransmit unacknowledged transactions after a reconnection.
 11. Total wallet deduction does not match the sum of the server's recomputed, capped amounts across all reconciled transactions — equal here, by Precondition 7, to the sum of the reported `creditsCharged`.
-12. The server expires, writes off or collects by any other route a transaction left pending below zero before the user tops up, or issues the user an offline pass while the balance is below zero.
+12. The server expires or writes off a pending transaction, or covers it by any route other than a credit to the wallet; or releases pending transactions out of their order, or leaves the last one uncovered for the part the credit reached; or issues an offline pass while the balance is not positive, or one whose `maxTotalCredits` exceeds the balance.

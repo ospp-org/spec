@@ -76,7 +76,7 @@ Schema: [`offline-pass-issuance-response.schema.json`](../../../schemas/offline-
 | HTTP | Code | When |
 |:---:|---|---|
 | `401` | `2009 JWT_EXPIRED`, `2010 JWT_INVALID` | The app is not authenticated. |
-| `402` | `4001 INSUFFICIENT_BALANCE` | The user's wallet is below zero; no pass is issued until it is covered ([`reconciliation.md` §8.1](reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)). |
+| `402` | `4001 INSUFFICIENT_BALANCE` | The user's wallet balance is not positive — zero or below; no pass is issued until it is ([`reconciliation.md` §8.1](reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)). |
 | `403` | `2008 ACTION_NOT_PERMITTED` | The server has not enabled offline use for this user, or has blocked the user. |
 
 The four codes every REST endpoint can return apply here too ([Chapter 07 §4.4](../../07-errors.md#44-rest-api-endpoints)).

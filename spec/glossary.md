@@ -345,7 +345,7 @@ specification. Where a definition involves a requirement, normative language
   server **MUST** take each through deduplication and, when deduplication does not answer it,
   receipt signature verification and the re-validation gate, then settle it — never above what its authorization allowed — and
   only then score it for fraud, which never changes the settled amount. A debit that
-  leaves the wallet below zero leaves its transaction pending until the user next tops up.
+  leaves the wallet below zero leaves its transaction pending until a credit to the wallet covers it.
   See [`reconciliation.md`](profiles/offline/reconciliation.md) and
   [`app-contract.md` §4](profiles/offline/app-contract.md#4-receipt-upload).
 

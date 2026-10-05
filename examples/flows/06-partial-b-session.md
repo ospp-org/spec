@@ -333,7 +333,7 @@ is withdrawn and this pass does not carry it — see
 
 Separately from pass validation, the server authorizes the session within the pass's limits — 48
 credits (4 min × 12 credits/min) — and gates nothing on the wallet balance: a debit that leaves the wallet
-below zero would leave the transaction pending until Bob next tops up
+below zero would leave the transaction pending until a credit to Bob's wallet covers it
 ([`reconciliation.md` §8.2](../../spec/profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)). The server then:
 - Debits 48 credits from Bob's wallet (balance: 95 - 48 = 47)
 - Creates session record `sess_d5e6f7a8b9c0` with `status: active`

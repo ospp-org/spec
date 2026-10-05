@@ -2563,9 +2563,9 @@ reconciliation, never a reconcile gate.
 > pass-wide totals cap nothing: a wash that takes a pass past them is charged in full
 > ([`reconciliation.md` §8](spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)). And a
 > debit that leaves the wallet below zero leaves its transaction **pending**: the wallet carries the
-> debt, but neither the tenant whose station delivered the wash nor the platform collects it until the
-> user next tops up, which releases it for collection, and it stays pending with no time limit; while the balance is
-> below zero no offline pass is issued
+> debt, the transaction stays pending, with no time limit, for the part no credit has covered, and every
+> credit to the wallet releases pending transactions oldest first; while the balance is
+> not positive no offline pass is issued
 > ([§8.1](spec/profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
 > So the residue below is no longer a difference that *"surfaces as balance and is
 > collectable"*: a tariff change inside the offline window is bounded from above by the cap. Item 2's

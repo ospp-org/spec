@@ -273,16 +273,21 @@ A server **MUST NOT** issue an additional debit above that amount for any reason
    negative balance. A session already delivered cannot be un-delivered by refusing to record it,
    and refusing the debit would lose the only record of what was owed.
 5. **A debit that leaves the wallet below zero leaves its transaction pending (Normative).** The
-   transaction is recorded and the wallet carries the debt, but the transaction is **pending
-   collection**: neither the tenant whose station delivered the wash nor the platform collects it —
-   nothing is paid to the tenant for it and nothing is booked to the platform — until the user next
-   tops up; that top-up releases it for collection. It stays pending **with no time limit**: the server
-   **MUST NOT** expire it, write it off, or collect it by any other route. While the balance is below zero the
-   server **MUST** trigger a top-up reminder and **MUST NOT** issue the user an offline pass
-   ([`app-contract.md` §3.5](app-contract.md#35-refusals)). Pending concerns collection, not the debit: the debit
-   stands, and what waits for the top-up is the transaction's collection. This is not a dispute over the amount —
-   the amount is the server's own recomputation — so the top-up, not adjudication, resolves it.
-6. The user is notified of the charges upon the next app open or push notification.
+   transaction is recorded and settled, and the wallet carries the debt; the transaction is
+   **pending** for the part of it the wallet's funds do not cover. It stays pending **with no time
+   limit**: the server **MUST NOT** expire it, write it off, or cover it by any route other than a
+   credit to the user's wallet.
+6. **Every credit that raises the balance releases pending transactions, oldest first (Normative).**
+   A top-up, a refund or any other credit to the wallet releases them alike, in the order they became
+   pending: a pending transaction the credit covers in full is **closed**; the one where the credit runs
+   out is covered for the part the credit reaches and stays **pending** for the rest; and the
+   transactions after it stay pending. While the balance is below zero the server **MUST** trigger a
+   top-up reminder. The server **MUST NOT** issue the user an offline pass while the balance is not
+   positive, and issues one again as soon as it is ([`app-contract.md` §3.5](app-contract.md#35-refusals)).
+   Pending concerns the debt, not the amount: the amount is the server's own recomputation, so a
+   credit, not adjudication, resolves it. How a covered transaction is accounted between the tenant
+   whose station delivered the wash and the platform is not part of this specification.
+7. The user is notified of the charges upon the next app open or push notification.
 
 > **Why recomputation is affordable here, and why the offline value is not stale in practice.**
 > The pass carries the user's allowance, and [`offline-pass.md` §6](offline-pass.md#6-lifecycle)
@@ -298,7 +303,7 @@ A server **MUST NOT** issue an additional debit above that amount for any reason
 > see each other's use, which settlement charges in full (§8), and spending through a **second
 > channel** while the application is off-network: a web payment, a second device, an operator
 > adjustment. The residue after all of it is a difference, not an exposure: it lands as negative
-> balance, and the transaction stays pending until the user tops up, rather than a loss that is written off.
+> balance, and the transaction stays pending until a credit covers it, rather than a loss that is written off.
 >
 > **The magnitudes here are policy, not protocol.** `maxUses`, `maxCreditsPerTx`, `maxTotalCredits`
 > and `minIntervalSec` are set per operator and appear in no configuration registry. Where this
@@ -312,7 +317,7 @@ When the gate resolved the transaction to a prior authorization that was **alrea
 
 1. The server reads the issue-time debit amount (`priorDebit`): the pre-authorized maximum (the signed `creditsAuthorized`) for Partial A; the recorded authorize-time debit for Partial B.
 2. The server recomputes the final cost per the **Billing Authority** rule (`04-flows.md` §6 — by service kind, from the signed receipt, at the tariff in force when the session ran; the station-reported `creditsCharged` is advisory, and the server **MUST** recompute regardless of it) and caps it (§8): the signed `creditsAuthorized` for Partial A, the authorize-time `creditsAuthorized` for Partial B. It then applies a **refund-only true-up**: when the capped cost is below `priorDebit` it refunds `priorDebit − cappedCost`, and otherwise it changes nothing. It **MUST NOT** debit more than `priorDebit` and **MUST NOT** re-debit the full amount. A tariff that rose during the offline window does not raise what the user pays above what was authorized.
-3. The true-up shares the **same idempotency key** as the authorize-time debit, derived from the form's correlation key above — `(authId, sessionId)` for the auth-form, `(offlinePassId, passCounter)` for the pass-form — so a retried reconcile or a late-arriving duplicate cannot double-apply it. The rules of §8.1 on a negative balance, pending collection and notification apply to a Partial-B session's authorize-time debit, whether the session settles on its SessionEnded or StopService RESPONSE or on its receipt (§3). A Partial-A authorization is refused at issue when the balance does not cover it ([`04-flows.md` §5b](../../04-flows.md#5b-partial-a--phone-online-station-offline)).
+3. The true-up shares the **same idempotency key** as the authorize-time debit, derived from the form's correlation key above — `(authId, sessionId)` for the auth-form, `(offlinePassId, passCounter)` for the pass-form — so a retried reconcile or a late-arriving duplicate cannot double-apply it. The rules of §8.1 on a negative balance, pending transactions and notification apply to a Partial-B session's authorize-time debit, whether the session settles on its SessionEnded or StopService RESPONSE or on its receipt (§3). A Partial-A authorization is refused at issue when the balance does not cover it ([`04-flows.md` §5b](../../04-flows.md#5b-partial-a--phone-online-station-offline)).
 4. The server marks the authorization `reconciled` and records the correlation on the transaction: `reconciled_session_id` on the auth-form, where a `sessionId` exists; the resolved authorization's own identifier on the pass-form, where one does not.
 
 > **Forward-guard note (finding N11).** The Partial-B authorize-time-debit path this rule guards is **not yet implemented server-side** (the offline session-creation path is a placeholder at the time of writing), so no double-debit exists today. The rule is specified now so that when that path lands it is built settle-once-correct from the start: the authorize-time debit and the reconcile true-up **MUST** present the same idempotency key — **the one rule 3 above names for the resolved form**, `(authId, sessionId)` for the auth-form and `(offlinePassId, passCounter)` for the pass-form. Until `0.25.0` this sentence said *"the same `sessionId`-derived idempotency key"*, which `0.24.0` had already made unsatisfiable everywhere it mattered: the case this note guards is the **Partial-B offline fallback**, which reconciles in the **pass-form**, and §8 states in terms that `sessionId` *"is not available on the pass-form and **MUST NOT** be required there"*. `0.24.0` re-keyed the rule and repaired the table above; this note kept the old key, and it is the only normative sentence an implementer of the unbuilt path reads. It was the same defect in a second site — see the class index in [`KNOWN-ISSUES.md`](../../../KNOWN-ISSUES.md#class--an-obligation-no-field-no-code-and-no-actor-can-carry), instance 7. Partial A (§6.7) exercises the rule from its first implementation, since it always debits at issue.

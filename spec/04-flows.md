@@ -1258,14 +1258,14 @@ sequenceDiagram
 | 8 | Webhook timeout (5 min) | PaymentIntent → expired, no credits |
 | 8 | HMAC verification failed | Reject webhook, log SecurityEvent |
 
-A top-up also releases for collection the user's **pending** transactions — those whose debit left the wallet below zero ([`reconciliation.md` §8.1](profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)). Until the user tops up, neither the tenant whose station delivered such a wash nor the platform collects it.
+A top-up — like every credit that raises the balance — also releases the user's **pending** transactions, those whose debit left the wallet below zero, oldest first: each one it covers in full is closed, and the one where the credit runs out is covered for the part the credit reaches and stays pending for the rest ([`reconciliation.md` §8.1](profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)). Once the balance is positive, the user is issued an offline pass again.
 
 ### Postconditions
 
 | Component | State |
 |-----------|-------|
 | User Wallet | Balance increased by `packageCredits + bonusCredits` |
-| Pending transactions | Released for collection by the top-up |
+| Pending transactions | Released oldest first: covered in full and closed, or covered in part and pending for the rest |
 | PaymentIntent | `captured` → `settled` |
 | Fiscal Invoice | Generated for local-currency amount |
 
@@ -1485,7 +1485,7 @@ sequenceDiagram
    - **Step 2:** Verify ECDSA P-256 receipt signature — reject if it does not verify; never scored ([`reconciliation.md` §5](profiles/offline/reconciliation.md#5-receipt-signature-verification))
    - **Step 3:** Record `txCounter` as forensic evidence — never gated on. If discontinuous: WARNING + operator alert on the **station**, process anyway (`profiles/offline/reconciliation.md` §4.2)
    - **Step 4:** Apply the reconcile-time gate — was the OfflinePass valid at transaction time: epoch, expiry, individual revocation, read through the station's clock offset ([`reconciliation.md` §6](profiles/offline/reconciliation.md#6-reconcile-time-re-validation-gate)). Limits are not a gate here: they cap settlement and feed fraud scoring
-   - **Step 5:** Settle — recompute by service kind from the signed receipt, never above what the authorization allowed, and debit the user wallet — or, where the authorization already debited it, refund only ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)) — (negative balance allowed; a debit that leaves it below zero leaves the transaction pending until the user tops up)
+   - **Step 5:** Settle — recompute by service kind from the signed receipt, never above what the authorization allowed, and debit the user wallet — or, where the authorization already debited it, refund only ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)) — (negative balance allowed; a debit that leaves it below zero leaves the transaction pending until a credit to the wallet covers it)
    - **Step 6:** Run fraud scoring on the settled transaction (see below)
    - **Step 7:** Create session record
 6. Server responds `Accepted`
@@ -1511,7 +1511,7 @@ When the mobile app regains connectivity, it **MUST** upload every receipt it ho
 |-----------|-------|
 | SSP Offline Queue | Empty (all transactions synced) |
 | Server | Session records created, user wallets debited |
-| User Wallets | Debited; a wallet may be negative, and a transaction whose debit left it below zero stays pending until the user tops up |
+| User Wallets | Debited; a wallet may be negative, and a transaction whose debit left it below zero stays pending until a credit to the wallet covers it |
 | Fraud records | `FraudDetected` for scores in the Review, Alert and Block bands (`0.30` and above); operator alert for Alert and Block (`0.60` and above) — [06-security.md §7.4](06-security.md#74-fraud-detection--offline-transactions) |
 
 ---

@@ -92,7 +92,7 @@ OSPP operates in a **hostile physical environment** — self-service points are 
 - **Per-pass limits**: `maxUses`, `maxTotalCredits`, `maxCreditsPerTx`, `minIntervalSec`; a request above a limit is refused, never reduced.
 - **Station offline limits**: `OfflineModeEnabled`, `OfflineWindowHours`, `OfflineTransactionLimit` — station configuration ([Chapter 08 §5](08-configuration.md#5-offline--ble-configuration-keys)).
 - **Epoch revocation** — one platform increment invalidates every outstanding pass.
-- **Negative wallet balance allowed** during reconciliation — the user is charged even when the debit leaves the balance below zero, and that transaction stays pending until the user tops up ([`reconciliation.md` §8.1](profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
+- **Negative wallet balance allowed** during reconciliation — the user is charged even when the debit leaves the balance below zero, and that transaction stays pending until a credit to the wallet covers it ([`reconciliation.md` §8.1](profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
 
 ### T07 - Payment Fraud
 
@@ -1890,7 +1890,7 @@ Diagnostic uploads via GetDiagnostics [MSG-018] **MUST** apply the same redactio
 - [ ] Select the verification key from a **server-authoritative anchor** (the OfflinePass's validity window, or the authorization record for the auth form) — never from a station-supplied timestamp, and never by trying every retained key (§4.3)
 - [ ] txCounter persisted on the transaction record as forensic evidence — and **not** used to gate settlement, deduplication or response status (§6.3, §6.3.1)
 - [ ] Operator alert on the **station** when the txCounter is discontinuous, with the transaction settled normally
-- [ ] Settlement of offline transactions never above the authorization's limits; a debit that leaves the wallet below zero leaves its transaction pending until the user tops up ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation))
+- [ ] Settlement of an offline wash never above what its station authorized, and a wash that takes a pass past its total charged in full; a debit that leaves the wallet below zero leaves its transaction pending until a credit covers it, and every credit releases pending transactions oldest first ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation))
 - [ ] Clock offset measured at reconnection and used to judge, never to rewrite ([`reconciliation.md` §6.8](profiles/offline/reconciliation.md#68-station-clock-offset))
 - [ ] Fraud scoring for offline transactions, after settlement; a `FraudDetected` record for the Review, Alert and Block bands and an operator alert for Alert and Block (§7.4)
 - [ ] Webhook HMAC-SHA512 verification (timing-safe)
