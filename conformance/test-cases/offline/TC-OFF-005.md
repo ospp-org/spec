@@ -33,7 +33,7 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
 - `spec/profiles/offline/reconciliation.md` §8.1 / §8.2 — no-prior-debit settlement, and the settle-once true-up
 - `spec/profiles/offline/reconciliation.md` §6.1 — the reconcile-time gate; checks #12 and #13
 - `spec/profiles/offline/reconciliation.md` §2 — **response timeout 30 s on the reconciliation path**, not §4.1's 60 s
-- `spec/07-errors.md` §2.1 — the seven response schemas that cannot carry `errorCode`; `authorize-offline-pass-response` is one of them
+- `spec/07-errors.md` §2.1 — which response schemas carry `errorCode`; `authorize-offline-pass-response` carries it on `Rejected`
 - `spec/07-errors.md` §1.2 — a server-written SecurityEvent is an **audit row that is not transmitted anywhere**; MSG-012 has no server→station direction
 - `spec/07-errors.md` §3.2 — error codes 2002 `OFFLINE_PASS_INVALID`, 2003 `OFFLINE_PASS_EXPIRED`, 2004 `OFFLINE_EPOCH_REVOKED`, 2005 `OFFLINE_COUNTER_REPLAY`, 2014 `OFFLINE_PASS_REVOKED`
 - `spec/07-errors.md` §3.4 — error codes 4002 `OFFLINE_LIMIT_EXCEEDED`, 4003 `OFFLINE_RATE_LIMITED`, 4004 `OFFLINE_PER_TX_EXCEEDED`
