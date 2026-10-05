@@ -225,7 +225,7 @@ The server **MUST** sign the authorization following the same canonical-form + E
    }
 ```
 
-The `appNonce` claim **MUST** equal the `appNonce` the app uses in the `Hello` message of this handshake (in either acquisition order — see §4.2) — the server reads it from the `POST /sessions/offline-auth` request body. The `expiresAt` claim **MUST** be no later than five minutes after `issuedAt`; `appNonce` provides the primary, clock-independent replay defence (§4.2.2 check #2) and `expiresAt` is a secondary bound.
+The `appNonce` claim **MUST** equal the `appNonce` the app uses in the `Hello` message of this handshake (in either acquisition order — see §4.2) — the server reads it from the `POST /sessions/offline-auth` request body. The `expiresAt` claim **MUST** be no later than five minutes after `issuedAt`; `appNonce` provides the primary, clock-independent replay defence (§4.2.2 check #2) and `expiresAt` is a secondary bound. The authorization is used to start within that validity: the station starts the session no later than `expiresAt` ([ble-session.md §1](ble-session.md#1-starting-a-service) rule 2a), and the session then runs its authorized duration, which may end after `expiresAt` — the server judges the authorization against the session's signed start ([reconciliation.md §6.7](reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4) check #9).
 
 #### 4.2.2 Verification (Station-Side)
 
