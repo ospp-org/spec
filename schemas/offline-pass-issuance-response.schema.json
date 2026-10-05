@@ -18,8 +18,7 @@
       "additionalProperties": false,
       "required": [
         "stationCaCertificate",
-        "stationCaCrl",
-        "serverKeys"
+        "stationCaCrl"
       ],
       "properties": {
         "stationCaCertificate": {
@@ -35,31 +34,6 @@
           "maxLength": 1048576,
           "pattern": "^-----BEGIN X509 CRL-----[\\s\\S]+-----END X509 CRL-----\\s*$",
           "description": "The Station CA's current certificate revocation list (spec/06-security.md 2.1.1), PEM."
-        },
-        "serverKeys": {
-          "type": "array",
-          "minItems": 1,
-          "description": "The server key set (spec/06-security.md 6.7): every key a pass may currently be signed under, including a key published ahead of its first signature and a retired key kept until everything it signed has expired.",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "keyId",
-              "publicKey"
-            ],
-            "properties": {
-              "keyId": {
-                "type": "string",
-                "pattern": "^[A-Za-z0-9_-]{22}$",
-                "description": "Base64url (unpadded) of the first 16 bytes of SHA-256 over the DER SubjectPublicKeyInfo of publicKey (spec/06-security.md 4.3). An OfflinePass names its signing key by this value."
-              },
-              "publicKey": {
-                "type": "string",
-                "pattern": "^MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE[A-Za-z0-9+/]{86}==$",
-                "description": "The key's DER SubjectPublicKeyInfo (id-ecPublicKey, prime256v1, point uncompressed), Base64: 124 characters, the body of the key's PEM without its armour."
-              }
-            }
-          }
         }
       }
     }

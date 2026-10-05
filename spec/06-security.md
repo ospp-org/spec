@@ -503,7 +503,7 @@ Server Signing Key set (ECDSA P-256, server-side HSM; §6.7)
 - Root CA public certificate is embedded in station firmware and server trust store.
 - Station CA public certificate is distributed during provisioning, and to the mobile app, with the Station CA's revocation list, in the trust bundle of every pass issuance and every Partial-A authorization ([`app-contract.md` §3.4](profiles/offline/app-contract.md#34-the-trust-bundle)): it is the app's anchor for authenticating stations over BLE (§6.5.2).
 - Station certificates are issued during provisioning ([Flow §2](04-flows.md#2-station-provisioning)).
-- The server signing key set is distributed to stations at provisioning, in the configuration of every `Accepted` BootNotification RESPONSE [MSG-001] and by ChangeConfiguration [MSG-013], and to the mobile app in the trust bundle of every pass issuance and every Partial-A authorization (§6.7).
+- The server signing key set is distributed to stations at provisioning, in the configuration of every `Accepted` BootNotification RESPONSE [MSG-001] and by ChangeConfiguration [MSG-013] (§6.7). The mobile app receives none of it: nothing the app verifies is signed by a server key.
 - The Station CA's **revocation list** is published at the address every station certificate carries in its CRL Distribution Points extension (§4.4), and is fetched by whichever party terminates that certificate. It is the only artefact in this list that travels to the **broker** rather than to the station, and the only one that has to keep arriving after provisioning — which is what [§2.1.1](#211-revocation-checking)'s freshness bounds hold it to.
 - Broker server CA trust anchor is delivered via the provisioning response `brokerRootCa` field when the broker uses a private CA hierarchy. When that field is absent the broker uses a publicly-trusted CA hierarchy and the station's anchor is its system trust store. This is a **summary of §2.1**, which states the requirement normatively and is authoritative: the system trust store is a fallback for the **anchor** only, and it does **not** relax anything else — a station that cannot validate **MUST refuse** (§2.1), and chain validity alone is never sufficient, because the station **MUST** also verify the certificate's identity against the host it meant to reach (§2.1, *Server identity verification*).
 
@@ -536,7 +536,7 @@ Server Signing Key set (ECDSA P-256, server-side HSM; §6.7)
 | Phase | Action |
 |-------|--------|
 | **Generation** | Server generates ECDSA P-256 key pair (RFC 6979 deterministic nonces for signing) |
-| **Distribution** | The public key set: to stations at provisioning, at every boot and by ChangeConfiguration [MSG-013]; to the app with every pass issued and every Partial-A authorization ([`app-contract.md` §3.4](profiles/offline/app-contract.md#34-the-trust-bundle), [§5](profiles/offline/app-contract.md#5-the-partial-a-authorization)) |
+| **Distribution** | The public key set: to stations at provisioning, at every boot and by ChangeConfiguration [MSG-013]. Not to the app, which verifies nothing the key signs (§6.7) |
 | **Storage** | Private: server HSM / Vault. Public: station NVS (`OfflinePassPublicKey`, the whole set). |
 | **Rotation** | Annual, with a publish-before and a keep-after window. See §6.7 for the key set and the windows. |
 
@@ -1504,7 +1504,7 @@ stationSignature = Base64( DER( ECDSA-P256-SHA256-Sign(stationCertificateKey, si
 
 **Intended-station binding (Normative, with its limit).** Step 4 is what binds the cryptographic identity to the *physical* station the user chose, narrowing the relay/wrong-station gap (the certificate alone proves "a legitimate provisioned station", not "the station in front of the user"). Its limit MUST be understood honestly: the `stationId` read from **StationInfo (FFF1) is delivered before the handshake and is unauthenticated** — a fake or relaying station can advertise any `stationId` — so the app **MUST NOT** treat a certificate-to-StationInfo comparison as a security binding; against an unauthenticated source it is purely advisory. Only an **out-of-band** intended `stationId` (QR/NFC/deep-link, established through a channel the attacker does not control) provides a real binding in step 4. When no out-of-band `stationId` is available, the certificate's `stationId` is informational only and the **Relay** residual below applies in full.
 
-**What the app holds (no per-station keys).** The mobile app holds only the **trust bundle** of its latest pass issuance or Partial-A authorization — the Station CA certificate, its CRL and the server key set ([`app-contract.md` §3.4](profiles/offline/app-contract.md#34-the-trust-bundle), [§5](profiles/offline/app-contract.md#5-the-partial-a-authorization)), obtained when it last fetched an OfflinePass or a ServerSignedAuth (it is online by definition then) — plus its device key and one freshly generated ephemeral key per handshake. It verifies every station against the Station CA; it stores **zero** per-station keys.
+**What the app holds (no per-station keys).** The mobile app holds only the **trust bundle** of its latest pass issuance or Partial-A authorization — the Station CA certificate and its CRL ([`app-contract.md` §3.4](profiles/offline/app-contract.md#34-the-trust-bundle), [§5](profiles/offline/app-contract.md#5-the-partial-a-authorization)), obtained when it last fetched an OfflinePass or a ServerSignedAuth (it is online by definition then) — plus its device key and one freshly generated ephemeral key per handshake. It verifies every station against the Station CA; it stores **zero** per-station keys.
 
 **What this gate stops — and what it does not.** The gate stops a **fake / unprovisioned** station from harvesting a pass: such a station holds no certificate the Station CA issued, and if it **replays a genuine station's certificate** it cannot sign the fresh Challenge with that certificate's key, so the app aborts before it sends anything. The gate does **NOT** stop a **provisioned-but-malicious or compromised** station, of any tenant: such a station presents its *own* valid certificate, signs its own Challenge, and **does** decrypt the pass presented to it. The certificate authenticates that the peer is *a provisioned station*, **not that it is honest**. What such a station can do with the pass is bounded by the device proof (§6.5.4): it cannot present the pass at another station, or forward it to the server for a new counter, because it cannot prove the device key over that station's handshake. It can still fabricate receipts in its own name for the pass, signed by its own receipt key — finding **N7**, closed at settlement by the reconcile-time `(offlinePassId, passCounter)` uniqueness check ([`profiles/offline/reconciliation.md` §6.1](profiles/offline/reconciliation.md#61-check-list) check #13) for a reused counter, and by the cross-station cumulative `maxUses` / `maxTotalCredits` fraud factor (§7.4) for a disjoint one.
 
@@ -1619,7 +1619,7 @@ The server's ECDSA P-256 signing key — which signs OfflinePasses and ServerSig
 
 **Key identifier.** A server key's `keyId` is the construction of §4.3 — Base64url, unpadded, of the first 16 bytes of SHA-256 over the key's DER `SubjectPublicKeyInfo` — applied to the server key, with its point uncompressed ([RFC 5480](https://www.rfc-editor.org/rfc/rfc5480)). Every OfflinePass carries the `keyId` of the key that signed it ([`offline-pass.md` §3](profiles/offline/offline-pass.md#3-signing-ecdsa-p-256)), and a verifier selects that key from its set. A ServerSignedAuth carries no `keyId`; its verifier tries the keys of its set.
 
-**One encoding.** A server public key travels as its DER `SubjectPublicKeyInfo`, point uncompressed, on every carrier: PEM-armoured in the provisioning response's `serverVerifyKey`, and Base64 without the armour in the station's `OfflinePassPublicKey` value ([Chapter 08 — Configuration](08-configuration.md), §4) and in the app's trust bundle ([`app-contract.md` §3.4](profiles/offline/app-contract.md#34-the-trust-bundle)). It is never sent as a bare SEC1 point.
+**One encoding.** A server public key travels as its DER `SubjectPublicKeyInfo`, point uncompressed, on every carrier: PEM-armoured in the provisioning response's `serverVerifyKey`, and Base64 without the armour in the station's `OfflinePassPublicKey` value ([Chapter 08 — Configuration](08-configuration.md), §4). It is never sent as a bare SEC1 point.
 
 **Where the set is delivered.**
 
@@ -1628,19 +1628,20 @@ The server's ECDSA P-256 signing key — which signs OfflinePasses and ServerSig
 | A station | at provisioning | `serverVerifyKey` — the key currently signing ([Flows §2](04-flows.md#2-station-provisioning)) |
 | A station | at every boot | `OfflinePassPublicKey` in the configuration of every `Accepted` BootNotification RESPONSE [MSG-001] ([Chapter 08 §8.3](08-configuration.md#83-configuration-via-bootnotification)): the whole set. This is how a station that was offline through a rotation, or missed its push, receives the keys |
 | A station | whenever the set changes | `OfflinePassPublicKey` by ChangeConfiguration [MSG-013]: the whole set. A batch that another key's refusal voids is not applied ([Chapter 08 §8.2](08-configuration.md#82-changeconfiguration)), and the station keeps its previous set until the next push or its next boot |
-| The app | at every pass issuance, and with every Partial-A authorization | the trust bundle's `serverKeys` ([`app-contract.md` §3.4](profiles/offline/app-contract.md#34-the-trust-bundle), [§5](profiles/offline/app-contract.md#5-the-partial-a-authorization)) |
+
+The app receives no server key. The station and the server verify what the key signs — a pass and a ServerSignedAuth — and the app authenticates a station by the Station CA (§6.5.2); the trust bundle carried the set only while the app verified a StationIdentity, which is withdrawn ([`app-contract.md` §3.4](profiles/offline/app-contract.md#34-the-trust-bundle)).
 
 A value of `OfflinePassPublicKey` is always the **whole** set, and the station **MUST** replace the set it holds with it. The station holds no other server key: there is no internally cached previous key and no grace period.
 
 **The windows (Normative).**
 
-1. **Publish before first use.** A new key **MUST** be in the published set for at least the **maximum pass lifetime** — 864000 seconds, ten days ([`offline-pass.md` §6](profiles/offline/offline-pass.md#6-lifecycle)) — **plus the worst station sync gap** before the server signs anything with it. The sync gap is the longest a station may go without receiving configuration while it still accepts passes on its own validation; a station stops doing so once it has been offline longer than its `OfflineWindowHours` ([Chapter 08 §5](08-configuration.md#5-offline--ble-configuration-keys), at most 240 hours), so a deployment's sync gap is at most the largest `OfflineWindowHours` it configures. The first term covers the app — a trust bundle issued before the key was published belongs to passes that have all expired by then — and the second covers the stations.
+1. **Publish before first use.** A new key **MUST** be in the published set for at least the **worst station sync gap** before the server signs anything with it. The sync gap is the longest a station may go without receiving configuration while it still accepts passes on its own validation; a station stops doing so once it has been offline longer than its `OfflineWindowHours` ([Chapter 08 §5](08-configuration.md#5-offline--ble-configuration-keys), at most 240 hours), so a deployment's sync gap is at most the largest `OfflineWindowHours` it configures. Until the trust bundle stopped carrying the set, the window began with a first term, the maximum pass lifetime, which covered the app; the stations are the set's only readers.
 2. **Keep after last use.** A key the server has stopped signing with **MUST** stay in the published set until everything it signed has expired — the last pass, at most the maximum pass lifetime after its last signature, and the last ServerSignedAuth — and is then removed.
 3. **Sign with one key.** The server signs with one key at a time: the newest key whose publish-before window has elapsed.
 
 **Steps:**
 1. Server generates a new ECDSA P-256 key pair (RFC 6979 deterministic nonces for signing).
-2. Server adds the new public key to the set, pushes the set to every online station, delivers it at every boot, and includes it in every trust bundle from then on.
+2. Server adds the new public key to the set, pushes the set to every online station, and delivers it at every boot.
 3. When the publish-before window has elapsed, the server switches its signing to the new key.
 4. When the keep-after window has elapsed, the server removes the old public key from the set and pushes the set again. The old private key signs nothing after the switch and **SHOULD** be destroyed then.
 
@@ -1648,20 +1649,18 @@ A value of `OfflinePassPublicKey` is always the **whole** set, and the station *
 sequenceDiagram
     participant Server
     participant SSP as Station
-    participant App
 
     Server->>Server: Generate keyNew
     Server->>SSP: ChangeConfiguration [MSG-013] {OfflinePassPublicKey = {keyOld, keyNew}}
     Server-->>SSP: (and in every Accepted BootNotification RESPONSE)
-    Server-->>App: trust bundle {keyOld, keyNew} with every pass issued and every Partial-A authorization
-    Note over Server: Publish-before window: max pass lifetime + worst sync gap
+    Note over Server: Publish-before window: worst sync gap
     Server->>Server: Sign with keyNew (keyId names it in every pass)
     Note over Server: Keep-after window: until everything keyOld signed has expired
     Server->>SSP: ChangeConfiguration [MSG-013] {OfflinePassPublicKey = {keyNew}}
     Note over Server: Compromise response inverts the windows — §6.7.1
 ```
 
-**Why a set, and why these windows.** A pass is valid for up to ten days and may be presented at any station ([`offline-pass.md` §2.3](profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)), so at the moment it signs, the server does not know which station will verify a pass, or when. A single station-held key with a short grace period could not serve that: a pass signed shortly before a switch would be refused everywhere the switch had already landed. The set holds every key a live pass may need, the `keyId` in the pass says which one to use, and the two windows guarantee that the key is there — at the station, because it was published before its first signature and is re-delivered at every boot, and in the app, because the trust bundle arrives with the pass.
+**Why a set, and why these windows.** A pass is valid for up to ten days and may be presented at any station ([`offline-pass.md` §2.3](profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)), so at the moment it signs, the server does not know which station will verify a pass, or when. A single station-held key with a short grace period could not serve that: a pass signed shortly before a switch would be refused everywhere the switch had already landed. The set holds every key a live pass may need, the `keyId` in the pass says which one to use, and the two windows guarantee that the key is there at the station, because it was published before its first signature and is re-delivered at every boot.
 
 #### 6.7.1 Two Postures — Scheduled Rotation and Compromise Response
 
@@ -1683,10 +1682,7 @@ The windows and steps above describe **scheduled rotation**: the annual cadence 
 
 **The residual, stated plainly.** A station that cannot be reached cannot be protected by any mechanism in this specification. A station that is offline will go on accepting anything signed under the key it holds until it reconnects and is given the new set — at its next boot at the latest. Remediation for a station that cannot be reached in band is out of band — physical access, or the [re-provisioning](04-flows.md#re-provisioning-an-already-provisioned-station) cycle. This is the same limit [§4.3](#43-key-management-lifecycle) states for a compromised receipt-signing key.
 
-**The key signs more than passes.** The same key also signs:
-
-- **ServerSignedAuth [MSG-032]** ([§4.2](#42-pki-architecture), [§4.3](#43-key-management-lifecycle)) — a holder of the key can mint authorizations that a station accepts on the Partial-A path until it receives the new set.
-- **The mobile app's trust bundle** ([`app-contract.md` §3.4](profiles/offline/app-contract.md#34-the-trust-bundle)) carries the set; the app replaces the bundle at its next pass issuance or Partial-A authorization. The app authenticates stations by the Station CA, not by this key (§6.5.2).
+**The key signs more than passes.** The same key also signs **ServerSignedAuth [MSG-032]** ([§4.2](#42-pki-architecture), [§4.3](#43-key-management-lifecycle)): a holder of the key can mint authorizations that a station accepts on the Partial-A path until it receives the new set. The app holds no server key and authenticates stations by the Station CA (§6.5.2).
 
 **No station can be impersonated with it.** Until this revision the same key signed the StationIdentity a station presented over BLE, and a holder of it could mint one for a station that did not exist and harvest real passes from any app whose bundle still held the key. A station now authenticates itself with the certificate the Station CA issued it (§6.5.2), which this key does not sign: a compromised server signing key permits forged passes and authorizations until every station holds the new set, and nothing further at the app.
 
