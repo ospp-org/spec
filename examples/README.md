@@ -58,10 +58,12 @@ Naming convention: `{action}.{type}.json`
 | `server-signed-auth.json` | Mobile → Station server-signed authorization (Partial A) |
 | `auth-response.accepted.json`, `auth-response.rejected.json` | Station → Mobile authentication result (accepted / rejected variants) |
 | `start-service-request.json` | Mobile → Station service activation |
-| `start-service-response.json` | Station → Mobile activation confirmation |
+| `start-service-response.json`, `start-service-response.rejected.json` | Station → Mobile activation confirmation (accepted / rejected variants) |
 | `service-status.running.json`, `service-status.receipt-ready.json` | Station → Mobile real-time metering (running / receipt-ready variants) |
 | `stop-service-request.json` | Mobile → Station service termination |
-| `stop-service-response.json` | Station → Mobile stop confirmation |
+| `stop-service-response.json`, `stop-service-response.rejected.json` | Station → Mobile stop confirmation (accepted / rejected variants) |
+| `receipt-request.json` | Mobile → Station request for a session's receipt, by its `offlineTxId` |
+| `receipt-response.json` | Station → Mobile answer carrying the receipt |
 | `receipt.json` | Station → Mobile signed proof of service; also the body of the app's receipt upload |
 
 ### HTTP Payloads (`payloads/http/`)

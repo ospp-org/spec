@@ -791,7 +791,7 @@ sequenceDiagram
 8. **App** verifies `stationCertificate` against a Station CA of its trust bundle and that CA's CRL, and `stationSignature` over the Hello and the Challenge ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)) — **aborts and sends no pass if either fails** — confirms that the catalog it chose from is the one the Challenge's `catalogDigest` names, and that the chosen service is available on the chosen bay in `availableServices`, then derives the session key via ECDH P-256 + HKDF-SHA256 (`ikm = ee ‖ appNonce ‖ stationNonce`; the LTK is not used). The post-Challenge AEAD channel is now established.
 9. **App** requests biometric or PIN confirmation from the user
 10. **App** writes **OfflineAuthRequest** [MSG-031] to FFF3 (inside the AEAD channel) with the OfflinePass, counter, `bayId`, `serviceId`, `requestedDurationSeconds`, `sessionProof` and `deviceProof`
-11. **SSP** validates the OfflinePass — the nine checks of [Chapter 06 §6.1.1](06-security.md#611-offlinepass-validation--10-checks): signature, expiry, epoch, device proof, limits, interval, counter — estimating the cost from the requested service and duration
+11. **SSP** refuses, before it validates the pass, a `sessionProof` that does not match, a bay it does not have, a service its catalog does not bind to a program of that bay and a duration above its `MaxSessionDurationSeconds` ([`ble-handshake.md` §4.1](profiles/offline/ble-handshake.md#41-offlineauthrequest-full-offline--partial-b)), then validates the OfflinePass — the nine checks of [Chapter 06 §6.1.1](06-security.md#611-offlinepass-validation--10-checks): signature, expiry, epoch, device proof, limits, interval, counter — estimating the cost from the requested service and duration
 12. **SSP** sends **AuthResponse** [MSG-033] `Accepted` on FFF4 with session key confirmation
 13. **App** writes **StartServiceRequest** [MSG-034] to FFF3 with the `bayId`, `serviceId` and `requestedDurationSeconds` of its OfflineAuthRequest
 14. **SSP** activates hardware, sends **StartServiceResponse** [MSG-035] `Accepted` with `sessionId` and `offlineTxId`
@@ -819,6 +819,10 @@ sequenceDiagram
 |:----:|-------|------|------------|
 | 7 | The station supports none of the Hello's BLE versions — a plaintext AuthResponse instead of the Challenge | `1007` | Display "App update needed", disconnect |
 | 8 | Certificate or station signature invalid | `2013` | Abort, send no pass, disconnect |
+| 11 | `sessionProof` does not match | `2013` | Disconnect, retry the handshake |
+| 11 | Bay unknown to the station | `3005` | Display "Start refused", disconnect |
+| 11 | Service not bound to a program of the bay | `3004` | Read FFF2 again and choose from it |
+| 11 | Duration above the station's `MaxSessionDurationSeconds` | `3010` | Choose a shorter duration |
 | 11 | Signature invalid, or device proof invalid | `2002` | Display "Pass invalid", disconnect |
 | 11 | Pass expired, or older than this station's `OfflinePassMaxAge` | `2003` | Display "Pass not accepted here — go online to renew" |
 | 11 | Epoch revoked | `2004` | Display "Pass revoked" |
@@ -950,15 +954,13 @@ sequenceDiagram
     App->>SSP: BLE connect
     App->>SSP: Write FFF2 0x01 [MSG-028] AvailableServices
     SSP-->>App: Notify FFF2: {catalogVersion, bays: [{bayId, services, prices}]}
-    Note over App: User selects bay, service and duration
+    Note over App: User selects bay, service and duration, and confirms (biometric / PIN)
     App->>SSP: Write FFF3: Hello [MSG-029]
     SSP-->>App: Notify FFF4: Challenge [MSG-030] (certificate, availability, signature, connectivity: "Online")
     Note over App: Verify certificate and signature, else abort with no pass sent
 
-    Note over App: Biometric / PIN confirmation
-
     App->>SSP: Write FFF3: OfflineAuthRequest [MSG-031] (bay, service, duration, device proof)
-    Note right of SSP: Verify the device proof
+    Note right of SSP: Verify sessionProof and device proof, refuse an unknown bay or service or a duration above MaxSessionDurationSeconds
 
     SSP->>Server: AuthorizeOfflinePass REQUEST [MSG-002]
     Note right of SSP: Forward pass, bay, service, duration, device proof and transcriptHash
@@ -983,12 +985,12 @@ sequenceDiagram
 
 ### Happy Path
 
-1. **App** connects to SSP via BLE and asks for **AvailableServices** [MSG-028] on FFF2; the user selects a bay, a service and a duration, with the pass's limits shown ([`offline-pass.md` §2.1](profiles/offline/offline-pass.md#21-offlineallowance-object))
+1. **App** connects to SSP via BLE and asks for **AvailableServices** [MSG-028] on FFF2; the user selects a bay, a service and a duration, with the pass's limits shown ([`offline-pass.md` §2.1](profiles/offline/offline-pass.md#21-offlineallowance-object)), and confirms them with biometrics or a PIN — before the Hello, so that the wait for the user runs outside the 10-second handshake budget, which must also hold the server's round trip (steps 6 to 9)
 2. **App** may read **StationInfo** [MSG-027] to show the customer which station it reached — unauthenticated; the Challenge's `stationConnectivity` is the connectivity it acts on
 3. **App** writes **HELLO** [MSG-029] → SSP responds with **CHALLENGE** [MSG-030] (`stationConnectivity: "Online"`); the App verifies the station's certificate and signature ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)), that the catalog it chose from is the one the Challenge's `catalogDigest` names, and that the chosen service is available, and sends no pass if not
-4. **App** requests biometric/PIN confirmation
+4. **App** holds the user's biometric/PIN confirmation from step 1, and asks for none inside the handshake
 5. **App** writes **OfflineAuthRequest** [MSG-031] with the OfflinePass, the counter, `bayId`, `serviceId`, `requestedDurationSeconds`, `sessionProof` and `deviceProof`
-6. **SSP** verifies the device proof, and does NOT validate the pass locally — instead forwards it to the Server via **AuthorizeOfflinePass REQUEST** [MSG-002] over MQTT, with the bay, the service, the duration, the device proof unchanged and the handshake's `transcriptHash`
+6. **SSP** verifies the `sessionProof` and the device proof, refuses a bay it does not have, a service its catalog does not bind to a program of that bay and a duration above its `MaxSessionDurationSeconds` ([`ble-handshake.md` §4.1](profiles/offline/ble-handshake.md#41-offlineauthrequest-full-offline--partial-b)), and does NOT validate the pass locally — instead forwards it to the Server via **AuthorizeOfflinePass REQUEST** [MSG-002] over MQTT, with the bay, the service, the duration, the device proof unchanged and the handshake's `transcriptHash`
 7. **Server** validates the pass ([`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks) — signature, expiry, epoch, device proof, limits, rate, counter, individual revocation), estimating the cost from the requested service and duration, and debits the user's wallet by the `creditsAuthorized` of its answer
 8. **Server** sends **AuthorizeOfflinePass RESPONSE** [MSG-002] `Accepted` with `sessionId`, `durationSeconds` — the requested duration — and `creditsAuthorized`
 9. **SSP** relays result as **AuthResponse** [MSG-033] `Accepted` to App via BLE
@@ -1002,6 +1004,8 @@ sequenceDiagram
 |:----:|-------|--------|
 | 6 | MQTT send failure | SSP **MAY** fall back to local validation (like Full Offline) if its `OfflineModeEnabled` is `true`, within its own offline limits ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)) |
 | 6 | Device proof invalid | SSP refuses with `2002` and forwards nothing |
+| 6 | `sessionProof` does not match | SSP refuses with `2013` and forwards nothing |
+| 6 | Bay unknown, service not bound to a program of the bay, or duration above `MaxSessionDurationSeconds` | SSP refuses with `3005`, `3004` or `3010` and forwards nothing |
 | 7 | Pass rejected by server | SSP relays the rejection to App with the server's `errorCode`, `errorText` and `details` |
 | 7 | AuthorizeOfflinePass unanswered within the BLE handshake budget | SSP answers the app within the budget with `1010 MESSAGE_TIMEOUT`, or **MAY** fall back to local validation (degraded mode) if its `OfflineModeEnabled` is `true`, within its own offline limits ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)) |
 | 10 | StartServiceRequest other than the authorized duration | SSP refuses with `3010` above it and `3008` below it, and starts nothing ([`ble-session.md` §1](profiles/offline/ble-session.md#1-starting-a-service) rule 2) |

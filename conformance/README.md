@@ -45,8 +45,9 @@ before claiming conformance.
 > - **`TC-TX-006`** is entirely offline *reconciliation*, but reconciliation runs over **MQTT**,
 >   is implemented, and is exercised against a second implementation. It stays Standard and is
 >   fully runnable.
-> - **`TC-TX-007`** Parts C, D and E end a session the app started over BLE, or one the station
->   ran offline: each exercises the EXPERIMENTAL profile, is no part of a Standard claim, runs only
+> - **`TC-TX-007`** Parts C and E end a session the app started over BLE, or one the station
+>   ran offline — Part D, an offline credit pool run dry, is withdrawn, since a station that refuses
+>   what a pass cannot cover never runs one dry: each exercises the EXPERIMENTAL profile, is no part of a Standard claim, runs only
 >   where the station declares the profile, and is recorded as skipped otherwise. The rest of the
 >   case runs over MQTT.
 > - **`TC-SEC-007`** step 14 checks two purposes on the station certificate: `clientAuth`, which the

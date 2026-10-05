@@ -146,7 +146,7 @@ graph TB
 | Offline | Online | **Partial B** ¹ | BLE → Station → MQTT (server validates) |
 | Offline | Offline | **Full Offline** | BLE only (OfflinePass, local validation) |
 
-> ¹ Partial B is required of every station that implements the Offline / BLE profile ([`offline/README.md` §5](spec/profiles/offline/README.md#5-compliance-requirements)); when the server does not answer, the station falls back to validating the pass itself, as in Full Offline.
+> ¹ Partial B is required of every station that implements the Offline / BLE profile ([`offline/README.md` §5](spec/profiles/offline/README.md#5-compliance-requirements)); when the server does not answer in time, the station refuses with `1010`, or **MAY** fall back to validating the pass itself if its `OfflineModeEnabled` is `true`, as in Full Offline.
 
 ---
 
@@ -388,14 +388,14 @@ ospp/
 │       ├── security/                4 actions (SecurityEvent, SignCertificate, ...)
 │       ├── device-management/       9 actions (Config, Firmware, Diagnostics, ...)
 │       └── offline/                 7 docs (AuthorizeOfflinePass, app–server contract, BLE transport, handshake, ...)
-├── schemas/                 JSON Schema definitions (91 files)
+├── schemas/                 JSON Schema definitions (92 files)
 │   ├── *.schema.json            5 HTTPS request/response schemas (provisioning, offline pass issuance, attestation challenge)
 │   ├── common/                  23 shared type schemas ($ref targets)
 │   ├── mqtt/                    48 MQTT message payload schemas
 │   └── ble/                     16 BLE message schemas
 ├── examples/                Example payloads and narrative flows (72 files)
 │   ├── payloads/mqtt/           36 MQTT payload examples
-│   ├── payloads/ble/            15 BLE payload examples
+│   ├── payloads/ble/            19 BLE payload examples
 │   ├── payloads/http/           4 HTTPS examples (provisioning request; offline pass issuance request and response; attestation challenge response)
 │   ├── flows/                   12 end-to-end flow narratives
 │   └── error-scenarios/         5 error scenario walkthroughs

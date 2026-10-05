@@ -646,7 +646,10 @@ export function stationVerificationGate({ challenge, helloBytes, caCertPem, crlP
   // Step 2: that CA's CRL.
   const crl = parseCrl(pemToDer(anchor.crlPem));
   if (!crl.issuerRaw.equals(ca.subjectRaw)) return fail(2, 'CRL issuer is not the Station CA subject');
-  if (!crypto.verify('sha256', crl.tbsRaw, caKey, crl.signatureDer)) return fail(2, 'CRL signature does not verify under the Station CA key');
+  // The CRL is signed as the certificate is, with ecdsa-with-SHA256 or ecdsa-with-SHA384.
+  const crlHash = { [OID_ECDSA_SHA256]: 'sha256', [OID_ECDSA_SHA384]: 'sha384' }[crl.signatureAlgorithm];
+  if (!crlHash) return fail(2, `CRL signature algorithm ${crl.signatureAlgorithm} is neither ecdsa-with-SHA256 nor ecdsa-with-SHA384`);
+  if (!crypto.verify(crlHash, crl.tbsRaw, caKey, crl.signatureDer)) return fail(2, 'CRL signature does not verify under the Station CA key');
   if (crl.revokedSerials.has(cert.serialHex)) return fail(2, `serial ${cert.serialHex} is on the CRL`);
 
   // Step 3.

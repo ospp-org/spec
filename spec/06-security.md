@@ -667,7 +667,7 @@ The station **SHOULD** initiate certificate renewal automatically when the curre
 5. Server forwards the CSR to the Certificate Authority
 6. CA signs the certificate and returns it to the server
 7. Server delivers the signed certificate (and optionally the CA chain) via CertificateInstall REQUEST [MSG-023]
-8. Station validates the certificate chain, CN match, key usage, and validity period
+8. Station validates the certificate chain, CN match, key usage, extended key usage — `clientAuth` and `id-kp-osppBleStation` (§4.4) — and validity period
 9. Station installs the certificate to its secure element, TPM, or encrypted NVS
 10. Station updates the `CertificateSerialNumber` configuration key
 11. On the next TLS reconnection, the station uses the new certificate

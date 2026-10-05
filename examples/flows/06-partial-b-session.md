@@ -1,6 +1,6 @@
 # Flow 06: Partial B Session (Phone Offline, Station Online)
 
-> **Compliance Level:** This flow is REQUIRED of every station that implements the Offline / BLE profile, which the **Complete** compliance level requires. When the server does not answer, the station falls back to validating the pass itself, as in Full Offline (see [Flow 04](04-full-offline-session.md)).
+> **Compliance Level:** This flow is REQUIRED of every station that implements the Offline / BLE profile, which the **Complete** compliance level requires. When the server does not answer in time, the station refuses with `1010`, or **MAY** fall back to validating the pass itself if its `OfflineModeEnabled` is `true`, as in Full Offline (see [Flow 04](04-full-offline-session.md)).
 
 ## Scenario
 
@@ -38,7 +38,7 @@ Bob is at "Station Alpha -- Example City" and wants a deluxe treatment on Bay 2.
 15:10:02.100  App reads FFF1 (StationInfo) — sees connectivity: "Online", unauthenticated
 15:10:02.400  App asks for AvailableServices on FFF2 — sees svc_deluxe on Bay 2
 15:10:03.000  Bob selects Bay 2, Deluxe Program, 4 minutes
-15:10:04.000  App detects Partial B scenario (phone offline + station online)
+15:10:04.000  App prepares its OfflinePass: the phone is offline, so it will present the pass whatever the station's connectivity
 15:10:04.500  App prompts biometric confirmation — Bob confirms with fingerprint
 15:10:05.000  App writes Hello to FFF3
 15:10:05.300  Station responds with Challenge on FFF4 (connectivity: "Online")
@@ -92,7 +92,7 @@ The app establishes a BLE connection and reads the StationInfo characteristic.
 }
 ```
 
-The app sees `connectivity: "Online"` — the station has an active MQTT connection to the server. Combined with the phone being offline, the ConnectivityDetector identifies this as a likely **Partial B** scenario; nothing on FFF1 is authenticated, and the Challenge's signed `stationConnectivity` confirms it (Step 6). In this mode, the station acts as a relay: the app sends an OfflinePass via BLE, and the station forwards it to the server via MQTT for real-time validation.
+The app sees `connectivity: "Online"` and shows it to Bob, and decides nothing from it: nothing on FFF1 is authenticated ([`ble-transport.md` §3](../../spec/profiles/offline/ble-transport.md#3-station-info-fff1)). The phone is offline, so the app will present its OfflinePass whatever the station's connectivity; the Challenge's signed `stationConnectivity`, `"Online"` (Step 6), is what makes this a **Partial B** session. In this mode, the station acts as a relay: the app sends an OfflinePass via BLE, and the station forwards it to the server via MQTT for real-time validation.
 
 ---
 

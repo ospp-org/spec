@@ -458,6 +458,8 @@ If the proof doesn't match, reject immediately — it means the sender didn't pa
 
 ### 2.10 OfflinePass Validation (10 checks, #5 withdrawn: a station performs nine)
 
+Before these checks, a station refuses a `sessionProof` that does not match (`2013`, §2.9), a bay it does not have (`3005`), a service its catalog does not bind to a program of that bay (`3004`) and a `requestedDurationSeconds` above its `MaxSessionDurationSeconds` (`3010`) ([`ble-handshake.md` §4.1](../spec/profiles/offline/ble-handshake.md#41-offlineauthrequest-full-offline--partial-b)); a Partial-B station refuses them, and a device proof that fails check #4, before it forwards the pass.
+
 When you receive an OfflineAuthRequest, validate the OfflinePass in this order:
 
 | # | Check | Reject Code | What to Verify |

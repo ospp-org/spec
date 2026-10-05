@@ -378,6 +378,8 @@ In the **Partial B** offline scenario (phone offline, station online), the mobil
 
 #### Example
 
+This example is the forward of a later presentation of the pass of §7.5, with counter `6`, made in a Partial-B handshake that this chapter does not show — one whose Challenge says `"Online"` — so its `transcriptHash` and device proof are those of that handshake, not of §7.3 and §7.4.
+
 **REQUEST payload:**
 
 ```json
@@ -404,15 +406,15 @@ In the **Partial B** offline scenario (phone offline, station online), the mobil
     "signatureAlgorithm": "ECDSA-P256-SHA256",
     "signature": "MEQCIGDt8n5JEeRrYMqlom+5pC9kQhSWxhscTNcNLx+W5jHvAiAnniRsf8oUWO8B2I9JwL0XwPPpirbfTYvSHbuNWZrLkg=="
   },
-  "counter": 5,
+  "counter": 6,
   "bayId": "bay_c1d2e3f4a5b6",
   "serviceId": "svc_eco",
   "requestedDurationSeconds": 300,
   "deviceProof": {
     "format": "android-key",
-    "signature": "MEQCIGSOLREN/0LqMg9i6YiauJzRMBy12UreplAq9Hu/LmDyAiB5MYstV08MgyFEYsVsBTrUUbAzEMoOUcnYuswkNkf8Eg=="
+    "signature": "MEQCIDiabonRaXBmk+BuP1nEiYUqk6j0H/AhFdpRff9XbjgPAiBvpE8/P5wLDzlsX/Q2ESacAtodqUw3mu3vTUvNKiEQlg=="
   },
-  "transcriptHash": "D8rjuIdBN9VELOfNXd6bl0lWYgc3bemUG/qKYCSxnRI="
+  "transcriptHash": "4HcnTzXjjSyugMiTcMP9eCUEOmygJTVm5v7hPaLlCow="
 }
 ```
 
@@ -679,7 +681,8 @@ Upon `Accepted`, the station MUST:
 {
   "status": "Rejected",
   "errorCode": 3001,
-  "errorText": "BAY_BUSY"
+  "errorText": "BAY_BUSY",
+  "programNumber": 2
 }
 ```
 
@@ -2760,6 +2763,8 @@ Presents an OfflinePass credential for authentication, with the bay, the service
 - **Full Offline** (phone + station both offline): Station validates the pass locally using the 10 validation checks.
 - **Partial B** (phone offline, station online): Station forwards the pass to the server via [AuthorizeOfflinePass](#21-authorizeofflinepass) MQTT message, with the bay, the service, the duration, the device proof and the handshake's `transcriptHash`.
 
+In both, the station refuses, before it validates or forwards the pass, a `sessionProof` that does not match (`2013`), a bay it does not have (`3005`), a service its catalog does not bind to a program of that bay (`3004`) and a `requestedDurationSeconds` above its `MaxSessionDurationSeconds` (`3010`) ([ble-handshake.md §4.1](profiles/offline/ble-handshake.md#41-offlineauthrequest-full-offline--partial-b)); a Partial-B station also verifies the device proof (check #4) before it forwards.
+
 The app MUST request biometric or PIN confirmation from the user before sending this message.
 
 #### Payload
@@ -2884,7 +2889,7 @@ The station **MUST** verify the signature using a key of its stored `OfflinePass
 | **Expected Response** | If `Accepted` → [StartServiceRequest](#78-startservicerequest) on FFF3 |
 | **Timeout** | N/A (station sends after validation) |
 
-Authentication result from the station. On `Accepted`, the app MAY proceed to start a service. On `Rejected`, the app MUST display the error and disconnect. A station that refuses a Hello sends an AuthResponse `Rejected` in plaintext instead of the Challenge, and closes the connection: the one refusal the AEAD channel does not authenticate ([ble-handshake.md §5](profiles/offline/ble-handshake.md#5-step-4-authresponse)).
+Authentication result from the station. On `Accepted`, the app MAY proceed to start a service. On a `Rejected` inside the AEAD channel, the app MUST display the error and disconnect. A station that refuses a Hello sends an AuthResponse `Rejected` in plaintext instead of the Challenge, and closes the connection: the one refusal the AEAD channel does not authenticate, which the app treats as an indication, not as evidence — it MAY show it, and does not act on it beyond ending the attempt ([ble-handshake.md §5](profiles/offline/ble-handshake.md#5-step-4-authresponse)).
 
 #### Payload
 
