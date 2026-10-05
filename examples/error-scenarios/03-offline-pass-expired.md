@@ -260,7 +260,7 @@ at the top suggests:
 
 4. **Prevention -- re-issuance and pre-arming:** Whenever it has connectivity, the app
    uploads the receipts it holds and requests a fresh pass at application start, after each use
-   of the pass and after each credit to the wallet ([`offline-pass.md` §6](../../spec/profiles/offline/offline-pass.md#6-lifecycle)),
+   of the pass and after each credit to the wallet it learns of ([`offline-pass.md` §6](../../spec/profiles/offline/offline-pass.md#6-lifecycle)),
    and its BackgroundPreArmingService requests one before the current pass
    expires, reducing the chance of this scenario occurring.
 

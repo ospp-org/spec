@@ -342,6 +342,8 @@ sequenceDiagram
         Note over Station,Server: Buffered Message Replay (FIFO)
         Station->>Broker: Buffered MeterValues
         Broker->>Server: MeterValues [MSG-010]
+        Station->>Broker: Buffered SessionEnded (sessionId, reason)
+        Broker->>Server: SessionEnded [MSG-040]
         Station->>Broker: TransactionEvent (offlineTxId, receipt, txCounter)
         Broker->>Server: TransactionEvent [MSG-007]
         Server->>Server: Dedup, receipt signature, gate, settle, score<br/>(txCounter recorded, not gated)

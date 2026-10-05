@@ -1353,7 +1353,7 @@ sequenceDiagram
 
     Note over SSP: Active sessions continue running!
     Note over SSP: Switch to BLE-only mode
-    Note over SSP: Buffer StatusNotification events locally
+    Note over SSP: Buffer TransactionEvent, SessionEnded, SecurityEvent (Ch. 01 §6.5)
 
     Broker->>Server: ConnectionLost (LWT) [MSG-011]
     Server->>Server: Mark station as Offline
@@ -1390,7 +1390,7 @@ sequenceDiagram
 2. **SSP** immediately takes these actions:
    - **Active sessions continue running** — the station MUST NOT stop a service due to connectivity loss
    - Switch to BLE-only mode for new sessions (if BLE is enabled)
-   - Buffer all StatusNotification and MeterValues events locally
+   - Buffer the messages it must keep — TransactionEvent, SessionEnded and SecurityEvent — per the categorized buffering policy of [Chapter 01 §6.5](01-architecture.md#65-offline-message-buffering); StatusNotification and MeterValues MAY be discarded, as they are regenerated at reconnection
 3. **Broker** publishes the pre-configured **ConnectionLost** [MSG-011] LWT to the station's `to-server` topic
 4. **Server** receives the LWT and marks the station as `Offline`
 5. **SSP** begins reconnection with exponential backoff:

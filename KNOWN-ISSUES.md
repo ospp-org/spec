@@ -927,7 +927,8 @@ never to rewrite.
    `Unsynchronized` when it had not.
 3. **Judged through it.** For a `Synchronized` receipt, check #9, check #10 and the timestamp factor of
    [`06-security.md` §7.4](spec/06-security.md#74-fraud-detection--offline-transactions) read the
-   signed times corrected by that offset. An `Unsynchronized` receipt is judged on its signed times as
+   signed times corrected by that offset — and, since the individual revocation was anchored in time on
+   2026-10-05, check #11 too ([`reconciliation.md` §6.8](spec/profiles/offline/reconciliation.md#68-station-clock-offset)). An `Unsynchronized` receipt is judged on its signed times as
    they are, and flagged for review. A receipt that reaches the server before any offset for its period
    exists — the app's copy can — is judged on its signed times as they are.
 4. **Impossible times are flagged.** A transaction whose times, read as above, end after the station
