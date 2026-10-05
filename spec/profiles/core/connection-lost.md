@@ -74,10 +74,10 @@ When a previously disconnected station reconnects:
 1. The station **MUST** send a BootNotification as the first message on the new connection (standard boot sequence).
 2. After the server responds with `Accepted`, the station **MUST** send a StatusNotification for each bay to report the current actual bay states.
 3. The server **MUST** compare the reported bay states against the `Unknown` states set during disconnection and reconcile:
-   - If a bay reports `Available` and the server had an active session, the session ended during the disconnection. The server **MUST** close the session and apply pro-rated billing based on the estimated time delivered — except a Partial-B session, which it settles on the first of its end records, or closes at the end of its authorized duration (§5).
+   - If a bay reports `Available` and the server had an active session, the session ended during the disconnection. The server **MUST** close the session and apply pro-rated billing based on the estimated time delivered, provisionally: the SessionEnded the station replays (rule 4) trues the close down, never up ([`04-flows.md` §6](../../04-flows.md#settlement-by-service-kind)) — except a Partial-B session, which it settles on the first of its end records, or closes at the end of its authorized duration (§5).
    - If a bay reports `Occupied` and the server has a matching active session, the session is still running. The server **MUST** resume tracking and cancel the recovery timer.
    - If a bay reports `Faulted`, the server **MUST** log the fault and notify operators.
-4. The station **MUST** replay any buffered events (StatusNotification, MeterValues, SessionEnded, TransactionEvent) in chronological order after the initial bay state reports.
+4. The station **MUST** replay any buffered events (StatusNotification, SessionStarted, MeterValues, SessionEnded, TransactionEvent) in chronological order after the initial bay state reports.
 5. The server **MUST** process replayed events to fill in gaps in session metering data and transaction records.
 
 ## 7. Offline Detection Timing

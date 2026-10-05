@@ -349,7 +349,7 @@ Authentication errors cover identity verification (mTLS, JWT, BLE handshake, Off
 
 > **Note on `2003 OFFLINE_PASS_EXPIRED` context-dependent semantics (v0.4.2):**
 > At **authorize-time** (`profiles/offline/authorize-offline-pass.md` §5 check #2 / `offline-pass.md` §4 check #2): severity = `Warning`, recoverable = `true`. The app retries with a fresh pass.
-> At **reconcile-time** (`profiles/offline/reconciliation.md` §6 gate check #9): the same error code is emitted with effective severity `Error`, recoverable = `false`. The transaction is in the past — no retry is possible. The pass had expired by the transaction's `endedAt`, read through the station's clock offset ([`reconciliation.md` §6.8](profiles/offline/reconciliation.md#68-station-clock-offset)): the station accepted an expired pass, or its clock could not be corrected. Servers SHOULD include `details.context: "reconcile"` on the reconcile-time emission for log clarity.
+> At **reconcile-time** (`profiles/offline/reconciliation.md` §6 gate check #9): the same error code is emitted with effective severity `Error`, recoverable = `false`. The transaction is in the past — no retry is possible. The pass had expired by the transaction's `endedAt` — for the auth form, the authorization had expired by its `startedAt` ([`reconciliation.md` §6.7](profiles/offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4)) — read through the station's clock offset ([`reconciliation.md` §6.8](profiles/offline/reconciliation.md#68-station-clock-offset)): the station accepted an expired pass, or its clock could not be corrected. Servers SHOULD include `details.context: "reconcile"` on the reconcile-time emission for log clarity.
 
 ### 3.3 Session & Bay Errors (3xxx)
 
@@ -786,7 +786,7 @@ reads as a complete enumeration.
 |--------|:------------:|--------------|:-------------------:|--------------------------|
 | StartService (mobile) | 1 | — | 10s | Refund 100%, session → `failed` |
 | StartService (web) | 4 | 0s, +5s, +10s, +15s | 10s | CancelReservation → refund 100%, session → `failed` |
-| StopService | 1 | — | 10s | Session → `failed`, station auto-stops on timer expiry anyway; a Partial-B session stays open, and the REQUEST is repeated, as a new attempt, once the station has reconnected before the end of the session's authorized duration ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4 and 4a) |
+| StopService | 1 | — | 10s | Session → `failed`, station auto-stops on timer expiry anyway; a Partial-B session stays open, and the REQUEST is repeated, as a new attempt, once the station has reconnected, while the session has not settled on an end record ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4 and 4a) |
 | ReserveBay | 1 | — | 5s | Session → `failed`, inform user |
 | CancelReservation | 1 | — | 5s | Server marks reservation as expired locally |
 | Reset | 1 | — | 30s | Log failure, operator notification |

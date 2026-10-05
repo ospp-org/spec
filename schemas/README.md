@@ -11,7 +11,8 @@
 >
 > `mqtt/authorize-offline-pass-request.schema.json`, `mqtt/authorize-offline-pass-response.schema.json` and
 > `common/device-proof.schema.json` are **EXPERIMENTAL** with them: the request carries the device proof and the
-> transcript hash of a BLE handshake, and changed incompatibly with the BLE wire revision.
+> transcript hash of a BLE handshake, and changed incompatibly with the BLE wire revision. So is
+> `mqtt/session-started-event.schema.json`, which reports the start of the Partial-B session such a request authorized.
 >
 > `common/offline-pass.schema.json` is **stable** and carries no station or organization scope: a
 > pass is valid at any station that accepts offline passes

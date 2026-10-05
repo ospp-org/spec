@@ -273,7 +273,7 @@ The station chooses the BLE version, generates its own nonce and ephemeral key, 
 }
 ```
 
-The `stationConnectivity: "Offline"` confirms the Partial A scenario. Before it relays anything, the app verifies the station against the trust bundle it received in Step 5 ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)): the certificate chains to the Station CA, is on no entry of the CRL, carries `id-kp-osppBleStation`, names `stn_a1b2c3d4` — the station the authorization is for — and `stationSignature` verifies under it. It then derives the BLE session key over the ephemeral ECDH secret (the BLE LTK is **not** used — see `spec/06-security.md` §6.5):
+The `stationConnectivity: "Offline"` confirms the Partial A scenario. Before it relays anything, the app verifies the station against the trust bundle it received in Step 5 ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)): the certificate chains to a Station CA of the bundle, is on no entry of that CA's CRL, carries `id-kp-osppBleStation`, names `stn_a1b2c3d4` — the station the authorization is for — and `stationSignature` verifies under it; and the catalog Alice chose from is the one the Challenge's `catalogDigest` names ([`ble-handshake.md` §3](../../spec/profiles/offline/ble-handshake.md#3-step-2-challenge)). It then derives the BLE session key over the ephemeral ECDH secret (the BLE LTK is **not** used — see `spec/06-security.md` §6.5):
 
 ```
 SessionKey = HKDF-SHA256(

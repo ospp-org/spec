@@ -104,8 +104,8 @@ Each message below includes:
 > **The first column is the `MSG-0NN` reference, not a row ordinal.** It is what
 > [Chapter 04 §Message References](04-flows.md) resolves and what every `[MSG-XXX]` citation in this
 > specification means. `SessionEnded` is **40** and sits between 10 and 11 because it is grouped by
-> category, not by number: it was registered last and added here where it belongs by topic, and
-> `SessionStarted`, **43**, sits beside it for the same reason. Until
+> category, not by number: it was registered after the 39 before it and added here where it belongs by topic, and
+> `SessionStarted`, **43**, registered last, sits beside it for the same reason. Until
 > `0.23.0` this column was a row ordinal that agreed with the registry for the first ten rows and
 > was off by one for the seventeen after them, while Chapter 04 stated the two were the same thing —
 > so `GetDiagnostics` was "19" here and `MSG-018` everywhere else, and the number `27` named
@@ -444,8 +444,8 @@ This example is the forward of a later presentation of the pass of §7.5, with c
 
 | Error Code | Condition |
 |------------|-----------|
-| `1005` | `INVALID_MESSAGE_FORMAT` — request is not valid JSON or missing required fields |
-| `2002` | `OFFLINE_PASS_INVALID` — signature verification failed |
+| `1005` | `INVALID_MESSAGE_FORMAT` — request is not valid JSON, or does not validate against its schema outside its `offlinePass` |
+| `2002` | `OFFLINE_PASS_INVALID` — signature verification failed (check #1), the device proof does not verify (check #4), or the `offlinePass` does not validate against the OfflinePass schema |
 | `2003` | `OFFLINE_PASS_EXPIRED` — pass has expired, or is older than the forwarding station's `OfflinePassMaxAge` |
 | `2004` | `OFFLINE_EPOCH_REVOKED` — revocation epoch is newer than pass epoch |
 | `2005` | `OFFLINE_COUNTER_REPLAY` — counter replay detected |

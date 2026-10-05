@@ -3,7 +3,7 @@
 ![Version: 0.44.0](https://img.shields.io/badge/version-0.44.0-blue)
 ![Status: Draft](https://img.shields.io/badge/status-draft-orange)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
-![Messages: 42](https://img.shields.io/badge/messages-42-green)
+![Messages: 43](https://img.shields.io/badge/messages-43-green)
 ![Schemas: 92](https://img.shields.io/badge/schemas-92-green)
 
 ---
@@ -267,7 +267,7 @@ Full index: [schemas/README.md](schemas/README.md)
 | Directory | Count | Content |
 |-----------|:-----:|---------|
 | [`examples/payloads/mqtt/`](examples/payloads/mqtt/) | 36 | JSON payloads for every MQTT message |
-| [`examples/payloads/ble/`](examples/payloads/ble/) | 15 | JSON payloads for every BLE message |
+| [`examples/payloads/ble/`](examples/payloads/ble/) | 19 | JSON payloads for every BLE message |
 | [`examples/payloads/http/`](examples/payloads/http/) | 4 | The provisioning request; the offline pass issuance request and response, and the attestation challenge response, of the app–server contract |
 | [`examples/flows/`](examples/flows/) | 12 | Narrative walkthroughs with complete message sequences |
 | [`examples/error-scenarios/`](examples/error-scenarios/) | 5 | Common error scenarios with full messages |

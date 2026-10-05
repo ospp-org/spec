@@ -122,7 +122,8 @@ reports the bay is already running a cycle. The station responds with error code
   "payload": {
     "status": "Rejected",
     "errorCode": 3001,
-    "errorText": "BAY_BUSY"
+    "errorText": "BAY_BUSY",
+    "programNumber": 1
   },
   "mac": "d6b0f2a4e5c7d9b1f3a5c7e9b1d3f5a7c9e1b3d5f7a9c1e3b5d7f9a1c3e5b7"
 }

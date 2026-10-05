@@ -271,7 +271,7 @@ LWT is exempt from HMAC signing (no session key at CONNECT time). Set Will Delay
 
 ### 2.5 Message Signing (HMAC-SHA256)
 
-**Sign everything.** Every message you send carries a `mac`, and every message you receive must have one you verify — 44 of the 47 message types. The three that do not are structural and you cannot opt anything else into their company:
+**Sign everything.** Every message you send carries a `mac`, and every message you receive must have one you verify — 45 of the 48 message types. The three that do not are structural and you cannot opt anything else into their company:
 
 | Exempt message | Why |
 |----------------|-----|
@@ -1134,7 +1134,7 @@ Test the error scenarios in `/examples/error-scenarios/`:
 
 **Using TLS 0-RTT.** TLS 1.3 offers 0-RTT resumption, which is vulnerable to replay attacks. OSPP explicitly forbids it. Don't enable it.
 
-**Counting a bare `Accepted` as proof that a station took your new server key set.** `OfflinePassPublicKey` is the server's **key set** — every key a live pass may be signed under, each named by the `keyId` a pass carries — and every value replaces the whole set the station holds, with no cached previous key and no grace period ([`06-security.md` §6.7](../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)). Rotation runs on time, not on confirmations: a new key is published for at least the maximum pass lifetime (864000 s) plus your worst station sync gap before it signs anything, and an old key stays in the set until everything it signed — passes and ServerSignedAuth — has expired. What can still go wrong is the push. ChangeConfiguration is **atomic**: a `results` entry of `Accepted` is that key's *validation verdict*, and if any other entry in the same batch is `Rejected` or `NotSupported`, **the station stored nothing** — while still answering `Accepted` for your key. That station keeps its old set until the next push or its next boot, and if it goes offline first it refuses, with `2002`, every pass whose `keyId` its old set does not name.
+**Counting a bare `Accepted` as proof that a station took your new server key set.** `OfflinePassPublicKey` is the server's **key set** — every key a live pass may be signed under, each named by the `keyId` a pass carries — and every value replaces the whole set the station holds, with no cached previous key and no grace period ([`06-security.md` §6.7](../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)). Rotation runs on time, not on confirmations: a new key is published for at least your worst station sync gap before it signs anything, and an old key stays in the set until everything it signed — passes and ServerSignedAuth — has expired. What can still go wrong is the push. ChangeConfiguration is **atomic**: a `results` entry of `Accepted` is that key's *validation verdict*, and if any other entry in the same batch is `Rejected` or `NotSupported`, **the station stored nothing** — while still answering `Accepted` for your key. That station keeps its old set until the next push or its next boot, and if it goes offline first it refuses, with `2002`, every pass whose `keyId` its old set does not name.
 
 Two things follow, and the second is the one to implement:
 
@@ -1226,7 +1226,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 
 ### Security
 
-- [ ] **[MUST]** HMAC-SHA256 on every message except BootNotification REQUEST/RESPONSE and the LWT (44 of 47); refuse to send rather than send unsigned when you hold no key
+- [ ] **[MUST]** HMAC-SHA256 on every message except BootNotification REQUEST/RESPONSE and the LWT (45 of 48); refuse to send rather than send unsigned when you hold no key
 - [ ] **[MUST]** Canonical JSON for HMAC: sorted keys (recursive), compact, UTF-8
 - [ ] **[MUST]** Constant-time HMAC comparison (timing-safe)
 - [ ] **[MUST]** Session key from BootNotification RESPONSE, stored in RAM only

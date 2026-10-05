@@ -512,9 +512,11 @@ Server Signing Key set (ECDSA P-256, server-side HSM; §6.7)
 **A Station CA is replaced as a member of a set (Normative).** The app accepts a station's certificate from any Station CA of the set its trust bundle carries, each judged against its own CRL ([`app-contract.md` §3.4](profiles/offline/app-contract.md#34-the-trust-bundle); §6.5.2), so a new Station CA joins the set before it issues and an old one leaves it once what it issued has expired, and no station is refused for the CA its certificate came from. The server keeps two windows for the set:
 
 1. **Distributed before it issues.** A new Station CA **MUST** be in every trust bundle the server issues for at least the **maximum pass lifetime** — 864000 seconds, ten days ([`offline-pass.md` §6](profiles/offline/offline-pass.md#6-lifecycle)) — before it issues its first station certificate. An app's bundle is never older than its newest usable pass ([`app-contract.md` §3.4](profiles/offline/app-contract.md#34-the-trust-bundle)), so every app that can present a pass holds the new CA before any station presents a certificate it issued.
-2. **Kept until what it issued has expired.** A Station CA that has stopped issuing **MUST** stay in every trust bundle, with its current CRL, until every certificate it issued has expired — at most the validity of a station certificate, one year (§4.4), after its last issuance — and is then removed.
+2. **Kept until what it issued has expired.** A Station CA that has stopped issuing **MUST** stay in every trust bundle, with its current CRL, until every station certificate it issued has expired — the validity of a station certificate (§4.4) after its last issuance — and is then removed.
 
-These are the windows of a rollover whose relying parties hold their anchors where the signer cannot reach them. A DNSSEC zone pre-publishes its key: *"the new key is introduced into the DNSKEY RRset. After enough time to ensure that any cached DNSKEY RRsets contain both keys, the zone is signed using the new key and the old signatures are removed. Finally, when all signatures created with the old key have expired from caches, the old key is removed"* ([RFC 7583 §3.2.1](https://www.rfc-editor.org/rfc/rfc7583#section-3.2.1)). An RPKI certification authority publishes its new CA certificate and *"waits for a period of time to afford every RP an opportunity to discover and retrieve this "new" CA certificate"*, the staging period, before the new instance issues anything ([RFC 6489 §2](https://www.rfc-editor.org/rfc/rfc6489#section-2)). The app's cache is its trust bundle, and the longest it relies on one is the maximum pass lifetime.
+**Each Station CA of a set has its own subject (Normative).** The app finds the CA of a certificate by the certificate's issuer (§6.5.2), so every Station CA of a set **MUST** have a subject distinct from the others': a new Station CA takes one distinct from those of the CAs it joins, as the issuer of a new RPKI CA certificate selects for it a subject name distinct from the one the current CA certificate uses ([RFC 6489 §2](https://www.rfc-editor.org/rfc/rfc6489#section-2)).
+
+These are the windows of a rollover whose relying parties hold their anchors where the signer cannot reach them. A DNSSEC zone pre-publishes its key: *"the new key is introduced into the DNSKEY RRset. After enough time to ensure that any cached DNSKEY RRsets contain both keys, the zone is signed using the new key and the old signatures are removed. Finally, when all signatures created with the old key have expired from caches, the old key is removed"* ([RFC 7583 §3.2.1](https://www.rfc-editor.org/rfc/rfc7583#section-3.2.1)). An RPKI certification authority publishes its new CA certificate and *"waits for a period of time to afford every RP an opportunity to discover and retrieve this "new" CA certificate"*, the staging period, before anything the new instance issues is published ([RFC 6489 §2](https://www.rfc-editor.org/rfc/rfc6489#section-2)). The app's cache is its trust bundle, and the longest it relies on one is the maximum pass lifetime.
 
 **A planned rotation.** The windows keep the set available through a planned rotation; they are not what keeps a Station CA believed compromised in the set — RFC 6489 scopes its procedure the same way, its *"focus"* being *"planned key rollover, not an emergency key rollover"*. A compromise of the Station CA is a fleet-wide break (§6.5.2).
 
@@ -667,7 +669,7 @@ The station **SHOULD** initiate certificate renewal automatically when the curre
 5. Server forwards the CSR to the Certificate Authority
 6. CA signs the certificate and returns it to the server
 7. Server delivers the signed certificate (and optionally the CA chain) via CertificateInstall REQUEST [MSG-023]
-8. Station validates the certificate chain, CN match, key usage, extended key usage — `clientAuth` and `id-kp-osppBleStation` (§4.4) — and validity period
+8. Station validates the certificate chain, CN match, key usage, extended key usage — `clientAuth`, and `id-kp-osppBleStation` where the station implements the Offline / BLE profile (§4.4) — and validity period
 9. Station installs the certificate to its secure element, TPM, or encrypted NVS
 10. Station updates the `CertificateSerialNumber` configuration key
 11. On the next TLS reconnection, the station uses the new certificate
@@ -959,7 +961,7 @@ The receiver MUST verify the MAC before processing the payload:
 
 **Rule:** every MQTT message MUST carry a valid `mac`, in either direction, with exactly three exceptions. There are no other exemptions, no per-message judgement, and no "informational" category ([§5.1](#51-overview) records why).
 
-Of the **47** message types in [Chapter 03](03-messages.md)'s catalogue, **44 are signed and 3 are exempt**.
+Of the **48** message types in [Chapter 03](03-messages.md)'s catalogue, **45 are signed and 3 are exempt**.
 
 #### The Three Structural Exemptions
 
@@ -999,7 +1001,7 @@ receives for a missing or unverifiable `mac` and refuses to send unsigned; the s
 other direction. Both fail closed, which is correct, and neither can tell the other.
 
 **Every channel that could carry the diagnosis is closed by the condition it would diagnose.**
-GetConfiguration [MSG-020] is one of the **44 signed message types of the 47**, so it is refused for
+GetConfiguration [MSG-020] is one of the **45 signed message types of the 48**, so it is refused for
 the same reason everything else is. The three [structural exemptions](#56-message-signing-classification)
 are the only messages that survive, and two of them cannot help: the BootNotification **RESPONSE**
 arrives after the server has already decided, and ConnectionLost is the broker's Last Will, which the
@@ -1921,7 +1923,7 @@ Diagnostic uploads via GetDiagnostics [MSG-018] **MUST** apply the same redactio
 - [ ] OfflinePasses issued with the platform lifetime, bound to a hardware-backed device key whose platform attestation the server verified, with a trust bundle ([`app-contract.md` §3](profiles/offline/app-contract.md#3-pass-issuance)); the same bundle with every Partial-A authorization ([`app-contract.md` §5](profiles/offline/app-contract.md#5-the-partial-a-authorization))
 - [ ] ECDSA P-256 receipt verification during reconciliation
 - [ ] Reject provisioning requests whose CSR subject key and `receiptSigningPublicKey` are the same key, comparing **decoded** keys, not transmitted encodings; `422` / `4016 PROVISIONING_KEY_REUSE`, no certificate issued, token NOT consumed (§4.3)
-- [ ] Station certificates issued with the extended key usages `clientAuth` and `id-kp-osppBleStation` (§4.4)
+- [ ] Station certificates issued with the extended key usages `clientAuth` and `id-kp-osppBleStation`, the second **EXPERIMENTAL** with the BLE construction (§4.4)
 - [ ] At Partial-B authorize time, the forwarded device proof verified under the pass's `devicePublicKey`, over the forwarding station's identity ([`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks) check #4)
 - [ ] Retain **every** receipt-signing key ever bound to a station, with each key's validity window; never overwrite a superseded key in place (§4.3)
 - [ ] Select the verification key from a **server-authoritative anchor** (the OfflinePass's validity window, or the authorization record for the auth form) — never from a station-supplied timestamp, and never by trying every retained key (§4.3)

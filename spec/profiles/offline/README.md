@@ -56,7 +56,7 @@ This role assignment also aligns with mobile OS power management: iOS and Androi
 | [BLE Transport](ble-transport.md) | Hardware requirements, GATT service definition, characteristics, advertising, MTU negotiation, fragmentation — **EXPERIMENTAL** |
 | [BLE Handshake](ble-handshake.md) | Hello / Challenge / authentication sequence, BLE version negotiation, the station's signature with its certificate, ephemeral ECDH P-256 and session key derivation (HKDF-SHA256), the device proof, AEAD channel — **EXPERIMENTAL** |
 | [BLE Session](ble-session.md) | Service start, real-time monitoring, stop, receipt retrieval, connection drop handling — **EXPERIMENTAL** |
-| [OfflinePass](offline-pass.md) | Server-signed offline credential structure — the user's, valid at any station that accepts offline passes — its validation checks, revocation, lifecycle — **stable** |
+| [OfflinePass](offline-pass.md) | Server-signed offline credential structure — the user's, valid at any station that accepts offline passes — its validation checks, revocation, lifecycle — **stable**, except check #4's device proof and the estimated cost of checks #7 and #8, which read the BLE request: **EXPERIMENTAL** |
 | [Reconciliation](reconciliation.md) | Offline transaction sync, deduplication, receipt verification, the re-validation gate, fraud detection, wallet debit — **stable** |
 
 ## 5. Compliance Requirements

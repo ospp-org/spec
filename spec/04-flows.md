@@ -740,14 +740,13 @@ sequenceDiagram
     App->>SSP: Write FFF2 0x01 [MSG-028] AvailableServices
     SSP-->>App: Notify FFF2: {catalogVersion, bays: [{bayId, services, prices}]}
 
-    Note over App: User selects bay, service and duration
+    Note over App: User selects bay, service and duration, and confirms (biometric / PIN)
 
     App->>SSP: Write FFF3: Hello [MSG-029] (bleVersions)
-    SSP-->>App: Notify FFF4: Challenge [MSG-030] (certificate, availability, signature, connectivity: "Offline")
+    SSP-->>App: Notify FFF4: Challenge [MSG-030] (certificate, availability, catalog digest, signature, connectivity: "Offline")
 
-    Note over App: Verify certificate and signature, else abort with no pass sent
+    Note over App: Verify certificate, signature and catalog digest, else send no pass
     Note over App: Derive session key (ECDH + HKDF-SHA256)
-    Note over App: Biometric / PIN confirmation
 
     App->>SSP: Write FFF3: OfflineAuthRequest [MSG-031] (bay, service, duration, device proof)
     Note right of SSP: Station verifies the device proof and validates the OfflinePass (nine checks)
@@ -785,11 +784,11 @@ sequenceDiagram
 2. **App** establishes BLE connection
 3. **App** may read **StationInfo** [MSG-027] from FFF1 to show the customer which station it reached — unauthenticated, and relied on for nothing ([`ble-transport.md` §3](profiles/offline/ble-transport.md#3-station-info-fff1))
 4. **App** asks for **AvailableServices** [MSG-028] on FFF2 — displays the service catalog with prices
-5. User selects a bay, a service and a duration. Before the choice the app shows the pass's limits — per session, credits remaining, uses remaining — and a service above a limit is refused, never reduced ([`offline-pass.md` §2.1](profiles/offline/offline-pass.md#21-offlineallowance-object))
+5. User selects a bay, a service and a duration. Before the choice the app shows the pass's limits — per session, credits remaining, uses remaining — and a service above a limit is refused, never reduced ([`offline-pass.md` §2.1](profiles/offline/offline-pass.md#21-offlineallowance-object)). The user confirms the choice with biometrics or a PIN, before the Hello, so that the wait for the user runs outside the 10-second handshake budget
 6. **App** writes **HELLO** [MSG-029] to FFF3 with `bleVersions`, `appNonce`, `appVersion`, `appEphemeralPubKey` — nothing that identifies the device or its user
-7. **SSP** responds with **CHALLENGE** [MSG-030] on FFF4 with `bleVersion`, `stationNonce`, `stationEphemeralPubKey`, `stationCertificate`, `stationConnectivity: "Offline"`, `availableServices` and `stationSignature`
+7. **SSP** responds with **CHALLENGE** [MSG-030] on FFF4 with `bleVersion`, `stationNonce`, `stationEphemeralPubKey`, `stationCertificate`, `stationConnectivity: "Offline"`, `availableServices`, `catalogDigest` and `stationSignature`
 8. **App** verifies `stationCertificate` against a Station CA of its trust bundle and that CA's CRL, and `stationSignature` over the Hello and the Challenge ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)) — **aborts and sends no pass if either fails** — confirms that the catalog it chose from is the one the Challenge's `catalogDigest` names, and that the chosen service is available on the chosen bay in `availableServices`, then derives the session key via ECDH P-256 + HKDF-SHA256 (`ikm = ee ‖ appNonce ‖ stationNonce`; the LTK is not used). The post-Challenge AEAD channel is now established.
-9. **App** requests biometric or PIN confirmation from the user
+9. **App** holds the user's biometric/PIN confirmation from step 5, and asks for none inside the handshake
 10. **App** writes **OfflineAuthRequest** [MSG-031] to FFF3 (inside the AEAD channel) with the OfflinePass, counter, `bayId`, `serviceId`, `requestedDurationSeconds`, `sessionProof` and `deviceProof`
 11. **SSP** refuses, before it validates the pass, a `sessionProof` that does not match, a bay it does not have, a service its catalog does not bind to a program of that bay and a duration above its `MaxSessionDurationSeconds` ([`ble-handshake.md` §4.1](profiles/offline/ble-handshake.md#41-offlineauthrequest-full-offline--partial-b)), then validates the OfflinePass — the nine checks of [Chapter 06 §6.1.1](06-security.md#611-offlinepass-validation--10-checks): signature, expiry, epoch, device proof, limits, interval, counter — estimating the cost from the requested service and duration
 12. **SSP** sends **AuthResponse** [MSG-033] `Accepted` on FFF4 with session key confirmation
@@ -956,8 +955,8 @@ sequenceDiagram
     SSP-->>App: Notify FFF2: {catalogVersion, bays: [{bayId, services, prices}]}
     Note over App: User selects bay, service and duration, and confirms (biometric / PIN)
     App->>SSP: Write FFF3: Hello [MSG-029]
-    SSP-->>App: Notify FFF4: Challenge [MSG-030] (certificate, availability, signature, connectivity: "Online")
-    Note over App: Verify certificate and signature, else abort with no pass sent
+    SSP-->>App: Notify FFF4: Challenge [MSG-030] (certificate, availability, catalog digest, signature, connectivity: "Online")
+    Note over App: Verify certificate, signature and catalog digest, else send no pass
 
     App->>SSP: Write FFF3: OfflineAuthRequest [MSG-031] (bay, service, duration, device proof)
     Note right of SSP: Verify sessionProof and device proof, refuse an unknown bay or service or a duration above MaxSessionDurationSeconds
@@ -1104,7 +1103,7 @@ This separation ensures that a misconfigured or compromised station cannot overc
 
 **A2 — MQTT disconnect during session:** SSP continues the service (does NOT stop the service). On reconnection, SSP re-boots (BootNotification [MSG-001]) and reports the session outcome.
 
-**A3 — StopService timeout:** If Server sends StopService and SSP does not respond within 10 seconds, Server marks the session as `failed`. SSP will report the actual outcome on next reconnection, and that outcome trues the server's settlement down, never up (*A close the server makes on its own timer*, under [Settlement by Service Kind](#settlement-by-service-kind)). A Partial-B session is not marked `failed`: the server repeats the StopService REQUEST once the station has reconnected, and settles the session on the first of its end records, or closes it at the end of its authorized duration ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4 and 4a).
+**A3 — StopService timeout:** If Server sends StopService and SSP does not respond within 10 seconds, Server marks the session as `failed`. SSP will report the actual outcome on next reconnection, and that outcome trues the server's settlement down, never up (*A close the server makes without the station's end record*, under [Settlement by Service Kind](#settlement-by-service-kind)). A Partial-B session is not marked `failed`: the server repeats the StopService REQUEST once the station has reconnected, and settles the session on the first of its end records, or closes it at the end of its authorized duration ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4 and 4a).
 
 ### The operator-disable policy
 
@@ -1205,7 +1204,7 @@ Only the `Local`, `Inactivity`, `Fault` and `OperatorStopped` rows diverge; `Tim
 
 **A stop the server issues for an operator settles as `OperatorStopped`.** An operator can also end a session through the server rather than at the station — from an operator console, or by a station disable the server carries out — and the server then sends StopService [MSG-006]. That stop produces no SessionEnded ([Chapter 03 §5.4](03-messages.md#54-sessionended)) and StopService carries no reason, so only the server knows an operator asked for it. The server **MUST** settle such a session as it settles `OperatorStopped`, by service kind — pro-rata on delivered time for `UserDuration`, a full refund for `FixedDuration` and `MultiUnit` — and **MUST NOT** settle it as the customer's own stop. A stop the station refuses while the session is still running is not settled as `OperatorStopped`, because the operator did not end the service: the session settles as a delivered session of its kind — a `FixedDuration` or `MultiUnit` session keeps its full charge, and a `UserDuration` session is pro-rata on its delivered time. A `3006 SESSION_NOT_FOUND` refusal is not that case: the station holds no such session, which may already have ended ([`07-errors.md` §3.3](07-errors.md#33-session--bay-errors-3xxx)). The signed receipt of a BLE session the server stopped carries `endReason` `ServerStopped` ([Chapter 06 §6.2](06-security.md#62-transaction-receipt-signing--ecdsa-p-256)), and the server settles that session as this section settles the stop it issued.
 
-**A close the server makes on its own timer is provisional (Normative).** The server closes some sessions without the station's record of their end: an online session whose StopService went unconfirmed (*A3*, above) or whose station stayed away past `ConnectionLostGracePeriod` ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)), each billed on the time delivered as the server knows it, and a Partial-B session at the end of its authorized duration or at a real boot ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4a and 4b). Such a close is provisional. When an end record of the session arrives after it — a SessionEnded, a StopService RESPONSE, a signed receipt — the server **MUST** settle that record as this section settles it, by service kind, as if it had arrived first, and **MUST** refund the difference when that is below what the close charged. **A charge never rises:** a record that settles at the close's amount or above it changes nothing. A customer who stopped a `UserDuration` wash early, or whose wash a `Fault` ended, on a station that was offline at the close, therefore pays what the record shows was delivered — the pro-rata amount, or nothing for a `FixedDuration` `Fault`.
+**A close the server makes without the station's end record is provisional (Normative).** The server closes some sessions without the station's record of their end: an online session whose StopService went unconfirmed (*A3*, above), whose station stayed away past `ConnectionLostGracePeriod` ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)), whose bay its station reported `Available` when it reconnected ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) rule 3), or which a real boot ended ([`boot-notification.md` §5.2](profiles/core/boot-notification.md#52-bootreason--seven-boots-and-one-non-boot)), each billed on the time delivered as the server knows it, and a Partial-B session at the end of its authorized duration or at a real boot ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4a and 4b). Such a close is provisional. When an end record of the session arrives after it — a SessionEnded, a StopService RESPONSE, a signed receipt — the server **MUST** settle that record as this section settles it, by service kind, as if it had arrived first, and **MUST** refund the difference when that is below what the close charged. **A charge never rises:** a record that settles at the close's amount or above it changes nothing. A customer who stopped a `UserDuration` wash early, or whose wash a `Fault` ended, on a station that was offline at the close, therefore pays what the record shows was delivered — the pro-rata amount, or nothing for a `FixedDuration` `Fault`.
 
 **Delivery outcome (`MultiUnit`).** A `MultiUnit` session additionally records what physically happened — `Dispensed` on a clean `TimerExpired`, `Missed` on a `Fault`. When the physical outcome is genuinely ambiguous from control-plane signals alone (e.g. a mid-pulse voluntary stop) it is left unrecorded rather than guessed; settlement never depends on it (it stays derived from the kind). A jam the firmware does not itself detect runs the timer to expiry and is therefore billed as delivered; the corrective path is an operator-issued refund, not an automatic one.
 

@@ -38,7 +38,7 @@ before claiming conformance.
 > `TC-OFF-001`, `TC-OFF-002` and `TC-OFF-005` exercise that surface and are experimental artefacts with it.
 >
 > **Development, Standard and Extended are unaffected and remain claimable.** Their required cases —
-> `TC-CORE-*`, `TC-TX-*`, `TC-SEC-*` and `TC-DM-*` — run over MQTT and HTTPS, but for three Parts of
+> `TC-CORE-*`, `TC-TX-*`, `TC-SEC-*` and `TC-DM-*` — run over MQTT and HTTPS, but for two Parts of
 > one case that apply only where the station declares the Offline / BLE profile, and one step's half that
 > checks a BLE purpose. Three are worth naming:
 >

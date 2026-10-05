@@ -1,8 +1,8 @@
 # OSPP Known Issues
 
-**Date:** 2026-10-05
+**Date:** 2026-10-06
 **Specification-document version:** 0.44.0 (release tag `v0.44.0`)
-**Status:** no blocker open, **22** non-blocking issues open, **35** decisions recorded (one of
+**Status:** no blocker open, **24** non-blocking issues open, **35** decisions recorded (one of
 them reversing another), and one named defect **class** with **eighteen** instances, **four** still open. **The counts are
 re-derived from the headings on every release, never incremented** — the `0.43.0` revision read 27
 open against 26 `## OPEN` headings, which is how a summary drifts
@@ -17,11 +17,11 @@ the arcs since
 | Severity | Count | Where |
 |----------|------:|-------|
 | BLOCKER | 0 | The BLE blockers B-1 and B-3 closed on 2026-10-05, with the BLE wire revision (see CLOSED) |
-| OPEN | 22 | **[the deduplication horizon is to cover the app's upload window, and the app has none](#open--the-deduplication-horizon-is-to-cover-the-apps-upload-window-and-the-app-has-none)** · **[the OSPP BLE station purpose is an OID with a 126-bit arc, which some X.509 parsers refuse](#open--the-ospp-ble-station-purpose-is-an-oid-with-a-126-bit-arc-which-some-x509-parsers-refuse)** · **[nothing bounds the Challenge against the 255 fragments a message may span at a small MTU](#open--nothing-bounds-the-challenge-against-the-255-fragments-a-message-may-span-at-a-small-mtu)** · [the conformance harness is two directories and a placeholder](#open--the-conformance-harness-is-two-directories-and-a-zero-byte-placeholder-so-nobody-outside-this-project-can-run-conformance) · [three absences with no urgency](#open--three-absences-with-no-urgency-recorded-together-so-they-stop-being-rediscovered) · **[no gate range-checks a config value inside an example payload](#open--no-gate-range-checks-a-configuration-value-that-sits-inside-an-example-payload)** · **[the hardware storage levels do not hold the Category-1 floors](#open--the-hardware-storage-levels-do-not-hold-the-category-1-floors-they-are-said-to-size)** · **[`5019` has no carrier on either side](#open--5019-upload_failed-names-a-condition-that-cannot-exist-when-its-response-is-sent-and-its-real-carrier-has-no-code-field)** · [4xxx grouping](#open--4xxx-grouping-the-provisioning-codes-sit-under-a-payment-heading-and-the-sdks-derive-category-from-the-range) · [provisioning station-side conformance](#open--no-conformance-case-exercises-the-provisioning-success-path-from-the-stations-side) · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [no gate parses JSON out of a markdown fence](#open--no-gate-parses-json-out-of-a-markdown-fence-and-511-payloads-live-there) · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) · **[the anti-downgrade guard verifies one artefact and decides on another](#open--the-anti-downgrade-guard-verifies-one-artefact-and-decides-on-another-and-no-field-is-missing)** · **[the firmware signing certificate rotates annually and no message can deliver it](#open--the-firmware-signing-certificate-is-stated-to-rotate-annually-and-no-message-can-deliver-the-new-one)** · **[UpdateFirmware is both idempotent and `5107`](#open--updatefirmware-is-documented-as-idempotent-and-as-rejected-with-5107-for-the-same-second-command)** · **[no code describes a non-HTTPS firmware URL](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal)** · **[a station whose hardware changes has no route back into service](#open--a-station-whose-hardware-genuinely-changes-has-no-route-back-into-service-because-the-two-rules-that-guard-topology-point-at-each-other)** · **[`offeredVersion` vs `attemptedVersion`](#open--the-firmwaredowngradeattempt-securityevent-names-the-offered-version-with-two-different-member-names-and-nothing-can-tell)** |
+| OPEN | 24 | **[a Partial-B acceptance that reaches a station after it fell back lapses, and the fallback's wash meets the lapse](#open--a-partial-b-acceptance-that-reaches-a-station-after-it-fell-back-lapses-and-the-fallbacks-wash-meets-the-lapse)** · **[a real boot that a station reports after the server closed its Partial-B session changes nothing](#open--a-real-boot-that-a-station-reports-after-the-server-closed-its-partial-b-session-changes-nothing)** · **[the deduplication horizon is to cover the app's upload window, and the app has none](#open--the-deduplication-horizon-is-to-cover-the-apps-upload-window-and-the-app-has-none)** · **[the OSPP BLE station purpose is an OID with a 126-bit arc, which some X.509 parsers refuse](#open--the-ospp-ble-station-purpose-is-an-oid-with-a-126-bit-arc-which-some-x509-parsers-refuse)** · **[nothing bounds the Challenge against the 255 fragments a message may span at a small MTU](#open--nothing-bounds-the-challenge-against-the-255-fragments-a-message-may-span-at-a-small-mtu)** · [the conformance harness is two directories and a placeholder](#open--the-conformance-harness-is-two-directories-and-a-zero-byte-placeholder-so-nobody-outside-this-project-can-run-conformance) · [three absences with no urgency](#open--three-absences-with-no-urgency-recorded-together-so-they-stop-being-rediscovered) · **[no gate range-checks a config value inside an example payload](#open--no-gate-range-checks-a-configuration-value-that-sits-inside-an-example-payload)** · **[the hardware storage levels do not hold the Category-1 floors](#open--the-hardware-storage-levels-do-not-hold-the-category-1-floors-they-are-said-to-size)** · **[`5019` has no carrier on either side](#open--5019-upload_failed-names-a-condition-that-cannot-exist-when-its-response-is-sent-and-its-real-carrier-has-no-code-field)** · [4xxx grouping](#open--4xxx-grouping-the-provisioning-codes-sit-under-a-payment-heading-and-the-sdks-derive-category-from-the-range) · [provisioning station-side conformance](#open--no-conformance-case-exercises-the-provisioning-success-path-from-the-stations-side) · **[`retryInterval` and `BootRetryInterval` are one quantity with two ranges](#open--retryinterval-and-bootretryinterval-are-one-quantity-with-two-legal-ranges-and-the-schema-states-only-a-floor)** · [asymmetric evidence on the online money path](#open--the-online-money-path-carries-only-a-symmetric-mac-and-a-symmetric-mac-proves-nothing-to-a-third-party) · [no gate parses JSON out of a markdown fence](#open--no-gate-parses-json-out-of-a-markdown-fence-and-511-payloads-live-there) · **[170 numbered rules, and nothing says whether the numbering binds](#open--170-numbered-processing-rules-and-nothing-says-whether-the-numbering-binds)** · **[103 of 127 restatements cite no source](#open--a-restatement-that-does-not-cite-its-source-cannot-be-checked-against-it-and-103-of-127-restatements-cite-nothing)** · [a refusal for want of a trust anchor has no code that fits](#open--a-station-that-refuses-for-want-of-a-trust-anchor-has-no-code-that-fits-and-narrowing-1003-made-that-visible) · **[the anti-downgrade guard verifies one artefact and decides on another](#open--the-anti-downgrade-guard-verifies-one-artefact-and-decides-on-another-and-no-field-is-missing)** · **[the firmware signing certificate rotates annually and no message can deliver it](#open--the-firmware-signing-certificate-is-stated-to-rotate-annually-and-no-message-can-deliver-the-new-one)** · **[UpdateFirmware is both idempotent and `5107`](#open--updatefirmware-is-documented-as-idempotent-and-as-rejected-with-5107-for-the-same-second-command)** · **[no code describes a non-HTTPS firmware URL](#open--a-firmware-url-that-is-not-https-is-refused-by-the-schema-and-no-error-code-in-the-registry-describes-that-refusal)** · **[a station whose hardware changes has no route back into service](#open--a-station-whose-hardware-genuinely-changes-has-no-route-back-into-service-because-the-two-rules-that-guard-topology-point-at-each-other)** · **[`offeredVersion` vs `attemptedVersion`](#open--the-firmwaredowngradeattempt-securityevent-names-the-offered-version-with-two-different-member-names-and-nothing-can-tell)** |
 | CLOSED | 12 | **[the BLE surface was not implementable as written](#closed--the-ble-surface-was-not-implementable-as-written-two-defects)** — closed 2026-10-05 by the BLE wire revision: one fragmentation protocol, one BLE error shape, and the device proof check #4 had lacked; its subsection **[B-2 — a station-scoped OfflinePass](#b-2--a-station-scoped-offlinepass-is-unrepresentable-in-the-authoritative-schema)** closed 2026-09-29 by withdrawing the demand · **[`bayCount` on BLE StationInfo](#closed--ble-stationinfo-carried-baycount-which-could-not-name-a-bay-and-agreed-with-nothing)** — closed 2026-10-05, deleted with nothing in its place · **[the signing toolchain canonicalized with the SDK](#closed-0440--the-signing-toolchain-canonicalizes-with-the-sdk-so-it-verifies-the-sdk-against-itself)** — closed in 0.44.0; the six tools canonicalize with `tools/canonical-form.mjs` and 0 committed bytes moved · **[nothing checked a per-message `Message Expiry` against its category](#closed-0440--nothing-checks-a-per-message-message-expiry-against-the-category-it-names-and-a-repair-landed-on-the-wrong-message-because-of-it)** — closed in 0.44.0 by `tools/check-message-expiry.py` · [Device Management Required vs RECOMMENDED](#closed-0160--the-device-management-profile-was-required-in-chapter-08-and-recommended-not-mandatory-in-its-own-readme) — closed in 0.16.0 in favour of the capability · [the bay FSM specified twice](#closed--the-bay-fsm-is-specified-twice-the-two-copies-disagree-and-each-sdk-implemented-a-different-one) — closed by the bay-FSM arc · [SessionEnded belonged to no profile](#closed-0130--sessionended-belonged-to-no-profile-and-the-note-saying-so-was-parked-where-nothing-reads-it) — closed in 0.13.0; both retained with their resolutions |
 | **CLASS** | 18 | **[an obligation no field, no code and no actor can carry](#class--an-obligation-no-field-no-code-and-no-actor-can-carry)** — an index of the eighteen instances; **4** still open, none a blocker. On 2026-09-29 instance 1, the station-scoped pass, closed by withdrawing its demand, and instance 3, dual signing across a single-valued key, already closed by saying so, closed by construction: the server key set, and the `keyId` every pass now carries. `0.35.0` closed instance 18 and recorded 17 with it — the same defect on two of the fourteen Server → Station actions, and 18 closed **without** the contract relaxation it appeared to need. `0.32.0` closed instances 15 and 16, the same defect on the two halves of one session, and supplied the **fourth remedy** the class had not recorded: withdraw the demand. The fourth sub-shape, named at 0.30.0 — a closed enumeration in which no legal value is true — still holds **three** instances, all closed at 0.31.0 |
 | DECIDED | 35 | **[a Partial-B start is reported by a session-bound message](#decided--a-partial-b-start-is-reported-by-a-session-bound-message-and-an-authorization-not-used-to-start-within-its-window-lapses)** — decision 4 of 2026-10-05: SessionStarted [MSG-043]; 30 s at the station, 40 s at the server, else a full refund · **[a reboot during a Partial-B session follows the online boot rules](#decided--a-station-reboot-during-a-partial-b-session-follows-the-online-boot-rules-and-a-real-boot-settles-it-as-it-settles-an-online-session)** — decision 3 of 2026-10-05: `Reconnect` keeps it, a real boot settles it pro-rata, provisionally · **[Partial-A check #9 judges the signed start](#decided--partial-a-check-9-judges-the-signed-start-an-authorization-is-used-to-start-within-its-validity)** — decision 9 of 2026-10-05: an authorization is used to start within its validity, and the wash then runs its duration · **[the catalog FFF2 shows is bound into the handshake by its digest](#decided--the-catalog-fff2-shows-the-customer-is-bound-into-the-handshake-by-its-digest)** — decision 8 of 2026-10-05: the Challenge signs `catalogDigest`, and the app sends no credential on another · **[the trust bundle holds a set of Station CAs](#decided--the-trust-bundle-holds-a-set-of-station-cas-so-a-rotation-keeps-the-apps-gate-open-for-the-stations-on-either-ca)** — decision 5 of 2026-10-05: a new CA distributed before it issues, an old one kept until what it issued has expired · **[the trust bundle carries no server key set](#decided--the-trust-bundle-carries-no-server-key-set-and-the-publish-before-window-loses-the-term-that-existed-for-it)** — decision 2 of 2026-10-05: nothing on the phone read it, and the publish-before window keeps only the stations' term · **[the server judges offline times through the clock offset it measures at reconnection](#decided--the-server-judges-offline-times-through-the-clock-offset-it-measures-at-reconnection-and-never-rewrites-them)** — option 1 of the entry's own list, in the form of `reconciliation.md` §6.8: `Synchronized` receipts judged through the offset, `Unsynchronized` ones as signed and flagged, signed times never rewritten · **[`FraudDetected` is a server-originated record, and a Block-band transaction is settled and flagged](#decided--frauddetected-is-a-server-originated-record-and-a-block-band-transaction-is-settled-and-flagged)** — no station emits it, the operator is alerted in the Alert and Block bands, and the fraud model's contradictions were fixed with it · **[`httpStatus()` and `category()` stay SDK extensions](#decided-0440--httpstatus-and-category-model-properties-the-spec-declines-to-give-a-code-and-the-two-sdks-invented-different-answers)** — no new status is named; the SDK pair settles `2001` at `422` and aligns the PHP category labels to Appendix A · **[`errorText` is prose on two messages, the documented exception](#decided-0440--two-messages-carry-errordescription-semantics-under-the-name-errortext)** — `07-errors.md` §1.3; no schema moves · **[`2008` was listed under two statuses and the licence permitting it could not be broken](#decided-0320--2008-was-listed-under-two-statuses-and-the-licence-that-permitted-it-could-not-be-broken)** — §4.4's truthfulness obligation un-scoped and the multi-status licence given a checkable condition; the row fell out as a consequence; prose only, zero schema bytes · **[a start that energised and a boot that cannot say what happened](#decided-0320--a-start-that-energised-a-boot-that-cannot-say-what-happened-and-the-two-remedies-that-were-refused)** — the third arm of the §3.5 partition, reported through two messages that already exist; a new `SessionEnded.reason` and a queryable session state both refused with their costs · **[§10.1 required receivers to ignore unknown fields, and every schema forbids it](#decided-0290--02-transportmd-101-required-receivers-to-ignore-unknown-fields-and-every-schema-in-this-repository-forbids-it)** — every object schema is closed (75 of 75 at this revision), and three decisions already taken (§2.1's known gap, exact-match negotiation, the `0.26.0` triple refusal) rest on receivers *not* ignoring; prose only, zero schema bytes · **[the broker MUST check revocation, the list is bounded twice, and a stale list buys one alerted hour](#decided-0270--the-broker-must-check-revocation-the-list-is-bounded-twice-and-a-list-that-goes-stale-buys-one-alerted-hour-before-the-door-shuts)** — axis 1a + 2a&2b + 3c; verified by declaration because no message can carry it, and the two bounds are broker settings deliberately outside the Chapter 08 registry · **[`allowedServiceTypes` withdrawn in two steps](#decided-0250--offlineallowanceallowedservicetypes-is-withdrawn-in-two-steps-because-nobody-ever-asked-for-the-constraint)** — step two, the schema removal, still pending · **[ownership transfer and decommissioning stay undefined, and §1.3 now says so](#decided-0250--station-ownership-transfer-and-decommissioning-stay-undefined-and-the-specification-now-says-so)** · **[the server is the billing authority on the offline path too](#decided-0240--the-server-is-the-billing-authority-on-the-offline-path-too-and-81-was-the-outlier)** — superseded in part: settlement is now capped per wash, and a debit that leaves the wallet below zero leaves its transaction pending · **[`OfflinePassMaxAge` kept, wired into check #2, defaulted to inert](#decided-0240--offlinepassmaxage-is-kept-wired-into-check-2-and-defaulted-to-inert)** — superseded in part: the pass lifetime is the platform's, 3 days by default and never more than 10 · **[`DiagnosticsUploadUrl` withdrawn — a key nothing reads](#decided-0230--diagnosticsuploadurl-had-no-reachable-consumer-and-is-withdrawn-rather-than-defined)** · **[UpdateFirmware to a `Pending` station is `Accepted`, notifications suppressed](#decided-0210--updatefirmware-to-a-pending-station-was-refused-on-a-premise-the-same-chapter-contradicts-and-with-a-response-no-error-code-could-carry)** — **reverses the `0.20.0` row below**: the `Rejected` it mandated needed an `errorCode` no registry entry supplies, and §6.6 already reported the outcome on BootNotification; the discriminator's second clause survives, its reading did not · **[nine gates in `tools/` were reachable from no job](#decided-0201--two-validation-scripts-reported-100-failure-and-no-workflow-ran-them-the-workflows-now-call-the-scripts-and-a-census-guards-the-class)** — the workflows now call the scripts, and `check-tool-callers.py` guards the class · **[the firmware gate is on the INSTALL, not the download](#decided-0200--the-active-session-gate-named-three-stages-it-gates-the-install-and-scheduledat-defers-the-install-with-it)** — and `scheduledAt` defers the install with it; the stall rule scoped rather than `Verified` given a wire value · **[~~UpdateFirmware to a `Pending` station is `Rejected`~~ — REVERSED in `0.21.0`](#decided-0200--updatefirmware-had-no-row-in-the-pending-command-table-it-is-rejected-and-the-discriminator-gained-the-clause-that-says-why)** — kept as the record; the row it added was right, the verdict in it was not · **[a restricted station may renew its own certificate](#decided-0190--one-table-gave-the-same-act-opposite-verdicts-and-a-certificate-renewal-could-not-conclude-in-the-state-the-spec-keeps-open-for-repairs)** — the exception's *reason* restated to cover both members rather than a second name added to a list · [a wire mechanism to shorten the previous-key grace period](#decided-0170--a-wire-mechanism-to-shorten-the-previous-key-grace-period-was-evaluated-for-compromise-response-and-rejected) — evaluated for compromise response in 0.17.0 and rejected, recorded with its cost and with what would reopen it; superseded, since a station now holds a key set and keeps no grace period · **[`1003` vs `1004`: specificity wins](#decided-0180--every-cause-of-1004-was-an-instance-of-1003s-second-cause-and-the-conformance-case-exercising-both-accepted-either)** — the missing *Distinct from* convention treated as the cause, and the conformance case repaired with it · **[the certificate urgency scale binds once](#decided-0180--the-certificate-urgency-scale-was-stated-twice-and-the-expired-row-was-the-one-that-differed)** — `06-security.md` §4.7.3 is normative, the profile refers, and the unbounded reconnect is dropped |
-| **Total open** | **23** | the 22 `## OPEN` headings and the one CLASS, which still has open instances — the same sum that gave the previous revision's 23 (2 open blocker subsections + 20 + 1) |
+| **Total open** | **25** | the 24 `## OPEN` headings and the one CLASS, which still has open instances — the same sum that gave the previous revision's 23 (2 open blocker subsections + 20 + 1) |
 
 **No blocker is open.** The two BLE blockers that made the BLE artefacts ship as EXPERIMENTAL in
 0.44 are closed; the artefacts stay EXPERIMENTAL until their cryptographic construction has passed
@@ -252,8 +252,8 @@ answer to all three schemas plus the profile prose that mirrors them
 lines that name `serverKeys` outside the CHANGELOG — the definition (2 in the schema, 1 in the
 app-contract table), the history sentence of app-contract §3.4 rule 3, the two example payloads, the
 delivery table of [`06-security.md` §6.7](spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)
-and this entry's 5 — none reads it, and none of the 88 lines in 31 files that name the trust bundle reads
-the server key set it carried: no chapter, profile, flow, conformance case, vector, example or tool
+and this entry's 5 — none reads it, and none of the 81 lines in 29 files outside the CHANGELOG and this
+file that name the trust bundle (`trust bundle` or `trustBundle`) reads the server key set it carried: no chapter, profile, flow, conformance case, vector, example or tool
 verifies anything under it on the phone. Neither SDK names it, and neither does the reference server.
 The key set signs the pass and the ServerSignedAuth, which the station and the server verify.
 
@@ -458,7 +458,7 @@ project's owner can request.
 **Raised 2026-10-05, by the review of the BLE wire revision.** A message spans at most 255 fragments of
 `ATT_MTU − 6` octets ([`ble-transport.md` §11](spec/profiles/offline/ble-transport.md#11-fragmentation-protocol)),
 4,335 octets at the minimum `ATT_MTU` of 23, at which a station **MUST** still operate (§10).
-Measured on the conformance vectors: a Challenge with an empty `availableServices` is 1,092 octets in
+Measured on the conformance vectors at `d526f1d`: a Challenge with an empty `availableServices` is 1,092 octets in
 compact JSON, most of it the station's certificate, and each entry adds about 70 — one per bay and
 service ([`ble-handshake.md` §3](spec/profiles/offline/ble-handshake.md#3-step-2-challenge)). At the
 minimum MTU a station with more than about 46 bay–service pairs cannot send its Challenge at all, and
@@ -480,24 +480,31 @@ time on the slowest connection the specification permits and that the Challenge 
 transport and time budget. The proof cannot be made:
 
 - **The largest catalog.** A catalog is bounded only by the 64,512-octet envelope cap
-  ([`02-transport.md` §10.2.1](spec/02-transport.md#1021-the-envelope-cap)). At the field bounds of
+  ([`02-transport.md` §10.2.1](spec/02-transport.md#1021-the-envelope-cap)), so how many services it holds
+  depends on how large each is. With entries at the field bounds of
   [`service-item.schema.json`](schemas/common/service-item.schema.json) — 64-character identifiers,
-  128-character names, 64 bindings — it holds 24 services bound to all 64 bays: 1,536 bay–service pairs
-  (21 services, 1,344 pairs, with 4-octet characters in the names). With one-character names it holds
-  27 services on all 64 bays, 1,728 pairs, or 429 services on one bay.
+  128-character names, two per-minute prices, 64 bindings — in an envelope whose own members are at their
+  longest, it holds 24 services bound to all 64 bays: 1,536 bay–service pairs (21 services, 1,344 pairs,
+  with 4-octet characters in the names; 19, 1,216 pairs, with escaped control characters).
+  [`update-service-catalog.md` §6](spec/profiles/device-management/update-service-catalog.md#6-processing-rules)
+  sizes its worst-case entry at 2,762 octets, 22 to an envelope; a shorter envelope, or entries without
+  their optional members, holds a service or so more. With one-character names it holds 27 services on all
+  64 bays, 1,728 pairs, or 429 services on one bay.
 - **Its FFF2 value.** As [`ble-transport.md` §4](spec/profiles/offline/ble-transport.md#4-available-services-fff2)
-  defines it, each bay repeating its services' names and prices: 470,645 to 516,725 octets with ASCII
-  names, up to 1,188,725 with escaped control characters. With each service listed once and each bay
-  naming its services' indices: 18,002 to 28,262 octets.
+  defines it, each bay repeating its services' names and prices: 470,645 octets or more for those 24
+  services with ASCII names, and 1,152,245 or more for those 19 with escaped control characters. With each
+  service listed once and each bay naming its services' indices: 18,002 to 28,262 octets.
 - **What one message can carry.** At most 255 fragments of `ATT_MTU − 6` octets
   ([`ble-transport.md` §11](spec/profiles/offline/ble-transport.md#11-fragmentation-protocol)): 4,335
-  octets at the `ATT_MTU` of 23 a station must still serve (§10), 45,645 at 185, 61,455 at 247, 130,305
-  at 517, the largest. The FFF2 value as defined today fits at none of them.
+  octets at the `ATT_MTU` of 23 a station must still serve (§10), 45,645 at 185, 61,455 at 247 and 130,305
+  at 517. The FFF2 value as defined today fits at none of them.
 - **How long it takes.** The specification bounds no connection interval, no number of link-layer PDUs
   per connection event and no link-layer data length, so the slowest connection it permits is the slowest
   the Core Specification allows: a 4-second interval, one 27-octet PDU per event. There, today's
-  1,092-octet Challenge takes 65 fragments and 260 seconds, the bitmap Challenge the decision describes
-  at its largest (2,925 octets, a 2,048-character certificate) 173 fragments and 692 seconds, and the
+  1,155-octet Challenge, which carries `catalogDigest`, takes 68 fragments and 272 seconds, the bitmap
+  Challenge the decision describes at its largest (2,925 octets: a 2,048-character certificate,
+  `catalogDigest`, and each bay's bitmap as a Base64 string in a JSON array, an encoding the decision does
+  not fix) 173 fragments and 692 seconds, and the
   catalog listed once 1,663 fragments — more than a message can carry — and 6,652 seconds, against the
   5 seconds §11 rule 4 allows a message and the 10 seconds of the handshake. At the fastest interval,
   7.5 milliseconds, with one PDU per event and no Data Length Extension, the bitmap Challenge takes
@@ -508,8 +515,10 @@ The decision needed: (a) the connection an OSPP BLE session runs on — a longes
 station requests and accepts, a floor on `ATT_MTU`, the Data Length Extension — without which no transfer
 time can be proven, for today's Challenge either; and (b) a bounded FFF2: each service listed once and a
 bound on the catalog a station serves over BLE, or the catalog carried in several messages, each within
-§11's cap, with a time bound of its own. The arithmetic is reproducible from the schemas' bounds and the
-conformance vectors; the method reproduces the 1,092 octets this entry recorded for today's Challenge.
+§11's cap, with a time bound of its own — either of them a change to FFF2's form, which every BLE version
+keeps ([`VERSIONING.md`](VERSIONING.md#ble-protocol-version)). The arithmetic is reproducible from the
+schemas' bounds and the conformance vectors; the method reproduces the 1,092 octets this entry recorded
+for the Challenge at `d526f1d`.
 
 ---
 
@@ -521,7 +530,7 @@ starts the session no later than the signed `expiresAt`, and refuses a StartServ
 with `3006 SESSION_NOT_FOUND` ([`ble-session.md` §1](spec/profiles/offline/ble-session.md#1-starting-a-service)
 rule 2a); reconcile-time check #9 compares `registry.expiresAt` with the signed `startedAt`
 ([`reconciliation.md` §6.7](spec/profiles/offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4)).
-Flow 05's wash, started 2.7 seconds after issue and run to its timer, now passes. **What follows is the
+Flow 05's authorization, run to its timer from a start 2.7 seconds after issue, would now pass. **What follows is the
 record, as raised.**
 
 **Raised 2026-10-05, by the review of the BLE wire revision; the rule predates it.** A ServerSignedAuth's
@@ -606,6 +615,60 @@ receipts ([`06-security.md` §8.2](spec/06-security.md#82-data-retention)).
 **The decision needed.** The app's upload window — a time after its wash beyond which the app no longer uploads
 a receipt — from which the horizon is the maximum pass lifetime plus that window; or the horizon tied to the
 two-year retention of 06 §8.2, which covers every upload the server can still verify.
+
+---
+
+## OPEN — a Partial-B acceptance that reaches a station after it fell back lapses, and the fallback's wash meets the lapse
+
+**Raised 2026-10-06, by the review of the BLE follow-up.** A station whose AuthorizeOfflinePass goes unanswered
+within the handshake budget **MAY** fall back to validating the pass itself ([`authorize-offline-pass.md` §6](spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 6).
+When the server accepted the request all the same, its acceptance meets two rules:
+
+- rule 4c: an authorization whose SessionStarted has not arrived 40 seconds after the server accepted it lapses,
+  refunded in full, and *"a SessionStarted, or any other record of the session, that arrives after the lapse
+  changes nothing"*. A station that fell back sends no SessionStarted, so every such authorization lapses;
+- [`reconciliation.md` §8.2](spec/profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)
+  settles *"a transaction a station validated itself after its AuthorizeOfflinePass request timed out, which the
+  server had nonetheless accepted"* as a refund-only true-up against the authorize-time debit, and §3 rule 5
+  takes its receipt — the authorization's `(offlinePassId, counter)`, signed by the station that forwarded it —
+  for the session's receipt.
+
+A fallback wash longer than about 40 seconds reports its end after the lapse: by rule 4c its record changes
+nothing and the wash is not charged; by §8.2 it trues against a debit the lapse already refunded, and refunds
+again. A record that arrives before the lapse settles the authorization through §8.2, and rule 4c still
+lapses it at 40 seconds and refunds it in full. Neither rule says which governs, and
+[TC-OFF-005](conformance/test-cases/offline/TC-OFF-005.md) Part F exercises only a response that never arrives.
+
+**The decision needed.** (a) The lapse is final for every record of the authorization, the fallback's included:
+a fallback wash whose record arrives after the lapse is not charged, and §8.2's clause covers only a record that
+arrives before it, which settles the authorization so that it does not lapse. Or (b) a lapsed authorization
+spends no `(offlinePassId, passCounter)`: a pass-form record that carries its pair after the lapse — the
+fallback's, or the receipt of a Partial-B wash whose SessionStarted came late — settles as a transaction its
+station validated itself, under §8.1 with no prior debit, so the wash is charged once; rule 4c's *"changes
+nothing"* then covers the session's SessionStarted, SessionEnded and StopService RESPONSE, and an authorization
+a record settled within its 40 seconds does not lapse.
+
+---
+
+## OPEN — a real boot that a station reports after the server closed its Partial-B session changes nothing
+
+**Raised 2026-10-06, by the review of the BLE follow-up.** A station reboot during a Partial-B session follows the
+online boot rules: a `bootReason` that names a boot ends the session, which the server settles as an online session
+a boot ended — pro-rata on the time delivered, from the arrival of its SessionStarted to the station's
+disconnection — provisionally ([`authorize-offline-pass.md` §6](spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4a). That holds for a boot the station
+reports while the session is open. A station that lost its connection during the session and reconnects only
+after the end of its authorized duration finds it closed already, as one whose timer expired — a full charge
+(rule 4a) — and a close is trued only by an end record that arrives after it (rule 4b;
+[`04-flows.md` §6](spec/04-flows.md#settlement-by-service-kind)). When the boot cut the wash and the station could
+not resume it — its record lost ([`05-state-machines.md` §3.5](spec/05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience)
+rule 3) or its outcome indeterminate (rule 6) — no end record comes, and the full charge stands, where the same
+boot reported a minute earlier would have settled pro-rata. The BootNotification carries `uptimeSeconds`, from
+which the server can date the boot.
+
+**The decision needed.** (a) A boot reported after the close changes nothing, as now: the close is trued only by an
+end record. Or (b) a boot the server dates, from `uptimeSeconds`, before the end of the session's authorized
+duration trues the close down to the figure of a boot — pro-rata from the arrival of the SessionStarted to the
+station's disconnection — and never up.
 
 ---
 
