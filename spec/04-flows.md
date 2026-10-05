@@ -982,7 +982,7 @@ sequenceDiagram
 9. **SSP** relays result as **AuthResponse** [MSG-033] `Accepted` to App via BLE
 10. **App** writes **StartServiceRequest** [MSG-034] → SSP starts service
 11. Service runs with **ServiceStatus** [MSG-038] updates, then stop/receipt
-12. Since the station is online, the session is tracked in real time by the Server and settled when the station reports its end — by service kind, never above the `creditsAuthorized` of the authorization, as a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)). If the station loses its connection, the loss does not end the session: the wash continues, and the station sends the session's end when it reconnects — its SessionEnded under the server's `sessionId`, or, when the server stopped the session, the StopService RESPONSE it sends again when the server repeats the REQUEST. The session settles once, on the first of its end records to arrive — that SessionEnded, the StopService RESPONSE when the server stopped the session, or the session's signed receipt, which the app uploads when it has a network — and the other is a duplicate ([`reconciliation.md` §3](profiles/offline/reconciliation.md#3-deduplication-offlinetxid)); either way the server applies no second debit, only a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback))
+12. Since the station is online, the session is tracked in real time by the Server and settled when the station reports its end — by service kind, never above the `creditsAuthorized` of the authorization, as a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)). If the station loses its connection, the loss does not end the session: the wash continues, and the station sends the session's end when it reconnects — its SessionEnded under the server's `sessionId`, or, when the server stopped the session, the StopService RESPONSE it sends again when the server repeats the REQUEST. The session settles once, on the first of its end records to arrive — that SessionEnded, the StopService RESPONSE when the server stopped the session, or the session's signed receipt, which the app uploads when it has a network — and the other is a duplicate ([`reconciliation.md` §3](profiles/offline/reconciliation.md#3-deduplication-offlinetxid)). If none has arrived by the end of the session's authorized duration, the server closes the session then without waiting for the station — as a session whose timer expired, or refunded in full when the wash never started — and every end record settles on the authorization's `creditsAuthorized` and `durationSeconds` ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4a and 4b). Either way the server applies no second debit, only a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback))
 
 ### Error Paths
 
@@ -1085,7 +1085,7 @@ This separation ensures that a misconfigured or compromised station cannot overc
 
 **A2 — MQTT disconnect during session:** SSP continues the service (does NOT stop the service). On reconnection, SSP re-boots (BootNotification [MSG-001]) and reports the session outcome.
 
-**A3 — StopService timeout:** If Server sends StopService and SSP does not respond within 10 seconds, Server marks the session as `failed`. SSP will report the actual outcome on next reconnection. A Partial-B session is not marked `failed`: the server repeats the StopService REQUEST once the station has reconnected, and settles the session on the first of its end records ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)).
+**A3 — StopService timeout:** If Server sends StopService and SSP does not respond within 10 seconds, Server marks the session as `failed`. SSP will report the actual outcome on next reconnection. A Partial-B session is not marked `failed`: the server repeats the StopService REQUEST once the station has reconnected, and settles the session on the first of its end records, or closes it at the end of its authorized duration ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4 and 4a).
 
 ### The operator-disable policy
 
@@ -1137,7 +1137,7 @@ of by what was delivered.
 | All retry attempts fail | Full | 100% |
 | ACK_TIMEOUT (no response) | Full | 100% |
 | Hardware error during active (SessionEnded `reason=Fault`) | Partial (pro-rated) | Based on time used |
-| Station offline during active | Partial (pro-rated) | Based on time used — not a Partial-B session, which settles on the first of its end records ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) |
+| Station offline during active | Partial (pro-rated) | Based on time used — not a Partial-B session, which settles on the first of its end records, or is closed at the end of its authorized duration ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) |
 | User manual stop at station (SessionEnded `reason=Local`) | Partial (pro-rated) | Based on time used, recomputed by the server (the event's `creditsCharged` is advisory) |
 | Offline credit exhausted mid-session (SessionEnded `reason=LocalOutOfCredit`) | Full | 100% (no charge — `creditsCharged` MUST be 0) |
 | Offline pass revoked mid-session (SessionEnded `reason=Deauthorized`) | Full | 100% (no charge — session not billable; `creditsCharged` MUST be 0) |
@@ -1799,7 +1799,7 @@ Consolidated timeout values across all flows:
 | Reserved → 3DS (web) | 3 min | CancelReservation |
 | Reserved → start (mobile) | 30s | CancelReservation |
 | StartService (pending_ack) | 10s | Refund, session → failed |
-| StopService (stopping) | 10s | Session → failed; a Partial-B session stays open (§6) |
+| StopService (stopping) | 10s | Session → failed; a Partial-B session stays open until the first of its end records, and no longer than the end of its authorized duration (§6) |
 | Active session (max) | durationSeconds | Station auto-stops |
 | Session token (web) | 10 min | Session expired |
 | BayLock fallback | 3 min | Auto-released |

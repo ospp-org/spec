@@ -15,12 +15,12 @@ sequenceDiagram
         Note over Station,Server: ⚠️ Connection Lost
         Station--xBroker: TCP connection drops
         Broker->>Server: ConnectionLost EVENT (LWT) [MSG-011]
-        Server->>Server: Mark station offline<br/>Start recovery timer (300s, not Partial B)
+        Server->>Server: Mark station offline<br/>Start recovery timer (300s; a Partial-B session's<br/>is its authorized duration)
 
         Note over Server: Server-side handling
         Server->>Server: Mark all bays as Unknown
         Server->>Server: Alert operators (push/email)
-        Server->>Server: Suspend active sessions<br/>(grace period running, not Partial B)
+        Server->>Server: Suspend active sessions<br/>(grace period running; a Partial-B session<br/>runs to its authorized duration)
     end
 
     %% Station buffers messages while offline

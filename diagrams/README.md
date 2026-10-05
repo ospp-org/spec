@@ -114,7 +114,8 @@ stateDiagram-v2
 
     Active --> Stopping : StopService requested
     Active --> Completed : SessionEnded (Local, LocalOutOfCredit)
-    Active --> Failed : Hardware fault / connection lost (not Partial B) / Deauthorized
+    Active --> Failed : Hardware fault / connection lost (not Partial B) / Deauthorized / Partial B never started
+    Active --> Completed : Partial B authorized duration ended with no end record
 
     Stopping --> Completed : Station confirms stop
     Stopping --> Failed : Stop timeout (10s, not Partial B)
