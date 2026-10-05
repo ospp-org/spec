@@ -15,12 +15,12 @@ sequenceDiagram
         Note over Station,Server: ⚠️ Connection Lost
         Station--xBroker: TCP connection drops
         Broker->>Server: ConnectionLost EVENT (LWT) [MSG-011]
-        Server->>Server: Mark station offline<br/>Start recovery timer (300s)
+        Server->>Server: Mark station offline<br/>Start recovery timer (300s, not Partial B)
 
         Note over Server: Server-side handling
         Server->>Server: Mark all bays as Unknown
         Server->>Server: Alert operators (push/email)
-        Server->>Server: Suspend active sessions<br/>(grace period running)
+        Server->>Server: Suspend active sessions<br/>(grace period running, not Partial B)
     end
 
     %% Station buffers messages while offline
@@ -29,7 +29,7 @@ sequenceDiagram
         Station->>Station: Buffer MeterValues to persistent storage
         Station->>Station: Buffer StatusNotifications
         Station->>Station: Complete active sessions (if possible)
-        Station->>Station: Buffer TransactionEvents
+        Station->>Station: Buffer SessionEnded and TransactionEvents
         Note over Station: Exponential backoff reconnection attempts<br/>1s → 2s → 4s → 8s → 16s → 30s cap
     end
 

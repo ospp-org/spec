@@ -201,7 +201,7 @@ The full lifecycle of an OfflinePass is as follows:
    |---|---|
    | Application start | The wallet may have moved through any other channel while the app was closed — a web payment, a second device, an operator adjustment. |
    | Each consumption of the pass | The allowance the previous pass carried is now partly spent; re-issuing is what keeps the remaining figure true rather than letting the station's local counters be the only record. |
-   | Each credit to the wallet — a top-up, a refund | The balance, and with it the ceiling, has risen, and a credit that makes the balance positive is what allows a pass at all ([`reconciliation.md` §8.1](reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)). Without re-issuance the credit is invisible offline until the pass expires. |
+   | Each credit to the wallet the app learns of — a top-up it made, a refund it is told of | The balance, and with it the ceiling, has risen, and a credit that makes the balance positive is what allows a pass at all ([`reconciliation.md` §8.1](reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)). Without re-issuance the credit is invisible offline until the pass expires. |
 
    The app **SHOULD** treat a failed re-issuance as non-fatal and keep the pass it holds: the
    existing pass is still valid within its own bounds, and refusing to use it would deny service
@@ -236,7 +236,7 @@ The full lifecycle of an OfflinePass is as follows:
    > This is stated because the two sites read as independent obligations and were implemented as
    > independent counters — measured, a `maxUses: 5` pass burns two uses per transaction and sums
    > an estimate with an actual into one `maxTotalCredits` total.
-6. **Expiry:** The pass becomes invalid after `expiresAt`, and at a given station once it is older than that station's `OfflinePassMaxAge` (§4 check #2 applies both bounds). These are two **independent** bounds: `expiresAt` is the platform lifetime, signed into the pass at issue, while `OfflinePassMaxAge` is the station's own stricter limit, which its operator can lower at any time. Neither caps the other. The app **SHOULD** request a new pass before the current one expires, and re-issuing it at every app start, use and top-up makes that the normal case rather than the exception.
+6. **Expiry:** The pass becomes invalid after `expiresAt`, and at a given station once it is older than that station's `OfflinePassMaxAge` (§4 check #2 applies both bounds). These are two **independent** bounds: `expiresAt` is the platform lifetime, signed into the pass at issue, while `OfflinePassMaxAge` is the station's own stricter limit, which its operator can lower at any time. Neither caps the other. The app **SHOULD** request a new pass before the current one expires, and re-issuing it at every app start, use and credit to the wallet makes that the normal case rather than the exception.
 7. **Revocation:** The pass becomes invalid at every station once the platform epoch exceeds the pass's `revocationEpoch`, and wherever the server is reachable, for the washes after it is individually revoked (§5).
 
 ## 7. Security Properties

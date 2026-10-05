@@ -87,7 +87,7 @@ When a previously disconnected station reconnects:
 | MQTT keep-alive | 30s | 10--60s | MQTT-level keep-alive for TCP liveness. |
 | LWT detection latency | ~45s | 15--90s | 1.5x MQTT keep-alive before broker publishes LWT. |
 | Heartbeat timeout threshold | 3.5× `heartbeatIntervalSec` | 35--12600s | No-message threshold before server declares offline. |
-| Session recovery timer | 300s | 60--600s | Grace period before closing a session whose station has not returned. |
+| Session recovery timer | 300s | 60--600s | Grace period before closing a session whose station has not returned — none runs for a Partial-B session (§5). |
 
 **Trade-offs:**
 

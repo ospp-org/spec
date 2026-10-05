@@ -256,7 +256,7 @@ Full index: [schemas/README.md](schemas/README.md)
 
 ## Examples
 
-**76 example files** in [`examples/`](examples/) — realistic, production-quality data.
+**72 example files** in [`examples/`](examples/) — realistic, production-quality data.
 
 | Directory | Count | Content |
 |-----------|:-----:|---------|

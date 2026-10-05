@@ -30,14 +30,15 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-10-05  (unreleased)  407 unbolded, 1416 bolded spans — the offline follow-up:
+    (this HEAD) 2026-10-05  (unreleased)  407 unbolded, 1434 bolded spans — the offline follow-up:
                                    the audit of the offline merge restores, as it stood before the
                                    merge, a sentence the merge rewrote and no decision required —
                                    `06-security.md` 6.3.1's "The station MUST maintain a monotonically
                                    increasing `txCounter` per station, starting at 1", whose MUST was
                                    plain at v0.44.0 — so unbolded RISES BY ONE and BASELINE follows it
-                                   to 407. The companion rises by two, the keywords the follow-up's
-                                   decisions add, each bolded on the way in. Both RE-DERIVED on this tree.
+                                   to 407. The companion rises by twenty, the keywords the follow-up's
+                                   decisions and its review add, each bolded on the way in. Both
+                                   RE-DERIVED on this tree.
     (superseded) 2026-09-29  (unreleased)  406 unbolded, 1414 bolded spans — the offline model and
                                    its money rules rewritten, and its consistency review. Unbolded
                                    FALLS BY TWENTY-FOUR and BASELINE follows it down to 406:
