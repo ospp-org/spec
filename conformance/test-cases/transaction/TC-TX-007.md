@@ -83,22 +83,14 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
 16. Verify SessionEnded EVENT is received BEFORE StatusNotification `Faulted`.
 17. Verify server applies refund policy: if `actualDurationSeconds < faultFullRefundThreshold * durationSeconds` → full refund. At the default threshold of `0.50` and a booked 300s, that boundary is 150s.
 
-### Part C — Local User Stop at Station (v0.4.0+)
+### Part C — The Customer's Stop over BLE (v0.4.0+)
 
-18. Send StartService with a long `durationSeconds` (e.g., 300):
-```json
-    {
-      "bayId": "bay_a1b2c3d4",
-      "serviceId": "svc_basic",
-      "programNumber": 1,
-      "sessionId": "sess_c3d4e5f6a7b8",
-      "sessionSource": "MobileApp",
-      "durationSeconds": 300
-    }
-```
-19. Receive StartService RESPONSE with `status: "Accepted"`.
+> **This Part needs the Offline / BLE profile.** A customer stops a session only through the app ([`04-flows.md` §6](../../../spec/04-flows.md#settlement-by-service-kind)): through the server, as a StopService, which ends in its RESPONSE; over BLE, as a StopServiceRequest, which the station reports as `Local`. The SessionEnded that carries `Local` is therefore the one of a Partial-B session, and a station that does not declare the profile never emits it.
+
+18. Run a Partial-B session on `bay_a1b2c3d4` for `svc_basic` with a long requested duration (e.g., 300 seconds), as `TC-OFF-005` Parts A and B do: the server answers AuthorizeOfflinePass `Accepted` with a `sessionId`, and the app starts the service over BLE.
+19. Receive the StartServiceResponse `Accepted` on the app's BLE connection.
 20. Observe StatusNotification: `bay_a1b2c3d4` → `Occupied`.
-21. After ~30 seconds elapsed, trigger a manual stop at the station (e.g., simulate physical Stop button press; implementation-specific method).
+21. After ~30 seconds elapsed, write a StopServiceRequest from the app over BLE naming the session.
 22. Observe SessionEnded EVENT from station. Validate:
     - `payload.reason: "Local"`
     - `payload.actualDurationSeconds` ≈ 30 (+/- 3s)
@@ -134,7 +126,7 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
 
 ## Expected Results
 
-1. Station sends SessionEnded EVENT autonomously when timer elapses, hardware faults, the user stops at the station, offline credits are exhausted, or the offline pass is revoked mid-session — without waiting for StopService.
+1. Station sends SessionEnded EVENT autonomously when timer elapses, hardware faults, the customer stops it from the app over BLE, offline credits are exhausted, or the offline pass is revoked mid-session — without waiting for StopService.
 2. SessionEnded `reason` is one of `"TimerExpired"`, `"Fault"`, `"Local"`, `"LocalOutOfCredit"`, `"Deauthorized"`.
    `"OperatorStopped"` is the sixth member of the enum and is deliberately **out of scope here**:
    this case verifies AUTONOMOUS termination — the station deciding on its own — and an operator

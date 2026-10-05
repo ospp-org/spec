@@ -4,7 +4,7 @@
 
 ## 1. Overview
 
-SessionEnded [MSG-040] is the EVENT a station emits when a session terminates **without** a server-initiated StopService — the timer ran out, hardware faulted, the user pressed Stop at the bay, offline credit ran out, or the pass was revoked mid-session. It carries the delivered duration, the credits the station computed, and the final meter readings.
+SessionEnded [MSG-040] is the EVENT a station emits when a session terminates **without** a server-initiated StopService — the timer ran out, hardware faulted, the customer stopped it from the app over BLE, offline credit ran out, or the pass was revoked mid-session. It carries the delivered duration, the credits the station computed, and the final meter readings.
 
 It is the **sole billing source** for those terminations. A session ended autonomously has no StopService RESPONSE to carry its numbers, so a lost SessionEnded is a service delivered and never billed. [Chapter 01 §6.5](../../01-architecture.md#65-offline-message-buffering) therefore forbids discarding it while buffered, and [Chapter 02 §5.1](../../02-transport.md) classifies it as a critical event that never expires.
 

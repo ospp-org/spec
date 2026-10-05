@@ -1177,7 +1177,7 @@ Reports the end of a session that was terminated autonomously by the station, wi
 
 1. **Timer expiry:** The `durationSeconds` timer elapsed and the station auto-stopped the service.
 2. **Hardware fault:** A hardware fault occurred during an active session and the station auto-stopped the service.
-3. **Local user stop:** The user manually stopped the session at the station (e.g., pressed the physical Stop button on the bay).
+3. **Customer stop over BLE:** The customer stopped the session from the app over BLE, with a StopServiceRequest [MSG-036] — a customer stops a session only through the app ([`04-flows.md` §6](04-flows.md#settlement-by-service-kind)).
 4. **Offline credit exhausted:** The station was operating in offline mode and the user's offline credit pool reached zero mid-session, forcing an immediate stop.
 5. **Mid-session deauthorization:** The user's offline pass was revoked (e.g., via a `RevocationEpoch` bump propagated through ChangeConfiguration) while the session was active; the station MUST stop the service when it detects the revocation.
 
@@ -1209,7 +1209,7 @@ This message is NOT sent when the session is stopped by a server-initiated StopS
 |-------|-------------|
 | `TimerExpired` | Session `durationSeconds` elapsed; station auto-stopped. |
 | `Fault` | Hardware fault detected during active session; station auto-stopped. |
-| `Local` | User manually stopped the session at the station (e.g., physical Stop button on the bay, station UI). Distinguishes operator-initiated termination at the station from a server-routed StopService. |
+| `Local` | The customer stopped the session from the app over BLE, with a StopServiceRequest [MSG-036]. A customer stops a session only through the app: through the server, a StopService, which ends in its RESPONSE and no SessionEnded; over BLE, this reason. Distinguishes the customer's stop at the station from a server-routed StopService and from an operator's termination at the station. |
 | `LocalOutOfCredit` | Offline credit pool exhausted mid-session — `OfflinePass.maxTotalCredits` would be exceeded by the next meter reading or by elapsed time, forcing the station to stop. Session MUST be billed at zero (no valid credits available). |
 | `Deauthorized` | Offline pass revoked while the session was active — typically a `RevocationEpoch` bump propagated through ChangeConfiguration that invalidates the pass under which the session was authorized. Session MUST be billed at zero. |
 | `Inactivity` | The `SessionTimeout` idle timer elapsed: **no user interaction** within the window ([Chapter 08 §3](08-configuration.md#3-transaction-configuration-keys)). MeterValues are the station's own telemetry and **do not** reset it. Added in `0.31.0` — the enum was closed at six, none of them was true of an idle stop, and the one event required to report the stop therefore had no value to report it with. |

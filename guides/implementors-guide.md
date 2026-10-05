@@ -794,7 +794,7 @@ QoS: 1 (always)
 
 When you receive StopService RESPONSE (user-initiated stop):
 
-1. Calculate final billing: `creditsCharged = ceil(actualDurationSeconds / 60 * priceCreditsPerMinute)`
+1. Calculate final billing as the customer's stop, by service kind: for `UserDuration`, `creditsCharged = ceil(actualDurationSeconds / 60 * priceCreditsPerMinute)`; a `FixedDuration` or `MultiUnit` session is charged in full ([`04-flows.md` §6](../spec/04-flows.md#settlement-by-service-kind))
 2. Refund unused portion: `refund = preAuthAmount - creditsCharged`
 3. Update session to `completed`
 4. Update bay status to `Available`
@@ -803,7 +803,7 @@ When you receive SessionEnded EVENT [MSG-040], switch on `reason`. **The arms be
 
 1. **`TimerExpired`** — Session ran to its booked timer. Charge the **full pre-authorized amount**, *not* the station-reported `creditsCharged`: the user received the booked duration, so `refund = 0` regardless of what the event or the meter values say. The low-delivery override does not apply. Session → `completed`. Bay → `Available`.
 2. **`Fault`** — Hardware fault during session. Charge the server's recomputation (the event's `creditsCharged` is advisory) UNLESS `actualDurationSeconds < faultFullRefundThreshold * durationSeconds` — in that case charge 0 and refund 100%. Read the threshold from configuration; do not compile the default `0.50` in. Session → `failed`. Bay → `Faulted`.
-3. **`Local`** (v0.4.0+) — User manually stopped at the station. Treat identically to a user-initiated StopService for billing purposes: charge the pro-rated amount, recomputed by the server (the event's `creditsCharged` is advisory), refund the unused portion. Session → `completed`. Bay → `Available`.
+3. **`Local`** (v0.4.0+) — The customer stopped the session from the app over BLE; a customer stops a session only through the app. Treat identically to a user-initiated StopService for billing purposes: charge the pro-rated amount, recomputed by the server (the event's `creditsCharged` is advisory), refund the unused portion. Session → `completed`. Bay → `Available`.
 4. **`LocalOutOfCredit`** (v0.4.0+) — Offline credit pool exhausted mid-session. Station MUST emit `creditsCharged: 0`; if a non-zero value arrives, log a CRITICAL anomaly and override to 0 server-side. Refund 100% of the pre-authorized amount. Session → `completed`. Bay → `Available`.
 5. **`Deauthorized`** (v0.4.0+) — Offline pass revoked mid-session. Station MUST emit `creditsCharged: 0`. Refund 100% of pre-auth. Flag the session record for security review (mid-session revocation usually indicates fraud or compromise). Session → `failed`. Bay → `Available`.
 
