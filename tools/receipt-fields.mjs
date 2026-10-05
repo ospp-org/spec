@@ -18,7 +18,7 @@ import { createHash } from 'node:crypto';
 
 export const RECEIPT_SIGNED_ONLY_FIELDS = ['stationId', 'bookedDurationSeconds', 'endReason', 'clockState'];
 
-const END_REASONS = new Set(['TimerExpired', 'Fault', 'Local', 'LocalOutOfCredit', 'Deauthorized', 'OperatorStopped', 'Inactivity']);
+const END_REASONS = new Set(['TimerExpired', 'Fault', 'Local', 'LocalOutOfCredit', 'Deauthorized', 'OperatorStopped', 'Inactivity', 'ServerStopped']);
 const CLOCK_STATES = new Set(['Synchronized', 'Unsynchronized']);
 
 function previousBody(outer) {

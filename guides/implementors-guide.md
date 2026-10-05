@@ -492,7 +492,7 @@ The signed field set is **discriminated** — pass-form (`offlinePassId` + `pass
 this guide does not reproduce it, for the same reason §2.6 does not reproduce the bay transition table.
 Both forms sign four fields that settlement reads and that no envelope repeats, the TransactionEvent's
 and the FFF6 Receipt's included: `stationId`, `endReason` (a stop the customer requested over BLE is
-`Local`), `bookedDurationSeconds` and `clockState` — `Synchronized` when your clock has been set from
+`Local`, a stop a StopService commanded is `ServerStopped`), `bookedDurationSeconds` and `clockState` — `Synchronized` when your clock has been set from
 the server since you booted, `Unsynchronized` otherwise
 ([`06-security.md` §6.2](../spec/06-security.md#62-transaction-receipt-signing--ecdsa-p-256)).
 
