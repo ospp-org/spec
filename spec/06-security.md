@@ -1883,7 +1883,7 @@ Diagnostic uploads via GetDiagnostics [MSG-018] **MUST** apply the same redactio
 - [ ] Refresh token one-time-use enforcement
 - [ ] ECDSA P-256 key generation and rotation for OfflinePass signing, as a key set with `keyId`s and the publish-before and keep-after windows; the whole set delivered at every boot (§6.7)
 - [ ] One platform `RevocationEpoch`, raised only by a Platform Admin as a platform governance action, and pushed to every station (§6.6)
-- [ ] OfflinePasses issued with the platform lifetime, bound to a hardware-backed device key, with a trust bundle ([`app-contract.md` §3](profiles/offline/app-contract.md#3-pass-issuance))
+- [ ] OfflinePasses issued with the platform lifetime, bound to a hardware-backed device key whose platform attestation the server verified, with a trust bundle ([`app-contract.md` §3](profiles/offline/app-contract.md#3-pass-issuance)); the same bundle with every Partial-A authorization ([`app-contract.md` §5](profiles/offline/app-contract.md#5-the-partial-a-authorization))
 - [ ] ECDSA P-256 receipt verification during reconciliation
 - [ ] Reject provisioning requests in which **any two** submitted keys are the same key — CSR subject key / `receiptSigningPublicKey`, CSR subject key / `stationPubKey`, or `receiptSigningPublicKey` / `stationPubKey` — comparing **decoded** keys, not transmitted encodings; `422` / `4016 PROVISIONING_KEY_REUSE`, no certificate issued, token NOT consumed (§4.3, §6.5.2)
 - [ ] Retain **every** receipt-signing key ever bound to a station, with each key's validity window; never overwrite a superseded key in place (§4.3)
