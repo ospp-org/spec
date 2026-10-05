@@ -10,7 +10,7 @@
 # went stale: `9 FAIL / 6 SKIP` was true at v0.20.0 and was still being quoted after 0.20.1
 # and 0.20.2 had closed three of them.
 #
-#   (this HEAD) 2026-10-05  (unreleased)  0 FAIL, 1 SKIP  (5443 checks, 5442 PASS) — the BLE
+#   (this HEAD) 2026-10-05  (unreleased)  0 FAIL, 1 SKIP  (5457 checks, 5456 PASS) — the BLE
 #                                  wire revision. The whole failure SET leaves: ble-secure-frame has
 #                                  valid and invalid vectors, station-identity is withdrawn with the
 #                                  StationIdentity, and auth-response's creditsAuthorized is in
@@ -24,7 +24,7 @@
 #                                  withdrawn `bleProtocolVersion`. The one SKIP is Category 8's
 #                                  `invalid/core/status-notification-available-program-with-error.json`,
 #                                  whose name maps to no schema; the BLE resolution noise is gone.
-#                                  +630 checks, all passing.
+#                                  +644 checks, all passing.
 #   (superseded) 2026-10-05  (unreleased)  5 FAIL, 6 SKIP  (4813 checks, 4802 PASS) — the offline
 #                                  follow-up: Gabi's decisions of 2026-10-05 and their review. The
 #                                  failure SET is the one measured at 7a65f09; +63 checks, all

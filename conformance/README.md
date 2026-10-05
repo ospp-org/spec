@@ -45,8 +45,9 @@ before claiming conformance.
 >   is implemented, and is exercised against a second implementation. It stays Standard and is
 >   fully runnable.
 > - **`TC-TX-007`** Parts C, D and E end a session the app started over BLE, or one the station
->   ran offline: each applies only where the station declares the Offline / BLE profile, and is
->   recorded as skipped otherwise. The rest of the case runs over MQTT.
+>   ran offline: each exercises the EXPERIMENTAL profile, is no part of a Standard claim, runs only
+>   where the station declares the profile, and is recorded as skipped otherwise. The rest of the
+>   case runs over MQTT.
 >
 > **The ladder moved with the BLE wire revision.** Partial B is now required of every station that
 > implements the Offline / BLE profile, so the profile is taken whole at **Complete**, and

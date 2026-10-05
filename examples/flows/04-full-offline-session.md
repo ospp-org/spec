@@ -531,7 +531,7 @@ The station performs the following cryptographic operations:
 **3. Sign with ECDSA P-256:**
 
 ```
-digest = SHA-256(receipt.data)
+digest = SHA-256(canonical bytes)   # the bytes receipt.data Base64-encodes, never the Base64 text
 signature = ECDSA-P256-Sign(station_private_key, digest)
 ```
 

@@ -73,7 +73,7 @@ The station validates the request and responds via FFF4 with a StartServiceRespo
 
 ## 2. Monitoring Progress (FFF5)
 
-During an active service, the station sends periodic Service Status notifications on characteristic FFF5. The app **MUST** subscribe to FFF5 notifications after receiving a successful StartServiceResponse.
+During an active service, the station sends periodic Service Status notifications on characteristic FFF5. The app **MUST** subscribe to FFF5 notifications before it writes the StartServiceRequest ([ble-transport.md §7](ble-transport.md#7-service-status-fff5)).
 
 **Notification payload:**
 
@@ -160,7 +160,7 @@ The app writes a StopServiceRequest to FFF3 to terminate a running service befor
 4. The station **MUST** send a FFF5 notification with `status: "ReceiptReady"` after the receipt is generated.
 5. If the `sessionId` matches no active session this connection established, the station **MUST** respond `Rejected` with `3006 SESSION_NOT_FOUND`; if it names an active session that is not on the request's `bayId`, with `3007 SESSION_MISMATCH`. A refused stop stops nothing.
 
-**Auto-stop:** When `requestedDurationSeconds` expires, the station **MUST** stop the service itself and end the session with `TimerExpired` (§6) — not as a StopServiceRequest would, which is the customer's stop, `Local`. It sends no StopServiceResponse, and a StopServiceRequest that arrives afterwards names no active session and is answered `Rejected` with `3006 SESSION_NOT_FOUND` (rule 5). The station **MUST** generate a receipt and send a `ReceiptReady` notification. The app does not need to send a StopServiceRequest for auto-stopped sessions.
+**Auto-stop:** When `requestedDurationSeconds` expires, the station **MUST** stop the service itself and end the session with `TimerExpired` ([`03-messages.md` §5.4](../../03-messages.md#54-sessionended)) — not as a StopServiceRequest would, which is the customer's stop, `Local`. It sends no StopServiceResponse, and a StopServiceRequest that arrives afterwards names no active session and is answered `Rejected` with `3006 SESSION_NOT_FOUND` (rule 5). The station **MUST** generate a receipt and send a `ReceiptReady` notification. The app does not need to send a StopServiceRequest for auto-stopped sessions.
 
 **Example (Request):**
 

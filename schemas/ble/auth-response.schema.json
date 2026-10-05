@@ -118,6 +118,7 @@
         ],
         "properties": {
           "details": {
+            "type": "object",
             "required": [
               "constraint"
             ],

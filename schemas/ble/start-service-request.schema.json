@@ -28,7 +28,7 @@
     "requestedDurationSeconds": {
       "type": "integer",
       "minimum": 1,
-      "description": "Requested service duration in seconds. Above the session's authorized duration it is refused with 3010, never reduced (profiles/offline/ble-session.md §1)."
+      "description": "Requested service duration in seconds. Above the session's authorized duration it is refused with 3010, never reduced; for a Partial-B session it is the authorized duration exactly, and below it is refused with 3008 (profiles/offline/ble-session.md §1)."
     }
   }
 }

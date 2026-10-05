@@ -86,7 +86,7 @@ Verify the complete full-offline BLE session lifecycle: BLE scan and discovery, 
       "requestedDurationSeconds": 300
     }
     ```
-18. Receive StartServiceResponse on FFF4: `result: "Accepted"`, carrying the `sessionId` the station mints locally for this Full Offline session, and `offlineTxId`. Retain both — steps 20 and 22 need the `sessionId`, and Part D matches the receipt on `offlineTxId`.
+18. Receive StartServiceResponse on FFF4: `result: "Accepted"`, carrying the `sessionId` the station mints locally for this Full Offline session, and `offlineTxId`. Retain both — step 20 needs the `sessionId`, step 22 asks for the receipt by the `offlineTxId`, and Part D matches the receipt on it.
 19. Observe ServiceStatus notifications on FFF5 (periodic updates):
     - `elapsedSeconds` increasing, `remainingSeconds` decreasing.
     - `meterValues.liquidMl` increasing.

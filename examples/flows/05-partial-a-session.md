@@ -32,10 +32,10 @@ Alice is at "Station Alpha -- Example City" and wants to start the Eco Program s
 14:30:00.000  Alice opens the app near the station
 14:30:01.500  App discovers BLE device OSPP-b2c3d4
 14:30:02.000  App establishes BLE connection to station
-14:30:02.300  App reads FFF1 (StationInfo) — sees connectivity: "Offline", unauthenticated
+14:30:02.300  App reads FFF1 (StationInfo) — displays it, and relies on nothing in it
 14:30:02.600  App asks for AvailableServices on FFF2 — sees svc_eco on Bay 1
 14:30:03.000  Alice selects Bay 1, Eco Program, 5 minutes
-14:30:05.000  App detects Partial A scenario (phone online + station offline)
+14:30:05.000  App, online, pre-fetches a Partial-A authorization for the station named by the bay's code
 14:30:05.200  App sends POST /sessions/offline-auth to server
 14:30:05.800  Server validates, debits 50 credits, signs ECDSA P-256 authorization
 14:30:06.000  Server responds with signedAuthorization, sessionId and the trust bundle
@@ -88,7 +88,7 @@ The app establishes a BLE connection and reads the StationInfo characteristic.
 }
 ```
 
-The app sees `connectivity: "Offline"` — the station's MQTT is down. Since the phone has internet, the app's ConnectivityDetector identifies this as a likely **Partial A** scenario and fetches the authorization ahead of the handshake. Nothing on FFF1 is authenticated ([`ble-transport.md` §3](../../spec/profiles/offline/ble-transport.md#3-station-info-fff1)): the Challenge's signed `stationConnectivity` is what confirms the scenario (Step 7), and a station that lied here would fail the authorization's `stationId` claim (Step 9, check #3).
+The app shows the station it reached, and acts on nothing here: nothing on FFF1 is authenticated ([`ble-transport.md` §3](../../spec/profiles/offline/ble-transport.md#3-station-info-fff1)). It knows the station from the code on Bay 1, which Alice scanned — the out-of-band source of the `stationId` that a pre-fetch needs ([`ble-handshake.md` §4.2](../../spec/profiles/offline/ble-handshake.md#42-serversignedauth-partial-a)) — and the Challenge's signed `stationConnectivity` says whether the station is offline (Step 7); a station that is not the one the code names fails the authorization's `stationId` claim (Step 9, check #3).
 
 ---
 
@@ -143,7 +143,7 @@ Alice sees the service catalog. She selects Bay 1 and "Eco Program" (10 credits/
 
 ### Step 4: App Requests Server-Signed Authorization (14:30:05.200)
 
-Since this is Partial A (phone online, station offline), the app calls the server to obtain a signed authorization before the BLE handshake proceeds.
+The phone is online and the app knows the station from the bay's code, so it obtains a signed authorization before the BLE handshake proceeds, and relays it once the Challenge has confirmed the station is offline (Step 7).
 
 **HTTP Request:**
 

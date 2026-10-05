@@ -262,7 +262,7 @@ sequenceDiagram
 6. SSP generates an ECDSA P-256 key pair for offline receipt signing (private key never leaves the device)
 6a. **Withdrawn.** Until this revision a station that supported BLE generated here a dedicated static ECDH key pair for the BLE handshake; a station now authenticates itself over BLE with the key of step 5 and its certificate ([Chapter 06 — Security §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)). The step number is not reused
 6b. **Before** step 7 leaves the device, the SSP **MUST** commit every private key generated in steps 5–6 to non-volatile storage, durably — the write **MUST** be flushed, not merely buffered — and **MUST** retain them until the provision succeeds or reaches a terminal outcome. See *Persisting the key set* under this flow's *Postconditions*
-7. SSP sends `POST /api/v1/stations/provision` with the provisioning token, serial number, bay count, TLS CSR and receipt-signing public key — see [`provisioning-request.schema.json`](../schemas/provisioning-request.schema.json) for the canonical field set and constraints
+7. SSP sends `POST /api/v1/stations/provision` with the provisioning token, serial number, bays, TLS CSR and receipt-signing public key — see [`provisioning-request.schema.json`](../schemas/provisioning-request.schema.json) for the canonical field set and constraints
 8. Server validates the token (not expired, not used), signs the CSR with the Station CA, and returns the provisioning response per [`provisioning-response.schema.json`](../schemas/provisioning-response.schema.json) — see schema for the canonical field set and constraints (`stationId`, `bays[]`, `clientCert`, `stationCaChain`, `brokerRootCa` (optional, broker server-cert trust anchor), `rootCaThumbprint` (optional, SHA-256 Root CA thumbprint for local trust-anchor pinning), `serverVerifyKey`, and the `mqttConfig` block: broker host/port/URI, client-ID template, topic prefix, QoS level, keep-alive, clean-start, session-expiry, TLS version, MQTT version, optional LWT topic). Defaults align with the normative MQTT connection parameters in [Chapter 02 — Transport §1.2](02-transport.md#12-connection-parameters)
 9. SSP stores the response — issued certificate, `stationCaChain`, `brokerRootCa`, `rootCaThumbprint`, `serverVerifyKey`, `mqttConfig`, `stationId`, `bays` — in NVS alongside the keys already committed at step 6b, and marks itself as provisioned
 10. SSP exits provisioning mode and reboots
@@ -426,7 +426,7 @@ second P-256 key pair — not to implement anything offline.
 
 A retry whose keys match the bound set exactly is a replay, and is answered as described above.
 
-**Comparison basis.** The comparison **MUST** be made on the **decoded public key**, never on the transmitted bytes. For the CSR this means the DER-encoded `SubjectPublicKeyInfo`, **not** the raw CSR bytes: a CSR is self-signed with ECDSA, whose signatures are randomised, so two honest CSRs for the same key differ byte-wise and a byte comparison would reject a legitimate retry. Equivalently, for the other keys a re-encoding of the same point — compressed vs. uncompressed SEC1, PEM whitespace — is **not** drift, whereas a different point **is**.
+**Comparison basis.** The comparison **MUST** be made on the **decoded public key**, never on the transmitted bytes. For the CSR this means the DER-encoded `SubjectPublicKeyInfo`, **not** the raw CSR bytes: a CSR is self-signed with ECDSA, whose signatures are randomised, so two honest CSRs for the same key differ byte-wise and a byte comparison would reject a legitimate retry. Equivalently, for the receipt-signing key a re-encoding of the same point — compressed vs. uncompressed SEC1, PEM whitespace — is **not** drift, whereas a different point **is**.
 
 > **What this replaced.** Until this revision a station that supported BLE submitted a third key, a static BLE ECDH key (`stationPubKey`), over which the server signed a StationIdentity; the bound set could then differ in which key kinds it held, and this section treated a key kind added or dropped on a retry as drift. The key is withdrawn with the StationIdentity ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)), both remaining key kinds are required, and a station's key set no longer depends on whether it supports BLE.
 
@@ -821,6 +821,7 @@ sequenceDiagram
 | 11 | Rate limited | `4003` | Display "Wait before next session" |
 | 11 | Counter replay | `2005` | Display "Security error" |
 | 14 | Request names another bay or service than the OfflineAuthRequest | `3007` | Display "Start refused", disconnect |
+| 14 | Duration above the authorized one | `3010` | Display "Start refused", request the authorized duration |
 | 14 | Bay busy | `3001` | Display "Bay occupied" |
 | 14 | Hardware failure | `3009` | Display "Hardware error" |
 
@@ -988,6 +989,7 @@ sequenceDiagram
 | 6 | MQTT send failure | SSP **MAY** fall back to local validation (like Full Offline) if its `OfflineModeEnabled` is `true`, within its own offline limits ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)) |
 | 6 | Device proof invalid | SSP refuses with `2002` and forwards nothing |
 | 7 | Pass rejected by server | SSP relays the rejection to App with the server's `errorCode`, `errorText` and `details` |
+| 8 | StartServiceRequest other than the authorized duration | SSP refuses with `3010` above it and `3008` below it, and starts nothing ([`ble-session.md` §1](profiles/offline/ble-session.md#1-starting-a-service) rule 2) |
 | 7 | AuthorizeOfflinePass unanswered within the BLE handshake budget | SSP answers the app within the budget with `1010 MESSAGE_TIMEOUT`, or **MAY** fall back to local validation (degraded mode) if its `OfflineModeEnabled` is `true`, within its own offline limits ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)) |
 
 ### Postconditions
@@ -1805,7 +1807,7 @@ Consolidated timeout values across all flows:
 | BayLock fallback | 3 min | Auto-released |
 | PaymentIntent pending | 5 min | Marked expired |
 | BLE scan | 10-30s | Return to IDLE |
-| BLE handshake step | 10s | ERROR state |
+| BLE handshake (first Hello to AuthResponse) | 10s | ERROR state |
 | AuthorizeOfflinePass | 15s | Sent inside a BLE handshake, whose budget ends first: the station answers within the budget, and **MAY** fall back to local validation if `OfflineModeEnabled` is `true`; otherwise refuses with `1010` ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 6) |
 | TransactionEvent | 60s | Retry later |
 | ChangeConfiguration | 60s | Log failure |

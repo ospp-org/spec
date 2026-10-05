@@ -1176,7 +1176,7 @@ Reports consumption telemetry during an active session. Sent at the interval con
 | **Transport** | MQTT |
 | **Message Type** | EVENT |
 | **Topic** | `ospp/v1/stations/{station_id}/to-server` |
-| **Trigger** | Session ends on the station without a StopService — the five cases below |
+| **Trigger** | Session ends on the station without a StopService — the cases below |
 | **Expected Response** | None (EVENT — fire-and-forget) |
 | **Timeout** | N/A |
 | **Idempotency** | Yes — duplicate SessionEnded for same `sessionId` MUST be ignored by server |
@@ -1189,6 +1189,8 @@ Reports the end of a session that was terminated autonomously by the station, wi
 3. **Customer stop over BLE:** The customer stopped the session from the app over BLE, with a StopServiceRequest [MSG-036] — a customer stops a session only through the app ([`04-flows.md` §6](04-flows.md#settlement-by-service-kind)).
 4. **Offline credit exhausted:** The station was operating in offline mode and the user's offline credit pool reached zero mid-session, forcing an immediate stop.
 5. **Mid-session deauthorization:** The user's offline pass was revoked (e.g., via a `RevocationEpoch` bump propagated through ChangeConfiguration) while the session was active; the station MUST stop the service when it detects the revocation.
+6. **Inactivity:** The `SessionTimeout` idle timer elapsed with no user interaction, and the station stopped the service ([`08-configuration.md` §3](08-configuration.md#3-transaction-configuration-keys)).
+7. **Operator stop at the station:** An operator ended the session — a forced Reset, or a station disable the station carries out ([Chapter 04 §6](04-flows.md#the-operator-disable-policy)).
 
 The server **MUST** settle the session from this event rather than from StatusNotification — it **MUST NOT** rely solely on StatusNotification for billing calculations when this event is expected. The event's `actualDurationSeconds` and `meterValues` are the delivery record; its `creditsCharged` is **advisory input only**. The server **MUST** recompute the amount itself under the active tariff (see **Billing Authority** in [`04-flows.md §6`](04-flows.md)) and **MUST NOT** accept the station's figure as the charge.
 
@@ -2634,7 +2636,7 @@ First message of the BLE handshake. The app sends the BLE versions it supports, 
 | **Transport** | BLE |
 | **Characteristic** | FFF4 (Notify) |
 | **Trigger** | Station receives a valid Hello message |
-| **Expected Response** | [OfflineAuthRequest](#75-offlineauthrequest) or [ServerSignedAuth](#76-serversignedauth) on FFF3, depending on connectivity scenario |
+| **Expected Response** | [OfflineAuthRequest](#75-offlineauthrequest) or [ServerSignedAuth](#76-serversignedauth) on FFF3, depending on connectivity scenario — or, from an app that presents no credential, a [ReceiptRequest](#714-receiptrequest) on FFF6 |
 | **Timeout** | N/A (station sends immediately) |
 
 Second message of the BLE handshake. The station names the BLE version it chose, gives its nonce and ephemeral key, presents its certificate, says whether it is connected to the server and what it can start now, and signs all of it with its certificate key over the Hello it answers ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)).
@@ -2842,7 +2844,7 @@ Authentication result from the station. On `Accepted`, the app MAY proceed to st
 | `creditsAuthorized` | integer | No | Advisory copy of the authorized credit budget (when `Accepted`); unsigned |
 | `errorCode` | integer | Cond. | Registry code of the refusal (when `Rejected`) — [Chapter 07 §4.3](07-errors.md#43-ble-message-types) |
 | `errorText` | string | Cond. | Registry name of `errorCode`, `UPPER_SNAKE_CASE` (when `Rejected`) |
-| `details` | object | No | Per-occurrence context of the refusal; with `4002`, `constraint` ([Chapter 07 §2.3](07-errors.md#23-ble-error-response)) |
+| `details` | object | Cond. | Per-occurrence context of the refusal. Required with `4002`, whose `constraint` names the limit that refused ([Chapter 07 §2.3](07-errors.md#23-ble-error-response)); otherwise optional when `result` is `Rejected` |
 
 #### Example
 
@@ -2889,7 +2891,7 @@ Requests the station to start the session's service on its bay. Only valid after
 | `type` | string | Yes | `"StartServiceRequest"` |
 | `bayId` | string | Yes | The bay of the session's authorization (`bay_{uuid}`) |
 | `serviceId` | string | Yes | The service of the session's authorization (`svc_{id}`) |
-| `requestedDurationSeconds` | integer | Yes | Requested session duration in seconds, at most the authorized duration |
+| `requestedDurationSeconds` | integer | Yes | Requested session duration in seconds: at most the authorized duration (`3010` above it), and exactly it for a Partial-B session (`3008` below it) |
 
 #### Example
 
@@ -2966,7 +2968,7 @@ Confirmation that the service has started (or was rejected). On `Accepted`, the 
 | **Expected Response** | [StopServiceResponse](#711-stopserviceresponse) on FFF4 |
 | **Timeout** | 10 seconds |
 
-Requests the station to stop the currently active service — the customer's stop over BLE, which the station reports as `Local` ([Chapter 04 §6](04-flows.md#settlement-by-service-kind)). The station also auto-stops when the authorized duration expires.
+Requests the station to stop the currently active service — the customer's stop over BLE, which the station reports as `Local` ([Chapter 04 §6](04-flows.md#settlement-by-service-kind)). The station also auto-stops when the duration its StartServiceRequest asked for expires.
 
 #### Payload
 

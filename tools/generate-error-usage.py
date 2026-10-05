@@ -198,7 +198,6 @@ BLE_SOURCES = {
 BASELINE = """
 4.1 | Heartbeat                          | 1005, 1010, 5106, 6001          | profile    | D1: heartbeat.md §8 lists conditions; §4.1's own note dispositions all four
 4.1 | TransactionEvent                   | 2003, 2005, 2014, 2016, 2017    | §4+profile | D3: 03 §4.1 lists five codes; the profile and §4 carry the gate's ten
-4.1 | AuthorizeOfflinePass               | 1005                            | §4+03      | D3: the profile's §7 table omits it
 4.1 | SignCertificate                    | 1005, 6001                      | §4         | 03 §6.10 omits them and no profile table exists; not under §4.2's implicit note
 4.1 | DataTransfer                       | 1010                            | profile    | D1: the waiting sender's own timeout, never a response value
 4.1 | SessionEnded                       | row                             | no §4 row  | D5: an EVENT in 03's Quick Reference with no §4.1 row
@@ -210,8 +209,8 @@ BASELINE = """
 4.2 | CertificateInstall                 | 5107                            | §4         | 03 §6.11 omits it, no profile table; prose makes 5107 reachable from every command
 4.2 | DataTransfer                       | 1010                            | profile    | D1: the waiting sender's own timeout, never a response value
 4.2 | TriggerMessage                     | 1010                            | profile    | D1: the waiting sender's own timeout, never a response value
-4.3 | AuthResponse (→ OfflineAuthRequest, validated by the station) | 2013, 3004, 3005 | §4 | D4: ble-handshake.md §4.1 prose — 3004/3005 refused before the pass is validated, 2013 for a sessionProof that does not match; offline-pass.md §4 lists the pass checks only
-4.3 | AuthResponse (→ OfflineAuthRequest, Partial B) | 1010, 2013, 3004, 3005 | §4 | D4: authorize-offline-pass.md §6 rule 6 prose (1010, the station's own timeout) and ble-handshake.md §4.1 (2013, 3004, 3005, refused before the forward); §7 lists the server's codes
+4.3 | AuthResponse (→ OfflineAuthRequest, validated by the station) | 2013, 3004, 3005, 3010 | §4 | D4: ble-handshake.md §4.1 prose — 3004/3005 and 3010 refused before the pass is validated, 2013 for a sessionProof that does not match; offline-pass.md §4 lists the pass checks only
+4.3 | AuthResponse (→ OfflineAuthRequest, Partial B) | 1010, 2013, 3004, 3005, 3010 | §4 | D4: authorize-offline-pass.md §6 rule 6 prose (1010, the station's own timeout) and ble-handshake.md §4.1 (2013, 3004, 3005, 3010, refused before the forward); §7 lists the server's codes
 4.3 | AuthResponse (→ ServerSignedAuth)  | 2013                            | §4         | D4: an AEAD or channel failure ends any handshake with 2013 (06-security.md §6.5.3); §4.2.2 lists the claim checks
 """
 

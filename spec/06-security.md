@@ -691,8 +691,7 @@ nothing ordered them. The profile now points here.
 station treat the next TLS failure as connection loss and reconnect, entering offline-only mode
 only if that reconnection was refused on the certificate. The attempt cannot succeed — the
 certificate is expired, so every cycle fails for the reason that started it — and nothing bounds
-the cycle, leaving the station neither online nor serving BLE customers for as long as its backoff
-runs. [Chapter 02 §1.3](02-transport.md#13-tls-12-floor-13-recommended) withholds the retry on
+the cycle, leaving the station retrying for as long as its backoff runs. [Chapter 02 §1.3](02-transport.md#13-tls-12-floor-13-recommended) withholds the retry on
 this row for the same reason, giving expiry *alert operator* where the row beside it gives *retry
 with backoff*. The one station the attempt would serve is one whose clock is **fast** — believing
 itself expired while the server would still accept it — and that case is narrow, since a station

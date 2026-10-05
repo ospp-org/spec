@@ -20,7 +20,7 @@ ospp-version: 0.44.0
 > **Not all of this specification is at the same maturity.** The MQTT station↔server surface,
 > HTTPS provisioning, and offline reconciliation are **stable** — implemented and exercised
 > against an independent implementation. The **BLE transport, handshake and session are
-> EXPERIMENTAL**: published for review, not for implementation, until their cryptographic
+> EXPERIMENTAL**, and so is AuthorizeOfflinePass, whose request carries the handshake's device proof: published for review, not for implementation, until their cryptographic
 > construction has passed the review of [Chapter 06, Appendix B](06-security.md#appendix-b--ble-cryptographic-review-checklist).
 > Their two blockers are closed. See [Release status](../README.md#release-status) and
 > [KNOWN-ISSUES](../KNOWN-ISSUES.md#closed--the-ble-surface-was-not-implementable-as-written-two-defects).
@@ -57,7 +57,7 @@ domain-specific behavior.
 | Transaction | [profiles/transaction/README.md](profiles/transaction/README.md) | Session start/stop, meter values, reservation lifecycle. |
 | Device Management | [profiles/device-management/README.md](profiles/device-management/README.md) | Configuration, firmware update, diagnostics, remote commands. |
 | Security | [profiles/security/README.md](profiles/security/README.md) | Two things: security event reporting — real-time incident notifications (tamper, auth failure, firmware integrity) — and the certificate lifecycle (SignCertificate, CertificateInstall, TriggerCertificateRenewal). |
-| Offline | [profiles/offline/README.md](profiles/offline/README.md) | OfflinePass authorization, offline transaction log, reconciliation — **stable**. BLE transport, handshake and session — **EXPERIMENTAL**, see [Release status](../README.md#ble-is-experimental). |
+| Offline | [profiles/offline/README.md](profiles/offline/README.md) | The OfflinePass and its validation, offline transaction log, reconciliation — **stable**. AuthorizeOfflinePass, and BLE transport, handshake and session — **EXPERIMENTAL**, see [Release status](../README.md#ble-is-experimental). |
 
 ## Normative Language
 
