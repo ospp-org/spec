@@ -1085,7 +1085,7 @@ This separation ensures that a misconfigured or compromised station cannot overc
 
 **A2 — MQTT disconnect during session:** SSP continues the service (does NOT stop the service). On reconnection, SSP re-boots (BootNotification [MSG-001]) and reports the session outcome.
 
-**A3 — StopService timeout:** If Server sends StopService and SSP does not respond within 10 seconds, Server marks the session as `failed`. SSP will report the actual outcome on next reconnection.
+**A3 — StopService timeout:** If Server sends StopService and SSP does not respond within 10 seconds, Server marks the session as `failed`. SSP will report the actual outcome on next reconnection. A Partial-B session is not marked `failed`: the server repeats the StopService REQUEST once the station has reconnected, and settles the session on the first of its end records ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)).
 
 ### The operator-disable policy
 
@@ -1137,7 +1137,7 @@ of by what was delivered.
 | All retry attempts fail | Full | 100% |
 | ACK_TIMEOUT (no response) | Full | 100% |
 | Hardware error during active (SessionEnded `reason=Fault`) | Partial (pro-rated) | Based on time used |
-| Station offline during active | Partial (pro-rated) | Based on time used |
+| Station offline during active | Partial (pro-rated) | Based on time used — not a Partial-B session, which settles on the first of its end records ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) |
 | User manual stop at station (SessionEnded `reason=Local`) | Partial (pro-rated) | Based on time used, recomputed by the server (the event's `creditsCharged` is advisory) |
 | Offline credit exhausted mid-session (SessionEnded `reason=LocalOutOfCredit`) | Full | 100% (no charge — `creditsCharged` MUST be 0) |
 | Offline pass revoked mid-session (SessionEnded `reason=Deauthorized`) | Full | 100% (no charge — session not billable; `creditsCharged` MUST be 0) |
@@ -1484,7 +1484,7 @@ sequenceDiagram
    - **Step 1:** Deduplicate by `offlineTxId`. The ledger holds the `offlineTxId` and the signed `receipt.data` matches → `Duplicate`; it holds it and the data differs → `Rejected`, retain both records, alert the operator ([`reconciliation.md` §3](profiles/offline/reconciliation.md#3-deduplication-offlinetxid))
    - **Step 2:** Verify ECDSA P-256 receipt signature — reject if it does not verify; never scored ([`reconciliation.md` §5](profiles/offline/reconciliation.md#5-receipt-signature-verification))
    - **Step 3:** Record `txCounter` as forensic evidence — never gated on. If discontinuous: WARNING + operator alert on the **station**, process anyway (`profiles/offline/reconciliation.md` §4.2)
-   - **Step 4:** Apply the reconcile-time gate — was the OfflinePass valid at transaction time: epoch, expiry, individual revocation, read through the station's clock offset ([`reconciliation.md` §6](profiles/offline/reconciliation.md#6-reconcile-time-re-validation-gate)). Limits are not a gate here: they cap settlement and feed fraud scoring
+   - **Step 4:** Apply the reconcile-time gate — was the OfflinePass valid at transaction time: epoch, expiry, individual revocation, read through the station's clock offset ([`reconciliation.md` §6](profiles/offline/reconciliation.md#6-reconcile-time-re-validation-gate)). Limits are not a gate here: the per-wash limit caps what a wash is charged, the pass-wide totals cap nothing, and both feed fraud scoring
    - **Step 5:** Settle — recompute by service kind from the signed receipt, never above what the authorization allowed, and debit the user wallet — or, where the authorization already debited it, refund only ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)) — (negative balance allowed; a debit that leaves it below zero leaves the transaction pending until a credit to the wallet covers it)
    - **Step 6:** Run fraud scoring on the settled transaction (see below)
    - **Step 7:** Create session record
@@ -1799,7 +1799,7 @@ Consolidated timeout values across all flows:
 | Reserved → 3DS (web) | 3 min | CancelReservation |
 | Reserved → start (mobile) | 30s | CancelReservation |
 | StartService (pending_ack) | 10s | Refund, session → failed |
-| StopService (stopping) | 10s | Session → failed |
+| StopService (stopping) | 10s | Session → failed; a Partial-B session stays open (§6, A3) |
 | Active session (max) | durationSeconds | Station auto-stops |
 | Session token (web) | 10 min | Session expired |
 | BayLock fallback | 3 min | Auto-released |

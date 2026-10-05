@@ -70,7 +70,7 @@ OSPP is an **open, vendor-neutral communication protocol** for self-service stat
 
 Think of it as **OCPP for self-service industries**. Where OCPP standardized EV charger-to-server communication, OSPP does the same for any station that delivers a time-bounded service through a physical bay. The protocol supports **online operation** (MQTT 5.0 over TLS 1.2+, TLS 1.3 recommended), **offline operation** (BLE 4.2+ GATT with cryptographically signed passes), and **four hybrid connectivity scenarios** — ensuring service continuity even when internet is unavailable.
 
-OSPP covers **40 messages** (27 MQTT + 13 BLE), **88 JSON Schemas**, **118 error codes**, **5 compliance profiles**, and a complete security model with mTLS, selective HMAC-SHA256 message signing, ECDSA P-256 offline authorization and receipt signing, and ECDSA P-384 root CA. Apart from the two exchanges the offline model depends on — pass issuance and receipt upload, defined in [`app-contract.md`](spec/profiles/offline/app-contract.md) — it does NOT cover server-to-app REST APIs, payment gateway integration, business logic, or hardware internals; those are implementation-specific.
+OSPP covers **40 messages** (27 MQTT + 13 BLE), **89 JSON Schemas**, **118 error codes**, **5 compliance profiles**, and a complete security model with mTLS, selective HMAC-SHA256 message signing, ECDSA P-256 offline authorization and receipt signing, and ECDSA P-384 root CA. Apart from the exchanges the offline model depends on — pass issuance with its attestation challenge, receipt upload, and the trust bundle of a Partial-A authorization, defined in [`app-contract.md`](spec/profiles/offline/app-contract.md) — it does NOT cover server-to-app REST APIs, payment gateway integration, business logic, or hardware internals; those are implementation-specific.
 
 ---
 
@@ -245,7 +245,7 @@ Full definitions: [Chapter 03 — Message Catalog](spec/03-messages.md)
 
 | Directory | Count | Content |
 |-----------|:-----:|---------|
-| [`schemas/`](schemas/) (top level) | 4 | HTTPS request and response bodies: station provisioning, and offline pass issuance |
+| [`schemas/`](schemas/) (top level) | 5 | HTTPS request and response bodies: station provisioning, offline pass issuance, and the device key attestation challenge |
 | [`schemas/common/`](schemas/common/) | 22 | Shared types: identifiers, timestamps, credit amounts, error objects, OfflinePass, receipt, envelope |
 | [`schemas/mqtt/`](schemas/mqtt/) | 47 | REQUEST/RESPONSE/EVENT payload schemas for all 27 MQTT actions |
 | [`schemas/ble/`](schemas/ble/) | 15 | BLE message schemas for all 13 BLE message types, plus the StationIdentity certificate and secure-frame structures |
@@ -256,13 +256,13 @@ Full index: [schemas/README.md](schemas/README.md)
 
 ## Examples
 
-**75 example files** in [`examples/`](examples/) — realistic, production-quality data.
+**76 example files** in [`examples/`](examples/) — realistic, production-quality data.
 
 | Directory | Count | Content |
 |-----------|:-----:|---------|
 | [`examples/payloads/mqtt/`](examples/payloads/mqtt/) | 36 | JSON payloads for every MQTT message |
 | [`examples/payloads/ble/`](examples/payloads/ble/) | 15 | JSON payloads for every BLE message |
-| [`examples/payloads/http/`](examples/payloads/http/) | 3 | The provisioning request, and the offline pass issuance request and response of the app–server contract |
+| [`examples/payloads/http/`](examples/payloads/http/) | 4 | The provisioning request; the offline pass issuance request and response, and the attestation challenge response, of the app–server contract |
 | [`examples/flows/`](examples/flows/) | 12 | Narrative walkthroughs with complete message sequences |
 | [`examples/error-scenarios/`](examples/error-scenarios/) | 5 | Common error scenarios with full messages |
 

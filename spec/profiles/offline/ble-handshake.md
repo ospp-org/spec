@@ -372,10 +372,10 @@ The following rejection reason codes **MAY** appear in the AuthResponse `reason`
       |--- POST /sessions/offline-auth -->|           |
       |                      |            |           |
       |<-- signedAuthorization ----------|           |
+      |    + sessionId, trustBundle      |           |
       |                      |                        |
       |--- ServerSignedAuth (FFF3) --------------->|
-      |    { signedAuthorization, sessionId,          |
-      |      trustBundle }                            |
+      |    { signedAuthorization, sessionId }         |
       |                      |                        |
       |    [Station verifies ECDSA P-256 signature     |
       |     using server public key]                  |

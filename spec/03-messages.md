@@ -339,7 +339,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
 | **Trigger** | Partial B scenario — station receives an OfflinePass via BLE from a mobile app while the station is online |
 | **Expected Response** | AuthorizeOfflinePass RESPONSE |
 | **Timeout** | 15 seconds |
-| **Idempotency** | Yes, on the **`(offlinePassId, counter)`** pair — a retransmission carries the same `counter` and **MUST** get the same answer. **Not** on `offlinePassId` alone, which this row said until `0.25.0` and which the validation checks contradict by construction: a pass legitimately returns `Accepted` and then `4002` once check #6's `maxUses` is reached, and a replayed `counter` returns `2005` where the first use returned `Accepted` ([`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks)). |
+| **Idempotency** | Yes, on the REQUEST's **`messageId`** — a retransmission carries the same `messageId` and **MUST** get the same answer, which the transport's deduplication gives it ([`02-transport.md` §3.3](02-transport.md#33-deduplication)). **Not** on the `(offlinePassId, counter)` pair: a new REQUEST that presents a `counter` already seen for the pass is a replay, refused at check #10 whether the first presentation was accepted or refused ([`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks)). **Not** on `offlinePassId` alone, which this row said until `0.25.0` and which the validation checks contradict by construction: a pass legitimately returns `Accepted` and then `4002` once check #6's `maxUses` is reached, and a replayed `counter` returns `2005` where the first use returned `Accepted` ([`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks)). |
 | **Message Expiry** | 30 seconds (no [`02-transport.md` §5.1](02-transport.md) category covers this action; Appendix B is the cross-check) |
 
 In the **Partial B** offline scenario (phone offline, station online), the mobile app presents an OfflinePass to the station via BLE. The station forwards it to the server for real-time validation instead of performing local validation.
@@ -2616,7 +2616,7 @@ First message of the BLE handshake. The app sends its identity and a random nonc
 {
   "type": "Hello",
   "deviceId": "device_uuid_123",
-  "appNonce": "dGhpcyBpcyBhIDMyLWJ5dGUgcmFuZG9tIG5vbmNl...",
+  "appNonce": "DTUrT0MOKRizF27RH0/XTpUHw0ZrhJXt1K1OCXIxrmw=",
   "appVersion": "2.1.0",
   "appEphemeralPubKey": "AjRkc2Vzc2lvbi1lcGhlbWVyYWwtcHVia2V5LWFwcDEy"
 }

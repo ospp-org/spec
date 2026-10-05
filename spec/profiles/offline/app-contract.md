@@ -111,7 +111,7 @@ The body is the Receipt exactly as the app read it from the station (characteris
 
 ### 4.2 Response
 
-`200 OK` with the body of a TransactionEvent RESPONSE — `status` and, when it is not `Accepted`, `reason` ([`transaction-event-response.schema.json`](../../../schemas/mqtt/transaction-event-response.schema.json)) — with the meanings [`transaction-event.md` §5.1](../transaction/transaction-event.md#51-response-status-values) gives them.
+`200 OK` with the body of a TransactionEvent RESPONSE — `status` and, when it is not `Accepted`, `reason` ([`transaction-event-response.schema.json`](../../../schemas/mqtt/transaction-event-response.schema.json)) — with the meanings [`transaction-event.md` §5.1](../transaction/transaction-event.md#51-response-status-values) gives them; the receipt of a Partial-B session that its station's end record already settled is answered `Duplicate` too (§4.3).
 
 ### 4.3 Rules
 
@@ -133,7 +133,7 @@ A receipt the server refuses on its merits — a signature that does not verify,
 
 ## 5. The Partial-A Authorization
 
-When the phone is online and the station is not, the app obtains a ServerSignedAuth from the server — `POST /api/v1/sessions/offline-auth` ([`04-flows.md` §5b](../../04-flows.md#5b-partial-a--phone-online-station-offline); [`ble-handshake.md` §4.2](ble-handshake.md#42-serversignedauth-partial-a)) — and relays it to the station over BLE. Before it relays it, it authenticates the station against a trust bundle ([`06-security.md` §6.5.2](../../06-security.md#652-stationidentity-certificate)), and the phone may hold no pass, and so no bundle, at all.
+When the phone is online and the station is not, the app obtains a ServerSignedAuth from the server — `POST /sessions/offline-auth` ([`04-flows.md` §5b](../../04-flows.md#5b-partial-a--phone-online-station-offline); [`ble-handshake.md` §4.2](ble-handshake.md#42-serversignedauth-partial-a)) — and relays it to the station over BLE. Before it relays it, it authenticates the station against a trust bundle ([`06-security.md` §6.5.2](../../06-security.md#652-stationidentity-certificate)), and the phone may hold no pass, and so no bundle, at all.
 
 **The phone receives the trust bundle with its authorization (Normative).** The server's response that carries the authorization — its `signedAuthorization` and `sessionId` — **MUST** also carry `trustBundle`, the object of §3.4, current at that moment: the Station CA certificate, its CRL and the server key set. The app **MUST** replace the bundle it holds with it, as on every issuance, and authenticates the station against it before it relays the authorization. This document defines that member of the response; the request and the authorization are those of [`04-flows.md` §5b](../../04-flows.md#5b-partial-a--phone-online-station-offline) and [`ble-handshake.md` §4.2](ble-handshake.md#42-serversignedauth-partial-a).
 

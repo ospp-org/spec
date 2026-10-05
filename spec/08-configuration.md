@@ -112,7 +112,7 @@ Two such pairs exist. `HeartbeatIntervalSeconds` with `heartbeatIntervalSec` **a
 | `ProtocolVersion` | string | `"0.3.0"` | R | Static | -- | OSPP protocol version supported by the station. ReadOnly; the station firmware determines this value. |
 | `FirmwareVersion` | string | -- | R | Static | -- | Current firmware version in semver format (e.g., `"1.2.3"`). ReadOnly; updated only via firmware update. |
 | `BootRetryInterval` | integer | `30` | RW | Dynamic | 10--600 | Retry interval in seconds when BootNotification is rejected or pending. |
-| `ConnectionLostGracePeriod` | integer | `300` | RW | Dynamic | 60--600 | Duration in seconds the server waits, after MQTT connection loss, before closing a session whose station has not returned. Server-side only; not the station-side `orphaned` of [`05-state-machines.md` §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rule 3. |
+| `ConnectionLostGracePeriod` | integer | `300` | RW | Dynamic | 60--600 | Duration in seconds the server waits, after MQTT connection loss, before closing a session whose station has not returned — not a Partial-B session, which the loss does not end ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)). Server-side only; not the station-side `orphaned` of [`05-state-machines.md` §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rule 3. |
 
 ---
 

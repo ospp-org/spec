@@ -636,7 +636,8 @@ On the Operator Dashboard, Charlie sees:
      |--------------------->|                          |
      |                      | validate, debit 50cr     |
      |                      | sign ECDSA P-256 auth        |
-     |  200 OK (signedAuth) |                          |
+     |  200 OK (signedAuth, |                          |
+     |   trustBundle)       |                          |
      |<---------------------|                          |
      |                      |                          |
      | -- Write FFF3: Hello -------------------------->|

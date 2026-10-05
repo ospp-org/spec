@@ -823,7 +823,7 @@ When the station has both MQTT and BLE available:
 
 ## 9. HTTPS Transport (Server ↔ Clients)
 
-OSPP does not normatively define the HTTPS API between the server and end-user clients (mobile app, web payment page), as this is implementation-specific — with one exception: the two exchanges the offline model depends on, pass issuance and receipt upload, which [`app-contract.md`](profiles/offline/app-contract.md) defines normatively. The following transport-level requirements apply to any OSPP-compliant server that exposes an HTTP API.
+OSPP does not normatively define the HTTPS API between the server and end-user clients (mobile app, web payment page), as this is implementation-specific — with one exception: the exchanges the offline model depends on — pass issuance with its attestation challenge, receipt upload, and the trust bundle of a Partial-A authorization — which [`app-contract.md`](profiles/offline/app-contract.md) defines normatively. The following transport-level requirements apply to any OSPP-compliant server that exposes an HTTP API.
 
 ### 9.1 General Requirements
 

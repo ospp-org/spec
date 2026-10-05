@@ -39,7 +39,7 @@ schemas/
 └── README.md                            This file
 ```
 
-**Total: 88 schema files.**
+**Total: 89 schema files.**
 
 ---
 
