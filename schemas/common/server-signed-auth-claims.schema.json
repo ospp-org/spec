@@ -33,7 +33,7 @@
     },
     "deviceId": {
       "$ref": "device-id.schema.json",
-      "description": "Mobile device the authorisation is bound to. The station MUST cross-check against `Hello.deviceId` (§4.2.2 check #4)."
+      "description": "Mobile device the authorisation was issued to, as the server recorded it from the authenticated app. The station does not compare it with anything: the Hello carries no device identifier, and check #4 of ble-handshake.md §4.2.2 is withdrawn. It is signed into the receipt's deviceId, and reconciliation compares the two (reconciliation.md §6.7)."
     },
     "sessionId": {
       "$ref": "session-id.schema.json",

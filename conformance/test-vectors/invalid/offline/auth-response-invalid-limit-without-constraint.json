@@ -1,0 +1,6 @@
+{
+  "type": "AuthResponse",
+  "result": "Rejected",
+  "errorCode": 4002,
+  "errorText": "OFFLINE_LIMIT_EXCEEDED"
+}

@@ -28,28 +28,31 @@ before claiming conformance.
 
 ## 2. Compliance Levels
 
-> **Extended and Complete cannot be claimed against 0.44.**
+> **Complete cannot be claimed against this revision.**
 >
-> Both levels require the Offline / BLE profile, whose BLE half is **EXPERIMENTAL** in this
-> revision and carries two blockers that make it unimplementable as written — see
+> It requires the Offline / BLE profile, whose BLE half is **EXPERIMENTAL**: its two blockers are
+> closed, and it stays experimental until its cryptographic construction has passed the review of
+> [Chapter 06, Appendix B](../spec/06-security.md#appendix-b--ble-cryptographic-review-checklist) — see
 > [Release status](../README.md#ble-is-experimental) and
-> [KNOWN-ISSUES](../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-two-defects).
-> `TC-OFF-001` and `TC-OFF-002` exercise that surface and are experimental artefacts with it.
+> [KNOWN-ISSUES](../KNOWN-ISSUES.md#closed--the-ble-surface-was-not-implementable-as-written-two-defects).
+> `TC-OFF-001`, `TC-OFF-002` and `TC-OFF-005` exercise that surface and are experimental artefacts with it.
 >
-> **Development and Standard are unaffected and remain claimable.** Their required cases —
-> `TC-CORE-*`, `TC-TX-*`, `TC-SEC-*` — run over MQTT and HTTPS only. Two are worth naming because
-> they read as offline or BLE work and are not blocked:
+> **Development, Standard and Extended are unaffected and remain claimable.** Their required cases —
+> `TC-CORE-*`, `TC-TX-*`, `TC-SEC-*` and `TC-DM-*` — run over MQTT and HTTPS, but for three Parts of
+> one case that apply only where the station declares the Offline / BLE profile. Two are worth naming:
 >
 > - **`TC-TX-006`** is entirely offline *reconciliation*, but reconciliation runs over **MQTT**,
 >   is implemented, and is exercised against a second implementation. It stays Standard and is
 >   fully runnable.
-> - **`TC-SEC-002`** step 33 requires a station to enter "offline-only BLE mode" on an expired
->   certificate, per the `1004` row in [`07-errors.md` §3.1](../spec/07-errors.md). This is a
->   genuine dependency of a mandatory level on the experimental surface — see the note under
->   §2.2 below.
+> - **`TC-TX-007`** Parts C, D and E end a session the app started over BLE, or one the station
+>   ran offline: each exercises the EXPERIMENTAL profile, is no part of a Standard claim, runs only
+>   where the station declares the profile, and is recorded as skipped otherwise. The rest of the
+>   case runs over MQTT.
 >
-> The compliance ladder itself is **unchanged** in 0.8. Restructuring it belongs in the revision
-> that implements BLE, where the new shape can be validated against something real.
+> **The ladder moved with the BLE wire revision.** Partial B is now required of every station that
+> implements the Offline / BLE profile, so the profile is taken whole at **Complete**, and
+> **Extended** is Standard plus Device Management ([`profiles/README.md` §2](../spec/profiles/README.md#2-compliance-levels)).
+> Earlier revisions put the profile without Partial B at Extended and Partial B at Complete.
 
 OSPP defines four compliance levels. Each level builds on the previous one.
 
@@ -92,33 +95,21 @@ HMAC-SHA256).
 | mTLS certificate validation | TC-SEC-002 |
 | Certificate revocation checking at the broker | **Declared, not tested** — [`06-security.md` §2.1.1](../spec/06-security.md#211-revocation-checking) |
 
-> **`TC-SEC-002` step 33 and the experimental BLE surface.** The step requires a station holding
-> an expired certificate to enter "offline-only BLE mode", following the `expired` branch of the
-> `1004` row in [`07-errors.md` §3.1](../spec/07-errors.md). A mandatory level therefore appears
-> to depend on an experimental profile.
->
-> It does not, once the requirement is read for what it actually asserts. The `1004` `expired`
-> branch carries two obligations, and only one of them is BLE: the **negative** obligations —
-> never enter provisioning mode, never discard or overwrite stored credentials, stay off the
-> broker, await server-triggered renewal — are what the case exists to prove, are what the
-> registry row states as a MUST on every branch, and are observable on any station. Entering BLE
-> mode is what a station *with BLE* does *instead of* provisioning; it is the alternative
-> occupying the station, not the property under test.
->
-> **For 0.8, therefore:** step 33's BLE clause applies only where the station declares
-> `bleSupported`, and is recorded as skipped otherwise. The negative obligations are asserted on
-> **every** station and are not waived. Steps 97 and 108 of the same case already state the
-> requirement in that form. This scopes one step; it does not weaken the case, and it does not
-> change the ladder.
+> **`TC-SEC-002` step 33 asserts no BLE behaviour.** Until the BLE wire revision it required a
+> station holding an expired certificate to enter "offline-only BLE mode", and that clause applied
+> only where the station declared `bleSupported`. A station now authenticates itself over BLE with
+> the same certificate, which the app refuses once expired, so the `expired` branch of the `1004`
+> row in [`07-errors.md` §3.1](../spec/07-errors.md) keeps only the obligations the step asserts on
+> every station: never enter provisioning mode, never discard or overwrite stored credentials,
+> await server-triggered renewal.
 
 ### 2.3 Extended Compliance
 
-**Required profiles:** Standard + Device Management + Offline/BLE
+**Required profiles:** Standard + Device Management
 
 An Extended-compliant station **MUST** pass all Standard test cases plus
-`TC-DM-*` and `TC-OFF-*` test cases. This level adds remote configuration,
-firmware updates, diagnostics, maintenance mode, BLE communication, OfflinePass
-validation, and offline session reconciliation.
+`TC-DM-*` test cases. This level adds remote configuration, firmware updates,
+diagnostics and maintenance mode.
 
 | Requirement | Test Cases |
 |-------------|------------|
@@ -126,16 +117,16 @@ validation, and offline session reconciliation.
 | Configuration read/write | TC-DM-001 |
 | Firmware update | TC-DM-002, TC-DM-004 |
 | Firmware update to a **restricted** station (accepted, notifications suppressed) | TC-DM-002 (Part E) |
-| Offline/BLE operation | TC-OFF-* |
 
 ### 2.4 Complete Compliance
 
-**Required profiles:** Extended + Partial B scenario
+**Required profiles:** Extended + Offline/BLE — every profile
 
-A Complete-compliant station **MUST** pass all Extended test cases plus
-Partial B scenario test cases. This level validates full protocol support
-including Partial B connectivity (phone offline, station online — station
-relays auth to server via MQTT).
+A Complete-compliant station **MUST** pass all Extended test cases plus the
+`TC-OFF-*` test cases. This level adds BLE communication, OfflinePass validation,
+offline sessions in every connectivity scenario the profile requires — Full Offline
+and Partial B (phone offline, station online — station relays auth to server via
+MQTT) — and offline session reconciliation.
 
 | Requirement | Test Cases |
 |-------------|------------|
@@ -149,8 +140,9 @@ relays auth to server via MQTT).
 > **Two defects in this table, both fixed in `0.25.0`.** It named a mandatory *"Partial B scenario"* for which
 > **no test case existed** — `TC-OFF-005` is that case, and until it was written this compliance level could
 > not be claimed by any station, however conformant. And it listed three `TC-OFF-*` cases where §2.3 above
-> reaches all of them through the `TC-OFF-*` glob, so **Complete** enumerated *fewer* offline cases than the
-> **Extended** level it is defined as a superset of. `TC-OFF-004` is now named.
+> then reached all of them through the `TC-OFF-*` glob, so **Complete** enumerated *fewer* offline cases than the
+> **Extended** level it is defined as a superset of. `TC-OFF-004` is now named, and since the BLE wire revision
+> only this level requires the `TC-OFF-*` cases.
 
 ## 3. Test Case Structure
 
@@ -257,7 +249,8 @@ conforming — it may say so, which is the whole point of requiring the answer, 
 | TC-DM-007 | Set Maintenance Mode | Device Management | Extended |
 | TC-DM-008 | Update Service Catalog | Device Management | Extended |
 | TC-DM-009 | Get Configuration | Device Management | Extended |
-| TC-OFF-001 | Full Offline BLE Session | Offline | Complete — **EXPERIMENTAL, not claimable in 0.8** |
-| TC-OFF-002 | OfflinePass Validation (10 Checks) | Offline | Complete — **EXPERIMENTAL, not claimable in 0.8**; check 5 withdrawn |
+| TC-OFF-001 | Full Offline BLE Session | Offline | Complete — **EXPERIMENTAL, not claimable while BLE is** |
+| TC-OFF-002 | OfflinePass Validation (10 Checks) | Offline | Complete — **EXPERIMENTAL, not claimable while BLE is**; check 5 withdrawn |
 | TC-OFF-003 | Reconciliation: Server-Side Processing | Offline | Complete — MQTT, stable |
 | TC-OFF-004 | Reconciliation: Station Upload & Recovery | Offline | Complete — MQTT, stable |
+| TC-OFF-005 | Partial B: Station-Relayed Authorization | Offline | Complete — **EXPERIMENTAL, not claimable while BLE is** |

@@ -1,6 +1,6 @@
 # TC-OFF-002 — OfflinePass Validation (10 Checks)
 
-> **Status: EXPERIMENTAL artefact.** This case exercises the BLE surface, which is EXPERIMENTAL in 0.44 and carries two blockers — see [Release status](../../../README.md#ble-is-experimental) and [KNOWN-ISSUES](../../../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-two-defects). It is published for review, not for certification, and **Extended and Complete compliance cannot be claimed against 0.44**.
+> **Status: EXPERIMENTAL artefact.** This case exercises the BLE surface, which is EXPERIMENTAL until its cryptographic construction has passed the review of [Chapter 06, Appendix B](../../../spec/06-security.md#appendix-b--ble-cryptographic-review-checklist) — see [Release status](../../../README.md#ble-is-experimental). Its two blockers are closed ([KNOWN-ISSUES](../../../KNOWN-ISSUES.md#closed--the-ble-surface-was-not-implementable-as-written-two-defects)). It is published for review, not for certification, and **Complete compliance cannot be claimed against this revision**.
 
 
 ## Profile
@@ -18,6 +18,7 @@ Verify that the station correctly performs the OfflinePass validation checks dur
 - `spec/profiles/offline/offline-pass.md` §2.2 — the station's own offline limits, refused with `4002` and `details.constraint`
 - `spec/08-configuration.md` §5 — `OfflinePassMaxAge`, the station's own age bound of check #2
 - `spec/profiles/offline/ble-handshake.md` — OfflineAuthRequest / AuthResponse
+- `spec/06-security.md` §6.5.4 — the device proof that check #4 verifies
 - `spec/profiles/offline/authorize-offline-pass.md` — Validation checks and error codes
 - `spec/07-errors.md` §3.2 — Error codes: 2002 `OFFLINE_PASS_INVALID`, 2003 `OFFLINE_PASS_EXPIRED`, 2004 `OFFLINE_EPOCH_REVOKED`, 2005 `OFFLINE_COUNTER_REPLAY`
 - `spec/07-errors.md` §3.4 — Error codes: 4002 `OFFLINE_LIMIT_EXCEEDED`, 4003 `OFFLINE_RATE_LIMITED`, 4004 `OFFLINE_PER_TX_EXCEEDED`
@@ -33,11 +34,12 @@ Verify that the station correctly performs the OfflinePass validation checks dur
 5. Station knows its own `stationId` (e.g., `"stn_b1c2d3e4f5a6"`).
 6. A baseline valid OfflinePass is prepared with all fields correct:
    - Valid ECDSA P-256 signature, `expiresAt` in the future, `revocationEpoch: 5`.
-   - `deviceId` matches test device, and `devicePublicKey` is that device's key.
+   - `devicePublicKey` is the test device's key, whose private key the test client holds to make the device proof ([`06-security.md` §6.5.4](../../../spec/06-security.md#654-device-proof-of-possession)).
    - The pass names no station and no organization: a pass carries no station or organization scope ([`offline-pass.md` §2.3](../../../spec/profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)).
    - `maxUses: 10` (not exhausted), `maxTotalCredits: 100` (not exhausted).
    - `maxCreditsPerTx: 20`, `minIntervalSec: 60`.
    - The OfflineAuthRequest envelope carries `counter: 11` (greater than the station's `lastSeenCounter` of 10). `counter` is a member of [`offline-auth-request.schema.json`](../../../schemas/ble/offline-auth-request.schema.json), **not** of the pass — `offline-pass.schema.json` is closed and has no such field.
+   - The OfflineAuthRequest names a bay and a service the station has, a `requestedDurationSeconds` whose estimated cost is within the pass's limits ([`offline-pass.md` §4](../../../spec/profiles/offline/offline-pass.md#4-validation-checks-10)), and a `deviceProof` the test client makes over each sub-test's handshake.
 7. BLE connection is established and HELLO/CHALLENGE handshake is completed for each sub-test.
 8. No station limit is reached: the station's `OfflineModeEnabled` is `true`, fewer than `OfflineWindowHours` have elapsed since its last MQTT connection, and it holds fewer than `OfflineTransactionLimit` offline transactions the server has not yet answered `Accepted`, `Duplicate` or `Rejected` ([`offline-pass.md` §2.2](../../../spec/profiles/offline/offline-pass.md#22-constraints-object); [`08-configuration.md` §5](../../../spec/08-configuration.md#5-offline--ble-configuration-keys)). A station limit refuses with `4002`, the code of checks #6 and #7, so a station that had reached one would make those two checks unreadable.
 9. The station's `OfflinePassMaxAge` is `86400` (one day), set before the station went offline ([`08-configuration.md` §5](../../../spec/08-configuration.md#5-offline--ble-configuration-keys)). Every pass the steps present was issued less than a day before it is presented, except the pass of step 41, so the age bound of check #2 fails in step 41 alone.
@@ -77,11 +79,11 @@ The age bound, in steps numbered after the last so that no step is renumbered:
 12. Send OfflineAuthRequest.
 13. Verify AuthResponse: `result: "Rejected"`, error code `2004` (`OFFLINE_EPOCH_REVOKED`).
 
-### Check 4 — Device Fingerprint Binding
+### Check 4 — Device Binding (the device proof)
 
-14. Create an OfflinePass with a `deviceId` that does not match the test client.
+14. Present the baseline OfflinePass with a `deviceProof` made by a device key other than the one its `devicePublicKey` names — or by the right key over the transcript of another handshake.
 15. Send OfflineAuthRequest.
-16. Verify AuthResponse: `result: "Rejected"`, error code `2002` (`OFFLINE_PASS_INVALID`).
+16. Verify AuthResponse: `result: "Rejected"`, error code `2002` (`OFFLINE_PASS_INVALID`). A station that compared `deviceId` alone accepts both, since every copy of the pass carries the same `deviceId`.
 
 ### Check 5 — Withdrawn
 
@@ -132,7 +134,7 @@ Withdrawn with check #5: a pass carries no station or organization scope ([`offl
 2. **Check 1 (Signature):** Tampered signature -> `2002 OFFLINE_PASS_INVALID` + SecurityEvent.
 3. **Check 2 (Temporal bounds):** Expired pass, or a pass older than the station's `OfflinePassMaxAge` -> `2003 OFFLINE_PASS_EXPIRED`.
 4. **Check 3 (Epoch):** Old epoch -> `2004 OFFLINE_EPOCH_REVOKED`.
-5. **Check 4 (Device):** Wrong fingerprint -> `2002 OFFLINE_PASS_INVALID`.
+5. **Check 4 (Device):** A device proof that does not verify under the pass's `devicePublicKey` over this handshake -> `2002 OFFLINE_PASS_INVALID`.
 6. **Check 5:** withdrawn — a pass carries no station or organization scope, and no result is expected.
 7. **Check 6 (Uses):** Exhausted uses -> `4002 OFFLINE_LIMIT_EXCEEDED`.
 8. **Check 7 (Credits):** Exhausted credits -> `4002 OFFLINE_LIMIT_EXCEEDED`.

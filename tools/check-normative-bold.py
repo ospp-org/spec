@@ -30,7 +30,18 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-10-05  (unreleased)  407 unbolded, 1434 bolded spans — the offline follow-up:
+    (this HEAD) 2026-10-05  (unreleased)  394 unbolded, 1446 bolded spans — the BLE wire revision.
+                                   Unbolded FALLS BY THIRTEEN and BASELINE follows it down to 394:
+                                   `02-transport.md` 79 -> 71 (the second fragmentation protocol of
+                                   §8.6 and the advertising and GATT tables of §8.3-§8.4, withdrawn
+                                   for the one definition in `ble-transport.md`), `07-errors.md`
+                                   24 -> 22 (the nested BLE error object of §2.3), `03-messages.md`
+                                   35 -> 34, `06-security.md` 74 -> 73 and `ble-transport.md` 1 -> 0,
+                                   each a plain keyword in a sentence the revision replaced; every
+                                   keyword it adds is bolded on the way in, and the two quoted from
+                                   RFC 9846 and the Matter specification are in backticks. Both
+                                   numbers RE-DERIVED on this tree.
+    (superseded) 2026-10-05  (unreleased)  407 unbolded, 1434 bolded spans — the offline follow-up:
                                    the audit of the offline merge restores, as it stood before the
                                    merge, a sentence the merge rewrote and no decision required —
                                    `06-security.md` 6.3.1's "The station MUST maintain a monotonically
@@ -288,7 +299,7 @@ import re
 import sys
 from collections import Counter
 
-BASELINE = 407
+BASELINE = 394
 
 KEYWORD = re.compile(r'\b(MUST NOT|MUST|SHALL NOT|SHALL)\b')
 FENCE = re.compile(r'```.*?```', re.S)

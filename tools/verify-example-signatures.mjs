@@ -20,35 +20,70 @@
 //      - Verify offlinePass.signature against canonical bytes
 //      - Re-canonicalise yields the same bytes
 //
+//   3. STATION_SIGNATURE  (a BLE Challenge; 06-security.md §6.5.2)
+//      - --key is the Station CA certificate the app trusts; the CRL is --crl
+//        (default: the trust bundle's), the time --at (default: the worked
+//        sessions' 2026-02-13T10:00:00.000Z, never the clock of the machine)
+//      - The Hello it answers is --hello, or the file beside it whose name has
+//        `hello` in place of `challenge`; its wire bytes are its compact JSON
+//      - Runs the app's verification gate, steps 1-6, and requires low-s
+//
+//   4. DEVICE_PROOF  (--mode device-proof; 06-security.md §6.5.4)
+//      - --key is the server key that signed the pass (the pass anchors devicePublicKey)
+//      - An OfflineAuthRequest takes its transcript from --hello/--challenge, or
+//        the files beside it named `hello`/`challenge` in place of
+//        `offline-auth-request`, and the stationId from that Challenge's
+//        certificate, which must pass the gate
+//      - An AuthorizeOfflinePass REQUEST carries its transcriptHash; the stationId
+//        is the subject CN of --station-cert (default: the test station's mTLS
+//        certificate), the identity of the station that forwarded it
+//
+//   Also: SERVER_SIGNED_AUTH, FIRMWARE, SESSION_PROOF, SESSION_KEY_CONFIRMATION,
+//   and a ReceiptResponse, whose receipt is verified as in mode 1.
+//
 // Usage:
-//   node tools/verify-example-signatures.mjs --key <pub.pem> <file...>
+//   node tools/verify-example-signatures.mjs --key <pub.pem> [--mode <mode>]
+//        [--hello <file>] [--challenge <file>] [--crl <file>] [--ca <file>]
+//        [--station-cert <file>] [--at <ISO time>] [--intended-station-id <id>] <file...>
 //
 // =============================================================================
 
 import { createHash, createHmac, createPublicKey, timingSafeEqual } from 'node:crypto';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import path from 'node:path';
 import { argv, exit } from 'node:process';
 import { canonicalForm } from './canonical-form.mjs';
 import { ecdsaVerify } from '@ospp/protocol/server';
+import {
+  wireBytes, validatePublicKey, isLowS, transcriptHashOf, stationVerificationGate,
+  parseCertificate, pemToDer, deviceProofInput, deviceProofFormats, verifyDeviceProof,
+} from './ble-crypto.mjs';
 
 // Compressed SEC1 P-256 public key on the BLE wire: 33 bytes → 44 Base64 chars,
 // no padding (06-security.md §6.5 Pin 2).
 const EC_PUBKEY_RE = /^[A-Za-z0-9+/]{44}$/;
-const STATION_IDENTITY_BODY_FIELDS = ['stationId', 'organizationId', 'stationPubKey', 'issuedAt', 'expiresAt'];
+
+// The BLE trust material and the instant every station certificate is judged at:
+// the worked sessions' time, fixed, so no fixture expires with the calendar.
+const DEFAULT_CRL = 'conformance/test-keys/station-ca-test-crl.pem';
+const DEFAULT_CA = 'conformance/test-keys/station-ca-test-cert.pem';
+const DEFAULT_STATION_CERT = 'conformance/test-keys/station-mtls-test-cert.pem';
+const DEFAULT_AT = '2026-02-13T10:00:00.000Z';
+const DEVICE_PROOF_SCHEMA = new URL('../schemas/common/device-proof.schema.json', import.meta.url);
 
 const FIRMWARE_BIN_PATH = 'conformance/test-firmware/test-firmware.bin';
 const SESSION_KEY_PATH = 'conformance/test-keys/session-test-key.bin';
 const AUTH_RESPONSE_OK_LABEL = 'AuthResponse_OK';
 
 function parseArgs(args) {
-  const opts = { key: null, mode: null, files: [] };
+  const opts = { key: null, mode: null, files: [], hello: null, challenge: null, crl: null, ca: null, stationMtlsCert: null, at: null, intendedStationId: null };
+  const flags = { '--key': 'key', '--mode': 'mode', '--hello': 'hello', '--challenge': 'challenge', '--crl': 'crl', '--ca': 'ca', '--station-cert': 'stationMtlsCert', '--at': 'at', '--intended-station-id': 'intendedStationId' };
   for (let i = 2; i < args.length; i++) {
     const a = args[i];
-    if (a === '--key') opts.key = args[++i];
-    else if (a === '--mode') opts.mode = args[++i];
+    if (a in flags) opts[flags[a]] = args[++i];
     else if (a === '--help' || a === '-h') {
-      console.log('Usage: verify-example-signatures.mjs --key <pub.pem|key.bin> [--mode <mode>] <file...>');
+      console.log('Usage: verify-example-signatures.mjs --key <pub.pem|ca.pem|key.bin> [--mode <mode>] [--hello <file>] [--challenge <file>] [--crl <file>] [--ca <file>] [--station-cert <file>] [--at <ISO>] [--intended-station-id <id>] <file...>');
       exit(0);
     } else opts.files.push(a);
   }
@@ -162,6 +197,11 @@ function verifySessionKeyConfirmation(outer, file, sessionKey) {
 }
 
 function detectMode(outer) {
+  // A ReceiptResponse carries the receipt object the app stores and uploads; its
+  // signed wrapper is one level further in.
+  if (outer && typeof outer === 'object' && outer.type === 'ReceiptResponse') {
+    return 'receipt-response';
+  }
   if (outer && typeof outer === 'object' && typeof outer.receipt === 'object' && outer.receipt !== null) {
     return 'receipt';
   }
@@ -177,13 +217,10 @@ function detectMode(outer) {
   if (outer && typeof outer === 'object' && outer.type === 'AuthResponse') {
     return 'session-key-confirmation';
   }
-  // StationIdentity certificate — either embedded in a Challenge (FFF4) as
-  // `stationCert`, or a bare cert object (stationPubKey + signature wrapper).
-  if (outer && typeof outer === 'object' && outer.type === 'Challenge' && outer.stationCert && typeof outer.stationCert === 'object') {
-    return 'station-identity';
-  }
-  if (outer && typeof outer === 'object' && typeof outer.stationPubKey === 'string' && typeof outer.signature === 'string' && typeof outer.signatureAlgorithm === 'string') {
-    return 'station-identity';
+  // The station's signature over the handshake, carried in the Challenge (FFF4)
+  // with the station's certificate (06-security.md §6.5.2).
+  if (outer && typeof outer === 'object' && outer.type === 'Challenge') {
+    return 'station-signature';
   }
   if (outer && typeof outer === 'object' && typeof outer.firmwareUrl === 'string') {
     return 'firmware';
@@ -191,50 +228,90 @@ function detectMode(outer) {
   return null;
 }
 
-function verifyStationIdentity(outer, file, pubPem) {
-  // Accept the cert directly, or pull it out of a Challenge wrapper.
-  const cert = (outer.stationCert && typeof outer.stationCert === 'object') ? outer.stationCert : outer;
+// The file a fixture pairs with: the same directory, `from` replaced by `to` in its name.
+function sibling(file, from, to) {
+  const base = path.basename(file);
+  if (!base.includes(from)) return null;
+  const candidate = path.join(path.dirname(file), base.replace(from, to));
+  return existsSync(candidate) ? candidate : null;
+}
 
-  for (const k of [...STATION_IDENTITY_BODY_FIELDS, 'signatureAlgorithm', 'signature']) {
-    if (typeof cert[k] !== 'string') {
-      return { file, ok: false, reason: `stationCert.${k} missing or not a string` };
+function verifyStationSignature(outer, file, caPem, opts) {
+  const helloFile = opts.hello ?? sibling(file, 'challenge', 'hello');
+  if (!helloFile) {
+    return { file, ok: false, reason: 'no Hello to verify the Challenge against: pass --hello <file> or keep a hello-* file beside it' };
+  }
+  const hello = JSON.parse(readFileSync(helloFile, 'utf-8'));
+  for (const [name, b64] of [['Hello.appEphemeralPubKey', hello.appEphemeralPubKey], ['Challenge.stationEphemeralPubKey', outer.stationEphemeralPubKey]]) {
+    if (!EC_PUBKEY_RE.test(b64 ?? '')) return { file, ok: false, reason: `${name} is not a 44-char compressed-SEC1 Base64 key (§6.5 Pin 2)` };
+    try { validatePublicKey(b64); } catch (e) { return { file, ok: false, reason: `${name} is not a valid P-256 point: ${e.message}` }; }
+  }
+  const gate = stationVerificationGate({
+    challenge: outer,
+    helloBytes: wireBytes(hello),
+    caCertPem: caPem,
+    crlPem: readFileSync(opts.crl ?? DEFAULT_CRL, 'utf-8'),
+    at: opts.at ?? DEFAULT_AT,
+    intendedStationId: opts.intendedStationId ?? null,
+  });
+  if (!gate.ok) {
+    return { file, ok: false, reason: `the app's verification gate refuses it at step ${gate.step}: ${gate.reason}` };
+  }
+  if (!isLowS(outer.stationSignature)) {
+    return { file, ok: false, reason: 'stationSignature is not low-s (06-security.md §6.2 Note 6)' };
+  }
+  return { file, ok: true, mode: 'station-signature', bodyFields: [`stationId=${gate.stationId}`, `hello=${path.basename(helloFile)}`], canonicalBytes: gate.signedContent.length };
+}
+
+function verifyDeviceProofFile(outer, file, serverPubPem, opts) {
+  // The pass anchors devicePublicKey: it must verify first.
+  const passResult = verifyOfflinePass(outer, file, serverPubPem);
+  if (!passResult.ok) return passResult;
+  const formats = deviceProofFormats(JSON.parse(readFileSync(DEVICE_PROOF_SCHEMA, 'utf-8')));
+  let transcriptHash;
+  let stationId;
+  if (outer.type === 'OfflineAuthRequest') {
+    const helloFile = opts.hello ?? sibling(file, 'offline-auth-request', 'hello');
+    const challengeFile = opts.challenge ?? sibling(file, 'offline-auth-request', 'challenge');
+    if (!helloFile || !challengeFile) {
+      return { file, ok: false, reason: 'no handshake to verify the device proof over: pass --hello and --challenge, or keep hello-*/challenge-* files beside it' };
     }
+    const hello = JSON.parse(readFileSync(helloFile, 'utf-8'));
+    const challenge = JSON.parse(readFileSync(challengeFile, 'utf-8'));
+    const gate = stationVerificationGate({
+      challenge, helloBytes: wireBytes(hello),
+      caCertPem: readFileSync(opts.ca ?? DEFAULT_CA, 'utf-8'),
+      crlPem: readFileSync(opts.crl ?? DEFAULT_CRL, 'utf-8'),
+      at: opts.at ?? DEFAULT_AT,
+    });
+    if (!gate.ok) return { file, ok: false, reason: `the handshake's Challenge fails the gate at step ${gate.step}: ${gate.reason}` };
+    transcriptHash = transcriptHashOf(wireBytes(hello), wireBytes(challenge));
+    stationId = gate.stationId;
+  } else if (typeof outer.transcriptHash === 'string') {
+    transcriptHash = Buffer.from(outer.transcriptHash, 'base64');
+    if (transcriptHash.length !== 32) return { file, ok: false, reason: 'transcriptHash is not 32 bytes' };
+    stationId = parseCertificate(pemToDer(readFileSync(opts.stationMtlsCert ?? DEFAULT_STATION_CERT, 'utf-8'))).subjectCN;
+  } else {
+    return { file, ok: false, reason: 'device-proof mode needs an OfflineAuthRequest or an AuthorizeOfflinePass REQUEST carrying transcriptHash' };
   }
-  if (cert.signatureAlgorithm !== 'ECDSA-P256-SHA256') {
-    return { file, ok: false, reason: `signatureAlgorithm "${cert.signatureAlgorithm}" != ECDSA-P256-SHA256` };
-  }
+  const proofInput = deviceProofInput({
+    transcriptHash, stationId, passId: outer.offlinePass.passId, counter: outer.counter,
+    bayId: outer.bayId, serviceId: outer.serviceId, requestedDurationSeconds: outer.requestedDurationSeconds,
+  });
+  const r = verifyDeviceProof({ deviceProof: outer.deviceProof, devicePublicKey: outer.offlinePass.devicePublicKey, proofInput, formats });
+  if (!r.ok) return { file, ok: false, reason: `deviceProof: ${r.reason}` };
+  if (!isLowS(outer.deviceProof.signature)) return { file, ok: false, reason: 'deviceProof.signature is not low-s' };
+  return { file, ok: true, mode: 'device-proof', bodyFields: [`format=${outer.deviceProof.format}`, `stationId=${stationId}`], canonicalBytes: proofInput.length };
+}
 
-  // Signed body = cert MINUS signature + signatureAlgorithm, OSPP-canonical (§4.8 / Pin 8).
-  const { signature, signatureAlgorithm, ...body } = cert;
-  void signatureAlgorithm;
-  const canonicalBytes = Buffer.from(canonicalForm(body), 'utf-8');
-  if (!ecdsaVerify(pubPem, canonicalBytes, signature)) {
-    return { file, ok: false, reason: 'stationCert.signature failed to verify against the server public key' };
+function verifyReceiptResponse(outer, file, pubPem) {
+  if (outer.result !== 'Accepted') {
+    if ('receipt' in outer) return { file, ok: false, reason: 'a Rejected ReceiptResponse carries no receipt' };
+    return { file, ok: true, mode: 'receipt-response', bodyFields: ['(no receipt — result=Rejected)'], canonicalBytes: 0 };
   }
-
-  // stationPubKey is the static ECDH key — MUST be compressed SEC1 (Pin 2).
-  if (!EC_PUBKEY_RE.test(body.stationPubKey)) {
-    return { file, ok: false, reason: 'stationPubKey is not a 44-char compressed-SEC1 Base64 key (§6.5 Pin 2)' };
-  }
-  // If embedded in a Challenge, the ephemeral key MUST also be compressed SEC1.
-  if (outer.stationCert && !EC_PUBKEY_RE.test(outer.stationEphemeralPubKey ?? '')) {
-    return { file, ok: false, reason: 'Challenge.stationEphemeralPubKey is not a 44-char compressed-SEC1 Base64 key (§6.5 Pin 2)' };
-  }
-
-  // Structural profile (a timeless vector): issuedAt < expiresAt. The absolute
-  // freshness check (expiresAt > now, with clock-skew) is the app's RUNTIME gate
-  // (§6.5.2 step 2) — it cannot be asserted on a fixed vector and is exercised
-  // live in B5, not here. Stated, not hidden.
-  const issuedMs = Date.parse(body.issuedAt);
-  const expiresMs = Date.parse(body.expiresAt);
-  if (!Number.isFinite(issuedMs) || !Number.isFinite(expiresMs)) {
-    return { file, ok: false, reason: 'issuedAt/expiresAt is not a parseable timestamp' };
-  }
-  if (!(expiresMs > issuedMs)) {
-    return { file, ok: false, reason: `expiresAt (${body.expiresAt}) must be after issuedAt (${body.issuedAt})` };
-  }
-
-  return { file, ok: true, mode: 'station-identity', bodyFields: Object.keys(body), canonicalBytes: canonicalBytes.length };
+  if (!outer.receipt || typeof outer.receipt !== 'object') return { file, ok: false, reason: 'ReceiptResponse Accepted without a receipt' };
+  const r = verifyReceipt(outer.receipt, file, pubPem);
+  return r.ok ? { ...r, mode: 'receipt-response' } : r;
 }
 
 function verifyFirmware(outer, file, pubPem) {
@@ -381,8 +458,8 @@ function verifyOfflinePass(outer, file, pubPem) {
   }
 
   // Cross-check pass fields against any outer-level fields that mirror them
-  // (e.g. authorize-offline-pass.request has top-level offlinePassId, deviceId
-  // that mirror pass.passId / pass.deviceId, where present).
+  // (authorize-offline-pass.request's top-level offlinePassId mirrors pass.passId;
+  // a deviceId beside the pass is checked the same way where one is present).
   const mirror = {
     passId: 'offlinePassId',
     deviceId: 'deviceId',
@@ -449,9 +526,9 @@ function verifyServerSignedAuth(outer, file, pubPem) {
   }
 
   // Cross-checks mandated by §4.2.2 for the parts visible from the envelope.
-  // Station-side checks (Hello.appNonce, Hello.deviceId, STATION_OWN_ID, NOW
-  // vs expiresAt) require live handshake state that conformance fixtures
-  // cannot capture, so we only assert the envelope binding here:
+  // Station-side checks (Hello.appNonce, STATION_OWN_ID, NOW vs expiresAt)
+  // require live handshake state that conformance fixtures cannot capture, so
+  // only the envelope binding is asserted here:
   //   §4.2.2 check #5  —  claims.sessionId == envelope.sessionId
   if (claims.sessionId !== outer.sessionId) {
     return {
@@ -470,13 +547,15 @@ function verifyServerSignedAuth(outer, file, pubPem) {
   };
 }
 
-function verifyFile(file, key, modeOverride) {
+function verifyFile(file, key, modeOverride, opts) {
   const outer = JSON.parse(readFileSync(file, 'utf-8'));
   const mode = modeOverride ?? detectMode(outer);
   if (mode === 'receipt') return verifyReceipt(outer, file, key);
+  if (mode === 'receipt-response') return verifyReceiptResponse(outer, file, key);
   if (mode === 'offline-pass') return verifyOfflinePass(outer, file, key);
   if (mode === 'server-signed-auth') return verifyServerSignedAuth(outer, file, key);
-  if (mode === 'station-identity') return verifyStationIdentity(outer, file, key);
+  if (mode === 'station-signature') return verifyStationSignature(outer, file, key, opts);
+  if (mode === 'device-proof') return verifyDeviceProofFile(outer, file, key, opts);
   if (mode === 'firmware') return verifyFirmware(outer, file, key);
   if (mode === 'session-proof') return verifySessionProof(outer, file, key);
   if (mode === 'session-key-confirmation') return verifySessionKeyConfirmation(outer, file, key);
@@ -493,7 +572,7 @@ function main() {
 
   let failures = 0;
   for (const file of opts.files) {
-    const r = verifyFile(file, key, opts.mode);
+    const r = verifyFile(file, key, opts.mode, opts);
     if (r.ok) {
       console.log(`  OK  ${r.file}  [mode=${r.mode}, body=${r.bodyFields.length} fields, canonical=${r.canonicalBytes}B]`);
     } else {

@@ -141,7 +141,9 @@ NAMED = ('IANA tz', 'valid key set')
 # The offline-model change after 0.44.0 registered `OfflineWindowHours` (1--240) and
 # `OfflineTransactionLimit` (1--10000), moving 'numeric' 15 -> 17, and made `OfflinePassPublicKey`
 # a key set, whose 'valid SEC1 key' cell became 'valid key set' ('named' stays 2).
-EXPECTED_FORMS = {'numeric': 17, 'none': 8, 'maxchars': 2, 'literals': 1, 'named': 2}
+# The BLE wire revision withdrew `StationIdentityCertificate` with the StationIdentity, moving
+# 'maxchars' 2 -> 1; the §1.6 table moved first.
+EXPECTED_FORMS = {'numeric': 17, 'none': 8, 'maxchars': 1, 'literals': 1, 'named': 2}
 
 # Registry key -> dedicated wire field, and the schema that bounds that field.
 ALIASES = {

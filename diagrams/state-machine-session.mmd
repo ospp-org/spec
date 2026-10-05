@@ -12,10 +12,11 @@ stateDiagram-v2
 
     Active --> Stopping : StopService requested<br/>(user, server, or timer)
     Active --> Completed : SessionEnded EVENT [MSG-040]<br/>(Local, LocalOutOfCredit)
-    Active --> Failed : Hardware fault (SessionEnded EVENT [MSG-040])<br/>Connection lost (after grace period, not Partial B)<br/>Deauthorized (RevocationEpoch bump)
+    Active --> Failed : Hardware fault (SessionEnded EVENT [MSG-040])<br/>Connection lost (after grace period, not Partial B)<br/>Deauthorized (RevocationEpoch bump)<br/>Partial B never started
+    Active --> Completed : Partial B authorized duration ended<br/>with no end record
 
     Stopping --> Completed : Station confirms stop<br/>StopService RESPONSE (user stop)<br/>or SessionEnded EVENT [MSG-040] (timer expiry)
-    Stopping --> Failed : Stop timeout (10s)<br/>Station unresponsive (not Partial B)
+    Stopping --> Failed : Stop timeout (10s) or station unresponsive<br/>(not Partial B)
 
     Completed --> [*]
     Failed --> [*]

@@ -15,12 +15,12 @@ sequenceDiagram
         Note over Station,Server: ⚠️ Connection Lost
         Station--xBroker: TCP connection drops
         Broker->>Server: ConnectionLost EVENT (LWT) [MSG-011]
-        Server->>Server: Mark station offline<br/>Start recovery timer (300s, not Partial B)
+        Server->>Server: Mark station offline<br/>Start recovery timer (300s; a Partial-B session's<br/>is its authorized duration)
 
         Note over Server: Server-side handling
         Server->>Server: Mark all bays as Unknown
         Server->>Server: Alert operators (push/email)
-        Server->>Server: Suspend active sessions<br/>(grace period running, not Partial B)
+        Server->>Server: Suspend active sessions<br/>(grace period running; a Partial-B session<br/>runs to its authorized duration)
     end
 
     %% Station buffers messages while offline
@@ -67,6 +67,9 @@ sequenceDiagram
         Broker->>Server: MeterValues [MSG-010]
         Station->>Broker: MeterValues EVENT (buffered, t=10:03:30)
         Broker->>Server: MeterValues [MSG-010]
+        Station->>Broker: SessionEnded EVENT (buffered, sessionId, reason)
+        Broker->>Server: SessionEnded [MSG-040]
+        Server->>Server: Settle the session once (a later end record is a duplicate)
         Station->>Broker: TransactionEvent REQUEST (offlineTxId, receipt, txCounter)
         Broker->>Server: TransactionEvent [MSG-007]
         Server->>Server: Dedup → receipt signature → gate → settle → score<br/>(txCounter recorded, not gated)

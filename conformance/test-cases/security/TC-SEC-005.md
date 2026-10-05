@@ -17,7 +17,6 @@ Verify that the **server's** provisioning endpoint (`POST /api/v1/stations/provi
 - `spec/07-errors.md` §3.4 — `4015 PROVISIONING_KEY_MISMATCH` (severity `Error`, `recoverable: false`, HTTP `409`)
 - `spec/07-errors.md` §2.4 — canonical flat REST error envelope
 - `spec/02-transport.md` §9.3 — provisioning idempotency keyed on the token, bounded by key identity
-- `spec/06-security.md` §6.5.2 — the static BLE ECDH public key submitted at provisioning
 - `schemas/provisioning-response.schema.json`
 
 ## Preconditions
@@ -25,10 +24,9 @@ Verify that the **server's** provisioning endpoint (`POST /api/v1/stations/provi
 1. A station entry exists in the management portal with `stationId` `stn_a1b2c3d4`, not yet provisioned.
 2. A provisioning token `T1` has been generated for it (single-use, unconsumed, with a known TTL fixed at issuance).
 3. The test harness can generate ECDSA P-256 key pairs and produce CSRs with CN = `stn_a1b2c3d4`.
-4. The test harness can generate a static ECDH P-256 key pair (for Part F; required only if the station profile declares `bleSupported`).
-5. The test harness can capture full HTTP responses, including status code and body.
-6. The harness retains, byte-for-byte, the certificate returned by the first successful provision.
-7. The server's certificate store can be inspected (directly or via an operator API) to count certificates issued against `T1`.
+4. The test harness can capture full HTTP responses, including status code and body.
+5. The harness retains, byte-for-byte, the certificate returned by the first successful provision.
+6. The server's certificate store can be inspected (directly or via an operator API) to count certificates issued against `T1`.
 
 ## Steps
 
@@ -93,15 +91,13 @@ Verify that the **server's** provisioning endpoint (`POST /api/v1/stations/provi
 32. Verify the server has still issued exactly **one** certificate against `T1`.
 33. Verify the server's stored receipt-signing key for `stn_a1b2c3d4` is still `K_rcpt_1.pub` — the drifted key was not adopted.
 
-### Part F — BLE ECDH key drift MUST be rejected (conditional)
+### Part F — Withdrawn
 
-> Applicable only where the station profile declares `bleSupported`, so that the **first provision** carries `stationPubKey` and the key is in the bound set (`06-security.md` §6.5.2). Skip otherwise, and record it as skipped. Note this part exercises BLE-key **value** drift only; a retry that **omits** a bound BLE key, or **adds** one that was not bound, is equally `409` / `4015` per Flows §2 and is not yet covered here.
-
-34. Repeat Part A steps 1–6, but include `stationPubKey: K_ble_1.pub` in the initial provision, using a fresh token `T2` on a second unprovisioned station entry.
-35. Generate a new static ECDH key pair `K_ble_2`.
-36. Re-send the request with token `T2`, all other keys unchanged, `stationPubKey: K_ble_2.pub`.
-37. Verify the response status is **`409 Conflict`** with `errorCode` `4015`.
-38. Verify the StationIdentity certificate held by the server for that station still binds `K_ble_1.pub`.
+> Part F exercised drift of the static BLE ECDH key, `stationPubKey`, which a station supporting BLE
+> submitted at provisioning until the BLE wire revision withdrew it with the StationIdentity it
+> certified: a station now authenticates itself over BLE with the certificate of Part A
+> ([`06-security.md` §6.5.2](../../../spec/06-security.md#652-station-authentication--the-stations-certificate)).
+> Its steps, 34–38, are not reused.
 
 ### Part G — Token exhaustion is unchanged
 
@@ -117,11 +113,10 @@ Verify that the **server's** provisioning endpoint (`POST /api/v1/stations/provi
 4. A fresh CSR over the **same** key is treated as a replay, not as drift — the server compares the DER `SubjectPublicKeyInfo`, not raw CSR bytes.
 5. CSR public-key drift returns `409 Conflict` with `4015 PROVISIONING_KEY_MISMATCH`.
 6. Receipt-signing-key drift returns the same `409` / `4015`.
-7. BLE ECDH-key drift returns the same `409` / `4015` where applicable.
-8. In every rejection case the server has issued exactly **one** certificate against the token.
-9. A rejection leaves the already-issued certificate and the already-stored keys intact and still replayable.
-10. Error bodies use the flat top-level Error Object of §2.4 with `recoverable: false`.
-11. After TTL expiry the endpoint returns `401`, regardless of key state.
+7. In every rejection case the server has issued exactly **one** certificate against the token.
+8. A rejection leaves the already-issued certificate and the already-stored keys intact and still replayable.
+9. Error bodies use the flat top-level Error Object of §2.4 with `recoverable: false`.
+10. After TTL expiry the endpoint returns `401`, regardless of key state.
 
 ## Failure Criteria
 
@@ -130,7 +125,7 @@ Verify that the **server's** provisioning endpoint (`POST /api/v1/stations/provi
 3. A second certificate is minted against the token in any scenario.
 4. A fresh CSR over the same key is rejected (server compared raw CSR bytes instead of the `SubjectPublicKeyInfo`).
 5. Descriptive drift is rejected, or causes a different certificate to be returned.
-6. Receipt-signing-key drift or BLE-key drift is accepted, silently adopted, or ignored while only CSR drift is checked.
+6. Receipt-signing-key drift is accepted, silently adopted, or ignored while only CSR drift is checked.
 7. The error body nests the error fields under an `error` member, carries sibling members, or omits `errorCode` / `errorText` / `timestamp`.
 8. `errorCode` is any value other than `4015`, or `recoverable` is `true`.
 9. A rejected retry invalidates, revokes, or alters the already-issued certificate.

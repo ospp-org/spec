@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/common/device-proof.schema.json",
+  "title": "DeviceProof",
+  "description": "Proof that the phone presenting an OfflinePass holds the private key of the pass's devicePublicKey, made inside the BLE channel over this handshake's transcript, the station's identity, the pass, its counter and the requested service (06-security.md §6.5.4). It travels in the BLE OfflineAuthRequest and, unchanged, in the AuthorizeOfflinePass REQUEST a station forwards. On Android it is a signature by the attested Keystore key; on iOS, where the device key is the App Attest key, an App Attest assertion.",
+  "type": "object",
+  "required": [
+    "format",
+    "signature"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "type": "string",
+      "enum": [
+        "android-key",
+        "apple-appattest"
+      ],
+      "description": "Which platform produced the proof - the formats of the device key's attestation (spec/profiles/offline/app-contract.md §3.6): android-key, a signature by the Android Keystore key; apple-appattest, an App Attest assertion."
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]+={0,2}$",
+      "minLength": 8,
+      "maxLength": 128,
+      "description": "The DER ECDSA P-256 signature, Base64: for android-key, over the proof input of 06-security.md §6.5.4 with SHA-256; for apple-appattest, the signature of the App Attest assertion, over the nonce SHA-256(authenticatorData || SHA-256(proof input)) with SHA-256."
+    },
+    "authenticatorData": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]+={0,2}$",
+      "minLength": 8,
+      "maxLength": 512,
+      "description": "apple-appattest only: the authenticator data of the App Attest assertion, Base64, which the verifier hashes with the proof input to rebuild the signed nonce (06-security.md §6.5.4)."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "format": {
+            "const": "apple-appattest"
+          }
+        },
+        "required": [
+          "format"
+        ]
+      },
+      "then": {
+        "required": [
+          "authenticatorData"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "format": {
+            "const": "android-key"
+          }
+        },
+        "required": [
+          "format"
+        ]
+      },
+      "then": {
+        "properties": {
+          "authenticatorData": false
+        }
+      }
+    }
+  ]
+}

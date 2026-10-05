@@ -26,8 +26,8 @@ cd "$(dirname "$0")/.."
 # ajv-cli resolution lives in one file for both gates; see tools/_ajv-resolve.sh.
 . tools/_ajv-resolve.sh   # cwd is the repo root by the cd above, in every invocation
 
-# Every schema, at any depth, as a ref — schemas/common alone left ble/challenge.schema.json
-# unable to resolve ble/station-identity.schema.json.
+# Every schema, at any depth, as a ref — schemas/common alone leaves a BLE schema unable to
+# resolve another BLE schema (ble/receipt-response.schema.json refers to ble/receipt.schema.json).
 mapfile -t SCHEMAS < <(find schemas -name '*.schema.json' | sort)
 if [ "${#SCHEMAS[@]}" -eq 0 ]; then
   echo "FATAL: zero schemas found. The layout moved." >&2
@@ -76,11 +76,13 @@ check schemas/mqtt/meter-values-event.schema.json examples/payloads/mqtt/meter-v
 
 for msg in station-info available-services hello challenge offline-auth-request \
            server-signed-auth start-service-request start-service-response \
-           stop-service-request stop-service-response receipt; do
+           stop-service-request stop-service-response receipt receipt-request receipt-response; do
   check "schemas/ble/${msg}.schema.json" "examples/payloads/ble/${msg}.json"
 done
 check schemas/ble/auth-response.schema.json  examples/payloads/ble/auth-response.accepted.json
 check schemas/ble/auth-response.schema.json  examples/payloads/ble/auth-response.rejected.json
+check schemas/ble/start-service-response.schema.json examples/payloads/ble/start-service-response.rejected.json
+check schemas/ble/stop-service-response.schema.json  examples/payloads/ble/stop-service-response.rejected.json
 check schemas/ble/service-status.schema.json examples/payloads/ble/service-status.running.json
 check schemas/ble/service-status.schema.json examples/payloads/ble/service-status.receipt-ready.json
 

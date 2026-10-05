@@ -97,8 +97,10 @@ EXCLUSIONS = {
         'every tool here that canonicalizes, the signing and signature-verification chain '
         'included. Running it would do nothing.',
     'ble-crypto.mjs':
-        'module, not an entry point — the BLE key-schedule primitives imported by '
-        'verify-ble-crypto.mjs and generate-ble-vectors.mjs.',
+        'module, not an entry point — the BLE primitives (key schedule, station signature, '
+        'certificate gate, device proof, AEAD) imported by verify-ble-crypto.mjs, '
+        'generate-ble-vectors.mjs, generate-tamper-vectors.mjs, sign-example.mjs, '
+        'sign-inline-md.mjs and verify-example-signatures.mjs.',
     'receipt-fields.mjs':
         'module, not an entry point — the receipt\'s four signed-only fields, imported by '
         'sign-example.mjs and sign-inline-md.mjs so the two signers cannot disagree on them.',

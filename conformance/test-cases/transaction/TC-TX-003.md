@@ -23,7 +23,7 @@ Verify that when a session is stopped before its natural expiry (early stop), th
 
 1. Station is booted and has received BootNotification ACCEPTED.
 2. Bay `bay_a1b2c3d4` is in `Available` state.
-3. Service catalog includes `svc_basic` with a known credits-per-second rate.
+3. Service catalog includes `svc_basic`, a `UserDuration` service, with a known per-minute price.
 4. `MeterValuesInterval` is set to 10 seconds.
 5. Test harness has `sessionId: "sess_b3c4d5e6f7a8"` ready.
 6. The server-side `creditsAuthorized` for a 300-second session is known (e.g., 50 credits).
@@ -58,7 +58,7 @@ Verify that when a session is stopped before its natural expiry (early stop), th
    - `actualDurationSeconds` — should be approximately 30 seconds (+/- 3s)
    - `creditsCharged` — should be the delivered time priced by the normative credit formula,
      `ceil(actualDurationSeconds / 60 * priceCreditsPerMinute)` (`spec/03-messages.md` §3.4).
-     Note this is rounded up to the minute, so it is **not** a strict linear proportion of
+     Note this is rounded up to one credit, so it is **not** a strict linear proportion of
      `creditsAuthorized`
 8. Verify `creditsCharged` < `creditsAuthorized` (50 credits).
 9. Verify `actualDurationSeconds` < `durationSeconds` (300 seconds).
@@ -102,11 +102,12 @@ Verify that when a session is stopped before its natural expiry (early stop), th
 
 1. `actualDurationSeconds` accurately reflects the real elapsed time between start and stop (+/- 3 seconds).
 2. `creditsCharged` equals `ceil(actualDurationSeconds / 60 * priceCreditsPerMinute)` — the delivered time
-   priced by the normative credit formula, rounded up to the minute.
+   priced by the normative credit formula, rounded up to one credit.
 3. `creditsCharged` < `creditsAuthorized` when the session is stopped early.
 4. Final MeterValues in StopService response are >= the last periodic MeterValues reading (monotonically increasing).
-5. Both commanded stops settle pro-rata: the refund is `creditsAuthorized - creditsCharged` in Part A and
-   in Part B alike. The delivered fraction does not change which rule applies.
+5. Both commanded stops settle pro-rata, as a `UserDuration` session's stop does: the refund is
+   `creditsAuthorized - creditsCharged` in Part A and in Part B alike. The delivered fraction does not change
+   which rule applies; a `FixedDuration` or `MultiUnit` service would be charged in full ([`spec/04-flows.md` §6](../../../spec/04-flows.md#settlement-by-service-kind)).
 6. The low-delivery override is not triggered by either part, because neither produces a SessionEnded with
    `reason: Fault`.
 7. A duplicate StopService inside the retention horizon returns the cached `Accepted` payload, byte-identical

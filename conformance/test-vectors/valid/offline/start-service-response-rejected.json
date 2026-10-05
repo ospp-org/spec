@@ -1,0 +1,6 @@
+{
+  "type": "StartServiceResponse",
+  "result": "Rejected",
+  "errorCode": 3001,
+  "errorText": "BAY_BUSY"
+}

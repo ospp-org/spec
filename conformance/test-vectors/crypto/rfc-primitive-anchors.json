@@ -1,6 +1,6 @@
 {
-  "_comment": "External-truth anchors for the OSPP BLE v0.6.0 crypto corpus. Each primitive (ECDH P-256, HKDF-SHA256, ChaCha20-Poly1305 IETF) reproduces a PUBLISHED RFC test vector byte-for-byte. This is what makes the conformance corpus non-circular: generate-ble-vectors.mjs and verify-ble-crypto.mjs both reproduce these before trusting any OSPP-specific value. If a primitive ever fails to reproduce its RFC vector, both tools abort. Regenerate: node tools/generate-ble-vectors.mjs ; re-check: node tools/verify-ble-crypto.mjs",
-  "specRef": "v0.6.0",
+  "_comment": "External-truth anchors for the OSPP BLE crypto corpus. Each primitive (ECDH P-256, HKDF-SHA256, ChaCha20-Poly1305 IETF) reproduces a PUBLISHED RFC test vector byte-for-byte. This is what makes the conformance corpus non-circular: generate-ble-vectors.mjs and verify-ble-crypto.mjs both reproduce these before trusting any OSPP-specific value. If a primitive ever fails to reproduce its RFC vector, both tools abort. Regenerate: node tools/generate-ble-vectors.mjs ; re-check: node tools/verify-ble-crypto.mjs",
+  "specRef": "BLE protocol version 0.3.0",
   "sources": {
     "ecdh": "RFC 5903 §8.1 (256-bit Random ECP Group)",
     "hkdf": "RFC 5869 Appendix A.1 + A.2 (SHA-256)",

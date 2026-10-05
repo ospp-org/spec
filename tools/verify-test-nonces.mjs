@@ -46,8 +46,9 @@ const SEED = 'OSPP_TEST_NONCE_V1';
 
 // One label per handshake. The label is what makes the value distinct, so two documents must
 // never share one.
-const HANDSHAKES = [
+export const HANDSHAKES = [
   { label: 'ble-handshake-profile', file: 'spec/profiles/offline/ble-handshake.md' },
+  { label: 'messages-catalog', file: 'spec/03-messages.md' },
   { label: 'flow-04-full-offline', file: 'examples/flows/04-full-offline-session.md' },
   { label: 'flow-05-partial-a', file: 'examples/flows/05-partial-a-session.md' },
   { label: 'flow-06-partial-b', file: 'examples/flows/06-partial-b-session.md' },
@@ -69,6 +70,13 @@ function literalsIn(text, field) {
   return [...text.matchAll(re)].map((m) => m[1]);
 }
 
+// A value in a nonce member that is not a nonce at all — a placeholder a document was
+// written with before its nonces were derived. --write replaces it; a check fails on it.
+function placeholdersIn(text, field) {
+  const re = new RegExp(`"${field}"\\s*:\\s*"([^"]*[Pp]laceholder[^"]*)"`, 'g');
+  return [...text.matchAll(re)].map((m) => m[1]);
+}
+
 function main() {
   const write = argv.includes('--write');
   let fail = 0;
@@ -80,13 +88,19 @@ function main() {
     for (const field of FIELDS) {
       const want = derive(label, field);
       const found = literalsIn(text, field);
-      if (found.length === 0) continue;
+      const placeholders = placeholdersIn(text, field);
+      if (found.length === 0 && placeholders.length === 0) continue;
       if (write) {
         text = text.replace(
-          new RegExp(`("${field}"\\s*:\\s*")[A-Za-z0-9+/]{43}=(")`, 'g'),
+          new RegExp(`("${field}"\\s*:\\s*")(?:[A-Za-z0-9+/]{43}=|[^"]*[Pp]laceholder[^"]*)(")`, 'g'),
           `$1${want}$2`,
         );
       } else {
+        for (const got of placeholders) {
+          console.log(`  FAIL ${file} ${field}: a placeholder, not the derived value for label "${label}"`);
+          console.log(`       got  ${got}`);
+          fail++;
+        }
         for (const got of found) {
           if (got !== want) {
             console.log(`  FAIL ${file} ${field}: not the derived value for label "${label}"`);
@@ -137,4 +151,7 @@ function main() {
   return 0;
 }
 
-exit(main());
+// Run only as a command: sign-inline-md.mjs imports HANDSHAKES for the document labels.
+if (process.argv[1] && new URL(import.meta.url).pathname === (await import('node:path')).resolve(process.argv[1])) {
+  exit(main());
+}

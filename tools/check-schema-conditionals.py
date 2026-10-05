@@ -18,7 +18,7 @@ Only *intra-document* conditionals are checked: "<X> when <sibling field> is <va
 Those are the ones JSON Schema can express.
 
 Cross-artefact claims are NOT flagged and must not be. "MUST equal the CN in the issued
-client certificate", "The station MUST cross-check against Hello.deviceId", "MUST be no
+client certificate", "The station MUST cross-check against Hello.appNonce", "MUST be no
 later than five minutes after issuedAt" -- JSON Schema cannot compare against an X.509
 certificate, another message, or another member's value. Those descriptions are correct
 and their citation, not their enforcement, is what matters. Flagging them was the first

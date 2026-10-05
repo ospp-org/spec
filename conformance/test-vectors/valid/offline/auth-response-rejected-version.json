@@ -1,0 +1,6 @@
+{
+  "type": "AuthResponse",
+  "result": "Rejected",
+  "errorCode": 1007,
+  "errorText": "PROTOCOL_VERSION_MISMATCH"
+}

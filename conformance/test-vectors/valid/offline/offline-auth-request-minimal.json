@@ -22,5 +22,13 @@
     "signature": "MEQCIDKcveVTEaaIaU0TJkUwBTMO3nU+AGFwgBnlN0s3w/RIAiAPyXNvjroFYWGQIjP+5hqbowvukOsiDn1Cgalj54kKsg=="
   },
   "counter": 0,
-  "sessionProof": "G7jn3V5239evl6QtKrc6W+y1tqn7qOTR3LHkVDFR5bE="
+  "bayId": "bay_c1d2e3f4a5b6",
+  "serviceId": "svc_eco",
+  "requestedDurationSeconds": 60,
+  "sessionProof": "G7jn3V5239evl6QtKrc6W+y1tqn7qOTR3LHkVDFR5bE=",
+  "deviceProof": {
+    "format": "apple-appattest",
+    "signature": "MEUCIQD1Z1c/UAz7WcvHCXig0QgZafbf1n9PUIcvYRgrJaVc+AIgNynHOuTCpIJpFx8AUuSrgSoC/OmvB5LVTXQfreB9eBQ=",
+    "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
+  }
 }

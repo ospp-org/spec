@@ -4,19 +4,10 @@
 >
 > Published for review, **not** for implementation. May change incompatibly without a MAJOR
 > bump. See [Release status](../../../README.md#ble-is-experimental).
->
-> **This document is the visible half of blocker
-> [B-3](../../../KNOWN-ISSUES.md#b-3--the-three-ble-response-schemas-disagree-with-each-other-and-with-chapter-07).**
-> §3 below requires the station to answer `Rejected` when the `sessionId` matches no active
-> session, but [`stop-service-response.schema.json`](../../../schemas/ble/stop-service-response.schema.json)
-> declares no error member, branches only on `Accepted`, and is closed with
-> `additionalProperties: false` — so a conforming station can refuse but cannot say why, and
-> cannot add a field to do so. `StartServiceResponse` and `AuthResponse` each carry a *different*
-> rejection shape again, and none matches [Chapter 07 §2.3](../../07-errors.md).
 
 ## 1. Starting a Service
 
-> **AEAD channel (Normative).** Every message in this lifecycle — `StartServiceRequest`/`StartServiceResponse`, `StopServiceRequest`/`StopServiceResponse`, the FFF5 ServiceStatus notifications, and the FFF6 Receipt value — travels **inside the post-Challenge AEAD channel** ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)), encrypted and authenticated under the per-direction session keys. A station **MUST** reject any session command that does not decrypt and authenticate under the channel established by *this* connection's handshake. This is what makes `bayId`/`serviceId` selection and `StopServiceRequest` tamper-proof and un-forgeable by a co-located central (finding N4), and what removes the need for `sessionProof` to bind bay/service at authentication time (N1).
+> **AEAD channel (Normative).** Every message in this lifecycle — `StartServiceRequest`/`StartServiceResponse`, `StopServiceRequest`/`StopServiceResponse`, the FFF5 ServiceStatus notifications, and the FFF6 `ReceiptRequest`/`ReceiptResponse` — travels **inside the post-Challenge AEAD channel** ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)), encrypted and authenticated under the per-direction session keys. A station **MUST** reject any session command that does not decrypt and authenticate under the channel established by *this* connection's handshake. This is what makes `bayId`/`serviceId` selection and `StopServiceRequest` tamper-proof and un-forgeable by a co-located central (finding N4), and what removes the need for `sessionProof` to bind bay/service at authentication time (N1).
 >
 > **Message-ordering (Normative).** A station **MUST** reject a `StartServiceRequest` — or any other session command — that arrives **before** it has sent an `Accepted` AuthResponse on this connection: until authentication completes there is no authorized session to act on. (This is enforced by the connection state machine; it is additionally gated by the AEAD channel, since a pre-Accepted peer cannot in any case produce a valid frame, but the state check **MUST** be explicit so an out-of-order command is rejected rather than acted upon.)
 
@@ -27,9 +18,11 @@ After a successful AuthResponse (`result: "Accepted"`), the app writes a StartSe
 | Field | Type | Required | Description |
 |---------------------------|---------|----------|-----------------------------------------------|
 | `type` | string | Yes | `StartServiceRequest` (constant). |
-| `bayId` | string | Yes | Target bay identifier. |
-| `serviceId` | string | Yes | Service to activate. |
+| `bayId` | string | Yes | The bay of the session's authorization. |
+| `serviceId` | string | Yes | The service of the session's authorization. |
 | `requestedDurationSeconds` | integer | Yes | Requested service duration in seconds (minimum 1). |
+
+The request carries no program: the station resolves the program to run from the bindings of the service catalog it holds — the program of that bay the catalog binds the service to ([ble-transport.md §4](ble-transport.md#4-available-services-fff2)).
 
 The station validates the request and responds via FFF4 with a StartServiceResponse.
 
@@ -39,27 +32,22 @@ The station validates the request and responds via FFF4 with a StartServiceRespo
 |--------------|---------|----------|-----------------------------------------------|
 | `type` | string | Yes | `StartServiceResponse` (constant). |
 | `result` | string | Yes | `Accepted` or `Rejected`. |
-| `sessionId` | string | Cond. | Session identifier. For **Full Offline / pass-form** sessions the station mints it locally. For **Partial A (ServerSignedAuth)** the station **MUST** use the **server-issued** `sessionId` from the validated claims (not a locally-minted one) — it is the settle-once correlation key signed into the receipt (`06-security.md` §6.2 / `reconciliation.md` §6.7, finding F2). Present when `result` is `Accepted`. |
+| `sessionId` | string | Cond. | The session's one identifier, which the app names in its StopServiceRequest. For a pass the station validated itself (**Full Offline**) the station mints it. For **Partial A (ServerSignedAuth)** the station **MUST** use the **server-issued** `sessionId` from the validated claims — it is the settle-once correlation key signed into the receipt (`06-security.md` §6.2 / `reconciliation.md` §6.7, finding F2). For **Partial B** the station **MUST** use the `sessionId` of the AuthorizeOfflinePass answer, under which it also reports the session's MeterValues and SessionEnded ([authorize-offline-pass.md §6](authorize-offline-pass.md#6-processing-rules) rule 4). Present when `result` is `Accepted`. |
 | `offlineTxId` | string | Cond. | Offline transaction identifier for reconciliation. Present when `result` is `Accepted`. |
-| `errorCode` | integer | Cond. | Numeric error code. Present when `result` is `Rejected`. |
-| `errorText` | string | Cond. | Human-readable error description. Present when `result` is `Rejected`. |
+| `errorCode` | integer | Cond. | The registry code of the refusal ([Chapter 07 §4.3](../../07-errors.md#43-ble-message-types)). Present when `result` is `Rejected`. |
+| `errorText` | string | Cond. | The registry name of `errorCode`, in `UPPER_SNAKE_CASE`. Present when `result` is `Rejected`. |
+| `details` | object | No | Per-occurrence context of the refusal ([Chapter 07 §2.3](../../07-errors.md#23-ble-error-response)). |
 
 **Processing rules:**
 
 1. The station **MUST** verify that the requested `bayId` and `serviceId` are still available. If the bay state changed between authentication and start (e.g., another BLE session claimed the bay), the station **MUST** respond with `Rejected` and error `3001 BAY_BUSY`.
-2. The station **MUST** verify that `requestedDurationSeconds` does not exceed the authorized `durationSeconds` (finding N3). For a Partial-A (ServerSignedAuth) session this is the **signed** `durationSeconds` claim (`server-signed-auth-claims.schema.json`) the station verified during the handshake; for a Partial-B session it is the `durationSeconds` from the AuthorizeOfflinePass response. The AuthResponse MAY relay an unsigned advisory copy for the app, but the check **MUST** be made against the signed or server value, never the advisory one. **A request above the authorized duration is refused, never reduced (Normative):** the station **MUST** respond `Rejected` with `3010 MAX_DURATION_EXCEEDED`, start no service, and **MUST NOT** shorten the request to the authorized value — a request above a pass's limit is refused the same way ([`offline-pass.md` §2.1](offline-pass.md#21-offlineallowance-object)). The app requests within the authorized duration when it holds it: in its ServerSignedAuth for Partial A, and for Partial B in the advisory copy the AuthResponse can carry.
+1a. **The request names the authorization's bay and service (Normative).** The station **MUST** start only the bay and the service the session was authorized for — those of the OfflineAuthRequest, which the pass was validated or forwarded for ([ble-handshake.md §4.1](ble-handshake.md#41-offlineauthrequest-full-offline--partial-b)), or the signed `bayId` and `serviceId` claims of the ServerSignedAuth. A request naming another bay or another service is refused with `3007 SESSION_MISMATCH`, and starts nothing. A service the catalog the station holds does not bind to a program of the bay is refused with `3004 INVALID_SERVICE`.
+2. The station **MUST** verify that `requestedDurationSeconds` does not exceed the authorized `durationSeconds` (finding N3). For a Partial-A (ServerSignedAuth) session this is the **signed** `durationSeconds` claim (`server-signed-auth-claims.schema.json`) the station verified during the handshake; for a Partial-B session it is the `durationSeconds` from the AuthorizeOfflinePass response; for a pass the station validated itself, the `requestedDurationSeconds` of the OfflineAuthRequest, from which it estimated the cost. The AuthResponse MAY relay an unsigned advisory copy for the app, but the check **MUST** be made against the signed or server value, never the advisory one. **A request above the authorized duration is refused, never reduced (Normative):** the station **MUST** respond `Rejected` with `3010 MAX_DURATION_EXCEEDED`, start no service, and **MUST NOT** shorten the request to the authorized value — a request above a pass's limit is refused the same way ([`offline-pass.md` §2.1](offline-pass.md#21-offlineallowance-object)). The app holds the authorized duration: the one it requested in its OfflineAuthRequest, which an authorization grants exactly or refuses, or the signed claim of its ServerSignedAuth. **A Partial-B start asks for the authorized duration (Normative):** whichever record ends a Partial-B session, the server settles it on the authorized duration ([authorize-offline-pass.md §6](authorize-offline-pass.md#6-processing-rules) rule 4b), so a shorter start would be charged as the whole; the station **MUST** refuse a Partial-B request below the authorized `durationSeconds` with `3008 DURATION_INVALID`, and start no service.
 3. Before confirming a StartServiceResponse with `result: "Accepted"`, the station **MUST** persist the pending transaction record (`offlineTxId`, `sessionId`, `bayId`, `timestamp`, `creditsAuthorized`) to non-volatile storage. This ensures that if the station loses power mid-session, the transaction can be recovered and reconciled upon reboot. If the station cannot persist the record (e.g., storage failure), it **MUST** reject the StartService request with error `5103 STORAGE_ERROR` — the code whose registry entry is *"Non-volatile storage (NVS) read or write failure"* ([`07-errors.md` §3](../../07-errors.md)). Earlier revisions named `5111 BUFFER_FULL` here; `5111` means the TransactionEvent buffer is at or above 90% of `MaxOfflineTransactions` ([`01-architecture.md` §6.5](../../01-architecture.md#65-offline-message-buffering)), which is a capacity condition on a working store, not a store that failed to write. The two are distinguishable by the station and lead an operator to different repairs, so they are no longer reported under one code. `5103` was added to StartService's code set in [§4.2](../../07-errors.md#42-server--station-mqtt-actions) for this rule.
 4. On `Accepted`, the station **MUST** activate the physical hardware, start the auto-stop timer, and begin sending FFF5 Service Status notifications.
-5. The app **MUST** store the `offlineTxId` for later reconciliation and receipt matching.
+5. The app **MUST** store the `sessionId` and the `offlineTxId`, for its ReceiptRequest (§4), later reconciliation and receipt matching.
 
-**Error scenarios:**
-
-| Condition | Error Code | Description |
-|------------------------------|------------|-----------------------------------------------|
-| Bay occupied or unavailable | `3001` | Bay state changed after authentication. |
-| Requested duration above the authorized one | `3010` | Partial A or Partial B: `requestedDurationSeconds` exceeds the authorized `durationSeconds`. Refused, never reduced. |
-| Hardware failure on start | `5000` | Physical hardware could not activate. Use `5000 HARDWARE_GENERIC` for unspecified hardware failures during BLE sessions. Use `3009 HARDWARE_ACTIVATION_FAILED` only when the specific service activation step fails. |
-| Service not available | `3003` | Requested service is currently unavailable. |
+**Error scenarios:** the codes a StartServiceResponse carries are listed once, in [Chapter 07 §4.3](../../07-errors.md#43-ble-message-types). Use `5000 HARDWARE_GENERIC` for unspecified hardware failures during BLE sessions, and `3009 HARDWARE_ACTIVATION_FAILED` only when the specific service activation step fails.
 
 **Example (Request):**
 
@@ -85,7 +73,7 @@ The station validates the request and responds via FFF4 with a StartServiceRespo
 
 ## 2. Monitoring Progress (FFF5)
 
-During an active service, the station sends periodic Service Status notifications on characteristic FFF5. The app **MUST** subscribe to FFF5 notifications after receiving a successful StartServiceResponse.
+During an active service, the station sends periodic Service Status notifications on characteristic FFF5. The app **MUST** subscribe to FFF5 notifications before it writes the StartServiceRequest ([ble-transport.md §7](ble-transport.md#7-service-status-fff5)).
 
 **Notification payload:**
 
@@ -105,12 +93,12 @@ During an active service, the station sends periodic Service Status notification
 | `Starting` | Hardware is initializing (warm-up phase). |
 | `Running` | Service is actively running. |
 | `Complete` | Service has finished (normal stop or auto-stop). |
-| `ReceiptReady` | Receipt is available for reading on FFF6. |
+| `ReceiptReady` | The session's receipt is signed, and the app can ask for it on FFF6 (§4). |
 | `Error` | A hardware or software error occurred during the session. |
 
 **Notification interval:** 5 seconds. The station **MUST** send at least one notification per interval while the service is in `Starting` or `Running` status.
 
-**App disconnection during session:** If the BLE connection drops while the service is running, the station **MUST** continue the service until the auto-stop timer expires. The station **MUST NOT** stop the service prematurely due to app disconnection. When the app reconnects, it **MAY** re-subscribe to FFF5 to resume monitoring.
+**App disconnection during session:** If the BLE connection drops while the service is running, the station **MUST** continue the service until the auto-stop timer expires. The station **MUST NOT** stop the service prematurely due to app disconnection. A reconnected app cannot resume monitoring: FFF5 notifications go only to the connection that started the session, and the app asks for the receipt once the service has ended (§4, §5).
 
 **Example (Running):**
 
@@ -142,7 +130,7 @@ During an active service, the station sends periodic Service Status notification
 
 ## 3. Stopping a Service
 
-The app writes a StopServiceRequest to FFF3 to terminate a running service before the timer expires.
+The app writes a StopServiceRequest to FFF3 to terminate a running service before the timer expires. This is the customer's stop over BLE: the station ends the session and reports it as `Local` — in the SessionEnded of a Partial-B session, and in the signed receipt's `endReason` — and the server settles it as the customer's stop, by service kind ([04-flows.md §6](../../04-flows.md#settlement-by-service-kind)).
 
 **Request Payload (FFF3 Write):**
 
@@ -160,16 +148,19 @@ The app writes a StopServiceRequest to FFF3 to terminate a running service befor
 | `result` | string | Yes | `Accepted` or `Rejected`. |
 | `actualDurationSeconds` | integer | Cond. | Actual duration the service ran. Present when `result` is `Accepted`. |
 | `creditsCharged` | integer | Cond. | Credits the station computed for the session; advisory — the server settles its own recomputation ([`reconciliation.md` §8](reconciliation.md#8-wallet-reconciliation)). Present when `result` is `Accepted`. |
+| `errorCode` | integer | Cond. | `3006 SESSION_NOT_FOUND` or `3007 SESSION_MISMATCH` (rule 5). Present when `result` is `Rejected`. |
+| `errorText` | string | Cond. | The registry name of `errorCode`, in `UPPER_SNAKE_CASE`. Present when `result` is `Rejected`. |
+| `details` | object | No | Per-occurrence context of the refusal ([Chapter 07 §2.3](../../07-errors.md#23-ble-error-response)). |
 
 **Processing rules:**
 
 1. The station **MUST** stop the physical hardware immediately upon receiving a valid StopServiceRequest.
 2. The station **MUST** calculate `creditsCharged` based on the actual duration and the service's pricing rate. The figure is advisory: the server settles by service kind, never above what the authorization allowed ([`reconciliation.md` §8](reconciliation.md#8-wallet-reconciliation)).
-3. The station **MUST** generate a signed receipt and make it available on FFF6.
+3. The station **MUST** generate a signed receipt and serve it on FFF6 (§4).
 4. The station **MUST** send a FFF5 notification with `status: "ReceiptReady"` after the receipt is generated.
-5. If the `sessionId` does not match any active session, the station **MUST** respond with `Rejected`.
+5. If the `sessionId` matches no active session this connection established, the station **MUST** respond `Rejected` with `3006 SESSION_NOT_FOUND`; if it names an active session that is not on the request's `bayId`, with `3007 SESSION_MISMATCH`. A refused stop stops nothing.
 
-**Auto-stop:** When `requestedDurationSeconds` expires, the station **MUST** automatically stop the service as if a StopServiceRequest had been received. The station **MUST** generate a receipt and send a `ReceiptReady` notification. The app does not need to send a StopServiceRequest for auto-stopped sessions.
+**Auto-stop:** When `requestedDurationSeconds` expires, the station **MUST** stop the service itself and end the session with `TimerExpired` ([`03-messages.md` §5.4](../../03-messages.md#54-sessionended)) — not as a StopServiceRequest would, which is the customer's stop, `Local`. It sends no StopServiceResponse, and a StopServiceRequest that arrives afterwards names no active session and is answered `Rejected` with `3006 SESSION_NOT_FOUND` (rule 5). The station **MUST** generate a receipt and send a `ReceiptReady` notification. The app does not need to send a StopServiceRequest for auto-stopped sessions.
 
 **Example (Request):**
 
@@ -192,21 +183,32 @@ The app writes a StopServiceRequest to FFF3 to terminate a running service befor
 }
 ```
 
+**Example (Response -- Rejected):**
+
+```json
+{
+  "type": "StopServiceResponse",
+  "result": "Rejected",
+  "errorCode": 3006,
+  "errorText": "SESSION_NOT_FOUND"
+}
+```
+
 ## 4. Retrieving Receipt (FFF6)
 
-After the service ends (manual stop or auto-stop), the app reads characteristic FFF6 to retrieve the signed transaction receipt. The receipt is the authoritative record of the offline transaction and is used for reconciliation when connectivity is restored.
+After the service ends (manual stop or auto-stop), the app asks for the signed transaction receipt on characteristic FFF6. The receipt is the authoritative record of the offline transaction and is used for reconciliation when connectivity is restored.
 
-**Receipt payload:** See [BLE Transport -- Receipt (FFF6)](ble-transport.md#8-receipt-fff6) for the full field table.
+**Request and response:** a `ReceiptRequest` naming the session's `offlineTxId`, written to FFF6, answered by one `ReceiptResponse` notified on FFF6 — `Accepted` with the receipt, or `Rejected` with `3006 SESSION_NOT_FOUND` ([BLE Transport -- Receipt (FFF6)](ble-transport.md#8-receipt-fff6), which defines both and the receipt's fields).
 
 **Processing rules:**
 
-1. The app **SHOULD** read FFF6 after receiving a `ReceiptReady` notification on FFF5.
-2. The app **MUST** store the receipt in local secure storage for later upload to the server, by the receipt upload of [`app-contract.md` §4](app-contract.md#4-receipt-upload).
+1. The app **SHOULD** ask for the receipt after receiving a `ReceiptReady` notification on FFF5.
+2. The app **MUST** store the receipt in local secure storage for later upload to the server, by the receipt upload of [`app-contract.md` §4](app-contract.md#4-receipt-upload) — the `receipt` of the `ReceiptResponse`, exactly as the station signed it.
 3. The receipt includes a `txCounter` field carried as forensic evidence for reconciliation. The app **MUST** preserve this field unmodified — it is inside the signed body, so altering it invalidates the signature.
 4. The receipt's `signature` is an ECDSA-P256-SHA256 signature computed by the station over the canonical `data` field using the station's private key. The server verifies this signature during reconciliation.
-5. The FFF6 value is served as an AEAD frame under the **current** connection's `k_station_to_app` (06-security.md §6.5.3): only the authenticated handshake peer can read the receipt, which carries `userId`/`deviceId`/amounts (finding N15). The financial **record** persists in the station's NVS independently of the BLE channel. If the app is unable to read FFF6 (e.g., BLE disconnect), it **MAY** reconnect later — but because the per-connection session key is discarded on disconnect ([ble-transport.md §13](ble-transport.md)), the app **MUST** complete a fresh handshake first; the station then re-seals the retained receipt under the new channel's key for retrieval. The station **MUST** retain the receipt record until the next session begins on the same bay or the station reboots.
+5. The `ReceiptResponse` is an AEAD frame under the **current** connection's `k_station_to_app` (06-security.md §6.5.3), so no third party reads the receipt in transit, and the station serves it only to an app that names its `offlineTxId`, which only the session's own connection was given ([ble-transport.md §8](ble-transport.md#8-receipt-fff6)) — the receipt carries `userId`/`deviceId`/amounts (finding N15). The financial **record** persists in the station's NVS independently of the BLE channel. If the app is unable to read the receipt (e.g., BLE disconnect), it **MAY** reconnect later — but because the per-connection session key is discarded on disconnect ([ble-transport.md §12](ble-transport.md#12-connection-lifecycle-and-isolation)), the app **MUST** complete a fresh Hello and Challenge first, and then asks for the receipt by its `offlineTxId`. The station serves the receipt for the read window of [ble-transport.md §8](ble-transport.md#8-receipt-fff6): at least 24 hours after signing it.
 
-**Example:**
+**Example (the receipt a `ReceiptResponse` carries):**
 
 ```json
 {
@@ -239,18 +241,18 @@ After the service ends (manual stop or auto-stop), the app reads characteristic 
 
 If the BLE connection drops during an active session, the following rules apply:
 
-1. **Station behaviour:** The station **MUST** continue the active service until the auto-stop timer expires. The station **MUST NOT** abort a running service due to BLE disconnection. Upon service completion (auto-stop), the station **MUST** generate a signed receipt and store it on FFF6.
-2. **App behaviour:** The app **SHOULD** attempt to reconnect to the station using the same BLE connection parameters. On reconnect, the app **MAY** re-subscribe to FFF5 notifications. If the service has already completed, the app **SHOULD** read FFF6 to retrieve the receipt.
-3. **Receipt availability:** The station **MUST** retain the receipt on FFF6 for at least 10 minutes after service completion, or until the next session begins on the same bay, whichever comes first.
-4. **Session state on reconnect:** A disconnect destroys the per-connection AEAD session key ([ble-transport.md §13](ble-transport.md) — derived key, nonces, and authenticated context are discarded). Therefore, on **any** reconnect, the app **MUST** perform a full re-handshake (HELLO/CHALLENGE/AUTH) before issuing any session command or reading the receipt; there is no key to resume. The underlying *service* is unaffected — it continues on its auto-stop timer (§6) regardless of the BLE channel — but the secure channel itself is always re-established from scratch.
+1. **Station behaviour:** The station **MUST** continue the active service until the auto-stop timer expires. The station **MUST NOT** abort a running service due to BLE disconnection. Upon service completion (auto-stop), the station **MUST** generate a signed receipt and serve it on FFF6 (§4).
+2. **App behaviour:** The app **SHOULD** attempt to reconnect to the station. On reconnect it cannot monitor the session — FFF5 notifications go only to the connection that started it — and, once the service has ended, it **SHOULD** ask for the receipt by its `offlineTxId` (§4).
+3. **Receipt availability:** The station **MUST** serve the receipt on FFF6 for the read window of [ble-transport.md §8](ble-transport.md#8-receipt-fff6) — at least the OSPP Session Retention Horizon, 24 hours, after it signs it — whether or not another session has begun on the bay since.
+4. **Session state on reconnect:** A disconnect destroys the per-connection AEAD session key ([ble-transport.md §12](ble-transport.md#12-connection-lifecycle-and-isolation) — derived key, nonces, and authenticated context are discarded). Therefore, on **any** reconnect, the app **MUST** perform a full re-handshake (Hello, Challenge, Authentication) before issuing any session command, or the Hello and Challenge before asking for a receipt; there is no key to resume. The underlying *service* is unaffected — it continues on its auto-stop timer (§6) regardless of the BLE channel — but the secure channel itself is always re-established from scratch, and a session command is honoured only on the connection that established the session.
 
 ## 6. Auto-Stop Timer
 
-The station **MUST** maintain a server-side auto-stop timer for every active BLE session:
+The station **MUST** maintain a station-side auto-stop timer for every active BLE session:
 
-1. The timer is initialized to `requestedDurationSeconds` when the service starts. For a Partial-A or Partial-B session that value never exceeds the authorized `durationSeconds` — the **signed** ServerSignedAuth claim for Partial A, the AuthorizeOfflinePass response value for Partial B — because a request above it is refused (§1).
+1. The timer is initialized to `requestedDurationSeconds` when the service starts. That value never exceeds the authorized duration — the **signed** ServerSignedAuth claim for Partial A, the AuthorizeOfflinePass response value for Partial B, the OfflineAuthRequest's requested duration for a pass the station validated itself — because a request above it is refused (§1); for Partial B it equals it, because a request below it is refused too.
 2. The timer counts down in real time, independent of the BLE connection state.
-3. When the timer reaches zero, the station **MUST** stop the physical hardware, calculate final `creditsCharged`, generate a signed receipt, store it on FFF6, and send a `ReceiptReady` notification on FFF5 (if the app is still connected).
+3. When the timer reaches zero, the station **MUST** stop the physical hardware, calculate final `creditsCharged`, generate a signed receipt, serve it on FFF6, and send a `ReceiptReady` notification on FFF5 (if the app is still connected).
 4. The auto-stop timer ensures that services always complete within the authorized duration, even if the app crashes, the BLE connection drops, or the user walks away.
 5. The auto-stop timer **MUST NOT** be extended or reset by app requests. The app stops a service before the timer expires only by a StopServiceRequest.
 
@@ -261,4 +263,6 @@ The station **MUST** maintain a server-side auto-stop timer for every active BLE
 - Stop Service Request: [`stop-service-request.schema.json`](../../../schemas/ble/stop-service-request.schema.json)
 - Stop Service Response: [`stop-service-response.schema.json`](../../../schemas/ble/stop-service-response.schema.json)
 - Service Status: [`service-status.schema.json`](../../../schemas/ble/service-status.schema.json)
+- Receipt Request: [`receipt-request.schema.json`](../../../schemas/ble/receipt-request.schema.json)
+- Receipt Response: [`receipt-response.schema.json`](../../../schemas/ble/receipt-response.schema.json)
 - Receipt: [`receipt.schema.json`](../../../schemas/ble/receipt.schema.json)

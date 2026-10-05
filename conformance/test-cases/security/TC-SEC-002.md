@@ -88,7 +88,7 @@ Verify that the station presents a valid X.509 client certificate during the TLS
 
 ### Part F — Certificate Renewal Behavior
 
-33. With the expired certificate still provisioned, verify the station enters **offline-only BLE mode** and does **not** enter provisioning mode, per the `1004` entry in `spec/07-errors.md` §3.1: "Station: never enter provisioning mode and never discard stored credentials — re-provisioning is operator-initiated. … `expired` — enter offline-only BLE mode (§4.7.3)".
+33. With the expired certificate still provisioned, verify the station does **not** enter provisioning mode, per the `1004` entry in `spec/07-errors.md` §3.1: "Station: never enter provisioning mode and never discard stored credentials … `expired` — keep credentials, serve no customer (the app refuses an expired certificate too) and await server-triggered renewal (§4.7.3)".
 34. Verify the station still holds its stored credentials — private key, certificate, and any provisioning material — unchanged after the rejection.
 35. Provision a new valid certificate **operator-side** (re-provisioning is operator-initiated; the station must not have driven this itself).
 36. Trigger reconnection.
@@ -103,7 +103,7 @@ Verify that the station presents a valid X.509 client certificate during the TLS
 4. A self-signed certificate causes TLS handshake failure; no MQTT connection is established.
 5. A revoked certificate causes TLS handshake failure; no MQTT connection is established.
 6. The station logs `1004 CERTIFICATE_ERROR` for **every** certificate failure scenario, each carrying the `details.cause` that names it — `expired` in Part C, `self-signed` in Part D, `revoked` in Part E. `1003` is not an acceptable substitute on any of them, and a missing or wrong `details.cause` is not a pass: the discriminator is what the station's own recovery branches on.
-7. On an expired certificate the station enters offline-only BLE mode, and on no branch of `1004` does it enter provisioning mode or discard its stored credentials.
+7. On no branch of `1004`, that of an expired certificate included, does the station enter provisioning mode or discard its stored credentials.
 8. After operator-initiated certificate renewal, the station successfully reconnects and resumes normal operation.
 
 ## Failure Criteria
@@ -114,5 +114,5 @@ Verify that the station presents a valid X.509 client certificate during the TLS
 4. Station does not present a client certificate during the TLS handshake.
 5. Station logs no error on a certificate rejection, **or logs `1003` instead of `1004`**, or logs `1004` without `details.cause`, or with a `details.cause` that does not match the scenario. `07-errors.md` §3.1 gives `1004` precedence over `1003` for every handshake failure a certificate caused, so `1003` here is a wrong answer and not a permitted alternative.
 6. Station sends MQTT messages (including BootNotification) without a successful TLS handshake.
-7. Station enters provisioning mode, or discards or overwrites stored credentials, on an expired, revoked, self-signed or otherwise invalid certificate. `1004` forbids both on every branch: re-provisioning is operator-initiated, and on the `expired` branch the station enters offline-only BLE mode instead.
+7. Station enters provisioning mode, or discards or overwrites stored credentials, on an expired, revoked, self-signed or otherwise invalid certificate. `1004` forbids both on every branch: re-provisioning is operator-initiated, and on the `expired` branch the station keeps its credentials, serves no customer and awaits renewal.
 8. TLS version negotiated is below **1.2** — the floor is TLS 1.2, with TLS 1.3 RECOMMENDED and negotiated whenever both peers support it (`spec/02-transport.md` §1.3). Negotiating 1.2 is **not** a failure: the floor exists for constrained cellular modems that cap at 1.2 with no firmware path to 1.3.

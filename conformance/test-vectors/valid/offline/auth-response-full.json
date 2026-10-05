@@ -1,6 +1,7 @@
 {
   "type": "AuthResponse",
-  "result": "Rejected",
-  "reason": "OFFLINE_PASS_EXPIRED",
-  "errorCode": 2003
+  "result": "Accepted",
+  "sessionKeyConfirmation": "uo31nIXlLPNLPc8rCOeJWYwbDh/ycVRE692174J5jp0=",
+  "durationSeconds": 300,
+  "creditsAuthorized": 50
 }

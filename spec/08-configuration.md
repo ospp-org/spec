@@ -67,7 +67,7 @@ Configuration keys are organized into profiles that align with station capabilit
 |---------|------------|------|:--------:|
 | **Core** | `Core` | HeartbeatIntervalSeconds, ConnectionTimeout, ReconnectBackoffMax, StationName, TimeZone, ProtocolVersion, FirmwareVersion, BootRetryInterval, ConnectionLostGracePeriod | Yes |
 | **Transaction** | `Transaction` | MeterValuesInterval, MeterValuesSampleInterval, MaxSessionDurationSeconds, SessionTimeout, ReservationDefaultTTL, DefaultCreditsPerSession | Yes |
-| **Security** | `Security` | CertificateSerialNumber, AuthorizationCacheEnabled, OfflinePassPublicKey, CertificateRenewalThresholdDays, CertificateRenewalEnabled, StationIdentityCertificate | Yes |
+| **Security** | `Security` | CertificateSerialNumber, AuthorizationCacheEnabled, OfflinePassPublicKey, CertificateRenewalThresholdDays, CertificateRenewalEnabled | Yes |
 | **Offline / BLE** | `OfflineBLE` | OfflineModeEnabled, MaxOfflineTransactions, OfflinePassMaxAge, RevocationEpoch, OfflineWindowHours, OfflineTransactionLimit | Conditional (required if `capabilities.bleSupported = true`) |
 | **Device Management** | `DeviceManagement` | FirmwareUpdateEnabled, LogLevel, AutoRebootEnabled | Conditional (required if `capabilities.deviceManagementSupported = true`) |
 | **Vendor-Specific** | -- | `Vendor_{VendorName}_*` | No |
@@ -88,7 +88,7 @@ Every cell takes one of five forms, and no others:
 |------|---------|-----:|
 | `<min>--<max>` | Inclusive integer bounds. Both endpoints are legal values. | 17 |
 | `--` | No range constraint beyond the declared type of §1.2. | 8 |
-| `max <n> chars` | Maximum length in UTF-8 characters. | 2 |
+| `max <n> chars` | Maximum length in UTF-8 characters. | 1 |
 | A list of quoted literals | The complete set of legal values, stated inline. | 1 |
 | A named external constraint | Defined by the key's own Description or by the chapter it cites. | 2 |
 
@@ -112,7 +112,7 @@ Two such pairs exist. `HeartbeatIntervalSeconds` with `heartbeatIntervalSec` **a
 | `ProtocolVersion` | string | `"0.3.0"` | R | Static | -- | OSPP protocol version supported by the station. ReadOnly; the station firmware determines this value. |
 | `FirmwareVersion` | string | -- | R | Static | -- | Current firmware version in semver format (e.g., `"1.2.3"`). ReadOnly; updated only via firmware update. |
 | `BootRetryInterval` | integer | `30` | RW | Dynamic | 10--600 | Retry interval in seconds when BootNotification is rejected or pending. |
-| `ConnectionLostGracePeriod` | integer | `300` | RW | Dynamic | 60--600 | Duration in seconds the server waits, after MQTT connection loss, before closing a session whose station has not returned — not a Partial-B session, which the loss does not end ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)). Server-side only; not the station-side `orphaned` of [`05-state-machines.md` §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rule 3. |
+| `ConnectionLostGracePeriod` | integer | `300` | RW | Dynamic | 60--600 | Duration in seconds the server waits, after MQTT connection loss, before closing a session whose station has not returned — not a Partial-B session, which the loss does not end and which closes at the end of its authorized duration instead ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)). Server-side only; not the station-side `orphaned` of [`05-state-machines.md` §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rule 3. |
 
 ---
 
@@ -176,7 +176,13 @@ Two such pairs exist. `HeartbeatIntervalSeconds` with `heartbeatIntervalSec` **a
 | `OfflinePassPublicKey` | CSV | -- | W | Dynamic | valid key set | The server's **key set** for OfflinePass and ServerSignedAuth signature verification: every server ECDSA P-256 public key a pass may currently be signed under, each as its DER `SubjectPublicKeyInfo` (point uncompressed), Base64, 124 characters, separated by commas. The station derives each key's `keyId` from the key itself ([Chapter 06 §4.3](06-security.md#43-key-management-lifecycle) and [§6.7](06-security.md#67-server-signing-key-rotation-ecdsa-p-256)) and verifies a pass with the key its `keyId` names. A value is always the **whole** set, and the station **MUST** replace the set it holds with it; the station keeps no other server key and no grace period. The server delivers it in the configuration of every `Accepted` BootNotification RESPONSE (§8.3) and by ChangeConfiguration whenever the set changes; [Chapter 06 §6.7](06-security.md#67-server-signing-key-rotation-ecdsa-p-256) states the windows a key spends in the set. At 124 characters a key, the 500-character ChangeConfiguration value holds four keys; a yearly rotation under those windows needs three at most. |
 | `CertificateRenewalThresholdDays` | integer | `30` | RW | Dynamic | 7--90 | Days before certificate expiry to initiate automatic renewal. The station checks daily and starts the SignCertificate flow when within this threshold. See [Chapter 06 — Security](06-security.md), §4.7. |
 | `CertificateRenewalEnabled` | boolean | `true` | RW | Dynamic | -- | Master switch for automatic certificate renewal. When `false`, the station does not initiate renewal automatically but still responds to server-triggered renewal (TriggerCertificateRenewal [MSG-024]). |
-| `StationIdentityCertificate` | string | -- | W | Dynamic | max 500 chars | The station's signed **BLE StationIdentity** artefact — the JSON object of [Chapter 06 §6.5.2](06-security.md#652-stationidentity-certificate) (`stationId`, `organizationId`, `stationPubKey`, `issuedAt`, `expiresAt`, `signatureAlgorithm`, `signature`), in OSPP Canonical Form. First delivered in the provisioning response; **re-issued** through ChangeConfiguration [MSG-013], which is the channel §6.5.2 names and relies on because `expiresAt` is short and the server re-issues before expiry. Write-only, like `OfflinePassPublicKey` — **not for confidentiality** (the station presents this artefact to any BLE peer during the handshake) but because a station's held identity is confirmed by completing a handshake, not by echoing 364 characters back through the configuration channel on every GetConfiguration. **Registered at 0.30.0.** It was named as a valid ChangeConfiguration key at two normative sites and was absent from this registry, so [§8.2](#82-changeconfiguration) obliged a **conforming** station to answer `NotSupported` — and, because the batch is atomic, to apply nothing else in the same request. The specification mandated a rotation every conformant station had to refuse. |
+
+> **Withdrawn: `StationIdentityCertificate`.** It held the station's BLE StationIdentity, a
+> document the server signed over a dedicated static BLE key, and was its re-issue channel. A
+> station now authenticates itself over BLE with its mTLS certificate, which renews as every
+> certificate does ([Chapter 06 §4.7](06-security.md#47-certificate-lifecycle-management)), and the
+> StationIdentity is withdrawn ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)).
+> A station that receives the key in a ChangeConfiguration answers it as any unrecognized key (§1.3).
 
 > **Two revocation settings are named with a range and deliberately kept out of this registry.**
 > `CertificateRevocationMaxAgeSeconds` and `CertificateRevocationGraceSeconds` bound the broker's
@@ -456,8 +462,7 @@ The table adds two columns Sections 2--6 do not carry — the index number and t
 | 25 | `FirmwareUpdateEnabled` | boolean | `true` | RW | Dynamic | Device Management |
 | 26 | `LogLevel` | string | `"Info"` | RW | Dynamic | Device Management |
 | 27 | `AutoRebootEnabled` | boolean | `false` | RW | Dynamic | Device Management |
-| 28 | `StationIdentityCertificate` | string | -- | W | Dynamic | Security |
-| 29 | `OfflineWindowHours` | integer | `240` | RW | Dynamic | Offline / BLE |
-| 30 | `OfflineTransactionLimit` | integer | `1000` | RW | Dynamic | Offline / BLE |
+| 28 | `OfflineWindowHours` | integer | `240` | RW | Dynamic | Offline / BLE |
+| 29 | `OfflineTransactionLimit` | integer | `1000` | RW | Dynamic | Offline / BLE |
 
-**Total: 30 standard configuration keys** (9 Core + 6 Transaction + **6** Security + 6 Offline/BLE + 3 Device Management). `MessageSigningMode` was withdrawn in `0.34.0` — signing is unconditional and no key selects it ([Chapter 06 §5.1](06-security.md#51-overview)). `DiagnosticsUploadUrl` was withdrawn in `0.23.0` — see the note in [§6](#6-device-management-configuration-keys). The index column is a row number in this derived table and is renumbered with it; it is not an identifier and nothing cites it.
+**Total: 29 standard configuration keys** (9 Core + 6 Transaction + **5** Security + 6 Offline/BLE + 3 Device Management). `StationIdentityCertificate` is withdrawn — see the note in [§4](#4-security-configuration-keys). `MessageSigningMode` was withdrawn in `0.34.0` — signing is unconditional and no key selects it ([Chapter 06 §5.1](06-security.md#51-overview)). `DiagnosticsUploadUrl` was withdrawn in `0.23.0` — see the note in [§6](#6-device-management-configuration-keys). The index column is a row number in this derived table and is renumbered with it; it is not an identifier and nothing cites it.

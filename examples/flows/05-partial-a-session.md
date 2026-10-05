@@ -2,7 +2,7 @@
 
 ## Scenario
 
-Alice is at "Station Alpha -- Example City" and wants to start the Eco Program service on Bay 1. Her phone has 4G connectivity, but the station's MQTT connection is down due to an ISP fiber cut in the area. The station has been offline for about 20 minutes, but its BLE radio is advertising normally. Alice opens the app, which detects the station via BLE and reads that it reports `connectivity: "Offline"`. Since her phone is online, the app uses the **Partial A** strategy: it calls `POST /sessions/offline-auth` to obtain a server-signed ECDSA P-256 authorization, then delivers it to the station over BLE. The station verifies the signature locally with a key of the server key set (`OfflinePassPublicKey`) it holds. Alice runs a 3-minute Eco Program session on Bay 1, stops, and receives a signed receipt. Credits were pre-debited server-side when the authorization was issued; settlement is a refund-only true-up against that pre-debit, never above the authorization's `creditsAuthorized` and never a second debit ([`reconciliation.md` §8.2](../../spec/profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)).
+Alice is at "Station Alpha -- Example City" and wants to start the Eco Program service on Bay 1. Her phone has 4G connectivity, but the station's MQTT connection is down due to an ISP fiber cut in the area. The station has been offline for about 20 minutes, but its BLE radio is advertising normally. Alice opens the app, which detects the station via BLE and reads that it reports `connectivity: "Offline"` — a hint the station's signed Challenge confirms. Since her phone is online, the app uses the **Partial A** strategy: it calls `POST /sessions/offline-auth` to obtain a server-signed ECDSA P-256 authorization, then delivers it to the station over BLE. The station verifies the signature locally with a key of the server key set (`OfflinePassPublicKey`) it holds. Alice runs a 3-minute Eco Program session on Bay 1, stops, and receives a signed receipt. Credits were pre-debited server-side when the authorization was issued; settlement is a refund-only true-up against that pre-debit, never above the authorization's `creditsAuthorized` and never a second debit ([`reconciliation.md` §8.2](../../spec/profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)).
 
 ## Participants
 
@@ -20,7 +20,8 @@ Alice is at "Station Alpha -- Example City" and wants to start the Eco Program s
 - Alice is authenticated in the app (valid JWT access token)
 - Alice's wallet balance: 120 credits
 - Station `stn_a1b2c3d4` has been offline (MQTT disconnected) for ~20 minutes
-- Station BLE is advertising as `OSPP-b2c3d4`
+- Station BLE is advertising the OSPP service UUID, with the name `OSPP-b2c3d4` in its scan response
+- Station holds its mTLS certificate, whose extended key usage carries `clientAuth` and `id-kp-osppBleStation`
 - Station holds the server key set (`OfflinePassPublicKey`) in NVS
 - Station `OfflineModeEnabled` does not matter here: it governs only whether the station accepts an OfflinePass on its own validation, and a ServerSignedAuth is authorized and debited by the server ([`08-configuration.md` §5](../../spec/08-configuration.md#5-offline--ble-configuration-keys))
 - Bay 1 status: `Available`
@@ -31,15 +32,16 @@ Alice is at "Station Alpha -- Example City" and wants to start the Eco Program s
 14:30:00.000  Alice opens the app near the station
 14:30:01.500  App discovers BLE device OSPP-b2c3d4
 14:30:02.000  App establishes BLE connection to station
-14:30:02.300  App reads FFF1 (StationInfo) — sees connectivity: "Offline"
-14:30:02.600  App reads FFF2 (AvailableServices) — sees Bay 1 Available with svc_eco
+14:30:02.300  App reads FFF1 (StationInfo) — displays it, and relies on nothing in it
+14:30:02.600  App asks for AvailableServices on FFF2 — sees svc_eco on Bay 1
 14:30:03.000  Alice selects Bay 1, Eco Program, 5 minutes
-14:30:05.000  App detects Partial A scenario (phone online + station offline)
+14:30:05.000  App, online, pre-fetches a Partial-A authorization for the station named by the bay's code
 14:30:05.200  App sends POST /sessions/offline-auth to server
 14:30:05.800  Server validates, debits 50 credits, signs ECDSA P-256 authorization
 14:30:06.000  Server responds with signedAuthorization, sessionId and the trust bundle
 14:30:06.500  App writes Hello to FFF3
 14:30:06.800  Station responds with Challenge on FFF4 (connectivity: "Offline")
+14:30:07.000  App verifies the station's certificate and signature against the bundle it just received
 14:30:07.200  App writes ServerSignedAuth to FFF3
 14:30:07.500  Station verifies ECDSA P-256 signature — valid
 14:30:07.600  Station sends AuthResponse (Accepted) on FFF4
@@ -54,7 +56,7 @@ Alice is at "Station Alpha -- Example City" and wants to start the Eco Program s
 14:33:02.600  Station sends StopServiceResponse (174s, 29 credits)
 14:33:03.000  Station generates ECDSA receipt, increments txCounter
 14:33:03.200  Station sends ServiceStatus (ReceiptReady)
-14:33:03.500  App reads Receipt from FFF6, stores in offline tx log
+14:33:03.500  App asks for the receipt on FFF6, stores it in offline tx log
 14:33:04.000  App disconnects BLE
 14:33:04.500  App displays session summary to Alice
 ```
@@ -67,7 +69,7 @@ Alice is at "Station Alpha -- Example City" and wants to start the Eco Program s
 
 **What Alice sees:**
 
-Alice opens the app at the station. The app begins a BLE scan and discovers a device advertising as `OSPP-b2c3d4`. The HomeScreen shows a card: "Station found: SSP-3000 — Station Alpha -- Example City".
+Alice opens the app at the station. The app begins a BLE scan and discovers a device advertising the OSPP service UUID, named `OSPP-b2c3d4` in its scan response. The HomeScreen shows a card: "Station found: SSP-3000 — Station Alpha -- Example City".
 
 ---
 
@@ -82,19 +84,17 @@ The app establishes a BLE connection and reads the StationInfo characteristic.
   "stationId": "stn_a1b2c3d4",
   "stationModel": "SSP-3000",
   "firmwareVersion": "1.2.3",
-  "bayCount": 2,
-  "bleProtocolVersion": "0.2.1",
   "connectivity": "Offline"
 }
 ```
 
-The app sees `connectivity: "Offline"` — the station's MQTT is down. Since the phone has internet, the app's ConnectivityDetector identifies this as a **Partial A** scenario.
+The app shows the station it reached, and acts on nothing here: nothing on FFF1 is authenticated ([`ble-transport.md` §3](../../spec/profiles/offline/ble-transport.md#3-station-info-fff1)). It knows the station from the code on Bay 1, which Alice scanned — the out-of-band source of the `stationId` that a pre-fetch needs ([`ble-handshake.md` §4.2](../../spec/profiles/offline/ble-handshake.md#42-serversignedauth-partial-a)) — and the Challenge's signed `stationConnectivity` says whether the station is offline (Step 7); a station that is not the one the code names fails the authorization's `stationId` claim (Step 9, check #3).
 
 ---
 
-### Step 3: App Reads AvailableServices from FFF2 (14:30:02.600)
+### Step 3: App Asks for AvailableServices on FFF2 (14:30:02.600)
 
-**BLE Read FFF2 [MSG-028]:**
+**BLE Write FFF2 (`0x01`), then Notify FFF2 [MSG-028]:**
 
 ```json
 {
@@ -103,38 +103,33 @@ The app sees `connectivity: "Offline"` — the station's MQTT is down. Since the
     {
       "bayId": "bay_c1d2e3f4a5b6",
       "bayNumber": 1,
-      "status": "Available",
       "services": [
         {
           "serviceId": "svc_eco",
           "serviceName": "Eco Program",
           "pricingType": "PerMinute",
           "priceCreditsPerMinute": 10,
-          "priceLocalPerMinute": 50,
-          "available": true
+          "priceLocalPerMinute": 50
         },
         {
           "serviceId": "svc_deluxe",
           "serviceName": "Deluxe Program",
           "pricingType": "PerMinute",
           "priceCreditsPerMinute": 12,
-          "priceLocalPerMinute": 60,
-          "available": true
+          "priceLocalPerMinute": 60
         }
       ]
     },
     {
       "bayId": "bay_a2b3c4d5e6f7",
       "bayNumber": 2,
-      "status": "Available",
       "services": [
         {
           "serviceId": "svc_eco",
           "serviceName": "Eco Program",
           "pricingType": "PerMinute",
           "priceCreditsPerMinute": 10,
-          "priceLocalPerMinute": 50,
-          "available": true
+          "priceLocalPerMinute": 50
         }
       ]
     }
@@ -148,7 +143,7 @@ Alice sees the service catalog. She selects Bay 1 and "Eco Program" (10 credits/
 
 ### Step 4: App Requests Server-Signed Authorization (14:30:05.200)
 
-Since this is Partial A (phone online, station offline), the app calls the server to obtain a signed authorization before the BLE handshake proceeds.
+The phone is online and the app knows the station from the bay's code, so it obtains a signed authorization before the BLE handshake proceeds, and relays it once the Challenge has confirmed the station is offline (Step 7).
 
 **HTTP Request:**
 
@@ -202,8 +197,8 @@ X-Request-Id: req_offauth_7d8e9f01
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "trustBundle": {
-    "stationCaCertificate": "-----BEGIN CERTIFICATE-----\nMIIBqTCCAU+gAwIBAgICBVAwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBU\nZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjA5MjkxMjA0\nMjBaFw0zMTA5MjkxMjA0MjBaMDMxEjAQBgNVBAoMCU9TUFAgVGVzdDEdMBsGA1UE\nAwwUT1NQUCBUZXN0IFN0YXRpb24gQ0EwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNC\nAASV+9CgAE4tgTzAKWwxVGw9wkyvqJhltZhs/62oD8EQ144coXVZ5S7LcVowOBB6\nRCV30pndUexf5mPlLvNrPAYuo1MwUTAdBgNVHQ4EFgQUF8cBGg8AqgEQ2/dlYB9f\nNDJLxlgwHwYDVR0jBBgwFoAUF8cBGg8AqgEQ2/dlYB9fNDJLxlgwDwYDVR0TAQH/\nBAUwAwEB/zAKBggqhkjOPQQDAgNIADBFAiEAwMWP7Ia0x9Uc4exjPV3AUGcuX+Dq\nBeI79s+WLLw7Fw4CIG36K8XxqbRQQVr+Bja//n3WB6h4Cqs3woRRNJpDWTsi\n-----END CERTIFICATE-----\n",
-    "stationCaCrl": "-----BEGIN X509 CRL-----\nMIHKMHMCAQEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYD\nVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQRcNMjYwOTI5MTIwNDIwWhcNMjYxMDA2\nMTIwNDIwWqAPMA0wCwYDVR0UBAQCAhAAMAoGCCqGSM49BAMCA0cAMEQCIGxNLjLG\nKr78hLgo9gHhuQ0yK57f3WC6Wk9q7ZkALnyFAiBdmVe0Isvro7QrabTxOXPs9bkG\nDDkAZ+DdNR/8/72kqQ==\n-----END X509 CRL-----\n",
+    "stationCaCertificate": "-----BEGIN CERTIFICATE-----\nMIIBiDCCAS6gAwIBAgICBVEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBU\nZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNTA5MDEwMDAw\nMDBaFw0zMDA4MzEyMzU5NTlaMDMxEjAQBgNVBAoMCU9TUFAgVGVzdDEdMBsGA1UE\nAwwUT1NQUCBUZXN0IFN0YXRpb24gQ0EwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNC\nAASV+9CgAE4tgTzAKWwxVGw9wkyvqJhltZhs/62oD8EQ144coXVZ5S7LcVowOBB6\nRCV30pndUexf5mPlLvNrPAYuozIwMDAdBgNVHQ4EFgQUF8cBGg8AqgEQ2/dlYB9f\nNDJLxlgwDwYDVR0TAQH/BAUwAwEB/zAKBggqhkjOPQQDAgNIADBFAiANwaaqU++e\nh+48Xbm+eIdx0Mewmx6Fi8TzTK7uRmr0IgIhAM7FlstK69gTH2I56MDw6st4gAnG\nfWr0/RyjuV++/a8j\n-----END CERTIFICATE-----\n",
+    "stationCaCrl": "-----BEGIN X509 CRL-----\nMIHLMHMCAQEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYD\nVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQRcNMjYwMjEwMDAwMDAwWhcNMjYwMjE3\nMDAwMDAwWqAPMA0wCwYDVR0UBAQCAhAAMAoGCCqGSM49BAMCA0gAMEUCIBn2bfLU\nLsyK7Ylqeam9kH9ZxjxZdbzegp90TJFf0XanAiEAxEIAKknqttpckEWPqEqPs5lp\nshMwikxb5J+KXtXQT9c=\n-----END X509 CRL-----\n",
     "serverKeys": [
       {
         "keyId": "YjX5pR0TzmU3ubs17wImQQ",
@@ -231,45 +226,64 @@ With the signed authorization in hand, the app proceeds with the BLE handshake.
 ```json
 {
   "type": "Hello",
-  "deviceId": "device_a8f3bc12e4567890",
+  "bleVersions": [
+    "0.3.0"
+  ],
   "appNonce": "XwmXIvgMokhZYNANPS8kzhlgT9dVDATP4Bd6Ed3mE34=",
-  "appVersion": "2.1.0"
+  "appVersion": "2.1.0",
+  "appEphemeralPubKey": "Akn5JLCi1/UNqvAKG/ZaLEemCR4LAqhbXISBBIj+EUlK"
 }
 ```
+
+The `appNonce` is the one the authorization carries (Step 4). Nothing in the Hello identifies Alice or her phone.
 
 ---
 
 ### Step 7: Station Responds with Challenge (14:30:06.800)
 
-The station generates its own nonce and reports its connectivity status.
+The station chooses the BLE version, generates its own nonce and ephemeral key, reports its connectivity status, presents its certificate and signs the Hello and the Challenge.
 
 **BLE Notify FFF4 [MSG-030]:**
 
 ```json
 {
   "type": "Challenge",
+  "bleVersion": "0.3.0",
   "stationNonce": "/kLv1LXl1SeQiYke7YZChUTxp9jfhgRDkkf3CNbr8kY=",
+  "stationEphemeralPubKey": "Ao3523QPEUTfo1iHGinnN3e5/DBUw9pmimYeTp7FsMoi",
+  "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
   "stationConnectivity": "Offline",
   "availableServices": [
-    { "bayId": "bay_c1d2e3f4a5b6", "serviceId": "svc_eco", "available": true },
-    { "bayId": "bay_c1d2e3f4a5b6", "serviceId": "svc_deluxe", "available": true },
-    { "bayId": "bay_a2b3c4d5e6f7", "serviceId": "svc_eco", "available": true }
-  ]
+    {
+      "bayId": "bay_c1d2e3f4a5b6",
+      "serviceId": "svc_eco",
+      "available": true
+    },
+    {
+      "bayId": "bay_c1d2e3f4a5b6",
+      "serviceId": "svc_deluxe",
+      "available": true
+    },
+    {
+      "bayId": "bay_a2b3c4d5e6f7",
+      "serviceId": "svc_eco",
+      "available": true
+    }
+  ],
+  "stationSignature": "MEUCIQCCqWbvzuNDmcGN0nQ8eO8LocG8GH51GWhk+uURG5sFfAIgGXn1RbJHfo9OmVNMfzKniVvLheNM3kJHANzNxicLjRk="
 }
 ```
 
-The `stationConnectivity: "Offline"` confirms the Partial A scenario. The app derives the BLE session key over the ECDH secrets (the BLE LTK is **not** used — see `spec/06-security.md` §6.5):
+The `stationConnectivity: "Offline"` confirms the Partial A scenario. Before it relays anything, the app verifies the station against the trust bundle it received in Step 5 ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)): the certificate chains to the Station CA, is on no entry of the CRL, carries `id-kp-osppBleStation`, names `stn_a1b2c3d4` — the station the authorization is for — and `stationSignature` verifies under it. It then derives the BLE session key over the ephemeral ECDH secret (the BLE LTK is **not** used — see `spec/06-security.md` §6.5):
 
 ```
 SessionKey = HKDF-SHA256(
-  ikm   = es ‖ ee ‖ appNonce ‖ stationNonce,   // es=ECDH(appEph, stnStatic[cert]); ee=ECDH(appEph, stnEph)
-  salt  = "OSPP_BLE_SESSION_V2",
-  info  = LP("device_a8f3bc12e4567890") ‖ LP(transcriptHash),   // LP(x)=U16BE(len)‖x; stationId bound via transcript
+  ikm   = ee ‖ appNonce ‖ stationNonce,   // ee = ECDH(appEphemeral, stationEphemeral)
+  salt  = "OSPP_BLE_SESSION_V3",
+  info  = LP(transcriptHash),             // LP(x)=U16BE(len)‖x; the transcript covers the certificate and the signature
   length = 32
 )
 ```
-
-> **Note (v0.6.0 / T1-pending):** The BLE message JSON in this walkthrough still reflects the v0.5.x handshake shape; it regenerates as a coherent set in the T1 vector batch (adding `appEphemeralPubKey`/`stationCert`/`stationEphemeralPubKey`, length-prefixed `sessionProof`, AEAD framing). The derivation above is the v0.6.0 construction.
 
 ---
 
@@ -300,7 +314,7 @@ The station decodes `signedAuthorization.data` and performs the six checks of [`
 1. **ECDSA P-256 signature verification** — with a key of the server key set (`OfflinePassPublicKey`) the station holds. A ServerSignedAuth names no `keyId`, so the station tries the keys of its set; there is no cached previous key and no grace period ([`06-security.md` §6.7](../../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256))
 2. **appNonce matches** — the claim equals the `appNonce` of the Hello in Step 6
 3. **stationId matches** — the authorization is for `stn_a1b2c3d4` (this station)
-4. **deviceId matches** — the claim equals the Hello's `device_a8f3bc12e4567890`
+4. *(withdrawn)* — the Hello carries no device identifier; the authorization is bound to this handshake by check #2
 5. **sessionId matches** — the claim equals the message's `sessionId`, `sess_c4d5e6f7a8b9`
 6. **Not expired** — `expiresAt` (14:35:05.800Z) is in the future
 
@@ -494,9 +508,9 @@ The station generates a signed receipt:
 
 ---
 
-### Step 17: App Reads Receipt from FFF6 (14:33:03.500)
+### Step 17: App Asks for the Receipt on FFF6 (14:33:03.500)
 
-**BLE Read FFF6 [MSG-039]:**
+**BLE Write FFF6 [MSG-041]:** `{"type": "ReceiptRequest", "offlineTxId": "otx_e5f6a7b8c9d0"}`, answered by a **ReceiptResponse [MSG-042]** notified on FFF6, `result: "Accepted"`, whose `receipt` [MSG-039] is:
 
 ```json
 {
@@ -563,7 +577,7 @@ The server pre-debited 50 credits. It settles the session from whichever copy of
 
 ### Step 19: App Uploads the Receipt (14:33:05.000)
 
-Since Alice's phone is online, the app uploads the receipt at once ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)). The request body is the Receipt of Step 17, exactly as the app read it from FFF6.
+Since Alice's phone is online, the app uploads the receipt at once ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)). The request body is the Receipt of Step 17, exactly as the app received it on FFF6.
 
 **HTTP Request:**
 
@@ -629,8 +643,8 @@ On the Operator Dashboard, Charlie sees:
      | -- Read FFF1 --------|------------------------->|
      |<-------- StationInfo (offline) -----------------|
      |                      |                          |
-     | -- Read FFF2 --------|------------------------->|
-     |<-------- AvailableServices ---------------------|
+     | -- Write FFF2 0x01 --|------------------------->|
+     |<-------- Notify FFF2: AvailableServices ---------|
      |                      |                          |
      |  POST /offline-auth  |                          |
      |--------------------->|                          |
@@ -641,8 +655,9 @@ On the Operator Dashboard, Charlie sees:
      |<---------------------|                          |
      |                      |                          |
      | -- Write FFF3: Hello -------------------------->|
-     |<-------- FFF4: Challenge (offline) -------------|
+     |<-------- FFF4: Challenge (offline, certificate, signature)
      |                      |                          |
+     |  verify certificate and signature (trust bundle) |
      | -- Write FFF3: ServerSignedAuth ------------->|
      |                      |                  verify  |
      |                      |                 ECDSA P-256  |
@@ -662,8 +677,8 @@ On the Operator Dashboard, Charlie sees:
      |<-------- FFF4: StopServiceResponse (174s) ----|
      |<-------- FFF5: ServiceStatus (ReceiptReady) ---|
      |                      |                          |
-     | -- Read FFF6: Receipt ------------------------->|
-     |<-------- Receipt (ECDSA signed) ----------------|
+     | -- Write FFF6: ReceiptRequest ----------------->|
+     |<-------- FFF6: ReceiptResponse (ECDSA-signed receipt)
      |                      |                          |
      | -- BLE disconnect -->|                          |
      |                      |                          |

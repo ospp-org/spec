@@ -83,22 +83,14 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
 16. Verify SessionEnded EVENT is received BEFORE StatusNotification `Faulted`.
 17. Verify server applies refund policy: if `actualDurationSeconds < faultFullRefundThreshold * durationSeconds` → full refund. At the default threshold of `0.50` and a booked 300s, that boundary is 150s.
 
-### Part C — Local User Stop at Station (v0.4.0+)
+### Part C — The Customer's Stop over BLE (v0.4.0+)
 
-18. Send StartService with a long `durationSeconds` (e.g., 300):
-```json
-    {
-      "bayId": "bay_a1b2c3d4",
-      "serviceId": "svc_basic",
-      "programNumber": 1,
-      "sessionId": "sess_c3d4e5f6a7b8",
-      "sessionSource": "MobileApp",
-      "durationSeconds": 300
-    }
-```
-19. Receive StartService RESPONSE with `status: "Accepted"`.
+> **This Part exercises the Offline / BLE profile, which is EXPERIMENTAL: it is no part of a Standard claim, runs only where the station declares the profile, and is recorded as skipped otherwise.** A customer stops a session only through the app ([`04-flows.md` §6](../../../spec/04-flows.md#settlement-by-service-kind)): through the server, as a StopService, which ends in its RESPONSE; over BLE, as a StopServiceRequest, which the station reports as `Local`. A SessionEnded that carries `Local` therefore ends a session the app started over BLE, and a station that does not declare the profile never emits one.
+
+18. Run a Partial-B session on `bay_a1b2c3d4` for `svc_basic` with a long requested duration (e.g., 300 seconds), as `TC-OFF-005` Parts A and B do: the server answers AuthorizeOfflinePass `Accepted` with a `sessionId`, and the app starts the service over BLE.
+19. Receive the StartServiceResponse `Accepted` on the app's BLE connection.
 20. Observe StatusNotification: `bay_a1b2c3d4` → `Occupied`.
-21. After ~30 seconds elapsed, trigger a manual stop at the station (e.g., simulate physical Stop button press; implementation-specific method).
+21. After ~30 seconds elapsed, write a StopServiceRequest from the app over BLE naming the session.
 22. Observe SessionEnded EVENT from station. Validate:
     - `payload.reason: "Local"`
     - `payload.actualDurationSeconds` ≈ 30 (+/- 3s)
@@ -107,6 +99,8 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
 23. Verify no StopService RESPONSE is sent (this is autonomous from the server's perspective).
 
 ### Part D — Offline Credit Exhausted (v0.4.0+)
+
+> **This Part exercises the Offline / BLE profile, which is EXPERIMENTAL: it is no part of a Standard claim, runs only where the station declares the profile, and is recorded as skipped otherwise.**
 
 24. Configure the station for offline mode with an OfflinePass that has low remaining credits (e.g., enough for ~20 seconds of `svc_basic`).
 25. Send StartService with `durationSeconds: 300` via the BLE offline path (or simulate offline mode and a local StartService).
@@ -118,6 +112,8 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
     - Payload validates against `schemas/mqtt/session-ended-event.schema.json`
 
 ### Part E — Mid-Session Deauthorization (v0.4.0+)
+
+> **This Part exercises the Offline / BLE profile, which is EXPERIMENTAL: it is no part of a Standard claim, runs only where the station declares the profile, and is recorded as skipped otherwise.**
 
 28. Configure the station for offline mode with an OfflinePass.
 29. Start an offline session via BLE.
@@ -134,7 +130,7 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
 
 ## Expected Results
 
-1. Station sends SessionEnded EVENT autonomously when timer elapses, hardware faults, the user stops at the station, offline credits are exhausted, or the offline pass is revoked mid-session — without waiting for StopService.
+1. Station sends SessionEnded EVENT autonomously when timer elapses, hardware faults, the customer stops it from the app over BLE, offline credits are exhausted, or the offline pass is revoked mid-session — without waiting for StopService.
 2. SessionEnded `reason` is one of `"TimerExpired"`, `"Fault"`, `"Local"`, `"LocalOutOfCredit"`, `"Deauthorized"`.
    `"OperatorStopped"` is the sixth member of the enum and is deliberately **out of scope here**:
    this case verifies AUTONOMOUS termination — the station deciding on its own — and an operator

@@ -1,6 +1,10 @@
 # AuthorizeOfflinePass
 
-> **Status:** Draft | **OSPP Version:** 0.44.0
+> **Status: EXPERIMENTAL** | **OSPP Version:** 0.44.0
+>
+> Published for review, **not** for implementation: its request carries the device proof and the
+> transcript hash of the BLE handshake, which is EXPERIMENTAL, and changed incompatibly with the BLE
+> wire revision. See [Release status](../../../README.md#ble-is-experimental).
 
 ## 1. Overview
 
@@ -8,7 +12,7 @@ AuthorizeOfflinePass is a station-initiated request used in the **Partial B** of
 
 This action provides stronger security guarantees than local-only validation because the server can check what a station alone cannot: an individual revocation or a block on the user (§5 check #12), the platform's current epoch (#3), and the pass's use at every station (#6, #7, #10). It does not gate on the wallet balance: the pass's limits bound what it authorizes, and a debit that leaves the wallet below zero leaves the transaction pending ([`reconciliation.md` §8.2](reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)). Offline authorization cache is configurable via `AuthorizationCacheEnabled` (see §8 Configuration).
 
-> **Compliance note:** AuthorizeOfflinePass is used in the Partial B scenario, which is required only at **Complete** compliance level. Stations implementing only Basic offline compliance (Full Offline and Partial A) are not required to implement this action.
+> **Compliance note:** AuthorizeOfflinePass is used in the Partial B scenario, which every station that implements the Offline / BLE profile supports ([`README.md` §5](README.md#5-compliance-requirements) rule 7); the **Complete** compliance level requires the profile.
 
 ## 2. Direction and Type
 
@@ -21,10 +25,14 @@ This action provides stronger security guarantees than local-only validation bec
 |-----------------|---------|----------|-----------------------------------------------|
 | `offlinePassId` | string | Yes | Unique identifier of the offline pass (`opass_` prefix). |
 | `offlinePass` | object | Yes | Full OfflinePass object (see [offline-pass.md](offline-pass.md)). |
-| `deviceId` | string | Yes | Identifier of the mobile device presenting the pass. |
 | `counter` | integer | Yes | Monotonic usage counter for replay protection (minimum 0). |
-| `bayId` | string | Yes | Target bay identifier. |
-| `serviceId` | string | Yes | Requested service identifier. |
+| `bayId` | string | Yes | The bay the customer chose, from the BLE OfflineAuthRequest. |
+| `serviceId` | string | Yes | The service the customer chose, from the BLE OfflineAuthRequest. |
+| `requestedDurationSeconds` | integer | Yes | The duration the customer chose, from the BLE OfflineAuthRequest, in seconds (minimum 1). The server estimates the cost from it ([`offline-pass.md` §4](offline-pass.md#4-validation-checks-10)) and authorizes exactly this duration or refuses. |
+| `deviceProof` | object | Yes | The device proof of the BLE OfflineAuthRequest, unchanged ([`06-security.md` §6.5.4](../../06-security.md#654-device-proof-of-possession)). |
+| `transcriptHash` | string | Yes | The transcript hash of the BLE handshake in which the pass was presented, Base64 of its 32 bytes ([`06-security.md` §6.5](../../06-security.md#65-ble-session-key-derivation--hkdf-sha256), Pin 4) — an input of the device proof. |
+
+The request carries no device identifier: the device is the pass's, and the proof shows the presenting phone holds its key. Earlier revisions carried a `deviceId` the station copied from the plaintext Hello, which check #4 compared with the pass's; it bound nothing, and is withdrawn with the Hello's identifier.
 
 ## 4. Response Payload
 
@@ -32,9 +40,14 @@ This action provides stronger security guarantees than local-only validation bec
 |---------------------|---------|----------|-----------------------------------------------|
 | `status` | string | Yes | `Accepted` or `Rejected`. |
 | `sessionId` | string | Cond. | Assigned session identifier. Present when `status` is `Accepted`. |
-| `durationSeconds` | integer | Cond. | Authorized service duration in seconds. Present when `status` is `Accepted`. |
+| `durationSeconds` | integer | Cond. | Authorized service duration in seconds — the request's `requestedDurationSeconds`, which the server authorizes exactly or refuses. Present when `status` is `Accepted`. |
 | `creditsAuthorized` | integer | Cond. | Number of credits authorized for this session — the estimated cost checks #7 and #8 accepted, which the server debits at authorization and which settlement never exceeds. Present when `status` is `Accepted`. |
-| `reason` | string | Cond. | Human-readable rejection reason. Present when `status` is `Rejected`. |
+| `reason` | string | Cond. | Human-readable description of the refusal, for logs and operators, and not for programmatic matching. Present when `status` is `Rejected`. |
+| `errorCode` | integer | Cond. | The registry code of the refusal: the code of the failed §5 check, `1005` for a request that does not validate against its schema, or `6001`. Present when `status` is `Rejected` (§7). |
+| `errorText` | string | Cond. | The registry name of `errorCode`, in `UPPER_SNAKE_CASE` ([`07-errors.md` §1.3](../../07-errors.md#13-error-object-fields)). Present when `status` is `Rejected`. |
+| `details` | object | Cond. | Per-occurrence context of the refusal. With `4002` it carries `constraint`, the pass field whose limit refused the presentation — `maxUses` (check #6) or `maxTotalCredits` (check #7). |
+
+**The refusal carries its code (Normative).** On every `Rejected` the server **MUST** carry `errorCode` and `errorText` — the code and registry name of the failed §5 check, `1005` for a request that does not validate against [`authorize-offline-pass-request.schema.json`](../../../schemas/mqtt/authorize-offline-pass-request.schema.json), or `6001` — and, with `4002`, `details.constraint`; the codes are those of §7, the same codes the BLE AuthResponse carries ([`07-errors.md` §4.3](../../07-errors.md#43-ble-message-types)). The three members are additive: a server that predates them sends `reason` alone, [`authorize-offline-pass-response.schema.json`](../../../schemas/mqtt/authorize-offline-pass-response.schema.json) admits both forms, and the station relays such a refusal as §6 rule 5 states. The station is this response's receiver, so it **MUST** accept the members before any server sends them ([`VERSIONING.md`](../../../VERSIONING.md), *Adding a REQUIRED field, and which side moves first*): a station validating against a copy of the schema that predates them refuses the whole response.
 
 ## 5. Validation Checks
 
@@ -45,7 +58,7 @@ The server **MUST** perform every check below that is not withdrawn — #1--#4, 
 | 1 | **Signature verification** -- verify the ECDSA P-256 `signature` field with the key of the server's own key set named by the pass's `keyId` ([`06-security.md` §6.7](../../06-security.md#67-server-signing-key-rotation-ecdsa-p-256)). | `2002 OFFLINE_PASS_INVALID` |
 | 2 | **Within its temporal bounds** -- `expiresAt` **MUST** be greater than the current server time, and the pass's age (`now - issuedAt`) **MUST NOT** exceed the forwarding station's `OfflinePassMaxAge` — the value the server configured on it, or the default of [`08-configuration.md` §5](../../08-configuration.md#5-offline--ble-configuration-keys) where it configured none. The station forwards the pass without validating it ([`04-flows.md` §5c](../../04-flows.md#5c-partial-b--phone-offline-station-online)), so the server applies the station's own, stricter limit for it. | `2003 OFFLINE_PASS_EXPIRED` |
 | 3 | **Revocation epoch** -- `revocationEpoch` **MUST** be greater than or equal to the platform's current `RevocationEpoch` ([`06-security.md` §6.6](../../06-security.md#66-epoch-based-revocation)). | `2004 OFFLINE_EPOCH_REVOKED` |
-| 4 | **Device binding** -- `offlinePass.deviceId` **MUST** match the `deviceId` field in the request. | `2002 OFFLINE_PASS_INVALID` |
+| 4 | **Device binding** -- the request's `deviceProof` **MUST** verify under the pass's `devicePublicKey` over the proof input of [`06-security.md` §6.5.4](../../06-security.md#654-device-proof-of-possession), built from the request's `transcriptHash`, `counter`, `bayId`, `serviceId` and `requestedDurationSeconds`, the pass's `passId`, and the forwarding station's identity — the station the server authenticated on the connection the request arrived on. | `2002 OFFLINE_PASS_INVALID` |
 | 5 | **Withdrawn** -- a pass carries no station scope. The number is not reused. | — |
 | 6 | **Usage limit** -- the transactions **already** counted against this pass **MUST** be fewer than `maxUses`; a pass permits `maxUses` transactions in total. The server's cumulative count and the fleet-wide count of the pass's settled transactions ([`06-security.md` §7.4](../../06-security.md#74-fraud-detection--offline-transactions)) are **one counter, not two** ([`offline-pass.md` §6](offline-pass.md#6-lifecycle)). | `4002 OFFLINE_LIMIT_EXCEEDED` |
 | 7 | **Total credits limit** -- the credits already counted **plus** this transaction's estimated cost **MUST NOT** exceed `maxTotalCredits`; a pass permits `maxTotalCredits` credits in total. | `4002 OFFLINE_LIMIT_EXCEEDED` |
@@ -63,10 +76,15 @@ The server **MUST** perform every check below that is not withdrawn — #1--#4, 
 
 1. The station **MUST** send this request only when it has an active MQTT connection and has received an OfflinePass via the BLE handshake (Partial B scenario).
 2. The station **MUST** forward the OfflinePass unmodified -- it **MUST NOT** alter any fields before sending.
-3. The station **MUST** include the `counter` value from the BLE OfflineAuthRequest to enable replay protection verification on the server.
-4. On `Accepted`: the station **MUST** store the `sessionId`, `durationSeconds`, and `creditsAuthorized` and then proceed with service activation, using that `sessionId` for the session in its MeterValues and SessionEnded and answering a StopService that names it. **A loss of the station's connection does not end the session (Normative):** the station continues the wash and, when it reconnects, sends the session's end — its SessionEnded under that `sessionId`, which it buffers while it cannot transmit ([`session-ended.md` §5](../transaction/session-ended.md#5-processing-rules)). A stop the server commanded whose RESPONSE the loss kept from the server is not closed on the StopService timeout: once the station has reconnected, the server **MUST** repeat the StopService REQUEST, and the station answers it with the RESPONSE it cached ([`stop-service.md` §6](../transaction/stop-service.md#6-processing-rules)), which it keeps for the OSPP Session Retention Horizon ([`02-transport.md` §5.3](../../02-transport.md#53-ospp-session-retention-horizon)); past the horizon it may answer `3006`, and the session's receipt is then its only end record. The server settles the session once, on the first of its end records to arrive — that SessionEnded, the StopService RESPONSE when the server stopped it, or the session's signed receipt, which the app uploads and which carries no `sessionId` — and recognises every later one as a duplicate ([`reconciliation.md` §3](reconciliation.md#3-deduplication-offlinetxid)). The station sends no TransactionEvent for the session — its receipt reaches the server as the app's upload — and does not count it in `pendingOfflineTransactions` or against `OfflineTransactionLimit`. The station **MUST** relay the acceptance result back to the app via the BLE AuthResponse.
-5. On `Rejected`: the station **MUST NOT** start any service. The station **MUST** relay the rejection back to the app via the BLE AuthResponse with the appropriate error code.
-6. If no response is received within 15 seconds, the station **MUST** treat the request as timed out (error `1010 MESSAGE_TIMEOUT`) and **MAY** fall back to local validation if the Offline profile is supported and its `OfflineModeEnabled` is `true` ([`08-configuration.md` §5](../../08-configuration.md#5-offline--ble-configuration-keys)); the station's own offline limits then apply ([`offline-pass.md` §2.2](offline-pass.md#22-constraints-object)).
+3. The station **MUST** include the `counter`, `bayId`, `serviceId`, `requestedDurationSeconds` and `deviceProof` of the BLE OfflineAuthRequest, unchanged, and the `transcriptHash` of the handshake that carried it. Before it forwards, it **MUST** have verified the `sessionProof` and the device proof itself ([`offline-pass.md` §4](offline-pass.md#4-validation-checks-10) check #4) and refused a bay or service it does not have, and a duration above its `MaxSessionDurationSeconds` ([`ble-handshake.md` §4.1](ble-handshake.md#41-offlineauthrequest-full-offline--partial-b)): a request that fails any of them never reaches the server.
+4. On `Accepted`: the station **MUST** store the `sessionId`, `durationSeconds`, and `creditsAuthorized` and then proceed with service activation — of the bay and the service of the request, for no longer than `durationSeconds` ([`ble-session.md` §1](ble-session.md#1-starting-a-service)) — using that `sessionId` for the session in its MeterValues and SessionEnded and answering a StopService that names it. **A loss of the station's connection does not end the session (Normative):** the station continues the wash and, when it reconnects, sends the session's end — its SessionEnded under that `sessionId`, which it buffers while it cannot transmit ([`session-ended.md` §5](../transaction/session-ended.md#5-processing-rules)). A stop the server commanded whose RESPONSE the loss kept from the server is not closed on the StopService timeout: once the station has reconnected, before the session closes under rule 4a, the server **MUST** repeat the StopService REQUEST, and the station answers it with the RESPONSE it cached ([`stop-service.md` §6](../transaction/stop-service.md#6-processing-rules)). The server settles the session once, on the first of its end records to arrive — that SessionEnded, the StopService RESPONSE when the server stopped it, or the session's signed receipt, which the app uploads and which carries no `sessionId` — and recognises every later one as a duplicate ([`reconciliation.md` §3](reconciliation.md#3-deduplication-offlinetxid)). The station sends no TransactionEvent for the session — its receipt reaches the server as the app's upload — and does not count it in `pendingOfflineTransactions` or against `OfflineTransactionLimit`. The station **MUST** relay the acceptance result back to the app via the BLE AuthResponse.
+
+4a. **A Partial-B session closes at the end of its authorized duration (Normative).** The server holds the session open until the first of its end records arrives, and no longer than the end of its authorized duration: `durationSeconds` after the wash started — which the station reports by the StatusNotification of the session's bay `Occupied` — or, while no report of the start has reached the server, after the server accepted the authorization. If no end record has arrived by then, the server **MUST** close the session at that moment and **MUST NOT** wait for the station. A session whose station is offline at that moment is finished then: the station runs the wash through a loss of its connection (rule 4), so the server settles it as a session whose timer expired — a full charge. A session whose station is connected at that moment is settled the same way when the station reported the wash started; when it reported no start — no `Occupied` for the session's bay after the authorization, and no MeterValues under its `sessionId` — the wash never started, and the server refunds it in full. An end record that arrives after the server closed the session is a duplicate ([`reconciliation.md` §3](reconciliation.md#3-deduplication-offlinetxid)). A station reboot keeps or ends the session by its `bootReason`, as it keeps or ends an online session ([`boot-notification.md` §5.2](../core/boot-notification.md#52-bootreason--seven-boots-and-one-non-boot)): a `Reconnect` keeps it, and a real boot ends it, and the server settles it as it settles an online session a boot ended. Where an online session whose station stays away is closed after `ConnectionLostGracePeriod` and billed on the time delivered ([`connection-lost.md` §5](../core/connection-lost.md#5-server-side-handling)), a Partial-B session runs through the loss for its whole authorized duration (rule 4), which is why it is closed at the end of that duration, as delivered.
+
+4b. **Every end record settles on the authorized amount and duration (Normative).** Whichever record settles a Partial-B session — its SessionEnded, the StopService RESPONSE, its receipt, or the server's close under rule 4a — the server **MUST** take the session's full charge as the `creditsAuthorized` and its booked duration as the `durationSeconds` of this response, and **MUST NOT** read a booked duration from the record; the time delivered is the one the record reports. Settlement by service kind therefore reads the same full charge and the same `Fault` threshold ([`04-flows.md` §6](../../04-flows.md#refund-policy)) on every path, and one wash settles at one amount whichever of its records arrives first.
+
+5. On `Rejected`: the station **MUST NOT** start any service. The station **MUST** relay the rejection back to the app via the BLE AuthResponse, carrying the response's `errorCode`, `errorText` and `details` unchanged. A response from a server that predates those members carries `reason` alone, which names no code the station can relay whole — a `4002` would lack the `details.constraint` the AuthResponse requires — so the station relays `6001 SERVER_INTERNAL_ERROR`.
+6. The station sends this request only inside a BLE handshake (rule 1), and answers the app within the handshake's budget ([`ble-handshake.md` §1](ble-handshake.md#1-handshake-overview)), which ends before this action's 15-second response timeout: if no response has arrived in time for it to answer within the budget, the station **MUST** treat the request as timed out (error `1010 MESSAGE_TIMEOUT`) and **MAY** fall back to local validation if the Offline profile is supported and its `OfflineModeEnabled` is `true` ([`08-configuration.md` §5](../../08-configuration.md#5-offline--ble-configuration-keys)); the station's own offline limits then apply ([`offline-pass.md` §2.2](offline-pass.md#22-constraints-object)).
 7. The server **MUST** log a SecurityEvent for any signature verification failure (check #1) or counter replay (check #10). **Within the §5 authorize-time gate these are the only two**: the other `Rejected` outcomes (expiry, epoch revocation, individual revocation, usage limits, rate limit) are policy decisions, not security incidents, and **MUST NOT** be emitted as SecurityEvents by the server *at authorize time*.
 
     **The scope of that prohibition is this gate, and only this gate.** The reconcile-time gate answers the question differently and on purpose: [`reconciliation.md` §6.3](reconciliation.md#63-securityevent-emission) **MUST**s an emission for **every** applicable check, expiry included, and the *Recommended Action* cells of `2014`, `2016` and `2017` ([`07-errors.md` §3.2](../../07-errors.md#32-authentication--authorization-errors-2xxx)) say the same for the reconcile-time gate. The two gates are not inconsistent, they are differently situated. At authorize time a policy refusal is a live decision about a credential presented seconds ago, the app is told, and the user can act — logging it as a security incident would fill the audit trail with ordinary refusals. At reconcile time the transaction is already delivered: a policy refusal means money moved against a credential the policy did not permit, nobody is present to act, and the audit row is the only account that will exist. Read this rule as bounded by its own gate, and never as a fleet-wide prohibition.
@@ -93,12 +111,13 @@ The server **MUST** perform every check below that is not withdrawn — #1--#4, 
 
 ## 7. Error Codes
 
-**These codes are recorded, not transmitted.** [`authorize-offline-pass-response.schema.json`](../../../schemas/mqtt/authorize-offline-pass-response.schema.json) is closed (`additionalProperties: false`) over `status`, `sessionId`, `durationSeconds`, `creditsAuthorized` and `reason`, so no response carrying an `errorCode` is schema-valid and no conforming server can put one on the wire — the same position [`reconciliation.md` §6.4](reconciliation.md#64-response) states for the reconcile-time twin, and the reason both are listed in [`07-errors.md` §2.1](../../07-errors.md#21-mqtt-error-response)'s table of response schemas that cannot carry a code. The table below identifies the check for the reader and for the audit trail; it does not describe a wire field.
+**These codes are transmitted.** A refusal carries its code in `errorCode` and its registry name in `errorText` (§4), and, with `4002`, `details.constraint`. Machine-readable detail beyond them lives in the server-originated `OfflinePassRejected` record of rule 7 of §6, for the two checks that emit one, correlated to this response by the originating REQUEST's `messageId`. `reason` stays beside them as a human-readable description; it is not a code, and no receiver matches on it.
 
-**What the station receives instead is `reason`**, REQUIRED on `Rejected` ([§4](#4-response-payload)) and bounded at 256 characters. It **MUST** identify the failed §5 check — its number, or its `errorText` as free text — well enough to be actionable without opening the audit trail, and the station **MUST** relay that rejection to the app over the BLE AuthResponse (rule 5). Machine-readable detail lives in the server-originated `OfflinePassRejected` record of rule 7, for the two checks that emit one, correlated to this response by the originating REQUEST's `messageId`.
+> **What this replaced.** Until this revision the response was closed over `status`, `sessionId`, `durationSeconds`, `creditsAuthorized` and `reason`, so these codes were recorded and never transmitted, and `reason` was asked to identify the failed check — in the schema as the registry name, in this section as the check's number or `errorText` as free text, and in a conformance vector as prose. A station relaying a refusal to the app had no code to relay. `errorCode`, `errorText` and `details` are now members of the response, and `reason` is prose only.
 
 | Code | Text | Severity | Description |
 |:----:|-------------------------------|----------|-----------------------------------------------|
+| 1005 | `INVALID_MESSAGE_FORMAT` | Error | The request does not validate against its schema — a member missing, extra or out of range. |
 | 2002 | `OFFLINE_PASS_INVALID` | Error | ECDSA P-256 signature verification failed or pass structure is invalid. |
 | 2003 | `OFFLINE_PASS_EXPIRED` | Warning | Pass `expiresAt` timestamp has passed, or the pass is older than the forwarding station's `OfflinePassMaxAge`. |
 | 2004 | `OFFLINE_EPOCH_REVOKED` | Error | Pass `revocationEpoch` is less than the platform's current epoch. |
@@ -144,10 +163,15 @@ The server **MUST** perform every check below that is not withdrawn — #1--#4, 
       "signatureAlgorithm": "ECDSA-P256-SHA256",
       "signature": "MEQCIHtTBR62/kj2qeB7M2BXb1yek5fh7ryc+lhz5N0sJLPNAiAHnbvbzTENpzKRSUflA/9BsgokbMZbDR1BdsxN4tZlPg=="
     },
-    "deviceId": "dev_android_abc123",
     "counter": 5,
     "bayId": "bay_a1b2c3d4",
-    "serviceId": "svc_eco"
+    "serviceId": "svc_eco",
+    "requestedDurationSeconds": 300,
+    "deviceProof": {
+      "format": "android-key",
+      "signature": "MEUCIQDc4B8LhNrkLgEKqbaolGy/eGIIF6ZQ5vN93byJtgBJ8AIgGbHG0iACfeM0mMRxMpjPXvbNgYMkDi+Vqju/EOumqNQ="
+    },
+    "transcriptHash": "kDtv6PscMeE30BerjTKjR2ZAqIO1Jio5OWJE8CqCi8g="
   }
 }
 ```
@@ -183,7 +207,9 @@ The server **MUST** perform every check below that is not withdrawn — #1--#4, 
   "protocolVersion": "0.3.0",
   "payload": {
     "status": "Rejected",
-    "reason": "OfflinePass revocation epoch (38) is below the current server epoch (42). The pass has been batch-revoked."
+    "reason": "OfflinePass revocation epoch (38) is below the current server epoch (42). The pass has been batch-revoked.",
+    "errorCode": 2004,
+    "errorText": "OFFLINE_EPOCH_REVOKED"
   }
 }
 ```
@@ -193,4 +219,4 @@ The server **MUST** perform every check below that is not withdrawn — #1--#4, 
 - Request: [`authorize-offline-pass-request.schema.json`](../../../schemas/mqtt/authorize-offline-pass-request.schema.json)
 - Response: [`authorize-offline-pass-response.schema.json`](../../../schemas/mqtt/authorize-offline-pass-response.schema.json)
 - OfflinePass: [`offline-pass.schema.json`](../../../schemas/common/offline-pass.schema.json)
-- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 2002--2005, 2014, 4002--4004, 6001)
+- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 1005, 2002--2005, 2014, 4002--4004, 6001)

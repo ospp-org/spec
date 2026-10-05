@@ -37,8 +37,8 @@ seconds (ten days) it is inert, and an operator arms it by lowering it
 |------|-------|
 | 10:30:00.000 | Alice opens the app, selects Bay 1, svc_eco |
 | 10:30:01.000 | App initiates BLE scan, discovers SSP-3000 |
-| 10:30:02.000 | App reads BLE characteristic FFF1 (station info + connectivity) |
-| 10:30:03.000 | App sends HELLO, station responds with Challenge |
+| 10:30:02.000 | App reads BLE characteristic FFF1 (station info + connectivity, unauthenticated) |
+| 10:30:03.000 | App sends HELLO, station responds with Challenge; app verifies the station's certificate and signature |
 | 10:30:05.000 | App confirms biometric (FaceID), constructs OfflineAuthRequest |
 | 10:30:06.000 | App sends OfflineAuthRequest with expired OfflinePass |
 | 10:30:08.000 | Station validates OfflinePass -- check #2 fails (expired) |
@@ -51,7 +51,7 @@ seconds (ten days) it is inert, and an operator arms it by lowering it
 
 ### 1. App reads BLE Characteristic FFF1 (Station Info)
 
-**BLE Service:** OSPP Primary Service (UUID: `0000FFF0-0000-1000-8000-00805F9B34FB`)
+**BLE Service:** OSPP Primary Service (UUID: `6645FFF0-5AEB-4709-ACD5-02E03C3000F6`)
 **Characteristic:** FFF1 (Station Info, READ)
 
 ```json
@@ -59,8 +59,6 @@ seconds (ten days) it is inert, and an operator arms it by lowering it
   "stationId": "stn_a1b2c3d4",
   "stationModel": "SSP-3000",
   "firmwareVersion": "2.4.1",
-  "bayCount": 3,
-  "bleProtocolVersion": "0.2.1",
   "connectivity": "Offline"
 }
 ```
@@ -72,9 +70,12 @@ seconds (ten days) it is inert, and an operator arms it by lowering it
 ```json
 {
   "type": "Hello",
-  "deviceId": "device_a8f3bc12e4567890",
+  "bleVersions": [
+    "0.3.0"
+  ],
   "appNonce": "M8MZRxjMBBxLhQ6vT0764RNX9V9CJcmayPBQgXVsH88=",
-  "appVersion": "1.8.0"
+  "appVersion": "1.8.0",
+  "appEphemeralPubKey": "A9/MadsnP0E9PFHGRvJYKLrBjec5EHfnencweEfhmtoL"
 }
 ```
 
@@ -85,15 +86,36 @@ seconds (ten days) it is inert, and an operator arms it by lowering it
 ```json
 {
   "type": "Challenge",
+  "bleVersion": "0.3.0",
   "stationNonce": "WmplP7lhWDDjNoOR711wziZf41PUY1my5fMgfCebSw8=",
+  "stationEphemeralPubKey": "Aixha1rLYxgD96zylNnBbBI/dquE1q3cF37gEP+4nMyO",
+  "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
   "stationConnectivity": "Offline",
   "availableServices": [
-    { "bayId": "bay_c1d2e3f4a5b6", "serviceId": "svc_eco", "available": true },
-    { "bayId": "bay_c1d2e3f4a5b6", "serviceId": "svc_standard", "available": true },
-    { "bayId": "bay_c1d2e3f4a5b6", "serviceId": "svc_deluxe", "available": true }
-  ]
+    {
+      "bayId": "bay_c1d2e3f4a5b6",
+      "serviceId": "svc_eco",
+      "available": true
+    },
+    {
+      "bayId": "bay_c1d2e3f4a5b6",
+      "serviceId": "svc_standard",
+      "available": true
+    },
+    {
+      "bayId": "bay_c1d2e3f4a5b6",
+      "serviceId": "svc_deluxe",
+      "available": true
+    }
+  ],
+  "stationSignature": "MEUCIQCLLosJRypxuNRsdlx2hj8kU3XcLPmrPKrLpzw7puHmTQIgT1wCa7+9gXh1nNUY4GdrRAsn+hOFF5grU8wLt2YdcCM="
 }
 ```
+
+The app verifies the station's certificate against the Station CA and CRL of its trust bundle,
+and the station's signature, before it sends the pass
+([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)).
+Both pass: the station is genuine. What fails is Alice's own pass, below.
 
 ### 4. App -> Station: OfflineAuthRequest (BLE Write to FFF3)
 
@@ -127,7 +149,15 @@ The `expiresAt` field clearly shows the pass expired more than a day ago.
     "signature": "MEUCIQD9u+aV3D9r6ffR8hfxt/L2uDkqJ239oI4l2eXBqezwcwIgVs9Dz0M5iXmPg3hfKVXu60so5UcFsG0ispLJh22Kc3g="
   },
   "counter": 3,
-  "sessionProof": "EtKD75H71pKdOC5mrEsIAS7a04p7oQzRcdNZv/G0uPA="
+  "bayId": "bay_c1d2e3f4a5b6",
+  "serviceId": "svc_eco",
+  "requestedDurationSeconds": 180,
+  "sessionProof": "EtKD75H71pKdOC5mrEsIAS7a04p7oQzRcdNZv/G0uPA=",
+  "deviceProof": {
+    "format": "apple-appattest",
+    "signature": "MEQCIGjScwOudcjUKehZXu7dsk5PgskHdSxJrFTobDijNpg2AiBGrSn7t2lZlFxyNWZzrYaLH3ZdCLSdoBSI1EFewidsEA==",
+    "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
+  }
 }
 ```
 
@@ -146,7 +176,7 @@ OfflinePass Validation:
     now (RTC):  2026-02-13T10:30:08.000Z
     Delta:      +24h 30m 08s (expired)
   Check #3 - Revocation epoch:          SKIPPED (prior check failed)
-  Check #4 - Device binding:            SKIPPED (prior check failed)
+  Check #4 - Device proof:              SKIPPED (prior check failed)
   Check #5 - (withdrawn)
   Checks #6-#10:                        SKIPPED (prior check failed)
 
@@ -161,10 +191,13 @@ Result: REJECTED (check #2 failed — offline pass expired)
 {
   "type": "AuthResponse",
   "result": "Rejected",
-  "reason": "OFFLINE_PASS_EXPIRED",
-  "errorCode": 2003
+  "errorCode": 2003,
+  "errorText": "OFFLINE_PASS_EXPIRED"
 }
 ```
+
+The refusal travels inside the AEAD channel, in the one BLE error shape
+([`07-errors.md` §2.3](../../spec/07-errors.md#23-ble-error-response)).
 
 ### 7. App: BLE Disconnection
 
@@ -227,7 +260,7 @@ at the top suggests:
 
 4. **Prevention -- re-issuance and pre-arming:** Whenever it has connectivity, the app
    uploads the receipts it holds and requests a fresh pass at application start, after each use
-   of the pass and after each credit to the wallet ([`offline-pass.md` §6](../../spec/profiles/offline/offline-pass.md#6-lifecycle)),
+   of the pass and after each credit to the wallet it learns of ([`offline-pass.md` §6](../../spec/profiles/offline/offline-pass.md#6-lifecycle)),
    and its BackgroundPreArmingService requests one before the current pass
    expires, reducing the chance of this scenario occurring.
 

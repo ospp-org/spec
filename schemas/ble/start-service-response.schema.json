@@ -25,7 +25,7 @@
     },
     "sessionId": {
       "$ref": "../common/session-id.schema.json",
-      "description": "Local session identifier assigned by the station, present when result is Accepted"
+      "description": "The session's identifier - the station's own for a pass it validated itself, the server's for a Partial-A or Partial-B authorization (profiles/offline/ble-session.md §1). Present when result is Accepted."
     },
     "offlineTxId": {
       "$ref": "../common/offline-tx-id.schema.json",
@@ -33,19 +33,19 @@
     },
     "errorCode": {
       "type": "integer",
-      "description": "Numeric error code, present when result is Rejected"
+      "minimum": 1000,
+      "maximum": 9999,
+      "description": "The registry code of the refusal (07-errors.md §4.3). Present when result is Rejected."
     },
     "errorText": {
       "type": "string",
       "pattern": "^[A-Z][A-Z0-9_]+$",
       "maxLength": 64,
-      "description": "Machine-readable error name in UPPER_SNAKE_CASE. Present when status is Rejected."
+      "description": "The registry name of errorCode, in UPPER_SNAKE_CASE (07-errors.md §1.3). Present when result is Rejected."
     },
-    "programNumber": {
-      "type": "integer",
-      "minimum": 1,
-      "maximum": 32,
-      "description": "ECHO of the programNumber from the request, so a refusal names the ordinal it refused. SHOULD be present on any non-accepted result."
+    "details": {
+      "type": "object",
+      "description": "Per-occurrence context of the refusal (07-errors.md §2.3). MAY be present when result is Rejected."
     }
   },
   "allOf": [
@@ -64,7 +64,12 @@
         "required": [
           "sessionId",
           "offlineTxId"
-        ]
+        ],
+        "properties": {
+          "errorCode": false,
+          "errorText": false,
+          "details": false
+        }
       }
     },
     {
@@ -82,7 +87,11 @@
         "required": [
           "errorCode",
           "errorText"
-        ]
+        ],
+        "properties": {
+          "sessionId": false,
+          "offlineTxId": false
+        }
       }
     }
   ]

@@ -1,0 +1,7 @@
+{
+  "type": "StopServiceResponse",
+  "result": "Rejected",
+  "errorCode": 3006,
+  "errorText": "SESSION_NOT_FOUND",
+  "creditsCharged": 48
+}

@@ -2,7 +2,7 @@
 
 ## Scenario
 
-It is a winter evening in Example City. Heavy snowfall has knocked out the internet at "Station Alpha -- Example City" and Bob's mobile carrier is also down in the area. Bob pulls into bay 1 and wants to use the Eco Program service. He opens the the app, which detects no internet connectivity. The app has a pre-armed OfflinePass (`opass_a8b9c0d1e2f3`) that was refreshed this morning while Bob was on WiFi. The app discovers the station via BLE, connects, reads station info and available services, performs the HELLO/CHALLENGE handshake, authenticates with the OfflinePass (the station validates it locally with the nine checks that apply), starts "Eco Program" on bay 1, monitors progress via BLE ServiceStatus notifications, and stops after 3 minutes. The station generates a signed receipt with ECDSA P-256 and increments the txCounter. Bob reads the receipt from FFF6 and the app stores it in the offline transaction log, to upload it to the server once it has a network.
+It is a winter evening in Example City. Heavy snowfall has knocked out the internet at "Station Alpha -- Example City" and Bob's mobile carrier is also down in the area. Bob pulls into bay 1 and wants to use the Eco Program service. He opens the the app, which detects no internet connectivity. The app has a pre-armed OfflinePass (`opass_a8b9c0d1e2f3`) that was refreshed this morning while Bob was on WiFi. The app discovers the station via BLE, connects, reads station info and asks for the service catalog, performs the HELLO/CHALLENGE handshake — verifying the station's certificate and signature before it sends anything — authenticates with the OfflinePass and its device proof (the station validates it locally with the nine checks that apply), starts "Eco Program" on bay 1, monitors progress via BLE ServiceStatus notifications, and stops after 3 minutes. The station generates a signed receipt with ECDSA P-256 and increments the txCounter. The app asks for the receipt on FFF6 and stores it in the offline transaction log, to upload it to the server once it has a network.
 
 ## Participants
 
@@ -19,7 +19,8 @@ It is a winter evening in Example City. Heavy snowfall has knocked out the inter
 - Bob has a valid OfflinePass `opass_a8b9c0d1e2f3` in the app, issued at 06:00 UTC today. It expires tomorrow because this example platform sets its pass lifetime to one day; the default is three days, and never more than ten ([`offline-pass.md` §6](../../spec/profiles/offline/offline-pass.md#6-lifecycle))
 - OfflinePass allowance: 100 credits total, 5 max uses, 30 credits max per transaction
 - Bob's OfflinePass counter is at 2 (he has done 2 previous offline sessions)
-- Station BLE is advertising as `OSPP-b2c3d4` (last 6 hex chars of station ID)
+- Station BLE is advertising the OSPP service UUID, with the name `OSPP-b2c3d4` (last 6 hex chars of station ID) in its scan response
+- Station holds its mTLS certificate, whose extended key usage carries `clientAuth` and `id-kp-osppBleStation`; the app holds the trust bundle of its last pass issuance — the Station CA certificate and its CRL ([`app-contract.md` §3.4](../../spec/profiles/offline/app-contract.md#34-the-trust-bundle))
 - Station holds the server key set (`OfflinePassPublicKey`) in NVS, including the key the pass's `keyId` names
 - Station `OfflineModeEnabled` configuration is `true`
 - Station is within its own offline limits: it holds 7 offline transactions the server has not yet answered `Accepted`, `Duplicate` or `Rejected`, well under its `OfflineTransactionLimit` (1000), and it has been offline for far less than its `OfflineWindowHours` (240). Both are station configuration, not pass fields ([`08-configuration.md` §5](../../spec/08-configuration.md#5-offline--ble-configuration-keys))
@@ -33,12 +34,12 @@ It is a winter evening in Example City. Heavy snowfall has knocked out the inter
 18:32:00.000  Bob opens the app, sees "Offline Mode" banner
 18:32:03.000  App starts BLE scan, discovers OSPP-b2c3d4
 18:32:04.500  App establishes BLE connection to station
-18:32:05.000  App reads FFF1 (StationInfo) — confirms station identity and offline status
-18:32:05.500  App reads FFF2 (AvailableServices) — displays service catalog
+18:32:05.000  App reads FFF1 (StationInfo) — shows which station it reached
+18:32:05.500  App asks for AvailableServices on FFF2 — displays service catalog
 18:32:12.000  Bob selects Bay 1, Eco Program, 3 min duration
 18:32:12.500  App writes Hello to FFF3
 18:32:13.000  Station notifies Challenge on FFF4 (stationConnectivity: "Offline")
-18:32:13.200  App derives session key via HKDF-SHA256
+18:32:13.200  App verifies the station's certificate and signature, derives session key
 18:32:14.000  App requests biometric confirmation (Face ID)
 18:32:15.000  App writes OfflineAuthRequest to FFF3 with OfflinePass
 18:32:15.500  Station performs the nine OfflinePass checks — all pass
@@ -48,13 +49,13 @@ It is a winter evening in Example City. Heavy snowfall has knocked out the inter
 18:32:20.000  Station notifies ServiceStatus Running on FFF5 (3s elapsed)
 18:33:17.000  Station notifies ServiceStatus Running on FFF5 (60s elapsed)
 18:34:17.000  Station notifies ServiceStatus Running on FFF5 (120s elapsed)
-18:35:17.000  Station notifies ServiceStatus Running on FFF5 (180s elapsed)
+18:35:17.000  Timer expires — station stops the dispenser itself, ending the session with TimerExpired
 18:35:17.500  Bob taps "Stop service" in the app
 18:35:18.000  App writes StopServiceRequest to FFF3
-18:35:18.500  Station deactivates dispenser, notifies StopServiceResponse on FFF4
+18:35:18.500  Station notifies StopServiceResponse Rejected 3006 on FFF4 — the session has already ended
 18:35:19.000  Station generates ECDSA-signed receipt, increments txCounter
 18:35:19.500  Station notifies ServiceStatus ReceiptReady on FFF5
-18:35:20.000  App reads FFF6 (Receipt) — stores in offline transaction log
+18:35:20.000  App writes ReceiptRequest to FFF6; station notifies ReceiptResponse — receipt stored in offline transaction log
 18:35:20.500  App disconnects BLE
 18:35:21.000  App displays session summary to Bob
 ```
@@ -73,7 +74,7 @@ The app opens to the HomeScreen. A yellow banner at the top reads "Offline mode 
 
 ### Step 2: BLE Discovery (18:32:03.000)
 
-The app starts scanning for BLE devices advertising the OSPP service UUID (`0000FFF0-0000-1000-8000-00805F9B34FB`). It discovers a device named `OSPP-b2c3d4` with RSSI -42 dBm (very close range, as expected at a service bay).
+The app starts scanning for BLE devices advertising the OSPP service UUID (`6645FFF0-5AEB-4709-ACD5-02E03C3000F6`). It discovers a device whose scan response names it `OSPP-b2c3d4`, with RSSI -42 dBm (very close range, as expected at a service bay).
 
 ---
 
@@ -85,31 +86,24 @@ The app connects to the station over BLE. The BLE connection state transitions: 
 
 ### Step 4: Read StationInfo from FFF1 (18:32:05.000)
 
-**BLE GATT Read:** Characteristic `0000FFF1-0000-1000-8000-00805F9B34FB`
+**BLE GATT Read:** Characteristic `6645FFF1-5AEB-4709-ACD5-02E03C3000F6`
 
 ```json
 {
   "stationId": "stn_a1b2c3d4",
   "stationModel": "SSP-3000",
   "firmwareVersion": "2.4.1",
-  "bayCount": 3,
-  "bleProtocolVersion": "0.2.1",
   "connectivity": "Offline"
 }
 ```
 
-The app verifies:
-- `stationId` matches the expected station from the scan
-- `bleProtocolVersion` is one the app supports. There is no compatibility relation derived from a version component — a shared MAJOR implies nothing ([VERSIONING.md](../../VERSIONING.md)) — and this station reports `0.2.1`
-- `connectivity` is `"Offline"` -- confirms the Full Offline flow is needed
-
-The BLE connection state transitions: `CONNECTED` -> `HANDSHAKE`.
+The app shows Bob which station it reached. Nothing on FFF1 is authenticated, so the app relies on none of it ([`ble-transport.md` §3](../../spec/profiles/offline/ble-transport.md#3-station-info-fff1)): the station's identity is the certificate in its Challenge (Step 7), its connectivity is the Challenge's `stationConnectivity`, and the BLE version is the one the handshake negotiates.
 
 ---
 
-### Step 5: Read AvailableServices from FFF2 (18:32:05.500)
+### Step 5: Ask for AvailableServices on FFF2 (18:32:05.500)
 
-**BLE GATT Read:** Characteristic `0000FFF2-0000-1000-8000-00805F9B34FB`
+**BLE GATT Write, then Notify:** Characteristic `6645FFF2-5AEB-4709-ACD5-02E03C3000F6` — the app writes the octet `0x01`, and the station notifies the catalog it holds
 
 ```json
 {
@@ -118,46 +112,40 @@ The BLE connection state transitions: `CONNECTED` -> `HANDSHAKE`.
     {
       "bayId": "bay_c1d2e3f4a5b6",
       "bayNumber": 1,
-      "status": "Available",
       "services": [
         {
           "serviceId": "svc_eco",
           "serviceName": "Eco Program",
           "pricingType": "PerMinute",
           "priceCreditsPerMinute": 10,
-          "priceLocalPerMinute": 50,
-          "available": true
+          "priceLocalPerMinute": 50
         },
         {
           "serviceId": "svc_standard",
           "serviceName": "Standard Program",
           "pricingType": "PerMinute",
           "priceCreditsPerMinute": 8,
-          "priceLocalPerMinute": 40,
-          "available": true
+          "priceLocalPerMinute": 40
         }
       ]
     },
     {
       "bayId": "bay_a2b3c4d5e6f7",
       "bayNumber": 2,
-      "status": "Available",
       "services": [
         {
           "serviceId": "svc_eco",
           "serviceName": "Eco Program",
           "pricingType": "PerMinute",
           "priceCreditsPerMinute": 10,
-          "priceLocalPerMinute": 50,
-          "available": true
+          "priceLocalPerMinute": 50
         },
         {
           "serviceId": "svc_standard",
           "serviceName": "Standard Program",
           "pricingType": "PerMinute",
           "priceCreditsPerMinute": 8,
-          "priceLocalPerMinute": 40,
-          "available": true
+          "priceLocalPerMinute": 40
         }
       ]
     }
@@ -167,65 +155,88 @@ The BLE connection state transitions: `CONNECTED` -> `HANDSHAKE`.
 
 **What Bob sees:**
 
-The app displays two bay cards. Both show "Available" (Available) in green. Under Bay 1, Bob sees "Eco Program (10 credits/min)" and "Standard Program (8 credits/min)". Before he chooses, the app shows the pass's limits, as it must ([`offline-pass.md` §2.1](../../spec/profiles/offline/offline-pass.md#21-offlineallowance-object)): 30 credits per session, 80 of 100 credits remaining, 3 of 5 uses remaining. He taps Bay 1, then selects "Eco Program". A duration picker appears, bounded at 3 minutes: the pass the app is already holding carries `offlineAllowance.maxCreditsPerTx` (30) in plaintext, so the app can read the limit and shape its offer to fit **before** it asks the station for anything — a request above a limit would be refused, never reduced. He sets it to 3 minutes (30 credits). The app shows: "Estimated cost: 30 credits. Estimated offline balance: 72 credits."
+The app displays two bay cards with their services and prices. Whether a bay can start now is not in the catalog: the station says so in its signed Challenge, which the app checks before it sends anything (Step 8). Under Bay 1, Bob sees "Eco Program (10 credits/min)" and "Standard Program (8 credits/min)". Before he chooses, the app shows the pass's limits, as it must ([`offline-pass.md` §2.1](../../spec/profiles/offline/offline-pass.md#21-offlineallowance-object)): 30 credits per session, 80 of 100 credits remaining, 3 of 5 uses remaining. He taps Bay 1, then selects "Eco Program". A duration picker appears, bounded at 3 minutes: the pass the app is already holding carries `offlineAllowance.maxCreditsPerTx` (30) in plaintext, so the app can read the limit and shape its offer to fit **before** it asks the station for anything — a request above a limit would be refused, never reduced. He sets it to 3 minutes (30 credits). The app shows: "Estimated cost: 30 credits. Estimated offline balance: 72 credits."
 
 ---
 
 ### Step 6: App Writes Hello to FFF3 (18:32:12.500)
 
-**BLE GATT Write:** Characteristic `0000FFF3-0000-1000-8000-00805F9B34FB`
+**BLE GATT Write:** Characteristic `6645FFF3-5AEB-4709-ACD5-02E03C3000F6`
 
 ```json
 {
   "type": "Hello",
-  "deviceId": "device_b7c4de89f0123456",
+  "bleVersions": [
+    "0.3.0"
+  ],
   "appNonce": "sH5WmIMfOYRb4zfrKESykXKz0UF5XR5HgU/iKijUAUg=",
-  "appVersion": "2.1.0"
+  "appVersion": "2.1.0",
+  "appEphemeralPubKey": "AkzXOgSZV4SKrkhel3uH6UuVAlKqYBC4AHp9DjEhdyZa"
 }
 ```
 
-The app generates a cryptographically random 32-byte nonce (`appNonce`) for session key derivation.
+The app generates a fresh ephemeral P-256 key pair and a cryptographically random 32-byte nonce (`appNonce`) for this handshake, and lists the BLE versions it supports. Nothing in the Hello identifies Bob or his phone: any radio in range can read it ([`06-security.md` T14](../../spec/06-security.md#t14---ble-presence-tracking)).
 
 ---
 
 ### Step 7: Station Notifies Challenge on FFF4 (18:32:13.000)
 
-**BLE GATT Notify:** Characteristic `0000FFF4-0000-1000-8000-00805F9B34FB`
+**BLE GATT Notify:** Characteristic `6645FFF4-5AEB-4709-ACD5-02E03C3000F6`
 
 ```json
 {
   "type": "Challenge",
+  "bleVersion": "0.3.0",
   "stationNonce": "nl+FBpL/lU0181wqYJgSi8QFcbi5ZZMRz0XrZhPUpvw=",
+  "stationEphemeralPubKey": "A3QJ54K3U/UO3me2bm9t7v7KXx+WcEwQyJaoPrO82cA2",
+  "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
   "stationConnectivity": "Offline",
   "availableServices": [
-    { "bayId": "bay_c1d2e3f4a5b6", "serviceId": "svc_eco", "available": true },
-    { "bayId": "bay_c1d2e3f4a5b6", "serviceId": "svc_standard", "available": true },
-    { "bayId": "bay_a2b3c4d5e6f7", "serviceId": "svc_eco", "available": true },
-    { "bayId": "bay_a2b3c4d5e6f7", "serviceId": "svc_standard", "available": true }
-  ]
+    {
+      "bayId": "bay_c1d2e3f4a5b6",
+      "serviceId": "svc_eco",
+      "available": true
+    },
+    {
+      "bayId": "bay_c1d2e3f4a5b6",
+      "serviceId": "svc_standard",
+      "available": true
+    },
+    {
+      "bayId": "bay_a2b3c4d5e6f7",
+      "serviceId": "svc_eco",
+      "available": true
+    },
+    {
+      "bayId": "bay_a2b3c4d5e6f7",
+      "serviceId": "svc_standard",
+      "available": true
+    }
+  ],
+  "stationSignature": "MEUCIQDfp7VzRCrkP6OLfHw7QvExiFEQ/XlQ5rUcgXqpoHCMpQIgaUp3cnNdqfL34aMWJBfOJmqFt8kThDyekPe1ESKg7IQ="
 }
 ```
 
-The station generates its own 32-byte random nonce. The `stationConnectivity: "Offline"` confirms that the app must use the OfflineAuthRequest flow (not ServerSignedAuth).
+The station chooses BLE version `0.3.0` from the Hello's list, generates its own ephemeral key pair and 32-byte random nonce, presents its mTLS certificate, and signs the Hello it received and this Challenge with the certificate's key ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)). The `stationConnectivity: "Offline"` confirms that the app must use the OfflineAuthRequest flow (not ServerSignedAuth), and `availableServices` says what each bay can start now.
 
 ---
 
-### Step 8: Session Key Derivation (18:32:13.200)
+### Step 8: Station Verification and Session Key Derivation (18:32:13.200)
 
-Both the app and station independently derive the BLE session key using HKDF-SHA256 over the ECDH secrets (the BLE LTK is **not** used — see `spec/06-security.md` §6.5):
+Before it derives any key, and before Bob's pass can leave the phone, the app verifies the station ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)): the certificate chains to the Station CA of its trust bundle, is valid now, and is on no entry of the bundle's CRL; it carries `digitalSignature` and `id-kp-osppBleStation`; its subject CN, `stn_a1b2c3d4`, is the station Bob is standing at; and `stationSignature` verifies under its key. It also confirms that Eco Program is available on Bay 1 in `availableServices`. Had any of this failed, the app would have aborted with `2013 BLE_AUTH_FAILED` and sent nothing.
+
+Both the app and station then derive the BLE session key using HKDF-SHA256 over the one ECDH secret of the two ephemeral keys (the BLE LTK is **not** used — see `spec/06-security.md` §6.5):
 
 ```
 SessionKey = HKDF-SHA256(
-  ikm   = es ‖ ee ‖ appNonce ‖ stationNonce,   // es=ECDH(appEph, stnStatic[cert]); ee=ECDH(appEph, stnEph)
-  salt  = "OSPP_BLE_SESSION_V2",
-  info  = LP("device_b7c4de89f0123456") ‖ LP(transcriptHash),   // LP(x)=U16BE(len)‖x; stationId bound via transcript
+  ikm   = ee ‖ appNonce ‖ stationNonce,   // ee = ECDH(appEphemeral, stationEphemeral)
+  salt  = "OSPP_BLE_SESSION_V3",
+  info  = LP(transcriptHash),             // LP(x)=U16BE(len)‖x; the transcript covers the certificate and the signature
   length = 32
 )
 ```
 
 This produces a 32-byte symmetric key used for the `sessionProof` HMAC in the next step, for the `sessionKeyConfirmation` in the AuthResponse, and to expand the per-direction AEAD keys that encrypt every post-Challenge message.
-
-> **Note (v0.6.0 / T1-pending):** The BLE message JSON shown in this walkthrough (Hello/Challenge fields, `sessionProof` values) still reflects the v0.5.x handshake shape and is regenerated as a coherent set in the T1 vector batch (it must carry `appEphemeralPubKey`, `stationCert`, `stationEphemeralPubKey`, length-prefixed `sessionProof`, and AEAD framing). The derivation above is the v0.6.0 construction.
 
 ---
 
@@ -246,7 +257,7 @@ Bob looks at his phone. Face ID succeeds. The app proceeds to send the OfflinePa
 
 ### Step 10: App Writes OfflineAuthRequest to FFF3 (18:32:15.000)
 
-**BLE GATT Write:** Characteristic `0000FFF3-0000-1000-8000-00805F9B34FB`
+**BLE GATT Write:** Characteristic `6645FFF3-5AEB-4709-ACD5-02E03C3000F6`, inside the AEAD channel
 
 ```json
 {
@@ -273,13 +284,23 @@ Bob looks at his phone. Face ID succeeds. The app proceeds to send the OfflinePa
     "signature": "MEQCIG2bOeuUibBTP/iHL+5rR9Nmea9zVnY7Co6/Hq+91rR3AiAn0pFVBCXzdNnPR9ndho4b3iMLsemDrWLs+pLUc4TKPw=="
   },
   "counter": 3,
-  "sessionProof": "hAW4BhA445dJmlLG78qcEn36DHEhkjIDNt3fZOGGh0c="
+  "bayId": "bay_c1d2e3f4a5b6",
+  "serviceId": "svc_eco",
+  "requestedDurationSeconds": 180,
+  "sessionProof": "hAW4BhA445dJmlLG78qcEn36DHEhkjIDNt3fZOGGh0c=",
+  "deviceProof": {
+    "format": "apple-appattest",
+    "signature": "MEQCIGeBV2FIirFTNiU4FCHk4mnoi6Sei9TpEOWdAVwEgOCwAiBU5mD+PI8untYHbd2fBKhVttn+qK8YDqi8LxCvt/D5nA==",
+    "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
+  }
 }
 ```
 
 Key fields:
 - `counter: 3` -- monotonically increasing, this is Bob's 3rd offline session with this pass
+- `bayId`, `serviceId`, `requestedDurationSeconds` -- what Bob chose, from which the station estimates the cost
 - `sessionProof` -- HMAC over the session parameters using the derived session key, binding this request to the BLE handshake
+- `deviceProof` -- Bob's iPhone proves it holds the pass's device key, its App Attest key, with an assertion over this handshake's transcript, the station's identity, the pass, the counter and the request ([`06-security.md` §6.5.4](../../spec/06-security.md#654-device-proof-of-possession))
 
 ---
 
@@ -292,7 +313,7 @@ The station performs the nine checks that apply, in order, stopping at the first
 | 1 | ECDSA P-256 signature valid | `signature` verified with the key of the station's server key set named by the pass's `keyId` (`YjX5pR0TzmU3ubs17wImQQ`) | PASS |
 | 2 | Within its temporal bounds | `expiresAt` (2026-02-14T06:00:00.000Z) > station clock (2026-02-13T18:32:15.000Z), and the pass's age (12 h 32 min) is within the station's `OfflinePassMaxAge` (864000 s) | PASS |
 | 3 | Revocation epoch valid | Pass `revocationEpoch` (42) >= the platform `RevocationEpoch` the station holds (42) | PASS |
-| 4 | Device ID matches Hello | Pass `deviceId` == Hello `deviceId` (`device_b7c4de89f0123456`) | PASS |
+| 4 | Device proof | `deviceProof` verifies under the pass's `devicePublicKey` over this handshake's transcript, the station's identity, the pass, the counter and the request | PASS |
 | 5 | *(withdrawn)* | A pass carries no station or organization scope ([`offline-pass.md` §2.3](../../spec/profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)); the number is not reused | — |
 | 6 | Max uses not exceeded | Uses already counted (2) < `maxUses` (5) | PASS |
 | 7 | Max total credits not exceeded | Credits already counted (20) + this transaction's estimated cost (30) = 50, not above `maxTotalCredits` (100) | PASS |
@@ -308,7 +329,7 @@ All nine checks pass, and the station is within its own offline limits (see Pre-
 
 ### Step 12: Station Notifies AuthResponse Accepted on FFF4 (18:32:16.000)
 
-**BLE GATT Notify:** Characteristic `0000FFF4-0000-1000-8000-00805F9B34FB`
+**BLE GATT Notify:** Characteristic `6645FFF4-5AEB-4709-ACD5-02E03C3000F6`, inside the AEAD channel
 
 ```json
 {
@@ -328,9 +349,9 @@ A green checkmark animation and "Authentication successful" (Authentication succ
 
 ### Step 13: App Writes StartServiceRequest to FFF3 (18:32:16.500)
 
-Note: the request is for 180 s — 30 credits at 10 credits/min, exactly `maxCreditsPerTx`. The app sized it from the pass before asking. Had it asked for 300 s, check #8 would have **rejected** the pass with `4004 OFFLINE_PER_TX_EXCEEDED` ([`offline-pass.md` §4](../../spec/profiles/offline/offline-pass.md) check #8); the station does not reduce an over-limit request to fit.
+Note: the request is for 180 s — 30 credits at 10 credits/min, exactly `maxCreditsPerTx`. The app sized it from the pass before asking. Had its OfflineAuthRequest asked for 300 s, check #8 would have **rejected** the pass with `4004 OFFLINE_PER_TX_EXCEEDED` ([`offline-pass.md` §4](../../spec/profiles/offline/offline-pass.md) check #8); the station does not reduce an over-limit request to fit.
 
-**BLE GATT Write:** Characteristic `0000FFF3-0000-1000-8000-00805F9B34FB`
+**BLE GATT Write:** Characteristic `6645FFF3-5AEB-4709-ACD5-02E03C3000F6`
 
 ```json
 {
@@ -352,7 +373,7 @@ The station controller:
 4. Starts the 180-second session timer
 5. Assigns a local session ID and offline transaction ID
 
-**BLE GATT Notify:** Characteristic `0000FFF4-0000-1000-8000-00805F9B34FB`
+**BLE GATT Notify:** Characteristic `6645FFF4-5AEB-4709-ACD5-02E03C3000F6`
 
 ```json
 {
@@ -375,7 +396,7 @@ The station sends periodic status updates via BLE notifications on FFF5.
 
 **At 18:32:20.000 (3 seconds elapsed):**
 
-**BLE GATT Notify:** Characteristic `0000FFF5-0000-1000-8000-00805F9B34FB`
+**BLE GATT Notify:** Characteristic `6645FFF5-5AEB-4709-ACD5-02E03C3000F6`
 
 ```json
 {
@@ -447,7 +468,7 @@ The timer counts down: 2:57... 2:00... 1:00... 0:00. The water and chemical cons
 
 ### Step 16: Bob Stops the Session (18:35:17.500)
 
-At the 3-minute mark the timer has hit zero. Bob sees the car is clean and taps "Stop service". (In this case the timer already expired, but Bob taps stop explicitly to confirm. If he had not tapped, the station would auto-stop.)
+At the 3-minute mark the timer has hit zero. Bob sees the car is clean and taps "Stop service". (The timer has already expired and the station has stopped the service itself; Bob's tap reaches a session that has ended, which the next two steps show.)
 
 **What Bob sees:**
 
@@ -463,7 +484,7 @@ Bob taps "Stop".
 
 ### Step 17: App Writes StopServiceRequest to FFF3 (18:35:18.000)
 
-**BLE GATT Write:** Characteristic `0000FFF3-0000-1000-8000-00805F9B34FB`
+**BLE GATT Write:** Characteristic `6645FFF3-5AEB-4709-ACD5-02E03C3000F6`
 
 ```json
 {
@@ -475,23 +496,25 @@ Bob taps "Stop".
 
 ---
 
-### Step 18: Station Deactivates Dispenser, Sends StopServiceResponse (18:35:18.500)
+### Step 18: Station Answers the Late Stop (18:35:18.500)
 
-The station's dispenser was already auto-stopped at the 180-second mark (the authorized duration). When the StopServiceRequest arrives at 18:35:18.000, the station acknowledges it but the hardware is already off. The station controller:
+The station stopped the dispenser itself at the 180-second mark (the authorized duration), and that auto-stop ended the session with `TimerExpired` ([`ble-session.md` §3](../../spec/profiles/offline/ble-session.md#3-stopping-a-service)). At 18:35:17.000 the station controller:
 
-1. Confirms the pump relay is already off (auto-stopped at 18:35:17.000)
-2. Reads the final meter values from the sensors
-3. Reports `actualDurationSeconds: 180` (the pump ran for exactly the authorized 180 seconds)
-4. Calculates credits: `ceil(180 / 60) * 10 = 3 * 10 = 30 credits` (within `maxCreditsPerTx` of 30)
+1. Turned the pump relay off
+2. Read the final meter values from the sensors
+3. Recorded `actualDurationSeconds: 180` (the pump ran for exactly the authorized 180 seconds)
+4. Calculated credits: `ceil(180 / 60 * 10) = 30 credits` (within `maxCreditsPerTx` of 30)
 
-**BLE GATT Notify:** Characteristic `0000FFF4-0000-1000-8000-00805F9B34FB`
+The StopServiceRequest that arrives at 18:35:18.000 names a session that is no longer active, so the station answers `Rejected` with `3006 SESSION_NOT_FOUND` (rule 5 of the same section), and the app moves on to the receipt.
+
+**BLE GATT Notify:** Characteristic `6645FFF4-5AEB-4709-ACD5-02E03C3000F6`
 
 ```json
 {
   "type": "StopServiceResponse",
-  "result": "Accepted",
-  "actualDurationSeconds": 180,
-  "creditsCharged": 30
+  "result": "Rejected",
+  "errorCode": 3006,
+  "errorText": "SESSION_NOT_FOUND"
 }
 ```
 
@@ -508,7 +531,7 @@ The station performs the following cryptographic operations:
 **3. Sign with ECDSA P-256:**
 
 ```
-digest = SHA-256(receipt.data)
+digest = SHA-256(canonical bytes)   # the bytes receipt.data Base64-encodes, never the Base64 text
 signature = ECDSA-P256-Sign(station_private_key, digest)
 ```
 
@@ -522,7 +545,7 @@ txCounter:           8 (station's 8th offline transaction)
 
 ### Step 20: Station Notifies ServiceStatus ReceiptReady on FFF5 (18:35:19.500)
 
-**BLE GATT Notify:** Characteristic `0000FFF5-0000-1000-8000-00805F9B34FB`
+**BLE GATT Notify:** Characteristic `6645FFF5-5AEB-4709-ACD5-02E03C3000F6`
 
 ```json
 {
@@ -536,9 +559,18 @@ txCounter:           8 (station's 8th offline transaction)
 
 ---
 
-### Step 21: App Reads Receipt from FFF6 (18:35:20.000)
+### Step 21: App Asks for the Receipt on FFF6 (18:35:20.000)
 
-**BLE GATT Read:** Characteristic `0000FFF6-0000-1000-8000-00805F9B34FB`
+**BLE GATT Write:** Characteristic `6645FFF6-5AEB-4709-ACD5-02E03C3000F6`, inside the AEAD channel
+
+```json
+{
+  "type": "ReceiptRequest",
+  "offlineTxId": "otx_a3b4c5d6e7f8"
+}
+```
+
+**BLE GATT Notify:** Characteristic `6645FFF6-5AEB-4709-ACD5-02E03C3000F6` — a `ReceiptResponse` with `result: "Accepted"`, whose `receipt` is:
 
 ```json
 {
@@ -684,7 +716,7 @@ The station removes the transaction from its local queue.
 ```
   Bob(App)                           Station (stn_a1b2c3d4)
      |                                        |
-     |  BLE scan → discover OSPP-b2c3d4         |
+     |  BLE scan → discover OSPP service UUID  |
      |                                        |
      |  BLE CONNECT                           |
      |--------------------------------------->|
@@ -694,19 +726,21 @@ The station removes the transaction from its local queue.
      |  {stationId, connectivity: "Offline"}  |
      |<---------------------------------------|
      |                                        |
-     |  Read FFF2 (AvailableServices)         |
+     |  Write FFF2 0x01 (AvailableServices)   |
      |--------------------------------------->|
-     |  {bays, services, prices}              |
+     |  Notify FFF2: {bays, services, prices} |
      |<---------------------------------------|
      |                                        |
      |  user selects Bay 1 + Eco Program     |
      |                                        |
      |  Write FFF3: Hello                     |
      |--------------------------------------->|
-     |  Notify FFF4: Challenge (offline)      |
+     |  Notify FFF4: Challenge (offline,      |
+     |    certificate, signature)             |
      |<---------------------------------------|
      |                                        |
-     |  derive session key (HKDF-SHA256)      |
+     |  verify certificate and signature      |
+     |  derive session key (ECDH + HKDF)      |
      |  biometric confirmation (Face ID)      |
      |                                        |
      |  Write FFF3: OfflineAuthRequest       |
@@ -728,12 +762,12 @@ The station removes the transaction from its local queue.
      |  Notify FFF5: ServiceStatus (Running)  |
      |<---------------------------------------|
      |                                        |
+     |                          timer expires: pump off
      |  user taps stop                        |
      |                                        |
      |  Write FFF3: StopServiceRequest       |
      |--------------------------------------->|
-     |                          deactivate pump
-     |  Notify FFF4: StopServiceResponse    |
+     |  Notify FFF4: StopServiceResponse 3006|
      |<---------------------------------------|
      |                                        |
      |                          generate receipt
@@ -743,9 +777,9 @@ The station removes the transaction from its local queue.
      |  Notify FFF5: ServiceStatus (ReceiptReady)
      |<---------------------------------------|
      |                                        |
-     |  Read FFF6 (Receipt)                   |
+     |Write FFF6: ReceiptRequest {offlineTxId}|
      |--------------------------------------->|
-     |  {receipt, signature, txCounter}        |
+     |  Notify FFF6: ReceiptResponse {receipt}|
      |<---------------------------------------|
      |                                        |
      |  store in offline tx log               |
@@ -769,4 +803,4 @@ The station removes the transaction from its local queue.
 
 6. **Biometric gate before OfflinePass transmission.** The app requires Face ID, Touch ID, or PIN before sending the OfflineAuthRequest. This prevents a stolen unlocked phone from being used for offline sessions. The biometric confirmation is a local device operation and does not require network access.
 
-7. **Session key derivation binds handshake to auth.** The HKDF-SHA256 session key — derived from the ECDH secrets (`es ‖ ee`) and the nonces, and bound to the full handshake transcript — is used to compute the `sessionProof` in the OfflineAuthRequest. This cryptographically binds the authentication to the specific BLE handshake and to the authenticated station identity, preventing replay attacks where an attacker captures an OfflineAuthRequest and tries to use it on a different connection.
+7. **Session key derivation binds handshake to auth.** The HKDF-SHA256 session key — derived from the ephemeral ECDH secret (`ee`) and the nonces, and bound to the full handshake transcript, which carries the station's certificate and signature — is used to compute the `sessionProof` in the OfflineAuthRequest, and the device proof signs the same transcript. This cryptographically binds the authentication to the specific BLE handshake and to the authenticated station identity, preventing replay attacks where an attacker captures an OfflineAuthRequest and tries to use it on a different connection.

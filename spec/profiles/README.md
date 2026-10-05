@@ -12,10 +12,12 @@ A **profile** is a logical grouping of related OSPP actions that a station or se
 |---------|----------------------------------------------|-----------------------------------------------|
 | **Development** | Core | Testing and prototyping only. Security optional. **NOT for production.** |
 | **Standard** | Core + Transaction + Security | Minimum for production: sessions, metering, TLS + mTLS + HMAC. |
-| **Extended** | Standard + Device Management + Offline/BLE | + remote config, firmware OTA, diagnostics, BLE, OfflinePass, offline sessions (Online + Partial A + Full Offline). |
-| **Complete** | Extended + Partial B scenario | + Partial B connectivity (phone offline, station online → station relays auth to server via MQTT). |
+| **Extended** | Standard + Device Management | + remote configuration, firmware OTA, diagnostics, maintenance mode. |
+| **Complete** | Extended + Offline/BLE — every profile | + BLE, OfflinePass and offline sessions: Full Offline and Partial B, and Partial A where the station supports it ([`offline/README.md` §5](offline/README.md#5-compliance-requirements)). |
 
 A station MUST implement at least the **Standard** compliance level for production deployments. Development compliance is for testing and prototyping only. Higher levels are additive -- each level includes all profiles from the levels below it.
+
+> **Partial B is part of the Offline / BLE profile, not a level of its own.** Every station that implements the profile forwards a pass to the server when it is online ([`offline/README.md` §5](offline/README.md#5-compliance-requirements) rule 7), so the profile is taken whole, at **Complete**. Earlier revisions put the profile without Partial B at **Extended** and Partial B at **Complete**, which left the profile's own rule — that a station implementing it supports Partial B — unsatisfiable at Extended.
 
 ## 3. Profile Negotiation
 

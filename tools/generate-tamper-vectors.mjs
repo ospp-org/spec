@@ -40,6 +40,10 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { canonicalForm } from './canonical-form.mjs';
+import {
+  wireBytes, stationSignedContent, certificatePublicKey, transcriptHashOf, parseCertificate,
+  deviceProofInput, deviceProofFormats, publicKeyPemFromSec1, sha256,
+} from './ble-crypto.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = 'conformance/test-vectors/crypto/tamper-rejection.json';
@@ -137,8 +141,27 @@ print(os.path.relpath(p, ${JSON.stringify(ROOT)}) if p and os.path.isfile(p) els
 // which is six more chances to get one wrong and a green test that proves the copy
 // agrees with itself.
 
-const STATION_IDENTITY_BODY_FIELDS = ['stationId', 'organizationId', 'stationPubKey', 'issuedAt', 'expiresAt'];
 const AUTH_RESPONSE_OK_LABEL = 'AuthResponse_OK';
+const FORMATS = deviceProofFormats(read('schemas/common/device-proof.schema.json'));
+
+// The handshake a BLE surface is judged over: the Hello a Challenge answers, and the
+// Hello and Challenge an OfflineAuthRequest's device proof signs.
+const HELLO_FULL = 'conformance/test-vectors/valid/offline/hello-full.json';
+const CHALLENGE_FULL = 'conformance/test-vectors/valid/offline/challenge-full.json';
+const helloWireOf = () => wireBytes(read(HELLO_FULL));
+function deviceProofSignedBytes(doc) {
+  const challenge = read(CHALLENGE_FULL);
+  const transcriptHash = transcriptHashOf(helloWireOf(), wireBytes(challenge));
+  const stationId = parseCertificate(Buffer.from(challenge.stationCertificate, 'base64')).subjectCN;
+  const input = deviceProofInput({
+    transcriptHash, stationId, passId: doc.offlinePass.passId, counter: doc.counter,
+    bayId: doc.bayId, serviceId: doc.serviceId, requestedDurationSeconds: doc.requestedDurationSeconds,
+  });
+  if (doc.deviceProof.format === FORMATS.apple) {
+    return sha256(Buffer.from(doc.deviceProof.authenticatorData, 'base64'), sha256(input));
+  }
+  return input;
+}
 const FIRMWARE_BIN = 'conformance/test-firmware/test-firmware.bin';
 
 /** U16BE(len) ‖ UTF-8 — the length prefix of 06-security.md §6.5.1. */
@@ -158,6 +181,27 @@ function keyMaterialOf(ref) {
   return ref.endsWith('.pem') ? buf.toString('utf8') : buf.toString('base64');
 }
 
+/**
+ * The key a portable BLE vector verifies under, as a PEM: the station's certificate key
+ * for its signature, the pass's devicePublicKey for a device proof. Neither is a file
+ * in conformance/test-keys/ — each is carried in the document it signs. A certificate
+ * named instead (a KEY case's other trust anchor) yields that certificate's key.
+ */
+function portableKeyFor(surface, doc, ref) {
+  if (ref && ref.endsWith('.pem')) {
+    const text = readFileSync(path.join(ROOT, ref), 'utf8');
+    return text.includes('BEGIN CERTIFICATE')
+      ? certificatePublicKey(Buffer.from(text.replace(/-----[A-Z ]+-----|\s+/g, ''), 'base64')).export({ type: 'spki', format: 'pem' })
+      : text;
+  }
+  if (surface === 'stationSignature') {
+    return certificatePublicKey(Buffer.from(doc.stationCertificate, 'base64')).export({ type: 'spki', format: 'pem' });
+  }
+  if (surface === 'deviceProof') return publicKeyPemFromSec1(doc.offlinePass.devicePublicKey);
+  return null;
+}
+const BLE_SURFACES = new Set(['stationSignature', 'deviceProof']);
+
 /** {bytes, signature, algorithm} — what a verifier is handed, per surface. */
 function portableForm(surface, doc, image = null) {
   switch (surface) {
@@ -169,11 +213,13 @@ function portableForm(surface, doc, image = null) {
     }
     case 'serverSignedAuth':
       return { bytes: Buffer.from(doc.signedAuthorization.data, 'base64'), signature: doc.signedAuthorization.signature, algorithm: 'ECDSA-P256-SHA256' };
-    case 'stationIdentity': {
-      const body = {};
-      for (const k of STATION_IDENTITY_BODY_FIELDS) body[k] = doc.stationCert[k];
-      return { bytes: Buffer.from(canonicalForm(body), 'utf-8'), signature: doc.stationCert.signature, algorithm: 'ECDSA-P256-SHA256' };
-    }
+    case 'stationSignature':
+      // 06-security.md §6.5.2: the content the station builds from the Hello it answers
+      // and the Challenge without its signature. The key is the certificate's.
+      return { bytes: stationSignedContent(helloWireOf(), doc), signature: doc.stationSignature, algorithm: 'ECDSA-P256-SHA256' };
+    case 'deviceProof':
+      // 06-security.md §6.5.4: the proof input (android-key) or the App Attest nonce over it.
+      return { bytes: deviceProofSignedBytes(doc), signature: doc.deviceProof.signature, algorithm: 'ECDSA-P256-SHA256' };
     case 'firmware':
       // The signature is over the IMAGE, not over the request that points at it. That
       // is also why a firmware BODY case cannot be expressed by editing the document:
@@ -286,27 +332,74 @@ const CASES = [
     },
   },
 
-  // ── StationIdentity certificate (ECDSA P-256, server key) ─────────────────
+  // ── the station's signature over the handshake (ECDSA P-256, its certificate key) ──
+  // Judged as the app judges it: the certificate against the Station CA the case names,
+  // the signature over the Hello the Challenge answers (06-security.md §6.5.2).
   {
-    id: 'stationidentity-expiry-extended',
-    surface: 'stationIdentity', class: 'BODY',
-    base: 'conformance/test-vectors/valid/offline/challenge-full.json',
-    key: 'conformance/test-keys/server-test-pub.pem',
-    what: 'stationCert.expiresAt pushed out by a year — forging a longer-lived identity, the attack the field exists to stop',
+    id: 'stationsignature-body-availability-altered',
+    surface: 'stationSignature', class: 'BODY',
+    base: CHALLENGE_FULL,
+    key: 'conformance/test-keys/station-ca-test-cert.pem',
+    args: ['--hello', HELLO_FULL],
+    signaturePointer: 'stationSignature',
+    what: 'a bay the station signed as unavailable shown available — the availability the app acts on is the signed one, so an altered Challenge must be refused',
     apply: (d) => {
-      const r = setAt(d, 'stationCert/expiresAt', '2027-03-15T10:00:00.000Z');
-      return { doc: r.doc, pointer: 'stationCert/expiresAt', was: r.was, note: `expiresAt ${r.was} → 2027-03-15T10:00:00.000Z` };
+      const r = setAt(d, 'availableServices/2/available', true);
+      return { doc: r.doc, pointer: 'availableServices/2/available', was: r.was, note: `availableServices[2].available ${r.was} → true` };
     },
   },
   {
-    id: 'stationidentity-signature-bitflip',
-    surface: 'stationIdentity', class: 'SIG',
-    base: 'conformance/test-vectors/valid/offline/challenge-full.json',
-    key: 'conformance/test-keys/server-test-pub.pem',
-    what: 'stationCert signature s-scalar bit flipped',
+    id: 'stationsignature-signature-bitflip',
+    surface: 'stationSignature', class: 'SIG',
+    base: CHALLENGE_FULL,
+    key: 'conformance/test-keys/station-ca-test-cert.pem',
+    args: ['--hello', HELLO_FULL],
+    what: 'stationSignature s-scalar bit flipped',
     apply: (d) => {
-      const r = setAt(d, 'stationCert/signature', flipLastBit(d.stationCert.signature));
-      return { doc: r.doc, pointer: 'stationCert/signature', was: r.was, note: 'signature[-1] ^= 0x01' };
+      const r = setAt(d, 'stationSignature', flipLastBit(d.stationSignature));
+      return { doc: r.doc, pointer: 'stationSignature', was: r.was, note: 'stationSignature[-1] ^= 0x01' };
+    },
+  },
+  {
+    id: 'stationsignature-judged-against-another-ca',
+    surface: 'stationSignature', class: 'KEY',
+    base: CHALLENGE_FULL,
+    key: 'conformance/test-keys/station-other-ca-test-cert.pem',
+    baseKey: 'conformance/test-keys/station-ca-test-cert.pem',
+    args: ['--hello', HELLO_FULL],
+    // The portable form offers the signature to the other CA's key: the key a verifier
+    // anchored on the wrong CA would hold. The document form refuses at the chain.
+    portableKey: 'conformance/test-keys/station-other-ca-test-cert.pem',
+    what: 'pristine Challenge judged against a Station CA that did not issue its certificate — proves the app binds the station to the CA of ITS trust bundle, not to any certificate that verifies its own signature',
+    apply: (d) => ({ doc: d, pointer: null, was: null, note: 'no mutation; another trust anchor' }),
+  },
+
+  // ── the device proof (ECDSA P-256, the pass's device key) ─────────────────
+  {
+    id: 'deviceproof-body-duration-raised',
+    surface: 'deviceProof', class: 'BODY',
+    mode: 'device-proof',
+    base: 'conformance/test-vectors/valid/offline/offline-auth-request-full.json',
+    key: 'conformance/test-keys/server-test-pub.pem',
+    args: ['--hello', HELLO_FULL, '--challenge', CHALLENGE_FULL],
+    signaturePointer: 'deviceProof/signature',
+    what: 'requestedDurationSeconds raised 300 → 600 after the phone proved its request — the proof binds what the customer asked for, so a station that forwards the pass cannot change what the server authorizes',
+    apply: (d) => {
+      const r = setAt(d, 'requestedDurationSeconds', 600);
+      return { doc: r.doc, pointer: 'requestedDurationSeconds', was: r.was, note: `requestedDurationSeconds ${r.was} → 600` };
+    },
+  },
+  {
+    id: 'deviceproof-signature-bitflip',
+    surface: 'deviceProof', class: 'SIG',
+    mode: 'device-proof',
+    base: 'conformance/test-vectors/valid/offline/offline-auth-request-full.json',
+    key: 'conformance/test-keys/server-test-pub.pem',
+    args: ['--hello', HELLO_FULL, '--challenge', CHALLENGE_FULL],
+    what: 'deviceProof signature s-scalar bit flipped',
+    apply: (d) => {
+      const r = setAt(d, 'deviceProof/signature', flipLastBit(d.deviceProof.signature));
+      return { doc: r.doc, pointer: 'deviceProof/signature', was: r.was, note: 'deviceProof.signature[-1] ^= 0x01' };
     },
   },
 
@@ -414,6 +507,14 @@ function build() {
   for (const c of CASES) {
     const base = read(c.base);
     const { doc, pointer, was, note, tamperedBytes } = c.apply(base);
+    const ble = BLE_SURFACES.has(c.surface);
+    // For the BLE surfaces the portable key is carried in the signed document itself
+    // (the certificate, the pass), or is a KEY case's other anchor.
+    const portableBaseKey = ble ? 'derived: the key in the document' : (c.baseKey ?? c.key);
+    const portableTamperedKey = ble ? (c.portableKey ?? 'derived: the key in the document') : c.key;
+    const material = (side, doc) => (ble
+      ? portableKeyFor(c.surface, doc, side === 'tampered' ? c.portableKey : null)
+      : keyMaterialOf(side === 'tampered' ? c.key : (c.baseKey ?? c.key)));
     vectors.push({
       id: c.id,
       surface: c.surface,
@@ -425,6 +526,12 @@ function build() {
       // The verifier needs both: without a passing base the failing tamper proves nothing.
       baseKey: c.baseKey ?? c.key,
       ...(c.mode ? { mode: c.mode } : {}),
+      // Arguments the document form needs beside --key: the handshake a BLE message is
+      // judged over (tools/verify-example-signatures.mjs --hello / --challenge).
+      ...(c.args ? { args: c.args } : {}),
+      // Where the signature a BODY case holds still lives, when it is not the sibling of
+      // the field the case changes.
+      ...(c.signaturePointer ? { signaturePointer: c.signaturePointer } : {}),
       what: c.what,
       mutation: note,
       mutatedPointer: pointer,
@@ -436,24 +543,24 @@ function build() {
       // consumer's test file.
       portable: {
         algorithm: portableForm(c.surface, doc, tamperedBytes).algorithm,
-        key: c.key,
+        key: ble ? portableTamperedKey : c.key,
         base: {
           signedBytesBase64: portableForm(c.surface, base).bytes.toString('base64'),
           signature: portableForm(c.surface, base).signature,
-          key: c.baseKey ?? c.key,
+          key: portableBaseKey,
           // Inlined so the corpus travels as ONE file. The SDKs vendor test-vectors/
           // and not test-keys/, and an integrator reading this should not have to
-          // resolve a path into a repository he may not have cloned. These are the
-          // published PUBLIC test keys (and the published symmetric test key); the
-          // spec repo has always shipped them in the clear.
-          keyMaterial: keyMaterialOf(c.baseKey ?? c.key),
+          // resolve a path into a repository not cloned. These are the published
+          // PUBLIC test keys (and the published symmetric test key); the spec repo
+          // has always shipped them in the clear.
+          keyMaterial: material('base', base),
           mustVerify: true,
         },
         tampered: {
           signedBytesBase64: portableForm(c.surface, doc, tamperedBytes).bytes.toString('base64'),
           signature: portableForm(c.surface, doc, tamperedBytes).signature,
-          key: c.key,
-          keyMaterial: keyMaterialOf(c.key),
+          key: portableTamperedKey,
+          keyMaterial: material('tampered', doc),
           mustVerify: false,
         },
       },

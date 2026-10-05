@@ -31,18 +31,43 @@
 //     signatureAlgorithm: "ECDSA-P256-SHA256",
 //   }
 //
+//   3. STATION_SIGNATURE — a BLE Challenge (06-security.md §6.5.2). --key is the
+//      station's mTLS private key; the Hello is --hello, or the file beside the
+//      Challenge named `hello` in place of `challenge`. The station's certificate
+//      (--station-cert, default the test station's) goes into stationCertificate
+//      and stationSignature is computed over the Hello's compact JSON and the
+//      Challenge without its signature, in the OSPP Canonical Form.
+//
+//   4. DEVICE_PROOF — an OfflineAuthRequest or an AuthorizeOfflinePass REQUEST
+//      (06-security.md §6.5.4). No --key: the device key is the test key of the
+//      pass's deviceId (conformance/test-keys/README.md). The transcript comes
+//      from --hello/--challenge (or the files beside an offline-auth-request-*
+//      file), or from the request's own transcriptHash; the stationId is that
+//      Challenge's certificate CN, or --station-cert's. The format already in the
+//      file is kept (default android).
+//
 // Usage:
 //   node tools/sign-example.mjs --key <key.pem> <file...>
 //   node tools/sign-example.mjs --key <key.pem> --in <file>
+//   node tools/sign-example.mjs --key <station-key.pem> --mode station-signature [--hello <file>] <challenge.json>
+//   node tools/sign-example.mjs --mode device-proof [--hello <file> --challenge <file>] <file...>
 //
 // =============================================================================
 
 import { createHash, createHmac } from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
 import { argv, exit } from 'node:process';
 import { canonicalForm } from './canonical-form.mjs';
 import { envelopeAbsentDeviceId, signedOnlyFields } from './receipt-fields.mjs';
 import { ecdsaSign, SIGNATURE_ALGORITHM } from '@ospp/protocol/server';
+import {
+  wireBytes, transcriptHashOf, signStationChallenge, parseCertificate, pemToDer,
+  deviceTestKey, deviceProofInput, deviceProofFormats, makeDeviceProof, syntheticAuthenticatorData,
+} from './ble-crypto.mjs';
+
+const DEFAULT_STATION_CERT = 'conformance/test-keys/station-mtls-test-cert.pem';
+const APP_ATTEST_APP_ID = 'OSPPTEST01.org.ospp.app';
 
 const SESSION_KEY_PATH = 'conformance/test-keys/session-test-key.bin';
 const AUTH_RESPONSE_OK_LABEL = 'AuthResponse_OK';
@@ -165,8 +190,8 @@ function signOfflinePass(outer, keyPem) {
 //
 // 12 required claims canonicalised and signed by the server. The claims a
 // fixture already signs win: a fixture depicts one authorization, and its claims
-// must agree with the document around it — the appNonce and deviceId of its Hello,
-// the station that verifies it, the bay, service, user and pre-debit of its flow
+// must agree with the document around it — the appNonce of its Hello, the device
+// it was issued for, the station that verifies it, the bay, service, user and pre-debit of its flow
 // (ble-handshake.md §4.2.1, §4.2.2). Only a fixture that carries no claims yet gets
 // synthetic ones, derived deterministically from the outer envelope's sessionId so
 // a new vector is reproducible without external inputs (the production server
@@ -337,6 +362,62 @@ function signSessionKeyConfirmation(outer, sessionKey) {
 }
 
 // -----------------------------------------------------------------------------
+// BLE modes — the station's signature and the device proof
+// -----------------------------------------------------------------------------
+
+function sibling(file, from, to) {
+  const base = path.basename(file);
+  if (!base.includes(from)) return null;
+  const candidate = path.join(path.dirname(file), base.replace(from, to));
+  return existsSync(candidate) ? candidate : null;
+}
+
+function signStationSignature(outer, stationKeyPem, file, opts) {
+  if (outer.type !== 'Challenge') throw new Error(`${file}: station-signature requires a Challenge`);
+  const helloFile = opts.hello ?? sibling(file, 'challenge', 'hello');
+  if (!helloFile) throw new Error(`${file}: no Hello — pass --hello <file>`);
+  const hello = JSON.parse(readFileSync(helloFile, 'utf-8'));
+  outer.stationCertificate = pemToDer(readFileSync(opts.stationMtlsCert ?? DEFAULT_STATION_CERT, 'utf-8')).toString('base64');
+  outer.stationSignature = '';
+  outer.stationSignature = signStationChallenge(stationKeyPem, wireBytes(hello), outer);
+  return { mode: 'station-signature', bodyFields: [`hello=${path.basename(helloFile)}`], signatureLength: outer.stationSignature.length };
+}
+
+function signDeviceProof(outer, file, opts) {
+  if (!outer.offlinePass?.deviceId) throw new Error(`${file}: device-proof requires an offlinePass`);
+  const formats = deviceProofFormats(JSON.parse(readFileSync('schemas/common/device-proof.schema.json', 'utf-8')));
+  let transcriptHash;
+  let stationId;
+  if (outer.type === 'OfflineAuthRequest') {
+    const helloFile = opts.hello ?? sibling(file, 'offline-auth-request', 'hello');
+    const challengeFile = opts.challenge ?? sibling(file, 'offline-auth-request', 'challenge');
+    if (!helloFile || !challengeFile) throw new Error(`${file}: no handshake — pass --hello and --challenge`);
+    const hello = JSON.parse(readFileSync(helloFile, 'utf-8'));
+    const challenge = JSON.parse(readFileSync(challengeFile, 'utf-8'));
+    transcriptHash = transcriptHashOf(wireBytes(hello), wireBytes(challenge));
+    stationId = parseCertificate(Buffer.from(challenge.stationCertificate, 'base64')).subjectCN;
+  } else {
+    if (typeof outer.transcriptHash !== 'string') throw new Error(`${file}: a forward needs its transcriptHash`);
+    transcriptHash = Buffer.from(outer.transcriptHash, 'base64');
+    stationId = parseCertificate(pemToDer(readFileSync(opts.stationMtlsCert ?? DEFAULT_STATION_CERT, 'utf-8'))).subjectCN;
+  }
+  const deviceKey = deviceTestKey(outer.offlinePass.deviceId);
+  if (deviceKey.devicePublicKey !== outer.offlinePass.devicePublicKey) {
+    throw new Error(`${file}: the pass's devicePublicKey is not the test device key of ${outer.offlinePass.deviceId}`);
+  }
+  const kind = outer.deviceProof?.format === formats.apple ? 'apple' : 'android';
+  const proofInput = deviceProofInput({
+    transcriptHash, stationId, passId: outer.offlinePass.passId, counter: outer.counter,
+    bayId: outer.bayId, serviceId: outer.serviceId, requestedDurationSeconds: outer.requestedDurationSeconds,
+  });
+  outer.deviceProof = makeDeviceProof({
+    kind, formats, deviceKey, proofInput,
+    authenticatorData: kind === 'apple' ? syntheticAuthenticatorData(APP_ATTEST_APP_ID, 1) : null,
+  });
+  return { mode: 'device-proof', bodyFields: [`format=${outer.deviceProof.format}`, `stationId=${stationId}`], signatureLength: outer.deviceProof.signature.length };
+}
+
+// -----------------------------------------------------------------------------
 // Dispatcher
 // -----------------------------------------------------------------------------
 
@@ -359,24 +440,31 @@ function detectMode(outer, file) {
   if (outer && typeof outer === 'object' && typeof outer.firmwareUrl === 'string') {
     return 'firmware';
   }
+  if (outer && typeof outer === 'object' && outer.type === 'Challenge') {
+    return 'station-signature';
+  }
   throw new Error(`${file}: cannot detect signing mode`);
 }
 
 function parseArgs(args) {
-  const opts = { key: null, mode: null, files: [] };
+  const opts = { key: null, mode: null, files: [], hello: null, challenge: null, stationMtlsCert: null };
   for (let i = 2; i < args.length; i++) {
     const a = args[i];
     if (a === '--key') opts.key = args[++i];
     else if (a === '--mode') opts.mode = args[++i];
     else if (a === '--in') opts.files.push(args[++i]);
+    else if (a === '--hello') opts.hello = args[++i];
+    else if (a === '--challenge') opts.challenge = args[++i];
+    else if (a === '--station-cert') opts.stationMtlsCert = args[++i];
     else if (a === '--help' || a === '-h') {
-      console.log('Usage: sign-example.mjs --key <key.pem|key.bin> [--mode <mode>] [--in <file>] <file...>');
+      console.log('Usage: sign-example.mjs --key <key.pem|key.bin> [--mode <mode>] [--in <file>] [--hello <file>] [--challenge <file>] [--station-cert <file>] <file...>');
       console.log('  modes (auto-detected; override with --mode):');
-      console.log('    receipt, offline-pass, server-signed-auth, firmware, session-proof, session-key-confirmation');
+      console.log('    receipt, offline-pass, server-signed-auth, firmware, session-proof, session-key-confirmation,');
+      console.log('    station-signature (a Challenge; --key is the station mTLS key), device-proof (no --key)');
       exit(0);
     } else opts.files.push(a);
   }
-  if (!opts.key) {
+  if (!opts.key && opts.mode !== 'device-proof') {
     console.error('error: --key <key.pem|key.bin> is required');
     exit(2);
   }
@@ -387,7 +475,7 @@ function parseArgs(args) {
   return opts;
 }
 
-function signFile(file, key, modeOverride) {
+function signFile(file, key, modeOverride, opts) {
   const raw = readFileSync(file, 'utf-8');
   const outer = JSON.parse(raw);
   const mode = modeOverride ?? detectMode(outer, file);
@@ -399,6 +487,8 @@ function signFile(file, key, modeOverride) {
   else if (mode === 'firmware') result = signFirmware(outer, key);
   else if (mode === 'session-proof') result = signSessionProof(outer, key);
   else if (mode === 'session-key-confirmation') result = signSessionKeyConfirmation(outer, key);
+  else if (mode === 'station-signature') result = signStationSignature(outer, key, file, opts);
+  else if (mode === 'device-proof') result = signDeviceProof(outer, file, opts);
   else throw new Error(`${file}: unsupported mode ${mode}`);
 
   const trailing = raw.endsWith('\n') ? '\n' : '';
@@ -413,10 +503,10 @@ function loadKey(path) {
 
 function main() {
   const opts = parseArgs(argv);
-  const key = loadKey(opts.key);
+  const key = opts.key ? loadKey(opts.key) : null;
 
   for (const file of opts.files) {
-    const r = signFile(file, key, opts.mode);
+    const r = signFile(file, key, opts.mode, opts);
     console.log(`  signed ${r.file}  [mode=${r.mode}]`);
     console.log(`    body fields (${r.bodyFields.length}): ${r.bodyFields.join(', ')}`);
     console.log(`    signature base64 length: ${r.signatureLength}`);

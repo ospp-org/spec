@@ -54,8 +54,8 @@ const VERIFIER = path.join(ROOT, 'tools', 'verify-example-signatures.mjs');
 // Anti-vacuity floors. These are not decoration: a corpus that silently shrank to
 // one surface would still report "all passed" without them. Raise them when the
 // corpus grows; a raise is a deliberate edit, a shrink is a red build.
-const MIN_VECTORS = 14;
-const MIN_SURFACES = 8;
+const MIN_VECTORS = 17;
+const MIN_SURFACES = 9;
 const REQUIRED_CLASSES = ['BODY', 'SIG', 'KEY'];
 
 // A class present SOMEWHERE in the corpus says nothing about the surface an
@@ -68,6 +68,11 @@ const REQUIRED_CLASSES = ['BODY', 'SIG', 'KEY'];
 // firmware with nothing to exercise.
 const REQUIRED_CLASSES_BY_SURFACE = {
   firmware: ['BODY', 'SIG', 'KEY'],
+  // The BLE station's signature is what stands between an OfflinePass and whatever
+  // answered the advertisement (06-security.md §6.5.2): content, check, and the anchor
+  // it is judged against. The device proof binds the customer's own request (§6.5.4).
+  stationSignature: ['BODY', 'SIG', 'KEY'],
+  deviceProof: ['BODY', 'SIG'],
 };
 
 const failures = [];
@@ -95,11 +100,14 @@ function buildAjv() {
 }
 
 /** Run verify-example-signatures.mjs over one document. Returns true iff it verified. */
-function verifies(doc, keyPath, mode, tmp) {
+function verifies(doc, keyPath, mode, tmp, extra = []) {
   const file = path.join(tmp, `v-${Math.random().toString(36).slice(2)}.json`);
   writeFileSync(file, JSON.stringify(doc, null, 2));
   const args = [VERIFIER, '--key', path.join(ROOT, keyPath)];
   if (mode) args.push('--mode', mode);
+  // The handshake a BLE document is judged over, which a document in a temporary
+  // directory cannot find beside itself.
+  args.push(...extra);
   args.push(file);
   try {
     execFileSync('node', args, { cwd: ROOT, stdio: 'pipe' });
@@ -251,7 +259,7 @@ export function verifyTamperRejection() {
 
       // 1. ANTI-VACUITY — the base verifies under its own key.
       checks++;
-      if (!verifies(base, v.baseKey, v.mode, tmp)) {
+      if (!verifies(base, v.baseKey, v.mode, tmp, v.args ?? [])) {
         fail(v.id, 'ANTI-VACUITY: the untampered base must VERIFY under ' + v.baseKey,
           'verifies', 'refused — so the refusal below proves nothing');
         continue; // every later check on this vector is now meaningless
@@ -259,7 +267,7 @@ export function verifyTamperRejection() {
 
       // 2. REFUSAL — the tampered document does not verify.
       checks++;
-      if (verifies(v.document, v.key, v.mode, tmp)) {
+      if (verifies(v.document, v.key, v.mode, tmp, v.args ?? [])) {
         fail(v.id, `REFUSAL: ${v.what}`, 'refused', 'ACCEPTED — a tampered message verified');
       }
 
@@ -285,9 +293,12 @@ export function verifyTamperRejection() {
         // stationidentity-expiry-extended it left the pointer unchanged, so the check
         // compared expiresAt to itself and could only ever pass. A minimality check
         // that cannot fail is not a check.
+        // A vector names the signature explicitly (`signaturePointer`) when it is not the
+        // sibling of the changed field: the station's signature beside a changed
+        // availableServices entry, the device proof beside a changed request member.
         checks++;
         const parent = v.mutatedPointer.split('/').slice(0, -1).join('/');
-        const sigPath = parent ? `${parent}/signature` : 'signature';
+        const sigPath = v.signaturePointer ?? (parent ? `${parent}/signature` : 'signature');
         const beforeSig = getAt(base, sigPath);
         const afterSig = getAt(v.document, sigPath);
         if (beforeSig === undefined) {

@@ -222,10 +222,9 @@ sequenceDiagram
 
     SSP->>SSP: Generate TLS key pair (ECDSA P-256) → CSR
     SSP->>SSP: Generate ECDSA P-256 key pair (receipt signing)
-    SSP->>SSP: Generate ECDH P-256 key pair (static BLE, if bleSupported)
 
     SSP->>Server: POST /api/v1/stations/provision
-    Note right of SSP: {provisioningToken, serialNumber, bays[], tlsCsr, receiptSigningPublicKey, stationPubKey?}
+    Note right of SSP: {provisioningToken, serialNumber, bays[], tlsCsr, receiptSigningPublicKey}
 
     alt Body fails schema validation
         Server-->>SSP: 400 Bad Request (4017 PROVISIONING_REQUEST_INVALID)
@@ -261,9 +260,9 @@ sequenceDiagram
 4. SSP powers on, detects no certificates in NVS, enters provisioning mode
 5. SSP generates a TLS key pair (ECDSA P-256) and produces a Certificate Signing Request (CSR) with CN = `stn_{station_id}`
 6. SSP generates an ECDSA P-256 key pair for offline receipt signing (private key never leaves the device)
-6a. A station that supports BLE generates a **dedicated static ECDH P-256** key pair for the BLE handshake — distinct from the keys above, per the key-separation rule in [Chapter 06 — Security §6.5.2](06-security.md) (private key never leaves the device)
-6b. **Before** step 7 leaves the device, the SSP **MUST** commit every private key generated in steps 5–6a to non-volatile storage, durably — the write **MUST** be flushed, not merely buffered — and **MUST** retain them until the provision succeeds or reaches a terminal outcome. See *Persisting the key set* under this flow's *Postconditions*
-7. SSP sends `POST /api/v1/stations/provision` with the provisioning token, serial number, bay count, TLS CSR, receipt-signing public key, and — when BLE is supported — the static BLE ECDH public key (`stationPubKey`), over which the server signs the StationIdentity certificate returned in the response — see [`provisioning-request.schema.json`](../schemas/provisioning-request.schema.json) for the canonical field set and constraints
+6a. **Withdrawn.** Until this revision a station that supported BLE generated here a dedicated static ECDH key pair for the BLE handshake; a station now authenticates itself over BLE with the key of step 5 and its certificate ([Chapter 06 — Security §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)). The step number is not reused
+6b. **Before** step 7 leaves the device, the SSP **MUST** commit every private key generated in steps 5–6 to non-volatile storage, durably — the write **MUST** be flushed, not merely buffered — and **MUST** retain them until the provision succeeds or reaches a terminal outcome. See *Persisting the key set* under this flow's *Postconditions*
+7. SSP sends `POST /api/v1/stations/provision` with the provisioning token, serial number, bays, TLS CSR and receipt-signing public key — see [`provisioning-request.schema.json`](../schemas/provisioning-request.schema.json) for the canonical field set and constraints
 8. Server validates the token (not expired, not used), signs the CSR with the Station CA, and returns the provisioning response per [`provisioning-response.schema.json`](../schemas/provisioning-response.schema.json) — see schema for the canonical field set and constraints (`stationId`, `bays[]`, `clientCert`, `stationCaChain`, `brokerRootCa` (optional, broker server-cert trust anchor), `rootCaThumbprint` (optional, SHA-256 Root CA thumbprint for local trust-anchor pinning), `serverVerifyKey`, and the `mqttConfig` block: broker host/port/URI, client-ID template, topic prefix, QoS level, keep-alive, clean-start, session-expiry, TLS version, MQTT version, optional LWT topic). Defaults align with the normative MQTT connection parameters in [Chapter 02 — Transport §1.2](02-transport.md#12-connection-parameters)
 9. SSP stores the response — issued certificate, `stationCaChain`, `brokerRootCa`, `rootCaThumbprint`, `serverVerifyKey`, `mqttConfig`, `stationId`, `bays` — in NVS alongside the keys already committed at step 6b, and marks itself as provisioned
 10. SSP exits provisioning mode and reboots
@@ -288,9 +287,9 @@ Rows are listed in the order the server evaluates them (see *Error precedence* b
 | 401 Unauthorized (`2019 PROVISIONING_TOKEN_INVALID`) | The token did not authenticate: it does not resolve to a token bound to this station, or it is expired / beyond TTL, superseded, or revoked — carried in `details.reason` (`not_found`, `expired`, `superseded`, `revoked`) | Display error, await new provisioning token. Do **not** regenerate keys: the keys are not what was rejected |
 | 409 Conflict (`4018 PROVISIONING_TOKEN_CONSUMED`) | The token authenticated but is already consumed and left **no certificate to replay** — carried in `details.reason`. A consumed token that did issue one is answered as a replay, or as `4015` if the keys drifted. `already_consumed`: a concurrent request won the race, and is **transient**. `consumed_without_certificate`: the consuming request failed before issuing, and is **terminal** | Depends on `details.reason`. `already_consumed` — retry unchanged after a short delay, bounded; it resolves to the issued certificate or to the terminal branch. `consumed_without_certificate` — request a **new** token. If `details.reason` is absent, assume `already_consumed`. **Do not regenerate keys on either branch** |
 | 400 Bad Request (`4010 CSR_INVALID`) | The `tlsCsr` is not a well-formed PKCS#10 CSR, uses a prohibited key algorithm, carries a Subject CN that is not the `stationId`, or its `SubjectPublicKeyInfo` cannot be decoded | Depends on `details.phase`, which the server **MUST** carry. `first-provision` — regenerate the keypair and CSR and resubmit on the same token. `retry` — **do NOT regenerate**: resubmit a well-formed CSR over the **already-bound** key. If `details.phase` is absent, assume `retry` and do not regenerate |
-| 400 Bad Request (`4019 PUBLIC_KEY_INVALID`) | A bare submitted key — `receiptSigningPublicKey`, or `stationPubKey` when present — does not decode, or is not an ECDSA P-256 public key. The schema constrains only the PEM armour and the SEC1 length and alphabet, so such a key passes `4017` and fails here; `details.field` names it | Depends on `details.phase`. `first-provision` — generate a correct P-256 key for the named role and resubmit on the **same** token. `retry` — **do NOT generate a new key**: resubmit the key already bound, because a fresh key is answered `4015`. If `details.phase` is absent, assume `retry` |
-| 422 Unprocessable Entity (`4016 PROVISIONING_KEY_REUSE`) | Two of the submitted keys are the same key — any of the three pairs among the `tlsCsr` subject key, `receiptSigningPublicKey` and `stationPubKey` ([Chapter 06 §4.3](06-security.md)) | Depends on `details.phase`. `first-provision` — generate a **separate** key pair for the colliding role and resubmit on the **same** token. `retry` — **do NOT regenerate**: resubmit the keys already bound, because a fresh key is answered `4015`. If `details.phase` is absent, assume `retry` |
-| 409 Conflict (`4015 PROVISIONING_KEY_MISMATCH`) | This token already issued a certificate, and this retry does not match the bound set — a **different** public key for a bound kind, or a **different set** of key kinds (one added, or one dropped) | **Do NOT retry with this token** — no retry can succeed. Request a **new** provisioning token from the operator, then provision again with the keys currently held. Do **not** regenerate keys first: that is what caused the mismatch |
+| 400 Bad Request (`4019 PUBLIC_KEY_INVALID`) | The bare submitted key, `receiptSigningPublicKey`, does not decode, or is not an ECDSA P-256 public key. The schema constrains only the PEM armour, so such a key passes `4017` and fails here; `details.field` names it | Depends on `details.phase`. `first-provision` — generate a correct P-256 key for the named role and resubmit on the **same** token. `retry` — **do NOT generate a new key**: resubmit the key already bound, because a fresh key is answered `4015`. If `details.phase` is absent, assume `retry` |
+| 422 Unprocessable Entity (`4016 PROVISIONING_KEY_REUSE`) | The two submitted keys are the same key — the `tlsCsr` subject key and `receiptSigningPublicKey` ([Chapter 06 §4.3](06-security.md)) | Depends on `details.phase`. `first-provision` — generate a **separate** key pair for the colliding role and resubmit on the **same** token. `retry` — **do NOT regenerate**: resubmit the keys already bound, because a fresh key is answered `4015`. If `details.phase` is absent, assume `retry` |
+| 409 Conflict (`4015 PROVISIONING_KEY_MISMATCH`) | This token already issued a certificate, and this retry does not match the bound set — a **different** public key for a bound kind | **Do NOT retry with this token** — no retry can succeed. Request a **new** provisioning token from the operator, then provision again with the keys currently held. Do **not** regenerate keys first: that is what caused the mismatch |
 | Network unreachable | No connectivity | Retry with backoff, await network |
 | Provisioning endpoint certificate not validated | No trust anchor is obtainable from the *HTTPS trust policy* ([Chapter 01 — Architecture §7.2](01-architecture.md#72-physical-configuration)), or the presented chain does not validate against it | **Do not send the request.** The call MUST NOT proceed on an unvalidated certificate ([Chapter 06 — Security §2.1](06-security.md#21-station--server--mutual-tls-mtls)); await operator intervention. This is a station-side refusal — no request reaches the server, so there is no error code and no response |
 
@@ -307,12 +306,12 @@ Rows are listed in the order the server evaluates them (see *Error precedence* b
 
 | Component | State |
 |-----------|-------|
-| SSP NVS | Contains: `stationId`, `bays` (the `(bayId, bayNumber)` pairing) and its own declared topology, TLS certificate + private key, the **receipt-signing** ECDSA P-256 key pair, the **static BLE ECDH** P-256 key pair together with the server-signed `stationIdentity` certificate issued over it (both only when BLE is supported), Station CA chain, broker root CA (optional, when broker uses private CA hierarchy for server cert), `serverVerifyKey`, `mqttConfig` |
+| SSP NVS | Contains: `stationId`, `bays` (the `(bayId, bayNumber)` pairing) and its own declared topology, TLS certificate + private key, the **receipt-signing** ECDSA P-256 key pair, Station CA chain, broker root CA (optional, when broker uses private CA hierarchy for server cert), `serverVerifyKey`, `mqttConfig` |
 | SSP | Provisioned, ready to boot |
 | Server | Station registered, certificate issued, provisioning token consumed. The server **MUST** retain every public key submitted in the request, bound to the consumed token — this binding is what a later retry is compared against (see [Single-use and idempotent retry](#single-use-and-idempotent-retry)); without it the comparison cannot be performed |
 | Provisioning Token | Invalidated (single-use) |
 
-**Persisting the key set — before the request, not after.** The station **MUST** commit the complete set of private keys it generated for this provision — the mTLS client key, the receipt-signing key, and the static BLE ECDH key where BLE is supported — to non-volatile storage **before** it sends the first `POST /api/v1/stations/provision`. The write **MUST** be durable: flushed to NVS, not left in a buffer that a reset discards. The station **MUST** retain that key set until one of:
+**Persisting the key set — before the request, not after.** The station **MUST** commit the complete set of private keys it generated for this provision — the mTLS client key and the receipt-signing key — to non-volatile storage **before** it sends the first `POST /api/v1/stations/provision`. The write **MUST** be durable: flushed to NVS, not left in a buffer that a reset discards. The station **MUST** retain that key set until one of:
 
 - the provision **succeeds** and the issued certificate has itself been persisted; or
 - a **terminal** outcome is reached — `4015 PROVISIONING_KEY_MISMATCH`, or `4018 PROVISIONING_TOKEN_CONSUMED` with `details.reason: consumed_without_certificate`, or the token's TTL elapses ([Chapter 07 §3.4](07-errors.md)).
@@ -373,7 +372,6 @@ the certificate was issued against, and it was missing.
 | `stationId` | the identifier the token is bound to; re-provisioning **MUST NOT** allocate a new one (§ *Re-provisioning*) |
 | `bays` | assigned at station registration, before the token was issued; the `(bayId, bayNumber)` pairing is the mapping the station consumes (below) |
 | `clientCert` | the issued certificate itself |
-| `stationIdentity` | where present — the certificate issued over the station's **bound** BLE ECDH key |
 
 **Bound to the certificate in this response — MUST verify the `clientCert` returned alongside them.** These are not free to track current state on their own, because their whole function is to make the returned certificate usable:
 
@@ -402,13 +400,12 @@ Where these fields are interdependent the values returned **MUST** be mutually c
 
 This applies to the station's **complete provisioned identity**, not only its TLS identity: what the token binds is the **bound set** — the set of key kinds submitted at first provision, together with the key each carried. Every key kind in that set is compared. Partial drift is still drift.
 
-The comparison is **per key kind**, against the bound set. **A retry is a replay only if it presents the same set of key kinds, each carrying the same key, as the provision the token bound.** This single sentence decides every case, including presence: a key kind in **neither** the bound set nor the retry is not part of that station's identity and is never compared — a station declaring `capabilities.bleSupported: false` submitted no BLE key at first provision and submits none on retry, and that is a replay. Absence is exempt only when it is absence on **both** sides; a key kind that **is** in the bound set but is omitted from the retry is drift, exactly as a differing key is — see *A change in which key kinds are present is also drift* below. The key kinds currently defined are:
+The comparison is **per key kind**, against the bound set. **A retry is a replay only if each key kind carries the same key as in the provision the token bound.** Both key kinds are REQUIRED of every request ([`provisioning-request.schema.json`](../schemas/provisioning-request.schema.json)), so a well-formed retry presents both. The key kinds currently defined are:
 
 | Submitted key | What it certifies | Consequence if drift were ignored |
 |---|---|---|
 | CSR public key (`tlsCsr`) | the mTLS client certificate | the station holds a certificate that does not match its private key — every mTLS connection fails |
 | `receiptSigningPublicKey` | offline receipt signatures | the server verifies receipts against a key the station no longer holds — every offline receipt fails at reconciliation, days later |
-| static BLE ECDH public key ([Chapter 06 §6.5.2](06-security.md)) — **only when BLE is supported** | the StationIdentity certificate | `es = ECDH(appEphemeral, stationStaticPub)` is never reproduced — every BLE handshake fails |
 
 **Why `receiptSigningPublicKey` is required of every station.** It is the one key in the table
 whose purpose lies outside the profiles every station must implement — receipts are an offline
@@ -425,22 +422,13 @@ ever does.
 This is forward compatibility, not a dependency of the online path on the offline one. Nothing
 in the Core, Transaction or Security profiles reads this key; the server stores it and uses it
 only at reconciliation. The obligation it creates on a station is to generate and retain a
-second P-256 key pair — not to implement anything offline. Note that the BLE key in the row
-above is treated the *opposite* way, and is conditional on `bleSupported`: that key's
-consequence is a failed handshake on a transport the station does not have, whereas an
-unusable receipt key is discovered days later at reconciliation, when the transactions it was
-meant to protect are already spent.
+second P-256 key pair — not to implement anything offline.
 
-A retry whose key kinds and keys match the bound set exactly is a replay, and is answered as described above.
+A retry whose keys match the bound set exactly is a replay, and is answered as described above.
 
-**Comparison basis.** The comparison **MUST** be made on the **decoded public key**, never on the transmitted bytes. For the CSR this means the DER-encoded `SubjectPublicKeyInfo`, **not** the raw CSR bytes: a CSR is self-signed with ECDSA, whose signatures are randomised, so two honest CSRs for the same key differ byte-wise and a byte comparison would reject a legitimate retry. Equivalently, for the other keys a re-encoding of the same point — compressed vs. uncompressed SEC1, PEM whitespace — is **not** drift, whereas a different point **is**.
+**Comparison basis.** The comparison **MUST** be made on the **decoded public key**, never on the transmitted bytes. For the CSR this means the DER-encoded `SubjectPublicKeyInfo`, **not** the raw CSR bytes: a CSR is self-signed with ECDSA, whose signatures are randomised, so two honest CSRs for the same key differ byte-wise and a byte comparison would reject a legitimate retry. Equivalently, for the receipt-signing key a re-encoding of the same point — compressed vs. uncompressed SEC1, PEM whitespace — is **not** drift, whereas a different point **is**.
 
-**A change in which key kinds are present is also drift.** Presence is part of the bound identity, so a retry whose **set** of key kinds differs from the bound set **MUST** be rejected exactly as a differing key is — `409 Conflict` with `4015 PROVISIONING_KEY_MISMATCH` — in **both** directions:
-
-- **Key kind added.** A retry introduces a key kind absent from the first provision (for example a BLE ECDH key where none was submitted). There is nothing to compare it against, and the station is asking to be certified for a **broader** identity than the token bound. The server **MUST NOT** bind the new key kind to the consumed token, and **MUST NOT** issue a second certificate.
-- **Key kind dropped.** A retry omits a key kind that **was** bound at first provision. This is not a replay of that provision — the identity presented is **narrower** than the one bound — and it **MUST NOT** silently succeed, because doing so would leave the caller believing an identity was re-confirmed when part of it was never presented.
-
-In either direction the recovery is the same as for a differing key: obtain a **new** provisioning token and provision the intended identity in full. A station whose set of key kinds has legitimately changed — BLE retrofitted onto a station provisioned without it — is performing [re-provisioning](#re-provisioning-an-already-provisioned-station), not a retry, and requires a new token accordingly.
+> **What this replaced.** Until this revision a station that supported BLE submitted a third key, a static BLE ECDH key (`stationPubKey`), over which the server signed a StationIdentity; the bound set could then differ in which key kinds it held, and this section treated a key kind added or dropped on a retry as drift. The key is withdrawn with the StationIdentity ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)), both remaining key kinds are required, and a station's key set no longer depends on whether it supports BLE.
 
 Once the TTL elapses the token is invalid for **all** purposes: any further call — **including** a retry of an already-completed provision — **MUST** be rejected with `401 Unauthorized` and error `2019 PROVISIONING_TOKEN_INVALID` ([Chapter 07 §3.2](07-errors.md)), and the station **MUST** obtain a new provisioning token. A token that has been **superseded** by a re-issuance for the same station, or administratively **revoked**, is likewise invalid and **MUST** be rejected the same way. A token that does **not resolve** to a token bound to the requested station **MUST** also be rejected the same way, with the same status: answering an unknown token differently from a known-but-dead one would let an unauthenticated caller use the endpoint to test token values for existence. The discriminator (`not_found`, `expired`, `superseded`, `revoked`) **SHOULD** be carried in `details.reason`.
 
@@ -451,9 +439,9 @@ Once the TTL elapses the token is invalid for **all** purposes: any further call
 3. **Token state.** The token authenticated, but has been consumed **without leaving a certificate to replay** — either a concurrent request consumed it and has not yet written its certificate (`already_consumed`), or the consuming request failed before issuing (`consumed_without_certificate`) → `409 Conflict` / `4018 PROVISIONING_TOKEN_CONSUMED` ([Chapter 07 §3.4](07-errors.md)), with the discriminator in `details.reason`. Those two causes are the whole of this step, and in both of them no certificate exists and therefore no bound set exists — which is what makes the step decidable from token state alone. Evaluated after authentication and before any key is examined, for that reason: the token's state settles whether a certificate can be issued at all, and no key in the body can change it. A consumed token that **did** issue a certificate is **not** answered here. It carries a bound set, so the request continues to step 4 and is judged a replay or drift at step 8 — which is the only place the key comparison that distinguishes them is performed. A `4018` rejection issues no certificate and alters no binding.
 4. **CSR decodability.** The `tlsCsr` **MUST** parse as a PKCS#10 CSR whose self-signature verifies, whose `SubjectPublicKeyInfo` decodes to an ECDSA P-256 public key, and whose Subject CN is the `stationId` the token is bound to. Failure → `400 Bad Request` / `4010 CSR_INVALID` ([Chapter 07 §3.4](07-errors.md)). Evaluated before both key comparisons because both compare **decoded** keys: a CSR whose `SubjectPublicKeyInfo` cannot be decoded cannot be compared against the other submitted keys or against the bound set, so neither `4016` nor `4015` is decidable. A `4010` rejection **MUST NOT** consume the token and **MUST NOT** create or alter any binding.
 5. **Declared topology.** The set of `bayNumber` values in the body's `bays` **MUST** equal the station's **in-service topology** — the bays the server currently records for the station the token is bound to, excluding any the operator has taken out of service, defined once at [Chapter 05 §1.5](05-state-machines.md#15-topology-at-boot). Equal as a **set**, not merely equal in size, so a station declaring `{1, 3}` against an in-service `{1, 2}` is rejected even though both have two bays.  → `422 Unprocessable Entity` / `4020 BAY_COUNT_MISMATCH` ([Chapter 07 §3.4](07-errors.md)). Evaluated after step 4 and before step 6 because it depends only on the token and the declared topology: it is decidable without examining any key, so a request that cannot succeed is refused before the remaining key validation is spent on it. It follows step 4 rather than preceding it because the CSR carries the identity being certified, the same reason step 4 precedes the comparisons. Reachable only on a first provision — on a replay the token is the key and body drift is ignored. A `4020` rejection **MUST NOT** consume the token and **MUST NOT** create or alter any binding.
-6. **Submitted public key validity.** Every **bare** public key the request carries — `receiptSigningPublicKey`, and `stationPubKey` when present — **MUST** decode, and **MUST** decode to an ECDSA P-256 public key. Failure → `400 Bad Request` / `4019 PUBLIC_KEY_INVALID` ([Chapter 07 §3.4](07-errors.md)), naming the member in `details.field`. Evaluated **after** step 4 and **before** both key comparisons. After step 4 because the `tlsCsr` carries the identity being certified, so where both are unusable the answer names the credential rather than an attribute of it; before the comparisons for exactly the reason step 4 precedes them — they compare **decoded** keys, and an undecodable bare key makes `4016` and `4015` undecidable rather than merely unequal. Step 1 does not subsume this: the request schema constrains the PEM armour and the SEC1 length and alphabet, not the DER body, the SEC1 prefix, or whether the point lies on the curve. A `4019` rejection **MUST NOT** consume the token and **MUST NOT** create or alter any binding.
-7. **Request self-consistency.** Two of the submitted key kinds carry the same public key → `422 Unprocessable Entity` / `4016 PROVISIONING_KEY_REUSE` ([Chapter 06 §4.3](06-security.md)). A `4016` rejection **MUST NOT** consume the token and **MUST NOT** create or alter any binding.
-8. **Comparison against the bound set.** A key kind carries a different key, or the set of key kinds differs → `409 Conflict` / `4015 PROVISIONING_KEY_MISMATCH` ([Chapter 07 §3.4](07-errors.md)). Reachable only on a well-formed request whose token authenticated, has **already issued a certificate**, and carries decodable, pairwise-distinct keys. The consumption is a **precondition, not a bar**: the bound set this step compares against is created by that issuance (§ *Postconditions*), so a token that has not yet issued a certificate has nothing to compare and never reaches this step — it is answered at step 3 or provisioned for the first time.
+6. **Submitted public key validity.** The **bare** public key the request carries, `receiptSigningPublicKey`, **MUST** decode, and **MUST** decode to an ECDSA P-256 public key. Failure → `400 Bad Request` / `4019 PUBLIC_KEY_INVALID` ([Chapter 07 §3.4](07-errors.md)), naming the member in `details.field`. Evaluated **after** step 4 and **before** both key comparisons. After step 4 because the `tlsCsr` carries the identity being certified, so where both are unusable the answer names the credential rather than an attribute of it; before the comparisons for exactly the reason step 4 precedes them — they compare **decoded** keys, and an undecodable bare key makes `4016` and `4015` undecidable rather than merely unequal. Step 1 does not subsume this: the request schema constrains the PEM armour, not the DER body or whether the point lies on the curve. A `4019` rejection **MUST NOT** consume the token and **MUST NOT** create or alter any binding.
+7. **Request self-consistency.** The `tlsCsr` subject key and `receiptSigningPublicKey` are the same public key → `422 Unprocessable Entity` / `4016 PROVISIONING_KEY_REUSE` ([Chapter 06 §4.3](06-security.md)). A `4016` rejection **MUST NOT** consume the token and **MUST NOT** create or alter any binding.
+8. **Comparison against the bound set.** A key kind carries a different key → `409 Conflict` / `4015 PROVISIONING_KEY_MISMATCH` ([Chapter 07 §3.4](07-errors.md)). Reachable only on a well-formed request whose token authenticated, has **already issued a certificate**, and carries decodable, pairwise-distinct keys. The consumption is a **precondition, not a bar**: the bound set this step compares against is created by that issuance (§ *Postconditions*), so a token that has not yet issued a certificate has nothing to compare and never reaches this step — it is answered at step 3 or provisioned for the first time.
 
 The order is not arbitrary. A body that fails schema validation is judged first because it is the only failure that can prevent the server reading the token at all, and because its recovery — correct the body — is free. A token that does not authenticate then fails fast with the only answer that helps, obtain a new token, and no key comparison could change that; a token that authenticates but is spent **without having issued a certificate** is judged next, because its state decides whether any certificate can be issued and no key in the body bears on it — whereas a token that is spent and *did* issue one carries the bound set the last step needs, so it is passed down the chain rather than answered here. The declared bay count is judged between the CSR and the bare keys because it is the cheapest check that can still refuse the request: it reads one integer against stored state and needs no key at all, so spending the remaining key validation on a request already known to fail buys nothing. The two decodability steps precede the two key comparisons for a mechanical reason rather than a policy one: those comparisons operate on decoded keys, so material that will not decode makes them undecidable rather than merely unequal. Between the two, the CSR is judged first because it carries the identity being certified — a station told its CSR is unusable learns the more fundamental fact — and stating the order at all is what stops two implementations answering a request with both defects differently. Reused keys are a defect in the request itself, visible without reference to any stored state; judging them before the bound-set comparison means a station whose firmware derived two roles from one key slot is told the one thing it can act on, and is told it while the token is still usable. `4015` is last because it is the only one that depends on state the requester cannot see, and because its recovery — obtain a new token — is the most expensive of the eight.
 
@@ -739,24 +727,25 @@ sequenceDiagram
     participant App as Mobile App
     participant SSP as SSP (Station)
 
-    App->>App: BLE scan → discover OSPP-{id}
+    App->>App: BLE scan → discover the OSPP service UUID
     App->>SSP: BLE connect
 
-    App->>SSP: Read FFF1 [MSG-027] StationInfo
+    App->>SSP: Read FFF1 [MSG-027] StationInfo (unauthenticated)
     SSP-->>App: {stationId, firmwareVersion, connectivity: "Offline"}
-    App->>SSP: Read FFF2 [MSG-028] AvailableServices
-    SSP-->>App: {bays: [{bayId, services, prices}]}
+    App->>SSP: Write FFF2 0x01 [MSG-028] AvailableServices
+    SSP-->>App: Notify FFF2: {catalogVersion, bays: [{bayId, services, prices}]}
 
-    Note over App: User selects bay + service
+    Note over App: User selects bay, service and duration
 
-    App->>SSP: Write FFF3: Hello [MSG-029]
-    SSP-->>App: Notify FFF4: Challenge [MSG-030] (connectivity: "Offline")
+    App->>SSP: Write FFF3: Hello [MSG-029] (bleVersions)
+    SSP-->>App: Notify FFF4: Challenge [MSG-030] (certificate, availability, signature, connectivity: "Offline")
 
-    Note over App: Derive session key (HKDF-SHA256)
+    Note over App: Verify certificate and signature, else abort with no pass sent
+    Note over App: Derive session key (ECDH + HKDF-SHA256)
     Note over App: Biometric / PIN confirmation
 
-    App->>SSP: Write FFF3: OfflineAuthRequest [MSG-031]
-    Note right of SSP: Station validates OfflinePass (nine checks)
+    App->>SSP: Write FFF3: OfflineAuthRequest [MSG-031] (bay, service, duration, device proof)
+    Note right of SSP: Station verifies the device proof and validates the OfflinePass (nine checks)
 
     alt Pass valid
         SSP-->>App: Notify FFF4: AuthResponse (Accepted) [MSG-033]
@@ -768,45 +757,45 @@ sequenceDiagram
             SSP-->>App: Notify FFF5: ServiceStatus (Running) [MSG-038]
         end
 
-        Note over App: User stops OR timer expires
+        Note over App,SSP: The customer stops from the app, or the timer expires and SSP stops the service itself, with no StopServiceResponse
         App->>SSP: Write FFF3: StopServiceRequest [MSG-036]
         SSP-->>App: Notify FFF4: StopServiceResponse [MSG-037]
 
         Note over SSP: Generate receipt, sign ECDSA P-256, increment txCounter
         SSP-->>App: Notify FFF5: ServiceStatus (ReceiptReady) [MSG-038]
 
-        App->>SSP: Read FFF6 [MSG-039] Receipt
-        SSP-->>App: {receipt, txCounter}
+        App->>SSP: Write FFF6: ReceiptRequest [MSG-041] (offlineTxId)
+        SSP-->>App: Notify FFF6: ReceiptResponse [MSG-042] (receipt [MSG-039])
         Note over App: Store in offline tx log
 
     else Pass invalid
-        SSP-->>App: Notify FFF4: AuthResponse (Rejected, reason) [MSG-033]
+        SSP-->>App: Notify FFF4: AuthResponse (Rejected, errorCode, errorText) [MSG-033]
         Note over App: Display error, disconnect
     end
 ```
 
 ### Happy Path
 
-1. **App** scans for BLE devices, discovers station advertising as `OSPP-{station_id_last6}`
+1. **App** scans for the OSPP service UUID ([`ble-transport.md` §9](profiles/offline/ble-transport.md#9-advertising-data)) and discovers the station, whose scan response names it `OSPP-{station_id_last6}`
 2. **App** establishes BLE connection
-3. **App** reads **StationInfo** [MSG-027] from FFF1 — verifies station identity, checks `connectivity: "Offline"`
-4. **App** reads **AvailableServices** [MSG-028] from FFF2 — displays service catalog with prices
-5. User selects a bay and service. Before the choice the app shows the pass's limits — per session, credits remaining, uses remaining — and a service above a limit is refused, never reduced ([`offline-pass.md` §2.1](profiles/offline/offline-pass.md#21-offlineallowance-object))
-6. **App** writes **HELLO** [MSG-029] to FFF3 with `deviceId`, `appNonce`, `appVersion`, `appEphemeralPubKey`
-7. **SSP** responds with **CHALLENGE** [MSG-030] on FFF4 with `stationNonce`, `stationCert` (StationIdentity), `stationEphemeralPubKey`, `stationConnectivity: "Offline"`
-8. **App** verifies `stationCert` against the server key set of its trust bundle (§6.5.2) — **aborts and sends no pass if invalid** — then derives the session key via ECDH P-256 + HKDF-SHA256 (`ikm = es ‖ ee ‖ appNonce ‖ stationNonce`; the LTK is not used). The post-Challenge AEAD channel is now established.
+3. **App** may read **StationInfo** [MSG-027] from FFF1 to show the customer which station it reached — unauthenticated, and relied on for nothing ([`ble-transport.md` §3](profiles/offline/ble-transport.md#3-station-info-fff1))
+4. **App** asks for **AvailableServices** [MSG-028] on FFF2 — displays the service catalog with prices
+5. User selects a bay, a service and a duration. Before the choice the app shows the pass's limits — per session, credits remaining, uses remaining — and a service above a limit is refused, never reduced ([`offline-pass.md` §2.1](profiles/offline/offline-pass.md#21-offlineallowance-object))
+6. **App** writes **HELLO** [MSG-029] to FFF3 with `bleVersions`, `appNonce`, `appVersion`, `appEphemeralPubKey` — nothing that identifies the device or its user
+7. **SSP** responds with **CHALLENGE** [MSG-030] on FFF4 with `bleVersion`, `stationNonce`, `stationEphemeralPubKey`, `stationCertificate`, `stationConnectivity: "Offline"`, `availableServices` and `stationSignature`
+8. **App** verifies `stationCertificate` against the Station CA certificate and CRL of its trust bundle, and `stationSignature` over the Hello and the Challenge ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)) — **aborts and sends no pass if either fails** — confirms that the chosen service is available on the chosen bay in `availableServices`, then derives the session key via ECDH P-256 + HKDF-SHA256 (`ikm = ee ‖ appNonce ‖ stationNonce`; the LTK is not used). The post-Challenge AEAD channel is now established.
 9. **App** requests biometric or PIN confirmation from the user
-10. **App** writes **OfflineAuthRequest** [MSG-031] to FFF3 (inside the AEAD channel) with the OfflinePass, counter, and `sessionProof`
-11. **SSP** validates the OfflinePass — the nine checks of [Chapter 06 §6.1.1](06-security.md#611-offlinepass-validation--10-checks): signature, expiry, epoch, device, limits, interval, counter
+10. **App** writes **OfflineAuthRequest** [MSG-031] to FFF3 (inside the AEAD channel) with the OfflinePass, counter, `bayId`, `serviceId`, `requestedDurationSeconds`, `sessionProof` and `deviceProof`
+11. **SSP** validates the OfflinePass — the nine checks of [Chapter 06 §6.1.1](06-security.md#611-offlinepass-validation--10-checks): signature, expiry, epoch, device proof, limits, interval, counter — estimating the cost from the requested service and duration
 12. **SSP** sends **AuthResponse** [MSG-033] `Accepted` on FFF4 with session key confirmation
-13. **App** writes **StartServiceRequest** [MSG-034] to FFF3 with `bayId`, `serviceId`, `requestedDurationSeconds`
+13. **App** writes **StartServiceRequest** [MSG-034] to FFF3 with the `bayId`, `serviceId` and `requestedDurationSeconds` of its OfflineAuthRequest
 14. **SSP** activates hardware, sends **StartServiceResponse** [MSG-035] `Accepted` with `sessionId` and `offlineTxId`
 15. **SSP** sends periodic **ServiceStatus** [MSG-038] on FFF5 (`Running`, elapsed, remaining, meter values)
-16. User stops (or timer expires) → **App** writes **StopServiceRequest** [MSG-036] to FFF3
-17. **SSP** deactivates hardware, sends **StopServiceResponse** [MSG-037] with `actualDurationSeconds` and `creditsCharged`
+16. The customer stops from the app → **App** writes **StopServiceRequest** [MSG-036] to FFF3
+17. **SSP** deactivates hardware, sends **StopServiceResponse** [MSG-037] with `actualDurationSeconds` and `creditsCharged`. When the timer expires first, SSP stops the service itself, sends no StopServiceResponse and ends the session with `TimerExpired` ([`ble-session.md` §3](profiles/offline/ble-session.md#3-stopping-a-service)); steps 18–20 follow either way
 18. **SSP** generates receipt: signs with ECDSA P-256 (RFC 6979), increments `txCounter`
 19. **SSP** sends **ServiceStatus** [MSG-038] with `status: "ReceiptReady"`
-20. **App** reads **Receipt** [MSG-039] from FFF6 — stores the signed receipt in its offline transaction log
+20. **App** writes a **ReceiptRequest** [MSG-041] naming the session's `offlineTxId` to FFF6, and stores the **Receipt** [MSG-039] of the **ReceiptResponse** [MSG-042] in its offline transaction log
 21. **App** disconnects BLE
 
 **Later, when connectivity is restored:**
@@ -817,18 +806,22 @@ sequenceDiagram
 
 **A1 — Timer auto-stop:** If the user does not send StopServiceRequest, the station automatically stops when `requestedDurationSeconds` expires. The station still generates a receipt and notifies via FFF5.
 
-**A2 — BLE disconnect during session:** If BLE disconnects during an active session, the station continues the service until the timer expires. The receipt remains readable on FFF6 for the next BLE connection (within a configurable window).
+**A2 — BLE disconnect during session:** If BLE disconnects during an active session, the station continues the service until the timer expires. The station serves the receipt on FFF6 for at least 24 hours after signing it, to a ReceiptRequest naming its `offlineTxId`, made over a fresh Hello and Challenge ([`ble-transport.md` §8](profiles/offline/ble-transport.md#8-receipt-fff6)).
 
 ### Error Paths
 
 | Step | Error | Code | App Action |
 |:----:|-------|------|------------|
-| 11 | Signature invalid | `2002` | Display "Pass invalid", disconnect |
+| 7 | The station supports none of the Hello's BLE versions — a plaintext AuthResponse instead of the Challenge | `1007` | Display "App update needed", disconnect |
+| 8 | Certificate or station signature invalid | `2013` | Abort, send no pass, disconnect |
+| 11 | Signature invalid, or device proof invalid | `2002` | Display "Pass invalid", disconnect |
 | 11 | Pass expired, or older than this station's `OfflinePassMaxAge` | `2003` | Display "Pass not accepted here — go online to renew" |
 | 11 | Epoch revoked | `2004` | Display "Pass revoked" |
 | 11 | Limits exceeded | `4002` | Display "Offline limit reached, go online" |
 | 11 | Rate limited | `4003` | Display "Wait before next session" |
 | 11 | Counter replay | `2005` | Display "Security error" |
+| 14 | Request names another bay or service than the OfflineAuthRequest | `3007` | Display "Start refused", disconnect |
+| 14 | Duration above the authorized one | `3010` | Display "Start refused", request the authorized duration |
 | 14 | Bay busy | `3001` | Display "Bay occupied" |
 | 14 | Hardware failure | `3009` | Display "Hardware error" |
 
@@ -867,9 +860,9 @@ sequenceDiagram
     Server-->>App: {signedAuthorization, sessionId, trustBundle}
 
     App->>SSP: BLE connect
-    App->>SSP: Read FFF1 [MSG-027] → connectivity: "Offline"
     App->>SSP: Write FFF3: Hello [MSG-029]
-    SSP-->>App: Notify FFF4: Challenge [MSG-030] (offline)
+    SSP-->>App: Notify FFF4: Challenge [MSG-030] (certificate, signature, connectivity: "Offline")
+    Note over App: Verify certificate (bundle's Station CA and CRL) and signature, else abort
 
     App->>SSP: Write FFF3: ServerSignedAuth [MSG-032]
     Note right of SSP: Verify ECDSA P-256 signature
@@ -883,9 +876,9 @@ sequenceDiagram
             SSP-->>App: Notify FFF5: ServiceStatus [MSG-038]
         end
 
-        Note over SSP: Stop → Receipt → FFF6
+        Note over SSP: Stop → Receipt → FFF6 (ReceiptRequest / ReceiptResponse)
     else Signature invalid
-        SSP-->>App: Notify FFF4: AuthResponse (Rejected) [MSG-033]
+        SSP-->>App: Notify FFF4: AuthResponse (Rejected, errorCode, errorText) [MSG-033]
     end
 ```
 
@@ -895,9 +888,9 @@ sequenceDiagram
 2. **Server** validates the user, debits the issue-time pre-debit, signs the ServerSignedAuth authorization blob with ECDSA P-256 server key — the signed claims carry `durationSeconds` (the authorized duration: the station refuses a longer request and never reduces it — [`ble-session.md` §1](profiles/offline/ble-session.md#1-starting-a-service)) and `creditsAuthorized` (the pre-debit, and the cap on what the session may be charged: the server recomputes final billing per the Billing Authority §6 / reconciliation §8.2 and refunds any difference, never debiting more), alongside `authId`, `sessionId`, `bayId`, `serviceId`, `appNonce`, `issuedAt`, `expiresAt` (full claim set: `server-signed-auth-claims.schema.json`, finding N3)
 3. **Server** returns the `signedAuthorization` object, its `sessionId` and the trust bundle — the Station CA certificate, its CRL and the server key set — to the App ([`app-contract.md` §5](profiles/offline/app-contract.md#5-the-partial-a-authorization)), which replaces the bundle it holds and authenticates the station against it before it relays the authorization
 4. **App** connects to the SSP via BLE
-5. **App** reads **StationInfo** [MSG-027] — confirms `connectivity: "Offline"`
-6. **App** writes **HELLO** [MSG-029] → SSP responds with **CHALLENGE** [MSG-030]
-7. **App** writes **ServerSignedAuth** [MSG-032] with the server-signed authorization blob and `sessionId`
+5. **App** may read **StationInfo** [MSG-027] to show the customer which station it reached — unauthenticated; the Challenge's `stationConnectivity` is the connectivity it acts on
+6. **App** writes **HELLO** [MSG-029] → SSP responds with **CHALLENGE** [MSG-030]; the App verifies the station's certificate against the Station CA and CRL of the bundle it received at step 3, and the station's signature ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)), and relays nothing if either fails
+7. **App** writes **ServerSignedAuth** [MSG-032] with the server-signed authorization blob and `sessionId`, inside the AEAD channel
 8. **SSP** verifies the ECDSA P-256 signature using a key of its `OfflinePassPublicKey` set ([Chapter 06 §6.7](06-security.md#67-server-signing-key-rotation-ecdsa-p-256))
 9. **SSP** sends **AuthResponse** [MSG-033] `Accepted`
 10. **App** writes **StartServiceRequest** [MSG-034] → SSP starts service
@@ -910,6 +903,7 @@ sequenceDiagram
 |:----:|-------|--------|
 | 2 | `402 INSUFFICIENT_BALANCE` | App shows top-up prompt |
 | 2 | `409 STATION_OFFLINE` | Server cannot verify bay status — proceeds with signed auth (optimistic) |
+| 6 | Station certificate or signature invalid | App aborts and relays nothing (`2013`) |
 | 8 | ECDSA P-256 signature invalid | SSP rejects — key mismatch or tampered auth |
 | 8 | Authorization expired | SSP rejects — user took too long between server call and BLE |
 
@@ -942,16 +936,20 @@ sequenceDiagram
     participant Server
 
     App->>SSP: BLE connect
-    App->>SSP: Read FFF1 [MSG-027] → connectivity: "Online"
+    App->>SSP: Write FFF2 0x01 [MSG-028] AvailableServices
+    SSP-->>App: Notify FFF2: {catalogVersion, bays: [{bayId, services, prices}]}
+    Note over App: User selects bay, service and duration
     App->>SSP: Write FFF3: Hello [MSG-029]
-    SSP-->>App: Notify FFF4: Challenge [MSG-030] (online)
+    SSP-->>App: Notify FFF4: Challenge [MSG-030] (certificate, availability, signature, connectivity: "Online")
+    Note over App: Verify certificate and signature, else abort with no pass sent
 
     Note over App: Biometric / PIN confirmation
 
-    App->>SSP: Write FFF3: OfflineAuthRequest [MSG-031]
+    App->>SSP: Write FFF3: OfflineAuthRequest [MSG-031] (bay, service, duration, device proof)
+    Note right of SSP: Verify the device proof
 
     SSP->>Server: AuthorizeOfflinePass REQUEST [MSG-002]
-    Note right of SSP: Forward pass to server for validation
+    Note right of SSP: Forward pass, bay, service, duration, device proof and transcriptHash
 
     alt Server accepts
         Server-->>SSP: AuthorizeOfflinePass RESPONSE (Accepted) [MSG-002]
@@ -964,33 +962,35 @@ sequenceDiagram
         end
 
     else Server rejects
-        Server-->>SSP: AuthorizeOfflinePass RESPONSE (Rejected) [MSG-002]
-        SSP-->>App: Notify FFF4: AuthResponse (Rejected) [MSG-033]
+        Server-->>SSP: AuthorizeOfflinePass RESPONSE (Rejected, errorCode, errorText) [MSG-002]
+        SSP-->>App: Notify FFF4: AuthResponse (Rejected, the same errorCode and errorText) [MSG-033]
     end
 ```
 
 ### Happy Path
 
-1. **App** connects to SSP via BLE
-2. **App** reads **StationInfo** [MSG-027] — sees `connectivity: "Online"`
-3. **App** writes **HELLO** [MSG-029] → SSP responds with **CHALLENGE** [MSG-030] (`stationConnectivity: "Online"`)
+1. **App** connects to SSP via BLE and asks for **AvailableServices** [MSG-028] on FFF2; the user selects a bay, a service and a duration, with the pass's limits shown ([`offline-pass.md` §2.1](profiles/offline/offline-pass.md#21-offlineallowance-object))
+2. **App** may read **StationInfo** [MSG-027] to show the customer which station it reached — unauthenticated; the Challenge's `stationConnectivity` is the connectivity it acts on
+3. **App** writes **HELLO** [MSG-029] → SSP responds with **CHALLENGE** [MSG-030] (`stationConnectivity: "Online"`); the App verifies the station's certificate and signature ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)) and that the chosen service is available, and sends no pass if not
 4. **App** requests biometric/PIN confirmation
-5. **App** writes **OfflineAuthRequest** [MSG-031] with the OfflinePass
-6. **SSP** does NOT validate locally — instead forwards the pass to the Server via **AuthorizeOfflinePass REQUEST** [MSG-002] over MQTT
-7. **Server** validates the pass ([`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks) — signature, expiry, epoch, device, limits, rate, counter, individual revocation), debits the user's wallet by the `creditsAuthorized` of its answer
-8. **Server** sends **AuthorizeOfflinePass RESPONSE** [MSG-002] `Accepted` with `sessionId`, `durationSeconds`, `creditsAuthorized`
+5. **App** writes **OfflineAuthRequest** [MSG-031] with the OfflinePass, the counter, `bayId`, `serviceId`, `requestedDurationSeconds`, `sessionProof` and `deviceProof`
+6. **SSP** verifies the device proof, and does NOT validate the pass locally — instead forwards it to the Server via **AuthorizeOfflinePass REQUEST** [MSG-002] over MQTT, with the bay, the service, the duration, the device proof unchanged and the handshake's `transcriptHash`
+7. **Server** validates the pass ([`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks) — signature, expiry, epoch, device proof, limits, rate, counter, individual revocation), estimating the cost from the requested service and duration, and debits the user's wallet by the `creditsAuthorized` of its answer
+8. **Server** sends **AuthorizeOfflinePass RESPONSE** [MSG-002] `Accepted` with `sessionId`, `durationSeconds` — the requested duration — and `creditsAuthorized`
 9. **SSP** relays result as **AuthResponse** [MSG-033] `Accepted` to App via BLE
 10. **App** writes **StartServiceRequest** [MSG-034] → SSP starts service
 11. Service runs with **ServiceStatus** [MSG-038] updates, then stop/receipt
-12. Since the station is online, the session is tracked in real time by the Server and settled when the station reports its end — by service kind, never above the `creditsAuthorized` of the authorization, as a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)). If the station loses its connection, the loss does not end the session: the wash continues, and the station sends the session's end when it reconnects — its SessionEnded under the server's `sessionId`, or, when the server stopped the session, the StopService RESPONSE it sends again when the server repeats the REQUEST. The session settles once, on the first of its end records to arrive — that SessionEnded, the StopService RESPONSE when the server stopped the session, or the session's signed receipt, which the app uploads when it has a network — and the other is a duplicate ([`reconciliation.md` §3](profiles/offline/reconciliation.md#3-deduplication-offlinetxid)); either way the server applies no second debit, only a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback))
+12. Since the station is online, the session is tracked in real time by the Server and settled when the station reports its end — by service kind, never above the `creditsAuthorized` of the authorization, as a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)). If the station loses its connection, the loss does not end the session: the wash continues, and the station sends the session's end when it reconnects — its SessionEnded under the server's `sessionId`, or, when the server stopped the session, the StopService RESPONSE it sends again when the server repeats the REQUEST. The session settles once, on the first of its end records to arrive — that SessionEnded, the StopService RESPONSE when the server stopped the session, or the session's signed receipt, which the app uploads when it has a network — and the other is a duplicate ([`reconciliation.md` §3](profiles/offline/reconciliation.md#3-deduplication-offlinetxid)). If none has arrived by the end of the session's authorized duration, the server closes the session then without waiting for the station — as a session whose timer expired, or refunded in full when the wash never started — and every end record settles on the authorization's `creditsAuthorized` and `durationSeconds` ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4a and 4b). Either way the server applies no second debit, only a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback))
 
 ### Error Paths
 
 | Step | Error | Action |
 |:----:|-------|--------|
 | 6 | MQTT send failure | SSP **MAY** fall back to local validation (like Full Offline) if its `OfflineModeEnabled` is `true`, within its own offline limits ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)) |
-| 7 | Pass rejected by server | SSP relays rejection to App with error code |
-| 7 | AuthorizeOfflinePass timeout (15s) | SSP **MAY** fall back to local validation (degraded mode) if its `OfflineModeEnabled` is `true`, within its own offline limits ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)) |
+| 6 | Device proof invalid | SSP refuses with `2002` and forwards nothing |
+| 7 | Pass rejected by server | SSP relays the rejection to App with the server's `errorCode`, `errorText` and `details` |
+| 7 | AuthorizeOfflinePass unanswered within the BLE handshake budget | SSP answers the app within the budget with `1010 MESSAGE_TIMEOUT`, or **MAY** fall back to local validation (degraded mode) if its `OfflineModeEnabled` is `true`, within its own offline limits ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)) |
+| 10 | StartServiceRequest other than the authorized duration | SSP refuses with `3010` above it and `3008` below it, and starts nothing ([`ble-session.md` §1](profiles/offline/ble-session.md#1-starting-a-service) rule 2) |
 
 ### Postconditions
 
@@ -1065,19 +1065,19 @@ This separation ensures that a misconfigured or compromised station cannot overc
 4. **SSP** sends **StopService RESPONSE** [MSG-006] with `actualDurationSeconds`, `creditsCharged`, final `meterValues` (user-initiated stop only). For timer expiry, **SSP** sends **SessionEnded EVENT** [MSG-040] with `reason: "TimerExpired"`, `actualDurationSeconds`, `creditsCharged`, final `meterValues` instead. The server uses the reported duration and meter values as billing **input** — it remains the billing authority (see the **Billing Authority** rules above and step 7).
 5. **SSP** sends **StatusNotification** [MSG-009] `Finishing` (hardware winding down)
 6. **SSP** sends **StatusNotification** [MSG-009] `Available` (bay ready for next user)
-7. **Server** processes billing (the server is the billing authority — the station-reported `creditsCharged` is advisory per the **Billing Authority** rules above): for a user-initiated stop it recomputes `creditsCharged = ceil(actualDurationSeconds / 60 * priceCreditsPerMinute)` from the reported duration; for timer expiry the booked duration was delivered in full, so it charges the **full pre-authorized amount** (not the station-reported `creditsCharged`, and regardless of meter values)
+7. **Server** processes billing (the server is the billing authority — the station-reported `creditsCharged` is advisory per the **Billing Authority** rules above): for a user-initiated stop it settles the customer's stop by service kind (*Settlement by Service Kind* below) — for `UserDuration`, `creditsCharged = ceil(actualDurationSeconds / 60 * priceCreditsPerMinute)` from the reported duration; for timer expiry the booked duration was delivered in full, so it charges the **full pre-authorized amount** (not the station-reported `creditsCharged`, and regardless of meter values)
 8. **Server** adjusts wallet — refunds the difference between pre-authorized amount and actual charge
 9. **Server** transitions session to `completed`
 10. **App** receives completion status on next poll
 
 ### Happy Path (BLE / Offline)
 
-1. **Trigger:** User taps "Stop" in App, or timer expires
-2. **App** writes **StopServiceRequest** [MSG-036] to FFF3
-3. **SSP** deactivates hardware, sends **StopServiceResponse** [MSG-037] with billing
+1. **Trigger:** the customer taps "Stop" in the app, or the timer expires
+2. On the customer's stop, **App** writes **StopServiceRequest** [MSG-036] to FFF3
+3. **SSP** deactivates hardware, sends **StopServiceResponse** [MSG-037] with billing — on the customer's stop only: when the timer expires, SSP stops the service itself and sends no StopServiceResponse ([`ble-session.md` §3](profiles/offline/ble-session.md#3-stopping-a-service))
 4. **SSP** generates signed receipt (ECDSA P-256), increments `txCounter`
 5. **SSP** notifies **ServiceStatus** [MSG-038] `ReceiptReady` on FFF5
-6. **App** reads **Receipt** [MSG-039] from FFF6, stores in offline log
+6. **App** writes a **ReceiptRequest** [MSG-041] naming the session's `offlineTxId` to FFF6, and stores the **Receipt** [MSG-039] of the **ReceiptResponse** [MSG-042] in its offline log
 
 ### Alternative Paths
 
@@ -1085,7 +1085,7 @@ This separation ensures that a misconfigured or compromised station cannot overc
 
 **A2 — MQTT disconnect during session:** SSP continues the service (does NOT stop the service). On reconnection, SSP re-boots (BootNotification [MSG-001]) and reports the session outcome.
 
-**A3 — StopService timeout:** If Server sends StopService and SSP does not respond within 10 seconds, Server marks the session as `failed`. SSP will report the actual outcome on next reconnection. A Partial-B session is not marked `failed`: the server repeats the StopService REQUEST once the station has reconnected, and settles the session on the first of its end records ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)).
+**A3 — StopService timeout:** If Server sends StopService and SSP does not respond within 10 seconds, Server marks the session as `failed`. SSP will report the actual outcome on next reconnection. A Partial-B session is not marked `failed`: the server repeats the StopService REQUEST once the station has reconnected, and settles the session on the first of its end records, or closes it at the end of its authorized duration ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4 and 4a).
 
 ### The operator-disable policy
 
@@ -1137,8 +1137,8 @@ of by what was delivered.
 | All retry attempts fail | Full | 100% |
 | ACK_TIMEOUT (no response) | Full | 100% |
 | Hardware error during active (SessionEnded `reason=Fault`) | Partial (pro-rated) | Based on time used |
-| Station offline during active | Partial (pro-rated) | Based on time used — not a Partial-B session, which settles on the first of its end records ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) |
-| User manual stop at station (SessionEnded `reason=Local`) | Partial (pro-rated) | Based on time used, recomputed by the server (the event's `creditsCharged` is advisory) |
+| Station offline during active | Partial (pro-rated) | Based on time used — not a Partial-B session, which settles on the first of its end records, or is closed at the end of its authorized duration ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) |
+| Customer stop from the app over BLE (SessionEnded `reason=Local`) | Partial (pro-rated) | Based on time used, recomputed by the server (the event's `creditsCharged` is advisory) |
 | Offline credit exhausted mid-session (SessionEnded `reason=LocalOutOfCredit`) | Full | 100% (no charge — `creditsCharged` MUST be 0) |
 | Offline pass revoked mid-session (SessionEnded `reason=Deauthorized`) | Full | 100% (no charge — session not billable; `creditsCharged` MUST be 0) |
 | Operator ended it (SessionEnded `reason=OperatorStopped`) | Partial (pro-rated) | Based on time used, recomputed by the server (the event's `creditsCharged` is advisory). The customer received a real wash and is billed for it; the operator's reason for ending it is not the customer's concern. |
@@ -1174,13 +1174,15 @@ For `UserDuration`, settlement is exactly the reason-keyed matrix above. `FixedD
 | SessionEnded reason | `UserDuration` | `FixedDuration` / `MultiUnit` |
 |---------------------|----------------|-------------------------------|
 | `TimerExpired` — delivered in full | Full charge | **Full charge** (same) |
-| `Local` — voluntary stop mid-service | Pro-rata on delivered time | **Full charge** — a preset the user started is consumed |
+| `Local` — the customer stopped it from the app over BLE, mid-service | Pro-rata on delivered time | **Full charge** — a preset the user started is consumed |
 | `Fault` — hardware fault mid-service | Pro-rata (full refund if less than `faultFullRefundThreshold` delivered) | **Full refund** — a service the station broke delivered nothing of value |
 | `LocalOutOfCredit` / `Deauthorized` | Full refund (`creditsCharged` MUST be `0`) | **Full refund** (same) |
 | `Inactivity` — idle timer elapsed mid-service | Pro-rata on delivered time | **Full charge** — a preset the user started is consumed |
 | `OperatorStopped` — operator ended it mid-service | Pro-rata on delivered time | **Full refund** — the operator, not the customer, cut the preset short, so none of it is consumed |
 
 Only the `Local`, `Inactivity`, `Fault` and `OperatorStopped` rows diverge; `TimerExpired` (full charge) and `LocalOutOfCredit` / `Deauthorized` (full refund) are already kind-invariant. An all-or-nothing override is always the pre-authorized amount **in full** or **`0`** — never a partial amount.
+
+**A stop the customer asks for from the app settles as the customer's stop.** A customer stops a session only through the app: online, by `POST /sessions/{id}/stop`, which the server carries out with a StopService [MSG-006]; over BLE, by a StopServiceRequest [MSG-036], which the station reports as `Local` — in the SessionEnded of a Partial-B session, or in the `endReason` of a signed receipt ([Chapter 06 §6.2](06-security.md#62-transaction-receipt-signing--ecdsa-p-256)). The first reaches a session only while the server can reach its station: a session the app started over BLE at a station that is offline — Full Offline, Partial A — is stopped over BLE. The server **MUST** settle that stop by service kind: a `UserDuration` session pays the time delivered, proportional to the second and rounded up to one credit — `ceil(actualDurationSeconds / 60 × priceCreditsPerMinute)`, the formula of [Chapter 03 §3](03-messages.md) — and a `FixedDuration` or `MultiUnit` session is charged in full. A stop the server issues because the customer asked for it is that stop, not an operator's; the next paragraph is the operator's.
 
 **A stop the server issues for an operator settles as `OperatorStopped`.** An operator can also end a session through the server rather than at the station — from an operator console, or by a station disable the server carries out — and the server then sends StopService [MSG-006]. That stop produces no SessionEnded ([Chapter 03 §5.4](03-messages.md#54-sessionended)) and StopService carries no reason, so only the server knows an operator asked for it. The server **MUST** settle such a session as it settles `OperatorStopped`, by service kind — pro-rata on delivered time for `UserDuration`, a full refund for `FixedDuration` and `MultiUnit` — and **MUST NOT** settle it as the customer's own stop. A stop the station refuses while the session is still running is not settled as `OperatorStopped`, because the operator did not end the service: the session settles as a delivered session of its kind — a `FixedDuration` or `MultiUnit` session keeps its full charge, and a `UserDuration` session is pro-rata on its delivered time. A `3006 SESSION_NOT_FOUND` refusal is not that case: the station holds no such session, which may already have ended ([`07-errors.md` §3.3](07-errors.md#33-session--bay-errors-3xxx)). The signed receipt of a BLE session the server stopped carries `endReason` `ServerStopped` ([Chapter 06 §6.2](06-security.md#62-transaction-receipt-signing--ecdsa-p-256)), and the server settles that session as this section settles the stop it issued.
 
@@ -1353,7 +1355,7 @@ sequenceDiagram
 
     Note over SSP: Active sessions continue running!
     Note over SSP: Switch to BLE-only mode
-    Note over SSP: Buffer StatusNotification events locally
+    Note over SSP: Buffer TransactionEvent, SessionEnded, SecurityEvent (Ch. 01 §6.5)
 
     Broker->>Server: ConnectionLost (LWT) [MSG-011]
     Server->>Server: Mark station as Offline
@@ -1390,7 +1392,7 @@ sequenceDiagram
 2. **SSP** immediately takes these actions:
    - **Active sessions continue running** — the station MUST NOT stop a service due to connectivity loss
    - Switch to BLE-only mode for new sessions (if BLE is enabled)
-   - Buffer all StatusNotification and MeterValues events locally
+   - Buffer the messages it must keep — TransactionEvent, SessionEnded and SecurityEvent — per the categorized buffering policy of [Chapter 01 §6.5](01-architecture.md#65-offline-message-buffering); StatusNotification and MeterValues MAY be discarded, as they are regenerated at reconnection
 3. **Broker** publishes the pre-configured **ConnectionLost** [MSG-011] LWT to the station's `to-server` topic
 4. **Server** receives the LWT and marks the station as `Offline`
 5. **SSP** begins reconnection with exponential backoff:
@@ -1799,14 +1801,14 @@ Consolidated timeout values across all flows:
 | Reserved → 3DS (web) | 3 min | CancelReservation |
 | Reserved → start (mobile) | 30s | CancelReservation |
 | StartService (pending_ack) | 10s | Refund, session → failed |
-| StopService (stopping) | 10s | Session → failed; a Partial-B session stays open (§6) |
+| StopService (stopping) | 10s | Session → failed; a Partial-B session stays open until the first of its end records, and no longer than the end of its authorized duration (§6) |
 | Active session (max) | durationSeconds | Station auto-stops |
 | Session token (web) | 10 min | Session expired |
 | BayLock fallback | 3 min | Auto-released |
 | PaymentIntent pending | 5 min | Marked expired |
 | BLE scan | 10-30s | Return to IDLE |
-| BLE handshake step | 10s | ERROR state |
-| AuthorizeOfflinePass | 15s | **MAY** fall back to local validation if `OfflineModeEnabled` is `true`; otherwise refuse |
+| BLE handshake (first Hello to AuthResponse) | 10s | ERROR state |
+| AuthorizeOfflinePass | 15s | Sent inside a BLE handshake, whose budget ends first: the station answers within the budget, and **MAY** fall back to local validation if `OfflineModeEnabled` is `true`; otherwise refuses with `1010` ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 6) |
 | TransactionEvent | 60s | Retry later |
 | ChangeConfiguration | 60s | Log failure |
 | GetConfiguration | 30s | Log failure |

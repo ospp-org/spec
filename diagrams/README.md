@@ -114,7 +114,8 @@ stateDiagram-v2
 
     Active --> Stopping : StopService requested
     Active --> Completed : SessionEnded (Local, LocalOutOfCredit)
-    Active --> Failed : Hardware fault / connection lost (not Partial B) / Deauthorized
+    Active --> Failed : Hardware fault / connection lost (not Partial B) / Deauthorized / Partial B never started
+    Active --> Completed : Partial B authorized duration ended with no end record
 
     Stopping --> Completed : Station confirms stop
     Stopping --> Failed : Stop timeout (10s, not Partial B)
@@ -250,21 +251,22 @@ sequenceDiagram
     rect rgb(243, 229, 245)
         Note over User,Station: BLE Discovery & Connection
         User->>BLE: GATT Connect
-        User->>BLE: Read FFF1 (Station Info)
-        User->>BLE: Read FFF2 (Available Services)
+        User->>BLE: Read FFF1 (Station Info, unauthenticated)
+        User->>BLE: Write FFF2 0x01, Notify FFF2 (Available Services)
     end
 
     rect rgb(232, 245, 233)
         Note over User,Station: ECDH Handshake
-        User->>BLE: Hello {deviceId, appNonce}
-        BLE-->>User: Challenge {stationNonce, connectivity: "Offline"}
+        User->>BLE: Hello {bleVersions, appNonce, appEphemeralPubKey}
+        BLE-->>User: Challenge {bleVersion, stationNonce, stationEphemeralPubKey, stationCertificate, availableServices, stationSignature}
+        User->>User: Verify certificate (Station CA, CRL, EKU) and signature, else abort
     end
 
     rect rgb(255, 243, 224)
         Note over User,Station: OfflinePass Authorization
-        User->>BLE: OfflineAuthRequest {offlinePass, counter, sessionProof}
-        Station->>Station: Validate OfflinePass (nine checks, check 5 withdrawn)
-        BLE-->>User: AuthResponse {result: "accepted"}
+        User->>BLE: OfflineAuthRequest {offlinePass, counter, bayId, serviceId, requestedDurationSeconds, sessionProof, deviceProof}
+        Station->>Station: Verify device proof, validate OfflinePass (nine checks, check 5 withdrawn)
+        BLE-->>User: AuthResponse {result: "Accepted"}
     end
 
     rect rgb(225, 245, 254)
@@ -281,7 +283,8 @@ sequenceDiagram
     rect rgb(252, 228, 236)
         Note over User,Station: Receipt & Disconnect
         BLE-->>User: FFF5: ReceiptReady
-        User->>BLE: Read FFF6 (Receipt, ECDSA signed)
+        User->>BLE: Write FFF6: ReceiptRequest {offlineTxId}
+        BLE-->>User: Notify FFF6: ReceiptResponse {receipt, ECDSA signed}
         User->>BLE: Disconnect
     end
 
@@ -339,6 +342,8 @@ sequenceDiagram
         Note over Station,Server: Buffered Message Replay (FIFO)
         Station->>Broker: Buffered MeterValues
         Broker->>Server: MeterValues [MSG-010]
+        Station->>Broker: Buffered SessionEnded (sessionId, reason)
+        Broker->>Server: SessionEnded [MSG-040]
         Station->>Broker: TransactionEvent (offlineTxId, receipt, txCounter)
         Broker->>Server: TransactionEvent [MSG-007]
         Server->>Server: Dedup, receipt signature, gate, settle, score<br/>(txCounter recorded, not gated)

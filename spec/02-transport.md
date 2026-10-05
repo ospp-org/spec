@@ -414,7 +414,7 @@ The station MUST configure an LWT message at MQTT CONNECT time:
 **Server processing on LWT receipt:**
 
 1. Mark all bays of the station as `Unknown` status.
-2. If any session is active, start a session timeout timer (per [Chapter 05](05-state-machines.md)) — not for a Partial-B session, which the loss does not end ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)).
+2. If any session is active, start a session timeout timer (per [Chapter 05](05-state-machines.md)) — not for a Partial-B session, which the loss does not end and which closes at the end of its authorized duration when no end record has arrived ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)).
 3. Log the disconnect event.
 
 ### 4.4 Reconnection Strategy
@@ -423,7 +423,7 @@ When the MQTT connection is lost (PINGRESP timeout, TCP reset, broker unavailabl
 
 1. **Continue active sessions** — hardware operations MUST NOT stop due to MQTT loss. The station runs on its local timer and auto-stops when `durationSeconds` elapses.
 2. **Switch to BLE-available mode** — if not already advertising, ensure BLE is active for offline sessions.
-3. **Buffer outbound messages** — The station MUST buffer TransactionEvent and SecurityEvent messages in persistent local storage per the categorized buffering policy in [01-architecture.md §6.5](../spec/01-architecture.md#65-offline-message-buffering). Regenerable messages (Heartbeat, StatusNotification, MeterValues, FirmwareStatusNotification, DiagnosticsNotification) MAY be discarded during offline operation as the station regenerates them at reconnection.
+3. **Buffer outbound messages** — The station MUST buffer TransactionEvent, SessionEnded and SecurityEvent messages in persistent local storage per the categorized buffering policy in [01-architecture.md §6.5](../spec/01-architecture.md#65-offline-message-buffering). Regenerable messages (Heartbeat, StatusNotification, MeterValues, FirmwareStatusNotification, DiagnosticsNotification) MAY be discarded during offline operation as the station regenerates them at reconnection.
 4. **Attempt reconnection** with exponential backoff (see Section 4.5).
 5. **On successful reconnect** — follow the full boot sequence (Section 4.1): re-subscribe, BootNotification, StatusNotification per bay, then flush buffered messages. The BootNotification **MUST** carry `bootReason: "Reconnect"` when the firmware did not restart, and `uptimeSeconds` measured from the last actual boot — which therefore spans the outage. The boot is mandatory here because the HMAC session key is scoped to the MQTT session and arrives only in the boot response ([Chapter 06 §5.2](06-security.md)); a station that skipped it would reconnect keyless. OCPP-J advises the opposite for the same event, and [`boot-notification.md` §5.2](profiles/core/boot-notification.md) records why OSPP diverges.
 
@@ -631,14 +631,7 @@ The broker distributes incoming station messages across all server instances in 
 
 > **EXPERIMENTAL — this entire section.** Published for review, **not** for implementation; it
 > may change incompatibly without a MAJOR bump. See
-> [Release status](../README.md#ble-is-experimental) and the two blockers in
-> [KNOWN-ISSUES](../KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-two-defects).
->
-> **[§8.6](#86-fragmentation-protocol) below is one half of blocker
-> [B-1](../KNOWN-ISSUES.md#b-1--two-incompatible-fragmentation-protocols-are-simultaneously-normative).**
-> [`profiles/offline/ble-transport.md` §11](profiles/offline/ble-transport.md) defines a
-> *different*, incompatible fragmentation protocol as an equally normative MUST, and nothing in
-> either chapter ranks them. Do not implement either until this is resolved.
+> [Release status](../README.md#ble-is-experimental).
 >
 > The rest of this chapter — MQTT, TLS, topics, QoS, connection lifecycle, ACL, and the HTTPS
 > REST surface — is **stable** and unaffected by this marking.
@@ -668,64 +661,21 @@ BLE transport is part of the **Offline/BLE Profile** and is OPTIONAL. Stations t
 
 ### 8.3 GATT Service Definition
 
-OSPP defines a single primary GATT service with 6 characteristics:
-
-**Service UUID:** `0000FFF0-0000-1000-8000-00805F9B34FB`
-
-| # | Characteristic | UUID | Properties | Direction | Description |
-|---|----------------|------|------------|-----------|-------------|
-| 1 | **Station Info** | `0000FFF1-0000-1000-8000-00805F9B34FB` | Read | Station → App | Station identity and capabilities |
-| 2 | **Available Services** | `0000FFF2-0000-1000-8000-00805F9B34FB` | Read | Station → App | Service catalog per bay with prices |
-| 3 | **TX Request** | `0000FFF3-0000-1000-8000-00805F9B34FB` | Write | App → Station | All app-to-station messages |
-| 4 | **TX Response** | `0000FFF4-0000-1000-8000-00805F9B34FB` | Notify | Station → App | All station-to-app responses |
-| 5 | **Service Status** | `0000FFF5-0000-1000-8000-00805F9B34FB` | Notify | Station → App | Real-time service progress |
-| 6 | **Receipt** | `0000FFF6-0000-1000-8000-00805F9B34FB` | Read | Station → App | Signed transaction receipt |
-
-> This characteristic table is the **single source of truth**. All other documents referencing BLE characteristics MUST match this mapping.
+OSPP defines a single primary GATT service with 6 characteristics — Station Info (FFF1), Available Services (FFF2), TX Request (FFF3), TX Response (FFF4), Service Status (FFF5) and Receipt (FFF6) — under random 128-bit UUIDs. Their UUIDs and properties are defined once, in [`profiles/offline/ble-transport.md` §2](profiles/offline/ble-transport.md#2-gatt-service-definition).
 
 ### 8.4 Advertising
 
-The station MUST include the following in BLE advertisements:
-
-| AD Type | Field | Value |
-|---------|-------|-------|
-| `0x01` | Flags | General Discoverable, BR/EDR Not Supported |
-| `0x09` | Complete Local Name | `OSPP-{station_id_last6}` (e.g., `OSPP-b2c3d4`) |
-| `0x07` | Complete 128-bit Service UUID | `0000FFF0-0000-1000-8000-00805F9B34FB` |
-| `0xFF` | Manufacturer Specific Data | `{company_id}{station_id_bytes}{bay_count}{firmware_version}` |
+The advertising data — Flags and the OSPP service UUID, with optional vendor manufacturer data — and the scan response data — the local name `OSPP-{station_id_last6}` and the TX power level — are defined once, in [`profiles/offline/ble-transport.md` §9](profiles/offline/ble-transport.md#9-advertising-data).
 
 ### 8.5 MTU Negotiation
 
 After BLE connection is established, the app SHOULD request an MTU of **247 bytes**. The effective payload per ATT write/notification is `MTU - 3` = 244 bytes (3 bytes for ATT header).
 
-If MTU negotiation fails or yields a lower value, the fragmentation protocol (Section 8.6) MUST be used for messages exceeding the effective payload size.
+Every message is carried by the fragmentation protocol of [`profiles/offline/ble-transport.md` §11](profiles/offline/ble-transport.md#11-fragmentation-protocol), whose fragments carry `MTU - 6` octets of the message each ([§10](profiles/offline/ble-transport.md#10-mtu-negotiation) there).
 
-### 8.6 Fragmentation Protocol
+### 8.6 Fragmentation
 
-Messages written to FFF3 or notified on FFF4 that exceed the effective MTU payload MUST be fragmented:
-
-| Fragment | Format |
-|----------|--------|
-| First | `{F:1/N}` + data bytes |
-| Middle | `{F:M/N}` + data bytes |
-| Last | `{F:N/N}` + data bytes |
-
-Where `N` is the total number of fragments and `M` is the current fragment number.
-
-**Rules:**
-
-- The receiver MUST buffer fragments until all `N` fragments are received.
-- The receiver MUST reassemble fragments in order (1..N) before processing.
-- If a fragment is not received within **5 seconds** of the previous fragment, the receiver MUST discard all buffered fragments for that message and MAY report an error.
-- Fragment numbering starts at 1.
-
-**Example:** A 600-byte JSON message with effective MTU payload of 244 bytes:
-
-```
-Fragment 1: {F:1/3}{"type":"OfflineAuthRequest","offlinePass":{"pass_id":"opass_a8b9c0...
-Fragment 2: {F:2/3}...d1","sub":"sub_xyz789","device_id":"device_uuid","issued_at":"2026-...
-Fragment 3: {F:3/3}...:"ECDSA-P256-base64"}}
-```
+Defined once, in [`profiles/offline/ble-transport.md` §11](profiles/offline/ble-transport.md#11-fragmentation-protocol). Until this revision this section defined a second fragmentation protocol, incompatible with that one; it is withdrawn, and the section number is kept so that the numbers after it do not move.
 
 ### 8.7 BLE Connection Flow
 
@@ -734,10 +684,10 @@ Mobile App (Central)                            Station (Peripheral)
        │                                               │
        │  ┌──────────────────────────────┐             │
        │  │ Station is advertising:      │             │
-       │  │ OSPP-b2c3d4, UUID=FFF0      │             │
+       │  │ OSPP-b2c3d4, OSPP service UUID │             │
        │  └──────────────────────────────┘             │
        │                                               │
-       │──── BLE Scan (filter: UUID=FFF0) ────────────>│
+       │──── BLE Scan (filter: OSPP service UUID) ─────>│
        │<─── Advertisement discovered ─────────────────│
        │                                               │
        │──── BLE Connect ─────────────────────────────>│
@@ -746,17 +696,20 @@ Mobile App (Central)                            Station (Peripheral)
        │──── MTU Request (247 bytes) ─────────────────>│
        │<─── MTU Response ─────────────────────────────│
        │                                               │
-       │──── Read FFF1 (Station Info) ────────────────>│
+       │──── Read FFF1 (Station Info, unauthenticated) ─>│
        │<─── {stationId, firmware, connectivity, ...} ─│
        │                                               │
-       │──── Read FFF2 (Available Services) ──────────>│
-       │<─── {bays: [{bayId, services, prices, ...}]} ─│
+       │──── Write FFF2 (0x01: request the catalog) ───>│
+       │<─── Notify FFF2: {bays: [{bayId, services}]} ─│
        │                                               │
-       │  [App verifies station identity]               │
-       │  [App checks bay availability]                 │
+       │──── Write FFF3: Hello {bleVersions, appNonce, ─>│
+       │                  appVersion, ephemeral key}    │
+       │<─── Notify FFF4: Challenge {bleVersion, nonce, │
+       │      ephemeral key, certificate, availability,│
+       │      stationSignature}                        │
        │                                               │
-       │──── Write FFF3: Hello {appNonce, appVersion} ─>│
-       │<─── Notify FFF4: Challenge {stationNonce, ...} │
+       │  [App verifies the certificate and signature;  │
+       │   availability comes from the Challenge]       │
        │                                               │
        │  [Handshake continues — see Offline Profile]   │
        │                                               │
@@ -766,7 +719,7 @@ Mobile App (Central)                            Station (Peripheral)
 
 #### 8.8.1 Link-Layer Pairing (Optional)
 
-BLE pairing is **OPTIONAL** and is **never** a security premise for OSPP (Chapter 06 — Security §6.4). The channel's confidentiality, integrity, and station authentication are provided end-to-end at the application layer by the ECDH P-256 handshake, the StationIdentity certificate, and the ChaCha20-Poly1305 AEAD channel (§6.5). A station **MUST** operate correctly with no pairing at all.
+BLE pairing is **OPTIONAL** and is **never** a security premise for OSPP (Chapter 06 — Security §6.4). The channel's confidentiality, integrity, and station authentication are provided end-to-end at the application layer by the ephemeral ECDH P-256 handshake, the station's signature with its certificate, and the ChaCha20-Poly1305 AEAD channel (§6.5). A station **MUST** operate correctly with no pairing at all.
 
 If a deployment chooses to enable link-layer pairing for defense-in-depth, it **MUST** use **LE Secure Connections** (LESC); legacy pairing **MUST NOT** be used. The station **MUST NOT** require pairing, MitM-protected pairing (Numeric Comparison / Passkey Entry), or bonding to complete a handshake — public self-service stations are NoInputNoOutput and serve large numbers of distinct phones, so a pairing mandate is both unenforceable from a third-party app and operationally unscalable (bond-table churn, mid-handshake OS pairing dialogs). The application-layer credential (OfflinePass / ServerSignedAuth) and the §6.5 handshake are the security guarantee.
 
@@ -777,7 +730,7 @@ BLE link encryption alone is insufficient for OSPP. The protocol provides additi
 | Mechanism | Purpose |
 |-----------|---------|
 | **OfflinePass** (ECDSA P-256) | Server-signed credential authorizing offline service delivery |
-| **Session Key** (ECDH P-256 + HKDF-SHA256) | Derived from a two-operation ECDH P-256 exchange (ephemeral-static + ephemeral-ephemeral) plus nonces — NOT from the BLE LTK. Station and mobile derive a shared session key per [Chapter 06 — Security §6.5](06-security.md#65-ble-session-key-derivation--hkdf-sha256); all BLE messages after the Challenge **MUST** be encrypted and authenticated with **ChaCha20-Poly1305 (IETF, RFC 8439)** under per-direction keys expanded from it (§6.5.3). |
+| **Session Key** (ECDH P-256 + HKDF-SHA256) | Derived from an ephemeral-ephemeral ECDH P-256 exchange, authenticated by the station's signature with its certificate, plus nonces — NOT from the BLE LTK. Station and mobile derive a shared session key per [Chapter 06 — Security §6.5](06-security.md#65-ble-session-key-derivation--hkdf-sha256); all BLE messages after the Challenge **MUST** be encrypted and authenticated with **ChaCha20-Poly1305 (IETF, RFC 8439)** under per-direction keys expanded from it (§6.5.3). |
 | **Receipt** (ECDSA-P256-SHA256) | Station-signed proof of service delivery |
 
 See [Offline Profile — BLE Handshake](profiles/offline/ble-handshake.md) for the full authentication flow.
@@ -792,8 +745,8 @@ Bonding (storing pairing keys for reconnection) is OPTIONAL. The station MAY sup
 |----------|-----------------|
 | BLE connection drops during handshake | Clean up handshake state, ready for new connection |
 | BLE connection drops during active service | Service continues on local timer, auto-stops on expiry |
-| App does not read receipt within 5 min | Receipt retained for next BLE connection |
-| Multiple apps try to connect simultaneously | Accept first connection, reject subsequent until first disconnects |
+| App does not ask for the receipt before disconnecting | Receipt served on FFF6 for its read window — at least 24 hours after signing ([`ble-transport.md` §8](profiles/offline/ble-transport.md#8-receipt-fff6)) |
+| Multiple apps try to connect simultaneously | Each connection has its own handshake and session state; the station MAY bound how many it accepts ([`ble-transport.md` §12](profiles/offline/ble-transport.md#12-connection-lifecycle-and-isolation)) |
 | Station receives Hello while in handshake | Abort current handshake, start new one |
 
 ### 8.10 BLE Configuration Keys
@@ -817,7 +770,7 @@ When the station has both MQTT and BLE available:
 | Offline | Online | Partial B ¹ | BLE (auth) + MQTT (validation) |
 | Offline | Offline | Full Offline | BLE only |
 
-> ¹ **Partial B** is REQUIRED only at **Complete** compliance level. For Extended compliance, this scenario falls back to Full Offline (OfflinePass validated locally).
+> ¹ **Partial B** is REQUIRED of every station that implements the Offline / BLE profile ([`profiles/offline/README.md` §5](profiles/offline/README.md#5-compliance-requirements)). A station whose AuthorizeOfflinePass goes unanswered MAY fall back to validating the pass itself.
 
 ---
 
@@ -891,7 +844,7 @@ Content-Type: application/json
 
 The server MUST store the response for a given `Idempotency-Key` and return the same response on duplicate requests. The key MUST be a valid RFC 4122 UUID (any version). The server SHOULD retain idempotency keys for at least **24 hours**.
 
-The station-provisioning endpoint (`POST /api/v1/stations/provision`) implements this contract keyed on the **provisioning token itself** rather than an `Idempotency-Key` header — but the token alone is **not** the whole key. Within the token's TTL, a repeat is a duplicate only if it presents the **same set of key kinds, each carrying the same key**, as the provision the token bound — the **bound set**; such a repeat returns the originally-issued certificate. A repeat that presents a **different** key for any bound kind, or a **different set** of key kinds in either direction, is **not** a duplicate and **MUST** be rejected with `409 Conflict` / `4015 PROVISIONING_KEY_MISMATCH` rather than replayed. After the TTL the token is invalid for all purposes. Retention is scoped accordingly: for this endpoint the server **MUST** retain the binding for at least the **token's TTL**, which overrides the generic ≥ 24 h floor above whenever the TTL is longer — otherwise a retry could still be permitted after the binding needed to judge it had been discarded. See [Flows §2 — Single-use and idempotent retry](04-flows.md#single-use-and-idempotent-retry).
+The station-provisioning endpoint (`POST /api/v1/stations/provision`) implements this contract keyed on the **provisioning token itself** rather than an `Idempotency-Key` header — but the token alone is **not** the whole key. Within the token's TTL, a repeat is a duplicate only if it presents the **same keys** as the provision the token bound — the **bound set**, the TLS key of its CSR and its receipt-signing key; such a repeat returns the originally-issued certificate. A repeat that presents a **different** key for either is **not** a duplicate and **MUST** be rejected with `409 Conflict` / `4015 PROVISIONING_KEY_MISMATCH` rather than replayed. After the TTL the token is invalid for all purposes. Retention is scoped accordingly: for this endpoint the server **MUST** retain the binding for at least the **token's TTL**, which overrides the generic ≥ 24 h floor above whenever the TTL is longer — otherwise a retry could still be permitted after the binding needed to judge it had been discarded. See [Flows §2 — Single-use and idempotent retry](04-flows.md#single-use-and-idempotent-retry).
 
 ### 9.4 Request Tracing
 
@@ -1119,8 +1072,8 @@ All timestamps MUST use **ISO 8601** format with **millisecond precision** and *
 | Protocol version mismatch **after** an accepted boot | MQTT | Envelope `protocolVersion` differs from the value negotiated at boot | **Accept and process the message.** Do **not** refuse it and do **not** emit `1007` — that code is boot-only. Record both versions, the `messageId` and the peer; alert the operator; carry no error code and no distinct wire status. Repaired at the next boot ([§2.2](#22-topic-namespace-versioning)) |
 | BLE scan timeout | BLE | No advertisement found in 30s | Return to IDLE, show error to user |
 | BLE connection drops | BLE | GATT disconnect event | Service continues on timer; receipt retained |
-| BLE fragment timeout | BLE | 5s without next fragment | Discard buffered fragments |
-| BLE MTU too small for message | BLE | Message > MTU | Use fragmentation protocol (Section 8.6) |
+| BLE fragment timeout | BLE | Message not reassembled 5 s after its first fragment | Abort the message and the session ([`ble-transport.md` §11](profiles/offline/ble-transport.md#11-fragmentation-protocol)) |
+| BLE MTU too small for message | BLE | Message > MTU | Use the fragmentation protocol ([`ble-transport.md` §11](profiles/offline/ble-transport.md#11-fragmentation-protocol)) |
 | Webhook signature invalid | HTTPS | HMAC mismatch | Reject with HTTP `401`, log security event |
 | Rate limited | HTTPS | Counter exceeded | Respond HTTP `429` with `Retry-After` |
 

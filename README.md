@@ -3,8 +3,8 @@
 ![Version: 0.44.0](https://img.shields.io/badge/version-0.44.0-blue)
 ![Status: Draft](https://img.shields.io/badge/status-draft-orange)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
-![Messages: 40](https://img.shields.io/badge/messages-40-green)
-![Schemas: 88](https://img.shields.io/badge/schemas-88-green)
+![Messages: 42](https://img.shields.io/badge/messages-42-green)
+![Schemas: 91](https://img.shields.io/badge/schemas-91-green)
 
 ---
 
@@ -23,7 +23,8 @@ Not every part of this specification is at the same maturity. Read this before i
 |---|---|---|
 | MQTT station↔server (Core, Transaction, Security, Device Management) | **Stable** | Implemented by a server and exercised by an independent station implementation |
 | HTTPS provisioning (`POST /api/v1/stations/provision`) | **Stable** | Implemented; error vocabulary and precedence chain covered by conformance cases |
-| Offline reconciliation, OfflinePass lifecycle, AuthorizeOfflinePass | **Stable** | Implemented and exercised over MQTT |
+| Offline reconciliation, OfflinePass lifecycle | **Stable** | Implemented and exercised over MQTT |
+| AuthorizeOfflinePass, the Partial-B authorization over MQTT | **EXPERIMENTAL** | Its request carries the device proof and the transcript hash of a BLE handshake, and changed incompatibly with the BLE wire revision |
 | Offline app–server contract — pass issuance and receipt upload over HTTPS ([`app-contract.md`](spec/profiles/offline/app-contract.md)) | **Draft** | Binds the server and the app, not the station |
 | **BLE transport, handshake and session** | **EXPERIMENTAL** | See below |
 
@@ -31,35 +32,37 @@ Not every part of this specification is at the same maturity. Read this before i
 
 The BLE surface — [`ble-transport.md`](spec/profiles/offline/ble-transport.md),
 [`ble-handshake.md`](spec/profiles/offline/ble-handshake.md),
-[`ble-session.md`](spec/profiles/offline/ble-session.md), the 15 schemas under
+[`ble-session.md`](spec/profiles/offline/ble-session.md), the 16 schemas under
 [`schemas/ble/`](schemas/ble/), [Chapter 02 §8](spec/02-transport.md),
-[ADR-002](adr/ADR-002-ble-handshake-security-architecture.md), and conformance cases
-[TC-OFF-001](conformance/test-cases/offline/TC-OFF-001.md) and
-[TC-OFF-002](conformance/test-cases/offline/TC-OFF-002.md) — is **EXPERIMENTAL**. It is
+[ADR-002](adr/ADR-002-ble-handshake-security-architecture.md) and
+[ADR-003](adr/ADR-003-ble-station-authentication-by-certificate.md), and conformance cases
+[TC-OFF-001](conformance/test-cases/offline/TC-OFF-001.md),
+[TC-OFF-002](conformance/test-cases/offline/TC-OFF-002.md) and
+[TC-OFF-005](conformance/test-cases/offline/TC-OFF-005.md) — is **EXPERIMENTAL**. It is
 published for review, **not** for implementation, and it may change incompatibly without a MAJOR
 bump.
 
-**It carries two known blockers that make it unimplementable as written.** Each is stated in
-full in [KNOWN-ISSUES](KNOWN-ISSUES.md#blocker--the-ble-surface-is-not-implementable-as-written-two-defects):
+**Its blockers are closed.** Both defects that made it unimplementable as written are repaired
+([KNOWN-ISSUES](KNOWN-ISSUES.md#closed--the-ble-surface-was-not-implementable-as-written-two-defects)):
+fragmentation has one definition, [`ble-transport.md` §11](spec/profiles/offline/ble-transport.md#11-fragmentation-protocol),
+and every BLE response refuses in one shape, [Chapter 07 §2.3](spec/07-errors.md#23-ble-error-response).
+This is BLE protocol version `0.3.0`, the first one the handshake negotiates
+([VERSIONING.md](VERSIONING.md#ble-protocol-version)).
 
-- **B-1** — two incompatible fragmentation protocols are simultaneously normative, one in
-  Chapter 02 §8.6 and one in `ble-transport.md` §11.
-- **B-3** — the three BLE response schemas disagree with each other and with Chapter 07 §2.3;
-  `stop-service-response` has no rejection branch at all, while the profile mandates a
-  `Rejected` reply.
+**What keeps it experimental.** Its cryptographic construction — the station's signature with its
+certificate, the ephemeral key agreement, the AEAD channel and the phone's device proof — passes the
+review gate of ADR-002, as amended by ADR-003, only when an adversarial review by the project's own
+team against the checklist of [Chapter 06, Appendix B](spec/06-security.md#appendix-b--ble-cryptographic-review-checklist)
+leaves no item open, and that review has not been performed. And no station, app or server
+implements BLE yet.
 
-B-2, a station-scoped OfflinePass the schema could not express, is closed: a pass carries no
-station scope ([`offline-pass.md` §2.3](spec/profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)).
+**Not audited.** As the banner above says, this specification has not been audited by an
+independent party. The Appendix B review is the project's own, and it is the gate the project set
+for the BLE construction — not an audit.
 
-Why it is marked rather than repaired: BLE is implemented nowhere. The server accepts no BLE key
-at provisioning and issues no `StationIdentity`, the firmware implementer has not begun it, and
-no second implementation exercises the transport. Repairing the two blockers means making
-design choices with nothing to validate them against — the pattern that produced the offline
-sequencing layer this cycle removed. They will be repaired against a real implementation.
-
-**Consequence for conformance.** The **Extended** and **Complete** compliance levels require the
-Offline / BLE profile, whose BLE half is experimental. **Neither level can be claimed against
-0.44.** **Development** and **Standard** are unaffected and remain claimable — see
+**Consequence for conformance.** The **Complete** compliance level requires the Offline / BLE
+profile, whose BLE half is experimental, so **Complete cannot be claimed against this revision**.
+**Development**, **Standard** and **Extended** are unaffected and remain claimable — see
 [Compliance Levels](conformance/README.md#2-compliance-levels).
 
 ---
@@ -70,7 +73,7 @@ OSPP is an **open, vendor-neutral communication protocol** for self-service stat
 
 Think of it as **OCPP for self-service industries**. Where OCPP standardized EV charger-to-server communication, OSPP does the same for any station that delivers a time-bounded service through a physical bay. The protocol supports **online operation** (MQTT 5.0 over TLS 1.2+, TLS 1.3 recommended), **offline operation** (BLE 4.2+ GATT with cryptographically signed passes), and **four hybrid connectivity scenarios** — ensuring service continuity even when internet is unavailable.
 
-OSPP covers **40 messages** (27 MQTT + 13 BLE), **89 JSON Schemas**, **118 error codes**, **5 compliance profiles**, and a complete security model with mTLS, selective HMAC-SHA256 message signing, ECDSA P-256 offline authorization and receipt signing, and ECDSA P-384 root CA. Apart from the exchanges the offline model depends on — pass issuance with its attestation challenge, receipt upload, and the trust bundle of a Partial-A authorization, defined in [`app-contract.md`](spec/profiles/offline/app-contract.md) — it does NOT cover server-to-app REST APIs, payment gateway integration, business logic, or hardware internals; those are implementation-specific.
+OSPP covers **42 messages** (27 MQTT + 15 BLE), **91 JSON Schemas**, **118 error codes**, **5 compliance profiles**, and a complete security model with mTLS, selective HMAC-SHA256 message signing, ECDSA P-256 offline authorization and receipt signing, and ECDSA P-384 root CA. Apart from the exchanges the offline model depends on — pass issuance with its attestation challenge, receipt upload, and the trust bundle of a Partial-A authorization, defined in [`app-contract.md`](spec/profiles/offline/app-contract.md) — it does NOT cover server-to-app REST APIs, payment gateway integration, business logic, or hardware internals; those are implementation-specific.
 
 ---
 
@@ -142,7 +145,7 @@ graph TB
 | Offline | Online | **Partial B** ¹ | BLE → Station → MQTT (server validates) |
 | Offline | Offline | **Full Offline** | BLE only (OfflinePass, local validation) |
 
-> ¹ Partial B is required only at **Complete** compliance level. For Extended compliance, this scenario falls back to Full Offline.
+> ¹ Partial B is required of every station that implements the Offline / BLE profile ([`offline/README.md` §5](spec/profiles/offline/README.md#5-compliance-requirements)); when the server does not answer, the station falls back to validating the pass itself, as in Full Offline.
 
 ---
 
@@ -176,12 +179,12 @@ npx ajv-cli validate \
 | [00](spec/00-introduction.md) | Introduction | Scope, audience, normative language (RFC 2119/8174) | Draft |
 | [01](spec/01-architecture.md) | Architecture | System topology, hardware model, identity scheme, protocol stack | Draft |
 | [02](spec/02-transport.md) | Transport | MQTT 5.0, TLS 1.2+, topic structure, QoS, BLE GATT, reconnection | Draft |
-| [03](spec/03-messages.md) | Message Catalog | JSON envelope, messageType, correlation, timestamps; all 40 messages — fields, types, constraints, directions | Draft |
+| [03](spec/03-messages.md) | Message Catalog | JSON envelope, messageType, correlation, timestamps; all 42 messages — fields, types, constraints, directions | Draft |
 | [04](spec/04-flows.md) | Protocol Flows | 15 end-to-end flows with sequence diagrams and step-by-step detail | Draft |
 | [05](spec/05-state-machines.md) | State Machines | Station, Bay, Session, Reservation, BLE Connection, Firmware Update, Diagnostics Upload FSMs | Draft |
 | [06](spec/06-security.md) | Security | Threat model, mTLS, HMAC-SHA256, PKI, OfflinePass, receipts, fraud scoring | Draft |
 | [07](spec/07-errors.md) | Error Codes | 118 codes (6 categories), retry policies, circuit breaker, graceful degradation | Draft |
-| [08](spec/08-configuration.md) | Configuration | 30 standard configuration keys, data types, access modes | Draft |
+| [08](spec/08-configuration.md) | Configuration | 29 standard configuration keys, data types, access modes | Draft |
 | [--](spec/glossary.md) | Glossary | Terms and definitions | Draft |
 
 ### Profiles
@@ -194,7 +197,7 @@ Each profile defines a subset of protocol actions. Implementations declare which
 | **Transaction** | 7 | StartService, StopService, TransactionEvent, MeterValues, SessionEnded, ReserveBay, CancelReservation | [spec/profiles/transaction/](spec/profiles/transaction/) |
 | **Security** | 4 | SecurityEvent, SignCertificate, CertificateInstall, TriggerCertificateRenewal | [spec/profiles/security/](spec/profiles/security/) |
 | **Device Management** | 9 | Config, Reset, Firmware, Diagnostics, Maintenance, ServiceCatalog | [spec/profiles/device-management/](spec/profiles/device-management/) |
-| **Offline / BLE** | 14 | AuthorizeOfflinePass (MQTT), BLE transport, handshake, offline sessions, OfflinePass, reconciliation, app–server contract (HTTPS) | [spec/profiles/offline/](spec/profiles/offline/) |
+| **Offline / BLE** | 16 | AuthorizeOfflinePass (MQTT), BLE transport, handshake, offline sessions, OfflinePass, reconciliation, app–server contract (HTTPS) | [spec/profiles/offline/](spec/profiles/offline/) |
 
 ### Message Catalog
 
@@ -230,10 +233,10 @@ Each profile defines a subset of protocol actions. Implementations declare which
 | 26 | TriggerMessage | Server → Station | REQ/RES | 10s |
 | 40 | SessionEnded | Station → Server | EVENT | — |
 
-> **Note:** MSG-027–039 are the 13 BLE messages, listed separately below.
+> **Note:** MSG-027–039, MSG-041 and MSG-042 are the 15 BLE messages, listed separately below.
 > SessionEnded [MSG-040] is emitted autonomously by the station on session termination — timer expiry or fault — rather than in reply to a command. It is a **Transaction** action ([`session-ended.md`](spec/profiles/transaction/session-ended.md)); until 0.13.0 it belonged to no profile at all, so a station implementing every profile exactly as written still would not have implemented the sole billing source for autonomous terminations.
 
-**13 BLE Messages:** StationInfo (FFF1), AvailableServices (FFF2), HELLO, CHALLENGE, OfflineAuthRequest, ServerSignedAuth, AuthResponse, START/StopServiceRequest/RESPONSE, ServiceStatus (FFF5), Receipt (FFF6)
+**15 BLE Messages:** StationInfo (FFF1), AvailableServices (FFF2), HELLO, CHALLENGE, OfflineAuthRequest, ServerSignedAuth, AuthResponse, START/StopServiceRequest/RESPONSE, ServiceStatus (FFF5), Receipt, ReceiptRequest and ReceiptResponse (FFF6)
 
 Full definitions: [Chapter 03 — Message Catalog](spec/03-messages.md)
 
@@ -241,14 +244,14 @@ Full definitions: [Chapter 03 — Message Catalog](spec/03-messages.md)
 
 ## JSON Schemas
 
-**89 schema files** in [`schemas/`](schemas/) — JSON Schema Draft 2020-12, strict validation (`additionalProperties: false`).
+**91 schema files** in [`schemas/`](schemas/) — JSON Schema Draft 2020-12, strict validation (`additionalProperties: false`).
 
 | Directory | Count | Content |
 |-----------|:-----:|---------|
 | [`schemas/`](schemas/) (top level) | 5 | HTTPS request and response bodies: station provisioning, offline pass issuance, and the device key attestation challenge |
-| [`schemas/common/`](schemas/common/) | 22 | Shared types: identifiers, timestamps, credit amounts, error objects, OfflinePass, receipt, envelope |
+| [`schemas/common/`](schemas/common/) | 23 | Shared types: identifiers, timestamps, credit amounts, error objects, OfflinePass, receipt, device proof, envelope |
 | [`schemas/mqtt/`](schemas/mqtt/) | 47 | REQUEST/RESPONSE/EVENT payload schemas for all 27 MQTT actions |
-| [`schemas/ble/`](schemas/ble/) | 15 | BLE message schemas for all 13 BLE message types, plus the StationIdentity certificate and secure-frame structures |
+| [`schemas/ble/`](schemas/ble/) | 16 | BLE message schemas for all 15 BLE message types, plus the secure-frame structure |
 
 Full index: [schemas/README.md](schemas/README.md)
 
@@ -369,7 +372,7 @@ ospp/
 │   ├── 00-introduction.md       Chapter 00: Introduction
 │   ├── 01-architecture.md       Chapter 01: Architecture
 │   ├── 02-transport.md          Chapter 02: Transport (MQTT + BLE)
-│   ├── 03-messages.md           Chapter 03: Message Catalog (40 messages)
+│   ├── 03-messages.md           Chapter 03: Message Catalog (42 messages)
 │   ├── 04-flows.md              Chapter 04: Protocol Flows (15 flows)
 │   ├── 05-state-machines.md     Chapter 05: State Machines
 │   ├── 06-security.md           Chapter 06: Security Model
@@ -382,11 +385,11 @@ ospp/
 │       ├── security/                4 actions (SecurityEvent, SignCertificate, ...)
 │       ├── device-management/       9 actions (Config, Firmware, Diagnostics, ...)
 │       └── offline/                 7 docs (AuthorizeOfflinePass, app–server contract, BLE transport, handshake, ...)
-├── schemas/                 JSON Schema definitions (89 files)
+├── schemas/                 JSON Schema definitions (91 files)
 │   ├── *.schema.json            5 HTTPS request/response schemas (provisioning, offline pass issuance, attestation challenge)
-│   ├── common/                  22 shared type schemas ($ref targets)
+│   ├── common/                  23 shared type schemas ($ref targets)
 │   ├── mqtt/                    47 MQTT message payload schemas
-│   └── ble/                     15 BLE message schemas
+│   └── ble/                     16 BLE message schemas
 ├── examples/                Example payloads and narrative flows (72 files)
 │   ├── payloads/mqtt/           36 MQTT payload examples
 │   ├── payloads/ble/            15 BLE payload examples
@@ -424,8 +427,8 @@ OSPP defines four compliance levels. Each level builds on the previous one.
 |-------|-------------------|-------------|
 | **Development** | Core | Testing and prototyping only. Security optional. **NOT for production.** |
 | **Standard** | Core + Transaction + Security | Minimum for production: sessions, metering, TLS + mTLS + HMAC |
-| **Extended** | Standard + Device Management + Offline/BLE | + remote config, firmware OTA, diagnostics, maintenance, BLE, OfflinePass, offline sessions (Online + Partial A + Full Offline) |
-| **Complete** | Extended + Partial B scenario | + Partial B connectivity (phone offline, station online → station relays auth to server via MQTT) |
+| **Extended** | Standard + Device Management | + remote config, firmware OTA, diagnostics, maintenance |
+| **Complete** | Extended + Offline/BLE — every profile | + BLE, OfflinePass, offline sessions: Full Offline and Partial B, and Partial A where the station supports it |
 
 > **Development compliance is for testing and prototyping ONLY.** Production deployments MUST achieve Standard compliance or higher. See [`conformance/README.md`](conformance/README.md) for the full testing framework.
 
@@ -440,7 +443,8 @@ OSPP defines four compliance levels. Each level builds on the previous one.
 - [ ] Reference implementation — TypeScript station simulator
 - [ ] Reference implementation — TypeScript server stub
 - [ ] Automated conformance test runner (executable harness)
-- [ ] BLE fragmentation protocol — formal specification for messages > MTU
+- [x] BLE fragmentation protocol — formal specification for messages > MTU ([`ble-transport.md` §11](spec/profiles/offline/ble-transport.md#11-fragmentation-protocol))
+- [ ] BLE cryptographic review against [Chapter 06, Appendix B](spec/06-security.md#appendix-b--ble-cryptographic-review-checklist)
 - [ ] REST API informative appendix — endpoint catalog for flows that reference REST
 - [ ] Interoperability test results (2+ implementations)
 - [ ] Security audit of crypto primitives

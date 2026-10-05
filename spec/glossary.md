@@ -48,7 +48,7 @@ specification. Where a definition involves a requirement, normative language
   a mobile application (acting as the **BLE Central**) and a station (acting as the
   **BLE Peripheral**). OSPP uses BLE for **OfflinePass** delivery, session control,
   and receipt retrieval when MQTT connectivity is unavailable.
-  See [Chapter 02, Section 8](02-transport.md).
+  See [Chapter 02, Section 8](02-transport.md) and [`ble-transport.md`](profiles/offline/ble-transport.md).
 
 **BLE Central**
 : The device that initiates a BLE connection. In OSPP, the mobile application acts
@@ -114,8 +114,10 @@ specification. Where a definition involves a requirement, normative language
   certificate carries the address of the Station CA's list in its CRL Distribution Points extension,
   which is REQUIRED ([Chapter 06 §4.4](06-security.md#44-certificate-requirements)), and whichever party
   terminates that certificate **MUST** read it, under a freshness bound and a bounded grace
-  ([Chapter 06 §2.1.1](06-security.md#211-revocation-checking)). Distinct from **Epoch Revocation**,
-  which invalidates OfflinePasses and touches no certificate.
+  ([Chapter 06 §2.1.1](06-security.md#211-revocation-checking)). The mobile app reads the list its
+  trust bundle carries when it authenticates a station over BLE
+  ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)). Distinct
+  from **Epoch Revocation**, which invalidates OfflinePasses and touches no certificate.
 
 **Envelope**
 : The top-level JSON structure wrapping every OSPP MQTT message. An envelope contains
@@ -245,7 +247,9 @@ specification. Where a definition involves a requirement, normative language
 : A TLS configuration where both the client (station) and the server (broker)
   present and verify **X.509** certificates. mTLS is **REQUIRED** for all MQTT
   connections. The station's Client ID **MUST** match the Common Name (CN) in its
-  client certificate. See [Chapter 06 §2.1](06-security.md#21-station--server--mutual-tls-mtls).
+  client certificate. See [Chapter 06 §2.1](06-security.md#21-station--server--mutual-tls-mtls). The
+  same certificate authenticates the station to the mobile app over BLE
+  ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)).
 
 ## O
 
@@ -331,8 +335,8 @@ specification. Where a definition involves a requirement, normative language
   and the credits the station computed; `receipt_fields` in
   [Chapter 06 §6.2](06-security.md#62-transaction-receipt-signing--ecdsa-p-256) is the
   complete list. The server settles by its own recomputation, and the station's credit figure
-  is advisory. Receipts are available via MQTT (`TransactionEvent`) and BLE (Receipt
-  characteristic), and the app uploads its copy to the server
+  is advisory. Receipts are available via MQTT (`TransactionEvent`) and BLE (a `ReceiptRequest`
+  on the Receipt characteristic), and the app uploads its copy to the server
   ([`app-contract.md` §4](profiles/offline/app-contract.md#4-receipt-upload)).
   See the [Transaction profile](profiles/transaction/README.md)
   and [Chapter 06](06-security.md).

@@ -2,10 +2,9 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/ble/available-services.schema.json",
   "title": "AvailableServices",
-  "description": "Service catalog available at the station, read via BLE characteristic FFF2 (Read). Lists all bays and their available services with pricing.",
+  "description": "The station's service catalog per bay, served on BLE characteristic FFF2 by request and notification before the handshake (profiles/offline/ble-transport.md §4). Derived from the catalog the station holds: every bay it declared, each with the services the catalog binds to its programs, with their prices. Carries no availability - that is the Challenge's availableServices.",
   "type": "object",
   "required": [
-    "catalogVersion",
     "bays"
   ],
   "additionalProperties": false,
@@ -14,18 +13,17 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 32,
-      "description": "Version identifier of the service catalog"
+      "description": "Version identifier of the service catalog the value is derived from. Absent while the station holds no catalog."
     },
     "bays": {
       "type": "array",
       "minItems": 1,
-      "description": "List of service bays and their available services",
+      "description": "Every bay the station declared at provisioning, each with the services its catalog binds to that bay's programs.",
       "items": {
         "type": "object",
         "required": [
           "bayId",
           "bayNumber",
-          "status",
           "services"
         ],
         "additionalProperties": false,
@@ -38,20 +36,16 @@
             "minimum": 1,
             "description": "Human-readable bay number"
           },
-          "status": {
-            "$ref": "../common/bay-status.schema.json"
-          },
           "services": {
             "type": "array",
-            "minItems": 1,
-            "description": "List of services offered in this bay",
+            "minItems": 0,
+            "description": "The services the station's catalog binds to this bay's programs - none while the station holds no catalog.",
             "items": {
               "type": "object",
               "required": [
                 "serviceId",
                 "serviceName",
-                "pricingType",
-                "available"
+                "pricingType"
               ],
               "additionalProperties": false,
               "properties": {
@@ -66,7 +60,10 @@
                 },
                 "pricingType": {
                   "type": "string",
-                  "enum": ["PerMinute", "Fixed"],
+                  "enum": [
+                    "PerMinute",
+                    "Fixed"
+                  ],
                   "description": "How this service is priced"
                 },
                 "priceCreditsPerMinute": {
@@ -88,20 +85,24 @@
                   "type": "integer",
                   "minimum": 0,
                   "description": "Optional fixed price in local-currency minor units — informational, for display only. MUST be absent when `pricingType` is `PerMinute`."
-                },
-                "available": {
-                  "type": "boolean",
-                  "description": "Whether this service is currently available for use"
                 }
               },
               "allOf": [
                 {
                   "if": {
-                    "properties": { "pricingType": { "const": "PerMinute" } },
-                    "required": ["pricingType"]
+                    "properties": {
+                      "pricingType": {
+                        "const": "PerMinute"
+                      }
+                    },
+                    "required": [
+                      "pricingType"
+                    ]
                   },
                   "then": {
-                    "required": ["priceCreditsPerMinute"],
+                    "required": [
+                      "priceCreditsPerMinute"
+                    ],
                     "properties": {
                       "priceCreditsFixed": false,
                       "priceLocalFixed": false
@@ -110,11 +111,19 @@
                 },
                 {
                   "if": {
-                    "properties": { "pricingType": { "const": "Fixed" } },
-                    "required": ["pricingType"]
+                    "properties": {
+                      "pricingType": {
+                        "const": "Fixed"
+                      }
+                    },
+                    "required": [
+                      "pricingType"
+                    ]
                   },
                   "then": {
-                    "required": ["priceCreditsFixed"],
+                    "required": [
+                      "priceCreditsFixed"
+                    ],
                     "properties": {
                       "priceCreditsPerMinute": false,
                       "priceLocalPerMinute": false

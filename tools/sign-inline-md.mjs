@@ -23,11 +23,38 @@
 //   - session-proof     (OfflineAuthRequest — outer.sessionProof)
 //   - session-key-confirmation (AuthResponse Accepted — outer.sessionKeyConfirmation)
 //
+// The BLE handshake of a document (06-security.md §6.5 – §6.5.4), in document order:
+//   - hello             (type "Hello": an appEphemeralPubKey that is not a valid
+//                        compressed P-256 point is replaced by one derived from the
+//                        document's label; a valid one is kept)
+//   - station-signature (type "Challenge": the same rule for stationEphemeralPubKey;
+//                        stationCertificate := the test station's mTLS certificate;
+//                        stationSignature := its key's signature over the Hello
+//                        before it, as compact JSON, and this Challenge)
+//   - device-proof      (an OfflineAuthRequest with a deviceProof: over the Hello and
+//                        Challenge before it — or, with none in the document, a
+//                        transcript derived from the label — and the station of that
+//                        Challenge's certificate; the pass's devicePublicKey is set to
+//                        the test device key of its deviceId before the pass is signed)
+//   - forward           (an AuthorizeOfflinePass REQUEST with deviceProof and
+//                        transcriptHash: the transcript of the document's
+//                        OfflineAuthRequest with the same pass and counter, or a
+//                        derived one, and the same device proof)
+//   - ssa-nonce         (a ServerSignedAuth in a document with a Hello: its signed
+//                        appNonce claim follows that Hello's appNonce, check #2)
+//   - trust-bundle      (a trustBundle's stationCaCertificate and stationCaCrl := the
+//                        test Station CA's certificate and CRL)
+// Handshake nonces are not invented here: a document's Hello and Challenge nonces
+// come from tools/verify-test-nonces.mjs --write, or are typed; a placeholder stops
+// the run.
+//
 // Each mode uses the appropriate synthetic test key from conformance/test-keys/.
 //
 // Usage:
 //   node tools/sign-inline-md.mjs <file.md...>          # explicit list
-//   node tools/sign-inline-md.mjs --all                  # the eight known files
+//   node tools/sign-inline-md.mjs --all                  # every file in ALL_FILES
+//   node tools/sign-inline-md.mjs --check <files|--all>  # write nothing; list what
+//                                                        # would change; exit 1 if any
 //
 // =============================================================================
 
@@ -37,6 +64,14 @@ import { argv, exit } from 'node:process';
 import { canonicalForm } from './canonical-form.mjs';
 import { envelopeAbsentDeviceId, signedOnlyFields } from './receipt-fields.mjs';
 import { ecdsaSign, SIGNATURE_ALGORITHM } from '@ospp/protocol/server';
+import {
+  deriveKeyPair, validatePublicKey, wireBytes, transcriptHashOf, signStationChallenge,
+  parseCertificate, pemToDer, sha256, deviceTestKey, deviceProofInput, deviceProofFormats,
+  makeDeviceProof, syntheticAuthenticatorData,
+} from './ble-crypto.mjs';
+import { HANDSHAKES } from './verify-test-nonces.mjs';
+import { createRequire } from 'node:module';
+import { readdirSync } from 'node:fs';
 
 const KEY_DIR = 'conformance/test-keys';
 const FIRMWARE_BIN_PATH = 'conformance/test-firmware/test-firmware.bin';
@@ -85,6 +120,16 @@ const STATION_KEY = readFileSync(`${KEY_DIR}/station-test-key.pem`, 'utf-8');
 const SERVER_KEY  = readFileSync(`${KEY_DIR}/server-test-key.pem`,  'utf-8');
 const FIRMWARE_KEY = readFileSync(`${KEY_DIR}/firmware-test-key.pem`, 'utf-8');
 const SESSION_KEY = readFileSync(`${KEY_DIR}/session-test-key.bin`);
+// The station's mTLS key and certificate sign the BLE Challenge (06-security.md §6.5.2);
+// STATION_KEY above is the separate receipt key.
+const STATION_MTLS_KEY = readFileSync(`${KEY_DIR}/station-mtls-test-key.pem`, 'utf-8');
+const STATION_MTLS_CERT_B64 = pemToDer(readFileSync(`${KEY_DIR}/station-mtls-test-cert.pem`, 'utf-8')).toString('base64');
+const STATION_MTLS_ID = parseCertificate(Buffer.from(STATION_MTLS_CERT_B64, 'base64')).subjectCN;
+const STATION_CA_CERT = readFileSync(`${KEY_DIR}/station-ca-test-cert.pem`, 'utf-8');
+const STATION_CA_CRL = readFileSync(`${KEY_DIR}/station-ca-test-crl.pem`, 'utf-8');
+const DEVICE_PROOF_FORMATS = deviceProofFormats(JSON.parse(readFileSync('schemas/common/device-proof.schema.json', 'utf-8')));
+const APP_ATTEST_APP_ID = 'OSPPTEST01.org.ospp.app';
+const NONCE_RE = /^[A-Za-z0-9+/]{43}=$/;
 
 // -----------------------------------------------------------------------------
 // Sign helpers (mirror of tools/sign-example.mjs)
@@ -358,6 +403,101 @@ function signBody(node, directive) {
 }
 
 // -----------------------------------------------------------------------------
+// BLE handshake of a document (06-security.md §6.5 – §6.5.4)
+// -----------------------------------------------------------------------------
+
+// The label a document's derived test values hang from: its verify-test-nonces
+// label, or its path.
+function labelOf(file) {
+  return HANDSHAKES.find((h) => h.file === file)?.label ?? file;
+}
+
+const isHello = (n) => n && n.type === 'Hello';
+const isChallenge = (n) => n && n.type === 'Challenge';
+const isOar = (n) => n && n.type === 'OfflineAuthRequest' && n.deviceProof && typeof n.deviceProof === 'object' &&
+  n.offlinePass && typeof n.offlinePass.passId === 'string';
+// An AuthorizeOfflinePass REQUEST payload, bare or in its MQTT envelope.
+const forwardTarget = (n) => {
+  const t = n && typeof n === 'object' && n.payload && typeof n.payload === 'object' ? n.payload : n;
+  return t && typeof t === 'object' && !t.type && t.offlinePass && typeof t.offlinePass.passId === 'string' &&
+    'deviceProof' in t && 'transcriptHash' in t ? t : null;
+};
+const trustBundleOf = (n) => {
+  const t = n && typeof n === 'object' && n.payload && typeof n.payload === 'object' ? n.payload : n;
+  return t && t.trustBundle && typeof t.trustBundle === 'object' && 'stationCaCertificate' in t.trustBundle ? t.trustBundle : null;
+};
+
+// A handshake message is signed only once it has the shape of its schema: a Hello or a
+// Challenge still in an earlier revision's shape would otherwise come out signed and
+// invalid at once.
+const require = createRequire(import.meta.url);
+let ajvInstance = null;
+function schemaErrors(schemaFile, value) {
+  if (!ajvInstance) {
+    const Ajv2020 = require('ajv/dist/2020').default;
+    const addFormatsModule = require('ajv-formats');
+    ajvInstance = new Ajv2020({ allErrors: true, strict: false });
+    (addFormatsModule.default ?? addFormatsModule)(ajvInstance);
+    const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(`${d}/${e.name}`) : [`${d}/${e.name}`]));
+    for (const f of walk('schemas').filter((f) => f.endsWith('.schema.json'))) {
+      const sch = JSON.parse(readFileSync(f, 'utf-8'));
+      if (sch.$id && !ajvInstance.getSchema(sch.$id)) ajvInstance.addSchema(sch);
+    }
+  }
+  const id = JSON.parse(readFileSync(schemaFile, 'utf-8')).$id;
+  const v = ajvInstance.getSchema(id);
+  return v(value) ? null : ajvInstance.errorsText(v.errors);
+}
+function requireShape(file, schemaFile, value, what) {
+  const errors = schemaErrors(schemaFile, value);
+  if (errors) throw new Error(`${file}: the ${what} does not satisfy ${schemaFile}: ${errors}`);
+}
+
+function validKey(b64) {
+  if (typeof b64 !== 'string' || !/^[A-Za-z0-9+/]{44}$/.test(b64)) return false;
+  try { validatePublicKey(b64); return true; } catch { return false; }
+}
+
+function ephemeral(label, ordinal, role) {
+  return deriveKeyPair(`OSPP_TEST_EPH_V1:${label}:${ordinal}:${role}`).pubCompressed.toString('base64');
+}
+
+function requireNonce(file, node, field) {
+  if (!NONCE_RE.test(node[field] ?? '')) {
+    throw new Error(`${file}: ${node.type}.${field} is not a 32-byte Base64 nonce (${JSON.stringify(node[field])}) — run node tools/verify-test-nonces.mjs --write, or type one`);
+  }
+}
+
+// A device proof for a pass presented over a transcript at a station. The pass's
+// devicePublicKey is set to the test key of its deviceId first: the proof can only
+// be made with that key, and the pass is then re-signed over it.
+function proveDevice(file, target, transcriptHash, stationId) {
+  const deviceKey = deviceTestKey(target.offlinePass.deviceId);
+  target.offlinePass.devicePublicKey = deviceKey.devicePublicKey;
+  for (const k of ['counter', 'requestedDurationSeconds']) {
+    if (!Number.isInteger(target[k])) throw new Error(`${file}: a device proof needs an integer ${k}`);
+  }
+  for (const k of ['bayId', 'serviceId']) {
+    if (typeof target[k] !== 'string') throw new Error(`${file}: a device proof needs ${k}`);
+  }
+  const kind = target.deviceProof?.format === DEVICE_PROOF_FORMATS.apple ? 'apple' : 'android';
+  const proofInput = deviceProofInput({
+    transcriptHash, stationId, passId: target.offlinePass.passId, counter: target.counter,
+    bayId: target.bayId, serviceId: target.serviceId, requestedDurationSeconds: target.requestedDurationSeconds,
+  });
+  const proof = makeDeviceProof({
+    kind, formats: DEVICE_PROOF_FORMATS, deviceKey, proofInput,
+    authenticatorData: kind === 'apple' ? syntheticAuthenticatorData(APP_ATTEST_APP_ID, 1) : null,
+  });
+  target.deviceProof = proof;
+}
+
+// A transcript for a presentation the document does not show the handshake of.
+function syntheticTranscript(label, ordinal) {
+  return sha256(Buffer.from(`OSPP_TEST_TRANSCRIPT_V1:${label}:${ordinal}`, 'utf-8'));
+}
+
+// -----------------------------------------------------------------------------
 // .md block extraction + re-injection
 // -----------------------------------------------------------------------------
 
@@ -367,87 +507,187 @@ function signBody(node, directive) {
 // negative fixture reverts to a positive one without anybody seeing it.
 const SIGN_DIRECTIVE = /<!--\s*ospp-sign:\s*([a-z][a-z0-9-]*)\s*-->/g;
 
-function processFile(file) {
+const STANDARD_SIG_FIELDS = ['"signature"', '"signedAuthorization"', '"sessionProof"', '"sessionKeyConfirmation"'];
+
+function processFile(file, { write = true } = {}) {
   const original = readFileSync(file, 'utf-8');
   const fence = /(```json\s*\n)([\s\S]*?)(```)/g;
-  let out = '';
-  let lastIndex = 0;
-  const stats = { blocks: 0, signed: 0, modes: [] };
+  const label = labelOf(file);
+  const stats = { blocks: 0, signed: 0, modes: [], changed: [] };
 
+  // 1. Collect every block, the directive before it, and its JSON when it parses.
+  const blocks = [];
+  let lastIndex = 0;
   for (const match of original.matchAll(fence)) {
     const [whole, open, body, close] = match;
-    const blockStart = match.index;
-    stats.blocks++;
-
-    // Everything between the previous block and this one, unchanged — and the place a
-    // signing directive for this block would live.
-    const gap = original.slice(lastIndex, blockStart);
-    out += gap;
+    const gap = original.slice(lastIndex, match.index);
     const found = [...gap.matchAll(SIGN_DIRECTIVE)];
     const directive = found.length ? found[found.length - 1][1] : undefined;
-
-    // Try to parse + sign
-    let parsed;
+    let parsed = null;
     try {
       parsed = JSON.parse(body);
     } catch {
       if (directive) throw new Error(`${file}: ospp-sign: ${directive} precedes a block that is not valid JSON`);
-      out += whole;
-      lastIndex = blockStart + whole.length;
+    }
+    blocks.push({ start: match.index, whole, open, body, close, gap, directive, parsed, before: parsed === null ? null : JSON.stringify(parsed), ops: [] });
+    lastIndex = match.index + whole.length;
+  }
+  stats.blocks = blocks.length;
+
+  // 2. The document's Hello: the one a ServerSignedAuth's appNonce claim follows.
+  const hellos = blocks.filter((b) => isHello(b.parsed));
+  const docAppNonce = hellos.length ? hellos[0].parsed.appNonce : null;
+
+  // 3. Document order: the handshake, the presentations and every standard signature.
+  const ctx = { hello: null, ordinal: -1, transcript: null, stationId: null, synthetic: 0 };
+  const presentations = [];
+  for (const b of blocks) {
+    const node = b.parsed;
+    if (node === null) continue;
+    if (forwardTarget(node)) continue; // after the presentations (step 4)
+
+    if (isHello(node)) {
+      ctx.ordinal++;
+      requireNonce(file, node, 'appNonce');
+      if (!validKey(node.appEphemeralPubKey)) node.appEphemeralPubKey = ephemeral(label, ctx.ordinal, 'app');
+      requireShape(file, 'schemas/ble/hello.schema.json', node, 'Hello');
+      ctx.hello = node;
+      ctx.transcript = null;
+      b.ops.push('hello');
       continue;
     }
-
-    // Only process blocks that look signed (have at least one sig field anywhere)
-    const flat = JSON.stringify(parsed);
-    const hasSig =
-      flat.includes('"signature"') ||
-      flat.includes('"signedAuthorization"') ||
-      flat.includes('"sessionProof"') ||
-      flat.includes('"sessionKeyConfirmation"');
-    if (!hasSig) {
-      if (directive) throw new Error(`${file}: ospp-sign: ${directive} precedes a block that carries no signature field`);
-      out += whole;
-      lastIndex = blockStart + whole.length;
+    if (isChallenge(node)) {
+      if (!ctx.hello) throw new Error(`${file}: a Challenge with no Hello before it — the station signs the Hello it answers`);
+      requireNonce(file, node, 'stationNonce');
+      if (!validKey(node.stationEphemeralPubKey)) node.stationEphemeralPubKey = ephemeral(label, ctx.ordinal, 'station');
+      node.stationCertificate = STATION_MTLS_CERT_B64;
+      node.stationSignature = '';
+      node.stationSignature = signStationChallenge(STATION_MTLS_KEY, wireBytes(ctx.hello), node);
+      requireShape(file, 'schemas/ble/challenge.schema.json', node, 'Challenge');
+      ctx.transcript = transcriptHashOf(wireBytes(ctx.hello), wireBytes(node));
+      ctx.stationId = STATION_MTLS_ID;
+      b.ops.push('station-signature');
       continue;
     }
+    if (isOar(node)) {
+      let transcript = ctx.transcript;
+      let stationId = ctx.stationId;
+      if (!transcript) {
+        transcript = syntheticTranscript(label, ctx.synthetic++);
+        stationId = STATION_MTLS_ID;
+      }
+      proveDevice(file, node, transcript, stationId);
+      b.ops.push(...signBody(node, b.directive), 'device-proof');
+      requireShape(file, 'schemas/ble/offline-auth-request.schema.json', node, 'OfflineAuthRequest');
+      presentations.push({ passId: node.offlinePass.passId, counter: node.counter, node, transcript, stationId });
+      continue;
+    }
+    if (node.type === 'ServerSignedAuth' && docAppNonce && typeof node.signedAuthorization?.data === 'string') {
+      // Check #2: the authorization names the appNonce of the Hello it is relayed with.
+      try {
+        const claims = JSON.parse(Buffer.from(node.signedAuthorization.data, 'base64').toString('utf-8'));
+        if (claims && typeof claims === 'object' && 'appNonce' in claims && claims.appNonce !== docAppNonce) {
+          claims.appNonce = docAppNonce;
+          node.signedAuthorization.data = Buffer.from(canonicalForm(claims), 'utf-8').toString('base64');
+          b.ops.push('ssa-nonce');
+        }
+      } catch { /* a block whose data is not claims is signed as it is */ }
+    }
+    const tb = trustBundleOf(node);
+    if (tb) {
+      tb.stationCaCertificate = STATION_CA_CERT;
+      if ('stationCaCrl' in tb) tb.stationCaCrl = STATION_CA_CRL;
+      b.ops.push('trust-bundle');
+    }
+    const flat = JSON.stringify(node);
+    if (STANDARD_SIG_FIELDS.some((f) => flat.includes(f))) b.ops.push(...signBody(node, b.directive));
+  }
 
-    const ops = signBody(parsed, directive);
-    if (directive && !ops.includes(directive)) {
+  // 4. Forwards: the transcript of the presentation they forward, the proof unchanged.
+  for (const b of blocks) {
+    const target = b.parsed === null ? null : forwardTarget(b.parsed);
+    if (!target) continue;
+    const p = presentations.find((x) => x.passId === target.offlinePass.passId && x.counter === target.counter);
+    let transcript;
+    let stationId;
+    if (p) {
+      for (const k of ['bayId', 'serviceId', 'requestedDurationSeconds']) {
+        if (target[k] !== p.node[k]) throw new Error(`${file}: the AuthorizeOfflinePass REQUEST forwards ${p.passId}/${p.counter} with ${k} ${JSON.stringify(target[k])}, the OfflineAuthRequest asked ${JSON.stringify(p.node[k])}`);
+      }
+      transcript = p.transcript;
+      stationId = p.stationId;
+    } else {
+      transcript = syntheticTranscript(label, ctx.synthetic++);
+      stationId = STATION_MTLS_ID;
+    }
+    target.transcriptHash = transcript.toString('base64');
+    proveDevice(file, target, transcript, stationId);
+    b.ops.push(...signBody(b.parsed, b.directive), 'forward');
+    requireShape(file, 'schemas/mqtt/authorize-offline-pass-request.schema.json', target, 'AuthorizeOfflinePass REQUEST payload');
+  }
+
+  // 5. Directives, and the text.
+  let out = '';
+  let cursor = 0;
+  for (const b of blocks) {
+    out += original.slice(cursor, b.start);
+    cursor = b.start + b.whole.length;
+    if (b.directive && b.parsed !== null && b.ops.length === 0) {
+      throw new Error(`${file}: ospp-sign: ${b.directive} precedes a block that carries no signature field`);
+    }
+    if (b.directive && !b.ops.includes(b.directive)) {
       throw new Error(
-        `${file}: ospp-sign: ${directive} matched no signing mode on the block that follows it ` +
-        `(the block was signed as: ${ops.join(', ') || 'nothing'}). ` +
+        `${file}: ospp-sign: ${b.directive} matched no signing mode on the block that follows it ` +
+        `(the block was signed as: ${b.ops.join(', ') || 'nothing'}). ` +
         `An unclaimed directive would leave a negative fixture silently signed as a valid one.`,
       );
     }
-    if (ops.length === 0) {
-      out += whole;
-      lastIndex = blockStart + whole.length;
+    if (b.parsed === null || b.ops.length === 0) {
+      out += b.whole;
       continue;
     }
-
     stats.signed++;
-    stats.modes.push(...ops);
-
-    // Reserialise with 2-space indent (matches the project convention)
-    const newBody = JSON.stringify(parsed, null, 2) + '\n';
-    out += open + newBody + close;
-    lastIndex = blockStart + whole.length;
+    stats.modes.push(...b.ops);
+    if (JSON.stringify(b.parsed) === b.before) {
+      out += b.whole; // nothing moved: the block keeps its own layout
+      continue;
+    }
+    stats.changed.push(`${b.ops.join('+')} @ offset ${b.start}`);
+    // Reserialise with 2-space indent (the project convention), at the indentation
+    // the block's own lines and closing fence already had.
+    const bodyIndent = (b.body.match(/^([ \t]*)\S/m) || [null, ''])[1];
+    const closeIndent = b.body.slice(b.body.lastIndexOf('\n') + 1);
+    const json = JSON.stringify(b.parsed, null, 2).split('\n').map((l) => bodyIndent + l).join('\n');
+    out += b.open + json + '\n' + (/^[ \t]*$/.test(closeIndent) ? closeIndent : '') + b.close;
   }
-  out += original.slice(lastIndex);
+  out += original.slice(cursor);
 
-  if (out !== original) writeFileSync(file, out);
+  stats.wouldChange = out !== original;
+  if (write && stats.wouldChange) writeFileSync(file, out);
   return stats;
 }
 
 function main() {
-  const files = argv.slice(2).flatMap((a) => (a === '--all' ? ALL_FILES : [a]));
+  const args = argv.slice(2);
+  const check = args.includes('--check');
+  const files = args.filter((a) => a !== '--check').flatMap((a) => (a === '--all' ? ALL_FILES : [a]));
   if (files.length === 0) {
-    console.error('usage: sign-inline-md.mjs <file.md...>  OR  --all');
+    console.error('usage: sign-inline-md.mjs [--check] <file.md...>  OR  [--check] --all');
     exit(2);
   }
+  let drift = 0;
   for (const file of files) {
-    const s = processFile(file);
-    console.log(`  ${file}: ${s.blocks} block(s), ${s.signed} signed [${s.modes.join(', ')}]`);
+    const s = processFile(file, { write: !check });
+    const tag = check ? (s.wouldChange ? ' WOULD CHANGE' : ' unchanged') : '';
+    console.log(`  ${file}: ${s.blocks} block(s), ${s.signed} signed [${s.modes.join(', ')}]${tag}`);
+    if (check && s.wouldChange) {
+      drift++;
+      for (const c of s.changed) console.log(`      ${c}`);
+    }
+  }
+  if (check) {
+    console.log(`\n${drift} of ${files.length} file(s) would change.`);
+    exit(drift ? 1 : 0);
   }
 }
 

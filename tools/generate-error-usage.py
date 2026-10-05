@@ -41,12 +41,14 @@ RESPONSE*, *implicit only* — is the empty set. For every §4.2 row, and for an
 says *implicit only*, the codes of §4.2's *Implicit error codes* note are removed from the sources
 first: the note says they apply to every Server→Station REQUEST and are not repeated.
 
-**BLE** has no per-message document, so `BLE_SOURCES` names the sections. Both AuthResponse tables
-— 03 §7.7 and `ble-handshake.md` §7 — list rejection reasons without saying which request the
-AuthResponse answers. They are assigned to the `(→ OfflineAuthRequest)` row: every code they list
-is an OfflinePass check or `2013`, and assigning them to the ServerSignedAuth row as well would
-charge it with eight OfflinePass codes no ServerSignedAuth can fail. That row's one table is
-`ble-handshake.md` §4.2.2's check list.
+**BLE** has no per-message document, so `BLE_SOURCES` names the sections. Since the BLE wire
+revision, §4.3 is the one table of the codes BLE responses carry, and the BLE documents point to it
+(03 §7 and the three `ble-*.md` profiles carry no code table of their own). A §4.3 row whose
+`BLE_SOURCES` entry is empty is SINGLE-SOURCE: §4.3 is its only statement, and it is compared with
+nothing. The three AuthResponse rows that answer a credential are compared with the check lists
+that state those checks — `offline-pass.md` §4 for a pass the station validates, whose code column
+is headed *Error on Failure*; `authorize-offline-pass.md` §7 for the server's answer a Partial-B
+station relays; `ble-handshake.md` §4.2.2 for a ServerSignedAuth.
 
 What is NOT derived
 -------------------
@@ -95,6 +97,10 @@ change and needs the product owner's decision, and five decisions are open:
       set is their union.
   D4  BLE. No per-response error tables; StartServiceResponse's one table has 3 codes against §4's
       18; StopServiceResponse has no source, and its schema no error member (KNOWN-ISSUES B-3).
+      Decided by the BLE wire revision (2026-10-05): §4.3 is the one table, the BLE documents point
+      to it, and a BLE refusal carries one flat shape. Four §4.3 rows are single-source; the three
+      that answer a credential differ from their check lists only by the codes the station gives
+      around those checks, recorded in BASELINE with the prose that states each.
   D5  `SessionEnded`: add the `(EVENT — no RESPONSE)` row, or say why it is exempt.
 
 `--check` fails when a divergence appears that BASELINE does not list, **and** when a BASELINE
@@ -155,7 +161,9 @@ FLOORS = {
     "03 message sections": 40,
     "03 Quick Reference MQTT actions": 27,
     "03 Quick Reference BLE messages": 13,
-    "03 sections with a code table": 17,
+    # 17 -> 16 with the BLE wire revision, reviewed: 03 §7.7 AuthResponse's rejection table was merged
+    # into 07-errors.md §4.3, the one table of BLE codes, and §7.7 points to it.
+    "03 sections with a code table": 16,
     "03 sections declaring none": 4,
     "profile documents titled by an action": 24,
     "profile code tables (action documents)": 16,
@@ -165,24 +173,23 @@ FLOORS = {
 }
 
 # BLE has no per-message document. Each §4.3 row names the sections that state its codes:
-# ("03", <03 section name>) or ("profile", <path under spec/profiles>, <heading regex>).
-# A mapped heading that no longer exists is an instrument fault.
+# ("03", <03 section name>) or ("profile", <path under spec/profiles>, <heading regex>[, <code
+# column header>]). An empty entry is a single-source row: §4.3 is its one statement. A mapped
+# heading that no longer exists is an instrument fault.
 BLE_SOURCES = {
-    "AuthResponse (→ OfflineAuthRequest)": (
-        ("03", "AuthResponse"),
-        ("profile", "offline/ble-handshake.md", r"7\. Rejection Reasons$"),
+    "AuthResponse (→ Hello, refused before the session key, in plaintext)": (),
+    "AuthResponse (→ OfflineAuthRequest, validated by the station)": (
+        ("profile", "offline/offline-pass.md", r"4\. Validation Checks \(10\)$", "error on failure"),
+    ),
+    "AuthResponse (→ OfflineAuthRequest, Partial B)": (
+        ("profile", "offline/authorize-offline-pass.md", r"7\. Error Codes$"),
     ),
     "AuthResponse (→ ServerSignedAuth)": (
         ("profile", "offline/ble-handshake.md", r"4\.2\.2 Verification \(Station-Side\)$"),
     ),
-    "StartServiceResponse": (
-        ("03", "StartServiceResponse"),
-        ("profile", "offline/ble-session.md", r"1\. Starting a Service$"),
-    ),
-    "StopServiceResponse": (
-        ("03", "StopServiceResponse"),
-        ("profile", "offline/ble-session.md", r"3\. Stopping a Service$"),
-    ),
+    "StartServiceResponse": (),
+    "StopServiceResponse": (),
+    "ReceiptResponse": (),
 }
 
 # Every divergence measured at b0704054, by row and code, with the surfaces that DO carry it.
@@ -191,7 +198,6 @@ BLE_SOURCES = {
 BASELINE = """
 4.1 | Heartbeat                          | 1005, 1010, 5106, 6001          | profile    | D1: heartbeat.md §8 lists conditions; §4.1's own note dispositions all four
 4.1 | TransactionEvent                   | 2003, 2005, 2014, 2016, 2017    | §4+profile | D3: 03 §4.1 lists five codes; the profile and §4 carry the gate's ten
-4.1 | AuthorizeOfflinePass               | 1005                            | §4+03      | D3: the profile's §7 table omits it
 4.1 | SignCertificate                    | 1005, 6001                      | §4         | 03 §6.10 omits them and no profile table exists; not under §4.2's implicit note
 4.1 | DataTransfer                       | 1010                            | profile    | D1: the waiting sender's own timeout, never a response value
 4.1 | SessionEnded                       | row                             | no §4 row  | D5: an EVENT in 03's Quick Reference with no §4.1 row
@@ -203,10 +209,9 @@ BASELINE = """
 4.2 | CertificateInstall                 | 5107                            | §4         | 03 §6.11 omits it, no profile table; prose makes 5107 reachable from every command
 4.2 | DataTransfer                       | 1010                            | profile    | D1: the waiting sender's own timeout, never a response value
 4.2 | TriggerMessage                     | 1010                            | profile    | D1: the waiting sender's own timeout, never a response value
-4.3 | AuthResponse (→ ServerSignedAuth)  | 1012, 2013                      | §4         | D4: not in §4.2.2's checks; 2013 has prose support, 1012 none
-4.3 | AuthResponse (→ ServerSignedAuth)  | 2018                            | profile    | D4: §4.2.2 check #2; the §3.2 registry row places it here
-4.3 | StartServiceResponse               | 3002, 3004, 3005, 3008-3009, 5001-5009 | §4  | D4: ble-session.md §1's table lists 3001, 3003, 3010, 5000
-4.3 | StopServiceResponse                | 3006, 3007                      | §4         | D4: no source; the schema has no error member (KNOWN-ISSUES B-3)
+4.3 | AuthResponse (→ OfflineAuthRequest, validated by the station) | 2013, 3004, 3005, 3010 | §4 | D4: ble-handshake.md §4.1 prose — 3004/3005 and 3010 refused before the pass is validated, 2013 for a sessionProof that does not match; offline-pass.md §4 lists the pass checks only
+4.3 | AuthResponse (→ OfflineAuthRequest, Partial B) | 1010, 2013, 3004, 3005, 3010 | §4 | D4: authorize-offline-pass.md §6 rule 6 prose (1010, the station's own timeout) and ble-handshake.md §4.1 (2013, 3004, 3005, 3010, refused before the forward); §7 lists the server's codes
+4.3 | AuthResponse (→ ServerSignedAuth)  | 2013                            | §4         | D4: an AEAD or channel failure ends any handshake with 2013 (06-security.md §6.5.3); §4.2.2 lists the claim checks
 """
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -307,12 +312,12 @@ def codes_in(text: str, where: str) -> set[int]:
     return out
 
 
-def code_tables(path: Path, lines: list[str], lo: int, hi: int):
+def code_tables(path: Path, lines: list[str], lo: int, hi: int, headers=CODE_HEADERS):
     """(codes, [header line numbers]) over every table in lines[lo:hi] with an error-code column."""
     codes, found = set(), []
     for hl, head, rows in tables(lines, lo, hi):
         keys = [re.sub(r"[*`]", "", c).strip().lower() for c in head]
-        col = next((i for i, k in enumerate(keys) if k in CODE_HEADERS), None)
+        col = next((i for i, k in enumerate(keys) if k in headers), None)
         if col is None:
             continue
         got: set[int] = set()
@@ -459,10 +464,11 @@ def parse_profiles():
     return docs
 
 
-def ble_section(doc, title_re):
+def ble_section(doc, title_re, headers=None):
     for _, title, a, b in doc["secs"]:
         if re.match(title_re, title):
-            codes, found = code_tables(doc["path"], doc["lines"], a, b)
+            codes, found = code_tables(doc["path"], doc["lines"], a, b,
+                                       {headers} if headers else CODE_HEADERS)
             num = title.split(" ")[0].rstrip(".")
             return dict(label=f"{doc['path'].relative_to(PROFILES)} §{num}", codes=codes,
                         status="table" if found else "absent")
@@ -515,7 +521,7 @@ def derive(s4_rows, s4_implicit, msgs, roster, docs):
                         srcs["03"] = (m["label"], m["codes"], m["status"])
                     continue
                 doc = docs.get(spec[1])
-                sec = ble_section(doc, spec[2]) if doc else None
+                sec = ble_section(doc, spec[2], spec[3] if len(spec) > 3 else None) if doc else None
                 if sec is None:
                     broken.append(f"BLE_SOURCES: no heading matching {spec[2]!r} in "
                                   f"spec/profiles/{spec[1]}")
@@ -526,7 +532,7 @@ def derive(s4_rows, s4_implicit, msgs, roster, docs):
             srcs = {k: (lab, c - s4_implicit, st) for k, (lab, c, st) in srcs.items()}
         derived = set().union(*(c for _, c, _ in srcs.values()))
         rows.append(dict(sub=sub, name=name, q=q, s4=r, srcs=srcs, derived=derived,
-                         implicit=implicit))
+                         implicit=implicit, single=(sub == "4.3" and not BLE_SOURCES[name])))
         if r is None:
             row_level.append((sub, name, "no §4 row"))
         elif q is not None and sub != "4.3" and msg_no(q) != r["msg"]:
@@ -542,7 +548,7 @@ def divergences(rows):
     """{(sub, row, code): carriers} for every code carried by some but not all existing surfaces."""
     out = {}
     for d in rows:
-        if d["s4"] is None:
+        if d["s4"] is None or d.get("single"):
             continue
         surf = {"§4": d["s4"]["codes"]}
         surf.update({k: c for k, (_, c, _) in d["srcs"].items()})
@@ -664,8 +670,10 @@ def main() -> int:
 
     for key, floor in FLOORS.items():
         print(f"  {key:<40}: {measured[key]}  (floor {floor})")
-    compared = sum(1 for d in rows if d["s4"] is not None)
+    compared = sum(1 for d in rows if d["s4"] is not None and not d.get("single"))
+    single = [d["name"] for d in rows if d.get("single")]
     print(f"\n{compared} rows compared: §4.1–4.3 against 03-messages.md and spec/profiles/")
+    print(f"{len(single)} single-source §4.3 rows, compared with nothing: " + "; ".join(single))
 
     if broken:
         print("\nINSTRUMENT BROKEN — a derivation produced nothing believable:")

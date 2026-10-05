@@ -2,13 +2,17 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/ble/offline-auth-request.schema.json",
   "title": "OfflineAuthRequest",
-  "description": "Offline authentication request sent by the app to the station via BLE characteristic FFF3 (Write). Used when the phone is offline (Partial B strategy) and the station must validate the offline pass.",
+  "description": "Offline authentication request written by the app to the station on BLE characteristic FFF3, inside the channel. Presents the OfflinePass with the bay, service and duration the customer chose, and proves the phone holds the pass's device key. A station offline validates it itself (Full Offline); a station online forwards it to the server (Partial B, profiles/offline/authorize-offline-pass.md).",
   "type": "object",
   "required": [
     "type",
     "offlinePass",
     "counter",
-    "sessionProof"
+    "bayId",
+    "serviceId",
+    "requestedDurationSeconds",
+    "sessionProof",
+    "deviceProof"
   ],
   "additionalProperties": false,
   "properties": {
@@ -25,10 +29,27 @@
       "minimum": 0,
       "description": "Monotonically increasing counter for replay protection"
     },
+    "bayId": {
+      "$ref": "../common/bay-id.schema.json",
+      "description": "The bay the customer chose. The session's StartServiceRequest names the same bay."
+    },
+    "serviceId": {
+      "$ref": "../common/service-id.schema.json",
+      "description": "The service the customer chose. The session's StartServiceRequest names the same service."
+    },
+    "requestedDurationSeconds": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "The duration the customer chose, in seconds. The validator estimates the cost from it (offline-pass.md §4 checks #7 and #8), and an authorization is for exactly this duration - refused, never reduced."
+    },
     "sessionProof": {
       "type": "string",
       "pattern": "^[A-Za-z0-9+/]{43}=$",
-      "description": "Base64-encoded HMAC-SHA256 (exactly 44 chars) binding this request to the session key. Canonical construction: ble-handshake.md §4.1 — Base64(HMAC-SHA256(SessionKey, UTF8(\"OfflineAuthRequest\") || UTF8(passId) || UTF8(decimal(counter)))). N1: the prior 64-char hex/4-input form is withdrawn."
+      "description": "Base64-encoded HMAC-SHA256 (exactly 44 chars) binding this request to the session key. Canonical construction: ble-handshake.md §4.1 - Base64(HMAC-SHA256(SessionKey, LP(UTF8(\"OfflineAuthRequest\")) || LP(UTF8(passId)) || LP(UTF8(decimal(counter))))), LP(x) = U16BE(byteLength(x)) || x."
+    },
+    "deviceProof": {
+      "$ref": "../common/device-proof.schema.json",
+      "description": "Proof of possession of the pass's device key over this handshake, the station, the pass, the counter and the requested service (06-security.md §6.5.4). Offline-pass check #4."
     }
   }
 }
