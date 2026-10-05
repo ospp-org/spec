@@ -54,7 +54,7 @@ This role assignment also aligns with mobile OS power management: iOS and Androi
 | Document | Description |
 |-------------------------------------|-----------------------------------------------|
 | [AuthorizeOfflinePass](authorize-offline-pass.md) | MQTT-based offline pass validation (Partial B scenario) — **stable** |
-| [App–Server Contract](app-contract.md) | Pass issuance with its trust bundle, and the app's receipt upload — binds the server and the app, not the station |
+| [App–Server Contract](app-contract.md) | Pass issuance with its trust bundle, the app's receipt upload, and the trust bundle a Partial-A authorization carries — binds the server and the app, not the station |
 | [BLE Transport](ble-transport.md) | Hardware requirements, GATT service definition, characteristics, MTU negotiation, fragmentation — **EXPERIMENTAL** ([B-1](../../../KNOWN-ISSUES.md#b-1--two-incompatible-fragmentation-protocols-are-simultaneously-normative)) |
 | [BLE Handshake](ble-handshake.md) | HELLO / CHALLENGE / AUTH authentication sequence, ECDH P-256 + StationIdentity certificate, session key derivation (HKDF-SHA256), AEAD channel — **EXPERIMENTAL** |
 | [BLE Session](ble-session.md) | Service start, real-time monitoring, stop, receipt retrieval, connection drop handling — **EXPERIMENTAL** ([B-3](../../../KNOWN-ISSUES.md#b-3--the-three-ble-response-schemas-disagree-with-each-other-and-with-chapter-07)) |

@@ -161,7 +161,7 @@ The prior 4-input hex construction (which additionally bound `bayId`/`serviceId`
 
 ### 4.2 ServerSignedAuth (Partial A)
 
-Used when the app is online but the station is offline. The app obtains a server-signed authorization (via `POST /sessions/offline-auth`, supplying the same `appNonce` it uses in the `Hello` of this handshake so the server binds the authorization to it — see **Acquisition ordering** below) and relays it to the station over BLE. The station verifies the ECDSA P-256 signature using a key of the server key set it holds ([06-security.md §6.7](../../06-security.md#67-server-signing-key-rotation-ecdsa-p-256)) and re-checks each claim against the live handshake state. Like every post-Challenge message, `ServerSignedAuth` is relayed **inside the AEAD channel** ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)).
+Used when the app is online but the station is offline. The app obtains a server-signed authorization (via `POST /sessions/offline-auth`, supplying the same `appNonce` it uses in the `Hello` of this handshake so the server binds the authorization to it — see **Acquisition ordering** below), with the trust bundle it authenticates the station against ([`app-contract.md` §5](app-contract.md#5-the-partial-a-authorization)), and relays the authorization to the station over BLE. The station verifies the ECDSA P-256 signature using a key of the server key set it holds ([06-security.md §6.7](../../06-security.md#67-server-signing-key-rotation-ecdsa-p-256)) and re-checks each claim against the live handshake state. Like every post-Challenge message, `ServerSignedAuth` is relayed **inside the AEAD channel** ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)).
 
 **Acquisition ordering (Normative).** The `appNonce` is chosen by the app and is the sole binding between the `POST` and the BLE handshake (§4.2.2 check #2), so the `POST /sessions/offline-auth` and the `Hello` write **MAY** occur in either order, provided the `appNonce` in the POST body equals the `appNonce` in the `Hello`. Two orderings are conformant:
 
@@ -374,7 +374,8 @@ The following rejection reason codes **MAY** appear in the AuthResponse `reason`
       |<-- signedAuthorization ----------|           |
       |                      |                        |
       |--- ServerSignedAuth (FFF3) --------------->|
-      |    { signedAuthorization, sessionId }         |
+      |    { signedAuthorization, sessionId,          |
+      |      trustBundle }                            |
       |                      |                        |
       |    [Station verifies ECDSA P-256 signature     |
       |     using server public key]                  |

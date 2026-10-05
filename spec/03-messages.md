@@ -2769,7 +2769,7 @@ The app MUST request biometric or PIN confirmation from the user before sending 
 | **Expected Response** | [AuthResponse](#77-authresponse) on FFF4 |
 | **Timeout** | 10 seconds |
 
-Used in the **Partial A** offline scenario where the phone has internet connectivity but the station does not. The app first calls `POST /sessions/offline-auth` on the server, which returns a signed authorization blob. The app then delivers this to the station via BLE.
+Used in the **Partial A** offline scenario where the phone has internet connectivity but the station does not. The app first calls `POST /sessions/offline-auth` on the server, which returns the signed authorization and, with it, the trust bundle the app authenticates the station against ([`app-contract.md` §5](profiles/offline/app-contract.md#5-the-partial-a-authorization)). The app then delivers the authorization to the station via BLE.
 
 The station verifies the server's ECDSA P-256 signature without needing network access.
 

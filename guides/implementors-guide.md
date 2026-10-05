@@ -1290,7 +1290,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[OFFLINE]** ConnectivityDetector: detect 4 scenarios (Online, Partial A, Partial B, Full Offline)
 - [ ] **[OFFLINE]** Pre-arm OfflinePass while online (`POST /api/v1/offline/passes`), bound to a P-256 device key generated in the hardware-backed keystore, non-exportable, and attested to the server by the platform — Android Key Attestation, Apple App Attest — with the first pass request for it; no such key, or no attestation, no offline pass
 - [ ] **[OFFLINE]** Store OfflinePass encrypted at rest (device keychain)
-- [ ] **[OFFLINE]** Replace the trust bundle on every pass issuance; never merge it with the one held
+- [ ] **[OFFLINE]** Replace the trust bundle on every pass issuance and with every Partial-A authorization; never merge it with the one held
 - [ ] **[OFFLINE]** Show the pass's limits before the customer chooses a service
 - [ ] **[OFFLINE]** Store offline receipts locally
 - [ ] **[OFFLINE]** Upload every receipt when online (`POST /api/v1/offline/receipts`) until it is answered `Accepted`, `Duplicate` or `Rejected`

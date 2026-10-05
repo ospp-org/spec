@@ -4,14 +4,15 @@
 
 ## 1. Overview
 
-The offline model depends on two exchanges between the mobile app and the server, and this document defines both normatively:
+The offline model depends on these exchanges between the mobile app and the server, and this document defines them normatively:
 
 - **pass issuance** (§3) — the server returns an OfflinePass together with the **trust bundle** the app needs while it has no network, for a device key whose hardware backing the platform has attested (§3.6);
-- **receipt upload** (§4) — the app sends the server its own copy of every receipt a station signed for it.
+- **receipt upload** (§4) — the app sends the server its own copy of every receipt a station signed for it;
+- **the trust bundle of a Partial-A authorization** (§5) — the server's answer that carries a ServerSignedAuth carries the trust bundle too.
 
-Everything else between the app and the server remains implementation-specific ([Chapter 02 §9](../../02-transport.md#9-https-transport-server--clients)). Both operations use the transport rules of [Chapter 02 §9.1](../../02-transport.md#91-general-requirements) and the mobile-app JWT of [Chapter 02 §9.2.1](../../02-transport.md#921-mobile-app--jwt-bearer); an error is answered with the REST Error Object of [Chapter 07 §2.4](../../07-errors.md#24-rest-api-error-response).
+Everything else between the app and the server remains implementation-specific ([Chapter 02 §9](../../02-transport.md#9-https-transport-server--clients)). Each uses the transport rules of [Chapter 02 §9.1](../../02-transport.md#91-general-requirements) and the mobile-app JWT of [Chapter 02 §9.2.1](../../02-transport.md#921-mobile-app--jwt-bearer); an error is answered with the REST Error Object of [Chapter 07 §2.4](../../07-errors.md#24-rest-api-error-response).
 
-This document binds the **server** and the **app**. It places no obligation on a station, which never takes part in either exchange.
+This document binds the **server** and the **app**. It places no obligation on a station, which never takes part in any of them.
 
 ## 2. Direction and Type
 
@@ -67,7 +68,7 @@ Schema: [`offline-pass-issuance-response.schema.json`](../../../schemas/offline-
 | `serverKeys` | array | Yes | The server key set ([`06-security.md` §6.7](../../06-security.md#67-server-signing-key-rotation-ecdsa-p-256)): one entry per key, each with its `keyId` and its `publicKey` — the key's DER SubjectPublicKeyInfo, point uncompressed, Base64. |
 
 1. The server **MUST** return a trust bundle with every pass it issues, current at the moment of issuance.
-2. The app **MUST** replace the trust bundle it holds with the one received, on **every** issuance. It **MUST NOT** merge the two: a key the server has withdrawn from its set, or a certificate the CA has revoked, stays withdrawn only if the app forgets the old bundle.
+2. The app **MUST** replace the trust bundle it holds with the one received, on **every** issuance and with every Partial-A authorization (§5). It **MUST NOT** merge the two: a key the server has withdrawn from its set, or a certificate the CA has revoked, stays withdrawn only if the app forgets the old bundle.
 3. The app authenticates a station against the bundle it holds: a StationIdentity certificate verifies under a key of `serverKeys` ([`06-security.md` §6.5.2](../../06-security.md#652-stationidentity-certificate)). The Station CA certificate and its CRL are the anchor for authenticating a station by its own X.509 certificate; the BLE handshake of this revision authenticates stations by StationIdentity, and does not yet read them.
 
 **Why a bundle that is replaced, and never refreshed separately.** An app holds only passes it fetched while online, each fetch replaces the bundle, and a pass lives at most ten days ([`offline-pass.md` §6](offline-pass.md#6-lifecycle)). The app's anchors are therefore never older than its newest usable pass, and the server's key windows (a new key published at least the maximum pass lifetime, plus the worst station sync gap, before it signs, an old key kept until everything it signed has expired — [`06-security.md` §6.7](../../06-security.md#67-server-signing-key-rotation-ecdsa-p-256)) guarantee that the bundle holds every key a pass the app holds, or a station it meets, may need.
@@ -130,11 +131,17 @@ The body is the Receipt exactly as the app read it from the station (characteris
 
 A receipt the server refuses on its merits — a signature that does not verify, a failed gate check — is not an HTTP error: it is answered `200` with `status: "Rejected"`, as the station would be.
 
-## 5. Related Schemas
+## 5. The Partial-A Authorization
+
+When the phone is online and the station is not, the app obtains a ServerSignedAuth from the server — `POST /api/v1/sessions/offline-auth` ([`04-flows.md` §5b](../../04-flows.md#5b-partial-a--phone-online-station-offline); [`ble-handshake.md` §4.2](ble-handshake.md#42-serversignedauth-partial-a)) — and relays it to the station over BLE. Before it relays it, it authenticates the station against a trust bundle ([`06-security.md` §6.5.2](../../06-security.md#652-stationidentity-certificate)), and the phone may hold no pass, and so no bundle, at all.
+
+**The phone receives the trust bundle with its authorization (Normative).** The server's response that carries the authorization — its `signedAuthorization` and `sessionId` — **MUST** also carry `trustBundle`, the object of §3.4, current at that moment: the Station CA certificate, its CRL and the server key set. The app **MUST** replace the bundle it holds with it, as on every issuance, and authenticates the station against it before it relays the authorization. This document defines that member of the response; the request and the authorization are those of [`04-flows.md` §5b](../../04-flows.md#5b-partial-a--phone-online-station-offline) and [`ble-handshake.md` §4.2](ble-handshake.md#42-serversignedauth-partial-a).
+
+## 6. Related Schemas
 
 - Attestation challenge response: [`offline-attestation-challenge-response.schema.json`](../../../schemas/offline-attestation-challenge-response.schema.json)
 - Pass issuance request: [`offline-pass-issuance-request.schema.json`](../../../schemas/offline-pass-issuance-request.schema.json)
-- Pass issuance response: [`offline-pass-issuance-response.schema.json`](../../../schemas/offline-pass-issuance-response.schema.json)
+- Pass issuance response, and the trust bundle a Partial-A authorization carries too: [`offline-pass-issuance-response.schema.json`](../../../schemas/offline-pass-issuance-response.schema.json)
 - OfflinePass: [`offline-pass.schema.json`](../../../schemas/common/offline-pass.schema.json)
 - Receipt upload request: [`receipt.schema.json`](../../../schemas/ble/receipt.schema.json)
 - Receipt upload response: [`transaction-event-response.schema.json`](../../../schemas/mqtt/transaction-event-response.schema.json)

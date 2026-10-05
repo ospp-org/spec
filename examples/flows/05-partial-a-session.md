@@ -37,7 +37,7 @@ Alice is at "Station Alpha -- Example City" and wants to start the Eco Program s
 14:30:05.000  App detects Partial A scenario (phone online + station offline)
 14:30:05.200  App sends POST /sessions/offline-auth to server
 14:30:05.800  Server validates, debits 50 credits, signs ECDSA P-256 authorization
-14:30:06.000  Server responds with signedAuthorization + sessionId
+14:30:06.000  Server responds with signedAuthorization, sessionId and the trust bundle
 14:30:06.500  App writes Hello to FFF3
 14:30:06.800  Station responds with Challenge on FFF4 (connectivity: "Offline")
 14:30:07.200  App writes ServerSignedAuth to FFF3
@@ -201,12 +201,24 @@ X-Request-Id: req_offauth_7d8e9f01
     "signature": "MEUCIQDwtBwQh4ljGq64jztmJ5qxZYKH1viSpN+G9Ou3CAU3/QIgScy1OwVmud8d5JMBpohjd5X/UcaIC0r58DrDPcuPdek=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
+  "trustBundle": {
+    "stationCaCertificate": "-----BEGIN CERTIFICATE-----\nMIIBqTCCAU+gAwIBAgICBVAwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBU\nZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjA5MjkxMjA0\nMjBaFw0zMTA5MjkxMjA0MjBaMDMxEjAQBgNVBAoMCU9TUFAgVGVzdDEdMBsGA1UE\nAwwUT1NQUCBUZXN0IFN0YXRpb24gQ0EwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNC\nAASV+9CgAE4tgTzAKWwxVGw9wkyvqJhltZhs/62oD8EQ144coXVZ5S7LcVowOBB6\nRCV30pndUexf5mPlLvNrPAYuo1MwUTAdBgNVHQ4EFgQUF8cBGg8AqgEQ2/dlYB9f\nNDJLxlgwHwYDVR0jBBgwFoAUF8cBGg8AqgEQ2/dlYB9fNDJLxlgwDwYDVR0TAQH/\nBAUwAwEB/zAKBggqhkjOPQQDAgNIADBFAiEAwMWP7Ia0x9Uc4exjPV3AUGcuX+Dq\nBeI79s+WLLw7Fw4CIG36K8XxqbRQQVr+Bja//n3WB6h4Cqs3woRRNJpDWTsi\n-----END CERTIFICATE-----\n",
+    "stationCaCrl": "-----BEGIN X509 CRL-----\nMIHKMHMCAQEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYD\nVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQRcNMjYwOTI5MTIwNDIwWhcNMjYxMDA2\nMTIwNDIwWqAPMA0wCwYDVR0UBAQCAhAAMAoGCCqGSM49BAMCA0cAMEQCIGxNLjLG\nKr78hLgo9gHhuQ0yK57f3WC6Wk9q7ZkALnyFAiBdmVe0Isvro7QrabTxOXPs9bkG\nDDkAZ+DdNR/8/72kqQ==\n-----END X509 CRL-----\n",
+    "serverKeys": [
+      {
+        "keyId": "YjX5pR0TzmU3ubs17wImQQ",
+        "publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/HdgUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA=="
+      }
+    ]
+  },
   "wallet": {
     "previousBalance": 120,
     "newBalance": 70
   }
 }
 ```
+
+The response carries the trust bundle too — the Station CA certificate, its CRL and the server key set — because Alice's phone needs it to authenticate the station before it relays the authorization, and a phone may hold no pass, and so no bundle, at all ([`app-contract.md` §5](../../spec/profiles/offline/app-contract.md#5-the-partial-a-authorization)). The app replaces the bundle it holds with this one.
 
 ---
 

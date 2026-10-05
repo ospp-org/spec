@@ -864,7 +864,7 @@ sequenceDiagram
 
     App->>Server: POST /sessions/offline-auth {bayId, serviceId}
     Server->>Server: Validate, debit wallet, sign authorization (ECDSA P-256)
-    Server-->>App: {signedAuthorization, sessionId}
+    Server-->>App: {signedAuthorization, sessionId, trustBundle}
 
     App->>SSP: BLE connect
     App->>SSP: Read FFF1 [MSG-027] → connectivity: "Offline"
@@ -893,7 +893,7 @@ sequenceDiagram
 
 1. **App** sends `POST /sessions/offline-auth` to Server with `bayId` and `serviceId`
 2. **Server** validates the user, debits the issue-time pre-debit, signs the ServerSignedAuth authorization blob with ECDSA P-256 server key — the signed claims carry `durationSeconds` (the authorized duration: the station refuses a longer request and never reduces it — [`ble-session.md` §1](profiles/offline/ble-session.md#1-starting-a-service)) and `creditsAuthorized` (the pre-debit, and the cap on what the session may be charged: the server recomputes final billing per the Billing Authority §6 / reconciliation §8.2 and refunds any difference, never debiting more), alongside `authId`, `sessionId`, `bayId`, `serviceId`, `appNonce`, `issuedAt`, `expiresAt` (full claim set: `server-signed-auth-claims.schema.json`, finding N3)
-3. **Server** returns `signedAuthorization` (Base64) and `sessionId` to the App
+3. **Server** returns the `signedAuthorization` object, its `sessionId` and the trust bundle — the Station CA certificate, its CRL and the server key set — to the App ([`app-contract.md` §5](profiles/offline/app-contract.md#5-the-partial-a-authorization)), which replaces the bundle it holds and authenticates the station against it before it relays the authorization
 4. **App** connects to the SSP via BLE
 5. **App** reads **StationInfo** [MSG-027] — confirms `connectivity: "Offline"`
 6. **App** writes **HELLO** [MSG-029] → SSP responds with **CHALLENGE** [MSG-030]
