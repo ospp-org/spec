@@ -783,7 +783,7 @@ sequenceDiagram
 5. User selects a bay, a service and a duration. Before the choice the app shows the pass's limits — per session, credits remaining, uses remaining — and a service above a limit is refused, never reduced ([`offline-pass.md` §2.1](profiles/offline/offline-pass.md#21-offlineallowance-object))
 6. **App** writes **HELLO** [MSG-029] to FFF3 with `bleVersions`, `appNonce`, `appVersion`, `appEphemeralPubKey` — nothing that identifies the device or its user
 7. **SSP** responds with **CHALLENGE** [MSG-030] on FFF4 with `bleVersion`, `stationNonce`, `stationEphemeralPubKey`, `stationCertificate`, `stationConnectivity: "Offline"`, `availableServices` and `stationSignature`
-8. **App** verifies `stationCertificate` against the Station CA certificate and CRL of its trust bundle, and `stationSignature` over the Hello and the Challenge ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)) — **aborts and sends no pass if either fails** — confirms that the chosen service is available on the chosen bay in `availableServices`, then derives the session key via ECDH P-256 + HKDF-SHA256 (`ikm = ee ‖ appNonce ‖ stationNonce`; the LTK is not used). The post-Challenge AEAD channel is now established.
+8. **App** verifies `stationCertificate` against a Station CA of its trust bundle and that CA's CRL, and `stationSignature` over the Hello and the Challenge ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)) — **aborts and sends no pass if either fails** — confirms that the chosen service is available on the chosen bay in `availableServices`, then derives the session key via ECDH P-256 + HKDF-SHA256 (`ikm = ee ‖ appNonce ‖ stationNonce`; the LTK is not used). The post-Challenge AEAD channel is now established.
 9. **App** requests biometric or PIN confirmation from the user
 10. **App** writes **OfflineAuthRequest** [MSG-031] to FFF3 (inside the AEAD channel) with the OfflinePass, counter, `bayId`, `serviceId`, `requestedDurationSeconds`, `sessionProof` and `deviceProof`
 11. **SSP** validates the OfflinePass — the nine checks of [Chapter 06 §6.1.1](06-security.md#611-offlinepass-validation--10-checks): signature, expiry, epoch, device proof, limits, interval, counter — estimating the cost from the requested service and duration
@@ -862,7 +862,7 @@ sequenceDiagram
     App->>SSP: BLE connect
     App->>SSP: Write FFF3: Hello [MSG-029]
     SSP-->>App: Notify FFF4: Challenge [MSG-030] (certificate, signature, connectivity: "Offline")
-    Note over App: Verify certificate (bundle's Station CA and CRL) and signature, else abort
+    Note over App: Verify certificate (a Station CA of the bundle, its CRL) and signature, else abort
 
     App->>SSP: Write FFF3: ServerSignedAuth [MSG-032]
     Note right of SSP: Verify ECDSA P-256 signature
@@ -886,10 +886,10 @@ sequenceDiagram
 
 1. **App** sends `POST /sessions/offline-auth` to Server with `bayId` and `serviceId`
 2. **Server** validates the user, debits the issue-time pre-debit, signs the ServerSignedAuth authorization blob with ECDSA P-256 server key — the signed claims carry `durationSeconds` (the authorized duration: the station refuses a longer request and never reduces it — [`ble-session.md` §1](profiles/offline/ble-session.md#1-starting-a-service)) and `creditsAuthorized` (the pre-debit, and the cap on what the session may be charged: the server recomputes final billing per the Billing Authority §6 / reconciliation §8.2 and refunds any difference, never debiting more), alongside `authId`, `sessionId`, `bayId`, `serviceId`, `appNonce`, `issuedAt`, `expiresAt` (full claim set: `server-signed-auth-claims.schema.json`, finding N3)
-3. **Server** returns the `signedAuthorization` object, its `sessionId` and the trust bundle — the Station CA certificate and its CRL — to the App ([`app-contract.md` §5](profiles/offline/app-contract.md#5-the-partial-a-authorization)), which replaces the bundle it holds and authenticates the station against it before it relays the authorization
+3. **Server** returns the `signedAuthorization` object, its `sessionId` and the trust bundle — the Station CA set, each CA with its CRL — to the App ([`app-contract.md` §5](profiles/offline/app-contract.md#5-the-partial-a-authorization)), which replaces the bundle it holds and authenticates the station against it before it relays the authorization
 4. **App** connects to the SSP via BLE
 5. **App** may read **StationInfo** [MSG-027] to show the customer which station it reached — unauthenticated; the Challenge's `stationConnectivity` is the connectivity it acts on
-6. **App** writes **HELLO** [MSG-029] → SSP responds with **CHALLENGE** [MSG-030]; the App verifies the station's certificate against the Station CA and CRL of the bundle it received at step 3, and the station's signature ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)), and relays nothing if either fails
+6. **App** writes **HELLO** [MSG-029] → SSP responds with **CHALLENGE** [MSG-030]; the App verifies the station's certificate against a Station CA of the bundle it received at step 3 and that CA's CRL, and the station's signature ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)), and relays nothing if either fails
 7. **App** writes **ServerSignedAuth** [MSG-032] with the server-signed authorization blob and `sessionId`, inside the AEAD channel
 8. **SSP** verifies the ECDSA P-256 signature using a key of its `OfflinePassPublicKey` set ([Chapter 06 §6.7](06-security.md#67-server-signing-key-rotation-ecdsa-p-256))
 9. **SSP** sends **AuthResponse** [MSG-033] `Accepted`

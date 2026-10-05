@@ -42,8 +42,9 @@
 //                        derived one, and the same device proof)
 //   - ssa-nonce         (a ServerSignedAuth in a document with a Hello: its signed
 //                        appNonce claim follows that Hello's appNonce, check #2)
-//   - trust-bundle      (a trustBundle's stationCaCertificate and stationCaCrl := the
-//                        test Station CA's certificate and CRL)
+//   - trust-bundle      (the first entry of a trustBundle's stationCas: its
+//                        certificate and crl := the test Station CA's certificate
+//                        and CRL; any other entry is left as written)
 // Handshake nonces are not invented here: a document's Hello and Challenge nonces
 // come from tools/verify-test-nonces.mjs --write, or are typed; a placeholder stops
 // the run.
@@ -424,7 +425,7 @@ const forwardTarget = (n) => {
 };
 const trustBundleOf = (n) => {
   const t = n && typeof n === 'object' && n.payload && typeof n.payload === 'object' ? n.payload : n;
-  return t && t.trustBundle && typeof t.trustBundle === 'object' && 'stationCaCertificate' in t.trustBundle ? t.trustBundle : null;
+  return t && t.trustBundle && typeof t.trustBundle === 'object' && Array.isArray(t.trustBundle.stationCas) ? t.trustBundle : null;
 };
 
 // A handshake message is signed only once it has the shape of its schema: a Hello or a
@@ -595,8 +596,10 @@ function processFile(file, { write = true } = {}) {
     }
     const tb = trustBundleOf(node);
     if (tb) {
-      tb.stationCaCertificate = STATION_CA_CERT;
-      if ('stationCaCrl' in tb) tb.stationCaCrl = STATION_CA_CRL;
+      if (tb.stationCas.length > 0 && tb.stationCas[0] && typeof tb.stationCas[0] === 'object') {
+        tb.stationCas[0].certificate = STATION_CA_CERT;
+        tb.stationCas[0].crl = STATION_CA_CRL;
+      }
       b.ops.push('trust-bundle');
     }
     const flat = JSON.stringify(node);

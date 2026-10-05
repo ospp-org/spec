@@ -75,7 +75,7 @@ The `stationConnectivity` field is critical for path selection:
 
 A phone and a station that are both online use the online session flow, not BLE.
 
-**App verification gate (Normative).** Before it derives the session key, and before it sends any OfflinePass or ServerSignedAuth, the app **MUST** pass the gate of [06-security.md §6.5.2](../../06-security.md#652-station-authentication--the-stations-certificate): the certificate chains to the Station CA of its trust bundle, is valid now, is on no entry of the bundle's CRL, carries `digitalSignature` and `id-kp-osppBleStation`, names the intended station where the app holds one from an out-of-band channel, and `stationSignature` verifies under it. On any failure it aborts with `2013 BLE_AUTH_FAILED` and sends no credential.
+**App verification gate (Normative).** Before it derives the session key, and before it sends any OfflinePass or ServerSignedAuth, the app **MUST** pass the gate of [06-security.md §6.5.2](../../06-security.md#652-station-authentication--the-stations-certificate): the certificate chains to a Station CA of its trust bundle, is valid now, is on no entry of that CA's CRL, carries `digitalSignature` and `id-kp-osppBleStation`, names the intended station where the app holds one from an out-of-band channel, and `stationSignature` verifies under it. On any failure it aborts with `2013 BLE_AUTH_FAILED` and sends no credential.
 
 **Example:**
 
@@ -353,7 +353,7 @@ The codes a BLE response carries, for every BLE message, are listed once, in [Ch
       |      stationSignature }               |
       |                                       |
       |  [App verifies the certificate        |
-      |   against its Station CA and CRL, and |
+      |   against its bundle's CAs and CRLs,  |
       |   the signature; aborts if invalid —  |
       |   no pass is sent]                    |
       |  [Both derive SessionKey via ECDH+    |

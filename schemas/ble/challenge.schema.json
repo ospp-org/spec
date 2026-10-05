@@ -41,7 +41,7 @@
       "pattern": "^[A-Za-z0-9+/]+={0,2}$",
       "minLength": 100,
       "maxLength": 2048,
-      "description": "The station's mTLS client certificate, DER, Base64 (06-security.md §4.4), carrying the OSPP BLE station extended key usage. The app validates it against the Station CA certificate and CRL of its trust bundle before it sends any credential (06-security.md §6.5.2)."
+      "description": "The station's mTLS client certificate, DER, Base64 (06-security.md §4.4), carrying the OSPP BLE station extended key usage. The app validates it against a Station CA of its trust bundle and that CA's CRL before it sends any credential (06-security.md §6.5.2)."
     },
     "stationConnectivity": {
       "type": "string",

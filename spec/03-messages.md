@@ -2653,7 +2653,7 @@ The `stationConnectivity` field determines which authentication flow the app MUS
 | `bleVersion` | string | Yes | The BLE protocol version of this session — one of the Hello's `bleVersions` |
 | `stationNonce` | string | Yes | Base64-encoded 32-byte random nonce |
 | `stationEphemeralPubKey` | string | Yes | Station's per-handshake ephemeral P-256 public key (compressed SEC1, Base64). ECDH input for the session key (§6.5). |
-| `stationCertificate` | string | Yes | The station's mTLS client certificate, DER, Base64, carrying `id-kp-osppBleStation` ([Chapter 06 §4.4](06-security.md#44-certificate-requirements)). App MUST verify it against the Station CA and CRL of its trust bundle before sending any credential. |
+| `stationCertificate` | string | Yes | The station's mTLS client certificate, DER, Base64, carrying `id-kp-osppBleStation` ([Chapter 06 §4.4](06-security.md#44-certificate-requirements)). App MUST verify it against a Station CA of its trust bundle and that CA's CRL before sending any credential. |
 | `stationConnectivity` | string | Yes | `"Online"` or `"Offline"` |
 | `availableServices` | array | Yes | Every service the station's catalog binds to each of its bays — the app's one source of availability; empty while the station holds no catalog |
 | `availableServices[].bayId` | string | Yes | Bay identifier |

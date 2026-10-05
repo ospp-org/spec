@@ -24,7 +24,7 @@ Bob is at "Station Alpha -- Example City" and wants a deluxe treatment on Bay 2.
 - Bob's phone has no internet connectivity (no cellular, no WiFi)
 - Station `stn_a1b2c3d4` is online (MQTT connected, last heartbeat 10 seconds ago)
 - Station BLE is advertising the OSPP service UUID, with the name `OSPP-b2c3d4` in its scan response
-- Station holds its mTLS certificate, whose extended key usage carries `clientAuth` and `id-kp-osppBleStation`; the app holds the trust bundle of its last pass issuance — the Station CA certificate and its CRL
+- Station holds its mTLS certificate, whose extended key usage carries `clientAuth` and `id-kp-osppBleStation`; the app holds the trust bundle of its last pass issuance — the Station CA set, each CA with its CRL
 - Bay 2 status: `Available`
 - Bob has completed biometric/PIN setup in the app
 - OfflinePass `opass_a8b9c0d1e2f3` was issued today with 3 remaining uses

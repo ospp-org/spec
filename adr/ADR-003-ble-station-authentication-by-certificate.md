@@ -51,8 +51,8 @@ StationIdentity, as the README's release status said at `0.44.0`.
    identity the station presented — the binding SIGMA makes, in its basic form, by a MAC under a
    key derived from the shared secret, and without which a signed Diffie-Hellman exchange is
    open to identity misbinding ([Krawczyk, *SIGMA*, CRYPTO 2003](https://www.iacr.org/archive/crypto2003/27290399/27290399.pdf), §3.1, §5.1).
-4. **The app verifies before it sends anything.** The chain to the Station CA of its bundle, the
-   validity, the bundle's CRL, the key usage, the extended key usage, the curve, the subject CN
+4. **The app verifies before it sends anything.** The chain to a Station CA of its bundle, the
+   validity, that CA's CRL, the key usage, the extended key usage, the curve, the subject CN
    against an intended station where it holds one from an out-of-band channel, and the signature
    — before it derives the key and before any pass or authorization leaves the phone.
 5. **Withdrawn.** The StationIdentity document and its schema, the provisioning request's

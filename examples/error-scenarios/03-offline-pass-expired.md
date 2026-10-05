@@ -112,7 +112,7 @@ seconds (ten days) it is inert, and an operator arms it by lowering it
 }
 ```
 
-The app verifies the station's certificate against the Station CA and CRL of its trust bundle,
+The app verifies the station's certificate against a Station CA of its trust bundle and that CA's CRL,
 and the station's signature, before it sends the pass
 ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)).
 Both pass: the station is genuine. What fails is Alice's own pass, below.

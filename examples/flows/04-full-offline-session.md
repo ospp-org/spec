@@ -20,7 +20,7 @@ It is a winter evening in Example City. Heavy snowfall has knocked out the inter
 - OfflinePass allowance: 100 credits total, 5 max uses, 30 credits max per transaction
 - Bob's OfflinePass counter is at 2 (he has done 2 previous offline sessions)
 - Station BLE is advertising the OSPP service UUID, with the name `OSPP-b2c3d4` (last 6 hex chars of station ID) in its scan response
-- Station holds its mTLS certificate, whose extended key usage carries `clientAuth` and `id-kp-osppBleStation`; the app holds the trust bundle of its last pass issuance — the Station CA certificate and its CRL ([`app-contract.md` §3.4](../../spec/profiles/offline/app-contract.md#34-the-trust-bundle))
+- Station holds its mTLS certificate, whose extended key usage carries `clientAuth` and `id-kp-osppBleStation`; the app holds the trust bundle of its last pass issuance — the Station CA set, each CA with its CRL ([`app-contract.md` §3.4](../../spec/profiles/offline/app-contract.md#34-the-trust-bundle))
 - Station holds the server key set (`OfflinePassPublicKey`) in NVS, including the key the pass's `keyId` names
 - Station `OfflineModeEnabled` configuration is `true`
 - Station is within its own offline limits: it holds 7 offline transactions the server has not yet answered `Accepted`, `Duplicate` or `Rejected`, well under its `OfflineTransactionLimit` (1000), and it has been offline for far less than its `OfflineWindowHours` (240). Both are station configuration, not pass fields ([`08-configuration.md` §5](../../spec/08-configuration.md#5-offline--ble-configuration-keys))
@@ -223,7 +223,7 @@ The station chooses BLE version `0.3.0` from the Hello's list, generates its own
 
 ### Step 8: Station Verification and Session Key Derivation (18:32:13.200)
 
-Before it derives any key, and before Bob's pass can leave the phone, the app verifies the station ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)): the certificate chains to the Station CA of its trust bundle, is valid now, and is on no entry of the bundle's CRL; it carries `digitalSignature` and `id-kp-osppBleStation`; its subject CN, `stn_a1b2c3d4`, is the station Bob is standing at; and `stationSignature` verifies under its key. It also confirms that Eco Program is available on Bay 1 in `availableServices`. Had any of this failed, the app would have aborted with `2013 BLE_AUTH_FAILED` and sent nothing.
+Before it derives any key, and before Bob's pass can leave the phone, the app verifies the station ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)): the certificate chains to a Station CA of its trust bundle, is valid now, and is on no entry of that CA's CRL; it carries `digitalSignature` and `id-kp-osppBleStation`; its subject CN, `stn_a1b2c3d4`, is the station Bob is standing at; and `stationSignature` verifies under its key. It also confirms that Eco Program is available on Bay 1 in `availableServices`. Had any of this failed, the app would have aborted with `2013 BLE_AUTH_FAILED` and sent nothing.
 
 Both the app and station then derive the BLE session key using HKDF-SHA256 over the one ECDH secret of the two ephemeral keys (the BLE LTK is **not** used — see `spec/06-security.md` §6.5):
 

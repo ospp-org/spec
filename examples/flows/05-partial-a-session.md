@@ -197,8 +197,12 @@ X-Request-Id: req_offauth_7d8e9f01
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "trustBundle": {
-    "stationCaCertificate": "-----BEGIN CERTIFICATE-----\nMIIBiDCCAS6gAwIBAgICBVEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBU\nZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNTA5MDEwMDAw\nMDBaFw0zMDA4MzEyMzU5NTlaMDMxEjAQBgNVBAoMCU9TUFAgVGVzdDEdMBsGA1UE\nAwwUT1NQUCBUZXN0IFN0YXRpb24gQ0EwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNC\nAASV+9CgAE4tgTzAKWwxVGw9wkyvqJhltZhs/62oD8EQ144coXVZ5S7LcVowOBB6\nRCV30pndUexf5mPlLvNrPAYuozIwMDAdBgNVHQ4EFgQUF8cBGg8AqgEQ2/dlYB9f\nNDJLxlgwDwYDVR0TAQH/BAUwAwEB/zAKBggqhkjOPQQDAgNIADBFAiANwaaqU++e\nh+48Xbm+eIdx0Mewmx6Fi8TzTK7uRmr0IgIhAM7FlstK69gTH2I56MDw6st4gAnG\nfWr0/RyjuV++/a8j\n-----END CERTIFICATE-----\n",
-    "stationCaCrl": "-----BEGIN X509 CRL-----\nMIHLMHMCAQEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYD\nVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQRcNMjYwMjEwMDAwMDAwWhcNMjYwMjE3\nMDAwMDAwWqAPMA0wCwYDVR0UBAQCAhAAMAoGCCqGSM49BAMCA0gAMEUCIBn2bfLU\nLsyK7Ylqeam9kH9ZxjxZdbzegp90TJFf0XanAiEAxEIAKknqttpckEWPqEqPs5lp\nshMwikxb5J+KXtXQT9c=\n-----END X509 CRL-----\n"
+    "stationCas": [
+      {
+        "certificate": "-----BEGIN CERTIFICATE-----\nMIIBiDCCAS6gAwIBAgICBVEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBU\nZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNTA5MDEwMDAw\nMDBaFw0zMDA4MzEyMzU5NTlaMDMxEjAQBgNVBAoMCU9TUFAgVGVzdDEdMBsGA1UE\nAwwUT1NQUCBUZXN0IFN0YXRpb24gQ0EwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNC\nAASV+9CgAE4tgTzAKWwxVGw9wkyvqJhltZhs/62oD8EQ144coXVZ5S7LcVowOBB6\nRCV30pndUexf5mPlLvNrPAYuozIwMDAdBgNVHQ4EFgQUF8cBGg8AqgEQ2/dlYB9f\nNDJLxlgwDwYDVR0TAQH/BAUwAwEB/zAKBggqhkjOPQQDAgNIADBFAiANwaaqU++e\nh+48Xbm+eIdx0Mewmx6Fi8TzTK7uRmr0IgIhAM7FlstK69gTH2I56MDw6st4gAnG\nfWr0/RyjuV++/a8j\n-----END CERTIFICATE-----\n",
+        "crl": "-----BEGIN X509 CRL-----\nMIHLMHMCAQEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYD\nVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQRcNMjYwMjEwMDAwMDAwWhcNMjYwMjE3\nMDAwMDAwWqAPMA0wCwYDVR0UBAQCAhAAMAoGCCqGSM49BAMCA0gAMEUCIBn2bfLU\nLsyK7Ylqeam9kH9ZxjxZdbzegp90TJFf0XanAiEAxEIAKknqttpckEWPqEqPs5lp\nshMwikxb5J+KXtXQT9c=\n-----END X509 CRL-----\n"
+      }
+    ]
   },
   "wallet": {
     "previousBalance": 120,
@@ -207,7 +211,7 @@ X-Request-Id: req_offauth_7d8e9f01
 }
 ```
 
-The response carries the trust bundle too — the Station CA certificate and its CRL — because Alice's phone needs it to authenticate the station before it relays the authorization, and a phone may hold no pass, and so no bundle, at all ([`app-contract.md` §5](../../spec/profiles/offline/app-contract.md#5-the-partial-a-authorization)). The app replaces the bundle it holds with this one.
+The response carries the trust bundle too — the Station CA set, each CA with its CRL — because Alice's phone needs it to authenticate the station before it relays the authorization, and a phone may hold no pass, and so no bundle, at all ([`app-contract.md` §5](../../spec/profiles/offline/app-contract.md#5-the-partial-a-authorization)). The app replaces the bundle it holds with this one.
 
 ---
 
