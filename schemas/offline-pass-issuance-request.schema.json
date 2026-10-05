@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/offline-pass-issuance-request.schema.json",
   "title": "OfflinePassIssuanceRequest",
-  "description": "HTTP request body sent by the mobile app to the server's pass issuance endpoint (POST /api/v1/offline/passes) per spec/profiles/offline/app-contract.md 3. Carries the device key the server binds into the pass. The server's response is defined by offline-pass-issuance-response.schema.json.",
+  "description": "HTTP request body sent by the mobile app to the server's pass issuance endpoint (POST /api/v1/offline/passes) per spec/profiles/offline/app-contract.md 3. Carries the device key the server binds into the pass, and on the first request for a key the platform's attestation of it. The server's response is defined by offline-pass-issuance-response.schema.json.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -17,6 +17,55 @@
     "devicePublicKey": {
       "$ref": "common/ec-public-key.schema.json",
       "description": "The P-256 public key of the device key, compressed SEC1, Base64: a key pair the app generated in the phone's hardware-backed keystore with a non-exportable private key (spec/profiles/offline/app-contract.md 3.2). Copied into the pass's devicePublicKey."
+    },
+    "deviceKeyAttestation": {
+      "description": "The platform's attestation that the device key is hardware-backed (spec/profiles/offline/app-contract.md 3.6): Android Key Attestation or Apple App Attest. The server issues no pass for a device key whose attestation it has not verified; the app sends it with its first pass request for a key.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["format", "challenge", "certificateChain"],
+          "properties": {
+            "format": { "const": "android-key" },
+            "challenge": { "$ref": "#/$defs/challenge" },
+            "certificateChain": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 10,
+              "description": "The device key's attestation certificate chain from the Android Keystore, leaf first, each certificate DER and Base64. The leaf's public key is devicePublicKey, and its key description carries the challenge.",
+              "items": { "type": "string", "pattern": "^[A-Za-z0-9+/]+={0,2}$", "minLength": 100, "maxLength": 16384 }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["format", "challenge", "keyId", "attestationObject"],
+          "properties": {
+            "format": { "const": "apple-appattest" },
+            "challenge": { "$ref": "#/$defs/challenge" },
+            "keyId": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9+/]{43}=$",
+              "description": "The App Attest key identifier, Base64: the SHA-256 of the key's public key, X9.62 uncompressed."
+            },
+            "attestationObject": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9+/]+={0,2}$",
+              "minLength": 100,
+              "maxLength": 65536,
+              "description": "The App Attest attestation object, CBOR, Base64. Its credential certificate's public key is devicePublicKey, and its nonce covers the SHA-256 of the challenge."
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "challenge": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]{43}=$",
+      "description": "The challenge of the server's attestation-challenge response (offline-attestation-challenge-response.schema.json) this attestation carries."
     }
   }
 }

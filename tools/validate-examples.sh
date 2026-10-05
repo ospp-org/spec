@@ -91,6 +91,7 @@ check schemas/provisioning-request.schema.json examples/payloads/http/provisioni
 # The two bodies of the app-server pass issuance (spec/profiles/offline/app-contract.md §3).
 check schemas/offline-pass-issuance-request.schema.json  examples/payloads/http/offline-pass-issuance.request.json
 check schemas/offline-pass-issuance-response.schema.json examples/payloads/http/offline-pass-issuance.response.json
+check schemas/offline-attestation-challenge-response.schema.json examples/payloads/http/offline-attestation-challenge.response.json
 
 TOTAL=$((PASS + FAIL))
 echo

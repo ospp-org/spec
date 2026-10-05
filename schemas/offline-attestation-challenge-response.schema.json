@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/offline-attestation-challenge-response.schema.json",
+  "title": "OfflineAttestationChallengeResponse",
+  "description": "HTTP response body of the server's attestation-challenge endpoint (POST /api/v1/offline/attestation-challenges) per spec/profiles/offline/app-contract.md 3.6. The app puts the challenge into the platform's attestation of its device key, and the server accepts it once, from the user it issued it to, before expiresAt.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "challenge",
+    "expiresAt"
+  ],
+  "properties": {
+    "challenge": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]{43}=$",
+      "description": "32 random bytes, Base64."
+    },
+    "expiresAt": {
+      "$ref": "common/timestamp.schema.json",
+      "description": "ISO 8601 UTC timestamp after which the server no longer accepts the challenge."
+    }
+  }
+}
