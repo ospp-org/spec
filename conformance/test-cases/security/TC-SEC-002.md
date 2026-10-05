@@ -103,7 +103,7 @@ Verify that the station presents a valid X.509 client certificate during the TLS
 4. A self-signed certificate causes TLS handshake failure; no MQTT connection is established.
 5. A revoked certificate causes TLS handshake failure; no MQTT connection is established.
 6. The station logs `1004 CERTIFICATE_ERROR` for **every** certificate failure scenario, each carrying the `details.cause` that names it — `expired` in Part C, `self-signed` in Part D, `revoked` in Part E. `1003` is not an acceptable substitute on any of them, and a missing or wrong `details.cause` is not a pass: the discriminator is what the station's own recovery branches on.
-7. On no branch of `1004`, an expired certificate's included, does the station enter provisioning mode or discard its stored credentials.
+7. On no branch of `1004`, that of an expired certificate included, does the station enter provisioning mode or discard its stored credentials.
 8. After operator-initiated certificate renewal, the station successfully reconnects and resumes normal operation.
 
 ## Failure Criteria

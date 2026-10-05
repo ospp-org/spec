@@ -349,7 +349,7 @@ A green checkmark animation and "Authentication successful" (Authentication succ
 
 ### Step 13: App Writes StartServiceRequest to FFF3 (18:32:16.500)
 
-Note: the request is for 180 s — 30 credits at 10 credits/min, exactly `maxCreditsPerTx`. The app sized it from the pass before asking. Had it asked for 300 s, check #8 would have **rejected** the pass with `4004 OFFLINE_PER_TX_EXCEEDED` ([`offline-pass.md` §4](../../spec/profiles/offline/offline-pass.md) check #8); the station does not reduce an over-limit request to fit.
+Note: the request is for 180 s — 30 credits at 10 credits/min, exactly `maxCreditsPerTx`. The app sized it from the pass before asking. Had its OfflineAuthRequest asked for 300 s, check #8 would have **rejected** the pass with `4004 OFFLINE_PER_TX_EXCEEDED` ([`offline-pass.md` §4](../../spec/profiles/offline/offline-pass.md) check #8); the station does not reduce an over-limit request to fit.
 
 **BLE GATT Write:** Characteristic `6645FFF3-5AEB-4709-ACD5-02E03C3000F6`
 

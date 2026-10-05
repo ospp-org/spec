@@ -219,4 +219,4 @@ The server **MUST** perform every check below that is not withdrawn — #1--#4, 
 - Request: [`authorize-offline-pass-request.schema.json`](../../../schemas/mqtt/authorize-offline-pass-request.schema.json)
 - Response: [`authorize-offline-pass-response.schema.json`](../../../schemas/mqtt/authorize-offline-pass-response.schema.json)
 - OfflinePass: [`offline-pass.schema.json`](../../../schemas/common/offline-pass.schema.json)
-- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 2002--2005, 2014, 4002--4004, 6001)
+- Error codes: [Chapter 07 — Error Codes & Resilience](../../07-errors.md) (codes 1005, 2002--2005, 2014, 4002--4004, 6001)

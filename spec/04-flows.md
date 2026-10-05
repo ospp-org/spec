@@ -989,8 +989,8 @@ sequenceDiagram
 | 6 | MQTT send failure | SSP **MAY** fall back to local validation (like Full Offline) if its `OfflineModeEnabled` is `true`, within its own offline limits ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)) |
 | 6 | Device proof invalid | SSP refuses with `2002` and forwards nothing |
 | 7 | Pass rejected by server | SSP relays the rejection to App with the server's `errorCode`, `errorText` and `details` |
-| 8 | StartServiceRequest other than the authorized duration | SSP refuses with `3010` above it and `3008` below it, and starts nothing ([`ble-session.md` §1](profiles/offline/ble-session.md#1-starting-a-service) rule 2) |
 | 7 | AuthorizeOfflinePass unanswered within the BLE handshake budget | SSP answers the app within the budget with `1010 MESSAGE_TIMEOUT`, or **MAY** fall back to local validation (degraded mode) if its `OfflineModeEnabled` is `true`, within its own offline limits ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)) |
+| 10 | StartServiceRequest other than the authorized duration | SSP refuses with `3010` above it and `3008` below it, and starts nothing ([`ble-session.md` §1](profiles/offline/ble-session.md#1-starting-a-service) rule 2) |
 
 ### Postconditions
 

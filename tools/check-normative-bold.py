@@ -30,7 +30,7 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-10-05  (unreleased)  394 unbolded, 1445 bolded spans — the BLE wire revision.
+    (this HEAD) 2026-10-05  (unreleased)  394 unbolded, 1446 bolded spans — the BLE wire revision.
                                    Unbolded FALLS BY THIRTEEN and BASELINE follows it down to 394:
                                    `02-transport.md` 79 -> 71 (the second fragmentation protocol of
                                    §8.6 and the advertising and GATT tables of §8.3-§8.4, withdrawn

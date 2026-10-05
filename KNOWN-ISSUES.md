@@ -405,7 +405,7 @@ the station refuses one presented after it (§4.2.2 check #6). Reconciliation th
 ([`reconciliation.md` §6.7](spec/profiles/offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4)
 check #9). Measured: every wash that ends more than five minutes after its authorization was issued
 fails check #9 with `2003`, however promptly the station accepted it — flow 05's authorization of
-300 seconds, accepted 2.7 seconds after issue and run to its timer, would end 2.7 seconds after its
+300 seconds, started 2.7 seconds after issue and run to its timer, would end 2.7 seconds after its
 `expiresAt`. The receipt carries `startedAt` and `endedAt`, and nothing records when the station
 accepted the authorization, which is what its expiry bounds; the start may follow the acceptance by
 any time, since nothing bounds it.
