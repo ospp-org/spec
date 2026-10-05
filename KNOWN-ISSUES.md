@@ -403,6 +403,28 @@ Private Enterprise Number, held by whoever registers it for the project; or (b) 
 with a rule that every party that parses a station certificate reads OID components of up to 128
 bits, and a conformance check of it.
 
+**Measured 2026-10-05, for Gabi's decision 6 of the BLE follow-up — not applied.** The decision drops
+`id-kp-osppBleStation`, and the re-issue it requires, if the Station CA issues station leaf certificates
+and nothing else: the station's BLE signature would then be accepted on its chain to the Station CA and
+the fixed OSPP context of its signed content. The specification says the Station CA signs station
+certificates ([`06-security.md` §4.2](spec/06-security.md#42-pki-architecture)) and nothing forbids it
+more. The reference server's Station CA issues more. Measured in csms-server at `63a34f48`, the Station
+CA's private key signs at three sites:
+
+| Site | What it signs |
+|---|---|
+| `CertificateManager::signCsr`, at provisioning and at renewal | a station certificate: CN `stn_…`, key usage `nonRepudiation`, `digitalSignature` and `keyEncipherment`, extended key usage `clientAuth`, one year |
+| `CrlGenerator` | the Station CA's CRL |
+| `GenerateServerCertCommand` (`ospp:generate-server-cert`) | the MQTT client certificate of the server's own broker client, the bridge: CN `csms-{environment}-server-{instance}`, key usage `digitalSignature` and `keyAgreement`, extended key usage `clientAuth`, five years |
+
+Without the purpose, the bridge's certificate would pass the app's gate
+([`06-security.md` §6.5.2](spec/06-security.md#652-station-authentication--the-stations-certificate)): it chains to
+the Station CA, carries `digitalSignature` on a P-256 key, and the gate compares its subject with a
+`stationId` only when the app holds one out of band. A Challenge signed with the bridge's key — a key on
+a server host, not in a station's secure element — would then authenticate as a station. So the purpose
+stays, and with it this entry: option (a) needs an IANA Private Enterprise Number, which only the
+project's owner can request.
+
 ---
 
 ## OPEN — nothing bounds the Challenge against the 255 fragments a message may span at a small MTU
@@ -423,6 +445,45 @@ Nothing says what a station does when its Challenge does not fit.
 **The decision needed.** One or more of: (a) a floor on the `ATT_MTU` of a BLE connection, with the
 refusal of a Hello on a connection below it; (b) a bound on the bays and services a station serves over
 BLE; (c) a more compact `availableServices` — for example, the unavailable pairs only.
+
+**Measured 2026-10-05, for Gabi's decision 7 of the BLE follow-up — not applied.** The decision keeps the
+whole per-bay catalog on FFF2, read before the Hello in as many fragments as its size needs, and moves
+availability to a per-bay bitmap in the Challenge, indexed by the catalog's order. It asks first for the
+largest station the specification allows, and for proof that its FFF2 transfer completes within a stated
+time on the slowest connection the specification permits and that the Challenge fits the handshake's
+transport and time budget. The proof cannot be made:
+
+- **The largest catalog.** A catalog is bounded only by the 64,512-octet envelope cap
+  ([`02-transport.md` §10.2.1](spec/02-transport.md#1021-the-envelope-cap)). At the field bounds of
+  [`service-item.schema.json`](schemas/common/service-item.schema.json) — 64-character identifiers,
+  128-character names, 64 bindings — it holds 24 services bound to all 64 bays: 1,536 bay–service pairs
+  (21 services, 1,344 pairs, with 4-octet characters in the names). With one-character names it holds
+  27 services on all 64 bays, 1,728 pairs, or 429 services on one bay.
+- **Its FFF2 value.** As [`ble-transport.md` §4](spec/profiles/offline/ble-transport.md#4-available-services-fff2)
+  defines it, each bay repeating its services' names and prices: 470,645 to 516,725 octets with ASCII
+  names, up to 1,188,725 with escaped control characters. With each service listed once and each bay
+  naming its services' indices: 18,002 to 28,262 octets.
+- **What one message can carry.** At most 255 fragments of `ATT_MTU − 6` octets
+  ([`ble-transport.md` §11](spec/profiles/offline/ble-transport.md#11-fragmentation-protocol)): 4,335
+  octets at the `ATT_MTU` of 23 a station must still serve (§10), 45,645 at 185, 61,455 at 247, 130,305
+  at 517, the largest. The FFF2 value as defined today fits at none of them.
+- **How long it takes.** The specification bounds no connection interval, no number of link-layer PDUs
+  per connection event and no link-layer data length, so the slowest connection it permits is the slowest
+  the Core Specification allows: a 4-second interval, one 27-octet PDU per event. There, today's
+  1,092-octet Challenge takes 65 fragments and 260 seconds, the bitmap Challenge the decision describes
+  at its largest (2,925 octets, a 2,048-character certificate) 173 fragments and 692 seconds, and the
+  catalog listed once 1,663 fragments — more than a message can carry — and 6,652 seconds, against the
+  5 seconds §11 rule 4 allows a message and the 10 seconds of the handshake. At the fastest interval,
+  7.5 milliseconds, with one PDU per event and no Data Length Extension, the bitmap Challenge takes
+  0.86 to 1.30 seconds and fits; the catalog listed once takes 8.29 seconds at an `ATT_MTU` of 185
+  and does not.
+
+The decision needed: (a) the connection an OSPP BLE session runs on — a longest connection interval the
+station requests and accepts, a floor on `ATT_MTU`, the Data Length Extension — without which no transfer
+time can be proven, for today's Challenge either; and (b) a bounded FFF2: each service listed once and a
+bound on the catalog a station serves over BLE, or the catalog carried in several messages, each within
+§11's cap, with a time bound of its own. The arithmetic is reproducible from the schemas' bounds and the
+conformance vectors; the method reproduces the 1,092 octets this entry recorded for today's Challenge.
 
 ---
 
