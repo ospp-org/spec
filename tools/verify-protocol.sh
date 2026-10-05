@@ -804,7 +804,7 @@ function category7() {
     subscriberId: /^sub_[a-f0-9_]{4,}$/,  // some examples use sub_alice2026 etc.
     serviceId: /^svc_[a-f0-9]{8,}$/,
     reservationId: /^rsv_[a-f0-9]{8,}$/,
-    offlineTxId: /^otx_[a-f0-9]{8,}$/,
+    offlineTxId: /^otx_[a-f0-9]{32,}$/, // 128 random bits, reconciliation.md 3 rule 1
     offlinePassId: /^opass_[a-f0-9]{8,}$/,
   };
 

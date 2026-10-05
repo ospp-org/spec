@@ -381,7 +381,7 @@ The station controller:
   "type": "StartServiceResponse",
   "result": "Accepted",
   "sessionId": "sess_a8b9c0d1e2f3",
-  "offlineTxId": "otx_a3b4c5d6e7f8"
+  "offlineTxId": "otx_a3b4c5d6e7f8d5fa9b53cfa58cb91fa5"
 }
 ```
 
@@ -567,7 +567,7 @@ txCounter:           8 (station's 8th offline transaction)
 ```json
 {
   "type": "ReceiptRequest",
-  "offlineTxId": "otx_a3b4c5d6e7f8"
+  "offlineTxId": "otx_a3b4c5d6e7f8d5fa9b53cfa58cb91fa5"
 }
 ```
 
@@ -575,7 +575,7 @@ txCounter:           8 (station's 8th offline transaction)
 
 ```json
 {
-  "offlineTxId": "otx_a3b4c5d6e7f8",
+  "offlineTxId": "otx_a3b4c5d6e7f8d5fa9b53cfa58cb91fa5",
   "offlinePassId": "opass_a8b9c0d1e2f3",
   "passCounter": 3,
   "userId": "sub_bob2026",
@@ -592,8 +592,8 @@ txCounter:           8 (station's 8th offline transaction)
     "energyWh": 85
   },
   "receipt": {
-    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjE4MCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjozMCwiZGV2aWNlSWQiOiJkZXZpY2VfYjdjNGRlODlmMDEyMzQ1NiIsImR1cmF0aW9uU2Vjb25kcyI6MTgwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xM1QxODozNToxNy4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjozNzUsImVuZXJneVdoIjo4NSwibGlxdWlkTWwiOjMzNDAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2E4YjljMGQxZTJmMyIsIm9mZmxpbmVUeElkIjoib3R4X2EzYjRjNWQ2ZTdmOCIsInBhc3NDb3VudGVyIjozLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xM1QxODozMjoxNy4wMDBaIiwic3RhdGlvbklkIjoic3RuX2ExYjJjM2Q0IiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfYm9iMjAyNiJ9",
-    "signature": "MEQCICMak9WpvoXhB461m1fRcir+k0RKKG1swqI+oEt9bS2GAiAJKrmeam0uyUykofWMu5M8GokaX2Y7tSI3HDQxGBQ+SQ==",
+    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjE4MCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjozMCwiZGV2aWNlSWQiOiJkZXZpY2VfYjdjNGRlODlmMDEyMzQ1NiIsImR1cmF0aW9uU2Vjb25kcyI6MTgwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xM1QxODozNToxNy4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjozNzUsImVuZXJneVdoIjo4NSwibGlxdWlkTWwiOjMzNDAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2E4YjljMGQxZTJmMyIsIm9mZmxpbmVUeElkIjoib3R4X2EzYjRjNWQ2ZTdmOGQ1ZmE5YjUzY2ZhNThjYjkxZmE1IiwicGFzc0NvdW50ZXIiOjMsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDE4OjMyOjE3LjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9ib2IyMDI2In0=",
+    "signature": "MEQCIEgxpigsbpm5jHIGBrljkN5jcgBnYHIpsllNrNWQaCjUAiAcZv6sqe28SGDBHBHF9e+03aUv5Kd9eR+v+YMV8u1IGA==",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "txCounter": 8
@@ -659,7 +659,7 @@ When the station regains MQTT connectivity, it performs the reconciliation flow 
   "source": "Station",
   "protocolVersion": "0.3.0",
   "payload": {
-    "offlineTxId": "otx_a3b4c5d6e7f8",
+    "offlineTxId": "otx_a3b4c5d6e7f8d5fa9b53cfa58cb91fa5",
     "offlinePassId": "opass_a8b9c0d1e2f3",
     "passCounter": 3,
     "userId": "sub_bob2026",
@@ -670,8 +670,8 @@ When the station regains MQTT connectivity, it performs the reconciliation flow 
     "durationSeconds": 180,
     "creditsCharged": 30,
     "receipt": {
-      "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjE4MCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjozMCwiZGV2aWNlSWQiOiJkZXZpY2VfYjdjNGRlODlmMDEyMzQ1NiIsImR1cmF0aW9uU2Vjb25kcyI6MTgwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xM1QxODozNToxNy4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjozNzUsImVuZXJneVdoIjo4NSwibGlxdWlkTWwiOjMzNDAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2E4YjljMGQxZTJmMyIsIm9mZmxpbmVUeElkIjoib3R4X2EzYjRjNWQ2ZTdmOCIsInBhc3NDb3VudGVyIjozLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xM1QxODozMjoxNy4wMDBaIiwic3RhdGlvbklkIjoic3RuX2ExYjJjM2Q0IiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfYm9iMjAyNiJ9",
-      "signature": "MEQCICMak9WpvoXhB461m1fRcir+k0RKKG1swqI+oEt9bS2GAiAJKrmeam0uyUykofWMu5M8GokaX2Y7tSI3HDQxGBQ+SQ==",
+      "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjE4MCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjozMCwiZGV2aWNlSWQiOiJkZXZpY2VfYjdjNGRlODlmMDEyMzQ1NiIsImR1cmF0aW9uU2Vjb25kcyI6MTgwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xM1QxODozNToxNy4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjozNzUsImVuZXJneVdoIjo4NSwibGlxdWlkTWwiOjMzNDAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2E4YjljMGQxZTJmMyIsIm9mZmxpbmVUeElkIjoib3R4X2EzYjRjNWQ2ZTdmOGQ1ZmE5YjUzY2ZhNThjYjkxZmE1IiwicGFzc0NvdW50ZXIiOjMsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDE4OjMyOjE3LjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9ib2IyMDI2In0=",
+      "signature": "MEQCIEgxpigsbpm5jHIGBrljkN5jcgBnYHIpsllNrNWQaCjUAiAcZv6sqe28SGDBHBHF9e+03aUv5Kd9eR+v+YMV8u1IGA==",
       "signatureAlgorithm": "ECDSA-P256-SHA256"
     },
     "txCounter": 8,
@@ -701,7 +701,7 @@ When the station regains MQTT connectivity, it performs the reconciliation flow 
 ```
 
 The server, in the order of [`reconciliation.md` §2](../../spec/profiles/offline/reconciliation.md#2-sync-procedure):
-1. Deduplicates by `offlineTxId` (`otx_a3b4c5d6e7f8`). Whichever copy of a receipt arrives first — the station's TransactionEvent or the app's upload — may settle, and once one has settled the other is answered `Duplicate` ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload))
+1. Deduplicates by `offlineTxId` (`otx_a3b4c5d6e7f8d5fa9b53cfa58cb91fa5`). Whichever copy of a receipt arrives first — the station's TransactionEvent or the app's upload — may settle, and once one has settled the other is answered `Duplicate` ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload))
 2. Verifies the receipt signature with the receipt-signing key of the station the signed receipt names (`stationId`)
 3. Records txCounter 8 as forensic evidence (contiguous with the last known counter — noted, not gated on)
 4. Applies the reconcile-time gate: the OfflinePass was valid at the transaction's signed `endedAt`, read through the station's clock offset ([`reconciliation.md` §6.8](../../spec/profiles/offline/reconciliation.md#68-station-clock-offset))

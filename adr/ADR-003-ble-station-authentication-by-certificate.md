@@ -108,10 +108,13 @@ station entered before this decision serves no one, and the station waits for it
 ## Review gate
 
 ADR-002 made the construction pass a cryptographic review — *"a cryptographer or an adversarial
-review on the final construction"* — before it is frozen. That gate is satisfied by an adversarial
+review on the final construction"* — before it is frozen. That gate is met by an adversarial
 review performed by the project's own team against the written checklist of
 [`06-security.md` Appendix B](../spec/06-security.md#appendix-b--ble-cryptographic-review-checklist),
-recorded item by item. The BLE profile stays EXPERIMENTAL until the review has passed.
+recorded item by item, once it has passed; it has not been performed. The BLE profile stays
+EXPERIMENTAL until its cryptographic construction has passed the review of Appendix B, and that is
+the one condition for leaving EXPERIMENTAL: an implementation that exercises the construction is
+evidence for the review, not a second condition.
 
 ## References
 

@@ -34,11 +34,11 @@ At 14:00, the ISP restores connectivity. The station reconnects to the MQTT brok
 14:00:02.500  Station sends BootNotification (pendingOfflineTransactions: 3)
 14:00:02.800  Server responds: Accepted (expects offline TX replay)
 14:00:03.000  Station sends StatusNotification for all 3 bays
-14:00:05.000  Station sends TransactionEvent #1 (otx_a1b2c3d4, Alice, Eco Program 5min)
+14:00:05.000  Station sends TransactionEvent #1 (otx_a1b2c3d4c6b7798bbf5a1a447c52e848, Alice, Eco Program 5min)
 14:00:05.300  Server verifies, gates, settles (debits Alice 50 credits), scores, responds Accepted
-14:00:07.000  Station sends TransactionEvent #2 (otx_e5f6a7b8d9c0, Bob, Standard Program 3min)
+14:00:07.000  Station sends TransactionEvent #2 (otx_e5f6a7b8d9c04c0edcfa092be0f1ec2d, Bob, Standard Program 3min)
 14:00:07.300  Server verifies, gates, settles (debits Bob 24 credits), scores, responds Accepted
-14:00:09.000  Station sends TransactionEvent #3 (otx_a9b0c1d2e3f4, Alice, Eco Program 4min)
+14:00:09.000  Station sends TransactionEvent #3 (otx_a9b0c1d2e3f40a9c488a44d8b1ad77e4, Alice, Eco Program 4min)
 14:00:09.300  Server verifies, gates, settles (debits Alice 40 credits), scores, responds Accepted
 14:00:10.000  All 3 settled and scored; every score in the Normal band
 14:00:10.500  Reconciliation complete (no FraudDetected record)
@@ -230,14 +230,14 @@ The first offline transaction. Alice used bay 1 around 10:30, using a BLE Offlin
 
 ```json
 {
-  "messageId": "msg_tx_otx_a1b2c3d4",
+  "messageId": "msg_tx_otx_a1b2c3d4c6b7798bbf5a1a447c52e848",
   "messageType": "Request",
   "action": "TransactionEvent",
   "timestamp": "2026-02-13T14:00:05.000Z",
   "source": "Station",
   "protocolVersion": "0.3.0",
   "payload": {
-    "offlineTxId": "otx_a1b2c3d4",
+    "offlineTxId": "otx_a1b2c3d4c6b7798bbf5a1a447c52e848",
     "offlinePassId": "opass_a1c3e500b2d4",
     "passCounter": 1,
     "userId": "sub_alice2026",
@@ -248,8 +248,8 @@ The first offline transaction. Alice used bay 1 around 10:30, using a BLE Offlin
     "durationSeconds": 300,
     "creditsCharged": 50,
     "receipt": {
-      "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjMwMCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjo1MCwiZGV2aWNlSWQiOiJkZXZpY2VfYThmM2JjMTJlNDU2Nzg5MCIsImR1cmF0aW9uU2Vjb25kcyI6MzAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xM1QxMDozNTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoyMTAwLCJlbmVyZ3lXaCI6MTI1MCwibGlxdWlkTWwiOjc1MDAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2ExYzNlNTAwYjJkNCIsIm9mZmxpbmVUeElkIjoib3R4X2ExYjJjM2Q0IiwicGFzc0NvdW50ZXIiOjEsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDEwOjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJ0eENvdW50ZXIiOjMsInVzZXJJZCI6InN1Yl9hbGljZTIwMjYifQ==",
-      "signature": "MEQCIBbN8BDdeQhhzq60UVXCHbOy+G8mIygysWZ+DeKVXwW+AiAobNHTbM4AsybR8esDLIOsUIPs1NTRsWoe/DKPMtuVoA==",
+      "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjMwMCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjo1MCwiZGV2aWNlSWQiOiJkZXZpY2VfYThmM2JjMTJlNDU2Nzg5MCIsImR1cmF0aW9uU2Vjb25kcyI6MzAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xM1QxMDozNTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoyMTAwLCJlbmVyZ3lXaCI6MTI1MCwibGlxdWlkTWwiOjc1MDAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2ExYzNlNTAwYjJkNCIsIm9mZmxpbmVUeElkIjoib3R4X2ExYjJjM2Q0YzZiNzc5OGJiZjVhMWE0NDdjNTJlODQ4IiwicGFzc0NvdW50ZXIiOjEsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDEwOjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJ0eENvdW50ZXIiOjMsInVzZXJJZCI6InN1Yl9hbGljZTIwMjYifQ==",
+      "signature": "MEQCIFXbfygCD8LJumhViqXcxioOndkAxPgfggS/Xgbq3adrAiASay2pLRqg5XHxD4ShJHeYEZcO35Fnv8TTgYjJZyKG7w==",
       "signatureAlgorithm": "ECDSA-P256-SHA256"
     },
     "txCounter": 3,
@@ -268,7 +268,7 @@ The first offline transaction. Alice used bay 1 around 10:30, using a BLE Offlin
 
 ```json
 {
-  "messageId": "msg_tx_otx_a1b2c3d4",
+  "messageId": "msg_tx_otx_a1b2c3d4c6b7798bbf5a1a447c52e848",
   "messageType": "Response",
   "action": "TransactionEvent",
   "timestamp": "2026-02-13T14:00:05.300Z",
@@ -284,7 +284,7 @@ The first offline transaction. Alice used bay 1 around 10:30, using a BLE Offlin
 
 In the order of [`reconciliation.md` §2](../../spec/profiles/offline/reconciliation.md#2-sync-procedure):
 
-- Deduplication: `otx_a1b2c3d4` is not in the ledger
+- Deduplication: `otx_a1b2c3d4c6b7798bbf5a1a447c52e848` is not in the ledger
 - Receipt signature: verifies under the receipt-signing key of `stn_a1b2c3d4`, the station the signed receipt names
 - txCounter recorded: 3 (forensic only — gates nothing)
 - Gate: pass `opass_a1c3e500b2d4` was valid at the signed `endedAt` (10:35), read through the station's clock offset (`clockState` `Synchronized`)
@@ -302,14 +302,14 @@ The second offline transaction. Bob used bay 2 around 12:15, using the Standard 
 
 ```json
 {
-  "messageId": "msg_tx_otx_e5f6a7b8d9c0",
+  "messageId": "msg_tx_otx_e5f6a7b8d9c04c0edcfa092be0f1ec2d",
   "messageType": "Request",
   "action": "TransactionEvent",
   "timestamp": "2026-02-13T14:00:07.000Z",
   "source": "Station",
   "protocolVersion": "0.3.0",
   "payload": {
-    "offlineTxId": "otx_e5f6a7b8d9c0",
+    "offlineTxId": "otx_e5f6a7b8d9c04c0edcfa092be0f1ec2d",
     "offlinePassId": "opass_b0b30030c1d2",
     "passCounter": 1,
     "userId": "sub_bob2026",
@@ -320,8 +320,8 @@ The second offline transaction. Bob used bay 2 around 12:15, using the Standard 
     "durationSeconds": 180,
     "creditsCharged": 24,
     "receipt": {
-      "data": "eyJiYXlJZCI6ImJheV9hMmIzYzRkNWU2ZjciLCJib29rZWREdXJhdGlvblNlY29uZHMiOjE4MCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjoyNCwiZGV2aWNlSWQiOiJkZXZfZTVmNmE3YjgiLCJkdXJhdGlvblNlY29uZHMiOjE4MCwiZW5kUmVhc29uIjoiVGltZXJFeHBpcmVkIiwiZW5kZWRBdCI6IjIwMjYtMDItMTNUMTI6MTg6MDAuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImVuZXJneVdoIjo5NTAsImxpcXVpZE1sIjo0MjAwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19iMGIzMDAzMGMxZDIiLCJvZmZsaW5lVHhJZCI6Im90eF9lNWY2YTdiOGQ5YzAiLCJwYXNzQ291bnRlciI6MSwic2VydmljZUlkIjoic3ZjX3N0YW5kYXJkIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xM1QxMjoxNTowMC4wMDBaIiwic3RhdGlvbklkIjoic3RuX2ExYjJjM2Q0IiwidHhDb3VudGVyIjo0LCJ1c2VySWQiOiJzdWJfYm9iMjAyNiJ9",
-      "signature": "MEUCIQDWDisxW35OQy2Xm/Rd96dJjSdDFjmtLEQszxOKx5G60AIgCoXKLAvHqNUsItit6e4R/Iewr3kI/LnTNDWPEnLAp1Q=",
+      "data": "eyJiYXlJZCI6ImJheV9hMmIzYzRkNWU2ZjciLCJib29rZWREdXJhdGlvblNlY29uZHMiOjE4MCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjoyNCwiZGV2aWNlSWQiOiJkZXZfZTVmNmE3YjgiLCJkdXJhdGlvblNlY29uZHMiOjE4MCwiZW5kUmVhc29uIjoiVGltZXJFeHBpcmVkIiwiZW5kZWRBdCI6IjIwMjYtMDItMTNUMTI6MTg6MDAuMDAwWiIsIm1ldGVyVmFsdWVzIjp7ImVuZXJneVdoIjo5NTAsImxpcXVpZE1sIjo0MjAwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19iMGIzMDAzMGMxZDIiLCJvZmZsaW5lVHhJZCI6Im90eF9lNWY2YTdiOGQ5YzA0YzBlZGNmYTA5MmJlMGYxZWMyZCIsInBhc3NDb3VudGVyIjoxLCJzZXJ2aWNlSWQiOiJzdmNfc3RhbmRhcmQiLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDEyOjE1OjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJ0eENvdW50ZXIiOjQsInVzZXJJZCI6InN1Yl9ib2IyMDI2In0=",
+      "signature": "MEQCIASs7eLpwhxUAaK2ZpWCZ2GwkB+RP7K3asY5Lnpl4eB3AiBo5GsJEcGhKxh1L/3gDG/pPrWUymWHjM6BgWnfSKLOJQ==",
       "signatureAlgorithm": "ECDSA-P256-SHA256"
     },
     "txCounter": 4,
@@ -339,7 +339,7 @@ The second offline transaction. Bob used bay 2 around 12:15, using the Standard 
 
 ```json
 {
-  "messageId": "msg_tx_otx_e5f6a7b8d9c0",
+  "messageId": "msg_tx_otx_e5f6a7b8d9c04c0edcfa092be0f1ec2d",
   "messageType": "Response",
   "action": "TransactionEvent",
   "timestamp": "2026-02-13T14:00:07.300Z",
@@ -355,7 +355,7 @@ The second offline transaction. Bob used bay 2 around 12:15, using the Standard 
 
 In the order of [`reconciliation.md` §2](../../spec/profiles/offline/reconciliation.md#2-sync-procedure):
 
-- Deduplication: `otx_e5f6a7b8d9c0` is not in the ledger
+- Deduplication: `otx_e5f6a7b8d9c04c0edcfa092be0f1ec2d` is not in the ledger
 - Receipt signature: verifies under the receipt-signing key of `stn_a1b2c3d4`, the station the signed receipt names
 - txCounter recorded: 4 (forensic only — gates nothing)
 - Gate: pass `opass_b0b30030c1d2` was valid at the signed `endedAt` (12:18), read through the station's clock offset
@@ -373,14 +373,14 @@ Alice returned for a second session at bay 3 around 13:10. Same OfflinePass, dif
 
 ```json
 {
-  "messageId": "msg_tx_otx_a9b0c1d2e3f4",
+  "messageId": "msg_tx_otx_a9b0c1d2e3f40a9c488a44d8b1ad77e4",
   "messageType": "Request",
   "action": "TransactionEvent",
   "timestamp": "2026-02-13T14:00:09.000Z",
   "source": "Station",
   "protocolVersion": "0.3.0",
   "payload": {
-    "offlineTxId": "otx_a9b0c1d2e3f4",
+    "offlineTxId": "otx_a9b0c1d2e3f40a9c488a44d8b1ad77e4",
     "offlinePassId": "opass_a1c3e500b2d4",
     "passCounter": 2,
     "userId": "sub_alice2026",
@@ -391,8 +391,8 @@ Alice returned for a second session at bay 3 around 13:10. Same OfflinePass, dif
     "durationSeconds": 240,
     "creditsCharged": 40,
     "receipt": {
-      "data": "eyJiYXlJZCI6ImJheV9kNWU2ZjdhOGI5YzAiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjI0MCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjo0MCwiZGV2aWNlSWQiOiJkZXZpY2VfYThmM2JjMTJlNDU2Nzg5MCIsImR1cmF0aW9uU2Vjb25kcyI6MjQwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xM1QxMzoxNDowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxNzAwLCJlbmVyZ3lXaCI6MTA1MCwibGlxdWlkTWwiOjYwMDAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2ExYzNlNTAwYjJkNCIsIm9mZmxpbmVUeElkIjoib3R4X2E5YjBjMWQyZTNmNCIsInBhc3NDb3VudGVyIjoyLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xM1QxMzoxMDowMC4wMDBaIiwic3RhdGlvbklkIjoic3RuX2ExYjJjM2Q0IiwidHhDb3VudGVyIjo1LCJ1c2VySWQiOiJzdWJfYWxpY2UyMDI2In0=",
-      "signature": "MEQCID1jXPUykIownks7Zu4TFcgD7ZTzE4GlcQSpvYQRS5yWAiAOtPKbAR7N7KsUhuFxjXQzkXTesaxKvNIW6SIlerM2lg==",
+      "data": "eyJiYXlJZCI6ImJheV9kNWU2ZjdhOGI5YzAiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjI0MCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjo0MCwiZGV2aWNlSWQiOiJkZXZpY2VfYThmM2JjMTJlNDU2Nzg5MCIsImR1cmF0aW9uU2Vjb25kcyI6MjQwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xM1QxMzoxNDowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxNzAwLCJlbmVyZ3lXaCI6MTA1MCwibGlxdWlkTWwiOjYwMDAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2ExYzNlNTAwYjJkNCIsIm9mZmxpbmVUeElkIjoib3R4X2E5YjBjMWQyZTNmNDBhOWM0ODhhNDRkOGIxYWQ3N2U0IiwicGFzc0NvdW50ZXIiOjIsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDEzOjEwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJ0eENvdW50ZXIiOjUsInVzZXJJZCI6InN1Yl9hbGljZTIwMjYifQ==",
+      "signature": "MEQCIAWHmti8rrNr/eVPn5DzV31B07hKymRVPW3WtLqSvwNbAiAeYQ3/AeAs4MWXpDqnw++DeN/SlhckjCnJuhE53gRshQ==",
       "signatureAlgorithm": "ECDSA-P256-SHA256"
     },
     "txCounter": 5,
@@ -411,7 +411,7 @@ Alice returned for a second session at bay 3 around 13:10. Same OfflinePass, dif
 
 ```json
 {
-  "messageId": "msg_tx_otx_a9b0c1d2e3f4",
+  "messageId": "msg_tx_otx_a9b0c1d2e3f40a9c488a44d8b1ad77e4",
   "messageType": "Response",
   "action": "TransactionEvent",
   "timestamp": "2026-02-13T14:00:09.300Z",
@@ -427,7 +427,7 @@ Alice returned for a second session at bay 3 around 13:10. Same OfflinePass, dif
 
 In the order of [`reconciliation.md` §2](../../spec/profiles/offline/reconciliation.md#2-sync-procedure):
 
-- Deduplication: `otx_a9b0c1d2e3f4` is not in the ledger
+- Deduplication: `otx_a9b0c1d2e3f40a9c488a44d8b1ad77e4` is not in the ledger
 - Receipt signature: verifies under the receipt-signing key of `stn_a1b2c3d4`, the station the signed receipt names
 - txCounter recorded: 5 (forensic only — gates nothing)
 - Gate: pass `opass_a1c3e500b2d4` was valid at the signed `endedAt` (13:14), read through the station's clock offset; its `passCounter` 2 has not been settled before for this pass (check #13)
@@ -453,21 +453,21 @@ The server scored each transaction after settling it, as it processed it (Steps 
   "fraudScoring": {
     "results": [
       {
-        "offlineTxId": "otx_a1b2c3d4",
+        "offlineTxId": "otx_a1b2c3d4c6b7798bbf5a1a447c52e848",
         "userId": "sub_alice2026",
         "score": 0.10,
         "band": "Normal",
         "factors": ["FirstUseOfStation"]
       },
       {
-        "offlineTxId": "otx_e5f6a7b8d9c0",
+        "offlineTxId": "otx_e5f6a7b8d9c04c0edcfa092be0f1ec2d",
         "userId": "sub_bob2026",
         "score": 0.00,
         "band": "Normal",
         "factors": []
       },
       {
-        "offlineTxId": "otx_a9b0c1d2e3f4",
+        "offlineTxId": "otx_a9b0c1d2e3f40a9c488a44d8b1ad77e4",
         "userId": "sub_alice2026",
         "score": 0.00,
         "band": "Normal",
@@ -507,9 +507,9 @@ Charlie sees a reconciliation summary on his dashboard:
 |  +------------------------------------------------------------------+ |
 |  | #  | ID             | User    | Service   | Duration | Credits   | |
 |  |----|----------------|---------|------------|--------|-----------|  |
-|  | 1  | otx_a1b2c3d4   | Alice  | Eco Program     | 5m     | 50       |  |
-|  | 2  | otx_e5f6a7b8d9c0   | Bob| Standard Program | 3m     | 24       |  |
-|  | 3  | otx_a9b0c1d2e3f4   | Alice  | Eco Program     | 4m     | 40       |  |
+|  | 1  | otx_a1b2c3d4c6b7798bbf5a1a447c52e848   | Alice  | Eco Program     | 5m     | 50       |  |
+|  | 2  | otx_e5f6a7b8d9c04c0edcfa092be0f1ec2d   | Bob| Standard Program | 3m     | 24       |  |
+|  | 3  | otx_a9b0c1d2e3f40a9c488a44d8b1ad77e4   | Alice  | Eco Program     | 4m     | 40       |  |
 |  +------------------------------------------------------------------+ |
 |                                                                        |
 |  txCounter: CONTINUOUS (2 -> 5, no gaps)                             |
@@ -585,7 +585,7 @@ What this does **not** provide is a completeness guarantee. An operator suppress
      |------------------------------->|
      |                                |
      |  TransactionEvent #1           |
-     |  (otx_a1b2c3d4, Alice, Eco Program)    |
+     |  (otx_a1b2c3d4c6b7798bbf5a1a447c52e848, Alice, Eco Program)    |
      |------------------------------->|
      |                                | dedup, verify receipt signature
      |                                | record txCounter (forensic)
@@ -596,7 +596,7 @@ What this does **not** provide is a completeness guarantee. An operator suppress
      |<-------------------------------|
      |                                |
      |  TransactionEvent #2           |
-     |  (otx_e5f6a7b8d9c0, Bob, Standard Program) |
+     |  (otx_e5f6a7b8d9c04c0edcfa092be0f1ec2d, Bob, Standard Program) |
      |------------------------------->|
      |                                | dedup, verify receipt signature
      |                                | record txCounter (forensic)
@@ -607,7 +607,7 @@ What this does **not** provide is a completeness guarantee. An operator suppress
      |<-------------------------------|
      |                                |
      |  TransactionEvent #3           |
-     |  (otx_a9b0c1d2e3f4, Alice, Eco Program)    |
+     |  (otx_a9b0c1d2e3f40a9c488a44d8b1ad77e4, Alice, Eco Program)    |
      |------------------------------->|
      |                                | dedup, verify receipt signature
      |                                | record txCounter (forensic)

@@ -333,6 +333,8 @@ The station MAY include a human-readable name configurable via `StationName` (se
 
 ### 2.1 AuthorizeOfflinePass
 
+> **EXPERIMENTAL**: its request carries the device proof and the transcript hash of a BLE handshake — see [Release status](../README.md#ble-is-experimental).
+
 | Property | Value |
 |----------|-------|
 | **Direction** | Station → Server |
@@ -813,7 +815,7 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
 
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
-| `offlineTxId` | string | Yes | Unique offline transaction ID (`otx_{uuid}`) |
+| `offlineTxId` | string | Yes | Unique offline transaction ID (`otx_` + at least 32 random hex digits) |
 | `offlinePassId` | string | Cond. | **pass-form only** — OfflinePass used for authorization (`opass_{uuid}`). Required in pass-form; **forbidden** in auth-form |
 | `passCounter` | integer | Cond. | **pass-form only** — per-pass monotonic counter. Required in pass-form; **forbidden** in auth-form |
 | `authId` | string | Cond. | **auth-form only** — the server-signed authorization this session ran under. Required in auth-form; **forbidden** in pass-form |
@@ -874,7 +876,7 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
 
 ```json
 {
-  "offlineTxId": "otx_d4e5f6a7b8c9",
+  "offlineTxId": "otx_d4e5f6a7b8c983e4dd389d512a5bc1f7",
   "offlinePassId": "opass_a8b9c0d1e2f3",
   "userId": "sub_xyz789",
   "bayId": "bay_c1d2e3f4a5b6",
@@ -884,8 +886,8 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
   "durationSeconds": 298,
   "creditsCharged": 50,
   "receipt": {
-    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjMwMCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjo1MCwiZGV2aWNlSWQiOiJkZXZfZDRlNWY2YTciLCJkdXJhdGlvblNlY29uZHMiOjI5OCwiZW5kUmVhc29uIjoiTG9jYWwiLCJlbmRlZEF0IjoiMjAyNi0wMS0zMFQxNDowNTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjo1MDAsImVuZXJneVdoIjoxNTAsImxpcXVpZE1sIjo0NTIwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19hOGI5YzBkMWUyZjMiLCJvZmZsaW5lVHhJZCI6Im90eF9kNGU1ZjZhN2I4YzkiLCJwYXNzQ291bnRlciI6MzYsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAxLTMwVDE0OjAwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJ0eENvdW50ZXIiOjUsInVzZXJJZCI6InN1Yl94eXo3ODkifQ==",
-    "signature": "MEUCIQDCz0NIRSXDloI4I9aOklLKjXqKEm1zCoWA6KyFYrx2NgIgaYXuggVoVBnr88ZxDJXuCCyZsrUitgl7l1ztekazauQ=",
+    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjMwMCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjo1MCwiZGV2aWNlSWQiOiJkZXZfZDRlNWY2YTciLCJkdXJhdGlvblNlY29uZHMiOjI5OCwiZW5kUmVhc29uIjoiTG9jYWwiLCJlbmRlZEF0IjoiMjAyNi0wMS0zMFQxNDowNTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjo1MDAsImVuZXJneVdoIjoxNTAsImxpcXVpZE1sIjo0NTIwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19hOGI5YzBkMWUyZjMiLCJvZmZsaW5lVHhJZCI6Im90eF9kNGU1ZjZhN2I4Yzk4M2U0ZGQzODlkNTEyYTViYzFmNyIsInBhc3NDb3VudGVyIjozNiwic2VydmljZUlkIjoic3ZjX2VjbyIsInN0YXJ0ZWRBdCI6IjIwMjYtMDEtMzBUMTQ6MDA6MDAuMDAwWiIsInN0YXRpb25JZCI6InN0bl9hMWIyYzNkNCIsInR4Q291bnRlciI6NSwidXNlcklkIjoic3ViX3h5ejc4OSJ9",
+    "signature": "MEUCIQDXy0CqklYMq9zA0oamHP7ygw5O7gEjrDV5CnSOmONTqgIgZ1sfVnWGJgcNZfAFhWzljZShm5U7IDsPUBrrR87m9bY=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "txCounter": 5,
@@ -1398,7 +1400,7 @@ Reports security incidents to the server for audit and automated response. The s
 | **Trigger** | The station started the wash of a Partial-B session, an AuthorizeOfflinePass it was answered `Accepted` for |
 | **Expected Response** | None (EVENT) |
 | **Timeout** | N/A |
-| **Idempotency** | Yes — a repeated SessionStarted for the same `sessionId` MUST be ignored by the server |
+| **Idempotency** | Yes — a repeated SessionStarted for the same `sessionId` **MUST** be ignored by the server |
 | **Message Expiry** | **Never expires** (Critical event — see [`02-transport.md §5.1`](02-transport.md)) |
 
 Reports that the station started the wash of a Partial-B session, under the `sessionId` of the AuthorizeOfflinePass answer. An online start is acknowledged by its StartService RESPONSE [MSG-005]; a session the app starts over BLE has no server command to answer, and this event is its start report ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4c). The server keys the session's authorized duration on it, and treats an authorization whose SessionStarted has not arrived 40 seconds after it accepted it as lapsed, refunding it in full. The server **MUST NOT** infer a Partial-B start from a [StatusNotification](#52-statusnotification), which names a bay and no session. It is sent for a Partial-B session only, and carries no `seqNo`: it is not one of the session-scoped EVENTs that counter orders ([`02-transport.md` §3.2](02-transport.md)).
@@ -2509,6 +2511,10 @@ The server **SHOULD NOT** send more than **1 TriggerMessage per action type, per
 
 ## 7. Offline / BLE Operations
 
+> **EXPERIMENTAL — this entire section.** Published for review, **not** for implementation; it
+> may change incompatibly without a MAJOR bump. See
+> [Release status](../README.md#ble-is-experimental).
+
 All messages in this section use the **BLE GATT** transport, defined in [`profiles/offline/ble-transport.md`](profiles/offline/ble-transport.md): the GATT service and its characteristics (§2), the advertising data (§9), MTU negotiation (§10) and fragmentation (§11). [Chapter 02 — Transport §8](02-transport.md#8-ble-transport-offline-mode) summarises the transport and points there.
 
 BLE messages do **not** use the MQTT envelope. Each BLE message written to FFF3 or FFF6 or notified on FFF4, FFF5 or FFF6 includes a `type` field for identification, except the ServiceStatus notification and the two values that are not requests and responses: StationInfo, read from FFF1, and AvailableServices, notified on FFF2 at the app's request.
@@ -2973,7 +2979,7 @@ Confirmation that the service has started (or was rejected). On `Accepted`, the 
 | `type` | string | Yes | `"StartServiceResponse"` |
 | `result` | string | Yes | `"Accepted"` or `"Rejected"` |
 | `sessionId` | string | Cond. | The session's one identifier — the station's for Full Offline, the server's for Partial A and Partial B (when `Accepted`) |
-| `offlineTxId` | string | Cond. | Offline transaction identifier (`otx_{uuid}`) for receipt tracking (when `Accepted`) |
+| `offlineTxId` | string | Cond. | Offline transaction identifier (`otx_` + at least 32 random hex digits) for receipt tracking (when `Accepted`) |
 | `errorCode` | integer | Cond. | Registry code of the refusal (when `Rejected`) |
 | `errorText` | string | Cond. | Registry name of `errorCode`, `UPPER_SNAKE_CASE` (when `Rejected`) |
 | `details` | object | No | Per-occurrence context of the refusal |
@@ -2987,7 +2993,7 @@ Confirmation that the service has started (or was rejected). On `Accepted`, the 
   "type": "StartServiceResponse",
   "result": "Accepted",
   "sessionId": "sess_a1b2c3d4e5f6",
-  "offlineTxId": "otx_d4e5f6a7b8c9"
+  "offlineTxId": "otx_d4e5f6a7b8c983e4dd389d512a5bc1f7"
 }
 ```
 
@@ -3163,7 +3169,7 @@ The app **MUST** store the receipt in its offline transaction log and sync it to
 
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
-| `offlineTxId` | string | Yes | Offline transaction identifier (`otx_{uuid}`) |
+| `offlineTxId` | string | Yes | Offline transaction identifier (`otx_` + at least 32 random hex digits) |
 | `offlinePassId` | string | Pass-form | The OfflinePass the session ran on (Full Offline, Partial B) |
 | `passCounter` | integer | Pass-form | The pass counter the app presented in OfflineAuthRequest |
 | `authId` | string | Auth-form | The ServerSignedAuth the session ran on (Partial A) |
@@ -3202,7 +3208,7 @@ The app **MUST** store the receipt in its offline transaction log and sync it to
 
 ```json
 {
-  "offlineTxId": "otx_d4e5f6a7b8c9",
+  "offlineTxId": "otx_d4e5f6a7b8c983e4dd389d512a5bc1f7",
   "bayId": "bay_c1d2e3f4a5b6",
   "serviceId": "svc_eco",
   "startedAt": "2026-01-30T14:00:00.000Z",
@@ -3215,8 +3221,8 @@ The app **MUST** store the receipt in its offline transaction log and sync it to
     "energyWh": 150
   },
   "receipt": {
-    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjMwMCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjo1MCwiZGV2aWNlSWQiOiJkZXZfZDRlNWY2YTciLCJkdXJhdGlvblNlY29uZHMiOjI5OCwiZW5kUmVhc29uIjoiTG9jYWwiLCJlbmRlZEF0IjoiMjAyNi0wMS0zMFQxNDowNDo1OC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjo1MDAsImVuZXJneVdoIjoxNTAsImxpcXVpZE1sIjo0NTIwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc185MmRmMGQ1YzAxMWVhZjc0Iiwib2ZmbGluZVR4SWQiOiJvdHhfZDRlNWY2YTdiOGM5IiwicGFzc0NvdW50ZXIiOjM2LCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic3RhcnRlZEF0IjoiMjAyNi0wMS0zMFQxNDowMDowMC4wMDBaIiwic3RhdGlvbklkIjoic3RuX2ExYjJjM2Q0IiwidHhDb3VudGVyIjo1LCJ1c2VySWQiOiJzdWJfMDYwNzJhODI5ZTM5MThhOCJ9",
-    "signature": "MEUCIQCYdlcViuPoUBG3SPEHWIWNBRuov99Hg2ikDySVNVfCFgIgVyL9hEeAE+KEvy0DR31K9Yqgzduz8aNpZe32lmzMbMs=",
+    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjMwMCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjo1MCwiZGV2aWNlSWQiOiJkZXZfZDRlNWY2YTciLCJkdXJhdGlvblNlY29uZHMiOjI5OCwiZW5kUmVhc29uIjoiTG9jYWwiLCJlbmRlZEF0IjoiMjAyNi0wMS0zMFQxNDowNDo1OC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjo1MDAsImVuZXJneVdoIjoxNTAsImxpcXVpZE1sIjo0NTIwMH0sIm9mZmxpbmVQYXNzSWQiOiJvcGFzc185MmRmMGQ1YzAxMWVhZjc0Iiwib2ZmbGluZVR4SWQiOiJvdHhfZDRlNWY2YTdiOGM5ODNlNGRkMzg5ZDUxMmE1YmMxZjciLCJwYXNzQ291bnRlciI6MzYsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAxLTMwVDE0OjAwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJ0eENvdW50ZXIiOjUsInVzZXJJZCI6InN1Yl8wNjA3MmE4MjllMzkxOGE4In0=",
+    "signature": "MEUCIQDpgbvhP7hczQUqJS1LX2Dh1vl0B4q6KmKDfWNpb1XjHgIgMqE5rQ9L5Ls+ipI2fpYxRQOEKaeZnqgMi5/6+FQl54U=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "txCounter": 5,
@@ -3254,7 +3260,7 @@ Asks the station for the signed receipt of a session, named by the `offlineTxId`
 ```json
 {
   "type": "ReceiptRequest",
-  "offlineTxId": "otx_d4e5f6a7b8c9"
+  "offlineTxId": "otx_d4e5f6a7b8c983e4dd389d512a5bc1f7"
 }
 ```
 

@@ -22,9 +22,9 @@ Not every part of this specification is at the same maturity. Read this before i
 | Surface | Status in 0.44 | Basis |
 |---|---|---|
 | MQTT station↔server (Core, Transaction, Security, Device Management) | **Stable** | Implemented by a server and exercised by an independent station implementation |
-| HTTPS provisioning (`POST /api/v1/stations/provision`) | **Stable** | Implemented; error vocabulary and precedence chain covered by conformance cases |
-| Offline reconciliation, OfflinePass lifecycle | **Stable** | Implemented and exercised over MQTT |
-| AuthorizeOfflinePass, the Partial-B authorization over MQTT | **EXPERIMENTAL** | Its request carries the device proof and the transcript hash of a BLE handshake, and changed incompatibly with the BLE wire revision |
+| HTTPS provisioning (`POST /api/v1/stations/provision`) | **Stable** | Implemented; error vocabulary and precedence chain covered by conformance cases. The station certificate's second purpose, `id-kp-osppBleStation`, serves only BLE and is **EXPERIMENTAL** with it |
+| Offline reconciliation, OfflinePass lifecycle | **Stable** | Implemented and exercised over MQTT — except what reads the BLE request, check #4's device proof and the estimated cost of checks #7 and #8, which is **EXPERIMENTAL** with it |
+| AuthorizeOfflinePass and SessionStarted, the Partial-B authorization and start report over MQTT | **EXPERIMENTAL** | Its request carries the device proof and the transcript hash of a BLE handshake, and changed incompatibly with the BLE wire revision |
 | Offline app–server contract — pass issuance and receipt upload over HTTPS ([`app-contract.md`](spec/profiles/offline/app-contract.md)) | **Draft** | Binds the server and the app, not the station |
 | **BLE transport, handshake and session** | **EXPERIMENTAL** | See below |
 
@@ -49,12 +49,13 @@ and every BLE response refuses in one shape, [Chapter 07 §2.3](spec/07-errors.m
 This is BLE protocol version `0.3.0`, the first one the handshake negotiates
 ([VERSIONING.md](VERSIONING.md#ble-protocol-version)).
 
-**What keeps it experimental.** Its cryptographic construction — the station's signature with its
-certificate, the ephemeral key agreement, the AEAD channel and the phone's device proof — passes the
-review gate of ADR-002, as amended by ADR-003, only when an adversarial review by the project's own
-team against the checklist of [Chapter 06, Appendix B](spec/06-security.md#appendix-b--ble-cryptographic-review-checklist)
-leaves no item open, and that review has not been performed. And no station, app or server
-implements BLE yet.
+**What keeps it experimental.** One condition, the one [ADR-003](adr/ADR-003-ble-station-authentication-by-certificate.md#review-gate)
+sets: it stays EXPERIMENTAL until its cryptographic construction — the station's signature with its
+certificate, the ephemeral key agreement, the AEAD channel and the phone's device proof — has passed
+the review of [Chapter 06, Appendix B](spec/06-security.md#appendix-b--ble-cryptographic-review-checklist),
+an adversarial review by the project's own team against that checklist which leaves no item open.
+That review has not been performed. No station, app or server implements BLE yet; an implementation
+is evidence for the review, not a second condition.
 
 **Not audited.** As the banner above says, this specification has not been audited by an
 independent party. The Appendix B review is the project's own, and it is the gate the project set

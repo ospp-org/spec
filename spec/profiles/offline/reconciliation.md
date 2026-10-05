@@ -28,7 +28,7 @@ Replay and clone protection does **not** depend on this ordering, and never did 
 
 The server uses the `offlineTxId` field to deduplicate offline transaction events:
 
-1. Each offline transaction is assigned a unique `offlineTxId` (format: `otx_` prefix + random hexadecimal digits) by the station at the time of service start. The station **MUST** draw every digit of it from a cryptographically secure random source: naming it is what entitles an app to the transaction's receipt over BLE ([`ble-transport.md` §8](ble-transport.md#8-receipt-fff6)).
+1. Each offline transaction is assigned a unique `offlineTxId` (format: `otx_` prefix + at least 32 hexadecimal digits) by the station at the time of service start. The station **MUST** draw every digit of it from a cryptographically secure random source, so that it carries at least 128 bits of randomness ([`offline-tx-id.schema.json`](../../../schemas/common/offline-tx-id.schema.json)): naming it is what entitles an app to the transaction's receipt over BLE ([`ble-transport.md` §8](ble-transport.md#8-receipt-fff6)).
 2. When the server receives a TransactionEvent or an uploaded receipt with an `offlineTxId`, it checks whether its ledger holds that ID.
 3. If the `offlineTxId` already exists in the server's ledger, the server **MUST** compare the arriving submission against the stored one before answering, whichever channel either of them came by — the station's TransactionEvent or the app's receipt upload ([`app-contract.md` §4](app-contract.md#4-receipt-upload)) — and the two outcomes are different:
    - **Same transaction** — the arriving signed `receipt.data` is **byte-identical** to the stored one. This is a retransmission after a network failure, and it is the common case. The server **MUST** respond `Duplicate` without re-processing (idempotent acknowledgement): no second debit, no second ledger row, no re-validation. The station deletes its copy ([`transaction-event.md` §5.1](../transaction/transaction-event.md)).
@@ -349,7 +349,7 @@ The following edge cases require special handling:
   "source": "Station",
   "protocolVersion": "0.3.0",
   "payload": {
-    "offlineTxId": "otx_d4e5f6a7",
+    "offlineTxId": "otx_d4e5f6a7c5ea018fe3d7af77a2a05cc7",
     "offlinePassId": "opass_a8b9c0d1e2f3",
     "userId": "sub_9a8b7c6d",
     "bayId": "bay_a1b2c3d4",
@@ -359,8 +359,8 @@ The following edge cases require special handling:
     "durationSeconds": 285,
     "creditsCharged": 48,
     "receipt": {
-      "data": "eyJiYXlJZCI6ImJheV9hMWIyYzNkNCIsImJvb2tlZER1cmF0aW9uU2Vjb25kcyI6MzAwLCJjbG9ja1N0YXRlIjoiU3luY2hyb25pemVkIiwiY3JlZGl0c0NoYXJnZWQiOjQ4LCJkZXZpY2VJZCI6ImRldl9kNGU1ZjZhNyIsImR1cmF0aW9uU2Vjb25kcyI6Mjg1LCJlbmRSZWFzb24iOiJMb2NhbCIsImVuZGVkQXQiOiIyMDI2LTAyLTEzVDA5OjU2OjQ1LjAwMFoiLCJtZXRlclZhbHVlcyI6eyJjb25zdW1hYmxlTWwiOjQ3MCwiZW5lcmd5V2giOjEzOCwibGlxdWlkTWwiOjQyODAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2E4YjljMGQxZTJmMyIsIm9mZmxpbmVUeElkIjoib3R4X2Q0ZTVmNmE3IiwicGFzc0NvdW50ZXIiOjcsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDA5OjUyOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJ0eENvdW50ZXIiOjUsInVzZXJJZCI6InN1Yl85YThiN2M2ZCJ9",
-      "signature": "MEUCIQDvXKXdsf7FL4XoHMrbeVPMoJEUfwDCvoVs69+tnVT0BAIgJfTrVkx0FoidyoTuZBeABEYm7gDg9IXgepxHJBcRGHw=",
+      "data": "eyJiYXlJZCI6ImJheV9hMWIyYzNkNCIsImJvb2tlZER1cmF0aW9uU2Vjb25kcyI6MzAwLCJjbG9ja1N0YXRlIjoiU3luY2hyb25pemVkIiwiY3JlZGl0c0NoYXJnZWQiOjQ4LCJkZXZpY2VJZCI6ImRldl9kNGU1ZjZhNyIsImR1cmF0aW9uU2Vjb25kcyI6Mjg1LCJlbmRSZWFzb24iOiJMb2NhbCIsImVuZGVkQXQiOiIyMDI2LTAyLTEzVDA5OjU2OjQ1LjAwMFoiLCJtZXRlclZhbHVlcyI6eyJjb25zdW1hYmxlTWwiOjQ3MCwiZW5lcmd5V2giOjEzOCwibGlxdWlkTWwiOjQyODAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2E4YjljMGQxZTJmMyIsIm9mZmxpbmVUeElkIjoib3R4X2Q0ZTVmNmE3YzVlYTAxOGZlM2Q3YWY3N2EyYTA1Y2M3IiwicGFzc0NvdW50ZXIiOjcsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDA5OjUyOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJ0eENvdW50ZXIiOjUsInVzZXJJZCI6InN1Yl85YThiN2M2ZCJ9",
+      "signature": "MEQCIHrjLrEdx6NXT0LTy9+I51ermKAel0A/qsK8zA0Y2HtJAiBafg+ax3f48Goib7yrB/QB0fFYseiBQhNpXmKZGvVd0A==",
       "signatureAlgorithm": "ECDSA-P256-SHA256"
     },
     "txCounter": 5,

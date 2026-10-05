@@ -711,6 +711,9 @@ sequenceDiagram
 
 ## 5a. Full Offline Session — BLE
 
+> **EXPERIMENTAL — this entire flow.** It runs over the BLE construction, published for review,
+> **not** for implementation. See [Release status](../README.md#ble-is-experimental).
+
 **Description:** Both the phone and the station are offline. The user connects via BLE, authenticates with a pre-armed OfflinePass, and the station runs the service using only local validation. The transaction is reconciled when connectivity is restored.
 
 ### Preconditions
@@ -840,6 +843,9 @@ sequenceDiagram
 
 ## 5b. Partial A — Phone Online, Station Offline
 
+> **EXPERIMENTAL — this entire flow.** It runs over the BLE construction, published for review,
+> **not** for implementation. See [Release status](../README.md#ble-is-experimental).
+
 **Description:** The user's phone has internet, but the station is offline (MQTT disconnected). The app obtains a server-signed authorization and delivers it to the station via BLE.
 
 ### Preconditions
@@ -921,6 +927,9 @@ sequenceDiagram
 ---
 
 ## 5c. Partial B — Phone Offline, Station Online
+
+> **EXPERIMENTAL — this entire flow.** It runs over the BLE construction, published for review,
+> **not** for implementation. See [Release status](../README.md#ble-is-experimental).
 
 **Description:** The user's phone is offline, but the station has MQTT connectivity. The app presents an OfflinePass via BLE, and the station forwards it to the server for real-time validation.
 

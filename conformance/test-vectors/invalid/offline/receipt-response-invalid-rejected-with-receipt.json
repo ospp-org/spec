@@ -4,7 +4,7 @@
   "errorCode": 3006,
   "errorText": "SESSION_NOT_FOUND",
   "receipt": {
-    "offlineTxId": "otx_a1b2c3d4e5f6a7b8",
+    "offlineTxId": "otx_a1b2c3d4e5f6a7b8193bf9eb15d531f8",
     "offlinePassId": "opass_a1b2c3d4e5f6a7b8",
     "passCounter": 17,
     "userId": "sub_a1b2c3d4e5f6a7b8a1b2c3d4e5f6a7b8",
@@ -16,7 +16,7 @@
     "durationSeconds": 300,
     "creditsCharged": 50,
     "receipt": {
-      "data": "eyJiYXlJZCI6ImJheV9hMWIyYzNkNGU1ZjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjMwMCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjo1MCwiZGV2aWNlSWQiOiJkZXZfYTFiMmMzZDQiLCJkdXJhdGlvblNlY29uZHMiOjMwMCwiZW5kUmVhc29uIjoiVGltZXJFeHBpcmVkIiwiZW5kZWRBdCI6IjIwMjYtMDItMTVUMTA6MDU6MDAuMDAwWiIsIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19hMWIyYzNkNGU1ZjZhN2I4Iiwib2ZmbGluZVR4SWQiOiJvdHhfYTFiMmMzZDRlNWY2YTdiOCIsInBhc3NDb3VudGVyIjoxNywic2VydmljZUlkIjoic3ZjX2Jhc2ljIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xNVQxMDowMDowMC4wMDBaIiwic3RhdGlvbklkIjoic3RuX2NlMmU5ZDZhIiwidHhDb3VudGVyIjoxLCJ1c2VySWQiOiJzdWJfYTFiMmMzZDRlNWY2YTdiOGExYjJjM2Q0ZTVmNmE3YjgifQ==",
+      "data": "eyJiYXlJZCI6ImJheV9hMWIyYzNkNGU1ZjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjMwMCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjo1MCwiZGV2aWNlSWQiOiJkZXZfYTFiMmMzZDQiLCJkdXJhdGlvblNlY29uZHMiOjMwMCwiZW5kUmVhc29uIjoiVGltZXJFeHBpcmVkIiwiZW5kZWRBdCI6IjIwMjYtMDItMTVUMTA6MDU6MDAuMDAwWiIsIm9mZmxpbmVQYXNzSWQiOiJvcGFzc19hMWIyYzNkNGU1ZjZhN2I4Iiwib2ZmbGluZVR4SWQiOiJvdHhfYTFiMmMzZDRlNWY2YTdiODE5M2JmOWViMTVkNTMxZjgiLCJwYXNzQ291bnRlciI6MTcsInNlcnZpY2VJZCI6InN2Y19iYXNpYyIsInN0YXJ0ZWRBdCI6IjIwMjYtMDItMTVUMTA6MDA6MDAuMDAwWiIsInN0YXRpb25JZCI6InN0bl9jZTJlOWQ2YSIsInR4Q291bnRlciI6MSwidXNlcklkIjoic3ViX2ExYjJjM2Q0ZTVmNmE3YjhhMWIyYzNkNGU1ZjZhN2I4In0=",
       "signature": "MEUCIQDmV7Aht/SardCWfCfGYDZQ4ZABjka+OS7e30SS+s42ggIgCKv/MDVgD8jZTJaV3ICfUJ8rps4Kae0+l4EF5hWh2aA=",
       "signatureAlgorithm": "ECDSA-P256-SHA256"
     },

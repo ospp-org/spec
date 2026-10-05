@@ -158,7 +158,7 @@ All OSPP identifiers use a typed prefix to avoid ambiguity and enable quick visu
 | `svc_` | Service | `svc_premium_wash` |
 | `sub_` | Subscriber (user) | `sub_x7y8z9` |
 | `rsv_` | Reservation | `rsv_f1e2d3c4` |
-| `otx_` | Offline transaction | `otx_b5a6c7d8` |
+| `otx_` | Offline transaction | `otx_b5a6c7d8beefa21e594cbc27b7fb8ae3` |
 | `opass_` | Offline pass | `opass_e9f0a1b2` |
 | `msg_` | Message | `msg_c3d4e5f6` |
 | `fwupd_` | Firmware update | `fwupd_d7e8f9a0` |

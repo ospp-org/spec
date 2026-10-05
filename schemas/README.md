@@ -57,7 +57,7 @@ Shared definitions referenced by message schemas via `$ref`.
 | [`session-id.schema.json`](common/session-id.schema.json) | string | Session identifier (`sess_{uuid}`) |
 | [`service-id.schema.json`](common/service-id.schema.json) | string | Service identifier (`svc_{id}`) |
 | [`reservation-id.schema.json`](common/reservation-id.schema.json) | string | Reservation identifier (`rsv_{uuid}`) |
-| [`offline-tx-id.schema.json`](common/offline-tx-id.schema.json) | string | Offline transaction identifier (`otx_{uuid}`) |
+| [`offline-tx-id.schema.json`](common/offline-tx-id.schema.json) | string | Offline transaction identifier (`otx_` + at least 32 random hex digits, 128 bits) |
 | [`offline-pass-id.schema.json`](common/offline-pass-id.schema.json) | string | OfflinePass identifier (`opass_{uuid}`) |
 | [`user-id.schema.json`](common/user-id.schema.json) | string | User subject identifier (`sub_{id}`) |
 | [`device-id.schema.json`](common/device-id.schema.json) | string | Mobile device identifier |

@@ -57,7 +57,7 @@ domain-specific behavior.
 | Transaction | [profiles/transaction/README.md](profiles/transaction/README.md) | Session start/stop, meter values, reservation lifecycle. |
 | Device Management | [profiles/device-management/README.md](profiles/device-management/README.md) | Configuration, firmware update, diagnostics, remote commands. |
 | Security | [profiles/security/README.md](profiles/security/README.md) | Two things: security event reporting — real-time incident notifications (tamper, auth failure, firmware integrity) — and the certificate lifecycle (SignCertificate, CertificateInstall, TriggerCertificateRenewal). |
-| Offline | [profiles/offline/README.md](profiles/offline/README.md) | The OfflinePass and its validation, offline transaction log, reconciliation — **stable**. AuthorizeOfflinePass, and BLE transport, handshake and session — **EXPERIMENTAL**, see [Release status](../README.md#ble-is-experimental). |
+| Offline | [profiles/offline/README.md](profiles/offline/README.md) | The OfflinePass and its validation, offline transaction log, reconciliation — **stable**, except what reads the BLE request: check #4's device proof and the estimated cost of checks #7 and #8 — **EXPERIMENTAL**. AuthorizeOfflinePass, and BLE transport, handshake and session — **EXPERIMENTAL**, see [Release status](../README.md#ble-is-experimental). |
 
 ## Normative Language
 

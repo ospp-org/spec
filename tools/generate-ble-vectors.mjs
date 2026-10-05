@@ -421,7 +421,7 @@ function deriveScenario(sc) {
     // A Full Offline session to its receipt: start, the ReceiptReady status, the
     // request for the receipt on FFF6 and the station's answer carrying it.
     const sessionId = `sess_${shortHex(`OSPP_BLE_SESSION_ID_${sc.label}_V1`, 8)}`;
-    const offlineTxId = `otx_${shortHex(`OSPP_BLE_OFFLINE_TX_ID_${sc.label}_V1`, 8)}`;
+    const offlineTxId = `otx_${shortHex(`OSPP_BLE_OFFLINE_TX_ID_${sc.label}_V1`, 16)}`; // 128 random bits (reconciliation.md 3 rule 1)
     const startReq = { type: 'StartServiceRequest', ...sc.request };
     const startResp = { type: 'StartServiceResponse', result: 'Accepted', sessionId, offlineTxId };
     const status = { bayId: sc.request.bayId, status: 'ReceiptReady', sessionId, elapsedSeconds: sc.request.requestedDurationSeconds, remainingSeconds: 0 };

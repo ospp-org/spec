@@ -22,9 +22,9 @@ Verify that when a station reconnects to the server after an offline period, it 
 ## Preconditions
 
 1. Station has been operating offline and has completed 3 offline BLE sessions:
-   - **TX-A:** `offlineTxId: "otx_a1b2c3d4e5f6"`, `txCounter: 5`, `creditsCharged: 9`.
-   - **TX-B:** `offlineTxId: "otx_b2c3d4e5f6a7"`, `txCounter: 6`, `creditsCharged: 12`.
-   - **TX-C:** `offlineTxId: "otx_c3d4e5f6a7b8"`, `txCounter: 7`, `creditsCharged: 6`.
+   - **TX-A:** `offlineTxId: "otx_a1b2c3d4e5f6d00b1ce6710722821c33"`, `txCounter: 5`, `creditsCharged: 9`.
+   - **TX-B:** `offlineTxId: "otx_b2c3d4e5f6a76698cf32dfcbd364c4d6"`, `txCounter: 6`, `creditsCharged: 12`.
+   - **TX-C:** `offlineTxId: "otx_c3d4e5f6a7b87f7870971d07a15a38ac"`, `txCounter: 7`, `creditsCharged: 6`.
 2. Each transaction has a signed receipt (ECDSA-P256-SHA256 with station private key).
 3. The server has the station's ECDSA public key for receipt verification.
 4. The server has previously recorded `txCounter: 4` for this station (forensic history only — the server keeps no watermark and does not compare against it).
@@ -48,7 +48,7 @@ Verify that when a station reconnects to the server after an offline period, it 
 7. Observe the station sends TransactionEvent(Ended) for TX-A:
    ```json
 {
-  "offlineTxId": "otx_a1b2c3d4e5f6",
+  "offlineTxId": "otx_a1b2c3d4e5f6d00b1ce6710722821c33",
   "offlinePassId": "<offline_pass_id>",
   "userId": "<user_id>",
   "bayId": "bay_a1b2c3d4",
@@ -58,8 +58,8 @@ Verify that when a station reconnects to the server after an offline period, it 
   "durationSeconds": 120,
   "creditsCharged": 9,
   "receipt": {
-    "data": "eyJiYXlJZCI6ImJheV9hMWIyYzNkNCIsImJvb2tlZER1cmF0aW9uU2Vjb25kcyI6MTIwLCJjbG9ja1N0YXRlIjoiU3luY2hyb25pemVkIiwiY3JlZGl0c0NoYXJnZWQiOjksImRldmljZUlkIjoiZGV2X2ExYjJjM2Q0IiwiZHVyYXRpb25TZWNvbmRzIjoxMjAsImVuZFJlYXNvbiI6IlRpbWVyRXhwaXJlZCIsImVuZGVkQXQiOiI8SVNPIDg2MDE+Iiwib2ZmbGluZVBhc3NJZCI6IjxvZmZsaW5lX3Bhc3NfaWQ+Iiwib2ZmbGluZVR4SWQiOiJvdHhfYTFiMmMzZDRlNWY2IiwicGFzc0NvdW50ZXIiOjQsInNlcnZpY2VJZCI6InN2Y19iYXNpYyIsInN0YXJ0ZWRBdCI6IjxJU08gODYwMT4iLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJ0eENvdW50ZXIiOjUsInVzZXJJZCI6Ijx1c2VyX2lkPiJ9",
-    "signature": "MEUCIQDBa4eOuZTZuAR6tLM413cIwbXrSHVXSHFW4KWPnx5vEQIgEEaypb3N9YaIFacW4habNzcOcV5baO6kxsAKiuJa83E=",
+    "data": "eyJiYXlJZCI6ImJheV9hMWIyYzNkNCIsImJvb2tlZER1cmF0aW9uU2Vjb25kcyI6MTIwLCJjbG9ja1N0YXRlIjoiU3luY2hyb25pemVkIiwiY3JlZGl0c0NoYXJnZWQiOjksImRldmljZUlkIjoiZGV2X2ExYjJjM2Q0IiwiZHVyYXRpb25TZWNvbmRzIjoxMjAsImVuZFJlYXNvbiI6IlRpbWVyRXhwaXJlZCIsImVuZGVkQXQiOiI8SVNPIDg2MDE+Iiwib2ZmbGluZVBhc3NJZCI6IjxvZmZsaW5lX3Bhc3NfaWQ+Iiwib2ZmbGluZVR4SWQiOiJvdHhfYTFiMmMzZDRlNWY2ZDAwYjFjZTY3MTA3MjI4MjFjMzMiLCJwYXNzQ291bnRlciI6NCwic2VydmljZUlkIjoic3ZjX2Jhc2ljIiwic3RhcnRlZEF0IjoiPElTTyA4NjAxPiIsInN0YXRpb25JZCI6InN0bl9hMWIyYzNkNCIsInR4Q291bnRlciI6NSwidXNlcklkIjoiPHVzZXJfaWQ+In0=",
+    "signature": "MEUCIQCMFO7Epyqm6R2hVF0O1R+yTFDK517q9ytx6SrvmROjiQIgN+NYbXZ0MPtn9494FiAh2ruRivzbG85hIooNZEqU5WY=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "txCounter": 5,
@@ -87,11 +87,11 @@ Verify that when a station reconnects to the server after an offline period, it 
 20. Restore connectivity.
 21. Observe the station reconnects and sends BootNotification again.
 22. Respond Accepted.
-23. Observe the station retransmits TX-C (`offlineTxId: "otx_c3d4e5f6a7b8"`).
-24. Server finds `offlineTxId: "otx_c3d4e5f6a7b8"` in its ledger, and compares the arriving signed `receipt.data` against the stored one. They are byte-identical — this is the same transaction arriving twice.
+23. Observe the station retransmits TX-C (`offlineTxId: "otx_c3d4e5f6a7b87f7870971d07a15a38ac"`).
+24. Server finds `offlineTxId: "otx_c3d4e5f6a7b87f7870971d07a15a38ac"` in its ledger, and compares the arriving signed `receipt.data` against the stored one. They are byte-identical — this is the same transaction arriving twice.
 25. Respond `Duplicate` (idempotent — no re-processing, no second debit), with a `reason`; `reason` is REQUIRED on `Duplicate`.
 26. Verify the station deletes TX-C from its local queue and does NOT retransmit it again.
-27. **Different data under the same identifier.** Re-send `offlineTxId: "otx_c3d4e5f6a7b8"` a third time, this time carrying a **different** signed receipt — a validly signed receipt for the same `offlineTxId` whose `creditsCharged` differs from the stored one.
+27. **Different data under the same identifier.** Re-send `offlineTxId: "otx_c3d4e5f6a7b87f7870971d07a15a38ac"` a third time, this time carrying a **different** signed receipt — a validly signed receipt for the same `offlineTxId` whose `creditsCharged` differs from the stored one.
 28. Verify the server responds `Rejected`, does **not** debit the wallet a second time, and does **not** overwrite the stored record. Two distinct claims under one identifier is a collision or tampering (`reconciliation.md` §3, §9).
 29. Verify the server **retains both records** and raises an operator alert, and emits an `OfflinePassRejected` SecurityEvent whose `details` carry `errorCode` `2017` and `field: "receipt.data"`.
 30. Verify the station **retains** its local copy, marked rejected — `Rejected` never orders a deletion, and that copy is the second of the two records the operator compares.
@@ -109,7 +109,7 @@ Parts A-D leave the server holding recorded counters 5, 6, 7 for this station an
 
 **E.1 — Forward discontinuity (a transaction is genuinely missing)**
 
-34. Inject a TransactionEvent with `offlineTxId: "otx_d4e5f6a7b8c9"`, `txCounter: 9` (skipping 8), `creditsCharged: 8`, and a valid receipt signature.
+34. Inject a TransactionEvent with `offlineTxId: "otx_d4e5f6a7b8c983e4dd389d512a5bc1f7"`, `txCounter: 9` (skipping 8), `creditsCharged: 8`, and a valid receipt signature.
 35. Verify the server responds `{ "status": "Accepted" }`. The server **MUST NOT** withhold, hold, or re-order the transaction on counter grounds, and **MUST NOT** make any response status conditional on the counter (`reconciliation.md` §4.2 step 2).
 36. Verify the money is recorded: the wallet moves `23.0 - 8 = 15.0`, and the transaction is persisted with `txCounter: 9` and its receipt.
 37. Verify an **operator alert on the station** is raised, recording the discontinuity (expected 8, received 9).
@@ -120,7 +120,7 @@ Parts A-D leave the server holding recorded counters 5, 6, 7 for this station an
 
 This is the path that destroyed money before 0.9.0: §4.1 step 1 resets the counter on boot, and the retired §4.2 step 5 answered a counter at-or-below the watermark with `Duplicate`, which obliges the station to delete its local copy.
 
-40. Simulate a station reboot. The station restarts its counter at 1 and sends a **new, never-settled** transaction: `offlineTxId: "otx_e5f6a7b8c9d0"`, `txCounter: 1`, `creditsCharged: 5`, valid receipt signature.
+40. Simulate a station reboot. The station restarts its counter at 1 and sends a **new, never-settled** transaction: `offlineTxId: "otx_e5f6a7b8c9d0a78600c61fa2108392d8"`, `txCounter: 1`, `creditsCharged: 5`, valid receipt signature.
 41. Verify the server responds `{ "status": "Accepted" }` — **not** `Duplicate`. The counter is at or below every counter previously recorded for this station, and the transaction is nonetheless new and unsettled. `Duplicate` here would direct the station to delete a payment the server never recorded.
 42. Verify the wallet moves `15.0 - 5 = 10.0` and the transaction is persisted with `txCounter: 1`.
 43. Verify deduplication still works on its own key: re-send the same `offlineTxId` with the same signed receipt and confirm it is answered `Duplicate` without a second debit.

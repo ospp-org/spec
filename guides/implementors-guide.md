@@ -61,7 +61,7 @@ Everything has a prefixed identifier:
 | Session | `sess_{uuid}` | `sess_f7e8d9c0` |
 | Reservation | `rsv_{uuid}` | `rsv_e5f6a7b8c9d0` |
 | User | `sub_{id}` | `sub_alice2026` |
-| Offline TX | `otx_{uuid}` | `otx_d4e5f6a7b8c9` |
+| Offline TX | `otx_` + 32+ random hex | `otx_d4e5f6a7b8c983e4dd389d512a5bc1f7` |
 | Offline Pass | `opass_{uuid}` | `opass_a8b9c0d1e2f3` |
 
 ### Message Model

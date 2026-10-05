@@ -6,8 +6,8 @@
 >
 > | Part | Documents | Status |
 > |---|---|---|
-> | Offline credential and reconciliation, over **MQTT** | [`offline-pass.md`](offline-pass.md), [`reconciliation.md`](reconciliation.md) | **Stable** — implemented and exercised against a second implementation |
-> | Partial-B authorization, over **MQTT** | [`authorize-offline-pass.md`](authorize-offline-pass.md) | **EXPERIMENTAL** — its request carries the device proof and the transcript hash of a BLE handshake, and changed incompatibly with the BLE wire revision |
+> | Offline credential and reconciliation, over **MQTT** | [`offline-pass.md`](offline-pass.md), [`reconciliation.md`](reconciliation.md) | **Stable** — implemented and exercised against a second implementation — except check #4's device proof and the estimated cost of checks #7 and #8, which read the BLE request: **EXPERIMENTAL** |
+> | Partial-B authorization and its start report, over **MQTT** | [`authorize-offline-pass.md`](authorize-offline-pass.md) | **EXPERIMENTAL** — its request carries the device proof and the transcript hash of a BLE handshake, and changed incompatibly with the BLE wire revision |
 > | The app–server contract, over **HTTPS** | [`app-contract.md`](app-contract.md) | **Draft** — binds the server and the app, not the station |
 > | **BLE** transport, handshake and session | [`ble-transport.md`](ble-transport.md), [`ble-handshake.md`](ble-handshake.md), [`ble-session.md`](ble-session.md) | **EXPERIMENTAL** |
 >
@@ -17,9 +17,9 @@
 > and every BLE response refuses in one shape ([Chapter 07 §2.3](../../07-errors.md#23-ble-error-response)).
 > It stays EXPERIMENTAL until its cryptographic construction has passed the review of
 > [Chapter 06, Appendix B](../../06-security.md#appendix-b--ble-cryptographic-review-checklist)
-> ([ADR-003](../../../adr/ADR-003-ble-station-authentication-by-certificate.md)) and an implementation
-> has exercised it: it is published for review, **not** for implementation, and may change
-> incompatibly without a MAJOR bump. **Complete** compliance therefore cannot be claimed while it is
+> ([ADR-003](../../../adr/ADR-003-ble-station-authentication-by-certificate.md)) — that review is the
+> one condition — and until then it is published for review, **not** for implementation, and may
+> change incompatibly without a MAJOR bump. **Complete** compliance therefore cannot be claimed while it is
 > EXPERIMENTAL; **Development**, **Standard** and **Extended** are unaffected.
 
 ## 1. Overview

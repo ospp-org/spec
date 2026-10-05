@@ -1,5 +1,5 @@
 {
-  "offlineTxId": "otx_a1b2c3d4e5f67890",
+  "offlineTxId": "otx_a1b2c3d4e5f678905f22dea4d4615718",
   "offlinePassId": "opass_a1b2c3d4e5f67890",
   "passCounter": 44,
   "userId": "sub_alice2026",
@@ -10,8 +10,8 @@
   "durationSeconds": 300,
   "creditsCharged": 500,
   "receipt": {
-    "data": "eyJiYXlJZCI6ImJheV9hMWIyYzNkNGU1ZjY3ODkwIiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjozMDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6NTAwLCJkZXZpY2VJZCI6ImRldl9hMWIyYzNkNCIsImR1cmF0aW9uU2Vjb25kcyI6MzAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xM1QxMDowNTowMC4wMDBaIiwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2ExYjJjM2Q0ZTVmNjc4OTAiLCJvZmZsaW5lVHhJZCI6Im90eF9hMWIyYzNkNGU1ZjY3ODkwIiwicGFzc0NvdW50ZXIiOjQ0LCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xM1QxMDowMDowMC4wMDBaIiwic3RhdGlvbklkIjoic3RuXzI2OTU1MjhiIiwidHhDb3VudGVyIjoxLCJ1c2VySWQiOiJzdWJfYWxpY2UyMDI2In0=",
-    "signature": "MEQCIEsCLl1KMpEcApAmgGJz72yOk58paqxwiarkoqg9YoylAiBlpVfcKa1tvf4uRlZx7mlstdO0ysJqVQxumEIOf8CPcw==",
+    "data": "eyJiYXlJZCI6ImJheV9hMWIyYzNkNGU1ZjY3ODkwIiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjozMDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6NTAwLCJkZXZpY2VJZCI6ImRldl9hMWIyYzNkNCIsImR1cmF0aW9uU2Vjb25kcyI6MzAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xM1QxMDowNTowMC4wMDBaIiwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2ExYjJjM2Q0ZTVmNjc4OTAiLCJvZmZsaW5lVHhJZCI6Im90eF9hMWIyYzNkNGU1ZjY3ODkwNWYyMmRlYTRkNDYxNTcxOCIsInBhc3NDb3VudGVyIjo0NCwic2VydmljZUlkIjoic3ZjX2VjbyIsInN0YXJ0ZWRBdCI6IjIwMjYtMDItMTNUMTA6MDA6MDAuMDAwWiIsInN0YXRpb25JZCI6InN0bl8yNjk1NTI4YiIsInR4Q291bnRlciI6MSwidXNlcklkIjoic3ViX2FsaWNlMjAyNiJ9",
+    "signature": "MEQCIAGSLcdOn2qOauQ2zT3xyznr6mEHmbqEhMzxCKPPnz04AiAr9sygvUtvYZH2E3+cnOanxHw6tRcLM0MS0m8d/JDWvw==",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "txCounter": 1

@@ -363,7 +363,7 @@ The station's bay controller:
 1. Validates that Bay 1 is still `Available`
 2. Activates the dispenser relay on Bay 1
 3. Starts the session timer at 300 seconds
-4. Uses the server-issued session ID `sess_c4d5e6f7a8b9` from the verified claims ([`ble-session.md` §1](../../spec/profiles/offline/ble-session.md#1-starting-a-service)) and assigns offline transaction ID `otx_e5f6a7b8c9d0`
+4. Uses the server-issued session ID `sess_c4d5e6f7a8b9` from the verified claims ([`ble-session.md` §1](../../spec/profiles/offline/ble-session.md#1-starting-a-service)) and assigns offline transaction ID `otx_e5f6a7b8c9d0a78600c61fa2108392d8`
 
 **BLE Notify FFF4 [MSG-038]:**
 
@@ -372,7 +372,7 @@ The station's bay controller:
   "type": "StartServiceResponse",
   "result": "Accepted",
   "sessionId": "sess_c4d5e6f7a8b9",
-  "offlineTxId": "otx_e5f6a7b8c9d0"
+  "offlineTxId": "otx_e5f6a7b8c9d0a78600c61fa2108392d8"
 }
 ```
 
@@ -509,11 +509,11 @@ The station generates a signed receipt:
 
 ### Step 17: App Asks for the Receipt on FFF6 (14:33:03.500)
 
-**BLE Write FFF6 [MSG-041]:** `{"type": "ReceiptRequest", "offlineTxId": "otx_e5f6a7b8c9d0"}`, answered by a **ReceiptResponse [MSG-042]** notified on FFF6, `result: "Accepted"`, whose `receipt` [MSG-039] is:
+**BLE Write FFF6 [MSG-041]:** `{"type": "ReceiptRequest", "offlineTxId": "otx_e5f6a7b8c9d0a78600c61fa2108392d8"}`, answered by a **ReceiptResponse [MSG-042]** notified on FFF6, `result: "Accepted"`, whose `receipt` [MSG-039] is:
 
 ```json
 {
-  "offlineTxId": "otx_e5f6a7b8c9d0",
+  "offlineTxId": "otx_e5f6a7b8c9d0a78600c61fa2108392d8",
   "authId": "auth_c89731927892",
   "sessionId": "sess_c4d5e6f7a8b9",
   "userId": "sub_alice2026",
@@ -530,8 +530,8 @@ The station generates a signed receipt:
     "energyWh": 120
   },
   "receipt": {
-    "data": "eyJhdXRoSWQiOiJhdXRoX2M4OTczMTkyNzg5MiIsImJheUlkIjoiYmF5X2MxZDJlM2Y0YTViNiIsImJvb2tlZER1cmF0aW9uU2Vjb25kcyI6MzAwLCJjbG9ja1N0YXRlIjoiU3luY2hyb25pemVkIiwiY3JlZGl0c0NoYXJnZWQiOjI5LCJkZXZpY2VJZCI6ImRldmljZV9hOGYzYmMxMmU0NTY3ODkwIiwiZHVyYXRpb25TZWNvbmRzIjoxNzQsImVuZFJlYXNvbiI6IkxvY2FsIiwiZW5kZWRBdCI6IjIwMjYtMDItMTNUMTQ6MzM6MDIuNDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6NDcwLCJlbmVyZ3lXaCI6MTIwLCJsaXF1aWRNbCI6Mzk4MDB9LCJvZmZsaW5lVHhJZCI6Im90eF9lNWY2YTdiOGM5ZDAiLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic2Vzc2lvbklkIjoic2Vzc19jNGQ1ZTZmN2E4YjkiLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDE0OjMwOjA4LjUwMFoiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9hbGljZTIwMjYifQ==",
-    "signature": "MEUCIQC5Ont2E3TnPYbB7s3OMCFKGNc1NcWiHnCpcLM5SyGZrgIgLGs9bpdYUR02K+2gHZPgTPMLw3/sCoOMgK3vPO1D+yo=",
+    "data": "eyJhdXRoSWQiOiJhdXRoX2M4OTczMTkyNzg5MiIsImJheUlkIjoiYmF5X2MxZDJlM2Y0YTViNiIsImJvb2tlZER1cmF0aW9uU2Vjb25kcyI6MzAwLCJjbG9ja1N0YXRlIjoiU3luY2hyb25pemVkIiwiY3JlZGl0c0NoYXJnZWQiOjI5LCJkZXZpY2VJZCI6ImRldmljZV9hOGYzYmMxMmU0NTY3ODkwIiwiZHVyYXRpb25TZWNvbmRzIjoxNzQsImVuZFJlYXNvbiI6IkxvY2FsIiwiZW5kZWRBdCI6IjIwMjYtMDItMTNUMTQ6MzM6MDIuNDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6NDcwLCJlbmVyZ3lXaCI6MTIwLCJsaXF1aWRNbCI6Mzk4MDB9LCJvZmZsaW5lVHhJZCI6Im90eF9lNWY2YTdiOGM5ZDBhNzg2MDBjNjFmYTIxMDgzOTJkOCIsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzZXNzaW9uSWQiOiJzZXNzX2M0ZDVlNmY3YThiOSIsInN0YXJ0ZWRBdCI6IjIwMjYtMDItMTNUMTQ6MzA6MDguNTAwWiIsInN0YXRpb25JZCI6InN0bl9hMWIyYzNkNCIsInR4Q291bnRlciI6OCwidXNlcklkIjoic3ViX2FsaWNlMjAyNiJ9",
+    "signature": "MEUCIQCgtFOnSTkKnisoia334eGuoaZmYTF2NDiHTKFM+C18AAIgK6Em6ctxkPYsBCDGWcvpyTzV2zMi5jLvOBzowsZVKxQ=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "txCounter": 8

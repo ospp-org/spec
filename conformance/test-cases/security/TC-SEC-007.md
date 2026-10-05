@@ -114,6 +114,9 @@ This case does that.
 14. Verify Key Usage asserts **`digitalSignature`** and Extended Key Usage asserts **`clientAuth`** and
     **`id-kp-osppBleStation`**, `2.25.57399134409609390163880398392748054115` (§4.4). Every station
     certificate carries both, whether or not the station declares the Offline / BLE profile.
+    **The `id-kp-osppBleStation` half of this step is EXPERIMENTAL**, with the BLE construction it
+    serves ([Release status](../../../README.md#ble-is-experimental)): it is reported, and it is not counted
+    toward a **Standard** or **Extended** verdict, which `clientAuth` and the rest of this case decide.
 15. Verify the validity period does not exceed **1 year**. §4.4 marks the 1-year bound RECOMMENDED
     rather than MUST; a longer validity is therefore recorded as a **deviation**, not a failure, and is
     reported with the observed period.
@@ -270,7 +273,8 @@ This case does that.
    members at the top level, no enclosing wrapper, no undeclared member.
 2. `stationId` is the identifier the token was bound to, and is the Subject CN of `clientCert`.
 3. `clientCert` certifies the **submitted CSR key**, is ECDSA P-256, X.509 v3, asserts `digitalSignature`,
-   `clientAuth` and `id-kp-osppBleStation`, and carries a CRL Distribution Points extension.
+   `clientAuth` and `id-kp-osppBleStation` — the last EXPERIMENTAL and reported only (step 14) — and
+   carries a CRL Distribution Points extension.
 4. `bays` is an array of **objects**, each pairing a `bayId` with its `bayNumber`, unique in both, of
    length equal to the station's registered bay count, and carrying exactly the registered set of bay
    numbers — dense or not. No `bayIds` member is present.
@@ -297,8 +301,9 @@ The implementation **fails** this test case if any of the following occur:
 1. The success body is **wrapped** in an enclosing member, or carries any top-level member the schema
    does not declare, or omits any of the six required members.
 2. `clientCert` certifies a public key other than the one submitted in the CSR, or its Subject CN is not
-   the `stationId` returned beside it, or it lacks `clientAuth` or `id-kp-osppBleStation`, or it lacks a
-   CRL Distribution Points extension.
+   the `stationId` returned beside it, or it lacks `clientAuth`, or it lacks a CRL Distribution Points
+   extension. A certificate that lacks `id-kp-osppBleStation` is reported against the EXPERIMENTAL half
+   of step 14 and fails nothing here.
 3. **`bays` is returned in any shape other than an array of `{bayId, bayNumber}` objects** — a bare
    array of bay-id strings, or a member carrying an additional property.
 4. `bays` contains a duplicate `bayId` or a duplicate `bayNumber`, or its set of `bayNumber` values is
