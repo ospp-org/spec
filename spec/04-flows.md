@@ -982,7 +982,7 @@ sequenceDiagram
 9. **SSP** relays result as **AuthResponse** [MSG-033] `Accepted` to App via BLE
 10. **App** writes **StartServiceRequest** [MSG-034] → SSP starts service
 11. Service runs with **ServiceStatus** [MSG-038] updates, then stop/receipt
-12. Since the station is online, the session is tracked in real time by the Server and settled when the station reports its end — by service kind, never above the `creditsAuthorized` of the authorization and within the pass's limits, as a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)). If the station loses MQTT before then, it reconciles the transaction through TransactionEvent, and the server applies no second debit — only a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback))
+12. Since the station is online, the session is tracked in real time by the Server and settled when the station reports its end — by service kind, never above the `creditsAuthorized` of the authorization and within the pass's limits, as a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)). If the station loses its connection, the loss does not end the session: the wash continues, and the station sends the session's end — its SessionEnded under the server's `sessionId` — when it reconnects. The session settles once, on the first of its end records to arrive — that SessionEnded, or the session's signed receipt, which the app uploads when it has a network — and the other is a duplicate ([`reconciliation.md` §3](profiles/offline/reconciliation.md#3-deduplication-offlinetxid)); either way the server applies no second debit, only a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback))
 
 ### Error Paths
 
@@ -998,7 +998,7 @@ sequenceDiagram
 |-----------|-------|
 | User Wallet | Debited by Server (real-time, step 7) |
 | Server Session | `active` (real-time tracking) |
-| SSP | Online session — reconciled through TransactionEvent only if MQTT is lost before it ends |
+| SSP | Online session — its end reported by SessionEnded, at reconnection when the connection was lost; its receipt, uploaded by the app, is a duplicate once the session has settled |
 
 ---
 
