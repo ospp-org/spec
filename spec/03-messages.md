@@ -406,9 +406,9 @@ In the **Partial B** offline scenario (phone offline, station online), the mobil
   "requestedDurationSeconds": 300,
   "deviceProof": {
     "format": "android-key",
-    "signature": "MEQCICH8vBBquJVWZz8sUQJrtPMjG0y6xV3t3bPuAYKNf0nPAiBi4x8PP+9T1GV9MRdjOFq3Z2NfM8HKzQLcG5sCuTfmhw=="
+    "signature": "MEQCIGSOLREN/0LqMg9i6YiauJzRMBy12UreplAq9Hu/LmDyAiB5MYstV08MgyFEYsVsBTrUUbAzEMoOUcnYuswkNkf8Eg=="
   },
-  "transcriptHash": "tfsNPVcoz7vxxQXUNvR3HlaWHe7hJvupwJjv2GSnk3w="
+  "transcriptHash": "D8rjuIdBN9VELOfNXd6bl0lWYgc3bemUG/qKYCSxnRI="
 }
 ```
 
@@ -2523,7 +2523,7 @@ The app MAY read StationInfo after connecting, to show the customer which statio
 | **Expected Response** | N/A (the station notifies the value on FFF2) |
 | **Timeout** | BLE response timeout (implementation-defined, RECOMMENDED 5s) |
 
-Returns the station's service catalog per bay, with prices: every bay the station declared, each with the services the catalog it holds binds to that bay's programs. The app uses it to show the customer what the station sells, and the customer chooses a bay and a service before the authentication. It carries **no availability** — that is the Challenge's signed `availableServices` — and before the first catalog push it carries no `catalogVersion` and no service ([`ble-transport.md` §4](profiles/offline/ble-transport.md#4-available-services-fff2)).
+Returns the station's service catalog per bay, with prices: every bay the station declared, each with the services the catalog it holds binds to that bay's programs. The app uses it to show the customer what the station sells, and the customer chooses a bay and a service before the authentication. It carries **no availability** — that is the Challenge's signed `availableServices` — and the Challenge carries its digest, `catalogDigest`, so an app finds an altered or replaced catalog before it sends a credential; before the first catalog push it carries no `catalogVersion` and no service ([`ble-transport.md` §4](profiles/offline/ble-transport.md#4-available-services-fff2)).
 
 > **Why this message carries services while [StatusNotification](#52-statusnotification) carries programs.** The two look alike and are not. AvailableServices is the station **echoing the catalog the server pushed it** ([UpdateServiceCatalog](#69-updateservicecatalog)) to an app that has no other way to reach it while offline — the station originates none of it, and if it holds no catalog it has nothing to offer here. StatusNotification is the station reporting **its own hardware**, which it always knows, in a message it is required to send before any catalog can have arrived. Same station, two different kinds of fact.
 
@@ -2639,7 +2639,7 @@ First message of the BLE handshake. The app sends the BLE versions it supports, 
 | **Expected Response** | [OfflineAuthRequest](#75-offlineauthrequest) or [ServerSignedAuth](#76-serversignedauth) on FFF3, depending on connectivity scenario — or, from an app that presents no credential, a [ReceiptRequest](#714-receiptrequest) on FFF6 |
 | **Timeout** | N/A (station sends immediately) |
 
-Second message of the BLE handshake. The station names the BLE version it chose, gives its nonce and ephemeral key, presents its certificate, says whether it is connected to the server and what it can start now, and signs all of it with its certificate key over the Hello it answers ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)).
+Second message of the BLE handshake. The station names the BLE version it chose, gives its nonce and ephemeral key, presents its certificate, says whether it is connected to the server and what it can start now, names the catalog it serves by its digest, and signs all of it with its certificate key over the Hello it answers ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)).
 
 The `stationConnectivity` field determines which authentication flow the app MUST use:
 - `"Offline"` → App uses [OfflineAuthRequest](#75-offlineauthrequest) (Full Offline) or [ServerSignedAuth](#76-serversignedauth) (Partial A)
@@ -2659,6 +2659,7 @@ The `stationConnectivity` field determines which authentication flow the app MUS
 | `availableServices[].bayId` | string | Yes | Bay identifier |
 | `availableServices[].serviceId` | string | Yes | Service identifier |
 | `availableServices[].available` | boolean | Yes | Whether the station can start this service on this bay now |
+| `catalogDigest` | string | Yes | SHA-256 of the OSPP Canonical Form of the catalog the station serves on FFF2 now, Base64. The app sends no credential when it differs from the digest of the catalog it chose from ([`ble-handshake.md` §3](profiles/offline/ble-handshake.md#3-step-2-challenge)) |
 | `stationSignature` | string | Yes | ECDSA P-256 signature with the certificate key over the Hello and this Challenge without this member ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)) |
 
 > **Session key derivation:** Both sides derive the session key using HKDF-SHA256 over an ephemeral-ephemeral ECDH P-256 exchange authenticated by `stationSignature` (the BLE LTK is NOT used — see [Chapter 06 — Security §6.5](06-security.md#65-ble-session-key-derivation--hkdf-sha256), which governs):
@@ -2684,9 +2685,15 @@ The `stationConnectivity` field determines which authentication flow the app MUS
       "bayId": "bay_c1d2e3f4a5b6",
       "serviceId": "svc_standard",
       "available": true
+    },
+    {
+      "bayId": "bay_a2b3c4d5e6f7",
+      "serviceId": "svc_eco",
+      "available": false
     }
   ],
-  "stationSignature": "MEQCID5pRZWu2j5U9YJv8tQatfi2C8HAEPKrflqELCed8HEQAiBi8cgoe/dOefXvXcNyTavrGOx3WAQdvdGxdRkDi8L64A=="
+  "catalogDigest": "KEfI0ZXJooFWmbAXgLrTjLkPeF3GyA4gN1i7FvRz2/k=",
+  "stationSignature": "MEQCIGpIfXXGobe9LhKnXl7LfPYTJsLjzkEo/w4/hriQcI0kAiBNeTAtHyBw4/t6i7+OalXvBWjsz70LJT7zT/snQ7PIqg=="
 }
 ```
 
@@ -2768,7 +2775,7 @@ The app MUST request biometric or PIN confirmation from the user before sending 
   "sessionProof": "ObgxpE1Ad+xl6P8fRWtBstqMY2Tjan9oK/LIWofxvrI=",
   "deviceProof": {
     "format": "android-key",
-    "signature": "MEQCICH8vBBquJVWZz8sUQJrtPMjG0y6xV3t3bPuAYKNf0nPAiBi4x8PP+9T1GV9MRdjOFq3Z2NfM8HKzQLcG5sCuTfmhw=="
+    "signature": "MEQCIGSOLREN/0LqMg9i6YiauJzRMBy12UreplAq9Hu/LmDyAiB5MYstV08MgyFEYsVsBTrUUbAzEMoOUcnYuswkNkf8Eg=="
   }
 }
 ```

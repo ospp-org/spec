@@ -12,5 +12,6 @@
       "available": true
     }
   ],
-  "stationSignature": "MEQCIAGrOKhyBvshGLj8xcC4wAaaFhd0LrC25e6pUbbjCeKFAiAr7cErTuBi+woI/ZjaXGkzSEn8tny0Q0fMD+ztkGTErA=="
+  "catalogDigest": "07pUOHvXhU1hZzsh7JWMj9n7Z5D4TbhEEuSGILeGE1w=",
+  "stationSignature": "MEQCIEkFr+QwG2UsrrNlZGr6hYH1Ma5DLIxrH3FR1U22Q5P6AiBsLOwVyYxxT9NVRjXE84iy2plBxlFTT0c50e4mbIQ/hQ=="
 }

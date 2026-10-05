@@ -349,6 +349,20 @@ const CASES = [
     },
   },
   {
+    id: 'stationsignature-body-catalog-digest-altered',
+    surface: 'stationSignature', class: 'BODY',
+    base: CHALLENGE_FULL,
+    key: 'conformance/test-keys/station-ca-test-cert.pem',
+    args: ['--hello', HELLO_FULL],
+    signaturePointer: 'stationSignature',
+    what: 'catalogDigest replaced by the digest of another catalog — the app judges the catalog it read against the signed digest, so an altered Challenge must be refused',
+    apply: (d) => {
+      const other = read('conformance/test-vectors/valid/offline/challenge-minimal.json').catalogDigest;
+      const r = setAt(d, 'catalogDigest', other);
+      return { doc: r.doc, pointer: 'catalogDigest', was: r.was, note: 'catalogDigest := the minimal Challenge\'s' };
+    },
+  },
+  {
     id: 'stationsignature-signature-bitflip',
     surface: 'stationSignature', class: 'SIG',
     base: CHALLENGE_FULL,

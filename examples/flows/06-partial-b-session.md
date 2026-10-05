@@ -218,7 +218,8 @@ The station chooses the BLE version, generates its nonce and ephemeral key, repo
       "available": true
     }
   ],
-  "stationSignature": "MEUCIQDb0nJ9IZyLHtc2Z3aOt5KyZifbC34PnxZkNe7p309CNgIgSjc5wjL7AyEnrWJCY0KhArqs9pfOSqJYO3RXT11bTyw="
+  "catalogDigest": "2UeVddjli82JD0z3ubl8lTsRmYua/QZFqn5lq3qkyfI=",
+  "stationSignature": "MEUCIQDRW5EXxkOyQpCL++3GcvcNvUvs9SDH32qVC1WS3yFW0gIgfwBVkYYifM8dqic6ZwJfe8URwu5D92JD4rPTc4KpwJU="
 }
 ```
 
@@ -272,7 +273,7 @@ The app presents the pre-armed OfflinePass. In Partial B, the station does NOT v
   "sessionProof": "hAW4BhA445dJmlLG78qcEn36DHEhkjIDNt3fZOGGh0c=",
   "deviceProof": {
     "format": "apple-appattest",
-    "signature": "MEUCIQCuaKx/GfKpGxi7eW61iTgZeflpxjuqHZxtPYSV4EefYwIgGtpnzeRYyj8iP9YJtuwK5hNfp1nMzOExTeb4ptzlT/4=",
+    "signature": "MEUCIQCx3I+HX4x8devC8EboDROXqN4iEMP+AYLJR8vxZ/aatgIgHwYg6Ky65BTVFjjHtxa9ut7LOy8V9rXAIfbzFyopn4w=",
     "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
   }
 }
@@ -325,10 +326,10 @@ Because the station is online (`stationConnectivity: "Online"`), it does NOT per
     "requestedDurationSeconds": 240,
     "deviceProof": {
       "format": "apple-appattest",
-      "signature": "MEUCIQCuaKx/GfKpGxi7eW61iTgZeflpxjuqHZxtPYSV4EefYwIgGtpnzeRYyj8iP9YJtuwK5hNfp1nMzOExTeb4ptzlT/4=",
+      "signature": "MEUCIQCx3I+HX4x8devC8EboDROXqN4iEMP+AYLJR8vxZ/aatgIgHwYg6Ky65BTVFjjHtxa9ut7LOy8V9rXAIfbzFyopn4w=",
       "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
     },
-    "transcriptHash": "llbETxlTjM0BmvlsnHf8xl+uaChKUn7b5OtVNvqV4J8="
+    "transcriptHash": "lsWrmnL+S4MGDLFSK/GqMP6Mo0RwywN8SZz1FGKUG6c="
   }
 }
 ```

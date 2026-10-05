@@ -601,18 +601,20 @@ export function signStationChallenge(stationKeyPem, helloBytes, challenge) {
 // the listed steps; where a step names a signature under the CA's key, the signed
 // object's issuer name is matched to the CA's subject as well, as RFC 5280 path and
 // CRL validation do:
-//   1. the certificate chains to the Station CA: its signature verifies under
-//      the CA's key and its issuer is the CA's subject; `at`, with `skewSeconds`,
-//      lies within its validity;
-//   2. its serial is on no entry of the CRL, whose signature verifies under the
-//      CA's key — the CRL as held, whatever its update times;
+//   1. the certificate chains to a Station CA of the bundle's set — the one whose
+//      subject is its issuer (06-security.md §4.2.1): its signature verifies under
+//      that CA's key; `at`, with `skewSeconds`, lies within its validity;
+//   2. its serial is on no entry of that CA's CRL, whose signature verifies under
+//      the CA's key — the CRL as held, whatever its update times;
 //   3. a P-256 key, key usage with digitalSignature, extended key usage with the
 //      OSPP BLE station purpose;
 //   4. stationId = subject CN; equal to `intendedStationId` when one is given;
 //   5. stationSignature verifies over the content above with the certificate key;
 //   6. any failure → abort, no credential, 2013 BLE_AUTH_FAILED.
+// The set is `stationCas`, [{ caCertPem, crlPem }, …]; a caller holding one CA may pass
+// `caCertPem` and `crlPem` instead, which is the set of that one CA.
 // Returns { ok, step, reason, stationId, certificate }.
-export function stationVerificationGate({ challenge, helloBytes, caCertPem, crlPem, at, skewSeconds = 0, intendedStationId = null }) {
+export function stationVerificationGate({ challenge, helloBytes, caCertPem, crlPem, stationCas = null, at, skewSeconds = 0, intendedStationId = null }) {
   const fail = (step, reason) => ({ ok: false, step, reason, ...GATE_ERROR });
   let cert;
   try {
@@ -621,14 +623,17 @@ export function stationVerificationGate({ challenge, helloBytes, caCertPem, crlP
   } catch (e) {
     return fail(1, `stationCertificate is not a DER certificate: ${e.message}`);
   }
-  const caDer = pemToDer(caCertPem);
-  const ca = parseCertificate(caDer);
-  const caKey = certificatePublicKey(caDer);
+  const set = (stationCas ?? [{ caCertPem, crlPem }]).map((e) => {
+    const der = pemToDer(e.caCertPem);
+    return { ca: parseCertificate(der), caKey: certificatePublicKey(der), crlPem: e.crlPem };
+  });
   const atMs = Date.parse(at);
   if (!Number.isFinite(atMs)) throw new Error(`gate: unparseable time ${at}`);
 
-  // Step 1.
-  if (!cert.issuerRaw.equals(ca.subjectRaw)) return fail(1, 'issuer is not the Station CA subject');
+  // Step 1: the CA of the set whose subject is the certificate's issuer.
+  const anchor = set.find((e) => cert.issuerRaw.equals(e.ca.subjectRaw));
+  if (!anchor) return fail(1, set.length === 1 ? 'issuer is not the Station CA subject' : `issuer is the subject of none of the ${set.length} Station CAs of the set`);
+  const { ca, caKey } = anchor;
   // 06-security.md §4.4 allows ecdsa-with-SHA256 and ecdsa-with-SHA384 for a station certificate.
   const certHash = { [OID_ECDSA_SHA256]: 'sha256', [OID_ECDSA_SHA384]: 'sha384' }[cert.signatureAlgorithm];
   if (!certHash) return fail(1, `certificate signature algorithm ${cert.signatureAlgorithm} is neither ecdsa-with-SHA256 nor ecdsa-with-SHA384`);
@@ -638,8 +643,8 @@ export function stationVerificationGate({ challenge, helloBytes, caCertPem, crlP
   if (atMs + skewSeconds * 1000 < cert.notBefore.getTime()) return fail(1, `not valid before ${cert.notBefore.toISOString()}`);
   if (atMs - skewSeconds * 1000 > cert.notAfter.getTime()) return fail(1, `expired at ${cert.notAfter.toISOString()}`);
 
-  // Step 2.
-  const crl = parseCrl(pemToDer(crlPem));
+  // Step 2: that CA's CRL.
+  const crl = parseCrl(pemToDer(anchor.crlPem));
   if (!crl.issuerRaw.equals(ca.subjectRaw)) return fail(2, 'CRL issuer is not the Station CA subject');
   if (!crypto.verify('sha256', crl.tbsRaw, caKey, crl.signatureDer)) return fail(2, 'CRL signature does not verify under the Station CA key');
   if (crl.revokedSerials.has(cert.serialHex)) return fail(2, `serial ${cert.serialHex} is on the CRL`);
@@ -664,6 +669,20 @@ export function stationVerificationGate({ challenge, helloBytes, caCertPem, crlP
   if (!ecdsaVerify(certKeyPem, content, challenge.stationSignature)) return fail(5, 'stationSignature does not verify over the Hello and this Challenge');
 
   return { ok: true, step: null, reason: null, stationId, certificate: cert, certKeyPem, signedContent: content };
+}
+
+// The catalog check (ble-handshake.md §3): catalogDigest is the SHA-256 of the OSPP
+// Canonical Form of the FFF2 catalog the station serves; the app compares it with the
+// digest of the catalog it chose from, and sends no credential when they differ.
+export function catalogDigestOf(catalog) {
+  return sha256(Buffer.from(canonicalForm(catalog), 'utf-8')).toString('base64');
+}
+export function catalogCheck({ challenge, catalog }) {
+  if (typeof challenge.catalogDigest !== 'string') return { ok: false, reason: 'catalogDigest missing' };
+  const digest = catalogDigestOf(catalog);
+  return digest === challenge.catalogDigest
+    ? { ok: true, reason: null }
+    : { ok: false, reason: `the catalog read hashes to ${digest}, the Challenge names ${challenge.catalogDigest}` };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

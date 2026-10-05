@@ -12,6 +12,7 @@
     "stationCertificate",
     "stationConnectivity",
     "availableServices",
+    "catalogDigest",
     "stationSignature"
   ],
   "additionalProperties": false,
@@ -75,6 +76,11 @@
           }
         }
       }
+    },
+    "catalogDigest": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]{43}=$",
+      "description": "SHA-256 of the OSPP Canonical Form of the catalog the station serves on FFF2 now, Base64 (44 characters; profiles/offline/ble-transport.md §4). Signed with the rest of the Challenge: the app sends no credential when it differs from the digest of the catalog it chose from (profiles/offline/ble-handshake.md §3)."
     },
     "stationSignature": {
       "type": "string",

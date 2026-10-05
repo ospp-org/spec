@@ -213,7 +213,8 @@ The app generates a fresh ephemeral P-256 key pair and a cryptographically rando
       "available": true
     }
   ],
-  "stationSignature": "MEUCIQDfp7VzRCrkP6OLfHw7QvExiFEQ/XlQ5rUcgXqpoHCMpQIgaUp3cnNdqfL34aMWJBfOJmqFt8kThDyekPe1ESKg7IQ="
+  "catalogDigest": "kR7SmaHNzwk56QSIJYzA+wXMZcQqUgLRHH2/fZ3SUfk=",
+  "stationSignature": "MEQCIBor51eIOuysLqXjSwvkd6XVbFmzGNWBBjZ8nk2tCHgYAiA6rjZr0hnYrhFX0tLvN5r0kJsiN/TAfJZGWacB3fGXMA=="
 }
 ```
 
@@ -290,7 +291,7 @@ Bob looks at his phone. Face ID succeeds. The app proceeds to send the OfflinePa
   "sessionProof": "hAW4BhA445dJmlLG78qcEn36DHEhkjIDNt3fZOGGh0c=",
   "deviceProof": {
     "format": "apple-appattest",
-    "signature": "MEQCIGeBV2FIirFTNiU4FCHk4mnoi6Sei9TpEOWdAVwEgOCwAiBU5mD+PI8untYHbd2fBKhVttn+qK8YDqi8LxCvt/D5nA==",
+    "signature": "MEUCIQCXpmgaeY3ujRhhS8bK74783dxeU/Z1tfiWwpW6KQ9tAwIgBp8RW5evYXI7f91yiJMFxcLf88BEW6lL+FcqRvGSCvc=",
     "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
   }
 }

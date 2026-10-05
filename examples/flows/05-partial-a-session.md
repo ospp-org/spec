@@ -268,7 +268,8 @@ The station chooses the BLE version, generates its own nonce and ephemeral key, 
       "available": true
     }
   ],
-  "stationSignature": "MEUCIQCCqWbvzuNDmcGN0nQ8eO8LocG8GH51GWhk+uURG5sFfAIgGXn1RbJHfo9OmVNMfzKniVvLheNM3kJHANzNxicLjRk="
+  "catalogDigest": "aTJKAIhKyFTwppylQPa+nBz8rl6KwwglWGonzrJX7D4=",
+  "stationSignature": "MEQCICQdjMlWwRCQNOnt1V9ahN1aHW9EtLggWDJIItLIHuLNAiAFshHsI/yM/GmsXe+9akHfVy+IHsGqtIYhMhJ3Roi/zQ=="
 }
 ```
 

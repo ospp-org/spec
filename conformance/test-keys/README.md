@@ -16,7 +16,7 @@ vectors and example payloads can be re-verified by any implementer.**
 | `station-mtls-test-key.pem` / `station-mtls-test-cert.pem` | ECDSA P-256 (prime256v1) | The station's mTLS client key and certificate (`06-security.md` §4.4): subject `O=OSPP Test, CN=stn_a1b2c3d4`, serial `0A01`, key usage `digitalSignature`, extended key usage `clientAuth` and `id-kp-osppBleStation` (`2.25.57399134409609390163880398392748054115`), valid 2026-01-01 to 2026-12-31. The station presents the certificate in the BLE Challenge and signs the Challenge with the key (`06-security.md` §6.5.2). The station's receipt key is the separate `station-test-key.pem`. |
 | `station-ca-test-crl-revoking.pem` | — | A CRL of the Station CA that revokes serial `0A03`, for the revoked-certificate case. |
 | `station-mtls-test-cert-no-ospp-eku.pem`, `-no-digital-signature.pem`, `-revoked.pem`, `-expired.pem`, `-other-ca.pem` | ECDSA P-256 (prime256v1) | Certificates over the station's mTLS key that the app's verification gate refuses (`06-security.md` §6.5.2): extended key usage `clientAuth` only (serial `0A02`); key usage `keyAgreement` without `digitalSignature` (`0A05`); revoked by `station-ca-test-crl-revoking.pem` (`0A03`); expired on 2026-02-12 (`0A04`); issued by another CA (`0A06`). |
-| `station-other-ca-test-key.pem` / `station-other-ca-test-cert.pem` | ECDSA P-256 (prime256v1) | A Station CA no trust bundle holds, the issuer of `station-mtls-test-cert-other-ca.pem`. |
+| `station-other-ca-test-key.pem` / `station-other-ca-test-cert.pem` / `station-other-ca-test-crl.pem` | ECDSA P-256 (prime256v1) | A second Station CA, the issuer of `station-mtls-test-cert-other-ca.pem`, with an empty CRL: no trust bundle of the examples holds it, and the two-CA set of the gate's positive control holds it beside the test Station CA (`06-security.md` §4.2.1). |
 | `station-mtls-test-p384-key.pem` / `station-mtls-test-cert-p384.pem` | ECDSA P-384 (secp384r1) | A station key on another curve and its certificate (serial `0A07`), refused by the gate, which takes only P-256. |
 
 ## Derivation
@@ -32,7 +32,7 @@ vectors and example payloads can be re-verified by any implementer.**
   The first certificate over the same key, serial `0550`, was valid only from 2026-09-29, after the sessions the documents depict.
   Each CRL comes from `openssl ca -gencrl -crl_lastupdate 20260210000000Z -crl_nextupdate 20260217000000Z` under a configuration
   naming that key and certificate, with `default_md = sha256`: `station-ca-test-crl.pem` with an empty database and a `crlnumber`
-  file of `1000` (CRL number 4096), and `station-ca-test-crl-revoking.pem` with serial `0A03` revoked on 2026-01-15 and a
+  file of `1000` (CRL number 4096) — and `station-other-ca-test-crl.pem` the same way, under the other Station CA's key and certificate — and `station-ca-test-crl-revoking.pem` with serial `0A03` revoked on 2026-01-15 and a
   `crlnumber` file of `1001` (CRL number 4097). The fixtures carry the certificate and the CRL as these files hold them; the app
   uses the CRL it holds also once its `nextUpdate` has passed (`06-security.md` §6.5.2), so nothing validates a CRL against a clock.
 - **Station mTLS key and certificates** (BLE station authentication, `06-security.md` §6.5.2):

@@ -37,8 +37,8 @@ seconds (ten days) it is inert, and an operator arms it by lowering it
 |------|-------|
 | 10:30:00.000 | Alice opens the app, selects Bay 1, svc_eco |
 | 10:30:01.000 | App initiates BLE scan, discovers SSP-3000 |
-| 10:30:02.000 | App reads BLE characteristic FFF1 (station info + connectivity, unauthenticated) |
-| 10:30:03.000 | App sends HELLO, station responds with Challenge; app verifies the station's certificate and signature |
+| 10:30:02.000 | App reads BLE characteristic FFF1 (station info + connectivity, unauthenticated) and asks for the catalog on FFF2 |
+| 10:30:03.000 | App sends HELLO, station responds with Challenge; app verifies the station's certificate and signature, and the catalog's digest |
 | 10:30:05.000 | App confirms biometric (FaceID), constructs OfflineAuthRequest |
 | 10:30:06.000 | App sends OfflineAuthRequest with expired OfflinePass |
 | 10:30:08.000 | Station validates OfflinePass -- check #2 fails (expired) |
@@ -60,6 +60,45 @@ seconds (ten days) it is inert, and an operator arms it by lowering it
   "stationModel": "SSP-3000",
   "firmwareVersion": "2.4.1",
   "connectivity": "Offline"
+}
+```
+
+The app then asks for the catalog on FFF2, and Alice chooses from it: Bay 1, the Eco Program, for three
+minutes ([`ble-transport.md` §4](../../spec/profiles/offline/ble-transport.md#4-available-services-fff2)).
+The Challenge names this catalog by its digest.
+
+```json
+{
+  "catalogVersion": "2026-02-01-03",
+  "bays": [
+    {
+      "bayId": "bay_c1d2e3f4a5b6",
+      "bayNumber": 1,
+      "services": [
+        {
+          "serviceId": "svc_eco",
+          "serviceName": "Eco Program",
+          "pricingType": "PerMinute",
+          "priceCreditsPerMinute": 10,
+          "priceLocalPerMinute": 50
+        },
+        {
+          "serviceId": "svc_standard",
+          "serviceName": "Standard Program",
+          "pricingType": "PerMinute",
+          "priceCreditsPerMinute": 8,
+          "priceLocalPerMinute": 40
+        },
+        {
+          "serviceId": "svc_deluxe",
+          "serviceName": "Deluxe Program",
+          "pricingType": "Fixed",
+          "priceCreditsFixed": 15,
+          "priceLocalFixed": 75
+        }
+      ]
+    }
+  ]
 }
 ```
 
@@ -108,7 +147,8 @@ seconds (ten days) it is inert, and an operator arms it by lowering it
       "available": true
     }
   ],
-  "stationSignature": "MEUCIQCLLosJRypxuNRsdlx2hj8kU3XcLPmrPKrLpzw7puHmTQIgT1wCa7+9gXh1nNUY4GdrRAsn+hOFF5grU8wLt2YdcCM="
+  "catalogDigest": "jlmpygkS+M1ixH7bJrWYFbxbTEmIJtNDtLu87NLl4d4=",
+  "stationSignature": "MEQCIHluwc6yLIlIYB4nOKGy6NtdbSIH33gheVB1iTD2zc4/AiBptYrZ+yI7GKGaNsbSrhsm6YXvEJx54MTEAk8aRZg7ng=="
 }
 ```
 
@@ -155,7 +195,7 @@ The `expiresAt` field clearly shows the pass expired more than a day ago.
   "sessionProof": "EtKD75H71pKdOC5mrEsIAS7a04p7oQzRcdNZv/G0uPA=",
   "deviceProof": {
     "format": "apple-appattest",
-    "signature": "MEQCIGjScwOudcjUKehZXu7dsk5PgskHdSxJrFTobDijNpg2AiBGrSn7t2lZlFxyNWZzrYaLH3ZdCLSdoBSI1EFewidsEA==",
+    "signature": "MEQCIAqMeUwtfN5JmIHZ3x1L5yIr3OCjOIliScLu1LONJR4uAiAJQ2oGv5KVzIZbZVLJVeJct5KFi+qE6JEyrPPIA5gW5Q==",
     "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
   }
 }
