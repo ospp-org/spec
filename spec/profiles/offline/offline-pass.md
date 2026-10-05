@@ -168,7 +168,7 @@ Processing **MUST** stop at the first failure.
 
 It **cannot** refuse on what only the server knows: a block or an individual revocation, whenever it was issued; an epoch the platform moved after the station last received configuration; use of the same pass at other stations; the user's current wallet balance; or which tenant's customer the user is — the last by design (§2.3). The server acts on the first three where it is reachable: at Partial-B authorize time, where each refuses ([`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks)), and at reconciliation, where revocation and the epoch refuse ([`reconciliation.md` §6.1](reconciliation.md#61-check-list)) and use at other stations caps what is settled ([`reconciliation.md` §8](reconciliation.md#8-wallet-reconciliation)). The wallet balance gates no wash on a pass, on either path: a debit that leaves the wallet below zero leaves its transaction pending until the user next tops up ([`reconciliation.md` §8.1](reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
 
-**Trade-off.** Epoch revocation is coarse-grained: it revokes every pass issued before the bump, not one user's. That is acceptable because a pass that escapes a revocation — one presented to a station that has not heard of it — is still **bound to its device** (§2, `devicePublicKey`; at the station check #4 compares `deviceId` until a BLE message carries a proof of possession of that key — see the note on §4 check #4) and **capped by its own limits** (§2.1): what it can be charged for is bounded by `maxUses`, `maxTotalCredits` and `maxCreditsPerTx`, because settlement never charges above them ([`reconciliation.md` §8](reconciliation.md#8-wallet-reconciliation)), and what it can be delivered is bounded at each station by that station's own count of the pass (checks #6--#8) and its own offline limits (§2.2). Its acceptability does not rest on a short lifetime: a pass may live ten days.
+**Trade-off.** Epoch revocation is coarse-grained: it revokes every pass issued before the bump, not one user's. That is acceptable because a pass that escapes a revocation — one presented to a station that has not heard of it — is still **bound to its device** (§2, `devicePublicKey`; at the station check #4 compares `deviceId` until a BLE message carries a proof of possession of that key — see the note on §4 check #4) and **limited at every station** (§2.1): what it can be delivered is bounded at each station by that station's own count of the pass (checks #6--#8) and its own offline limits (§2.2), and no wash is charged more than its station authorized for it ([`reconciliation.md` §8](reconciliation.md#8-wallet-reconciliation)). Washes at stations that could not see each other's use may together take the pass past its totals; each is charged in full, to the user's wallet. Its acceptability does not rest on a short lifetime: a pass may live ten days.
 
 ## 6. Lifecycle
 
@@ -224,14 +224,14 @@ The full lifecycle of an OfflinePass is as follows:
    > reconciliation ([`reconciliation.md` §8.1](reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)), or from the
    > reported end when a Partial-B session settles online
    > ([`04-flows.md` §5c](../../04-flows.md#5c-partial-b--phone-offline-station-online)) — and capped as [`reconciliation.md` §8](reconciliation.md#8-wallet-reconciliation) states,
-   > since the pass's limits bound what settlement charges.
+   > at what its station authorized for the wash.
    > Adding the second to the first counts one transaction twice **and** at two different
    > valuations. The authorize-time advance is therefore **provisional**: the server **MUST**
    > replace it with the settled amount when the transaction settles, and **MUST NOT** add to
    > it. A pass that was authorized and whose transaction never settled keeps its provisional figure, which is the
    > conservative direction and the one that cannot overspend. The cumulative credits factor of
    > [`06-security.md` §7.4](../../06-security.md#74-fraud-detection--offline-transactions) reads the same transactions at their cost before the cap,
-   > since settled amounts can never show an overrun.
+   > which is what each wash delivered.
    >
    > This is stated because the two sites read as independent obligations and were implemented as
    > independent counters — measured, a `maxUses: 5` pass burns two uses per transaction and sums
@@ -249,7 +249,7 @@ The OfflinePass provides the following security guarantees:
 | **Non-forgeable** | ECDSA P-256 signature, `keyId` | The pass is signed by a key of the server's key set, named by `keyId`. Modifying any field invalidates the signature (check #1). |
 | **Time-limited** | `expiresAt`, `OfflinePassMaxAge` | The pass is valid for the platform lifetime — 3 days by default, never more than 10 days — and at each station for no longer than that station's own `OfflinePassMaxAge` (check #2). |
 | **Revocable** | `revocationEpoch`, the server's revoked mark | Every outstanding pass can be batch-revoked by incrementing the platform epoch (check #3); one user's passes are revoked individually wherever the server is reachable (§5). |
-| **Usage-limited** | `maxUses`, `maxTotalCredits`, `maxCreditsPerTx` | The pass limits the number of sessions, the credits across them and the credits of any one (checks #6, #7, #8). A request above a limit is refused, never reduced (§2.1), and settlement never charges above the limits ([`reconciliation.md` §8](reconciliation.md#8-wallet-reconciliation)). |
+| **Usage-limited** | `maxUses`, `maxTotalCredits`, `maxCreditsPerTx` | The pass limits the number of sessions, the credits across them and the credits of any one (checks #6, #7, #8). A request above a limit is refused, never reduced (§2.1), and settlement never charges a wash more than its station authorized ([`reconciliation.md` §8](reconciliation.md#8-wallet-reconciliation)). |
 | **Rate-limited** | `minIntervalSec` | Prevents rapid consecutive use that could indicate abuse (check #9). |
 | **Replay-protected** | Monotonic counter | The `counter` field in OfflineAuthRequest prevents replaying the same pass presentation (check #10). |
 

@@ -894,7 +894,7 @@ pass field.
 
 **The options not taken.** Option 2 stays rejected for the reason it gives: a window bounds how long a
 station may be offline, not how long a pass is valid. Option 3's bound still stands beneath the
-decision — the limits read no clock, and settlement never charges above them
+decision — the limits read no clock, and settlement never charges a wash more than its station authorized
 ([`reconciliation.md` §8](spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)).
 
 ---
@@ -2557,11 +2557,10 @@ reconciliation, never a reconcile gate.
 
 > **Superseded in part, 2026-09-29.** The authority stands — the server recomputes, and the station's
 > `creditsCharged` stays advisory — but two things this decision leaned on have changed. Settlement is
-> now **capped**: at the pass's `maxCreditsPerTx`, the signed `creditsAuthorized` of a Partial-A
-> authorization or the `creditsAuthorized` of a Partial-B one within the pass's limits, and across a pass at
-> its `maxTotalCredits` and `maxUses`, taken in the order the transactions arrive — and no
-> debit above that is taken for any reason, a tariff that rose while the station was offline included;
-> what the cap leaves uncharged is not recovered from the user later
+> now **capped per wash**, at what the station authorized for it: the pass's `maxCreditsPerTx`, the signed
+> `creditsAuthorized` of a Partial-A authorization or the `creditsAuthorized` of a Partial-B one — and no
+> debit above that is taken for any reason, a tariff that rose while the station was offline included. The
+> pass-wide totals cap nothing: a wash that takes a pass past them is charged in full
 > ([`reconciliation.md` §8](spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)). And a
 > debit that leaves the wallet below zero leaves its transaction **pending**: the wallet carries the
 > debt, but neither the tenant whose station delivered the wash nor the platform collects it until the

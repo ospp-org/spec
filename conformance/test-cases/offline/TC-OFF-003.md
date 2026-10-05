@@ -30,7 +30,7 @@ Verify that when a station reconnects to the server after an offline period, it 
 4. The server has previously recorded `txCounter: 4` for this station (forensic history only — the server keeps no watermark and does not compare against it).
 5. The user's wallet balance on the server is `50.0` credits.
 6. The MQTT broker is now reachable (connectivity restored).
-7. The tariff of each service is set so that the server's recomputation of every transaction in this case, from its signed receipt, equals the `creditsCharged` the station reports, and so that each transaction stays within its pass's `maxCreditsPerTx` and what remains of its `maxTotalCredits`. The server settles on its recomputation, capped by the pass limits, and never on the station's figure ([`reconciliation.md` §8, §8.1](../../../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)); this precondition is what lets the arithmetic below use the station's figures.
+7. The tariff of each service is set so that the server's recomputation of every transaction in this case, from its signed receipt, equals the `creditsCharged` the station reports, and so that each transaction stays within its pass's `maxCreditsPerTx` and what remains of its `maxTotalCredits`. The server settles on its recomputation, capped at what the station authorized for each wash, and never on the station's figure ([`reconciliation.md` §8, §8.1](../../../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)); this precondition is what lets the arithmetic below use the station's figures.
 
 ## Steps
 
@@ -98,7 +98,7 @@ Verify that when a station reconnects to the server after an offline period, it 
 
 ### Part D — Billing Reconciliation
 
-31. After all 3 transactions are reconciled, verify the server settles each at its own recomputation from the signed receipt — by service kind on the signed `endReason`, from `durationSeconds` or `bookedDurationSeconds` — capped by the pass limits ([`reconciliation.md` §8.1](../../../spec/profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)). Under Precondition 7 the totals are:
+31. After all 3 transactions are reconciled, verify the server settles each at its own recomputation from the signed receipt — by service kind on the signed `endReason`, from `durationSeconds` or `bookedDurationSeconds` — capped at what the station authorized for each wash, the pass's `maxCreditsPerTx` ([`reconciliation.md` §8.1](../../../spec/profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)). Under Precondition 7 the totals are:
     - TX-A: 9 credits + TX-B: 12 credits + TX-C: 6 credits = **27 credits total**.
 32. Verify the server debits the user's wallet: `50.0 - 27 = 23.0` credits remaining.
 33. Verify the server stores each transaction with its receipt for audit purposes.
@@ -140,7 +140,7 @@ This is the path that destroyed money before 0.9.0: §4.1 step 1 resets the coun
 3. The server records each `txCounter` and settles every transaction on its own merits. No response status is conditional on the counter's value, its continuity, or its ordering.
 4. All receipt signatures (ECDSA-P256-SHA256) are valid when verified with the station's public key.
 5. A retransmission of the same transaction — same `offlineTxId`, byte-identical signed `receipt.data` — is answered `Duplicate` without re-processing, and the station deletes its copy. A **different** signed receipt under an `offlineTxId` the server's ledger holds is answered `Rejected`, both records are retained, an operator alert is raised, and the station keeps its copy.
-6. The server settles each transaction at its own recomputation from the signed receipt, capped by the pass limits, and debits the user's wallet by the settled amounts.
+6. The server settles each transaction at its own recomputation from the signed receipt, capped at the pass's `maxCreditsPerTx` and at nothing pass-wide, and debits the user's wallet by the settled amounts.
 7. A transaction whose `txCounter` is discontinuous with the station's recorded history is settled normally, its money recorded, and an operator alert raised **on the station** — contributing nothing to the user's fraud score.
 8. A transaction whose `txCounter` is at or below previously recorded counters (station reboot) is settled and **never** answered `Duplicate`. Deduplication is keyed on `offlineTxId`, not on the counter.
 9. Negative wallet balances are permitted; the transaction whose debit left the wallet below zero stays pending until the user next tops up, the server notifies the user to top up, and it issues no offline pass while the balance is below zero.
