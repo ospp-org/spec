@@ -1,0 +1,6 @@
+{
+  "status": "Rejected",
+  "reason": "The pass expired at 2026-02-06T10:00:00.000Z.",
+  "errorCode": 2003,
+  "errorText": "OFFLINE_PASS_EXPIRED"
+}

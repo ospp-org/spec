@@ -363,7 +363,10 @@ In the **Partial B** offline scenario (phone offline, station online), the mobil
 | `sessionId` | string | Cond. | Server-assigned session ID (when `Accepted`) |
 | `durationSeconds` | integer | Cond. | Authorized session duration in seconds (when `Accepted`) |
 | `creditsAuthorized` | integer | Cond. | Maximum credits authorized for this session (when `Accepted`) |
-| `reason` | string | Cond. | Rejection reason (when `Rejected`) — see error codes below |
+| `reason` | string | Cond. | Human-readable description of the refusal, not for programmatic matching (when `Rejected`) |
+| `errorCode` | integer | Cond. | The refusal's registry code — see error codes below (when `Rejected`; [`authorize-offline-pass.md` §4](profiles/offline/authorize-offline-pass.md#4-response-payload)) |
+| `errorText` | string | Cond. | The registry name of `errorCode`, `UPPER_SNAKE_CASE` (when `Rejected`) |
+| `details` | object | Cond. | Per-occurrence context; with `4002`, `constraint` names the pass limit that refused — `maxUses` or `maxTotalCredits` |
 
 #### Example
 
@@ -416,7 +419,9 @@ In the **Partial B** offline scenario (phone offline, station online), the mobil
 ```json
 {
   "status": "Rejected",
-  "reason": "OFFLINE_PASS_EXPIRED"
+  "reason": "The pass expired at 2026-02-06T10:00:00.000Z.",
+  "errorCode": 2003,
+  "errorText": "OFFLINE_PASS_EXPIRED"
 }
 ```
 

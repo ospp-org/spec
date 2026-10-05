@@ -119,17 +119,16 @@ The last clause is the load-bearing one. A receiver generally cannot tell which 
 
 When a station or server rejects a REQUEST, it **MUST** respond with a RESPONSE message whose `payload` carries `status: "Rejected"`, `errorCode`, and `errorText`.
 
-That holds wherever the message's own response schema declares those members. **Five do not**, and every response schema is closed (`additionalProperties: false`), so on those messages an `errorCode` cannot be placed on the wire at all. The denominator is **20** response schemas under `schemas/mqtt/`, of which **15** declare a top-level `errorCode` and these five do not:
+That holds wherever the message's own response schema declares those members. **Four do not**, and every response schema is closed (`additionalProperties: false`), so on those messages an `errorCode` cannot be placed on the wire at all. The denominator is **20** response schemas under `schemas/mqtt/`, of which **16** declare a top-level `errorCode` and these four do not:
 
 | Response schema | How a rejection is signalled | `errorCode` on the wire |
 |---|---|:---:|
 | `transaction-event-response` | `status` + `reason` (REQUIRED when not `Accepted`) — see [reconciliation §6.4](profiles/offline/reconciliation.md#64-response) | no |
-| `authorize-offline-pass-response` | `status` + `reason` | no |
 | `data-transfer-response` | `status` (`Rejected`, `UnknownVendor`, `UnknownData`) | no |
 | `change-configuration-response` | per-key `results[].status`, with `results[].errorCode` / `results[].errorText` | per key, not top level |
 | `heartbeat-response` | declares no `status`; a rejection is not expressible, and none is ever sent — [§4.1](#41-station--server-mqtt-actions) | no |
 
-**Three have left this list, and each left for its own reason.** `boot-notification-response` went
+**Four have left this list, and each left for its own reason.** `boot-notification-response` went
 first: it now declares `errorCode` and `errorText`, both **REQUIRED when `status` is `Rejected`**,
 because that message carries four codes with four different recoveries — `2001`, `1005`, `1007`,
 `6001` — so a station that could not read the code could not select among them, and the per-code
@@ -139,6 +138,14 @@ they are the same finding twice: the *Implicit Error Codes* note makes `1005`, `
 implicit for **ALL** Server → Station REQUESTs, and measured across the **14** such actions these two
 were the only ones whose response could not carry any of the three. Both are station → server, the
 direction in which widening a response cannot break a validator.
+
+`authorize-offline-pass-response` left last, by decision, in the other direction: it travels server
+→ station, where a station validating against a copy of the schema that predates the widening refuses
+the whole response. It now declares `errorCode`, `errorText` and `details`, which the server **MUST**
+carry on every refusal, because the station relays the refusal to an app that chooses its recovery by
+the code — `4002` alone has two ([`authorize-offline-pass.md` §4](profiles/offline/authorize-offline-pass.md#4-response-payload)).
+The members are additive and the schema admits a response without them; the price of the direction is
+an order — stations accept the members before any server sends them ([VERSIONING.md](../VERSIONING.md)).
 
 `get-configuration-response` was the harder of the two and the reason is worth recording, because the
 obvious reading was wrong. It declares no `status`, so it looked as though `configuration` would have
@@ -561,7 +568,7 @@ This table maps which error codes can appear in the RESPONSE or rejection of eac
 | StatusNotification [MSG-009] | *(EVENT — no RESPONSE. Carries 5xxx error details in the payload: at bay level when `status` is `Faulted`, and optionally per program on any `programs[]` entry reported `available: false`)* |
 | MeterValues [MSG-010] | *(EVENT — no RESPONSE)* |
 | TransactionEvent [MSG-007] | **2002**, **2003**, **2004**, **2005**, **2014**, **2016**, **2017**, 1005, 3015, 6001 — **recorded, not transmitted** ([`reconciliation.md` §6.4](profiles/offline/reconciliation.md#64-response)) |
-| AuthorizeOfflinePass [MSG-002] | **2002**, **2003**, **2004**, **2005**, **2014**, 1005, 4002, 4003, 4004, 6001 — **recorded, not transmitted** ([`authorize-offline-pass.md` §7](profiles/offline/authorize-offline-pass.md#7-error-codes)) |
+| AuthorizeOfflinePass [MSG-002] | **2002**, **2003**, **2004**, **2005**, **2014**, 1005, 4002, 4003, 4004, 6001 ([`authorize-offline-pass.md` §7](profiles/offline/authorize-offline-pass.md#7-error-codes)) |
 | FirmwareStatusNotification [MSG-017] | *(EVENT — no RESPONSE)* |
 | DiagnosticsNotification [MSG-019] | *(EVENT — no RESPONSE)* |
 | SignCertificate [MSG-022] | **4010**, **4012**, **4013**, 1005, 6001 |
@@ -583,7 +590,7 @@ This table maps which error codes can appear in the RESPONSE or rejection of eac
 >
 > **Why the schema was not widened instead.** Adding an optional `errorCode` would be backward-compatible for an emitter and **not** for a receiver: every response schema is closed, so a station validating against a vendored older copy drops the widened response as malformed — and a station that drops Heartbeat responses concludes it has lost the server. That failure mode has been measured once already, on the offline pair ([`reconciliation.md` §6.4](profiles/offline/reconciliation.md#64-response)), where serialising the computed codes made a conforming station discard the whole reject. A repair that makes the healthy path fail is worse than the gap it closes.
 
-> **"Recorded, not transmitted" on the two offline rows.** TransactionEvent and AuthorizeOfflinePass differ from Heartbeat in the one way that matters: their responses **can** say no — `status: "Rejected"` with a `reason` REQUIRED on that branch — they simply cannot say *which code*. Both schemas are closed over their two and five members ([§2.1](#21-mqtt-error-response)). The codes listed above are therefore real, and a conforming server computes them: they reach the audit trail through the server-originated `OfflinePassRejected` record ([`security-event.md` §2.1](profiles/security/security-event.md#21-two-origins-one-payload-shape)), and they reach the station through `reason`, which **MUST** identify the failed check. `2014` is on the AuthorizeOfflinePass row because check #12 of its profile evaluates individual revocation there; `2006` and `2015` left both rows when they were withdrawn (§1.1).
+> **"Recorded, not transmitted" on the TransactionEvent row.** TransactionEvent differs from Heartbeat in the one way that matters: its response **can** say no — `status: "Rejected"` with a `reason` REQUIRED on that branch — it simply cannot say *which code*. Its schema is closed over its two members ([§2.1](#21-mqtt-error-response)). The codes listed above are therefore real, and a conforming server computes them: they reach the audit trail through the server-originated `OfflinePassRejected` record ([`security-event.md` §2.1](profiles/security/security-event.md#21-two-origins-one-payload-shape)), and they reach the station through `reason`, which **MUST** identify the failed check. The AuthorizeOfflinePass row carried the same mark until its response gained `errorCode` and `errorText`; its codes are transmitted now ([§2.1](#21-mqtt-error-response)). `2014` is on the AuthorizeOfflinePass row because check #12 of its profile evaluates individual revocation there; `2006` and `2015` left both rows when they were withdrawn (§1.1).
 
 ### 4.2 Server → Station MQTT Actions
 
