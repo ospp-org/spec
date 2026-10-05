@@ -472,12 +472,14 @@ stateDiagram-v2
     Pending --> Failed : Payment declined / insufficient funds
 
     Authorized --> Active : StartService accepted by station
+    Authorized --> Active : SessionStarted (Partial B)
     Authorized --> Failed : StartService rejected or timeout (10s)
+    Authorized --> Failed : Partial B start not reported within 40s
 
     Active --> Stopping : StopService requested (user or server)
     Active --> Stopping : Service duration elapsed
     Active --> Completed : SessionEnded (Local, LocalOutOfCredit, OperatorStopped)
-    Active --> Failed : Hardware fault / connection lost (not Partial B) / Deauthorized / Partial B never started
+    Active --> Failed : Hardware fault / connection lost (not Partial B) / Deauthorized
     Active --> Completed : Partial B authorized duration ended with no end record
 
     Stopping --> Completed : Station confirms stop, final MeterValues received
@@ -518,7 +520,9 @@ stateDiagram-v2
 | Mid-session deauthorization | Active | Failed | Station detects offline pass revocation via `RevocationEpoch` bump (e.g., received through ChangeConfiguration) and stops the active session; sends SessionEnded EVENT [MSG-040] with `reason: Deauthorized` and `creditsCharged: 0` | Server records terminal state; full refund of pre-authorized amount; flag for security audit (mid-session revocation usually indicates fraud or compromise) |
 | Idle timeout | Active | Stopping | No **user interaction** for `SessionTimeout` seconds (default `0`, the timer off; see [Chapter 08 §3](08-configuration.md#3-transaction-configuration-keys)). MeterValues do **not** reset the timer — they are the station's own telemetry, not the customer's. The station **MAY** act on this; the registry row is a MAY and stays one | Station auto-stops the service and sends SessionEnded EVENT [MSG-040] with `reason: Inactivity`; server settles pro-rata on delivered duration |
 | Connection lost | Active | Failed | ConnectionLost [MSG-011] received and station does not reconnect within `ConnectionLostGracePeriod` (default: 300s) | Server marks session as failed after grace period; on reconnect, reconciles via TransactionEvent. **Not** a Partial-B session, which the loss does not end: its timer is its authorized duration, not the grace period, and it settles on the first of its end records ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) |
-| Authorized duration ended (Partial B) | Active | Completed, or Failed when the wash never started | No end record of a Partial-B session has arrived by the end of its authorized duration ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4a) | Server closes the session at that moment and does not wait for the station: a session whose station is offline then, or reported the wash started, is settled as one whose timer expired; one whose connected station reported no start never started, and is refunded in full |
+| SessionStarted (Partial B) | Authorized | Active | The station reports the start of a Partial-B session the server authorized through AuthorizeOfflinePass — SessionStarted [MSG-043] ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4c) | Server records the start; the session's authorized duration runs from it |
+| Start window lapsed (Partial B) | Authorized | Failed | No SessionStarted has arrived 40 seconds after the server accepted the authorization (the same section, rule 4c) | Server closes the session as never started and refunds `creditsAuthorized` in full; a record of the session that arrives later changes nothing |
+| Authorized duration ended (Partial B) | Active | Completed | No end record of a started Partial-B session has arrived by the end of its authorized duration (the same section, rule 4a) | Server closes the session at that moment, as one whose timer expired, and does not wait for the station; the close is provisional — an end record that arrives later trues it down, never up (rule 4b) |
 
 The billing instructions in the **Action** column are the `UserDuration` case. The amount a session actually settles at is additionally modulated by its **service kind** — the defining section is *Settlement by Service Kind* in [Chapter 04 §6](04-flows.md), and it governs where this table is read as unconditional. This table is not restating it. The closes the server makes without the station's record of the end — the *Stop timeout*, *Connection lost* and *Authorized duration ended (Partial B)* rows — are provisional: an end record of the session that arrives afterwards trues the close down, never up (the same section).
 

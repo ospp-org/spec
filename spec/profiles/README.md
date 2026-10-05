@@ -71,4 +71,4 @@ Client applications (mobile apps, web browsers) interact with the server via HTT
 | Transaction | [transaction/](transaction/README.md) | Yes | 7 |
 | Security | [security/](security/README.md) | Yes | 4 |
 | Device Management | [device-management/](device-management/README.md) | No | 9 |
-| Offline / BLE | [offline/](offline/README.md) | No | 14 |
+| Offline / BLE | [offline/](offline/README.md) | No | 17 |

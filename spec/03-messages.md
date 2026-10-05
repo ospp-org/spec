@@ -68,7 +68,7 @@ Each message below includes:
 
 ## Quick Reference
 
-### MQTT Messages (27 actions)
+### MQTT Messages (28 actions)
 
 | MSG | Action | Direction | Type | Category | Timeout |
 |--:|--------|-----------|------|----------|--------:|
@@ -83,6 +83,7 @@ Each message below includes:
 | 9 | [StatusNotification](#52-statusnotification) | Station → Server | EVENT | Status | — |
 | 10 | [MeterValues](#53-metervalues) | Station → Server | EVENT | Status | — |
 | 40 | [SessionEnded](#54-sessionended) | Station → Server | EVENT | Status | — |
+| 43 | [SessionStarted](#57-sessionstarted) | Station → Server | EVENT | Status | — |
 | 11 | [ConnectionLost](#55-connectionlost) | Broker → Server, or Station → Server | EVENT | Status | — |
 | 12 | [SecurityEvent](#56-securityevent) | Station → Server | EVENT | Status | — |
 | 13 | [ChangeConfiguration](#61-changeconfiguration) | Server → Station | REQ/RES | Config | 60s |
@@ -103,7 +104,8 @@ Each message below includes:
 > **The first column is the `MSG-0NN` reference, not a row ordinal.** It is what
 > [Chapter 04 §Message References](04-flows.md) resolves and what every `[MSG-XXX]` citation in this
 > specification means. `SessionEnded` is **40** and sits between 10 and 11 because it is grouped by
-> category, not by number: it was registered last and added here where it belongs by topic. Until
+> category, not by number: it was registered last and added here where it belongs by topic, and
+> `SessionStarted`, **43**, sits beside it for the same reason. Until
 > `0.23.0` this column was a row ordinal that agreed with the registry for the first ten rows and
 > was off by one for the seventeen after them, while Chapter 04 stated the two were the same thing —
 > so `GetDiagnostics` was "19" here and `MSG-018` everywhere else, and the number `27` named
@@ -1378,6 +1380,44 @@ Reports security incidents to the server for audit and automated response. The s
     "expectedMac": "dGhpcyBpcyBleHBlY3RlZCBtYWM=",
     "receivedMac": "dGhpcyBpcyByZWNlaXZlZCBtYWM="
   }
+}
+```
+
+---
+
+### 5.7 SessionStarted
+
+> **EXPERIMENTAL**, with [AuthorizeOfflinePass](#21-authorizeofflinepass) and the BLE half whose Partial-B session it reports — see [Release status](../README.md#ble-is-experimental).
+
+| Property | Value |
+|----------|-------|
+| **Direction** | Station → Server |
+| **Transport** | MQTT |
+| **Message Type** | EVENT |
+| **Topic** | `ospp/v1/stations/{station_id}/to-server` |
+| **Trigger** | The station started the wash of a Partial-B session, an AuthorizeOfflinePass it was answered `Accepted` for |
+| **Expected Response** | None (EVENT) |
+| **Timeout** | N/A |
+| **Idempotency** | Yes — a repeated SessionStarted for the same `sessionId` MUST be ignored by the server |
+| **Message Expiry** | **Never expires** (Critical event — see [`02-transport.md §5.1`](02-transport.md)) |
+
+Reports that the station started the wash of a Partial-B session, under the `sessionId` of the AuthorizeOfflinePass answer. An online start is acknowledged by its StartService RESPONSE [MSG-005]; a session the app starts over BLE has no server command to answer, and this event is its start report ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4c). The server keys the session's authorized duration on it, and treats an authorization whose SessionStarted has not arrived 40 seconds after it accepted it as lapsed, refunding it in full. The server **MUST NOT** infer a Partial-B start from a [StatusNotification](#52-statusnotification), which names a bay and no session. It is sent for a Partial-B session only, and carries no `seqNo`: it is not one of the session-scoped EVENTs that counter orders ([`02-transport.md` §3.2](02-transport.md)).
+
+#### Payload
+
+| Field | Type | Required | Description |
+|-------|------|:--------:|-------------|
+| `sessionId` | string | Yes | The session's identifier, from the AuthorizeOfflinePass answer (`sess_{uuid}`) |
+| `bayId` | string | Yes | Bay identifier (`bay_{uuid}`) |
+| `startedAt` | string | Yes | When the station started the wash (ISO 8601 UTC, on the station's clock) |
+
+#### Example
+
+```json
+{
+  "sessionId": "sess_f7e8d9c0",
+  "bayId": "bay_a1b2c3d4",
+  "startedAt": "2026-02-13T10:05:14.900Z"
 }
 ```
 
@@ -3290,6 +3330,7 @@ Cross-reference table for MQTT Message Expiry Interval per action (see [Chapter 
 | MeterValues | — | 120s | No |
 | TransactionEvent | 60s | — | Yes |
 | SessionEnded | — | — | Yes |
+| SessionStarted | — | — | Yes |
 | SecurityEvent | — | — | Yes |
 | ConnectionLost | — | — | Yes |
 | AuthorizeOfflinePass | 15s | 30s | No |

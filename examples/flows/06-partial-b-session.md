@@ -50,6 +50,7 @@ Bob is at "Station Alpha -- Example City" and wants a deluxe treatment on Bay 2.
 15:10:07.000  Station relays AuthResponse (Accepted) to app via BLE FFF4
 15:10:07.500  App writes StartServiceRequest to FFF3
 15:10:07.900  Station activates dispenser on Bay 2
+15:10:07.950  Station sends SessionStarted EVENT via MQTT — the server's authorized duration runs from it
 15:10:08.000  Station sends StartServiceResponse (Accepted) on FFF4
 15:10:08.000  Deluxe Program session begins — timer starts at 240 seconds
 15:11:08.000  ServiceStatus update: 60s elapsed, 180s remaining
@@ -450,7 +451,27 @@ The station's bay controller:
 }
 ```
 
-Since the station is online, it also reports the session start to the server via MQTT:
+Since the station is online, it reports the session's start to the server at once, with a SessionStarted under the authorization's `sessionId` — the start report the server keys the session's authorized duration on, sent within 30 seconds of the acceptance as every Partial-B start must be ([`authorize-offline-pass.md` §6](../../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4c):
+
+**MQTT Topic:** `ospp/v1/stations/stn_a1b2c3d4/to-server`
+
+```json
+{
+  "messageId": "msg_started_2a3b4c5d",
+  "messageType": "Event",
+  "action": "SessionStarted",
+  "timestamp": "2026-02-13T15:10:07.950Z",
+  "source": "Station",
+  "protocolVersion": "0.3.0",
+  "payload": {
+    "sessionId": "sess_d5e6f7a8b9c0",
+    "bayId": "bay_a2b3c4d5e6f7",
+    "startedAt": "2026-02-13T15:10:07.900Z"
+  }
+}
+```
+
+It then reports the bay's new state, a StatusNotification, which names the bay and no session — the server never reads a Partial-B start from it:
 
 **MQTT Topic:** `ospp/v1/stations/stn_a1b2c3d4/to-server`
 
@@ -863,6 +884,8 @@ On the Operator Dashboard, Charlie sees the session in real-time because the sta
      | -- Write FFF3: StartServiceRequest --------------->|
      |                          | start service                |
      |<------ FFF4: StartServiceResponse                 |
+     |                          |  SessionStarted [MQTT]   |
+     |                          |------------------------->|
      |                          |  StatusNotif (Occupied)  |
      |                          |------------------------->|
      |                          |                          |
@@ -901,7 +924,7 @@ On the Operator Dashboard, Charlie sees the session in real-time because the sta
 
 2. **Server debits wallet at authorization time.** The server debits Bob's wallet at step 9, before the service even starts. This matches the online flow behavior, and the pass's limits, checked against the server's count at every station, bound what the next session may use. There is no risk of over-billing: the `creditsAuthorized` of the response caps what the session may be charged, and any true-up is refund-only ([`reconciliation.md` §8](../../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)).
 
-3. **Settled once, on the first end record.** Because the station is online throughout the session, all events (StatusNotification, MeterValues, SessionEnded) are sent to the server in real time via MQTT, and the server settles the session from the SessionEnded the station sends at its end. Had the station lost MQTT before then, the loss would not have ended the session: the wash would have continued, and the station would have sent its SessionEnded when it reconnected; had no end record reached the server by the end of the session's authorized duration, the server would have closed the session then ([`authorize-offline-pass.md` §6](../../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4a). The receipt on FFF6 is Bob's copy, which the app uploads once it has connectivity ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)). The session settles once, on whichever of the two arrives first, and the other is a duplicate ([`reconciliation.md` §3](../../spec/profiles/offline/reconciliation.md#3-deduplication-offlinetxid)); had the receipt arrived first, the server would have applied no second debit, only a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](../../spec/profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)).
+3. **Settled once, on the first end record.** Because the station is online throughout the session, all events (SessionStarted, StatusNotification, MeterValues, SessionEnded) are sent to the server in real time via MQTT: the session's authorized duration runs from its SessionStarted, and the server settles the session from the SessionEnded the station sends at its end. Had the station lost MQTT before then, the loss would not have ended the session: the wash would have continued, and the station would have sent its SessionEnded when it reconnected; had no end record reached the server by the end of the session's authorized duration, the server would have closed the session then, provisionally — the SessionEnded arriving later would have trued that close down had it shown less delivered ([`authorize-offline-pass.md` §6](../../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4a to 4c). The receipt on FFF6 is Bob's copy, which the app uploads once it has connectivity ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)). The session settles once, on whichever of the two arrives first, and the other is a duplicate ([`reconciliation.md` §3](../../spec/profiles/offline/reconciliation.md#3-deduplication-offlinetxid)); had the receipt arrived first, the server would have applied no second debit, only a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](../../spec/profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)).
 
 4. **MQTT fallback if AuthorizeOfflinePass times out.** If the server has not answered in time for the station to answer the app within the BLE handshake budget, the station answers `1010 MESSAGE_TIMEOUT`, or **MAY** fall back to local validation (as in Full Offline, Flow 04) if its `OfflineModeEnabled` is `true`, and then within its own offline limits ([`authorize-offline-pass.md` §6](../../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules)). This graceful degradation ensures the user is not stuck if MQTT has a momentary hiccup. The spec defines this in section 5c error paths.
 

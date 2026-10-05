@@ -26,7 +26,7 @@
 
 The **Offline / BLE** profile is optional and enables stations to operate in degraded connectivity scenarios using Bluetooth Low Energy (BLE) as an alternative communication channel between the mobile app and the station. When a station or the user's device lacks internet connectivity, the BLE profile provides a secure path for authentication, service activation, and receipt generation -- ensuring the station remains operational even during network outages.
 
-This profile also includes **AuthorizeOfflinePass**, an MQTT message used in the Partial B scenario (phone offline, station online) where the station forwards a BLE-received OfflinePass to the server for validation.
+This profile also includes **AuthorizeOfflinePass**, an MQTT message used in the Partial B scenario (phone offline, station online) where the station forwards a BLE-received OfflinePass to the server for validation, and **SessionStarted**, the MQTT event by which the station reports that the wash of such a session started ([`authorize-offline-pass.md` §6](authorize-offline-pass.md#6-processing-rules) rule 4c).
 
 ## 2. Connectivity Scenarios
 

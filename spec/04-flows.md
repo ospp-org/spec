@@ -50,6 +50,8 @@ onward while this sentence asserted the two were the same:
 | MSG-018 | GetDiagnostics | MSG-038 | ServiceStatus (FFF5) |
 | MSG-019 | DiagnosticsNotification | MSG-039 | Receipt (FFF6) |
 | MSG-020 | SetMaintenanceMode | MSG-040 | SessionEnded |
+| MSG-041 | ReceiptRequest | MSG-043 | SessionStarted |
+| MSG-042 | ReceiptResponse | | |
 
 ### Diagram Notation
 
@@ -957,6 +959,8 @@ sequenceDiagram
         SSP-->>App: Notify FFF4: AuthResponse (Accepted) [MSG-033]
         App->>SSP: Write FFF3: StartServiceRequest [MSG-034]
         SSP-->>App: Notify FFF4: StartServiceResponse (Accepted) [MSG-035]
+        SSP->>Server: SessionStarted EVENT [MSG-043] (sessionId, bayId, startedAt)
+        Note right of Server: Start window 30s at the station, 40s at the Server, else the authorization lapses (full refund)
 
         loop Service running
             SSP-->>App: Notify FFF5: ServiceStatus [MSG-038]
@@ -979,9 +983,9 @@ sequenceDiagram
 7. **Server** validates the pass ([`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks) — signature, expiry, epoch, device proof, limits, rate, counter, individual revocation), estimating the cost from the requested service and duration, and debits the user's wallet by the `creditsAuthorized` of its answer
 8. **Server** sends **AuthorizeOfflinePass RESPONSE** [MSG-002] `Accepted` with `sessionId`, `durationSeconds` — the requested duration — and `creditsAuthorized`
 9. **SSP** relays result as **AuthResponse** [MSG-033] `Accepted` to App via BLE
-10. **App** writes **StartServiceRequest** [MSG-034] → SSP starts service
+10. **App** writes **StartServiceRequest** [MSG-034] → SSP starts service, at most 30 seconds after the acceptance, and reports the start to the Server with **SessionStarted** [MSG-043] ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4c)
 11. Service runs with **ServiceStatus** [MSG-038] updates, then stop/receipt
-12. Since the station is online, the session is tracked in real time by the Server and settled when the station reports its end — by service kind, never above the `creditsAuthorized` of the authorization, as a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)). If the station loses its connection, the loss does not end the session: the wash continues, and the station sends the session's end when it reconnects — its SessionEnded under the server's `sessionId`, or, when the server stopped the session, the StopService RESPONSE it sends again when the server repeats the REQUEST. The session settles once, on the first of its end records to arrive — that SessionEnded, the StopService RESPONSE when the server stopped the session, or the session's signed receipt, which the app uploads when it has a network — and the other is a duplicate ([`reconciliation.md` §3](profiles/offline/reconciliation.md#3-deduplication-offlinetxid)). If none has arrived by the end of the session's authorized duration, the server closes the session then without waiting for the station — as a session whose timer expired, or refunded in full when the wash never started — and every end record settles on the authorization's `creditsAuthorized` and `durationSeconds` ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4a and 4b). Either way the server applies no second debit, only a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback))
+12. Since the station is online, the session is tracked in real time by the Server and settled when the station reports its end — by service kind, never above the `creditsAuthorized` of the authorization, as a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)). If the station loses its connection, the loss does not end the session: the wash continues, and the station sends the session's end when it reconnects — its SessionEnded under the server's `sessionId`, or, when the server stopped the session, the StopService RESPONSE it sends again when the server repeats the REQUEST. The session settles once, on the first of its end records to arrive — that SessionEnded, the StopService RESPONSE when the server stopped the session, or the session's signed receipt, which the app uploads when it has a network — and the other is a duplicate ([`reconciliation.md` §3](profiles/offline/reconciliation.md#3-deduplication-offlinetxid)). If none has arrived by the end of the session's authorized duration, counted from its SessionStarted, the server closes the session then without waiting for the station, as a session whose timer expired, and provisionally: an end record that arrives later trues the close down, never up. Every end record settles on the authorization's `creditsAuthorized` and `durationSeconds`, and an authorization whose SessionStarted has not arrived 40 seconds after its acceptance lapses, refunded in full ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4a to 4c). Either way the server applies no second debit, only a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback))
 
 ### Error Paths
 
@@ -992,6 +996,7 @@ sequenceDiagram
 | 7 | Pass rejected by server | SSP relays the rejection to App with the server's `errorCode`, `errorText` and `details` |
 | 7 | AuthorizeOfflinePass unanswered within the BLE handshake budget | SSP answers the app within the budget with `1010 MESSAGE_TIMEOUT`, or **MAY** fall back to local validation (degraded mode) if its `OfflineModeEnabled` is `true`, within its own offline limits ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)) |
 | 10 | StartServiceRequest other than the authorized duration | SSP refuses with `3010` above it and `3008` below it, and starts nothing ([`ble-session.md` §1](profiles/offline/ble-session.md#1-starting-a-service) rule 2) |
+| 10 | StartServiceRequest more than 30 seconds after the acceptance | SSP refuses with `3006` and starts nothing; with no SessionStarted 40 seconds after the acceptance, the Server lapses the authorization and refunds it in full ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4c) |
 
 ### Postconditions
 
@@ -1803,6 +1808,7 @@ Consolidated timeout values across all flows:
 | ReserveBay | 5s | Session → failed |
 | Reserved → 3DS (web) | 3 min | CancelReservation |
 | Reserved → start (mobile) | 30s | CancelReservation |
+| Partial-B authorization → start | 30s at the station; 40s at the server | Station refuses the StartServiceRequest with `3006`; with no SessionStarted by then, Server lapses the authorization and refunds it in full ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4c) |
 | StartService (pending_ack) | 10s | Refund, session → failed |
 | StopService (stopping) | 10s | Session → failed; a Partial-B session stays open until the first of its end records, and no longer than the end of its authorized duration (§6) |
 | Active session (max) | durationSeconds | Station auto-stops |

@@ -32,7 +32,7 @@ This directory contains JSON Schema definitions for every message in the OSPP pr
 ```
 schemas/
 ├── common/                              23 shared type definitions ($ref targets)
-├── mqtt/                                47 MQTT message payload schemas
+├── mqtt/                                48 MQTT message payload schemas
 ├── ble/                                 16 BLE schemas (15 message types + secure frame) — EXPERIMENTAL
 ├── provisioning-request.schema.json     HTTP provisioning request (Flow §2)
 ├── provisioning-response.schema.json    HTTP provisioning response (Flow §2)
@@ -42,7 +42,7 @@ schemas/
 └── README.md                            This file
 ```
 
-**Total: 91 schema files.**
+**Total: 92 schema files.**
 
 ---
 
@@ -317,7 +317,7 @@ if (!valid) {
 
 | Spec Chapter | Schema Coverage |
 |--------------|----------------|
-| [03 — Message Catalog](../spec/03-messages.md) | All 42 messages → 63 message schema files (REQUEST + RESPONSE + EVENT + common types) |
+| [03 — Message Catalog](../spec/03-messages.md) | All 43 messages → 64 message schema files (REQUEST + RESPONSE + EVENT + common types) |
 | [02 — Transport](../spec/02-transport.md) | `common/mqtt-envelope.schema.json` (envelope), `provisioning-response.schema.json` (MQTT connection parameters returned by provisioning) |
 | [04 — Protocol Flows](../spec/04-flows.md) | `provisioning-request.schema.json` + `provisioning-response.schema.json` (Flow §2) |
 | [06 — Security](../spec/06-security.md) | `common/offline-pass.schema.json`, `common/receipt.schema.json` |

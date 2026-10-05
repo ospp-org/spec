@@ -66,10 +66,10 @@ Everything has a prefixed identifier:
 
 ### Message Model
 
-OSPP has **40 messages** across two transports:
+OSPP has **43 messages** across two transports:
 
-- **27 MQTT messages** — station-to-server and server-to-station
-- **13 BLE messages** — app-to-station (offline)
+- **28 MQTT messages** — station-to-server and server-to-station
+- **15 BLE messages** — app-to-station (offline)
 
 Every MQTT message is wrapped in an **envelope**:
 
@@ -137,7 +137,7 @@ Make sure you understand:
 | Chapter | What It Covers | Read When |
 |---------|---------------|-----------|
 | [02 — Transport](../spec/02-transport.md) | MQTT topics, QoS, TLS, BLE, envelope | First |
-| [03 — Messages](../spec/03-messages.md) | All 40 messages with field definitions | When implementing each message |
+| [03 — Messages](../spec/03-messages.md) | All 43 messages with field definitions | When implementing each message |
 | [04 — Flows](../spec/04-flows.md) | 15 end-to-end protocol flows | When implementing each flow |
 | [06 — Security](../spec/06-security.md) | Crypto, HMAC, OfflinePass, receipts | Before writing any crypto code |
 | [07 — Errors](../spec/07-errors.md) | 118 error codes, retry policies, circuit breaker | When implementing error handling |
@@ -1292,6 +1292,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[OFFLINE]** Persist offline state: pass usage counters, transaction log, session state
 - [ ] **[OFFLINE]** Refuse, never reduce: `4004` when the estimated cost exceeds `maxCreditsPerTx`, `4002` when it exceeds what remains of `maxTotalCredits` (checks #7 and #8 are rejects, not caps)
 - [ ] **[OFFLINE]** Reconciliation via TransactionEvent after connectivity restored
+- [ ] **[OFFLINE]** Partial B: start the wash no later than 30 seconds after the AuthorizeOfflinePass acceptance (`3006` after it), and report the start at once with SessionStarted [MSG-043] under its `sessionId` ([`authorize-offline-pass.md` §6](../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4c)
 
 ### User Agent
 
@@ -1307,6 +1308,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[OFFLINE]** Store OfflinePass encrypted at rest (device keychain)
 - [ ] **[OFFLINE]** Replace the trust bundle on every pass issuance and with every Partial-A authorization; never merge it with the one held
 - [ ] **[OFFLINE]** Show the pass's limits before the customer chooses a service
+- [ ] **[OFFLINE]** Compare the Challenge's `catalogDigest` with the digest of the catalog you read on FFF2 before you send a credential; on another digest, read FFF2 again on a new connection ([`ble-handshake.md` §3](../spec/profiles/offline/ble-handshake.md#3-step-2-challenge))
 - [ ] **[OFFLINE]** Store offline receipts locally
 - [ ] **[OFFLINE]** Upload every receipt when online (`POST /api/v1/offline/receipts`) until it is answered `Accepted`, `Duplicate` or `Rejected`
 - [ ] **[OFFLINE]** Biometric/PIN gate before offline authentication

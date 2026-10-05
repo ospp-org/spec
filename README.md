@@ -4,7 +4,7 @@
 ![Status: Draft](https://img.shields.io/badge/status-draft-orange)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 ![Messages: 42](https://img.shields.io/badge/messages-42-green)
-![Schemas: 91](https://img.shields.io/badge/schemas-91-green)
+![Schemas: 92](https://img.shields.io/badge/schemas-92-green)
 
 ---
 
@@ -73,7 +73,7 @@ OSPP is an **open, vendor-neutral communication protocol** for self-service stat
 
 Think of it as **OCPP for self-service industries**. Where OCPP standardized EV charger-to-server communication, OSPP does the same for any station that delivers a time-bounded service through a physical bay. The protocol supports **online operation** (MQTT 5.0 over TLS 1.2+, TLS 1.3 recommended), **offline operation** (BLE 4.2+ GATT with cryptographically signed passes), and **four hybrid connectivity scenarios** — ensuring service continuity even when internet is unavailable.
 
-OSPP covers **42 messages** (27 MQTT + 15 BLE), **91 JSON Schemas**, **118 error codes**, **5 compliance profiles**, and a complete security model with mTLS, selective HMAC-SHA256 message signing, ECDSA P-256 offline authorization and receipt signing, and ECDSA P-384 root CA. Apart from the exchanges the offline model depends on — pass issuance with its attestation challenge, receipt upload, and the trust bundle of a Partial-A authorization, defined in [`app-contract.md`](spec/profiles/offline/app-contract.md) — it does NOT cover server-to-app REST APIs, payment gateway integration, business logic, or hardware internals; those are implementation-specific.
+OSPP covers **43 messages** (28 MQTT + 15 BLE), **92 JSON Schemas**, **118 error codes**, **5 compliance profiles**, and a complete security model with mTLS, selective HMAC-SHA256 message signing, ECDSA P-256 offline authorization and receipt signing, and ECDSA P-384 root CA. Apart from the exchanges the offline model depends on — pass issuance with its attestation challenge, receipt upload, and the trust bundle of a Partial-A authorization, defined in [`app-contract.md`](spec/profiles/offline/app-contract.md) — it does NOT cover server-to-app REST APIs, payment gateway integration, business logic, or hardware internals; those are implementation-specific.
 
 ---
 
@@ -179,7 +179,7 @@ npx ajv-cli validate \
 | [00](spec/00-introduction.md) | Introduction | Scope, audience, normative language (RFC 2119/8174) | Draft |
 | [01](spec/01-architecture.md) | Architecture | System topology, hardware model, identity scheme, protocol stack | Draft |
 | [02](spec/02-transport.md) | Transport | MQTT 5.0, TLS 1.2+, topic structure, QoS, BLE GATT, reconnection | Draft |
-| [03](spec/03-messages.md) | Message Catalog | JSON envelope, messageType, correlation, timestamps; all 42 messages — fields, types, constraints, directions | Draft |
+| [03](spec/03-messages.md) | Message Catalog | JSON envelope, messageType, correlation, timestamps; all 43 messages — fields, types, constraints, directions | Draft |
 | [04](spec/04-flows.md) | Protocol Flows | 15 end-to-end flows with sequence diagrams and step-by-step detail | Draft |
 | [05](spec/05-state-machines.md) | State Machines | Station, Bay, Session, Reservation, BLE Connection, Firmware Update, Diagnostics Upload FSMs | Draft |
 | [06](spec/06-security.md) | Security | Threat model, mTLS, HMAC-SHA256, PKI, OfflinePass, receipts, fraud scoring | Draft |
@@ -197,11 +197,11 @@ Each profile defines a subset of protocol actions. Implementations declare which
 | **Transaction** | 7 | StartService, StopService, TransactionEvent, MeterValues, SessionEnded, ReserveBay, CancelReservation | [spec/profiles/transaction/](spec/profiles/transaction/) |
 | **Security** | 4 | SecurityEvent, SignCertificate, CertificateInstall, TriggerCertificateRenewal | [spec/profiles/security/](spec/profiles/security/) |
 | **Device Management** | 9 | Config, Reset, Firmware, Diagnostics, Maintenance, ServiceCatalog | [spec/profiles/device-management/](spec/profiles/device-management/) |
-| **Offline / BLE** | 16 | AuthorizeOfflinePass (MQTT), BLE transport, handshake, offline sessions, OfflinePass, reconciliation, app–server contract (HTTPS) | [spec/profiles/offline/](spec/profiles/offline/) |
+| **Offline / BLE** | 17 | AuthorizeOfflinePass and SessionStarted (MQTT), BLE transport, handshake, offline sessions, OfflinePass, reconciliation, app–server contract (HTTPS) | [spec/profiles/offline/](spec/profiles/offline/) |
 
 ### Message Catalog
 
-**27 MQTT Messages:**
+**28 MQTT Messages:**
 
 | # | Action | Direction | Type | Timeout |
 |:-:|--------|-----------|------|:-------:|
@@ -232,8 +232,10 @@ Each profile defines a subset of protocol actions. Implementations declare which
 | 25 | DataTransfer | Bidirectional | REQ/RES | 30s |
 | 26 | TriggerMessage | Server → Station | REQ/RES | 10s |
 | 40 | SessionEnded | Station → Server | EVENT | — |
+| 43 | SessionStarted | Station → Server | EVENT | — |
 
 > **Note:** MSG-027–039, MSG-041 and MSG-042 are the 15 BLE messages, listed separately below.
+> SessionStarted [MSG-043] reports the start of a Partial-B session, the one session the app starts over BLE while the server is reachable; it is EXPERIMENTAL with AuthorizeOfflinePass ([`authorize-offline-pass.md` §6](spec/profiles/offline/authorize-offline-pass.md#6-processing-rules)).
 > SessionEnded [MSG-040] is emitted autonomously by the station on session termination — timer expiry or fault — rather than in reply to a command. It is a **Transaction** action ([`session-ended.md`](spec/profiles/transaction/session-ended.md)); until 0.13.0 it belonged to no profile at all, so a station implementing every profile exactly as written still would not have implemented the sole billing source for autonomous terminations.
 
 **15 BLE Messages:** StationInfo (FFF1), AvailableServices (FFF2), HELLO, CHALLENGE, OfflineAuthRequest, ServerSignedAuth, AuthResponse, START/StopServiceRequest/RESPONSE, ServiceStatus (FFF5), Receipt, ReceiptRequest and ReceiptResponse (FFF6)
@@ -244,13 +246,13 @@ Full definitions: [Chapter 03 — Message Catalog](spec/03-messages.md)
 
 ## JSON Schemas
 
-**91 schema files** in [`schemas/`](schemas/) — JSON Schema Draft 2020-12, strict validation (`additionalProperties: false`).
+**92 schema files** in [`schemas/`](schemas/) — JSON Schema Draft 2020-12, strict validation (`additionalProperties: false`).
 
 | Directory | Count | Content |
 |-----------|:-----:|---------|
 | [`schemas/`](schemas/) (top level) | 5 | HTTPS request and response bodies: station provisioning, offline pass issuance, and the device key attestation challenge |
 | [`schemas/common/`](schemas/common/) | 23 | Shared types: identifiers, timestamps, credit amounts, error objects, OfflinePass, receipt, device proof, envelope |
-| [`schemas/mqtt/`](schemas/mqtt/) | 47 | REQUEST/RESPONSE/EVENT payload schemas for all 27 MQTT actions |
+| [`schemas/mqtt/`](schemas/mqtt/) | 48 | REQUEST/RESPONSE/EVENT payload schemas for all 28 MQTT actions |
 | [`schemas/ble/`](schemas/ble/) | 16 | BLE message schemas for all 15 BLE message types, plus the secure-frame structure |
 
 Full index: [schemas/README.md](schemas/README.md)
@@ -372,7 +374,7 @@ ospp/
 │   ├── 00-introduction.md       Chapter 00: Introduction
 │   ├── 01-architecture.md       Chapter 01: Architecture
 │   ├── 02-transport.md          Chapter 02: Transport (MQTT + BLE)
-│   ├── 03-messages.md           Chapter 03: Message Catalog (42 messages)
+│   ├── 03-messages.md           Chapter 03: Message Catalog (43 messages)
 │   ├── 04-flows.md              Chapter 04: Protocol Flows (15 flows)
 │   ├── 05-state-machines.md     Chapter 05: State Machines
 │   ├── 06-security.md           Chapter 06: Security Model
@@ -388,7 +390,7 @@ ospp/
 ├── schemas/                 JSON Schema definitions (91 files)
 │   ├── *.schema.json            5 HTTPS request/response schemas (provisioning, offline pass issuance, attestation challenge)
 │   ├── common/                  23 shared type schemas ($ref targets)
-│   ├── mqtt/                    47 MQTT message payload schemas
+│   ├── mqtt/                    48 MQTT message payload schemas
 │   └── ble/                     16 BLE message schemas
 ├── examples/                Example payloads and narrative flows (72 files)
 │   ├── payloads/mqtt/           36 MQTT payload examples

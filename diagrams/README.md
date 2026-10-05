@@ -110,11 +110,13 @@ stateDiagram-v2
     Pending --> Failed : Payment declined
 
     Authorized --> Active : StartService accepted
+    Authorized --> Active : SessionStarted (Partial B)
     Authorized --> Failed : StartService rejected / timeout
+    Authorized --> Failed : Partial B start not reported within 40s
 
     Active --> Stopping : StopService requested
     Active --> Completed : SessionEnded (Local, LocalOutOfCredit)
-    Active --> Failed : Hardware fault / connection lost (not Partial B) / Deauthorized / Partial B never started
+    Active --> Failed : Hardware fault / connection lost (not Partial B) / Deauthorized
     Active --> Completed : Partial B authorized duration ended with no end record
 
     Stopping --> Completed : Station confirms stop

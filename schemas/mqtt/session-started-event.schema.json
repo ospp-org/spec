@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ospp-standard.org/schemas/v1/mqtt/session-started-event.schema.json",
+  "title": "SessionStarted",
+  "description": "EXPERIMENTAL, with AuthorizeOfflinePass and the BLE half (spec/profiles/offline/README.md). Station notification that it started the wash of a Partial-B session, under the sessionId of the AuthorizeOfflinePass answer: the session-bound start report of spec/profiles/offline/authorize-offline-pass.md 6 rule 4c, as an online start is acknowledged by its StartService RESPONSE. The server keys the session's authorized duration on it, and treats an authorization whose SessionStarted has not arrived 40 seconds after its acceptance as lapsed.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "sessionId",
+    "bayId",
+    "startedAt"
+  ],
+  "properties": {
+    "sessionId": {
+      "$ref": "../common/session-id.schema.json"
+    },
+    "bayId": {
+      "$ref": "../common/bay-id.schema.json"
+    },
+    "startedAt": {
+      "$ref": "../common/timestamp.schema.json"
+    }
+  }
+}

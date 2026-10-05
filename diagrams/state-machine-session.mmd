@@ -8,11 +8,13 @@ stateDiagram-v2
     Pending --> Failed : Payment declined<br/>Insufficient funds
 
     Authorized --> Active : StartService accepted<br/>by station
+    Authorized --> Active : SessionStarted EVENT [MSG-043]<br/>(Partial B)
     Authorized --> Failed : StartService rejected<br/>or timeout (10s)
+    Authorized --> Failed : Partial B start not reported<br/>within 40s
 
     Active --> Stopping : StopService requested<br/>(user, server, or timer)
     Active --> Completed : SessionEnded EVENT [MSG-040]<br/>(Local, LocalOutOfCredit)
-    Active --> Failed : Hardware fault (SessionEnded EVENT [MSG-040])<br/>Connection lost (after grace period, not Partial B)<br/>Deauthorized (RevocationEpoch bump)<br/>Partial B never started
+    Active --> Failed : Hardware fault (SessionEnded EVENT [MSG-040])<br/>Connection lost (after grace period, not Partial B)<br/>Deauthorized (RevocationEpoch bump)
     Active --> Completed : Partial B authorized duration ended<br/>with no end record
 
     Stopping --> Completed : Station confirms stop<br/>StopService RESPONSE (user stop)<br/>or SessionEnded EVENT [MSG-040] (timer expiry)

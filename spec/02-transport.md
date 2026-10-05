@@ -484,7 +484,7 @@ OSPP uses MQTT 5.0 **Message Expiry Interval** to prevent stale commands from be
 | **Long-running commands** | UpdateFirmware, GetDiagnostics | 300s | 600s |
 | **Certificate renewal** | SignCertificate, CertificateInstall, TriggerCertificateRenewal | 30s | 60s |
 | **Periodic reporting** | MeterValues | 60s | 120s |
-| **Critical events** | BootNotification, TransactionEvent, SessionEnded, SecurityEvent, ConnectionLost (LWT) | — | **Never expires** |
+| **Critical events** | BootNotification, TransactionEvent, SessionEnded, SessionStarted, SecurityEvent, ConnectionLost (LWT) | — | **Never expires** |
 
 **Per-action overrides.** The actions below take an MQTT Expiry Interval different from the rest of their category:
 
@@ -511,6 +511,7 @@ The following messages MUST NOT have a Message Expiry Interval set:
 - **BootNotification** — always relevant, contains station identity
 - **TransactionEvent** — offline transaction reconciliation data must never be lost
 - **SessionEnded** — sole billing source for autonomous session termination (timer expiry, hardware fault, and other autonomous reasons); loss would cause irreversible billing data discrepancy
+- **SessionStarted** — the start of a Partial-B session, on which the server keys its authorized duration; without it the server lapses the authorization and refunds it ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4c)
 - **SecurityEvent** — security incidents must always be delivered
 - **ConnectionLost (LWT)** — disconnect detection must always be delivered
 
@@ -979,7 +980,7 @@ An OSPP message on MQTT is one envelope, serialised to UTF-8, published as the w
 PUBLISH payload (§10.1). **That serialisation MUST NOT exceed 64 512 bytes (63 KiB).**
 
 **The bound is on the envelope and not on any field inside it, because no arrangement of
-field bounds can express it.** **Nine** of the 47 MQTT message schemas admit a member with no
+field bounds can express it.** **Nine** of the 48 MQTT message schemas admit a member with no
 size bound of its own — **11 such members**, of which **6 are arrays without `maxItems`**
 (`update-service-catalog-request.services`, `get-configuration-request.keys`,
 `get-configuration-response.configuration` and `.unknownKeys`,
