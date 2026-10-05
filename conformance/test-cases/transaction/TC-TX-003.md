@@ -58,7 +58,7 @@ Verify that when a session is stopped before its natural expiry (early stop), th
    - `actualDurationSeconds` — should be approximately 30 seconds (+/- 3s)
    - `creditsCharged` — should be the delivered time priced by the normative credit formula,
      `ceil(actualDurationSeconds / 60 * priceCreditsPerMinute)` (`spec/03-messages.md` §3.4).
-     Note this is rounded up to the minute, so it is **not** a strict linear proportion of
+     Note this is rounded up to one credit, so it is **not** a strict linear proportion of
      `creditsAuthorized`
 8. Verify `creditsCharged` < `creditsAuthorized` (50 credits).
 9. Verify `actualDurationSeconds` < `durationSeconds` (300 seconds).
@@ -102,7 +102,7 @@ Verify that when a session is stopped before its natural expiry (early stop), th
 
 1. `actualDurationSeconds` accurately reflects the real elapsed time between start and stop (+/- 3 seconds).
 2. `creditsCharged` equals `ceil(actualDurationSeconds / 60 * priceCreditsPerMinute)` — the delivered time
-   priced by the normative credit formula, rounded up to the minute.
+   priced by the normative credit formula, rounded up to one credit.
 3. `creditsCharged` < `creditsAuthorized` when the session is stopped early.
 4. Final MeterValues in StopService response are >= the last periodic MeterValues reading (monotonically increasing).
 5. Both commanded stops settle pro-rata: the refund is `creditsAuthorized - creditsCharged` in Part A and

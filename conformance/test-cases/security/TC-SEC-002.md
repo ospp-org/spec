@@ -88,7 +88,7 @@ Verify that the station presents a valid X.509 client certificate during the TLS
 
 ### Part F — Certificate Renewal Behavior
 
-33. With the expired certificate still provisioned, verify the station enters **offline-only BLE mode** and does **not** enter provisioning mode, per the `1004` entry in `spec/07-errors.md` §3.1: "Station: never enter provisioning mode and never discard stored credentials — re-provisioning is operator-initiated. … `expired` — enter offline-only BLE mode (§4.7.3)".
+33. With the expired certificate still provisioned, verify the station does **not** enter provisioning mode, per the `1004` entry in `spec/07-errors.md` §3.1: "Station: never enter provisioning mode and never discard stored credentials … `expired` — keep credentials, serve no customer (the app refuses an expired certificate too) and await server-triggered renewal (§4.7.3)".
 34. Verify the station still holds its stored credentials — private key, certificate, and any provisioning material — unchanged after the rejection.
 35. Provision a new valid certificate **operator-side** (re-provisioning is operator-initiated; the station must not have driven this itself).
 36. Trigger reconnection.
@@ -103,7 +103,7 @@ Verify that the station presents a valid X.509 client certificate during the TLS
 4. A self-signed certificate causes TLS handshake failure; no MQTT connection is established.
 5. A revoked certificate causes TLS handshake failure; no MQTT connection is established.
 6. The station logs `1004 CERTIFICATE_ERROR` for **every** certificate failure scenario, each carrying the `details.cause` that names it — `expired` in Part C, `self-signed` in Part D, `revoked` in Part E. `1003` is not an acceptable substitute on any of them, and a missing or wrong `details.cause` is not a pass: the discriminator is what the station's own recovery branches on.
-7. On an expired certificate the station enters offline-only BLE mode, and on no branch of `1004` does it enter provisioning mode or discard its stored credentials.
+7. On no branch of `1004`, an expired certificate's included, does the station enter provisioning mode or discard its stored credentials.
 8. After operator-initiated certificate renewal, the station successfully reconnects and resumes normal operation.
 
 ## Failure Criteria

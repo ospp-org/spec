@@ -340,7 +340,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
 | **Topic (reply)** | `ospp/v1/stations/{station_id}/to-station` |
 | **Trigger** | Partial B scenario — station receives an OfflinePass via BLE from a mobile app while the station is online |
 | **Expected Response** | AuthorizeOfflinePass RESPONSE |
-| **Timeout** | 15 seconds |
+| **Timeout** | 15 seconds — the request is sent inside a BLE handshake, whose budget ends first ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 6) |
 | **Idempotency** | Yes, on the REQUEST's **`messageId`** — a retransmission carries the same `messageId` and **MUST** get the same answer, which the transport's deduplication gives it ([`02-transport.md` §3.3](02-transport.md#33-deduplication)). **Not** on the `(offlinePassId, counter)` pair: a new REQUEST that presents a `counter` already seen for the pass is a replay, refused at check #10 whether the first presentation was accepted or refused ([`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks)). **Not** on `offlinePassId` alone, which this row said until `0.25.0` and which the validation checks contradict by construction: a pass legitimately returns `Accepted` and then `4002` once check #6's `maxUses` is reached, and a replayed `counter` returns `2005` where the first use returned `Accepted` ([`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks)). |
 | **Message Expiry** | 30 seconds (no [`02-transport.md` §5.1](02-transport.md) category covers this action; Appendix B is the cross-check) |
 
@@ -1176,7 +1176,7 @@ Reports consumption telemetry during an active session. Sent at the interval con
 | **Transport** | MQTT |
 | **Message Type** | EVENT |
 | **Topic** | `ospp/v1/stations/{station_id}/to-server` |
-| **Trigger** | Session ends autonomously on station (timer expiry or hardware fault) |
+| **Trigger** | Session ends on the station without a StopService — the five cases below |
 | **Expected Response** | None (EVENT — fire-and-forget) |
 | **Timeout** | N/A |
 | **Idempotency** | Yes — duplicate SessionEnded for same `sessionId` MUST be ignored by server |
@@ -3191,21 +3191,21 @@ The app **MUST** store the receipt in its offline transaction log and sync it to
 | **Expected Response** | [ReceiptResponse](#715-receiptresponse) on FFF6 |
 | **Timeout** | 10 seconds |
 
-Asks the station for the signed receipt of a session, named by the `sessionId` of the StartServiceResponse that started it ([`ble-transport.md` §8](profiles/offline/ble-transport.md#8-receipt-fff6)). It is not a session command: it may name a session another connection established.
+Asks the station for the signed receipt of a session, named by the `offlineTxId` of the StartServiceResponse that started it, which the station draws at random and sends only on the session's own connection: naming it is what entitles the app to the receipt ([`ble-transport.md` §8](profiles/offline/ble-transport.md#8-receipt-fff6)). It is not a session command: it may name the transaction of a session another connection established.
 
 #### Payload
 
 | Field | Type | Required | Description |
 |-------|------|:--------:|-------------|
 | `type` | string | Yes | `"ReceiptRequest"` |
-| `sessionId` | string | Yes | The session whose receipt the app asks for |
+| `offlineTxId` | string | Yes | The offline transaction whose receipt the app asks for — the `offlineTxId` of the StartServiceResponse that started its session |
 
 #### Example
 
 ```json
 {
   "type": "ReceiptRequest",
-  "sessionId": "sess_a1b2c3d4e5f6"
+  "offlineTxId": "otx_d4e5f6a7b8c9"
 }
 ```
 

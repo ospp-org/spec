@@ -757,14 +757,14 @@ sequenceDiagram
             SSP-->>App: Notify FFF5: ServiceStatus (Running) [MSG-038]
         end
 
-        Note over App: Customer stops from the app OR timer expires
+        Note over App,SSP: The customer stops from the app, or the timer expires and SSP stops the service itself, with no StopServiceResponse
         App->>SSP: Write FFF3: StopServiceRequest [MSG-036]
         SSP-->>App: Notify FFF4: StopServiceResponse [MSG-037]
 
         Note over SSP: Generate receipt, sign ECDSA P-256, increment txCounter
         SSP-->>App: Notify FFF5: ServiceStatus (ReceiptReady) [MSG-038]
 
-        App->>SSP: Write FFF6: ReceiptRequest [MSG-041] (sessionId)
+        App->>SSP: Write FFF6: ReceiptRequest [MSG-041] (offlineTxId)
         SSP-->>App: Notify FFF6: ReceiptResponse [MSG-042] (receipt [MSG-039])
         Note over App: Store in offline tx log
 
@@ -791,11 +791,11 @@ sequenceDiagram
 13. **App** writes **StartServiceRequest** [MSG-034] to FFF3 with the `bayId`, `serviceId` and `requestedDurationSeconds` of its OfflineAuthRequest
 14. **SSP** activates hardware, sends **StartServiceResponse** [MSG-035] `Accepted` with `sessionId` and `offlineTxId`
 15. **SSP** sends periodic **ServiceStatus** [MSG-038] on FFF5 (`Running`, elapsed, remaining, meter values)
-16. The customer stops from the app (or the timer expires) → **App** writes **StopServiceRequest** [MSG-036] to FFF3
-17. **SSP** deactivates hardware, sends **StopServiceResponse** [MSG-037] with `actualDurationSeconds` and `creditsCharged`
+16. The customer stops from the app → **App** writes **StopServiceRequest** [MSG-036] to FFF3
+17. **SSP** deactivates hardware, sends **StopServiceResponse** [MSG-037] with `actualDurationSeconds` and `creditsCharged`. When the timer expires first, SSP stops the service itself, sends no StopServiceResponse and ends the session with `TimerExpired` ([`ble-session.md` §3](profiles/offline/ble-session.md#3-stopping-a-service)); steps 18–20 follow either way
 18. **SSP** generates receipt: signs with ECDSA P-256 (RFC 6979), increments `txCounter`
 19. **SSP** sends **ServiceStatus** [MSG-038] with `status: "ReceiptReady"`
-20. **App** writes a **ReceiptRequest** [MSG-041] naming the session's `sessionId` to FFF6, and stores the **Receipt** [MSG-039] of the **ReceiptResponse** [MSG-042] in its offline transaction log
+20. **App** writes a **ReceiptRequest** [MSG-041] naming the session's `offlineTxId` to FFF6, and stores the **Receipt** [MSG-039] of the **ReceiptResponse** [MSG-042] in its offline transaction log
 21. **App** disconnects BLE
 
 **Later, when connectivity is restored:**
@@ -806,7 +806,7 @@ sequenceDiagram
 
 **A1 — Timer auto-stop:** If the user does not send StopServiceRequest, the station automatically stops when `requestedDurationSeconds` expires. The station still generates a receipt and notifies via FFF5.
 
-**A2 — BLE disconnect during session:** If BLE disconnects during an active session, the station continues the service until the timer expires. The station serves the receipt on FFF6 for at least 24 hours after signing it, to a ReceiptRequest made over a fresh handshake ([`ble-transport.md` §8](profiles/offline/ble-transport.md#8-receipt-fff6)).
+**A2 — BLE disconnect during session:** If BLE disconnects during an active session, the station continues the service until the timer expires. The station serves the receipt on FFF6 for at least 24 hours after signing it, to a ReceiptRequest naming its `offlineTxId`, made over a fresh Hello and Challenge ([`ble-transport.md` §8](profiles/offline/ble-transport.md#8-receipt-fff6)).
 
 ### Error Paths
 
@@ -988,7 +988,7 @@ sequenceDiagram
 | 6 | MQTT send failure | SSP **MAY** fall back to local validation (like Full Offline) if its `OfflineModeEnabled` is `true`, within its own offline limits ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)) |
 | 6 | Device proof invalid | SSP refuses with `2002` and forwards nothing |
 | 7 | Pass rejected by server | SSP relays the rejection to App with the server's `errorCode`, `errorText` and `details` |
-| 7 | AuthorizeOfflinePass timeout (15s) | SSP **MAY** fall back to local validation (degraded mode) if its `OfflineModeEnabled` is `true`, within its own offline limits ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)) |
+| 7 | AuthorizeOfflinePass unanswered within the BLE handshake budget | SSP answers the app within the budget with `1010 MESSAGE_TIMEOUT`, or **MAY** fall back to local validation (degraded mode) if its `OfflineModeEnabled` is `true`, within its own offline limits ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)) |
 
 ### Postconditions
 
@@ -1070,12 +1070,12 @@ This separation ensures that a misconfigured or compromised station cannot overc
 
 ### Happy Path (BLE / Offline)
 
-1. **Trigger:** User taps "Stop" in App, or timer expires
-2. **App** writes **StopServiceRequest** [MSG-036] to FFF3
-3. **SSP** deactivates hardware, sends **StopServiceResponse** [MSG-037] with billing
+1. **Trigger:** the customer taps "Stop" in the app, or the timer expires
+2. On the customer's stop, **App** writes **StopServiceRequest** [MSG-036] to FFF3
+3. **SSP** deactivates hardware, sends **StopServiceResponse** [MSG-037] with billing — on the customer's stop only: when the timer expires, SSP stops the service itself and sends no StopServiceResponse ([`ble-session.md` §3](profiles/offline/ble-session.md#3-stopping-a-service))
 4. **SSP** generates signed receipt (ECDSA P-256), increments `txCounter`
 5. **SSP** notifies **ServiceStatus** [MSG-038] `ReceiptReady` on FFF5
-6. **App** reads **Receipt** [MSG-039] from FFF6, stores in offline log
+6. **App** writes a **ReceiptRequest** [MSG-041] naming the session's `offlineTxId` to FFF6, and stores the **Receipt** [MSG-039] of the **ReceiptResponse** [MSG-042] in its offline log
 
 ### Alternative Paths
 
@@ -1180,7 +1180,7 @@ For `UserDuration`, settlement is exactly the reason-keyed matrix above. `FixedD
 
 Only the `Local`, `Inactivity`, `Fault` and `OperatorStopped` rows diverge; `TimerExpired` (full charge) and `LocalOutOfCredit` / `Deauthorized` (full refund) are already kind-invariant. An all-or-nothing override is always the pre-authorized amount **in full** or **`0`** — never a partial amount.
 
-**A stop the customer asks for from the app settles as the customer's stop.** A customer stops a session only through the app: online, by `POST /sessions/{id}/stop`, which the server carries out with a StopService [MSG-006]; over BLE, by a StopServiceRequest [MSG-036], which the station reports as `Local` — in the SessionEnded of a Partial-B session, or in the `endReason` of a signed receipt ([Chapter 06 §6.2](06-security.md#62-transaction-receipt-signing--ecdsa-p-256)). The server **MUST** settle that stop by service kind: a `UserDuration` session pays the time delivered, proportional to the second and rounded up to one credit — `ceil(actualDurationSeconds / 60 × priceCreditsPerMinute)`, the formula of [Chapter 03 §3](03-messages.md) — and a `FixedDuration` or `MultiUnit` session is charged in full. A stop the server issues because the customer asked for it is that stop, not an operator's; the next paragraph is the operator's.
+**A stop the customer asks for from the app settles as the customer's stop.** A customer stops a session only through the app: online, by `POST /sessions/{id}/stop`, which the server carries out with a StopService [MSG-006]; over BLE, by a StopServiceRequest [MSG-036], which the station reports as `Local` — in the SessionEnded of a Partial-B session, or in the `endReason` of a signed receipt ([Chapter 06 §6.2](06-security.md#62-transaction-receipt-signing--ecdsa-p-256)). The first reaches a session only while the server can reach its station: a session the app started over BLE at a station that is offline — Full Offline, Partial A — is stopped over BLE. The server **MUST** settle that stop by service kind: a `UserDuration` session pays the time delivered, proportional to the second and rounded up to one credit — `ceil(actualDurationSeconds / 60 × priceCreditsPerMinute)`, the formula of [Chapter 03 §3](03-messages.md) — and a `FixedDuration` or `MultiUnit` session is charged in full. A stop the server issues because the customer asked for it is that stop, not an operator's; the next paragraph is the operator's.
 
 **A stop the server issues for an operator settles as `OperatorStopped`.** An operator can also end a session through the server rather than at the station — from an operator console, or by a station disable the server carries out — and the server then sends StopService [MSG-006]. That stop produces no SessionEnded ([Chapter 03 §5.4](03-messages.md#54-sessionended)) and StopService carries no reason, so only the server knows an operator asked for it. The server **MUST** settle such a session as it settles `OperatorStopped`, by service kind — pro-rata on delivered time for `UserDuration`, a full refund for `FixedDuration` and `MultiUnit` — and **MUST NOT** settle it as the customer's own stop. A stop the station refuses while the session is still running is not settled as `OperatorStopped`, because the operator did not end the service: the session settles as a delivered session of its kind — a `FixedDuration` or `MultiUnit` session keeps its full charge, and a `UserDuration` session is pro-rata on its delivered time. A `3006 SESSION_NOT_FOUND` refusal is not that case: the station holds no such session, which may already have ended ([`07-errors.md` §3.3](07-errors.md#33-session--bay-errors-3xxx)). The signed receipt of a BLE session the server stopped carries `endReason` `ServerStopped` ([Chapter 06 §6.2](06-security.md#62-transaction-receipt-signing--ecdsa-p-256)), and the server settles that session as this section settles the stop it issued.
 
@@ -1806,7 +1806,7 @@ Consolidated timeout values across all flows:
 | PaymentIntent pending | 5 min | Marked expired |
 | BLE scan | 10-30s | Return to IDLE |
 | BLE handshake step | 10s | ERROR state |
-| AuthorizeOfflinePass | 15s | **MAY** fall back to local validation if `OfflineModeEnabled` is `true`; otherwise refuse |
+| AuthorizeOfflinePass | 15s | Sent inside a BLE handshake, whose budget ends first: the station answers within the budget, and **MAY** fall back to local validation if `OfflineModeEnabled` is `true`; otherwise refuses with `1010` ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 6) |
 | TransactionEvent | 60s | Retry later |
 | ChangeConfiguration | 60s | Log failure |
 | GetConfiguration | 30s | Log failure |

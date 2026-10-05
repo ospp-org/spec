@@ -6,7 +6,8 @@
 >
 > | Part | Documents | Status |
 > |---|---|---|
-> | Offline credential and reconciliation, over **MQTT** | [`offline-pass.md`](offline-pass.md), [`authorize-offline-pass.md`](authorize-offline-pass.md), [`reconciliation.md`](reconciliation.md) | **Stable** — implemented and exercised against a second implementation |
+> | Offline credential and reconciliation, over **MQTT** | [`offline-pass.md`](offline-pass.md), [`reconciliation.md`](reconciliation.md) | **Stable** — implemented and exercised against a second implementation |
+> | Partial-B authorization, over **MQTT** | [`authorize-offline-pass.md`](authorize-offline-pass.md) | **EXPERIMENTAL** — its request carries the device proof and the transcript hash of a BLE handshake, and changed incompatibly with the BLE wire revision |
 > | The app–server contract, over **HTTPS** | [`app-contract.md`](app-contract.md) | **Draft** — binds the server and the app, not the station |
 > | **BLE** transport, handshake and session | [`ble-transport.md`](ble-transport.md), [`ble-handshake.md`](ble-handshake.md), [`ble-session.md`](ble-session.md) | **EXPERIMENTAL** |
 >
@@ -50,7 +51,7 @@ This role assignment also aligns with mobile OS power management: iOS and Androi
 
 | Document | Description |
 |-------------------------------------|-----------------------------------------------|
-| [AuthorizeOfflinePass](authorize-offline-pass.md) | MQTT-based offline pass validation (Partial B scenario) — **stable** |
+| [AuthorizeOfflinePass](authorize-offline-pass.md) | MQTT-based offline pass validation (Partial B scenario) — **EXPERIMENTAL**, with the BLE handshake whose device proof and transcript hash its request carries |
 | [App–Server Contract](app-contract.md) | Pass issuance with its trust bundle, the app's receipt upload, and the trust bundle a Partial-A authorization carries — binds the server and the app, not the station |
 | [BLE Transport](ble-transport.md) | Hardware requirements, GATT service definition, characteristics, advertising, MTU negotiation, fragmentation — **EXPERIMENTAL** |
 | [BLE Handshake](ble-handshake.md) | Hello / Challenge / authentication sequence, BLE version negotiation, the station's signature with its certificate, ephemeral ECDH P-256 and session key derivation (HKDF-SHA256), the device proof, AEAD channel — **EXPERIMENTAL** |

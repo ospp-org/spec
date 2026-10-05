@@ -1,4 +1,4 @@
 {
   "type": "ReceiptRequest",
-  "sessionId": 12345678
+  "offlineTxId": 12345678
 }

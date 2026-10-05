@@ -38,16 +38,15 @@ before claiming conformance.
 > `TC-OFF-001`, `TC-OFF-002` and `TC-OFF-005` exercise that surface and are experimental artefacts with it.
 >
 > **Development, Standard and Extended are unaffected and remain claimable.** Their required cases —
-> `TC-CORE-*`, `TC-TX-*`, `TC-SEC-*` and `TC-DM-*` — run over MQTT and HTTPS only. Two are worth naming because
-> they read as offline or BLE work and are not blocked:
+> `TC-CORE-*`, `TC-TX-*`, `TC-SEC-*` and `TC-DM-*` — run over MQTT and HTTPS, but for three Parts of
+> one case that apply only where the station declares the Offline / BLE profile. Two are worth naming:
 >
 > - **`TC-TX-006`** is entirely offline *reconciliation*, but reconciliation runs over **MQTT**,
 >   is implemented, and is exercised against a second implementation. It stays Standard and is
 >   fully runnable.
-> - **`TC-SEC-002`** step 33 requires a station to enter "offline-only BLE mode" on an expired
->   certificate, per the `1004` row in [`07-errors.md` §3.1](../spec/07-errors.md). This is a
->   genuine dependency of a mandatory level on the experimental surface — see the note under
->   §2.2 below.
+> - **`TC-TX-007`** Parts C, D and E end a session the app started over BLE, or one the station
+>   ran offline: each applies only where the station declares the Offline / BLE profile, and is
+>   recorded as skipped otherwise. The rest of the case runs over MQTT.
 >
 > **The ladder moved with the BLE wire revision.** Partial B is now required of every station that
 > implements the Offline / BLE profile, so the profile is taken whole at **Complete**, and
@@ -95,24 +94,13 @@ HMAC-SHA256).
 | mTLS certificate validation | TC-SEC-002 |
 | Certificate revocation checking at the broker | **Declared, not tested** — [`06-security.md` §2.1.1](../spec/06-security.md#211-revocation-checking) |
 
-> **`TC-SEC-002` step 33 and the experimental BLE surface.** The step requires a station holding
-> an expired certificate to enter "offline-only BLE mode", following the `expired` branch of the
-> `1004` row in [`07-errors.md` §3.1](../spec/07-errors.md). A mandatory level therefore appears
-> to depend on an experimental profile.
->
-> It does not, once the requirement is read for what it actually asserts. The `1004` `expired`
-> branch carries two obligations, and only one of them is BLE: the **negative** obligations —
-> never enter provisioning mode, never discard or overwrite stored credentials, stay off the
-> broker, await server-triggered renewal — are what the case exists to prove, are what the
-> registry row states as a MUST on every branch, and are observable on any station. Entering BLE
-> mode is what a station *with BLE* does *instead of* provisioning; it is the alternative
-> occupying the station, not the property under test.
->
-> **For 0.8, therefore:** step 33's BLE clause applies only where the station declares
-> `bleSupported`, and is recorded as skipped otherwise. The negative obligations are asserted on
-> **every** station and are not waived. Steps 97 and 108 of the same case already state the
-> requirement in that form. This scopes one step; it does not weaken the case, and it does not
-> change the ladder.
+> **`TC-SEC-002` step 33 asserts no BLE behaviour.** Until the BLE wire revision it required a
+> station holding an expired certificate to enter "offline-only BLE mode", and that clause applied
+> only where the station declared `bleSupported`. A station now authenticates itself over BLE with
+> the same certificate, which the app refuses once expired, so the `expired` branch of the `1004`
+> row in [`07-errors.md` §3.1](../spec/07-errors.md) keeps only the obligations the step asserts on
+> every station: never enter provisioning mode, never discard or overwrite stored credentials,
+> await server-triggered renewal.
 
 ### 2.3 Extended Compliance
 

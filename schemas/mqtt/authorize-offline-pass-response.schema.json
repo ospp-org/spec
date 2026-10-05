@@ -49,7 +49,7 @@
     },
     "details": {
       "type": "object",
-      "description": "Per-occurrence context of the refusal (spec/07-errors.md §1.3). With 4002 OFFLINE_LIMIT_EXCEEDED it carries constraint, the pass field whose limit refused the presentation - maxUses or maxTotalCredits (spec/profiles/offline/authorize-offline-pass.md §4)."
+      "description": "Per-occurrence context of the refusal (spec/07-errors.md §1.3). Required with 4002 OFFLINE_LIMIT_EXCEEDED, whose registry entry branches on its constraint: the pass field whose limit refused the presentation - maxUses or maxTotalCredits (spec/profiles/offline/authorize-offline-pass.md §4)."
     }
   },
   "allOf": [
@@ -105,6 +105,38 @@
           "errorCode": false,
           "errorText": false,
           "details": false
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "errorCode": {
+            "const": 4002
+          }
+        },
+        "required": [
+          "errorCode"
+        ]
+      },
+      "then": {
+        "required": [
+          "details"
+        ],
+        "properties": {
+          "details": {
+            "required": [
+              "constraint"
+            ],
+            "properties": {
+              "constraint": {
+                "enum": [
+                  "maxUses",
+                  "maxTotalCredits"
+                ]
+              }
+            }
+          }
         }
       }
     }

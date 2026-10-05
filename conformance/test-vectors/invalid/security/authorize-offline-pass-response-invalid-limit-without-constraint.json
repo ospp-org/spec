@@ -1,0 +1,6 @@
+{
+  "status": "Rejected",
+  "reason": "The pass has no use left.",
+  "errorCode": 4002,
+  "errorText": "OFFLINE_LIMIT_EXCEEDED"
+}

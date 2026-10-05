@@ -104,7 +104,7 @@ Verify the complete full-offline BLE session lifecycle: BLE scan and discovery, 
 
 ### Part D — Receipt Retrieval and Disconnect
 
-22. After the `ReceiptReady` notification on FFF5, write a ReceiptRequest naming the session to FFF6, and receive the ReceiptResponse notified on FFF6 with `result: "Accepted"`.
+22. After the `ReceiptReady` notification on FFF5, write a ReceiptRequest naming the session's `offlineTxId`, from the StartServiceResponse, to FFF6, and receive the ReceiptResponse notified on FFF6 with `result: "Accepted"`.
 23. Verify the receipt it carries contains:
     - `offlineTxId`, `bayId`, `serviceId`.
     - `startedAt`, `endedAt` (valid ISO 8601, `endedAt > startedAt`).

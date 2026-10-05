@@ -49,10 +49,10 @@ It is a winter evening in Example City. Heavy snowfall has knocked out the inter
 18:32:20.000  Station notifies ServiceStatus Running on FFF5 (3s elapsed)
 18:33:17.000  Station notifies ServiceStatus Running on FFF5 (60s elapsed)
 18:34:17.000  Station notifies ServiceStatus Running on FFF5 (120s elapsed)
-18:35:17.000  Station notifies ServiceStatus Running on FFF5 (180s elapsed)
+18:35:17.000  Timer expires — station stops the dispenser itself, ending the session with TimerExpired
 18:35:17.500  Bob taps "Stop service" in the app
 18:35:18.000  App writes StopServiceRequest to FFF3
-18:35:18.500  Station deactivates dispenser, notifies StopServiceResponse on FFF4
+18:35:18.500  Station notifies StopServiceResponse Rejected 3006 on FFF4 — the session has already ended
 18:35:19.000  Station generates ECDSA-signed receipt, increments txCounter
 18:35:19.500  Station notifies ServiceStatus ReceiptReady on FFF5
 18:35:20.000  App writes ReceiptRequest to FFF6; station notifies ReceiptResponse — receipt stored in offline transaction log
@@ -101,7 +101,7 @@ The app shows Bob which station it reached. Nothing on FFF1 is authenticated, so
 
 ---
 
-### Step 5: Read AvailableServices from FFF2 (18:32:05.500)
+### Step 5: Ask for AvailableServices on FFF2 (18:32:05.500)
 
 **BLE GATT Write, then Notify:** Characteristic `6645FFF2-5AEB-4709-ACD5-02E03C3000F6` — the app writes the octet `0x01`, and the station notifies the catalog it holds
 
@@ -468,7 +468,7 @@ The timer counts down: 2:57... 2:00... 1:00... 0:00. The water and chemical cons
 
 ### Step 16: Bob Stops the Session (18:35:17.500)
 
-At the 3-minute mark the timer has hit zero. Bob sees the car is clean and taps "Stop service". (In this case the timer already expired, but Bob taps stop explicitly to confirm. If he had not tapped, the station would auto-stop.)
+At the 3-minute mark the timer has hit zero. Bob sees the car is clean and taps "Stop service". (The timer has already expired and the station has stopped the service itself; Bob's tap reaches a session that has ended, which the next two steps show.)
 
 **What Bob sees:**
 
@@ -496,23 +496,25 @@ Bob taps "Stop".
 
 ---
 
-### Step 18: Station Deactivates Dispenser, Sends StopServiceResponse (18:35:18.500)
+### Step 18: Station Answers the Late Stop (18:35:18.500)
 
-The station's dispenser was already auto-stopped at the 180-second mark (the authorized duration). When the StopServiceRequest arrives at 18:35:18.000, the station acknowledges it but the hardware is already off. The station controller:
+The station stopped the dispenser itself at the 180-second mark (the authorized duration), and that auto-stop ended the session with `TimerExpired` ([`ble-session.md` §3](../../spec/profiles/offline/ble-session.md#3-stopping-a-service)). At 18:35:17.000 the station controller:
 
-1. Confirms the pump relay is already off (auto-stopped at 18:35:17.000)
-2. Reads the final meter values from the sensors
-3. Reports `actualDurationSeconds: 180` (the pump ran for exactly the authorized 180 seconds)
-4. Calculates credits: `ceil(180 / 60) * 10 = 3 * 10 = 30 credits` (within `maxCreditsPerTx` of 30)
+1. Turned the pump relay off
+2. Read the final meter values from the sensors
+3. Recorded `actualDurationSeconds: 180` (the pump ran for exactly the authorized 180 seconds)
+4. Calculated credits: `ceil(180 / 60 * 10) = 30 credits` (within `maxCreditsPerTx` of 30)
+
+The StopServiceRequest that arrives at 18:35:18.000 names a session that is no longer active, so the station answers `Rejected` with `3006 SESSION_NOT_FOUND` (rule 5 of the same section), and the app moves on to the receipt.
 
 **BLE GATT Notify:** Characteristic `6645FFF4-5AEB-4709-ACD5-02E03C3000F6`
 
 ```json
 {
   "type": "StopServiceResponse",
-  "result": "Accepted",
-  "actualDurationSeconds": 180,
-  "creditsCharged": 30
+  "result": "Rejected",
+  "errorCode": 3006,
+  "errorText": "SESSION_NOT_FOUND"
 }
 ```
 
@@ -564,7 +566,7 @@ txCounter:           8 (station's 8th offline transaction)
 ```json
 {
   "type": "ReceiptRequest",
-  "sessionId": "sess_a8b9c0d1e2f3"
+  "offlineTxId": "otx_a3b4c5d6e7f8"
 }
 ```
 
@@ -760,12 +762,12 @@ The station removes the transaction from its local queue.
      |  Notify FFF5: ServiceStatus (Running)  |
      |<---------------------------------------|
      |                                        |
+     |                          timer expires: pump off
      |  user taps stop                        |
      |                                        |
      |  Write FFF3: StopServiceRequest       |
      |--------------------------------------->|
-     |                          deactivate pump
-     |  Notify FFF4: StopServiceResponse    |
+     |  Notify FFF4: StopServiceResponse 3006|
      |<---------------------------------------|
      |                                        |
      |                          generate receipt
@@ -775,7 +777,7 @@ The station removes the transaction from its local queue.
      |  Notify FFF5: ServiceStatus (ReceiptReady)
      |<---------------------------------------|
      |                                        |
-     |  Write FFF6: ReceiptRequest {sessionId}|
+     |Write FFF6: ReceiptRequest {offlineTxId}|
      |--------------------------------------->|
      |  Notify FFF6: ReceiptResponse {receipt}|
      |<---------------------------------------|

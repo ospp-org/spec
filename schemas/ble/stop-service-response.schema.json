@@ -36,7 +36,7 @@
       "type": "integer",
       "minimum": 1000,
       "maximum": 9999,
-      "description": "The registry code of the refusal: 3006 when the station holds no session under the request's sessionId, 3007 when that session is not on the request's bay (profiles/offline/ble-session.md §3). Present when result is Rejected."
+      "description": "The registry code of the refusal: 3006 when the request's sessionId names no active session the connection established, 3007 when that session is not on the request's bay (profiles/offline/ble-session.md §3). Present when result is Rejected."
     },
     "errorText": {
       "type": "string",

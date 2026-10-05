@@ -283,7 +283,7 @@ sequenceDiagram
     rect rgb(252, 228, 236)
         Note over User,Station: Receipt & Disconnect
         BLE-->>User: FFF5: ReceiptReady
-        User->>BLE: Write FFF6: ReceiptRequest {sessionId}
+        User->>BLE: Write FFF6: ReceiptRequest {offlineTxId}
         BLE-->>User: Notify FFF6: ReceiptResponse {receipt, ECDSA signed}
         User->>BLE: Disconnect
     end

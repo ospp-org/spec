@@ -107,7 +107,7 @@ The platform documentation this rests on, as published on 2026-10-05:
 
 ### 4.1 Request
 
-The body is the Receipt exactly as the app read it from the station (characteristic FFF6, [`receipt.schema.json`](../../../schemas/ble/receipt.schema.json)): the signed `receipt` and the identifiers beside it, unaltered.
+The body is the Receipt exactly as the app received it from the station (the `receipt` of the ReceiptResponse on characteristic FFF6, [`receipt.schema.json`](../../../schemas/ble/receipt.schema.json)): the signed `receipt` and the identifiers beside it, unaltered.
 
 ### 4.2 Response
 

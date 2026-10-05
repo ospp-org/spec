@@ -52,7 +52,7 @@
     },
     "details": {
       "type": "object",
-      "description": "Per-occurrence context of the refusal (07-errors.md §2.3). With 4002 OFFLINE_LIMIT_EXCEEDED it carries constraint: the pass field or the station configuration key whose limit refused (offline-pass.md §2.2). MAY be present when result is Rejected."
+      "description": "Per-occurrence context of the refusal (07-errors.md §2.3). Required with 4002 OFFLINE_LIMIT_EXCEEDED, whose registry entry branches on its constraint: the pass field or the station configuration key whose limit refused (offline-pass.md §2.2). Otherwise MAY be present when result is Rejected."
     }
   },
   "allOf": [
@@ -98,6 +98,41 @@
           "sessionKeyConfirmation": false,
           "durationSeconds": false,
           "creditsAuthorized": false
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "errorCode": {
+            "const": 4002
+          }
+        },
+        "required": [
+          "errorCode"
+        ]
+      },
+      "then": {
+        "required": [
+          "details"
+        ],
+        "properties": {
+          "details": {
+            "required": [
+              "constraint"
+            ],
+            "properties": {
+              "constraint": {
+                "enum": [
+                  "maxUses",
+                  "maxTotalCredits",
+                  "OfflineModeEnabled",
+                  "OfflineWindowHours",
+                  "OfflineTransactionLimit"
+                ]
+              }
+            }
+          }
         }
       }
     }

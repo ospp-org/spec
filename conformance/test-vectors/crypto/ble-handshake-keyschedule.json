@@ -212,10 +212,10 @@
           "characteristic": "FFF6",
           "nonce96Hex": "000000000000000000000002",
           "aad": "transcriptHash",
-          "plaintextUtf8": "{\"type\":\"ReceiptRequest\",\"sessionId\":\"sess_1a80b51e926554da\"}",
+          "plaintextUtf8": "{\"type\":\"ReceiptRequest\",\"offlineTxId\":\"otx_fe437960b2298eaa\"}",
           "frame": {
             "n": 2,
-            "ct": "9Nmc3nvM9tc8dmc4KxM+YqKOnffIco4lgbl3Fug133tEqdOcmnth9In/VHEtuVkPPCuz7iLzo7dtw0FYlMQaaUKImtxqYqxXqIn4lPI="
+            "ct": "9Nmc3nvM9tc8dmc4KxM+YqKOnffIco4lgblrFf0q33pPtM/3xHsos5X4cx8q5F1ePiPg53L3pLthwkEbyzmEFRfW4fQiKC41wlR7TZ1g"
           }
         },
         {

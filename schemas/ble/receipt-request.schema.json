@@ -2,11 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/ble/receipt-request.schema.json",
   "title": "ReceiptRequest",
-  "description": "Request for a session's signed receipt, written by the app to the station on BLE characteristic FFF6, inside the channel (profiles/offline/ble-transport.md §8). The station answers with a ReceiptResponse notified on FFF6.",
+  "description": "Request for a session's signed receipt, written by the app to the station on BLE characteristic FFF6, inside the channel (profiles/offline/ble-transport.md §8). The session is named by its offlineTxId, which the station draws at random and sends only in the StartServiceResponse of the session's own connection: naming it is what entitles the app to the receipt. The station answers with a ReceiptResponse notified on FFF6.",
   "type": "object",
   "required": [
     "type",
-    "sessionId"
+    "offlineTxId"
   ],
   "additionalProperties": false,
   "properties": {
@@ -15,9 +15,9 @@
       "const": "ReceiptRequest",
       "description": "Message type discriminator"
     },
-    "sessionId": {
-      "$ref": "../common/session-id.schema.json",
-      "description": "The session whose receipt the app asks for - the sessionId of the StartServiceResponse that started it."
+    "offlineTxId": {
+      "$ref": "../common/offline-tx-id.schema.json",
+      "description": "The offline transaction whose receipt the app asks for - the offlineTxId of the StartServiceResponse that started its session."
     }
   }
 }

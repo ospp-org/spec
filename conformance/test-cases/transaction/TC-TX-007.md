@@ -85,7 +85,7 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
 
 ### Part C — The Customer's Stop over BLE (v0.4.0+)
 
-> **This Part needs the Offline / BLE profile.** A customer stops a session only through the app ([`04-flows.md` §6](../../../spec/04-flows.md#settlement-by-service-kind)): through the server, as a StopService, which ends in its RESPONSE; over BLE, as a StopServiceRequest, which the station reports as `Local`. The SessionEnded that carries `Local` is therefore the one of a Partial-B session, and a station that does not declare the profile never emits it.
+> **This Part applies only where the station declares the Offline / BLE profile, and is recorded as skipped otherwise.** A customer stops a session only through the app ([`04-flows.md` §6](../../../spec/04-flows.md#settlement-by-service-kind)): through the server, as a StopService, which ends in its RESPONSE; over BLE, as a StopServiceRequest, which the station reports as `Local`. A SessionEnded that carries `Local` therefore ends a session the app started over BLE, and a station that does not declare the profile never emits one.
 
 18. Run a Partial-B session on `bay_a1b2c3d4` for `svc_basic` with a long requested duration (e.g., 300 seconds), as `TC-OFF-005` Parts A and B do: the server answers AuthorizeOfflinePass `Accepted` with a `sessionId`, and the app starts the service over BLE.
 19. Receive the StartServiceResponse `Accepted` on the app's BLE connection.
@@ -100,6 +100,8 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
 
 ### Part D — Offline Credit Exhausted (v0.4.0+)
 
+> **This Part applies only where the station declares the Offline / BLE profile, and is recorded as skipped otherwise.**
+
 24. Configure the station for offline mode with an OfflinePass that has low remaining credits (e.g., enough for ~20 seconds of `svc_basic`).
 25. Send StartService with `durationSeconds: 300` via the BLE offline path (or simulate offline mode and a local StartService).
 26. Wait for the station to consume the available credits and stop the session autonomously.
@@ -110,6 +112,8 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
     - Payload validates against `schemas/mqtt/session-ended-event.schema.json`
 
 ### Part E — Mid-Session Deauthorization (v0.4.0+)
+
+> **This Part applies only where the station declares the Offline / BLE profile, and is recorded as skipped otherwise.**
 
 28. Configure the station for offline mode with an OfflinePass.
 29. Start an offline session via BLE.

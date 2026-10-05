@@ -55,8 +55,7 @@ Bob is at "Station Alpha -- Example City" and wants a deluxe treatment on Bay 2.
 15:11:08.000  ServiceStatus update: 60s elapsed, 180s remaining
 15:12:08.000  ServiceStatus update: 120s elapsed, 120s remaining
 15:13:08.000  ServiceStatus update: 180s elapsed, 60s remaining
-15:14:08.000  Timer expires — station auto-stops dispenser
-15:14:08.050  Station sends StopServiceResponse (240s, 48 credits)
+15:14:08.000  Timer expires — station auto-stops dispenser; it sends no StopServiceResponse, since the app asked for no stop
 15:14:08.100  Station sends SessionEnded EVENT (TimerExpired, 240s) — the server settles from it
 15:14:09.000  Station generates ECDSA receipt, increments txCounter
 15:14:09.200  Station sends ServiceStatus (ReceiptReady)
@@ -96,7 +95,7 @@ The app sees `connectivity: "Online"` — the station has an active MQTT connect
 
 ---
 
-### Step 3: App Reads AvailableServices from FFF2 (15:10:02.400)
+### Step 3: App Asks for AvailableServices on FFF2 (15:10:02.400)
 
 **BLE Write FFF2 (`0x01`), then Notify FFF2 [MSG-028]:**
 
@@ -437,7 +436,7 @@ The station's bay controller:
 1. Validates that Bay 2 is still `Available`
 2. Activates the dispenser relay on Bay 2
 3. Starts the session timer at 240 seconds
-4. Assigns local session ID `sess_a2b3c4d5e6f7` and offline transaction ID `otx_f6a7b8c9d0e1`
+4. Uses the session ID of the authorization, `sess_d5e6f7a8b9c0` ([`ble-session.md` §1](../../spec/profiles/offline/ble-session.md#1-starting-a-service)), and assigns offline transaction ID `otx_f6a7b8c9d0e1`
 
 **BLE Notify FFF4 [MSG-038]:**
 
@@ -445,7 +444,7 @@ The station's bay controller:
 {
   "type": "StartServiceResponse",
   "result": "Accepted",
-  "sessionId": "sess_a2b3c4d5e6f7",
+  "sessionId": "sess_d5e6f7a8b9c0",
   "offlineTxId": "otx_f6a7b8c9d0e1"
 }
 ```
@@ -516,7 +515,7 @@ The station sends periodic BLE status updates and MQTT meter values simultaneous
 {
   "bayId": "bay_a2b3c4d5e6f7",
   "status": "Running",
-  "sessionId": "sess_a2b3c4d5e6f7",
+  "sessionId": "sess_d5e6f7a8b9c0",
   "elapsedSeconds": 60,
   "remainingSeconds": 180,
   "meterValues": {
@@ -533,7 +532,7 @@ The station sends periodic BLE status updates and MQTT meter values simultaneous
 {
   "bayId": "bay_a2b3c4d5e6f7",
   "status": "Running",
-  "sessionId": "sess_a2b3c4d5e6f7",
+  "sessionId": "sess_d5e6f7a8b9c0",
   "elapsedSeconds": 120,
   "remainingSeconds": 120,
   "meterValues": {
@@ -550,7 +549,7 @@ The station sends periodic BLE status updates and MQTT meter values simultaneous
 {
   "bayId": "bay_a2b3c4d5e6f7",
   "status": "Running",
-  "sessionId": "sess_a2b3c4d5e6f7",
+  "sessionId": "sess_d5e6f7a8b9c0",
   "elapsedSeconds": 180,
   "remainingSeconds": 60,
   "meterValues": {
@@ -599,18 +598,9 @@ The station's bay controller:
 2. Sends relay-off signal to the dispenser on Bay 2
 3. Reads final meter values
 4. Calculates actual duration: exactly 240 seconds
-5. Calculates credits: `ceil(240 / 60) * 12 = 4 * 12 = 48 credits`
+5. Calculates credits: `ceil(240 / 60 * 12) = 48 credits`
 
-**BLE Notify FFF4 [MSG-037]:**
-
-```json
-{
-  "type": "StopServiceResponse",
-  "result": "Accepted",
-  "actualDurationSeconds": 240,
-  "creditsCharged": 48
-}
-```
+It sends no StopServiceResponse: the app asked for no stop, and the session ends with `TimerExpired` ([`ble-session.md` §3](../../spec/profiles/offline/ble-session.md#3-stopping-a-service)). The app learns of the end from the `ReceiptReady` status on FFF5.
 
 **What Bob sees:**
 
@@ -705,7 +695,7 @@ The station generates a signed receipt:
 {
   "bayId": "bay_a2b3c4d5e6f7",
   "status": "ReceiptReady",
-  "sessionId": "sess_a2b3c4d5e6f7",
+  "sessionId": "sess_d5e6f7a8b9c0",
   "elapsedSeconds": 240,
   "remainingSeconds": 0
 }
@@ -715,7 +705,7 @@ The station generates a signed receipt:
 
 ### Step 18: App Asks for the Receipt on FFF6 (15:14:09.500)
 
-**BLE Write FFF6 [MSG-041]:** `{"type": "ReceiptRequest", "sessionId": "sess_d5e6f7a8b9c0"}`, answered by a **ReceiptResponse [MSG-042]** notified on FFF6, `result: "Accepted"`, whose `receipt` [MSG-039] is:
+**BLE Write FFF6 [MSG-041]:** `{"type": "ReceiptRequest", "offlineTxId": "otx_f6a7b8c9d0e1"}`, answered by a **ReceiptResponse [MSG-042]** notified on FFF6, `result: "Accepted"`, whose `receipt` [MSG-039] is:
 
 ```json
 {
@@ -887,7 +877,6 @@ On the Operator Dashboard, Charlie sees the session in real-time because the sta
      |                          |                          |
      |                          | timer expires (240s)     |
      |                          | stop service                 |
-     |<------ FFF4: StopServiceResponse (240s, 48cr)     |
      |                          |  SessionEnded (Timer)     |
      |                          |------------------------->|
      |                          |  StatusNotif (Finishing)  |
@@ -913,8 +902,8 @@ On the Operator Dashboard, Charlie sees the session in real-time because the sta
 
 3. **Settled once, on the first end record.** Because the station is online throughout the session, all events (StatusNotification, MeterValues, SessionEnded) are sent to the server in real time via MQTT, and the server settles the session from the SessionEnded the station sends at its end. Had the station lost MQTT before then, the loss would not have ended the session: the wash would have continued, and the station would have sent its SessionEnded when it reconnected; had no end record reached the server by the end of the session's authorized duration, the server would have closed the session then ([`authorize-offline-pass.md` §6](../../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4a). The receipt on FFF6 is Bob's copy, which the app uploads once it has connectivity ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)). The session settles once, on whichever of the two arrives first, and the other is a duplicate ([`reconciliation.md` §3](../../spec/profiles/offline/reconciliation.md#3-deduplication-offlinetxid)); had the receipt arrived first, the server would have applied no second debit, only a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](../../spec/profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)).
 
-4. **MQTT fallback if AuthorizeOfflinePass times out.** If the server does not respond within 15 seconds, the station **MAY** fall back to local validation (as in Full Offline, Flow 04) if its `OfflineModeEnabled` is `true`, and then within its own offline limits ([`authorize-offline-pass.md` §6](../../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules)). This graceful degradation ensures the user is not stuck if MQTT has a momentary hiccup. The spec defines this in section 5c error paths.
+4. **MQTT fallback if AuthorizeOfflinePass times out.** If the server has not answered in time for the station to answer the app within the BLE handshake budget, the station answers `1010 MESSAGE_TIMEOUT`, or **MAY** fall back to local validation (as in Full Offline, Flow 04) if its `OfflineModeEnabled` is `true`, and then within its own offline limits ([`authorize-offline-pass.md` §6](../../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules)). This graceful degradation ensures the user is not stuck if MQTT has a momentary hiccup. The spec defines this in section 5c error paths.
 
 5. **Dual-channel reporting.** During the session, the station sends updates on both BLE (ServiceStatus on FFF5 to the app) and MQTT (MeterValues to the server). These are independent channels. The BLE updates provide real-time UI feedback to Bob, while the MQTT events feed the operator dashboard and billing system.
 
-6. **Timer expiry triggers auto-stop.** Bob did not manually stop the session — the 240-second timer expired naturally. The station auto-stops and generates the receipt without requiring a StopServiceRequest from the app. The app detects the stop via the StopServiceResponse notification on FFF4 and the ReceiptReady status on FFF5.
+6. **Timer expiry triggers auto-stop.** Bob did not manually stop the session — the 240-second timer expired naturally. The station auto-stops and generates the receipt without requiring a StopServiceRequest from the app. The app detects the stop by the ReceiptReady status on FFF5; the station sends no StopServiceResponse, since the app asked for no stop.

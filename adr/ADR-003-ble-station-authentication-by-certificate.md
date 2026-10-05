@@ -100,7 +100,10 @@ once per handshake for any central that writes a Hello, before the app has authe
 and over BLE, until the certificate is revoked and the CRL reaches the app with its next bundle.
 A certificate issued without `id-kp-osppBleStation` cannot serve BLE until it is renewed; since
 every certificate carries both purposes from this revision on, that concerns only certificates
-issued before it.
+issued before it. An expired certificate ends the station's BLE service with its MQTT connection:
+the app refuses a certificate outside its validity, so the offline-only BLE mode an expired
+station entered before this decision serves no one, and the station waits for its renewal
+([`06-security.md` §4.7.3](../spec/06-security.md#473-emergency-renewal)).
 
 ## Review gate
 

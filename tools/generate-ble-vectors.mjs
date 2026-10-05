@@ -390,7 +390,7 @@ function deriveScenario(sc) {
     const startReq = { type: 'StartServiceRequest', ...sc.request };
     const startResp = { type: 'StartServiceResponse', result: 'Accepted', sessionId, offlineTxId };
     const status = { bayId: sc.request.bayId, status: 'ReceiptReady', sessionId, elapsedSeconds: sc.request.requestedDurationSeconds, remainingSeconds: 0 };
-    const receiptReq = { type: 'ReceiptRequest', sessionId };
+    const receiptReq = { type: 'ReceiptRequest', offlineTxId };
     const receipt = signedReceipt({ pass, counter, request: sc.request, offlineTxId });
     const receiptResp = { type: 'ReceiptResponse', result: 'Accepted', receipt };
     frames.push(

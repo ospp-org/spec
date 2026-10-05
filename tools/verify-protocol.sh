@@ -10,19 +10,21 @@
 # went stale: `9 FAIL / 6 SKIP` was true at v0.20.0 and was still being quoted after 0.20.1
 # and 0.20.2 had closed three of them.
 #
-#   (this HEAD) 2026-10-05  (unreleased)  0 FAIL, 1 SKIP  (5405 checks, 5404 PASS) — the BLE
+#   (this HEAD) 2026-10-05  (unreleased)  0 FAIL, 1 SKIP  (5443 checks, 5442 PASS) — the BLE
 #                                  wire revision. The whole failure SET leaves: ble-secure-frame has
 #                                  valid and invalid vectors, station-identity is withdrawn with the
 #                                  StationIdentity, and auth-response's creditsAuthorized is in
-#                                  ble-handshake.md §5's table. Two exemptions are added, each with
+#                                  ble-handshake.md §5's table. Three exemptions are added, each with
 #                                  its reason where it is declared: the device-proof formats
 #                                  `android-key` and `apple-appattest` (Category 3), identifiers OSPP
-#                                  carries from outside, and `ProtocolVersion` (Category 6), which
+#                                  carries from outside; `maxUses` and `maxTotalCredits` (Category 3),
+#                                  the pass fields a 4002 refusal's constraint names; and
+#                                  `ProtocolVersion` (Category 6), which
 #                                  passed only because the string occurred inside StationInfo's
 #                                  withdrawn `bleProtocolVersion`. The one SKIP is Category 8's
 #                                  `invalid/core/status-notification-available-program-with-error.json`,
 #                                  whose name maps to no schema; the BLE resolution noise is gone.
-#                                  +592 checks, all passing.
+#                                  +630 checks, all passing.
 #   (superseded) 2026-10-05  (unreleased)  5 FAIL, 6 SKIP  (4813 checks, 4802 PASS) — the offline
 #                                  follow-up: Gabi's decisions of 2026-10-05 and their review. The
 #                                  failure SET is the one measured at 7a65f09; +63 checks, all
@@ -324,11 +326,17 @@ function category3() {
   // platform two names.
   const EXTERNAL_IDENTIFIERS = new Set(['android-key', 'apple-appattest']);
 
+  // Values that name a member of an OSPP message, spelled as that member is: the `constraint` of a
+  // 4002 refusal names the pass field whose limit refused, `maxUses` or `maxTotalCredits`, or a
+  // configuration key, which is PascalCase already (07-errors.md §2.3).
+  const FIELD_NAME_VALUES = new Set(['maxUses', 'maxTotalCredits']);
+
   function isPascalCase(s) {
     if (typeof s !== 'string' || s.length === 0) return true;
     if (/^\d/.test(s)) return true; // version strings, numbers
     if (BLE_TYPE_VALUES.has(s)) return true; // BLE type exception
     if (EXTERNAL_IDENTIFIERS.has(s)) return true; // identifiers defined outside OSPP
+    if (FIELD_NAME_VALUES.has(s)) return true; // the name of a member, as the member spells it
     if (/^[a-z]/.test(s)) return false; // starts lowercase
     if (/_/.test(s)) return false; // has underscore (snake_case)
     return true;

@@ -419,11 +419,12 @@ App writes FFF3: StartServiceRequest {bayId, serviceId,
                                       requestedDurationSeconds}          [AEAD-encrypted]
 Station notifies FFF4: StartServiceResponse {sessionId, offlineTxId}     [AEAD-encrypted]
   → Station notifies FFF5 periodically: ServiceStatus {elapsed, remaining, meters}  [AEAD-encrypted]
-App writes FFF3: StopServiceRequest (or timer expires)                   [AEAD-encrypted]
+App writes FFF3: StopServiceRequest                                      [AEAD-encrypted]
 Station notifies FFF4: StopServiceResponse {duration, credits}           [AEAD-encrypted]
+  (when the timer expires first, the station stops the service itself and sends no StopServiceResponse)
   → Station signs receipt (ECDSA P-256), increments txCounter
 Station notifies FFF5: ServiceStatus {status: "ReceiptReady"}            [AEAD-encrypted]
-App writes FFF6: ReceiptRequest {sessionId}                              [AEAD-encrypted]
+App writes FFF6: ReceiptRequest {offlineTxId}                            [AEAD-encrypted]
 Station notifies FFF6: ReceiptResponse {result, receipt}                 [AEAD-encrypted]
 ```
 
@@ -626,7 +627,7 @@ OSPP supports in-protocol certificate renewal so stations can obtain new TLS cer
 | CSR rejected | Retry once after 60s. If still rejected, log SecurityEvent (`CertificateError`) |
 | Certificate chain invalid | Respond `Rejected` to CertificateInstall, continue using current cert |
 | Cannot generate keypair | Reject TriggerCertificateRenewal with `4014 KEYPAIR_GENERATION_FAILED`, log SecurityEvent (`HardwareFault`) |
-| Certificate expired (too late) | Enter offline-only mode (BLE). Recovery via server-triggered renewal or re-provisioning |
+| Certificate expired (too late) | Keep your credentials and do not re-provision yourself. You serve no customer meanwhile, over BLE either: the app refuses an expired certificate too. Recovery via server-triggered renewal or re-provisioning |
 | Certificate revoked | The broker refuses the handshake. Log `1004` with `details.cause: revoked`, keep your credentials, stay off the broker, alert the operator. Do **not** re-provision yourself |
 | Broker refuses at CONNACK (non-zero reason code) | Not a certificate fault of yours — one cause is a broker that cannot check revocation and whose grace has expired. Log the reason code and retry with backoff |
 
@@ -1287,7 +1288,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[OFFLINE]** Server key set: replace the whole set on every `OfflinePassPublicKey` value received, in a BootNotification RESPONSE or by ChangeConfiguration; no cached previous key, no grace period
 - [ ] **[OFFLINE]** ECDSA P-256 receipt signing, including the signed-only `stationId`, `endReason`, `bookedDurationSeconds` and `clockState` (§2.11)
 - [ ] **[OFFLINE]** Monotonic txCounter: increment by exactly 1 per offline transaction (forensic evidence; the server records it and does not gate on it)
-- [ ] **[OFFLINE]** Serve a receipt on FFF6, to a ReceiptRequest naming its session, for **at least 24 hours** after you sign it, whether or not another session has begun on the bay ([`ble-transport.md` §8](../spec/profiles/offline/ble-transport.md#8-receipt-fff6))
+- [ ] **[OFFLINE]** Serve a receipt on FFF6, to a ReceiptRequest naming its `offlineTxId`, for **at least 24 hours** after you sign it, whether or not another session has begun on the bay ([`ble-transport.md` §8](../spec/profiles/offline/ble-transport.md#8-receipt-fff6))
 - [ ] **[OFFLINE]** Persist offline state: pass usage counters, transaction log, session state
 - [ ] **[OFFLINE]** Refuse, never reduce: `4004` when the estimated cost exceeds `maxCreditsPerTx`, `4002` when it exceeds what remains of `maxTotalCredits` (checks #7 and #8 are rejects, not caps)
 - [ ] **[OFFLINE]** Reconciliation via TransactionEvent after connectivity restored
@@ -1334,7 +1335,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 | Web session token | 10 min |
 | OfflinePass validity | 3 days default, 10 days max (platform lifetime; a station's `OfflinePassMaxAge` may refuse sooner) |
 | Reservation TTL | 300s default (`ReservationDefaultTTL`, 60–1800); the web-payment flow uses 180s |
-| BLE receipt retention | 10 min minimum (or until next session on the bay) |
+| BLE receipt retention | At least 24 hours after signing, whether or not another session has begun on the bay ([`ble-transport.md` §8](../spec/profiles/offline/ble-transport.md#8-receipt-fff6)) |
 
 ### Error Code Ranges
 

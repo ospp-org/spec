@@ -9,6 +9,10 @@
 > [B-3](../KNOWN-ISSUES.md#b-3--the-three-ble-response-schemas-disagree-with-each-other-and-with-chapter-07).
 > See [Release status](../README.md#ble-is-experimental).
 >
+> `mqtt/authorize-offline-pass-request.schema.json`, `mqtt/authorize-offline-pass-response.schema.json` and
+> `common/device-proof.schema.json` are **EXPERIMENTAL** with them: the request carries the device proof and the
+> transcript hash of a BLE handshake, and changed incompatibly with the BLE wire revision.
+>
 > `common/offline-pass.schema.json` is **stable** and carries no station or organization scope: a
 > pass is valid at any station that accepts offline passes
 > ([`offline-pass.md` §2.3](../spec/profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)).

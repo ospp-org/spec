@@ -78,6 +78,7 @@ const OID_COMMON_NAME = '2.5.4.3';
 const OID_EC_PUBLIC_KEY = '1.2.840.10045.2.1';
 const OID_PRIME256V1 = '1.2.840.10045.3.1.7';
 const OID_ECDSA_SHA256 = '1.2.840.10045.4.3.2';
+const OID_ECDSA_SHA384 = '1.2.840.10045.4.3.3';
 
 // The OSPP error the app surfaces on any failure of its verification gate (§6.5.2 step 6).
 export const GATE_ERROR = { errorCode: 2013, errorText: 'BLE_AUTH_FAILED' };
@@ -628,8 +629,10 @@ export function stationVerificationGate({ challenge, helloBytes, caCertPem, crlP
 
   // Step 1.
   if (!cert.issuerRaw.equals(ca.subjectRaw)) return fail(1, 'issuer is not the Station CA subject');
-  if (cert.signatureAlgorithm !== OID_ECDSA_SHA256) return fail(1, `certificate signature algorithm ${cert.signatureAlgorithm} is not ecdsa-with-SHA256`);
-  if (!crypto.verify('sha256', cert.tbsRaw, caKey, cert.signatureDer)) return fail(1, 'certificate signature does not verify under the Station CA key');
+  // 06-security.md §4.4 allows ecdsa-with-SHA256 and ecdsa-with-SHA384 for a station certificate.
+  const certHash = { [OID_ECDSA_SHA256]: 'sha256', [OID_ECDSA_SHA384]: 'sha384' }[cert.signatureAlgorithm];
+  if (!certHash) return fail(1, `certificate signature algorithm ${cert.signatureAlgorithm} is neither ecdsa-with-SHA256 nor ecdsa-with-SHA384`);
+  if (!crypto.verify(certHash, cert.tbsRaw, caKey, cert.signatureDer)) return fail(1, 'certificate signature does not verify under the Station CA key');
   const node = new crypto.X509Certificate(cert.der);
   if (!node.verify(caKey)) throw new Error('gate cross-check: DER walker and Node X509Certificate disagree on the certificate signature');
   if (atMs + skewSeconds * 1000 < cert.notBefore.getTime()) return fail(1, `not valid before ${cert.notBefore.toISOString()}`);

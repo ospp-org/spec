@@ -23,7 +23,8 @@ Not every part of this specification is at the same maturity. Read this before i
 |---|---|---|
 | MQTT station↔server (Core, Transaction, Security, Device Management) | **Stable** | Implemented by a server and exercised by an independent station implementation |
 | HTTPS provisioning (`POST /api/v1/stations/provision`) | **Stable** | Implemented; error vocabulary and precedence chain covered by conformance cases |
-| Offline reconciliation, OfflinePass lifecycle, AuthorizeOfflinePass | **Stable** | Implemented and exercised over MQTT |
+| Offline reconciliation, OfflinePass lifecycle | **Stable** | Implemented and exercised over MQTT |
+| AuthorizeOfflinePass, the Partial-B authorization over MQTT | **EXPERIMENTAL** | Its request carries the device proof and the transcript hash of a BLE handshake, and changed incompatibly with the BLE wire revision |
 | Offline app–server contract — pass issuance and receipt upload over HTTPS ([`app-contract.md`](spec/profiles/offline/app-contract.md)) | **Draft** | Binds the server and the app, not the station |
 | **BLE transport, handshake and session** | **EXPERIMENTAL** | See below |
 

@@ -18,11 +18,11 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
 - `spec/profiles/offline/README.md` §2 — the connectivity-scenario table that defines Partial B as phone Offline / station Online
 - `spec/profiles/offline/authorize-offline-pass.md` §3 / §4 — REQUEST and RESPONSE payloads
 - `spec/profiles/offline/authorize-offline-pass.md` §5 — the authorize-time validation checks — #1–#4, #6–#10 and #12; #5 and #11 withdrawn — in order, stopping at the first failure
-- `spec/profiles/offline/authorize-offline-pass.md` §6 — processing rules 1–7 (forward unmodified, echo the counter, 15 s timeout, the SecurityEvent discrimination)
+- `spec/profiles/offline/authorize-offline-pass.md` §6 — processing rules 1–7 (forward unmodified, echo the counter, the timeout inside the handshake budget, the SecurityEvent discrimination)
 - `spec/profiles/offline/authorize-offline-pass.md` §7 — the error-code table for this action
 - `spec/04-flows.md` §5c — the Partial B sequence, happy path steps 1–12, and the error-path table
 - `spec/04-flows.md` §6 (Billing Authority) — the server recomputes; the station's `creditsCharged` is advisory
-- `spec/03-messages.md` §2.1 — the AuthorizeOfflinePass message table: 15 s response timeout, 30 s MQTT expiry, topics
+- `spec/03-messages.md` §2.1 — the AuthorizeOfflinePass message table: 15 s response timeout, which the BLE handshake budget ends first, 30 s MQTT expiry, topics
 - `spec/06-security.md` §6.1.1 — the station-local check list (**ten numbered checks; #5 is withdrawn and a station performs the other nine**) and the **counter model** note: `counter` is app-global, and the station **MUST** echo it into the signed receipt as `passCounter`
 - `spec/profiles/offline/ble-session.md` §1 — a requested duration above the authorized one is refused with `3010 MAX_DURATION_EXCEEDED`, never reduced, and a Partial-B station checks it against the AuthorizeOfflinePass response value, never the unsigned advisory copy
 - `spec/profiles/offline/ble-session.md` §6 — the auto-stop timer starts at the requested duration, which an accepted request keeps within the authorized one
@@ -162,10 +162,10 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
 32. Verify **no** SecurityEvent is written: a limit refusal is a policy decision (§6 rule 7).
 33. **The codes only the server can give reach the app too.** Answer one presentation `Rejected` with `2014 OFFLINE_PASS_REVOKED` — a pass revoked on the server, individually or by a block on its user ([`authorize-offline-pass.md` §5](../../../spec/profiles/offline/authorize-offline-pass.md#5-validation-checks) check #12) — and another with `6001 SERVER_INTERNAL_ERROR`. Verify the station relays each, unchanged, in a `Rejected` AuthResponse, and starts no service. Both are rows of [`07-errors.md` §4.3](../../../spec/07-errors.md#43-ble-message-types) for the AuthResponse; `1010 MESSAGE_TIMEOUT`, the station's own code for an unanswered forward, is exercised in Part F.
 
-### Part F — Timeout at 15 Seconds, and a Fallback That Is a MAY
+### Part F — A Timeout Inside the Handshake Budget, and a Fallback That Is a MAY
 
 34. Complete a fresh handshake and present the baseline pass with `counter: 6`. Observe the forwarded AuthorizeOfflinePass REQUEST and **withhold the response entirely**.
-35. Verify the station treats the request as timed out at **15 seconds** (§6 rule 6; [`03-messages.md` §2.1](../../../spec/03-messages.md), which is where this action's timeout is declared — [`07-errors.md` Appendix B](../../../spec/07-errors.md) names `AuthorizeOfflinePass` (15s) as one of eight actions deliberately not repeated in its own table).
+35. Verify the station treats the request as timed out in time to answer the app **within the BLE handshake budget**, 10 seconds from the Hello ([`ble-handshake.md` §1](../../../spec/profiles/offline/ble-handshake.md#1-handshake-overview)), which ends before the action's 15-second response timeout (§6 rule 6; [`03-messages.md` §2.1](../../../spec/03-messages.md), which is where this action's timeout is declared).
 36. Verify the station logs `1010 MESSAGE_TIMEOUT`.
 37. **Both continuations conform. Record which one the station took.** [`authorize-offline-pass.md` §6](../../../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) says the station "**MAY** fall back to local validation if the Offline profile is supported and its `OfflineModeEnabled` is `true`", and that the station's own offline limits then apply; [`04-flows.md` §5c](../../../spec/04-flows.md#5c-partial-b--phone-offline-station-online)'s error-path table restates it, and it is a MAY. A station that refuses instead is conforming, and a case that demanded the fallback would fail a conformant station.
     - **37a — fallback taken.** Verify local validation runs the nine station checks, #1–#4 and #6–#10 ([`06-security.md` §6.1.1](../../../spec/06-security.md#611-offlinepass-validation--10-checks)). Check #5 is withdrawn — a pass carries no station or organization scope ([`offline-pass.md` §2.3](../../../spec/profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)) — so nine is the whole list, not a shortfall. Verify the session then proceeds exactly as a Full Offline session, with a locally signed receipt — Part G arm 2 settles it.
@@ -218,7 +218,7 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
 10. Expiry, limits and rate refusals emit **no** SecurityEvent — only checks #1 and #10 do.
 11. A per-transaction cost above `maxCreditsPerTx` is refused at check #8 (`4004 OFFLINE_PER_TX_EXCEEDED`).
 12. `2014` and `6001` reach the app in the AuthResponse as the server sent them, and `1010` as the station's own, and no substitute code is emitted in their place.
-13. A withheld response times out at **15 seconds** and is logged as `1010 MESSAGE_TIMEOUT`; **either** the local fallback **or** a refusal is conforming, and which one occurred is recorded.
+13. A withheld response times out within the BLE handshake budget, and is logged as `1010 MESSAGE_TIMEOUT`; **either** the local fallback **or** a refusal is conforming, and which one occurred is recorded.
 14. Where the fallback runs, it evaluates the **nine** station-side checks, #1–#4 and #6–#10; check #5 is withdrawn.
 15. A Partial-B session whose station loses MQTT is not ended by the loss: the server does not close it on `ConnectionLostGracePeriod`, and at reconnection the station sends its SessionEnded under the AuthorizeOfflinePass `sessionId` — or, for a stop the server commanded, the StopService RESPONSE it cached, in answer to the repeated REQUEST — and no TransactionEvent. The session settles once, on the first of its end records to arrive — that SessionEnded or the receipt the app uploads — and the other is a duplicate with no effect, both settling on the grant's `creditsAuthorized` and `durationSeconds`. The phone's upload of a receipt the server already settled online is `Duplicate`.
 16. `passCounter` is the same value across the BLE request, the MQTT authorize request, the envelope, and the signed receipt.
@@ -243,7 +243,7 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
 11. A SecurityEvent is written for a **policy** refusal — expiry, epoch, individual revocation, limits, rate — which `authorize-offline-pass.md` §6 forbids the server to emit at authorize time.
 12. Distinct authorization REQUESTs that fail check #1 or #10 collapse into a single `eventId`, erasing attack-attempt visibility.
 13. A rejection is relayed with an `errorCode` or `errorText` other than the server's response carried — a code that names a *different* refusal than the one that occurred is indistinguishable from a correct answer — or a timed-out forward is refused with a code other than `1010`.
-14. The timeout fires later than 15 seconds, or is not logged as `1010`.
+14. The station answers the app later than the BLE handshake budget allows, or does not log the timeout as `1010`.
 15. The station latches into local validation after one timeout instead of forwarding the next request.
 16. The fallback's TransactionEvent, or a receipt the app uploads, carries `sessionId` or `authId` — a schema-invalid message on the pass-form — or omits `offlinePassId` or `passCounter`.
 17. `passCounter` in the envelope differs from the value in the signed `receipt.data`, or from the `counter` presented at authorize time.

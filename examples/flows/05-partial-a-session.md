@@ -92,7 +92,7 @@ The app sees `connectivity: "Offline"` — the station's MQTT is down. Since the
 
 ---
 
-### Step 3: App Reads AvailableServices from FFF2 (14:30:02.600)
+### Step 3: App Asks for AvailableServices on FFF2 (14:30:02.600)
 
 **BLE Write FFF2 (`0x01`), then Notify FFF2 [MSG-028]:**
 
@@ -510,7 +510,7 @@ The station generates a signed receipt:
 
 ### Step 17: App Asks for the Receipt on FFF6 (14:33:03.500)
 
-**BLE Write FFF6 [MSG-041]:** `{"type": "ReceiptRequest", "sessionId": "sess_c4d5e6f7a8b9"}`, answered by a **ReceiptResponse [MSG-042]** notified on FFF6, `result: "Accepted"`, whose `receipt` [MSG-039] is:
+**BLE Write FFF6 [MSG-041]:** `{"type": "ReceiptRequest", "offlineTxId": "otx_e5f6a7b8c9d0"}`, answered by a **ReceiptResponse [MSG-042]** notified on FFF6, `result: "Accepted"`, whose `receipt` [MSG-039] is:
 
 ```json
 {
@@ -577,7 +577,7 @@ The server pre-debited 50 credits. It settles the session from whichever copy of
 
 ### Step 19: App Uploads the Receipt (14:33:05.000)
 
-Since Alice's phone is online, the app uploads the receipt at once ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)). The request body is the Receipt of Step 17, exactly as the app read it from FFF6.
+Since Alice's phone is online, the app uploads the receipt at once ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)). The request body is the Receipt of Step 17, exactly as the app received it on FFF6.
 
 **HTTP Request:**
 
