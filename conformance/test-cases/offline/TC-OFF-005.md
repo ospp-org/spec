@@ -10,7 +10,7 @@ Offline/BLE Profile
 
 ## Purpose
 
-Verify the **Partial B** connectivity scenario end to end — phone offline, station online. The station **MUST** forward an OfflinePass received over BLE to the server via AuthorizeOfflinePass [MSG-002] rather than validating it locally; the server runs the authorize-time gate — checks #1–#4, #6–#10 and #12, with #5 and #11 withdrawn — and answers `Accepted` (granting `sessionId`, `durationSeconds`, `creditsAuthorized`) or `Rejected`; the station starts no service on a rejection and relays the outcome to the app over BLE; the duration clamp is rooted in the server's value and not in the unsigned advisory copy; and — where the station later loses MQTT — the resulting TransactionEvent takes the **pass-form**, and the server applies no second debit — where it settles from that TransactionEvent, a refund-only true-up keyed on `(offlinePassId, passCounter)`.
+Verify the **Partial B** connectivity scenario end to end — phone offline, station online. The station **MUST** forward an OfflinePass received over BLE to the server via AuthorizeOfflinePass [MSG-002] rather than validating it locally; the server runs the authorize-time gate — checks #1–#4, #6–#10 and #12, with #5 and #11 withdrawn — and answers `Accepted` (granting `sessionId`, `durationSeconds`, `creditsAuthorized`) or `Rejected`; the station starts no service on a rejection and relays the outcome to the app over BLE; a requested duration above the server's authorized value is refused, never reduced, and the check is rooted in the server's value and not in the unsigned advisory copy; and — where the station later loses MQTT — the resulting TransactionEvent takes the **pass-form**, and the server applies no second debit — where it settles from that TransactionEvent, a refund-only true-up keyed on `(offlinePassId, passCounter)`.
 
 ## References
 
@@ -24,8 +24,8 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
 - `spec/04-flows.md` §6 (Billing Authority) — the server recomputes; the station's `creditsCharged` is advisory
 - `spec/03-messages.md` §2.1 — the AuthorizeOfflinePass message table: 15 s response timeout, 30 s MQTT expiry, topics
 - `spec/06-security.md` §6.1.1 — the station-local check list (**ten numbered checks; #5 is withdrawn and a station performs the other nine**) and the **counter model** note: `counter` is app-global, and the station **MUST** echo it into the signed receipt as `passCounter`
-- `spec/profiles/offline/ble-session.md` §1 rule 2 — the duration clamp, and that a Partial-B station roots it in the AuthorizeOfflinePass response value, never the unsigned advisory copy
-- `spec/profiles/offline/ble-session.md` §6 rule 1 — the auto-stop timer is the lower of requested and authorized
+- `spec/profiles/offline/ble-session.md` §1 — a requested duration above the authorized one is refused with `3010 MAX_DURATION_EXCEEDED`, never reduced, and a Partial-B station checks it against the AuthorizeOfflinePass response value, never the unsigned advisory copy
+- `spec/profiles/offline/ble-session.md` §6 — the auto-stop timer starts at the requested duration, which an accepted request keeps within the authorized one
 - `spec/profiles/offline/reconciliation.md` §8 — the correlation-key table (the pass-form settles on `(offlinePassId, passCounter)`), and why `sessionId` is unreachable on that form
 - `spec/profiles/offline/reconciliation.md` §8.1 / §8.2 — no-prior-debit settlement, and the settle-once true-up
 - `spec/profiles/offline/reconciliation.md` §6.1 — the reconcile-time gate; checks #12 and #13
@@ -95,7 +95,7 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
 7. Verify the station emits **no** AuthResponse on FFF4 and starts **no** service before the server answers.
 8. **Negative control — this step is the case.** Verify that an AuthorizeOfflinePass REQUEST was in fact published. A station that validated the pass locally would answer the app inside its own handshake budget and put nothing on MQTT; the *presence of the publication* is the only observable that separates Partial B from Full Offline, and every later Part presumes it. If step 4 captured nothing, this case **fails here** and the remaining Parts are not run: they would be measuring a Full Offline station against a Partial B specification.
 
-### Part B — Accepted: the Grant, the Relay, and the Clamp
+### Part B — Accepted: the Grant, the Relay, and the Refusal Above the Grant
 
 9. Answer the REQUEST with the `Accepted` shape of [`authorize-offline-pass-response-full.json`](../../test-vectors/valid/security/authorize-offline-pass-response-full.json), retargeted to this session:
    ```json
@@ -109,10 +109,10 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
 10. Verify the station stores `sessionId`, `durationSeconds` and `creditsAuthorized` (§6 rule 4).
 11. Verify an AuthResponse [MSG-033] on FFF4 with `result: "Accepted"` and `sessionKeyConfirmation` present. There is **no** `sessionId` on AuthResponse — [`auth-response.schema.json`](../../../schemas/ble/auth-response.schema.json) is closed and carries none; the session identifier reaches the app on StartServiceResponse [MSG-035].
 12. If the AuthResponse carries `durationSeconds` or `creditsAuthorized`, verify each equals the server's value. Both are **advisory and unsigned** copies for app UX; nothing may be enforced against them.
-13. Write StartServiceRequest [MSG-034] with `requestedDurationSeconds: 900` — above the authorized `600`. Verify the station **clamps to 600** and does not reject ([`ble-session.md` §1](../../../spec/profiles/offline/ble-session.md) rule 2: clamping is a SHOULD, rejecting is not what the rule asks for).
-14. Verify the clamp was enforced against the value the **AuthorizeOfflinePass response** carried, and verify the auto-stop timer initializes to the lower of requested and authorized — `600` ([`ble-session.md` §6](../../../spec/profiles/offline/ble-session.md) rule 1).
+13. Write StartServiceRequest [MSG-034] with `requestedDurationSeconds: 900` — above the authorized `600`. Verify the station answers `Rejected` with `3010 MAX_DURATION_EXCEEDED`, starts **no** service, and does not reduce the request to `600` ([`ble-session.md` §1](../../../spec/profiles/offline/ble-session.md#1-starting-a-service): a request above the authorized duration is refused, never reduced).
+14. Verify the refusal was made against the value the **AuthorizeOfflinePass response** carried. Then write StartServiceRequest with `requestedDurationSeconds: 600`, verify `Accepted`, and verify the auto-stop timer initializes to `600` ([`ble-session.md` §6](../../../spec/profiles/offline/ble-session.md#6-auto-stop-timer)).
 
-    > **There is no signed duration on this path.** For Partial A the clamp roots in the signed `durationSeconds` claim of `server-signed-auth-claims.schema.json`. Partial B has no signed authorization blob at all: the AuthorizeOfflinePass response is an ordinary MQTT RESPONSE whose integrity comes from the transport, not from a signature over its payload. The rule accommodates this — it names "the `durationSeconds` from the AuthorizeOfflinePass response" for Partial B — and the test asserts exactly that, not a signature that does not exist here.
+    > **There is no signed duration on this path.** For Partial A the check roots in the signed `durationSeconds` claim of `server-signed-auth-claims.schema.json`. Partial B has no signed authorization blob at all: the AuthorizeOfflinePass response is an ordinary MQTT RESPONSE whose integrity comes from the transport, not from a signature over its payload. The rule accommodates this — it names "the `durationSeconds` from the AuthorizeOfflinePass response" for Partial B — and the test asserts exactly that, not a signature that does not exist here.
 15. Let the service run and stop normally. Verify that the SessionEnded for the session, and any MeterValues the station sends for it, carry the `sessionId` of step 9 ([`authorize-offline-pass.md` §6](../../../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules)), and that the server tracks the session in real time and settles it when the station reports its end — never above the `creditsAuthorized` of step 9, adjusting the authorize-time debit by refund only — and that **no** TransactionEvent is emitted for it ([`04-flows.md` §5c](../../../spec/04-flows.md#5c-partial-b--phone-offline-station-online): a Partial-B session is reconciled through TransactionEvent only if the station loses MQTT before it ends). Part G covers the two cases where it is.
 
 ### Part C — Refusal: Expired Pass (check #2 → `2003 OFFLINE_PASS_EXPIRED`)
@@ -213,7 +213,7 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
 2. **The pass is forwarded unmodified,** and the `counter` on the MQTT REQUEST is the `counter` from the BLE OfflineAuthRequest.
 3. **No AuthResponse and no service precede the server's answer.**
 4. On `Accepted`, the station stores `sessionId`, `durationSeconds` and `creditsAuthorized`, and relays `result: "Accepted"` with `sessionKeyConfirmation` — carrying no `sessionId`, which the BLE schema does not admit.
-5. `requestedDurationSeconds` above the authorized value is **clamped to it**, and the clamp is rooted in the AuthorizeOfflinePass response value, never in the unsigned advisory copy on AuthResponse.
+5. `requestedDurationSeconds` above the authorized value is **refused** with `3010 MAX_DURATION_EXCEEDED`, never reduced, and the check is rooted in the AuthorizeOfflinePass response value, never in the unsigned advisory copy on AuthResponse.
 6. A session that stays online end to end reports its SessionEnded, and any MeterValues, under the `sessionId` of the AuthorizeOfflinePass answer, is settled when the station reports its end — never above `creditsAuthorized`, adjusting the authorize-time debit by refund only — and produces **no** TransactionEvent.
 7. An expired pass is **still forwarded**, and is refused by the server at check #2. The profile's code is `2003 OFFLINE_PASS_EXPIRED`; the MQTT response carries `status` and `reason` only.
 8. A replayed `counter` is refused at check #10 (`2005 OFFLINE_COUNTER_REPLAY`, Critical), and the server writes an `OfflinePassRejected` audit record whose `eventId` derives deterministically from the originating REQUEST's `messageId`.
@@ -238,7 +238,7 @@ Verify the **Partial B** connectivity scenario end to end — phone offline, sta
 5. The station starts a service on a `Rejected` response.
 6. The station short-circuits a pass it can see is defective — an expired pass, a bad signature — and refuses it locally instead of forwarding it, while MQTT is up.
 7. A `Rejected` AuthResponse omits `reason` or `errorCode`; the closed BLE schema requires both, and a response missing either is invalid whatever the station knew.
-8. `requestedDurationSeconds` above the authorized value is rejected outright rather than clamped, or is clamped against the unsigned advisory copy rather than the server's value.
+8. `requestedDurationSeconds` above the authorized value is reduced to fit instead of refused — the service starts for the authorized duration or for any other — or the check is made against the unsigned advisory copy rather than the server's value.
 9. A session that stayed online end to end emits a TransactionEvent, creating a second settlement for a session the server already tracked.
 10. No SecurityEvent audit record is written for a signature failure or a counter replay.
 11. A SecurityEvent is written for a **policy** refusal — expiry, epoch, individual revocation, limits, rate — which `authorize-offline-pass.md` §6 forbids the server to emit at authorize time.

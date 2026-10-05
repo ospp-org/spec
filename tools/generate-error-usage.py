@@ -205,7 +205,7 @@ BASELINE = """
 4.2 | TriggerMessage                     | 1010                            | profile    | D1: the waiting sender's own timeout, never a response value
 4.3 | AuthResponse (→ ServerSignedAuth)  | 1012, 2013                      | §4         | D4: not in §4.2.2's checks; 2013 has prose support, 1012 none
 4.3 | AuthResponse (→ ServerSignedAuth)  | 2018                            | profile    | D4: §4.2.2 check #2; the §3.2 registry row places it here
-4.3 | StartServiceResponse               | 3002, 3004, 3005, 3008-3010, 5001-5009 | §4  | D4: ble-session.md §1's table lists 3001, 3003, 5000
+4.3 | StartServiceResponse               | 3002, 3004, 3005, 3008-3009, 5001-5009 | §4  | D4: ble-session.md §1's table lists 3001, 3003, 3010, 5000
 4.3 | StopServiceResponse                | 3006, 3007                      | §4         | D4: no source; the schema has no error member (KNOWN-ISSUES B-3)
 """
 
