@@ -704,7 +704,7 @@ The server, in the order of [`reconciliation.md` §2](../../spec/profiles/offlin
 1. Deduplicates by `offlineTxId` (`otx_a3b4c5d6e7f8d5fa9b53cfa58cb91fa5`). Whichever copy of a receipt arrives first — the station's TransactionEvent or the app's upload — may settle, and once one has settled the other is answered `Duplicate` ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload))
 2. Verifies the receipt signature with the receipt-signing key of the station the signed receipt names (`stationId`)
 3. Records txCounter 8 as forensic evidence (contiguous with the last known counter — noted, not gated on)
-4. Applies the reconcile-time gate: the OfflinePass was valid at the transaction's signed `endedAt`, read through the station's clock offset ([`reconciliation.md` §6.8](../../spec/profiles/offline/reconciliation.md#68-station-clock-offset))
+4. Applies the reconcile-time gate: the OfflinePass was valid at the transaction's signed `startedAt`, the transaction time of a wash its station validated, read through the station's clock offset ([`reconciliation.md` §6.8](../../spec/profiles/offline/reconciliation.md#68-station-clock-offset))
 5. Settles: recomputes the cost from the signed receipt — 30 credits, not above `maxCreditsPerTx` (30) — and debits 30 credits from Bob's wallet
 6. Scores the settled transaction for fraud ([`06-security.md` §7.4](../../spec/06-security.md#74-fraud-detection--offline-transactions)); the score is in the Normal band, so no `FraudDetected` record is written
 7. Creates a session record

@@ -287,7 +287,7 @@ In the order of [`reconciliation.md` §2](../../spec/profiles/offline/reconcilia
 - Deduplication: `otx_a1b2c3d4c6b7798bbf5a1a447c52e848` is not in the ledger
 - Receipt signature: verifies under the receipt-signing key of `stn_a1b2c3d4`, the station the signed receipt names
 - txCounter recorded: 3 (forensic only — gates nothing)
-- Gate: pass `opass_a1c3e500b2d4` was valid at the signed `endedAt` (10:35), read through the station's clock offset (`clockState` `Synchronized`)
+- Gate: pass `opass_a1c3e500b2d4` was valid at the signed `startedAt` (10:30), read through the station's clock offset (`clockState` `Synchronized`)
 - Settlement: 300 s of Eco Program, `TimerExpired`, recomputed from the signed receipt — 50 credits; sub_alice2026 debited (120 -> 70)
 - Fraud score, after settlement: 0.10 — `FirstUseOfStation` (Alice's first transaction at this station); Normal band, no `FraudDetected` record
 - Server session: `sess_01a2b3c4d5e6`
@@ -358,7 +358,7 @@ In the order of [`reconciliation.md` §2](../../spec/profiles/offline/reconcilia
 - Deduplication: `otx_e5f6a7b8d9c04c0edcfa092be0f1ec2d` is not in the ledger
 - Receipt signature: verifies under the receipt-signing key of `stn_a1b2c3d4`, the station the signed receipt names
 - txCounter recorded: 4 (forensic only — gates nothing)
-- Gate: pass `opass_b0b30030c1d2` was valid at the signed `endedAt` (12:18), read through the station's clock offset
+- Gate: pass `opass_b0b30030c1d2` was valid at the signed `startedAt` (12:15), read through the station's clock offset
 - Settlement: 180 s of Standard Program, `TimerExpired`, recomputed from the signed receipt — 24 credits; sub_bob2026 debited (85 -> 61)
 - Fraud score, after settlement: 0.00 — no factor fires; Normal band
 - Server session: `sess_02a2b3c4d5e6`
@@ -430,7 +430,7 @@ In the order of [`reconciliation.md` §2](../../spec/profiles/offline/reconcilia
 - Deduplication: `otx_a9b0c1d2e3f40a9c488a44d8b1ad77e4` is not in the ledger
 - Receipt signature: verifies under the receipt-signing key of `stn_a1b2c3d4`, the station the signed receipt names
 - txCounter recorded: 5 (forensic only — gates nothing)
-- Gate: pass `opass_a1c3e500b2d4` was valid at the signed `endedAt` (13:14), read through the station's clock offset; its `passCounter` 2 has not been settled before for this pass (check #13)
+- Gate: pass `opass_a1c3e500b2d4` was valid at the signed `startedAt` (13:10), read through the station's clock offset; its `passCounter` 2 has not been settled before for this pass (check #13)
 - Settlement: 240 s of Eco Program, `TimerExpired`, recomputed from the signed receipt — 40 credits; sub_alice2026 debited (70 -> 30)
 - Fraud score, after settlement: 0.00 — a second use of the same pass is what a pass is for, and its cumulative uses and credits stay within `maxUses` and `maxTotalCredits`; Alice has now used this station. Normal band
 - Server session: `sess_03a2b3c4d5e6`
@@ -590,7 +590,7 @@ What this does **not** provide is a completeness guarantee. An operator suppress
      |------------------------------->|
      |                                | dedup, verify receipt signature
      |                                | record txCounter (forensic)
-     |                                | gate: pass valid at endedAt
+     |                                | gate: pass valid at startedAt
      |                                | settle: debit Alice 50 credits
      |                                | score: 0.10 (Normal)
      |  Accepted                      |
@@ -602,7 +602,7 @@ What this does **not** provide is a completeness guarantee. An operator suppress
      |------------------------------->|
      |                                | dedup, verify receipt signature
      |                                | record txCounter (forensic)
-     |                                | gate: pass valid at endedAt
+     |                                | gate: pass valid at startedAt
      |                                | settle: debit Bob 24 credits
      |                                | score: 0.00 (Normal)
      |  Accepted                      |
@@ -614,7 +614,7 @@ What this does **not** provide is a completeness guarantee. An operator suppress
      |------------------------------->|
      |                                | dedup, verify receipt signature
      |                                | record txCounter (forensic)
-     |                                | gate: pass valid at endedAt
+     |                                | gate: pass valid at startedAt
      |                                | settle: debit Alice 40 credits
      |                                | score: 0.00 (Normal)
      |  Accepted                      |

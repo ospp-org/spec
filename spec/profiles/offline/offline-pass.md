@@ -128,7 +128,7 @@ Processing **MUST** stop at the first failure.
 >
 > **What the server does about it.** The server's backstop for temporal validity is
 > [`reconciliation.md` §6.1](reconciliation.md#61-check-list) check #9, and it does not read the
-> station's clock alone: it judges the signed `endedAt` corrected by the offset the server measured
+> station's clock alone: it judges the signed `startedAt` corrected by the offset the server measured
 > when the station reconnected, for a receipt whose clock was synchronized, and flags the receipt for
 > review when its clock was not ([`reconciliation.md` §6.8](reconciliation.md#68-station-clock-offset)).
 > The signed times themselves are never rewritten. The guards that read no clock at all — checks
