@@ -786,7 +786,7 @@ reads as a complete enumeration.
 |--------|:------------:|--------------|:-------------------:|--------------------------|
 | StartService (mobile) | 1 | — | 10s | Refund 100%, session → `failed` |
 | StartService (web) | 4 | 0s, +5s, +10s, +15s | 10s | CancelReservation → refund 100%, session → `failed` |
-| StopService | 1 | — | 10s | Session → `failed`, station auto-stops on timer expiry anyway; a Partial-B session stays open, and the REQUEST is repeated, as a new attempt, once the station has reconnected, while the session has not settled on an end record ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4 and 4a) |
+| StopService | 1 | — | 10s | Session → `failed`, station auto-stops on timer expiry anyway; a Partial-B session stays open, and the REQUEST is repeated, as a new attempt, once the station has reconnected before the end of the session's authorized duration ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4 and 4a) |
 | ReserveBay | 1 | — | 5s | Session → `failed`, inform user |
 | CancelReservation | 1 | — | 5s | Server marks reservation as expired locally |
 | Reset | 1 | — | 30s | Log failure, operator notification |
@@ -990,7 +990,7 @@ When errors occur during the session lifecycle, the following refund rules apply
 | All StartService retry attempts fail (web) | 1010, 6002 | Full (credits or local currency) | 100% |
 | ACK_TIMEOUT (mobile) | 6002 | Full (credits) | 100% |
 | Hardware error during active session | 5001–5009 | Partial (pro-rated) | Based on time delivered |
-| Station offline during active session | 1001 (followed by session timeout) | Partial (pro-rated) | Based on time delivered, provisionally: an end record that arrives later trues it down, never up ([`04-flows.md` §6](04-flows.md#settlement-by-service-kind)) — not a Partial-B session, which settles on the first of its end records, or is closed at the end of its authorized duration, provisionally too ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) |
+| Station offline during active session | 1001 (followed by session timeout) | Partial (pro-rated) | Based on time delivered — not a Partial-B session, which settles on the first of its end records, or is closed at the end of its authorized duration ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) |
 | Low-delivery override | — | See [`04-flows.md §6`](04-flows.md) | Defined there, and **not restated here**: it is scoped to a single SessionEnded `reason` and its threshold is a configurable parameter, both of which this table has previously got wrong by restating them |
 | Payment processor refund failure | 4007 | Manual refund queue | Per original amount |
 
