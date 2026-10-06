@@ -421,7 +421,8 @@ A `PowerOn`, `Watchdog`, `ErrorRecovery`, `Reconnect`, `ManualReset` or `Schedul
 online session: no rule ends a session before such a boot, and a station that reboots mid-session resumes the
 session under its `sessionId` ([`05-state-machines.md` §2.3](spec/05-state-machines.md#23-transition-table) and
 §3.5 rule 2). The server waits for the resumed session's end record, closing the session at the end of its
-authorized duration if none arrives — option (d); a session whose bay the StatusNotification after the boot reports
+authorized duration if none arrives — option (d); after a reboot, a boot other than `Reconnect`, a session whose bay
+the StatusNotification after the boot reports
 `Available` — one the station did not resume, or resumed and ended before it reconnected — or `Faulted` with an outcome
 the station could not determine, is settled as online settles one so reported, pro-rata on the time delivered
 ([`connection-lost.md` §6](spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3), and an end
@@ -958,9 +959,9 @@ the server closed the session changes nothing
 ([`authorize-offline-pass.md` §6](spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4a): the
 close stands, final, and only an end record that arrives before it settles the session. Under decision 2 of the same
 day a reboot with one of the six reasons that keep an online session keeps a Partial-B session too, so the boots
-this reaches are a `RemoteReset` or a `FirmwareUpdate` reported after the close, and a boot of any reason that left
-the session unresumed — its record lost or its outcome indeterminate — reported after the end of the session's
-authorized duration; in each the close at that end, a full charge, stands. **What follows is the record, as
+this reaches are a `RemoteReset` or a `FirmwareUpdate` reported after the close, and a reboot, any reason but
+`Reconnect`, whose StatusNotification reports the bay `Available`, or `Faulted` with `5113`, after the end of the
+session's authorized duration; in each the close at that end, a full charge, stands. **What follows is the record, as
 raised.**
 
 **Raised 2026-10-06, by the review of the BLE follow-up.** A station reboot during a Partial-B session follows the
