@@ -2702,7 +2702,7 @@ The `stationConnectivity` field determines which authentication flow the app MUS
 | `bleVersion` | string | Yes | The BLE protocol version of this session — one of the Hello's `bleVersions` |
 | `stationNonce` | string | Yes | Base64-encoded 32-byte random nonce |
 | `stationEphemeralPubKey` | string | Yes | Station's per-handshake ephemeral P-256 public key (compressed SEC1, Base64). ECDH input for the session key (§6.5). |
-| `stationCertificate` | string | Yes | The station's mTLS client certificate, DER, Base64, carrying `id-kp-osppBleStation` ([Chapter 06 §4.4](06-security.md#44-certificate-requirements)). App MUST verify it against a Station CA of its trust bundle and that CA's CRL before sending any credential. |
+| `stationCertificate` | string | Yes | The station's mTLS client certificate, DER, Base64, whose subject CN is the station's `stationId` ([Chapter 06 §4.4](06-security.md#44-certificate-requirements)). App MUST verify it against a Station CA of its trust bundle and that CA's CRL before sending any credential. |
 | `stationConnectivity` | string | Yes | `"Online"` or `"Offline"` |
 | `availableServices` | array | Yes | Every service the station's catalog binds to each of its bays — the app's one source of availability; empty while the station holds no catalog |
 | `availableServices[].bayId` | string | Yes | Bay identifier |
@@ -2722,7 +2722,7 @@ The `stationConnectivity` field determines which authentication flow the app MUS
   "bleVersion": "0.3.0",
   "stationNonce": "7oplt8bFihuLtLP/TirYwqP8RsJOLs0L2rfEzgPoAKI=",
   "stationEphemeralPubKey": "AoB8Dry2qCXwUlmOl0guXd7iJTsjpxcy9AD+RLMZUK1N",
-  "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+  "stationCertificate": "MIICAzCCAamgAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOBtDCBsTAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAjA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNIADBFAiA68HnSIWTR3JTm5kYtjZjERKezdDF2N/qyVrM9FHc2DgIhAOv5S9B8HOhYsQOnPW5Qne3CilfGv5/TnrQ6ujO1RK6Q",
   "stationConnectivity": "Offline",
   "availableServices": [
     {
@@ -2742,7 +2742,7 @@ The `stationConnectivity` field determines which authentication flow the app MUS
     }
   ],
   "catalogDigest": "KEfI0ZXJooFWmbAXgLrTjLkPeF3GyA4gN1i7FvRz2/k=",
-  "stationSignature": "MEQCIGpIfXXGobe9LhKnXl7LfPYTJsLjzkEo/w4/hriQcI0kAiBNeTAtHyBw4/t6i7+OalXvBWjsz70LJT7zT/snQ7PIqg=="
+  "stationSignature": "MEUCIQCQmMQKDLSpYD1EoKmz4hIaORUeuOQOIj/wefJX0G913QIgOeYlU3BwK93RfM5CTbVUeVPdnZLy4Pd+y3ryx+jFViw="
 }
 ```
 
@@ -2826,7 +2826,7 @@ The app MUST request biometric or PIN confirmation from the user before sending 
   "sessionProof": "ObgxpE1Ad+xl6P8fRWtBstqMY2Tjan9oK/LIWofxvrI=",
   "deviceProof": {
     "format": "android-key",
-    "signature": "MEQCIGSOLREN/0LqMg9i6YiauJzRMBy12UreplAq9Hu/LmDyAiB5MYstV08MgyFEYsVsBTrUUbAzEMoOUcnYuswkNkf8Eg=="
+    "signature": "MEUCIQDkVK2UBydLZIcrp09Eh5YOTgLYA4AQtq4k+V/sj5AywgIgVWUHl98RghbG068Oc3CF0uy2tkyv11g0MJV15/TMzYM="
   }
 }
 ```

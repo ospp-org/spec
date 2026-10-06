@@ -13,9 +13,9 @@ vectors and example payloads can be re-verified by any implementer.**
 | `firmware-test-key.pem` / `firmware-test-pub.pem` | ECDSA P-256 (prime256v1) | Firmware image code-signing (spec §4.6). Signs the firmware binary referenced by `firmwareUrl` — NOT the JSON payload. |
 | `session-test-key.bin` | HMAC-SHA256 secret (32 bytes raw) | BLE handshake sessionProof + sessionKeyConfirmation HMACs (`profiles/offline/ble-handshake.md` §4-§5). |
 | `station-ca-test-key.pem` / `station-ca-test-cert.pem` / `station-ca-test-crl.pem` | ECDSA P-256 (prime256v1) | The one Station CA of the trust bundle's set in [`offline-pass-issuance.response.json`](../../examples/payloads/http/offline-pass-issuance.response.json): its self-signed certificate and an empty CRL ([`app-contract.md` §3.4](../../spec/profiles/offline/app-contract.md#34-the-trust-bundle)). It issued every station certificate below. |
-| `station-mtls-test-key.pem` / `station-mtls-test-cert.pem` | ECDSA P-256 (prime256v1) | The station's mTLS client key and certificate (`06-security.md` §4.4): subject `O=OSPP Test, CN=stn_a1b2c3d4`, serial `0A01`, key usage `digitalSignature`, extended key usage `clientAuth` and `id-kp-osppBleStation` (`2.25.57399134409609390163880398392748054115`), valid 2026-01-01 to 2026-12-31. The station presents the certificate in the BLE Challenge and signs the Challenge with the key (`06-security.md` §6.5.2). The station's receipt key is the separate `station-test-key.pem`. |
+| `station-mtls-test-key.pem` / `station-mtls-test-cert.pem` | ECDSA P-256 (prime256v1) | The station's mTLS client key and certificate (`06-security.md` §4.4): subject `O=OSPP Test, CN=stn_a1b2c3d4`, serial `0A01`, key usage `digitalSignature`, extended key usage `clientAuth`, valid 2026-01-01 to 2026-12-31. The station presents the certificate in the BLE Challenge and signs the Challenge with the key (`06-security.md` §6.5.2). The station's receipt key is the separate `station-test-key.pem`. |
 | `station-ca-test-crl-revoking.pem` | — | A CRL of the Station CA that revokes serial `0A03`, for the revoked-certificate case. |
-| `station-mtls-test-cert-no-ospp-eku.pem`, `-no-digital-signature.pem`, `-revoked.pem`, `-expired.pem`, `-other-ca.pem` | ECDSA P-256 (prime256v1) | Certificates over the station's mTLS key that the app's verification gate refuses (`06-security.md` §6.5.2): extended key usage `clientAuth` only (serial `0A02`); key usage `keyAgreement` without `digitalSignature` (`0A05`); revoked by `station-ca-test-crl-revoking.pem` (`0A03`); expired on 2026-02-12 (`0A04`); issued by another CA (`0A06`). |
+| `station-mtls-test-cert-bridge-form.pem`, `-no-digital-signature.pem`, `-revoked.pem`, `-expired.pem`, `-other-ca.pem` | ECDSA P-256 (prime256v1) | Certificates over the station's mTLS key that the app's verification gate refuses (`06-security.md` §6.5.2): a certificate the Station CA issued to a party that is not a station, whose subject CN, `csms-test-server-1`, has the form of a server's own MQTT client, with key usage `digitalSignature` and `keyAgreement` and extended key usage `clientAuth` (serial `0A08`); key usage `keyAgreement` without `digitalSignature` (`0A05`); revoked by `station-ca-test-crl-revoking.pem` (`0A03`); expired on 2026-02-12 (`0A04`); issued by another CA (`0A06`). |
 | `station-other-ca-test-key.pem` / `station-other-ca-test-cert.pem` / `station-other-ca-test-crl.pem` | ECDSA P-256 (prime256v1) | A second Station CA, the issuer of `station-mtls-test-cert-other-ca.pem`, with an empty CRL: no trust bundle of the examples holds it, and the two-CA set of the gate's positive control holds it beside the test Station CA (`06-security.md` §4.2.1). |
 | `station-mtls-test-p384-key.pem` / `station-mtls-test-cert-p384.pem` | ECDSA P-384 (secp384r1) | A station key on another curve and its certificate (serial `0A07`), refused by the gate, which takes only P-256. |
 
@@ -39,14 +39,17 @@ vectors and example payloads can be re-verified by any implementer.**
   `openssl ecparam -name prime256v1 -genkey -noout -out station-mtls-test-key.pem`, a CSR with
   `-subj "/O=OSPP Test/CN=stn_a1b2c3d4"`, and `openssl ca -startdate 20260101000000Z -enddate 20261231235959Z` with the extensions
   `basicConstraints = critical,CA:FALSE`, `keyUsage = critical,digitalSignature`,
-  `extendedKeyUsage = clientAuth,2.25.57399134409609390163880398392748054115`,
+  `extendedKeyUsage = clientAuth`,
   `crlDistributionPoints = URI:http://crl.ospp-test.invalid/station-ca.crl`, `subjectKeyIdentifier = hash`,
   `authorityKeyIdentifier = keyid` (serial `0A01`). The negative certificates are issued over the same CSR, changing one thing
-  each: `extendedKeyUsage = clientAuth` (`0A02`); serial `0A03`, revoked by the revoking CRL; `-startdate 20250901000000Z
+  each: serial `0A03`, revoked by the revoking CRL; `-startdate 20250901000000Z
   -enddate 20260212235959Z` (`0A04`); `keyUsage = critical,keyAgreement` (`0A05`); issued by `station-other-ca-test-key.pem`,
   whose certificate is made like the Station CA's with `-subj "/O=OSPP Test/CN=OSPP Test Other Station CA"` and serial `0552`
-  (`0A06`). The P-384 pair: `openssl ecparam -name secp384r1 -genkey -noout -out station-mtls-test-p384-key.pem` and its
-  certificate with the extensions of `0A01` (serial `0A07`). Private keys are random per generation, like every key here;
+  (`0A06`); and over a CSR with `-subj "/O=OSPP Test/CN=csms-test-server-1"`, with
+  `keyUsage = critical,digitalSignature,keyAgreement` (`0A08`). The P-384 pair: `openssl ecparam -name secp384r1 -genkey -noout -out station-mtls-test-p384-key.pem` and its
+  certificate with the extensions of `0A01` (serial `0A07`). These certificates were issued again on 2026-10-06, over the
+  same keys and serials, without the BLE purpose earlier revisions listed beside `clientAuth`; serial `0A02`, which differed
+  from `0A01` by that purpose alone, is withdrawn. Private keys are random per generation, like every key here;
   `openssl verify -attime 1770976800 -crl_check` confirms the chain, validity and revocation verdicts at 2026-02-13T10:00:00Z,
   and `tools/generate-ble-vectors.mjs` checks them again before it uses any certificate.
 - **The BLE handshake values the tools derive.** `tools/sign-inline-md.mjs` fills, in a worked document, an ephemeral key that is
@@ -79,7 +82,7 @@ Run `tools/verify-example-signatures.mjs` (added in the same change-set that int
 
 Production deployments establish their own keys through the operational PKI:
 
-- **Station mTLS client key**: generated on-device during provisioning; the private key never leaves the secure element / NVS. Its CSR is signed by the operator's Station CA, and the certificate it receives carries `clientAuth` and `id-kp-osppBleStation`: the same key authenticates the station to the broker and, by signing the BLE Challenge, to the app. See `profiles/security/certificate-renewal.md`. The `station-mtls-test-*` files above stand in for it.
+- **Station mTLS client key**: generated on-device during provisioning; the private key never leaves the secure element / NVS. Its CSR is signed by the operator's Station CA, and the certificate it receives carries `clientAuth` and names its `stationId` in the subject CN: the same key authenticates the station to the broker and, by signing the BLE Challenge, to the app. See `profiles/security/certificate-renewal.md`. The `station-mtls-test-*` files above stand in for it.
 - **Station receipt-signing key**: a **separate** on-device ECDSA P-256 key pair, submitted at provisioning as a bare public key and never certified by the Station CA. It **MUST** be distinct from the mTLS client key (`06-security.md` §4.3). The `station-test-key.pem` / `station-test-pub.pem` pair above stands in for this key, not for the mTLS key.
 - **Server ECDSA key**: generated and stored in the server HSM / Vault. Its public keys form the server key set. A station receives the key currently signing at provisioning (`serverVerifyKey`), and the whole set as `OfflinePassPublicKey` at every boot, in the configuration of the `Accepted` BootNotification RESPONSE, and by `ChangeConfiguration` ([`06-security.md` §6.7](../../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)); the app receives none of it.
 - **Firmware code-signing key**: held by the firmware release pipeline. Public certificate pre-provisioned to the station's secure element.

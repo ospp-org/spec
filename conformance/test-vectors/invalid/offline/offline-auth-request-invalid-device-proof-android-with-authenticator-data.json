@@ -28,7 +28,7 @@
   "sessionProof": "Z2CslLwYw8mNTbU2MPkHX4Ijy3oK5+5u+pWl8ycC0QY=",
   "deviceProof": {
     "format": "android-key",
-    "signature": "MEQCIHWmYnYLiEPB7KvEwmfGQaUdzu385+tPHb9RIn32r2/MAiA62dqH8+IkKiCdznI5iyCKytFQEL/kr9DDzFRDC9PQdQ==",
+    "signature": "MEUCIQCxnNoMuKWTT+oWzZc/HYdjZ2nj4jSRe9g7kvWW5d77jQIgK3KW9pntUUO8/csZ94uoTu70mRhYWopqYFYfOaj3ZG8=",
     "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
   }
 }

@@ -21,7 +21,7 @@ Alice is at "Station Alpha -- Example City" and wants to start the Eco Program s
 - Alice's wallet balance: 120 credits
 - Station `stn_a1b2c3d4` has been offline (MQTT disconnected) for ~20 minutes
 - Station BLE is advertising the OSPP service UUID, with the name `OSPP-b2c3d4` in its scan response
-- Station holds its mTLS certificate, whose extended key usage carries `clientAuth` and `id-kp-osppBleStation`
+- Station holds its mTLS certificate, whose extended key usage carries `clientAuth`
 - Station holds the server key set (`OfflinePassPublicKey`) in NVS
 - Station `OfflineModeEnabled` does not matter here: it governs only whether the station accepts an OfflinePass on its own validation, and a ServerSignedAuth is authorized and debited by the server ([`08-configuration.md` §5](../../spec/08-configuration.md#5-offline--ble-configuration-keys))
 - Bay 1 status: `Available`
@@ -249,7 +249,7 @@ The station chooses the BLE version, generates its own nonce and ephemeral key, 
   "bleVersion": "0.3.0",
   "stationNonce": "/kLv1LXl1SeQiYke7YZChUTxp9jfhgRDkkf3CNbr8kY=",
   "stationEphemeralPubKey": "Ao3523QPEUTfo1iHGinnN3e5/DBUw9pmimYeTp7FsMoi",
-  "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+  "stationCertificate": "MIICAzCCAamgAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOBtDCBsTAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAjA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNIADBFAiA68HnSIWTR3JTm5kYtjZjERKezdDF2N/qyVrM9FHc2DgIhAOv5S9B8HOhYsQOnPW5Qne3CilfGv5/TnrQ6ujO1RK6Q",
   "stationConnectivity": "Offline",
   "availableServices": [
     {
@@ -269,11 +269,11 @@ The station chooses the BLE version, generates its own nonce and ephemeral key, 
     }
   ],
   "catalogDigest": "aTJKAIhKyFTwppylQPa+nBz8rl6KwwglWGonzrJX7D4=",
-  "stationSignature": "MEQCICQdjMlWwRCQNOnt1V9ahN1aHW9EtLggWDJIItLIHuLNAiAFshHsI/yM/GmsXe+9akHfVy+IHsGqtIYhMhJ3Roi/zQ=="
+  "stationSignature": "MEUCIQCfl02hXYehiFD7EW2Jr4AzcZ2SE/+BdKoJ+QtTtFEpnAIgfwblPdfHWjL0NHMIFBU6lvf8OadzN5gOkNGVlGkpbGo="
 }
 ```
 
-The `stationConnectivity: "Offline"` confirms the Partial A scenario. Before it relays anything, the app verifies the station against the trust bundle it received in Step 5 ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)): the certificate chains to a Station CA of the bundle, is on no entry of that CA's CRL, carries `id-kp-osppBleStation`, names `stn_a1b2c3d4` — the station the authorization is for — and `stationSignature` verifies under it; and the catalog Alice chose from is the one the Challenge's `catalogDigest` names ([`ble-handshake.md` §3](../../spec/profiles/offline/ble-handshake.md#3-step-2-challenge)). It then derives the BLE session key over the ephemeral ECDH secret (the BLE LTK is **not** used — see `spec/06-security.md` §6.5):
+The `stationConnectivity: "Offline"` confirms the Partial A scenario. Before it relays anything, the app verifies the station against the trust bundle it received in Step 5 ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)): the certificate chains to a Station CA of the bundle, is on no entry of that CA's CRL, names `stn_a1b2c3d4` in its subject CN — a `stationId`, the station the authorization is for — and `stationSignature` verifies under it; and the catalog Alice chose from is the one the Challenge's `catalogDigest` names ([`ble-handshake.md` §3](../../spec/profiles/offline/ble-handshake.md#3-step-2-challenge)). It then derives the BLE session key over the ephemeral ECDH secret (the BLE LTK is **not** used — see `spec/06-security.md` §6.5):
 
 ```
 SessionKey = HKDF-SHA256(

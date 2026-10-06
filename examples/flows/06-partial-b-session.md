@@ -24,7 +24,7 @@ Bob is at "Station Alpha -- Example City" and wants a deluxe treatment on Bay 2.
 - Bob's phone has no internet connectivity (no cellular, no WiFi)
 - Station `stn_a1b2c3d4` is online (MQTT connected, last heartbeat 10 seconds ago)
 - Station BLE is advertising the OSPP service UUID, with the name `OSPP-b2c3d4` in its scan response
-- Station holds its mTLS certificate, whose extended key usage carries `clientAuth` and `id-kp-osppBleStation`; the app holds the trust bundle of its last pass issuance — the Station CA set, each CA with its CRL
+- Station holds its mTLS certificate, whose extended key usage carries `clientAuth`; the app holds the trust bundle of its last pass issuance — the Station CA set, each CA with its CRL
 - Bay 2 status: `Available`
 - Bob has completed biometric/PIN setup in the app
 - OfflinePass `opass_a8b9c0d1e2f3` was issued today with 3 remaining uses
@@ -197,7 +197,7 @@ The station chooses the BLE version, generates its nonce and ephemeral key, repo
   "bleVersion": "0.3.0",
   "stationNonce": "8yucONtbmYBdu+dzLhegGw3QnMNjJcmmoFgNP0vii/k=",
   "stationEphemeralPubKey": "A+WHdiOoxe15cp85al87JonZauxW+Fwg5Uwr0qZmxhaP",
-  "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+  "stationCertificate": "MIICAzCCAamgAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOBtDCBsTAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAjA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNIADBFAiA68HnSIWTR3JTm5kYtjZjERKezdDF2N/qyVrM9FHc2DgIhAOv5S9B8HOhYsQOnPW5Qne3CilfGv5/TnrQ6ujO1RK6Q",
   "stationConnectivity": "Online",
   "availableServices": [
     {
@@ -222,11 +222,11 @@ The station chooses the BLE version, generates its nonce and ephemeral key, repo
     }
   ],
   "catalogDigest": "2UeVddjli82JD0z3ubl8lTsRmYua/QZFqn5lq3qkyfI=",
-  "stationSignature": "MEUCIQDRW5EXxkOyQpCL++3GcvcNvUvs9SDH32qVC1WS3yFW0gIgfwBVkYYifM8dqic6ZwJfe8URwu5D92JD4rPTc4KpwJU="
+  "stationSignature": "MEQCIEUDRQb0d9ZI5OGrJznFYIujSBpRYjbkResCPo6CQlxpAiAKSZJpWNkgBJEnsZQC2INih9ffVii5ONfB4MUcXgsG4g=="
 }
 ```
 
-The `stationConnectivity: "Online"` confirms the Partial B scenario. The app verifies the station against its trust bundle — the certificate chains to a Station CA of the bundle, is on no entry of that CA's CRL, carries `id-kp-osppBleStation`, and `stationSignature` verifies under it ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)) — and confirms that the catalog Bob chose from is the one the Challenge's `catalogDigest` names and that Deluxe Program is available on Bay 2. Both sides derive the BLE session key over the ephemeral ECDH secret (the BLE LTK is **not** used — see `spec/06-security.md` §6.5):
+The `stationConnectivity: "Online"` confirms the Partial B scenario. The app verifies the station against its trust bundle — the certificate chains to a Station CA of the bundle, is on no entry of that CA's CRL, names a `stationId` in its subject CN, and `stationSignature` verifies under it ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)) — and confirms that the catalog Bob chose from is the one the Challenge's `catalogDigest` names and that Deluxe Program is available on Bay 2. Both sides derive the BLE session key over the ephemeral ECDH secret (the BLE LTK is **not** used — see `spec/06-security.md` §6.5):
 
 ```
 SessionKey = HKDF-SHA256(
@@ -276,7 +276,7 @@ The app presents the pre-armed OfflinePass. In Partial B, the station does NOT v
   "sessionProof": "hAW4BhA445dJmlLG78qcEn36DHEhkjIDNt3fZOGGh0c=",
   "deviceProof": {
     "format": "apple-appattest",
-    "signature": "MEUCIQCx3I+HX4x8devC8EboDROXqN4iEMP+AYLJR8vxZ/aatgIgHwYg6Ky65BTVFjjHtxa9ut7LOy8V9rXAIfbzFyopn4w=",
+    "signature": "MEQCIEpDZnDje82ePxj8PHxMVCLSpIK7lA1e2l5bBYNc3jU/AiAJpwSv0ZI16t61tJ2VV7mUXFiJU3DnW9bRP6GXxTGuGA==",
     "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
   }
 }
@@ -329,10 +329,10 @@ Because the station is online (`stationConnectivity: "Online"`), it does NOT per
     "requestedDurationSeconds": 240,
     "deviceProof": {
       "format": "apple-appattest",
-      "signature": "MEUCIQCx3I+HX4x8devC8EboDROXqN4iEMP+AYLJR8vxZ/aatgIgHwYg6Ky65BTVFjjHtxa9ut7LOy8V9rXAIfbzFyopn4w=",
+      "signature": "MEQCIEpDZnDje82ePxj8PHxMVCLSpIK7lA1e2l5bBYNc3jU/AiAJpwSv0ZI16t61tJ2VV7mUXFiJU3DnW9bRP6GXxTGuGA==",
       "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
     },
-    "transcriptHash": "lsWrmnL+S4MGDLFSK/GqMP6Mo0RwywN8SZz1FGKUG6c="
+    "transcriptHash": "3+srIbhfmOKMXv5uBAuyh+c7QFGC/+pklJVDajY07Ng="
   }
 }
 ```

@@ -70,7 +70,6 @@ export const KDF_LABEL_S2A = Buffer.from('OSPP-BLE-v0.6.0-key-station-to-app', '
 export const SESSION_CONFIRM_LABEL = Buffer.from('AuthResponse_OK', 'utf-8');
 export const STATION_SIGNATURE_CONTEXT = 'OSPP BLE station, Challenge signature';
 export const DEVICE_PROOF_LABEL = 'OSPP BLE device proof v1';
-export const OID_OSPP_BLE_STATION = '2.25.57399134409609390163880398392748054115';
 export const OID_CLIENT_AUTH = '1.3.6.1.5.5.7.3.2';
 const OID_KEY_USAGE = '2.5.29.15';
 const OID_EXT_KEY_USAGE = '2.5.29.37';
@@ -606,9 +605,10 @@ export function signStationChallenge(stationKeyPem, helloBytes, challenge) {
 //      that CA's key; `at`, with `skewSeconds`, lies within its validity;
 //   2. its serial is on no entry of that CA's CRL, whose signature verifies under
 //      the CA's key — the CRL as held, whatever its update times;
-//   3. a P-256 key, key usage with digitalSignature, extended key usage with the
-//      OSPP BLE station purpose;
-//   4. stationId = subject CN; equal to `intendedStationId` when one is given;
+//   3. a P-256 key, key usage with digitalSignature;
+//   4. stationId = subject CN, which must be a stationId — a certificate the Station CA
+//      issued to a party that is not a station names none — and equal to
+//      `intendedStationId` when one is given;
 //   5. stationSignature verifies over the content above with the certificate key;
 //   6. any failure → abort, no credential, 2013 BLE_AUTH_FAILED.
 // The set is `stationCas`, [{ caCertPem, crlPem }, …]; a caller holding one CA may pass
@@ -655,9 +655,10 @@ export function stationVerificationGate({ challenge, helloBytes, caCertPem, crlP
   // Step 3.
   if (cert.keyAlg !== OID_EC_PUBLIC_KEY || cert.keyCurve !== OID_PRIME256V1) return fail(3, `key is not P-256 (alg ${cert.keyAlg}, curve ${cert.keyCurve})`);
   if (!cert.keyUsage || !cert.keyUsage.digitalSignature) return fail(3, 'key usage does not include digitalSignature');
-  if (!cert.ekuOids || !cert.ekuOids.includes(OID_OSPP_BLE_STATION)) return fail(3, 'extended key usage does not include id-kp-osppBleStation');
+  // No purpose is read in the extended key usage (06-security.md §4.4); the DER walker's
+  // reading of it is still cross-checked against Node's.
   const nodeEku = node.keyUsage ?? [];
-  if (cert.ekuOids.join(',') !== nodeEku.join(',')) throw new Error(`gate cross-check: EKU disagrees (DER ${cert.ekuOids} vs Node ${nodeEku})`);
+  if ((cert.ekuOids ?? []).join(',') !== nodeEku.join(',')) throw new Error(`gate cross-check: EKU disagrees (DER ${cert.ekuOids} vs Node ${nodeEku})`);
 
   // Step 4.
   const stationId = cert.subjectCN;

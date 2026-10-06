@@ -239,7 +239,7 @@
         "sessionProof": "Z2CslLwYw8mNTbU2MPkHX4Ijy3oK5+5u+pWl8ycC0QY=",
         "deviceProof": {
           "format": "android-key",
-          "signature": "MEQCIHWmYnYLiEPB7KvEwmfGQaUdzu385+tPHb9RIn32r2/MAiA62dqH8+IkKiCdznI5iyCKytFQEL/kr9DDzFRDC9PQdQ=="
+          "signature": "MEUCIQCxnNoMuKWTT+oWzZc/HYdjZ2nj4jSRe9g7kvWW5d77jQIgK3KW9pntUUO8/csZ94uoTu70mRhYWopqYFYfOaj3ZG8="
         }
       }
     },
@@ -305,7 +305,7 @@
         "sessionProof": "Z2CslLwYw8mNTbU2MPkHX4Ijy3oK5+5u+pWl8ycC0Qc=",
         "deviceProof": {
           "format": "android-key",
-          "signature": "MEQCIHWmYnYLiEPB7KvEwmfGQaUdzu385+tPHb9RIn32r2/MAiA62dqH8+IkKiCdznI5iyCKytFQEL/kr9DDzFRDC9PQdQ=="
+          "signature": "MEUCIQCxnNoMuKWTT+oWzZc/HYdjZ2nj4jSRe9g7kvWW5d77jQIgK3KW9pntUUO8/csZ94uoTu70mRhYWopqYFYfOaj3ZG8="
         }
       }
     },
@@ -413,15 +413,15 @@
         "algorithm": "ECDSA-P256-SHA256",
         "key": "derived: the key in the document",
         "base": {
-          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUASQ5OW/y4glQCAIOvZ8Sbo3TApyKmfXheX0PqE9aGg4o=",
-          "signature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV90=",
+          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUAtQxVme1i3avLskKBJ6TOSayXM+OCJv8FlIeLKewUVcA=",
+          "signature": "MEUCIQDJp2R4khf9kGB5S95Z0oKcuGcll+toTlb1I4cACw9nKQIgb1+tuZEcj/M9wRa6+c4qVMlvYCtTw/WxSE+UKC2ipSI=",
           "key": "derived: the key in the document",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAn\nOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcA==\n-----END PUBLIC KEY-----\n",
           "mustVerify": true
         },
         "tampered": {
-          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUAhvp52k7yOgLzuwA5I63QvVKXWO15yuV4e44xwjf5KLs=",
-          "signature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV90=",
+          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUABsHkDQ/LzsxXckn7l1PDwhPbKwHUc21akf4gYGZTkLU=",
+          "signature": "MEUCIQDJp2R4khf9kGB5S95Z0oKcuGcll+toTlb1I4cACw9nKQIgb1+tuZEcj/M9wRa6+c4qVMlvYCtTw/WxSE+UKC2ipSI=",
           "key": "derived: the key in the document",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAn\nOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcA==\n-----END PUBLIC KEY-----\n",
           "mustVerify": false
@@ -432,7 +432,7 @@
         "bleVersion": "0.3.0",
         "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
         "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
-        "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+        "stationCertificate": "MIICAzCCAamgAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOBtDCBsTAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAjA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNIADBFAiA68HnSIWTR3JTm5kYtjZjERKezdDF2N/qyVrM9FHc2DgIhAOv5S9B8HOhYsQOnPW5Qne3CilfGv5/TnrQ6ujO1RK6Q",
         "stationConnectivity": "Offline",
         "availableServices": [
           {
@@ -452,7 +452,7 @@
           }
         ],
         "catalogDigest": "Rh8Y+YN+oKEC9g2dD5GM5EI/0mHXN+A2ewwaZTz7erE=",
-        "stationSignature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV90="
+        "stationSignature": "MEUCIQDJp2R4khf9kGB5S95Z0oKcuGcll+toTlb1I4cACw9nKQIgb1+tuZEcj/M9wRa6+c4qVMlvYCtTw/WxSE+UKC2ipSI="
       }
     },
     {
@@ -477,15 +477,15 @@
         "algorithm": "ECDSA-P256-SHA256",
         "key": "derived: the key in the document",
         "base": {
-          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUASQ5OW/y4glQCAIOvZ8Sbo3TApyKmfXheX0PqE9aGg4o=",
-          "signature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV90=",
+          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUAtQxVme1i3avLskKBJ6TOSayXM+OCJv8FlIeLKewUVcA=",
+          "signature": "MEUCIQDJp2R4khf9kGB5S95Z0oKcuGcll+toTlb1I4cACw9nKQIgb1+tuZEcj/M9wRa6+c4qVMlvYCtTw/WxSE+UKC2ipSI=",
           "key": "derived: the key in the document",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAn\nOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcA==\n-----END PUBLIC KEY-----\n",
           "mustVerify": true
         },
         "tampered": {
-          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUAJ2CKyddLDBtlmpE1DCtY4PDDnPejCR1omHQ7rnQ4U0A=",
-          "signature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV90=",
+          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUAX2VTJT7ihpvD5T1KxDt7wRLttnsYMGWlN6ONghdsBdw=",
+          "signature": "MEUCIQDJp2R4khf9kGB5S95Z0oKcuGcll+toTlb1I4cACw9nKQIgb1+tuZEcj/M9wRa6+c4qVMlvYCtTw/WxSE+UKC2ipSI=",
           "key": "derived: the key in the document",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAn\nOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcA==\n-----END PUBLIC KEY-----\n",
           "mustVerify": false
@@ -496,7 +496,7 @@
         "bleVersion": "0.3.0",
         "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
         "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
-        "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+        "stationCertificate": "MIICAzCCAamgAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOBtDCBsTAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAjA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNIADBFAiA68HnSIWTR3JTm5kYtjZjERKezdDF2N/qyVrM9FHc2DgIhAOv5S9B8HOhYsQOnPW5Qne3CilfGv5/TnrQ6ujO1RK6Q",
         "stationConnectivity": "Offline",
         "availableServices": [
           {
@@ -516,7 +516,7 @@
           }
         ],
         "catalogDigest": "07pUOHvXhU1hZzsh7JWMj9n7Z5D4TbhEEuSGILeGE1w=",
-        "stationSignature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV90="
+        "stationSignature": "MEUCIQDJp2R4khf9kGB5S95Z0oKcuGcll+toTlb1I4cACw9nKQIgb1+tuZEcj/M9wRa6+c4qVMlvYCtTw/WxSE+UKC2ipSI="
       }
     },
     {
@@ -533,22 +533,22 @@
       "what": "stationSignature s-scalar bit flipped",
       "mutation": "stationSignature[-1] ^= 0x01",
       "mutatedPointer": "stationSignature",
-      "was": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV90=",
-      "now": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV9w=",
+      "was": "MEUCIQDJp2R4khf9kGB5S95Z0oKcuGcll+toTlb1I4cACw9nKQIgb1+tuZEcj/M9wRa6+c4qVMlvYCtTw/WxSE+UKC2ipSI=",
+      "now": "MEUCIQDJp2R4khf9kGB5S95Z0oKcuGcll+toTlb1I4cACw9nKQIgb1+tuZEcj/M9wRa6+c4qVMlvYCtTw/WxSE+UKC2ipSM=",
       "schema": "schemas/ble/challenge.schema.json",
       "portable": {
         "algorithm": "ECDSA-P256-SHA256",
         "key": "derived: the key in the document",
         "base": {
-          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUASQ5OW/y4glQCAIOvZ8Sbo3TApyKmfXheX0PqE9aGg4o=",
-          "signature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV90=",
+          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUAtQxVme1i3avLskKBJ6TOSayXM+OCJv8FlIeLKewUVcA=",
+          "signature": "MEUCIQDJp2R4khf9kGB5S95Z0oKcuGcll+toTlb1I4cACw9nKQIgb1+tuZEcj/M9wRa6+c4qVMlvYCtTw/WxSE+UKC2ipSI=",
           "key": "derived: the key in the document",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAn\nOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcA==\n-----END PUBLIC KEY-----\n",
           "mustVerify": true
         },
         "tampered": {
-          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUASQ5OW/y4glQCAIOvZ8Sbo3TApyKmfXheX0PqE9aGg4o=",
-          "signature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV9w=",
+          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUAtQxVme1i3avLskKBJ6TOSayXM+OCJv8FlIeLKewUVcA=",
+          "signature": "MEUCIQDJp2R4khf9kGB5S95Z0oKcuGcll+toTlb1I4cACw9nKQIgb1+tuZEcj/M9wRa6+c4qVMlvYCtTw/WxSE+UKC2ipSM=",
           "key": "derived: the key in the document",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAn\nOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcA==\n-----END PUBLIC KEY-----\n",
           "mustVerify": false
@@ -559,7 +559,7 @@
         "bleVersion": "0.3.0",
         "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
         "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
-        "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+        "stationCertificate": "MIICAzCCAamgAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOBtDCBsTAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAjA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNIADBFAiA68HnSIWTR3JTm5kYtjZjERKezdDF2N/qyVrM9FHc2DgIhAOv5S9B8HOhYsQOnPW5Qne3CilfGv5/TnrQ6ujO1RK6Q",
         "stationConnectivity": "Offline",
         "availableServices": [
           {
@@ -579,7 +579,7 @@
           }
         ],
         "catalogDigest": "Rh8Y+YN+oKEC9g2dD5GM5EI/0mHXN+A2ewwaZTz7erE=",
-        "stationSignature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV9w="
+        "stationSignature": "MEUCIQDJp2R4khf9kGB5S95Z0oKcuGcll+toTlb1I4cACw9nKQIgb1+tuZEcj/M9wRa6+c4qVMlvYCtTw/WxSE+UKC2ipSM="
       }
     },
     {
@@ -603,15 +603,15 @@
         "algorithm": "ECDSA-P256-SHA256",
         "key": "conformance/test-keys/station-other-ca-test-cert.pem",
         "base": {
-          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUASQ5OW/y4glQCAIOvZ8Sbo3TApyKmfXheX0PqE9aGg4o=",
-          "signature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV90=",
+          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUAtQxVme1i3avLskKBJ6TOSayXM+OCJv8FlIeLKewUVcA=",
+          "signature": "MEUCIQDJp2R4khf9kGB5S95Z0oKcuGcll+toTlb1I4cACw9nKQIgb1+tuZEcj/M9wRa6+c4qVMlvYCtTw/WxSE+UKC2ipSI=",
           "key": "derived: the key in the document",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAn\nOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcA==\n-----END PUBLIC KEY-----\n",
           "mustVerify": true
         },
         "tampered": {
-          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUASQ5OW/y4glQCAIOvZ8Sbo3TApyKmfXheX0PqE9aGg4o=",
-          "signature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV90=",
+          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUAtQxVme1i3avLskKBJ6TOSayXM+OCJv8FlIeLKewUVcA=",
+          "signature": "MEUCIQDJp2R4khf9kGB5S95Z0oKcuGcll+toTlb1I4cACw9nKQIgb1+tuZEcj/M9wRa6+c4qVMlvYCtTw/WxSE+UKC2ipSI=",
           "key": "conformance/test-keys/station-other-ca-test-cert.pem",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEMznoD73QwvrawFQ4BplrlGum7aw0\nyKPV8dboSvng4owKhT1Rl0gCk/ME6hASAWvYw/7BRgR89qUskkrURYTjww==\n-----END PUBLIC KEY-----\n",
           "mustVerify": false
@@ -622,7 +622,7 @@
         "bleVersion": "0.3.0",
         "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
         "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
-        "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+        "stationCertificate": "MIICAzCCAamgAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOBtDCBsTAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAjA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNIADBFAiA68HnSIWTR3JTm5kYtjZjERKezdDF2N/qyVrM9FHc2DgIhAOv5S9B8HOhYsQOnPW5Qne3CilfGv5/TnrQ6ujO1RK6Q",
         "stationConnectivity": "Offline",
         "availableServices": [
           {
@@ -642,7 +642,7 @@
           }
         ],
         "catalogDigest": "Rh8Y+YN+oKEC9g2dD5GM5EI/0mHXN+A2ewwaZTz7erE=",
-        "stationSignature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV90="
+        "stationSignature": "MEUCIQDJp2R4khf9kGB5S95Z0oKcuGcll+toTlb1I4cACw9nKQIgb1+tuZEcj/M9wRa6+c4qVMlvYCtTw/WxSE+UKC2ipSI="
       }
     },
     {
@@ -670,15 +670,15 @@
         "algorithm": "ECDSA-P256-SHA256",
         "key": "derived: the key in the document",
         "base": {
-          "signedBytesBase64": "ABhPU1BQIEJMRSBkZXZpY2UgcHJvb2YgdjEAIJ6AHfq9vDyaQefvMY42nWwL2q7zFuIxyhlHMcly8UZrAAxzdG5fYTFiMmMzZDQAGm9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDdjNmI1AAE3ABBiYXlfYTFiMmMzZDRlNWY2AAlzdmNfYmFzaWMAAzMwMA==",
-          "signature": "MEQCIHWmYnYLiEPB7KvEwmfGQaUdzu385+tPHb9RIn32r2/MAiA62dqH8+IkKiCdznI5iyCKytFQEL/kr9DDzFRDC9PQdQ==",
+          "signedBytesBase64": "ABhPU1BQIEJMRSBkZXZpY2UgcHJvb2YgdjEAIH5p0IVlGmuQTpNbvgraztY0z3pNtNB0HFpt72K1Fy5cAAxzdG5fYTFiMmMzZDQAGm9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDdjNmI1AAE3ABBiYXlfYTFiMmMzZDRlNWY2AAlzdmNfYmFzaWMAAzMwMA==",
+          "signature": "MEUCIQCxnNoMuKWTT+oWzZc/HYdjZ2nj4jSRe9g7kvWW5d77jQIgK3KW9pntUUO8/csZ94uoTu70mRhYWopqYFYfOaj3ZG8=",
           "key": "derived: the key in the document",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAETXAgFlQSOI+eoklpARWRQLE10FJE\nW6Kp0wzI15dYrlQ2ZBh9c7Lm5LnJ7JMuwJEC2yMb32qY0QLvAV/Iaw4MKg==\n-----END PUBLIC KEY-----\n",
           "mustVerify": true
         },
         "tampered": {
-          "signedBytesBase64": "ABhPU1BQIEJMRSBkZXZpY2UgcHJvb2YgdjEAIJ6AHfq9vDyaQefvMY42nWwL2q7zFuIxyhlHMcly8UZrAAxzdG5fYTFiMmMzZDQAGm9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDdjNmI1AAE3ABBiYXlfYTFiMmMzZDRlNWY2AAlzdmNfYmFzaWMAAzYwMA==",
-          "signature": "MEQCIHWmYnYLiEPB7KvEwmfGQaUdzu385+tPHb9RIn32r2/MAiA62dqH8+IkKiCdznI5iyCKytFQEL/kr9DDzFRDC9PQdQ==",
+          "signedBytesBase64": "ABhPU1BQIEJMRSBkZXZpY2UgcHJvb2YgdjEAIH5p0IVlGmuQTpNbvgraztY0z3pNtNB0HFpt72K1Fy5cAAxzdG5fYTFiMmMzZDQAGm9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDdjNmI1AAE3ABBiYXlfYTFiMmMzZDRlNWY2AAlzdmNfYmFzaWMAAzYwMA==",
+          "signature": "MEUCIQCxnNoMuKWTT+oWzZc/HYdjZ2nj4jSRe9g7kvWW5d77jQIgK3KW9pntUUO8/csZ94uoTu70mRhYWopqYFYfOaj3ZG8=",
           "key": "derived: the key in the document",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAETXAgFlQSOI+eoklpARWRQLE10FJE\nW6Kp0wzI15dYrlQ2ZBh9c7Lm5LnJ7JMuwJEC2yMb32qY0QLvAV/Iaw4MKg==\n-----END PUBLIC KEY-----\n",
           "mustVerify": false
@@ -714,7 +714,7 @@
         "sessionProof": "Z2CslLwYw8mNTbU2MPkHX4Ijy3oK5+5u+pWl8ycC0QY=",
         "deviceProof": {
           "format": "android-key",
-          "signature": "MEQCIHWmYnYLiEPB7KvEwmfGQaUdzu385+tPHb9RIn32r2/MAiA62dqH8+IkKiCdznI5iyCKytFQEL/kr9DDzFRDC9PQdQ=="
+          "signature": "MEUCIQCxnNoMuKWTT+oWzZc/HYdjZ2nj4jSRe9g7kvWW5d77jQIgK3KW9pntUUO8/csZ94uoTu70mRhYWopqYFYfOaj3ZG8="
         }
       }
     },
@@ -735,22 +735,22 @@
       "what": "deviceProof signature s-scalar bit flipped",
       "mutation": "deviceProof.signature[-1] ^= 0x01",
       "mutatedPointer": "deviceProof/signature",
-      "was": "MEQCIHWmYnYLiEPB7KvEwmfGQaUdzu385+tPHb9RIn32r2/MAiA62dqH8+IkKiCdznI5iyCKytFQEL/kr9DDzFRDC9PQdQ==",
-      "now": "MEQCIHWmYnYLiEPB7KvEwmfGQaUdzu385+tPHb9RIn32r2/MAiA62dqH8+IkKiCdznI5iyCKytFQEL/kr9DDzFRDC9PQdA==",
+      "was": "MEUCIQCxnNoMuKWTT+oWzZc/HYdjZ2nj4jSRe9g7kvWW5d77jQIgK3KW9pntUUO8/csZ94uoTu70mRhYWopqYFYfOaj3ZG8=",
+      "now": "MEUCIQCxnNoMuKWTT+oWzZc/HYdjZ2nj4jSRe9g7kvWW5d77jQIgK3KW9pntUUO8/csZ94uoTu70mRhYWopqYFYfOaj3ZG4=",
       "schema": "schemas/ble/offline-auth-request.schema.json",
       "portable": {
         "algorithm": "ECDSA-P256-SHA256",
         "key": "derived: the key in the document",
         "base": {
-          "signedBytesBase64": "ABhPU1BQIEJMRSBkZXZpY2UgcHJvb2YgdjEAIJ6AHfq9vDyaQefvMY42nWwL2q7zFuIxyhlHMcly8UZrAAxzdG5fYTFiMmMzZDQAGm9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDdjNmI1AAE3ABBiYXlfYTFiMmMzZDRlNWY2AAlzdmNfYmFzaWMAAzMwMA==",
-          "signature": "MEQCIHWmYnYLiEPB7KvEwmfGQaUdzu385+tPHb9RIn32r2/MAiA62dqH8+IkKiCdznI5iyCKytFQEL/kr9DDzFRDC9PQdQ==",
+          "signedBytesBase64": "ABhPU1BQIEJMRSBkZXZpY2UgcHJvb2YgdjEAIH5p0IVlGmuQTpNbvgraztY0z3pNtNB0HFpt72K1Fy5cAAxzdG5fYTFiMmMzZDQAGm9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDdjNmI1AAE3ABBiYXlfYTFiMmMzZDRlNWY2AAlzdmNfYmFzaWMAAzMwMA==",
+          "signature": "MEUCIQCxnNoMuKWTT+oWzZc/HYdjZ2nj4jSRe9g7kvWW5d77jQIgK3KW9pntUUO8/csZ94uoTu70mRhYWopqYFYfOaj3ZG8=",
           "key": "derived: the key in the document",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAETXAgFlQSOI+eoklpARWRQLE10FJE\nW6Kp0wzI15dYrlQ2ZBh9c7Lm5LnJ7JMuwJEC2yMb32qY0QLvAV/Iaw4MKg==\n-----END PUBLIC KEY-----\n",
           "mustVerify": true
         },
         "tampered": {
-          "signedBytesBase64": "ABhPU1BQIEJMRSBkZXZpY2UgcHJvb2YgdjEAIJ6AHfq9vDyaQefvMY42nWwL2q7zFuIxyhlHMcly8UZrAAxzdG5fYTFiMmMzZDQAGm9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDdjNmI1AAE3ABBiYXlfYTFiMmMzZDRlNWY2AAlzdmNfYmFzaWMAAzMwMA==",
-          "signature": "MEQCIHWmYnYLiEPB7KvEwmfGQaUdzu385+tPHb9RIn32r2/MAiA62dqH8+IkKiCdznI5iyCKytFQEL/kr9DDzFRDC9PQdA==",
+          "signedBytesBase64": "ABhPU1BQIEJMRSBkZXZpY2UgcHJvb2YgdjEAIH5p0IVlGmuQTpNbvgraztY0z3pNtNB0HFpt72K1Fy5cAAxzdG5fYTFiMmMzZDQAGm9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDdjNmI1AAE3ABBiYXlfYTFiMmMzZDRlNWY2AAlzdmNfYmFzaWMAAzMwMA==",
+          "signature": "MEUCIQCxnNoMuKWTT+oWzZc/HYdjZ2nj4jSRe9g7kvWW5d77jQIgK3KW9pntUUO8/csZ94uoTu70mRhYWopqYFYfOaj3ZG4=",
           "key": "derived: the key in the document",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAETXAgFlQSOI+eoklpARWRQLE10FJE\nW6Kp0wzI15dYrlQ2ZBh9c7Lm5LnJ7JMuwJEC2yMb32qY0QLvAV/Iaw4MKg==\n-----END PUBLIC KEY-----\n",
           "mustVerify": false
@@ -786,7 +786,7 @@
         "sessionProof": "Z2CslLwYw8mNTbU2MPkHX4Ijy3oK5+5u+pWl8ycC0QY=",
         "deviceProof": {
           "format": "android-key",
-          "signature": "MEQCIHWmYnYLiEPB7KvEwmfGQaUdzu385+tPHb9RIn32r2/MAiA62dqH8+IkKiCdznI5iyCKytFQEL/kr9DDzFRDC9PQdA=="
+          "signature": "MEUCIQCxnNoMuKWTT+oWzZc/HYdjZ2nj4jSRe9g7kvWW5d77jQIgK3KW9pntUUO8/csZ94uoTu70mRhYWopqYFYfOaj3ZG4="
         }
       }
     },

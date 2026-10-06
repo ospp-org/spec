@@ -35,7 +35,7 @@ import { canonicalForm } from './canonical-form.mjs';
 import { ecdsaVerify } from '@ospp/protocol/server';
 import {
   runRfcAnchors, SALT_V3, KDF_LABEL_A2S, KDF_LABEL_S2A, SESSION_CONFIRM_LABEL,
-  STATION_SIGNATURE_CONTEXT, DEVICE_PROOF_LABEL, OID_OSPP_BLE_STATION,
+  STATION_SIGNATURE_CONTEXT, DEVICE_PROOF_LABEL,
   sha256, hmacSha256, lp, nonce96, wireBytes, ecdhSharedX, hkdf, hkdfExpand,
   transcriptHashOf, sessionProofMessage, chachaPolySeal, chachaPolyOpen, validatePublicKey,
   isLowS, stationSignedContent, stationVerificationGate, certificatePublicKey,
@@ -92,7 +92,6 @@ check('k_app_to_station label', oracle.constants.kdfLabelAppToStation, KDF_LABEL
 check('k_station_to_app label', oracle.constants.kdfLabelStationToApp, KDF_LABEL_S2A.toString('utf-8'));
 check('station signature context', oracle.constants.stationSignatureContext, STATION_SIGNATURE_CONTEXT);
 check('device proof label', oracle.constants.deviceProofLabel, DEVICE_PROOF_LABEL);
-check('id-kp-osppBleStation', oracle.constants.idKpOsppBleStation, OID_OSPP_BLE_STATION);
 check('device proof formats == device-proof.schema.json enum', canonicalForm(oracle.constants.deviceProofFormats), canonicalForm(FORMATS));
 
 const scenarioByName = {};

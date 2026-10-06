@@ -60,7 +60,7 @@ The station responds to the Hello by sending a Challenge notification on charact
 | `bleVersion` | string | Yes | The BLE protocol version of this session — one of the Hello's `bleVersions`, chosen by the station. |
 | `stationNonce` | string | Yes | Base64-encoded 32-byte cryptographically random nonce (exactly 44 Base64 characters). |
 | `stationEphemeralPubKey` | string | Yes | Station's per-handshake ephemeral P-256 public key, compressed SEC1, Base64 (44 chars; Pin 2). Its ECDH with the app's ephemeral key is the session key's input (§6). Freshly generated per handshake. |
-| `stationCertificate` | string | Yes | The station's mTLS client certificate, DER, Base64 ([06-security.md §4.4](../../06-security.md#44-certificate-requirements)), carrying the extended key usage `id-kp-osppBleStation`. |
+| `stationCertificate` | string | Yes | The station's mTLS client certificate, DER, Base64 ([06-security.md §4.4](../../06-security.md#44-certificate-requirements)), whose subject CN is the station's `stationId`. |
 | `stationConnectivity` | string | Yes | `"Online"` or `"Offline"` -- determines which auth path the app **MUST** use. |
 | `availableServices` | array | Yes | Every service the station's catalog binds to each of its bays, each `{bayId, serviceId, available}`, `available` saying whether the station can start it now — empty while the station holds no catalog. The app's one source of availability ([ble-transport.md §4](ble-transport.md#4-available-services-fff2)). |
 | `catalogDigest` | string | Yes | SHA-256 of the OSPP Canonical Form ([06-security.md §4.8](../../06-security.md#48-ospp-canonical-form)) of the catalog the station serves on FFF2 now, Base64 (44 chars) ([ble-transport.md §4](ble-transport.md#4-available-services-fff2)). It binds that catalog — its bays, their numbers, the services and their names and prices — to the handshake: the station signs it with the rest of the Challenge. |
@@ -78,7 +78,7 @@ The `stationConnectivity` field is critical for path selection:
 
 A phone and a station that are both online use the online session flow, not BLE.
 
-**App verification gate (Normative).** Before it derives the session key, and before it sends any OfflinePass or ServerSignedAuth, the app **MUST** pass the gate of [06-security.md §6.5.2](../../06-security.md#652-station-authentication--the-stations-certificate): the certificate chains to a Station CA of its trust bundle, is valid now, is on no entry of that CA's CRL, carries `digitalSignature` and `id-kp-osppBleStation`, names the intended station where the app holds one from an out-of-band channel, and `stationSignature` verifies under it. On any failure it aborts with `2013 BLE_AUTH_FAILED` and sends no credential.
+**App verification gate (Normative).** Before it derives the session key, and before it sends any OfflinePass or ServerSignedAuth, the app **MUST** pass the gate of [06-security.md §6.5.2](../../06-security.md#652-station-authentication--the-stations-certificate): the certificate chains to a Station CA of its trust bundle, is valid now, is on no entry of that CA's CRL, carries `digitalSignature`, names a `stationId` in its subject CN — the intended station's where the app holds one from an out-of-band channel — and `stationSignature` verifies under it. On any failure it aborts with `2013 BLE_AUTH_FAILED` and sends no credential.
 
 **Example**, whose `catalogDigest` names the catalog of the example in [ble-transport.md §4](ble-transport.md#4-available-services-fff2):
 
@@ -89,7 +89,7 @@ A phone and a station that are both online use the online session flow, not BLE.
   "bleVersion": "0.3.0",
   "stationNonce": "bt8L0mYAoDDqk+6swnQMgM0lDWMe+tPXBvaj8A4TfR0=",
   "stationEphemeralPubKey": "AwwZpLQ0CxbV0HOXDPuQEv+418VzE/RupNS7oUHka6AX",
-  "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+  "stationCertificate": "MIICAzCCAamgAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOBtDCBsTAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAjA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNIADBFAiA68HnSIWTR3JTm5kYtjZjERKezdDF2N/qyVrM9FHc2DgIhAOv5S9B8HOhYsQOnPW5Qne3CilfGv5/TnrQ6ujO1RK6Q",
   "stationConnectivity": "Offline",
   "availableServices": [
     {
@@ -104,7 +104,7 @@ A phone and a station that are both online use the online session flow, not BLE.
     }
   ],
   "catalogDigest": "di1rJvk5MMuI0K6zbQb/pVJnc5QQB8NSFAENH+R5goI=",
-  "stationSignature": "MEUCIQCDMgEktywuiGPdndfl0zVDO/ixGnZ1XruNp1B6TahM1QIgUngZJRX3Ldv1KHkaW3UyhxyVPcE5nlQjRQEGyHHnwAs="
+  "stationSignature": "MEUCIQCRQYZa51L8e0gKxVnYoAb5rZjTioaF+5uULxc2xqli6wIgERqMQRo6wV7di+e5zkFJ/m6HNprR8+UrJQwZJhnJsw0="
 }
 ```
 
@@ -177,7 +177,7 @@ The prior 4-input hex construction (which additionally bound `bayId`/`serviceId`
   "sessionProof": "ObgxpE1Ad+xl6P8fRWtBstqMY2Tjan9oK/LIWofxvrI=",
   "deviceProof": {
     "format": "android-key",
-    "signature": "MEUCIQCuPvU1IfXnkwx3wHRvhXkFEOvgQKF2tYDaMtKHFTqb5QIgVn3kd+dkOBDPUHHpgVCncV+gckIrotS8AixULTVIazU="
+    "signature": "MEUCIQCRVii4dLPZNkTigU7FrulDW24KGTpR2Lh8vuNYiK+l0AIgVjRDv8lnaNVz+OT7HDDVO7I0YmQiEsvHnP0pmAz+vX4="
   }
 }
 ```
