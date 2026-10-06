@@ -991,7 +991,7 @@ When errors occur during the session lifecycle, the following refund rules apply
 | All StartService retry attempts fail (web) | 1010, 6002 | Full (credits or local currency) | 100% |
 | ACK_TIMEOUT (mobile) | 6002 | Full (credits) | 100% |
 | Hardware error during active session | 5001–5009 | Partial (pro-rated) | Based on time delivered |
-| Station offline during active session | 1001 (followed by session timeout) | Partial (pro-rated) | Based on time delivered — not a Partial-B session, which settles on the first of its end records, or is closed at the end of its authorized duration ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) |
+| Station offline during active session | 1001 (followed by session timeout) | None | Full pre-authorized amount charged (the station runs the service to its end through the loss), and the close marked as an anomaly — not a Partial-B session, which settles on the first of its end records, or is closed at the end of its authorized duration ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) |
 | Low-delivery override | — | See [`04-flows.md §6`](04-flows.md) | Defined there, and **not restated here**: it is scoped to a single SessionEnded `reason` and its threshold is a configurable parameter, both of which this table has previously got wrong by restating them |
 | Payment processor refund failure | 4007 | Manual refund queue | Per original amount |
 

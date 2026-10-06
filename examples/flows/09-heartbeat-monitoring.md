@@ -417,4 +417,4 @@ If a user (e.g., Alice) tries to start a session at this station, the app shows:
 
 3. **Bay status becomes unknown.** When a station goes offline, its bay statuses are shown as unknown (grey) rather than their last known state. This prevents users from attempting to start sessions at bays that may have changed state while offline.
 
-5. **No active sessions = simpler handling.** If there were active sessions when the station went offline, the server would also need to handle session timeout/refund logic (see Flow 10 for error recovery during active sessions).
+5. **No active sessions = simpler handling.** If there were active sessions when the station went offline, the server would also need to handle session timeout and settlement logic (see Flow 10 for error recovery during active sessions).
