@@ -179,7 +179,8 @@ until its cryptographic construction has passed the review of
     [`offline-pass.md` §4](spec/profiles/offline/offline-pass.md#4-validation-checks-10)).
 15. **Labels.** The Partial-B settlement rests on the EXPERIMENTAL construction under reconciliation's stable label
     ([`spec/profiles/offline/README.md`](spec/profiles/offline/README.md), the documents table).
-16. **Leftover wording.** Flow 01 calls FFF2 *readable*, where it is written for and notified
+16. **Leftover wording.** Flow 01 calls FFF2 *readable*, where it is written for and notified, and FFF6 *readable*,
+    where it is written and notified, and its BLE initialization step carries no EXPERIMENTAL status
     ([flow 01](examples/flows/01-boot-sequence.md)); TC-OFF-003 and TC-OFF-004 carry `deviceId` placeholders
     in their TransactionEvent examples ([TC-OFF-003](conformance/test-cases/offline/TC-OFF-003.md);
     [TC-OFF-004](conformance/test-cases/offline/TC-OFF-004.md)).
@@ -228,8 +229,9 @@ until its cryptographic construction has passed the review of
     wash's authorization was accepted ([`reconciliation.md` §7](spec/profiles/offline/reconciliation.md#7-fraud-detection);
     [`offline-pass.md` §6](spec/profiles/offline/offline-pass.md#6-lifecycle)); the lists of what a later Partial-B
     record is a duplicate of omit the server's settlement at a boot in
-    [`session-ended.md` §5](spec/profiles/transaction/session-ended.md#5-processing-rules), the first bullet of
-    [`reconciliation.md` §3](spec/profiles/offline/reconciliation.md#3-deduplication-offlinetxid) rule 5,
+    [`session-ended.md` §5](spec/profiles/transaction/session-ended.md#5-processing-rules), the bullet of
+    [`reconciliation.md` §3](spec/profiles/offline/reconciliation.md#3-deduplication-offlinetxid) rule 5 on a receipt
+    that arrives after the session settled,
     [`offline-pass.md` §6](spec/profiles/offline/offline-pass.md#6-lifecycle) and the guide's reconciliation steps 2
     and 7 ([implementors guide §3.6](guides/implementors-guide.md#36-offline-reconciliation)); the transaction time is
     restated as two moments without §6.1's case of a wash a station ran on its own validation after the server had

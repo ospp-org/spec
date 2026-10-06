@@ -536,7 +536,8 @@ than an inbound message at all, and `5103 STORAGE_ERROR` is a write fault on a w
 > discriminator.** [`update-service-catalog.md` §7](profiles/device-management/update-service-catalog.md)
 > lists `5103` beside `5025` on the same action, and both cells named storage. They are not one
 > condition: the separator is **whether the write was attempted** — a pre-write capacity judgement
-> on a working store is `5025`, an attempted write that failed is `5103` — which is the same
+> on a working store is `5025`, as is, at a station that declares the Offline / BLE profile, a catalog
+> beyond the bounds of that document's rule 9a, and an attempted write that failed is `5103` — which is the same
 > distinction [`ble-session.md` §1](profiles/offline/ble-session.md) rule 3 already draws between
 > `5103` and `5111`. Nor are they one class by reach: [§4](#4-error-code-usage-per-message) lists
 > `5103` against **5** actions — StartService, UpdateFirmware, GetDiagnostics,

@@ -42,7 +42,7 @@ vectors and example payloads can be re-verified by any implementer.**
   `extendedKeyUsage = clientAuth`,
   `crlDistributionPoints = URI:http://crl.ospp-test.invalid/station-ca.crl`, `subjectKeyIdentifier = hash`,
   `authorityKeyIdentifier = keyid` (serial `0A01`). The negative certificates are issued over the same CSR, changing one thing
-  each: serial `0A03`, revoked by the revoking CRL; `-startdate 20250901000000Z
+  each but the last, which changes two: serial `0A03`, revoked by the revoking CRL; `-startdate 20250901000000Z
   -enddate 20260212235959Z` (`0A04`); `keyUsage = critical,keyAgreement` (`0A05`); issued by `station-other-ca-test-key.pem`,
   whose certificate is made like the Station CA's with `-subj "/O=OSPP Test/CN=OSPP Test Other Station CA"` and serial `0552`
   (`0A06`); and over a CSR with `-subj "/O=OSPP Test/CN=csms-test-server-1"`, with

@@ -249,6 +249,8 @@ A server **MUST NOT** issue an additional debit above that amount for any reason
 
 ### 8.1 No prior debit (Full Offline / direct Partial B)
 
+The receipt of an authorization whose debit a lapse or an expiry refunded is settled here too, under an idempotency key of its own (§8.2 rule 3).
+
 1. **The server recomputes the settled cost. It does not read it off the wire.** Per the
    **Billing Authority** rule ([`04-flows.md` §6](../../04-flows.md#billing-authority)), the server
    **MUST** compute the amount from the signed receipt and the tariff for that receipt's
