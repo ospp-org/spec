@@ -596,7 +596,7 @@ A connection runs on a floor that current phones and BLE stacks support by defau
 ([`ble-transport.md` §10](spec/profiles/offline/ble-transport.md#10-connection-parameters)): an ATT_MTU of 185 to 247
 octets, the station answering the MTU exchange with 247; the LE Data Packet Length Extension at 251 octets; and a
 connection interval of at most 30 ms, which the station asks for. The sources, each by section: Apple's Accessory Design
-Guidelines, Release R31, §58.6, §58.7 and §58.11; WWDC 2017 session 712; Android 14's behavior changes and
+Guidelines, Release R31, §58.6, §58.7 and §58.11; Android 14's behavior changes and
 `BluetoothGatt`; AOSP `packages/modules/Bluetooth` at `745ee92b` (`le_impl.h`, `l2c_ble.cc`, `gatt_cl.cc`); and the
 Core Specification v5.4. On that floor one fragment is one link-layer PDU, and a connection event carries at least one:
 
@@ -610,8 +610,9 @@ The bound on `availableServices` was added by the session's review. With FFF2 bo
 under the limit and made a Challenge of more than 34,000 octets, beyond the five seconds at the floor.
 
 Apple publishes no MTU figure and grants a requested interval at its discretion: the floor is what its stack asks for,
-as reported, and what WWDC 2017 names its baseline interval, and a phone that grants a longer interval transfers more
-slowly by the same factor. Apple also asks an accessory to answer the MTU exchange with no less than the device asks
+as reported, and what its guidelines let an accessory request, and a phone that grants a longer interval, or a shorter
+link-layer payload, transfers more slowly. The review of the session replaced a source it found dead, WWDC 2017 session
+712, whose page now leads to the year's index, with the guidelines' §58.6 and §58.7. Apple also asks an accessory to answer the MTU exchange with no less than the device asks
 for, and the station's 247 can be less, so that a fragment never needs a second link-layer PDU. The decision 7 record
 below, measured on 2026-10-05 for a bitmap Challenge and a bound the spec did not then set, is superseded. **What
 follows is the record, as raised.**
