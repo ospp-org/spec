@@ -485,12 +485,14 @@ transport and time budget. The proof cannot be made:
   [`service-item.schema.json`](schemas/common/service-item.schema.json) — 64-character identifiers,
   128-character names, two per-minute prices of 1 or of 2^53 − 1 (the schemas set no maximum, and
   [RFC 8259 §6](https://www.rfc-editor.org/rfc/rfc8259#section-6) calls that the interoperable range),
-  64 bindings — in an envelope whose own members are at their
-  longest, it holds 24 services bound to all 64 bays: 1,536 bay–service pairs (21 services, 1,344 pairs,
+  64 bindings to program 32 — in an envelope with a 64-character `messageId`, a five-character
+  `protocolVersion` and a 44-character `mac`, it holds 24 services bound to all 64 bays: 1,536 bay–service pairs (21 services, 1,344 pairs,
   with 4-octet characters in the names; 19, 1,216 pairs, with escaped control characters).
   [`update-service-catalog.md` §6](spec/profiles/device-management/update-service-catalog.md#6-processing-rules)
-  sizes a worst-case entry, larger than these, at 2,762 octets, 22 to an envelope. With one-character
-  names it holds 27 services on all 64 bays, 1,728 pairs, or 429 services on one bay.
+  sizes a worst-case entry, larger than these, at 2,762 octets, 22 to an envelope, and a longer `mac`,
+  which the envelope schema allows up to 1,024 characters, holds fewer. With one-character names, the
+  shortest service identifiers, one fixed price of 1 and program 1, it holds 27 services on all 64 bays,
+  1,728 pairs, or 429 services on one bay.
 - **Its FFF2 value.** As [`ble-transport.md` §4](spec/profiles/offline/ble-transport.md#4-available-services-fff2)
   defines it, each bay repeating its services' names and prices: 470,645 octets or more for those 24
   services with ASCII names, and 1,152,245 or more for those 19 with escaped control characters. With each
@@ -505,7 +507,7 @@ transport and time budget. The proof cannot be made:
   1,155-octet Challenge, which carries `catalogDigest`, takes 68 fragments and 272 seconds, the bitmap
   Challenge the decision describes at its largest (3,181 octets: a 2,048-character certificate,
   `catalogDigest`, and those 27 services on each of 64 bays, each bay's bitmap a Base64 string in a JSON
-  array, an encoding the decision does not fix) 188 fragments and 752 seconds, and the
+  array under a member `availability`, an encoding the decision does not fix) 188 fragments and 752 seconds, and the
   catalog listed once 1,663 fragments — more than a message can carry — and 6,652 seconds, against the
   5 seconds §11 rule 4 allows a message and the 10 seconds of the handshake. At the fastest interval,
   7.5 milliseconds, with one PDU per event and no Data Length Extension, the bitmap Challenge takes

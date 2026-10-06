@@ -518,7 +518,7 @@ Server Signing Key set (ECDSA P-256, server-side HSM; §6.7)
 
 These are the windows of a rollover whose relying parties hold their anchors where the signer cannot reach them. A DNSSEC zone pre-publishes its key: *"the new key is introduced into the DNSKEY RRset. After enough time to ensure that any cached DNSKEY RRsets contain both keys, the zone is signed using the new key and the old signatures are removed. Finally, when all signatures created with the old key have expired from caches, the old key is removed"* ([RFC 7583 §3.2.1](https://www.rfc-editor.org/rfc/rfc7583#section-3.2.1)). An RPKI certification authority publishes its new CA certificate and *"waits for a period of time to afford every RP an opportunity to discover and retrieve this "new" CA certificate"*, the staging period, during which the new instance publishes only its own CRL and manifest and the products it reissues wait ([RFC 6489 §2](https://www.rfc-editor.org/rfc/rfc6489#section-2)). The app's cache is its trust bundle, and the longest it relies on one is the maximum pass lifetime.
 
-**A planned rotation.** The windows keep the set available through a planned rotation; they are not what keeps a Station CA believed compromised in the set — RFC 6489 scopes its procedure the same way, its *"focus"* being *"planned key rollover, not an emergency key rollover"*. A compromise of the Station CA is a fleet-wide break (§6.5.2).
+**A planned rotation.** The windows keep the set available through a planned rotation; they are not what keeps a Station CA believed compromised in the set. RFC 6489 too names its *"focus"* as *"planned key rollover, not an emergency key rollover"*. A compromise of the Station CA is a fleet-wide break (§6.5.2).
 
 ### 4.3 Key Management Lifecycle
 

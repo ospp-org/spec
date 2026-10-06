@@ -494,8 +494,8 @@ stateDiagram-v2
 | State | Description |
 |-------|-------------|
 | **Pending** | Session has been initiated by the user (mobile app or web payment). The server is verifying payment authorization or credit balance. |
-| **Authorized** | Payment or credits have been verified. The server is sending StartService [MSG-005] to the station and awaiting acknowledgment. |
-| **Active** | The station has accepted the StartService command and is delivering the service. MeterValues [MSG-010] are being sent periodically. The session duration timer is running. |
+| **Authorized** | Payment or credits have been verified. The server is sending StartService [MSG-005] to the station and awaiting acknowledgment — or, for a Partial-B session, awaiting its SessionStarted [MSG-043]. |
+| **Active** | The station has accepted the StartService command, or reported a Partial-B start with SessionStarted, and is delivering the service. MeterValues [MSG-010] are being sent periodically. The session duration timer is running. |
 | **Stopping** | The session is ending — either a StopService [MSG-006] command has been sent (user-initiated or server-initiated), or the `durationSeconds` timer elapsed and the station auto-stopped without any command. The station is performing hardware wind-down. |
 | **Completed** | The session has ended normally. The station has confirmed the stop, final MeterValues have been received, and the receipt has been generated. |
 | **Failed** | The session terminated abnormally due to an error, timeout, or fault. The server MUST initiate a refund if payment was collected and no service was delivered. |
