@@ -257,9 +257,8 @@ until its cryptographic construction has passed the review of
     the settlement of a session a `RemoteReset` or a `FirmwareUpdate` ended, pro-rata to the station's disconnection,
     still cites as its online figure the steps of `connection-lost.md` §5 that billed that close; the reboot arm of
     [TC-OFF-005](conformance/test-cases/offline/TC-OFF-005.md) cites §5 for the same figure; and the closing session's
-    leftover finding that four sites settle a session reported `Faulted` with `5113` *"as online does"* now differs
-    in the amount as well as the moment, since online closes such a session on its timer and charges it in full
-    ([`05-state-machines.md` §3.5](spec/05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience)).
+    leftover finding, which sets four sites that settle a session reported `Faulted` with `5113` *"as online does"*
+    against online's close at the end of its own timer, now sets them against a close that charges in full.
 
 ---
 
@@ -465,10 +464,11 @@ station that reboots mid-session resume the session, since a watchdog, a power c
 chose, while a commanded Reset and a firmware update reach no running session. Rule 3 of
 [`boot-notification.md` §5.2](spec/profiles/core/boot-notification.md#52-bootreason--seven-boots-and-one-non-boot)
 still calls the branch a server takes for *"a real boot"* the one that *"terminate[s] and settle[s] any session it
-was holding"*; that online text is left as it is, since the online rules do not change here. It was aligned later
-the same day: [`boot-notification.md` §5.2](spec/profiles/core/boot-notification.md#52-bootreason--seven-boots-and-one-non-boot)
-now keeps any session the server holds on a contradicted pair, and names the six reasons that keep a session and
-the two that end one. **What follows is the record, as raised.**
+was holding"*; that online text is left as it is, since the online rules do not change here.
+**Superseded in part on 2026-10-06:** that online text was aligned later the same day, and
+[`boot-notification.md` §5.2](spec/profiles/core/boot-notification.md#52-bootreason--seven-boots-and-one-non-boot) now
+keeps any session the server holds through a boot whose `bootReason` and `uptimeSeconds` disagree, and names the six
+reasons that keep a session and the two that end one. **What follows is the record, as raised.**
 
 **Raised 2026-10-05, by the review of the BLE wire revision.** Decision 1 of 2026-10-05 has a station
 reboot keep or end a Partial-B session by its `bootReason`, as for an online session, and
