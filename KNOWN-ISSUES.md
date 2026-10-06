@@ -465,8 +465,10 @@ station that reboots mid-session resume the session, since a watchdog, a power c
 chose, while a commanded Reset and a firmware update reach no running session. Rule 3 of
 [`boot-notification.md` §5.2](spec/profiles/core/boot-notification.md#52-bootreason--seven-boots-and-one-non-boot)
 still calls the branch a server takes for *"a real boot"* the one that *"terminate[s] and settle[s] any session it
-was holding"*; that online text is left as it is, since the online rules do not change here. **What follows is the
-record, as raised.**
+was holding"*; that online text is left as it is, since the online rules do not change here. It was aligned later
+the same day: [`boot-notification.md` §5.2](spec/profiles/core/boot-notification.md#52-bootreason--seven-boots-and-one-non-boot)
+now keeps any session the server holds on a contradicted pair, and names the six reasons that keep a session and
+the two that end one. **What follows is the record, as raised.**
 
 **Raised 2026-10-05, by the review of the BLE wire revision.** Decision 1 of 2026-10-05 has a station
 reboot keep or end a Partial-B session by its `bootReason`, as for an online session, and
