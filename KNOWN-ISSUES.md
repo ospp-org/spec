@@ -258,7 +258,8 @@ until its cryptographic construction has passed the review of
     still cites as its online figure the steps of `connection-lost.md` §5 that billed that close; the reboot arm of
     [TC-OFF-005](conformance/test-cases/offline/TC-OFF-005.md) cites §5 for the same figure; and the closing session's
     leftover finding, which sets four sites that settle a session reported `Faulted` with `5113` *"as online does"*
-    against online's close at the end of its own timer, now sets them against a close that charges in full.
+    against online's close at the end of its own timer, now sets them, for a station not back by the end of
+    `ConnectionLostGracePeriod`, against a close that charges in full.
 
 ---
 
