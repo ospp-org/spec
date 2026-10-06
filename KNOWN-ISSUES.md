@@ -406,10 +406,12 @@ A `PowerOn`, `Watchdog`, `ErrorRecovery`, `Reconnect`, `ManualReset` or `Schedul
 online session: no rule ends a session before such a boot, and a station that reboots mid-session resumes the
 session under its `sessionId` ([`05-state-machines.md` §2.3](spec/05-state-machines.md#23-transition-table) and
 §3.5 rule 2). The server waits for the resumed session's end record, closing the session at the end of its
-authorized duration if none arrives — option (d); a session the station did not resume, for which no end record will
-come, is settled as online settles one left so, pro-rata on the time delivered, when the StatusNotification after the
-boot shows it ([`connection-lost.md` §6](spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3),
-where the first application of 2026-10-06 had closed it at the end of its authorized duration as a full charge. A `RemoteReset` or a `FirmwareUpdate` ends it, as it ends an
+authorized duration if none arrives — option (d); a session whose bay the StatusNotification after the boot reports
+`Available` — one the station did not resume, or resumed and ended before it reconnected — or `Faulted` with an outcome
+the station could not determine, is settled as online settles one so reported, pro-rata on the time delivered
+([`connection-lost.md` §6](spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3), and an end
+record the station replays afterwards is a duplicate, where the first application of 2026-10-06 had closed it at the
+end of its authorized duration as a full charge. A `RemoteReset` or a `FirmwareUpdate` ends it, as it ends an
 online one: the station ends every active session before such a boot and reports its end, and a session the server
 still holds when such a boot is reported is settled pro-rata on the time delivered, from the arrival of its
 SessionStarted to the station's disconnection, which the server records for billing
