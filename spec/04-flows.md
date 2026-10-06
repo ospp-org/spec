@@ -924,7 +924,7 @@ sequenceDiagram
 
 | Component | State |
 |-----------|-------|
-| User Wallet | Debited at step 2 (by Server); refunded in full when the authorization's `expiresAt` passes with no receipt reconciling it ([`reconciliation.md` §6.7](profiles/offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4)) |
+| User Wallet | Debited at step 2 (by Server); refunded in full when the authorization's `expiresAt` passes with no receipt reconciling it, and debited once more, with no prior debit, by the receipt of a wash started before `expiresAt` that arrives after that refund ([`reconciliation.md` §6.7](profiles/offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4)) |
 | SSP | Has server-signed proof; transaction logged locally |
 | Server | Session created (status: pending — awaiting reconciliation) |
 
