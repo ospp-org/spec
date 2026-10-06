@@ -17,7 +17,7 @@ Verify that the station correctly performs the OfflinePass validation checks dur
 - `spec/profiles/offline/offline-pass.md` §2.3 — a pass carries no station or organization scope
 - `spec/profiles/offline/offline-pass.md` §2.2 — the station's own offline limits, refused with `4002` and `details.constraint`
 - `spec/08-configuration.md` §5 — `OfflinePassMaxAge`, the station's own age bound of check #2
-- `spec/profiles/offline/ble-handshake.md` — OfflineAuthRequest / AuthResponse
+- `spec/profiles/offline/ble-handshake.md` — OfflineAuthRequest / AuthResponse, and §4.1's refusals before a station validates a pass: a `sessionProof` that does not match (`2013`), a bay it does not have (`3005`), a service its catalog does not bind to the bay (`3004`), a duration above its `MaxSessionDurationSeconds` (`3010`)
 - `spec/06-security.md` §6.5.4 — the device proof that check #4 verifies
 - `spec/profiles/offline/authorize-offline-pass.md` — Validation checks and error codes
 - `spec/07-errors.md` §3.2 — Error codes: 2002 `OFFLINE_PASS_INVALID`, 2003 `OFFLINE_PASS_EXPIRED`, 2004 `OFFLINE_EPOCH_REVOKED`, 2005 `OFFLINE_COUNTER_REPLAY`
@@ -128,6 +128,10 @@ Withdrawn with check #5: a pass carries no station or organization scope ([`offl
 39. Verify AuthResponse: `result: "Accepted"` with `sessionKeyConfirmation`. There is no `sessionId` on AuthResponse — [`auth-response.schema.json`](../../../schemas/ble/auth-response.schema.json) is closed and does not carry one; the session identifier arrives on StartServiceResponse.
 40. Verify the station updates `lastSeenCounter` to `11`.
 
+### Refusals Before Validation
+
+41. In four fresh handshakes, send the baseline pass with a fresh `counter` and, in turn, a `sessionProof` that does not match the handshake, a `bayId` the station does not have, a `serviceId` its catalog does not bind to a program of the bay, and a `requestedDurationSeconds` above its `MaxSessionDurationSeconds`. Verify a `Rejected` AuthResponse carrying `2013 BLE_AUTH_FAILED`, `3005 BAY_NOT_FOUND`, `3004 INVALID_SERVICE` and `3010 MAX_DURATION_EXCEEDED` respectively, each before the station validates the pass ([`ble-handshake.md` §4.1](../../../spec/profiles/offline/ble-handshake.md#41-offlineauthrequest-full-offline--partial-b)).
+
 ## Expected Results
 
 1. **Check 0 (Structure):** Missing required fields -> `2002 OFFLINE_PASS_INVALID`.
@@ -142,14 +146,16 @@ Withdrawn with check #5: a pass carries no station or organization scope ([`offl
 10. **Check 9 (Rate):** Too frequent -> `4003 OFFLINE_RATE_LIMITED`.
 11. **Check 10 (Replay):** Counter replay -> `2005 OFFLINE_COUNTER_REPLAY` (Critical) + SecurityEvent.
 12. **Positive:** Valid pass with all checks satisfied -> Accepted.
+13. **Refusals before validation:** a `sessionProof` that does not match, an unknown bay, a service the catalog does not bind to the bay, a duration above `MaxSessionDurationSeconds` -> `2013`, `3005`, `3004`, `3010`, before the pass is validated.
 
 ## Failure Criteria
 
 1. Any check that should fail returns Accepted instead of Rejected.
 2. Wrong error code returned for a specific validation failure (e.g., `2003` instead of `2004` for epoch revocation).
 3. Counter replay (`2005`) is not flagged as Critical severity.
-4. No SecurityEvent is generated for signature failure or replay detection.
-5. A structurally invalid OfflinePass (missing required fields) is accepted.
-6. The positive control (valid pass) is rejected.
-7. Station does not update `lastSeenCounter` after a successful authentication.
-8. Rate limiting check (`minIntervalSec`) is not enforced.
+4. A presentation that fails a check the station makes before it validates the pass is refused with another code, or its pass is validated first.
+5. No SecurityEvent is generated for signature failure or replay detection.
+6. A structurally invalid OfflinePass (missing required fields) is accepted.
+7. The positive control (valid pass) is rejected.
+8. Station does not update `lastSeenCounter` after a successful authentication.
+9. Rate limiting check (`minIntervalSec`) is not enforced.

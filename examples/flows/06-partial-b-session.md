@@ -1,6 +1,8 @@
 # Flow 06: Partial B Session (Phone Offline, Station Online)
 
-> **Compliance Level:** This flow is REQUIRED of every station that implements the Offline / BLE profile, which the **Complete** compliance level requires. When the server does not answer in time, the station refuses with `1010`, or **MAY** fall back to validating the pass itself if its `OfflineModeEnabled` is `true`, as in Full Offline (see [Flow 04](04-full-offline-session.md)).
+> **Status: EXPERIMENTAL.** This flow runs over the BLE surface, which is EXPERIMENTAL until its cryptographic construction has passed the review of [`06-security.md` Appendix B](../../spec/06-security.md#appendix-b--ble-cryptographic-review-checklist) — see [Release status](../../README.md#ble-is-experimental).
+
+> **Compliance Level:** This flow is REQUIRED of every station that implements the Offline / BLE profile, which the **Complete** compliance level requires — a level no station can claim while the profile is EXPERIMENTAL. When the server does not answer in time, the station refuses with `1010`, or **MAY** fall back to validating the pass itself if its `OfflineModeEnabled` is `true`, as in Full Offline (see [Flow 04](04-full-offline-session.md)).
 
 ## Scenario
 
@@ -24,7 +26,7 @@ Bob is at "Station Alpha -- Example City" and wants a deluxe treatment on Bay 2.
 - Bob's phone has no internet connectivity (no cellular, no WiFi)
 - Station `stn_a1b2c3d4` is online (MQTT connected, last heartbeat 10 seconds ago)
 - Station BLE is advertising the OSPP service UUID, with the name `OSPP-b2c3d4` in its scan response
-- Station holds its mTLS certificate, whose extended key usage carries `clientAuth` and `id-kp-osppBleStation`; the app holds the trust bundle of its last pass issuance — the Station CA set, each CA with its CRL
+- Station holds its mTLS certificate, whose extended key usage carries `clientAuth`; the app holds the trust bundle of its last pass issuance — the Station CA set, each CA with its CRL
 - Bay 2 status: `Available`
 - Bob has completed biometric/PIN setup in the app
 - OfflinePass `opass_a8b9c0d1e2f3` was issued today with 3 remaining uses
@@ -58,8 +60,8 @@ Bob is at "Station Alpha -- Example City" and wants a deluxe treatment on Bay 2.
 15:13:08.000  ServiceStatus update: 180s elapsed, 60s remaining
 15:14:08.000  Timer expires — station auto-stops dispenser; it sends no StopServiceResponse, since the app asked for no stop
 15:14:08.100  Station sends SessionEnded EVENT (TimerExpired, 240s)
-15:14:08.120  Server closes the session, 240 s after the SessionStarted arrived, as one whose timer expired — provisionally
-15:14:08.150  SessionEnded arrives — the first end record after the close; the full 240 s delivered, so it trues nothing
+15:14:08.120  Server closes the session, 240 s after the SessionStarted arrived, as one whose timer expired
+15:14:08.150  SessionEnded arrives after the close — a duplicate, which changes nothing
 15:14:09.000  Station generates ECDSA receipt, increments txCounter
 15:14:09.200  Station sends ServiceStatus (ReceiptReady)
 15:14:09.500  App asks for the receipt on FFF6, stores it locally
@@ -197,7 +199,7 @@ The station chooses the BLE version, generates its nonce and ephemeral key, repo
   "bleVersion": "0.3.0",
   "stationNonce": "8yucONtbmYBdu+dzLhegGw3QnMNjJcmmoFgNP0vii/k=",
   "stationEphemeralPubKey": "A+WHdiOoxe15cp85al87JonZauxW+Fwg5Uwr0qZmxhaP",
-  "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+  "stationCertificate": "MIICAzCCAamgAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOBtDCBsTAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAjA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNIADBFAiA68HnSIWTR3JTm5kYtjZjERKezdDF2N/qyVrM9FHc2DgIhAOv5S9B8HOhYsQOnPW5Qne3CilfGv5/TnrQ6ujO1RK6Q",
   "stationConnectivity": "Online",
   "availableServices": [
     {
@@ -222,11 +224,11 @@ The station chooses the BLE version, generates its nonce and ephemeral key, repo
     }
   ],
   "catalogDigest": "2UeVddjli82JD0z3ubl8lTsRmYua/QZFqn5lq3qkyfI=",
-  "stationSignature": "MEUCIQDRW5EXxkOyQpCL++3GcvcNvUvs9SDH32qVC1WS3yFW0gIgfwBVkYYifM8dqic6ZwJfe8URwu5D92JD4rPTc4KpwJU="
+  "stationSignature": "MEQCIEUDRQb0d9ZI5OGrJznFYIujSBpRYjbkResCPo6CQlxpAiAKSZJpWNkgBJEnsZQC2INih9ffVii5ONfB4MUcXgsG4g=="
 }
 ```
 
-The `stationConnectivity: "Online"` confirms the Partial B scenario. The app verifies the station against its trust bundle — the certificate chains to a Station CA of the bundle, is on no entry of that CA's CRL, carries `id-kp-osppBleStation`, and `stationSignature` verifies under it ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)) — and confirms that the catalog Bob chose from is the one the Challenge's `catalogDigest` names and that Deluxe Program is available on Bay 2. Both sides derive the BLE session key over the ephemeral ECDH secret (the BLE LTK is **not** used — see `spec/06-security.md` §6.5):
+The `stationConnectivity: "Online"` confirms the Partial B scenario. The app verifies the station against its trust bundle — the certificate chains to a Station CA of the bundle, is on no entry of that CA's CRL, names a `stationId` in its subject CN, and `stationSignature` verifies under it ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)) — and confirms that the catalog Bob chose from is the one the Challenge's `catalogDigest` names and that Deluxe Program is available on Bay 2. Both sides derive the BLE session key over the ephemeral ECDH secret (the BLE LTK is **not** used — see `spec/06-security.md` §6.5):
 
 ```
 SessionKey = HKDF-SHA256(
@@ -276,7 +278,7 @@ The app presents the pre-armed OfflinePass. In Partial B, the station does NOT v
   "sessionProof": "hAW4BhA445dJmlLG78qcEn36DHEhkjIDNt3fZOGGh0c=",
   "deviceProof": {
     "format": "apple-appattest",
-    "signature": "MEUCIQCx3I+HX4x8devC8EboDROXqN4iEMP+AYLJR8vxZ/aatgIgHwYg6Ky65BTVFjjHtxa9ut7LOy8V9rXAIfbzFyopn4w=",
+    "signature": "MEQCIEpDZnDje82ePxj8PHxMVCLSpIK7lA1e2l5bBYNc3jU/AiAJpwSv0ZI16t61tJ2VV7mUXFiJU3DnW9bRP6GXxTGuGA==",
     "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
   }
 }
@@ -329,10 +331,10 @@ Because the station is online (`stationConnectivity: "Online"`), it does NOT per
     "requestedDurationSeconds": 240,
     "deviceProof": {
       "format": "apple-appattest",
-      "signature": "MEUCIQCx3I+HX4x8devC8EboDROXqN4iEMP+AYLJR8vxZ/aatgIgHwYg6Ky65BTVFjjHtxa9ut7LOy8V9rXAIfbzFyopn4w=",
+      "signature": "MEQCIEpDZnDje82ePxj8PHxMVCLSpIK7lA1e2l5bBYNc3jU/AiAJpwSv0ZI16t61tJ2VV7mUXFiJU3DnW9bRP6GXxTGuGA==",
       "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
     },
-    "transcriptHash": "lsWrmnL+S4MGDLFSK/GqMP6Mo0RwywN8SZz1FGKUG6c="
+    "transcriptHash": "3+srIbhfmOKMXv5uBAuyh+c7QFGC/+pklJVDajY07Ng="
   }
 }
 ```
@@ -634,7 +636,7 @@ The app timer reaches `4:00` and the progress bar fills completely. A notificati
 
 ### Step 16: Station Reports Completion via MQTT (15:14:08.100)
 
-Since the station is online, it reports the end of the session and then the bay's new state in real time. The SessionEnded EVENT is the session's delivery record. It arrives at 15:14:08.150, 30 ms after the server closed the session at the end of its authorized duration — 240 seconds after the SessionStarted arrived — as one whose timer expired, provisionally ([`authorize-offline-pass.md` §6](../../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4a and 4b); as the first end record after that close, it trues it. The server processes it before the StatusNotification that follows it ([`session-ended.md` §5](../../spec/profiles/transaction/session-ended.md#5-processing-rules); [`03-messages.md` §5.4](../../spec/03-messages.md#54-sessionended)):
+Since the station is online, it reports the end of the session and then the bay's new state in real time. The SessionEnded EVENT is the session's delivery record. It arrives at 15:14:08.150, 30 ms after the server closed the session at the end of its authorized duration — 240 seconds after the SessionStarted arrived — as one whose timer expired ([`authorize-offline-pass.md` §6](../../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4a), so it is a duplicate. The server processes it before the StatusNotification that follows it ([`session-ended.md` §5](../../spec/profiles/transaction/session-ended.md#5-processing-rules); [`03-messages.md` §5.4](../../spec/03-messages.md#54-sessionended)):
 
 **MQTT Topic:** `ospp/v1/stations/stn_a1b2c3d4/to-server`
 
@@ -692,7 +694,7 @@ Since the station is online, it reports the end of the session and then the bay'
 }
 ```
 
-The server closed session `sess_d5e6f7a8b9c0` as `completed` at the full 48 credits; the SessionEnded shows the full 4 minutes delivered, so the true-up refunds nothing. Settlement never exceeds the `creditsAuthorized` of the authorization (48), and any true-up against the authorize-time debit is refund-only ([`reconciliation.md` §8](../../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)).
+The server closed session `sess_d5e6f7a8b9c0` as `completed` at the full 48 credits, and the SessionEnded, a duplicate, changes nothing; it shows the full 4 minutes delivered. Settlement never exceeds the `creditsAuthorized` of the authorization (48), and any true-up against the authorize-time debit is refund-only ([`reconciliation.md` §8](../../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)).
 
 | Field | Value |
 |-------|-------|
@@ -758,7 +760,7 @@ The station generates a signed receipt:
 }
 ```
 
-The app stores the receipt locally. The session was settled online, from the station's real-time reports; the app still uploads the receipt once it has connectivity, as it does every receipt it holds ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)), and the server answers that upload `Duplicate`, with no effect: the session settled once, on its SessionEnded ([`reconciliation.md` §3](../../spec/profiles/offline/reconciliation.md#3-deduplication-offlinetxid)).
+The app stores the receipt locally. The session was settled online, from the station's real-time reports; the app still uploads the receipt once it has connectivity, as it does every receipt it holds ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)), and the server answers that upload `Duplicate`, with no effect: the session settled once, on the server's close at the end of its authorized duration ([`reconciliation.md` §3](../../spec/profiles/offline/reconciliation.md#3-deduplication-offlinetxid)).
 
 ---
 
@@ -926,7 +928,7 @@ On the Operator Dashboard, Charlie sees the session in real-time because the sta
 
 2. **Server debits wallet at authorization time.** The server debits Bob's wallet at step 9, before the service even starts. This matches the online flow behavior, and the pass's limits, checked against the server's count at every station, bound what the next session may use. There is no risk of over-billing: the `creditsAuthorized` of the response caps what the session may be charged, and any true-up is refund-only ([`reconciliation.md` §8](../../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)).
 
-3. **Settled once, on the first end record.** Because the station is online throughout the session, all events (SessionStarted, StatusNotification, MeterValues, SessionEnded) are sent to the server in real time via MQTT: the session's authorized duration runs from the arrival of its SessionStarted, and the session settles on the first of its end records or on the server's close at the end of that duration — here the close, 30 ms before the SessionEnded, which trues it and finds the full 240 seconds delivered. Had the station lost MQTT before then, the loss would not have ended the session: the wash would have continued, and the station would have sent its SessionEnded when it reconnected; had no end record reached the server by the end of the session's authorized duration, the server would have closed the session then, provisionally — the SessionEnded arriving later would have trued that close down had it shown less delivered ([`authorize-offline-pass.md` §6](../../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4a to 4c). The receipt on FFF6 is Bob's copy, which the app uploads once it has connectivity ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)). The session settles once, on whichever of the two arrives first, and the other is a duplicate ([`reconciliation.md` §3](../../spec/profiles/offline/reconciliation.md#3-deduplication-offlinetxid)); had the receipt arrived first, the server would have applied no second debit, only a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](../../spec/profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)).
+3. **Settled once, on the first end record.** Because the station is online throughout the session, all events (SessionStarted, StatusNotification, MeterValues, SessionEnded) are sent to the server in real time via MQTT: the session's authorized duration runs from the arrival of its SessionStarted, and the session settles on the first of its end records or on the server's close at the end of that duration — here the close, 30 ms before the SessionEnded, which is then a duplicate. Had the station lost MQTT before then, the loss would not have ended the session: the wash would have continued, and the station would have sent its SessionEnded when it reconnected; had no end record reached the server by the end of the session's authorized duration, the server would have closed the session then, and the SessionEnded arriving later would have been a duplicate ([`authorize-offline-pass.md` §6](../../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4a to 4c). The receipt on FFF6 is Bob's copy, which the app uploads once it has connectivity ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)). The session settles once, on whichever of the two arrives first, and the other is a duplicate ([`reconciliation.md` §3](../../spec/profiles/offline/reconciliation.md#3-deduplication-offlinetxid)); had the receipt arrived first, the server would have applied no second debit, only a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](../../spec/profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)).
 
 4. **MQTT fallback if AuthorizeOfflinePass times out.** If the server has not answered in time for the station to answer the app within the BLE handshake budget, the station answers `1010 MESSAGE_TIMEOUT`, or **MAY** fall back to local validation (as in Full Offline, Flow 04) if its `OfflineModeEnabled` is `true`, and then within its own offline limits ([`authorize-offline-pass.md` §6](../../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules)). This graceful degradation ensures the user is not stuck if MQTT has a momentary hiccup. The spec defines this in section 5c error paths.
 

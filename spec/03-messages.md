@@ -868,7 +868,7 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
 2. Verify ECDSA receipt signature — reject if it does not verify; never scored
 3. Record `txCounter` (WARNING if the sequence is discontinuous, process anyway)
 4. Apply the reconcile-time gate (was the pass valid at transaction time, read through the station's clock offset?)
-5. Settle: recompute the cost by service kind from the signed receipt, never above what the authorization allowed, and debit the user wallet — or, where the authorization already debited it, refund only ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)) — (a debit that leaves it below zero leaves the transaction pending until a credit to the wallet covers it)
+5. Settle: recompute the cost by service kind from the signed receipt, never above what the authorization allowed, and debit the user wallet — or, where the authorization already debited it and the debit stands, refund only ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback); one a lapse or an expiry refunded is debited once, with no prior debit, by [§8.1](profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)) — (a debit that leaves it below zero leaves the transaction pending until a credit to the wallet covers it)
 6. Run fraud scoring ([Chapter 06 §7.4](06-security.md#74-fraud-detection--offline-transactions)) — record `FraudDetected` and act on the band; the settled amount does not change
 7. Create session record
 8. Respond `Accepted`
@@ -2170,7 +2170,7 @@ Pushes the complete service catalog to the station. This is a **full replacement
 | `3015` | `PAYLOAD_INVALID` — a payload-level value wrong in itself, such as an empty `catalogVersion`; a malformed service *entry* is `5023`, not this |
 | `5023` | `INVALID_CATALOG` — any entry failed validation (missing field, invalid pricing type, missing or conflicting price), or the catalog is internally inconsistent (duplicate `serviceId`) |
 | `5024` | `UNSUPPORTED_SERVICE` — the catalog names a service the station cannot run, or binds one to a bay or program ordinal it never declared; the whole catalog is refused, not the offending entry |
-| `5025` | `CATALOG_TOO_LARGE` — catalog exceeds station storage capacity |
+| `5025` | `CATALOG_TOO_LARGE` — catalog exceeds station storage capacity, or, at a station that declares the Offline / BLE profile, the BLE bounds of [`ble-transport.md` §4](profiles/offline/ble-transport.md#4-available-services-fff2) |
 | `5103` | `STORAGE_ERROR` — NVS write failed |
 
 ---
@@ -2702,7 +2702,7 @@ The `stationConnectivity` field determines which authentication flow the app MUS
 | `bleVersion` | string | Yes | The BLE protocol version of this session — one of the Hello's `bleVersions` |
 | `stationNonce` | string | Yes | Base64-encoded 32-byte random nonce |
 | `stationEphemeralPubKey` | string | Yes | Station's per-handshake ephemeral P-256 public key (compressed SEC1, Base64). ECDH input for the session key (§6.5). |
-| `stationCertificate` | string | Yes | The station's mTLS client certificate, DER, Base64, carrying `id-kp-osppBleStation` ([Chapter 06 §4.4](06-security.md#44-certificate-requirements)). App MUST verify it against a Station CA of its trust bundle and that CA's CRL before sending any credential. |
+| `stationCertificate` | string | Yes | The station's mTLS client certificate, DER, Base64, whose subject CN is the station's `stationId` ([Chapter 06 §4.4](06-security.md#44-certificate-requirements)). App MUST verify it against a Station CA of its trust bundle and that CA's CRL before sending any credential. |
 | `stationConnectivity` | string | Yes | `"Online"` or `"Offline"` |
 | `availableServices` | array | Yes | Every service the station's catalog binds to each of its bays — the app's one source of availability; empty while the station holds no catalog |
 | `availableServices[].bayId` | string | Yes | Bay identifier |
@@ -2722,7 +2722,7 @@ The `stationConnectivity` field determines which authentication flow the app MUS
   "bleVersion": "0.3.0",
   "stationNonce": "7oplt8bFihuLtLP/TirYwqP8RsJOLs0L2rfEzgPoAKI=",
   "stationEphemeralPubKey": "AoB8Dry2qCXwUlmOl0guXd7iJTsjpxcy9AD+RLMZUK1N",
-  "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+  "stationCertificate": "MIICAzCCAamgAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOBtDCBsTAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAjA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNIADBFAiA68HnSIWTR3JTm5kYtjZjERKezdDF2N/qyVrM9FHc2DgIhAOv5S9B8HOhYsQOnPW5Qne3CilfGv5/TnrQ6ujO1RK6Q",
   "stationConnectivity": "Offline",
   "availableServices": [
     {
@@ -2742,7 +2742,7 @@ The `stationConnectivity` field determines which authentication flow the app MUS
     }
   ],
   "catalogDigest": "KEfI0ZXJooFWmbAXgLrTjLkPeF3GyA4gN1i7FvRz2/k=",
-  "stationSignature": "MEQCIGpIfXXGobe9LhKnXl7LfPYTJsLjzkEo/w4/hriQcI0kAiBNeTAtHyBw4/t6i7+OalXvBWjsz70LJT7zT/snQ7PIqg=="
+  "stationSignature": "MEUCIQCQmMQKDLSpYD1EoKmz4hIaORUeuOQOIj/wefJX0G913QIgOeYlU3BwK93RfM5CTbVUeVPdnZLy4Pd+y3ryx+jFViw="
 }
 ```
 
@@ -2826,7 +2826,7 @@ The app MUST request biometric or PIN confirmation from the user before sending 
   "sessionProof": "ObgxpE1Ad+xl6P8fRWtBstqMY2Tjan9oK/LIWofxvrI=",
   "deviceProof": {
     "format": "android-key",
-    "signature": "MEQCIGSOLREN/0LqMg9i6YiauJzRMBy12UreplAq9Hu/LmDyAiB5MYstV08MgyFEYsVsBTrUUbAzEMoOUcnYuswkNkf8Eg=="
+    "signature": "MEUCIQDkVK2UBydLZIcrp09Eh5YOTgLYA4AQtq4k+V/sj5AywgIgVWUHl98RghbG068Oc3CF0uy2tkyv11g0MJV15/TMzYM="
   }
 }
 ```

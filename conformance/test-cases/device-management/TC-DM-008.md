@@ -303,7 +303,10 @@ Verify that the station correctly handles UpdateServiceCatalog including success
 > assigns to this action, two had no conformance case at all; this part closes one. `5025` is left
 > open because its threshold is the *station's* storage or processing capacity and no bound in this
 > specification fixes it — `services` carries `minItems: 1` and no `maxItems` — so a portable case
-> would have to invent a number the protocol does not state.
+> would have to invent a number the protocol does not state. A station that declares the Offline /
+> BLE profile has a stated bound as well, the 24,576 octets of
+> [`ble-transport.md` §4](../../../spec/profiles/offline/ble-transport.md#4-available-services-fff2),
+> which no case exercises yet ([`KNOWN-ISSUES.md`](../../../KNOWN-ISSUES.md), the BLE freeze).
 
 ## Expected Results
 

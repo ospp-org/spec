@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/common/server-signed-auth-claims.schema.json",
   "title": "ServerSignedAuthClaims",
-  "description": "Canonical body serialised via OSPP Canonical Form (spec/06-security.md §4.8) and base64-encoded into the `signedAuthorization.data` field of a ServerSignedAuth message for ECDSA P-256 signing. Per profiles/offline/ble-handshake.md §4.2.1. 12 required claims — no optional fields. `durationSeconds` (finding N3) is the authorized duration: the station refuses a StartServiceRequest above it and never reduces the request (profiles/offline/ble-session.md §1); `creditsAuthorized` is the issue-time pre-debit and the most the session may be charged: the server recomputes the cost per the Billing Authority (04-flows §6) and settles it as a refund-only true-up that never exceeds `creditsAuthorized` (reconciliation §8, §8.2). Both are signed so the station enforces a server-authorized duration it can cryptographically trust, not an app-supplied request. The digest signed by the server's private key is SHA-256 over the canonical bytes directly (NOT over the base64 form).",
+  "description": "Canonical body serialised via OSPP Canonical Form (spec/06-security.md §4.8) and base64-encoded into the `signedAuthorization.data` field of a ServerSignedAuth message for ECDSA P-256 signing. Per profiles/offline/ble-handshake.md §4.2.1. 12 required claims — no optional fields. `durationSeconds` (finding N3) is the authorized duration: the station refuses a StartServiceRequest above it and never reduces the request (profiles/offline/ble-session.md §1); `creditsAuthorized` is the issue-time pre-debit and the most the session may be charged: the server recomputes the cost per the Billing Authority (04-flows §6) and settles it as a refund-only true-up that never exceeds `creditsAuthorized` while the pre-debit stands, and, for a receipt that arrives after the expiry refunded the pre-debit, as one debit with no prior debit, up to the same cap (reconciliation §6.7, §8, §8.1, §8.2). Both are signed so the station enforces a server-authorized duration it can cryptographically trust, not an app-supplied request. The digest signed by the server's private key is SHA-256 over the canonical bytes directly (NOT over the base64 form).",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -58,7 +58,7 @@
     },
     "creditsAuthorized": {
       "$ref": "credit-amount.schema.json",
-      "description": "Authorized credit budget for this session (finding N3) — the issue-time pre-debit, and the most the session may be charged: settlement recomputes the cost per the Billing Authority (04-flows §6) and is a refund-only true-up that never exceeds it (reconciliation §8, §8.2). Signed."
+      "description": "Authorized credit budget for this session (finding N3) — the issue-time pre-debit, and the most the session may be charged: settlement recomputes the cost per the Billing Authority (04-flows §6) and is a refund-only true-up that never exceeds it while the pre-debit stands, or, for a receipt that arrives after the expiry refunded the pre-debit, one debit up to it with no prior debit (reconciliation §6.7, §8, §8.1, §8.2). Signed."
     },
     "appNonce": {
       "type": "string",

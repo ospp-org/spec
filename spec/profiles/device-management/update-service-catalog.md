@@ -68,8 +68,18 @@ party that can honour it:
    and **SHOULD** stay well inside it. A station **MAY** refuse an oversized envelope on length alone,
    before parsing and before verifying `mac`, with `1014 MESSAGE_TOO_LARGE` — that is the refusal §10.2.1
    grants every receiver, and it is the one that protects a fixed receive buffer. `5025
-   CATALOG_TOO_LARGE` remains available for a catalog the station can receive and cannot **keep**;
-   see the note below.
+   CATALOG_TOO_LARGE` remains available for a catalog the station can receive and cannot **keep**,
+   and, at a station that declares the Offline / BLE profile, for one it cannot serve over BLE (rule
+   9a); see the note below.
+
+9a. A server **MUST NOT** publish an UpdateServiceCatalog to a station that declares the Offline / BLE
+   profile when the FFF2 value the station derives from it — every bay the station declared, each with
+   the services the catalog binds to it, in the OSPP Canonical Form — would exceed **24,576 octets**,
+   or when the `availableServices` of the Challenge the station would build from it — one entry for each
+   of those bay–service pairs, in the same form, every `available` counted `false` — would
+   ([`ble-transport.md` §4](../offline/ble-transport.md#4-available-services-fff2)). Such a station
+   refuses one that would with `5025 CATALOG_TOO_LARGE` and keeps the catalog it holds: it cannot serve
+   that catalog over BLE.
 
 **Coverage, which only the server can check, and the silence it must not read as a report.** Rule 8
 puts the refusal on the station and makes it **total**: one `bindings` entry naming a pair the station
@@ -149,8 +159,10 @@ never existed — and now names this ceiling.
 > envelope a station can legally receive is a number it provisions for once, and any catalog
 > within it is by definition one it can process. **What survives is the storage ground**: a
 > station that receives, verifies and parses a legal catalog and then cannot persist it answers
-> `5025` — and that is a fact about its flash, not about its receive path. A station with no such
-> limit will never emit `5025`, and that is correct rather than a coverage gap.
+> `5025` — and that is a fact about its flash, not about its receive path. A station that declares
+> the Offline / BLE profile has a second ground of the same kind, decided on the parsed catalog: the
+> bounds of rule 9a. A station with neither will never emit `5025`, and that is correct rather than a
+> coverage gap.
 > [`TC-DM-008`](../../../conformance/test-cases/device-management/TC-DM-008.md) records why the
 > code has no conformance case; this is why it cannot get one from the wire alone.
 
@@ -161,7 +173,7 @@ never existed — and now names this ceiling.
 | `3015` | `PAYLOAD_INVALID` | Error | A payload-level value that is wrong in itself — an empty `catalogVersion`, for instance. [Chapter 07 §3.3](../../07-errors.md) narrows this code to a value that could never be valid, so it does not reach a service **entry**: an entry that fails validation, a missing or conflicting price included, is `5023` by rule 1 above. |
 | `5023` | `INVALID_CATALOG` | Error | Any service entry failed validation — a missing required field, an invalid pricing type, no price for the declared `pricingType`, or the other type's price present — or the catalog as a whole is inconsistent, a duplicate `serviceId` being the case that arises. |
 | `5024` | `UNSUPPORTED_SERVICE` | Error | The catalog names a service the station cannot run, or binds one to a `(bayNumber, programNumber)` pair it never declared. The whole catalog is refused — see rule 8. **Not `5023`:** that is rule 1's code for an entry that failed *validation*, and such an entry passes validation — what it fails is a fact only the station holds. Exercised by [`TC-DM-008`](../../../conformance/test-cases/device-management/TC-DM-008.md) Part E. |
-| `5025` | `CATALOG_TOO_LARGE` | Error | The catalog is larger than the station can **keep** — a capacity judgement made **before** attempting the write, on a store that works. See the discriminator below. |
+| `5025` | `CATALOG_TOO_LARGE` | Error | The catalog is larger than the station can **keep** — a capacity judgement made **before** attempting the write, on a store that works — or, at a station that declares the Offline / BLE profile, larger than the bounds of rule 9a. See the discriminator below. |
 | `5103` | `STORAGE_ERROR` | Error | The station **attempted** to persist the catalog and the store failed — an I/O fault, not a capacity judgement. See the discriminator below. |
 
 > **Two codes, one action, and until `0.39.0` no rule saying which.** Both cells named storage and
@@ -177,8 +189,9 @@ never existed — and now names this ceiling.
 > `5103` against **5** actions — StartService, UpdateFirmware, GetDiagnostics,
 > UpdateServiceCatalog and CertificateInstall — and `5025` against **one**, this one. What they
 > shared was a word, not a condition. `5025` is also the code the envelope cap narrowed (§6, rule 9's note): its
-> *processing* ground is unreachable by construction, and the ground surviving there is precisely
-> the pre-write capacity judgement this discriminator names.
+> *processing* ground is unreachable by construction, and the grounds surviving there — the station's storage,
+> and at a station that declares the Offline / BLE profile the bounds of rule 9a — are both the pre-write
+> judgement this discriminator names.
 
 ## 8. Examples
 

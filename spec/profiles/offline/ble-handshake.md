@@ -60,7 +60,7 @@ The station responds to the Hello by sending a Challenge notification on charact
 | `bleVersion` | string | Yes | The BLE protocol version of this session — one of the Hello's `bleVersions`, chosen by the station. |
 | `stationNonce` | string | Yes | Base64-encoded 32-byte cryptographically random nonce (exactly 44 Base64 characters). |
 | `stationEphemeralPubKey` | string | Yes | Station's per-handshake ephemeral P-256 public key, compressed SEC1, Base64 (44 chars; Pin 2). Its ECDH with the app's ephemeral key is the session key's input (§6). Freshly generated per handshake. |
-| `stationCertificate` | string | Yes | The station's mTLS client certificate, DER, Base64 ([06-security.md §4.4](../../06-security.md#44-certificate-requirements)), carrying the extended key usage `id-kp-osppBleStation`. |
+| `stationCertificate` | string | Yes | The station's mTLS client certificate, DER, Base64 ([06-security.md §4.4](../../06-security.md#44-certificate-requirements)), whose subject CN is the station's `stationId`. |
 | `stationConnectivity` | string | Yes | `"Online"` or `"Offline"` -- determines which auth path the app **MUST** use. |
 | `availableServices` | array | Yes | Every service the station's catalog binds to each of its bays, each `{bayId, serviceId, available}`, `available` saying whether the station can start it now — empty while the station holds no catalog. The app's one source of availability ([ble-transport.md §4](ble-transport.md#4-available-services-fff2)). |
 | `catalogDigest` | string | Yes | SHA-256 of the OSPP Canonical Form ([06-security.md §4.8](../../06-security.md#48-ospp-canonical-form)) of the catalog the station serves on FFF2 now, Base64 (44 chars) ([ble-transport.md §4](ble-transport.md#4-available-services-fff2)). It binds that catalog — its bays, their numbers, the services and their names and prices — to the handshake: the station signs it with the rest of the Challenge. |
@@ -78,7 +78,7 @@ The `stationConnectivity` field is critical for path selection:
 
 A phone and a station that are both online use the online session flow, not BLE.
 
-**App verification gate (Normative).** Before it derives the session key, and before it sends any OfflinePass or ServerSignedAuth, the app **MUST** pass the gate of [06-security.md §6.5.2](../../06-security.md#652-station-authentication--the-stations-certificate): the certificate chains to a Station CA of its trust bundle, is valid now, is on no entry of that CA's CRL, carries `digitalSignature` and `id-kp-osppBleStation`, names the intended station where the app holds one from an out-of-band channel, and `stationSignature` verifies under it. On any failure it aborts with `2013 BLE_AUTH_FAILED` and sends no credential.
+**App verification gate (Normative).** Before it derives the session key, and before it sends any OfflinePass or ServerSignedAuth, the app **MUST** pass the gate of [06-security.md §6.5.2](../../06-security.md#652-station-authentication--the-stations-certificate): the certificate chains to a Station CA of its trust bundle, is valid now, is on no entry of that CA's CRL, carries `digitalSignature`, names a `stationId` in its subject CN — the intended station's where the app holds one from an out-of-band channel — and `stationSignature` verifies under it. On any failure it aborts with `2013 BLE_AUTH_FAILED` and sends no credential.
 
 **Example**, whose `catalogDigest` names the catalog of the example in [ble-transport.md §4](ble-transport.md#4-available-services-fff2):
 
@@ -89,7 +89,7 @@ A phone and a station that are both online use the online session flow, not BLE.
   "bleVersion": "0.3.0",
   "stationNonce": "bt8L0mYAoDDqk+6swnQMgM0lDWMe+tPXBvaj8A4TfR0=",
   "stationEphemeralPubKey": "AwwZpLQ0CxbV0HOXDPuQEv+418VzE/RupNS7oUHka6AX",
-  "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+  "stationCertificate": "MIICAzCCAamgAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOBtDCBsTAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAjA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNIADBFAiA68HnSIWTR3JTm5kYtjZjERKezdDF2N/qyVrM9FHc2DgIhAOv5S9B8HOhYsQOnPW5Qne3CilfGv5/TnrQ6ujO1RK6Q",
   "stationConnectivity": "Offline",
   "availableServices": [
     {
@@ -104,7 +104,7 @@ A phone and a station that are both online use the online session flow, not BLE.
     }
   ],
   "catalogDigest": "di1rJvk5MMuI0K6zbQb/pVJnc5QQB8NSFAENH+R5goI=",
-  "stationSignature": "MEUCIQCDMgEktywuiGPdndfl0zVDO/ixGnZ1XruNp1B6TahM1QIgUngZJRX3Ldv1KHkaW3UyhxyVPcE5nlQjRQEGyHHnwAs="
+  "stationSignature": "MEUCIQCRQYZa51L8e0gKxVnYoAb5rZjTioaF+5uULxc2xqli6wIgERqMQRo6wV7di+e5zkFJ/m6HNprR8+UrJQwZJhnJsw0="
 }
 ```
 
@@ -177,7 +177,7 @@ The prior 4-input hex construction (which additionally bound `bayId`/`serviceId`
   "sessionProof": "ObgxpE1Ad+xl6P8fRWtBstqMY2Tjan9oK/LIWofxvrI=",
   "deviceProof": {
     "format": "android-key",
-    "signature": "MEUCIQCuPvU1IfXnkwx3wHRvhXkFEOvgQKF2tYDaMtKHFTqb5QIgVn3kd+dkOBDPUHHpgVCncV+gckIrotS8AixULTVIazU="
+    "signature": "MEUCIQCRVii4dLPZNkTigU7FrulDW24KGTpR2Lh8vuNYiK+l0AIgVjRDv8lnaNVz+OT7HDDVO7I0YmQiEsvHnP0pmAz+vX4="
   }
 }
 ```
@@ -225,7 +225,7 @@ The server **MUST** sign the authorization following the same canonical-form + E
    }
 ```
 
-The `appNonce` claim **MUST** equal the `appNonce` the app uses in the `Hello` message of this handshake (in either acquisition order — see §4.2) — the server reads it from the `POST /sessions/offline-auth` request body. The `expiresAt` claim **MUST** be no later than five minutes after `issuedAt`; `appNonce` provides the primary, clock-independent replay defence (§4.2.2 check #2) and `expiresAt` is a secondary bound. The authorization is used to start within that validity: the station starts the session no later than `expiresAt` ([ble-session.md §1](ble-session.md#1-starting-a-service) rule 2a), and the session then runs its authorized duration, which may end after `expiresAt` — the server judges the authorization against the session's signed start ([reconciliation.md §6.7](reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4) check #9).
+The `appNonce` claim **MUST** equal the `appNonce` the app uses in the `Hello` message of this handshake (in either acquisition order — see §4.2) — the server reads it from the `POST /sessions/offline-auth` request body. The `expiresAt` claim **MUST** be no later than five minutes after `issuedAt`; `appNonce` provides the primary, clock-independent replay defence (§4.2.2 check #2) and `expiresAt` is a secondary bound. The authorization is used to start within that validity: the station starts the session before `expiresAt` ([ble-session.md §1](ble-session.md#1-starting-a-service) rule 2a), and the session then runs its authorized duration, which may end after `expiresAt` — the server judges the authorization against the session's signed start ([reconciliation.md §6.7](reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4) check #9).
 
 #### 4.2.2 Verification (Station-Side)
 
@@ -279,7 +279,7 @@ On `Accepted`, the `sessionKeyConfirmation` field proves to the app that the sta
 
 **A refusal carries the one BLE error shape.** `errorCode`, `errorText` and, where the code calls for it, `details` — the shape every BLE response uses ([Chapter 07 §2.3](../../07-errors.md#23-ble-error-response)). In Partial B the station relays the server's refusal with the server's `errorCode`, `errorText` and `details` unchanged ([authorize-offline-pass.md §6](authorize-offline-pass.md#6-processing-rules) rule 5). The codes are those of [Chapter 07 §4.3](../../07-errors.md#43-ble-message-types).
 
-**A refusal before the session key (Normative).** A station that refuses a Hello — it supports none of the Hello's `bleVersions` (`1007 PROTOCOL_VERSION_MISMATCH`), or the Hello is malformed or carries an ephemeral key that fails validation, or the station cannot serve a handshake now (`2013 BLE_AUTH_FAILED`) — notifies, **instead of the Challenge**, a plaintext AuthResponse with `result: "Rejected"`, `errorCode` and `errorText`, fragmented by [ble-transport.md §11](ble-transport.md#11-fragmentation-protocol) and outside any secure frame, and then closes the connection. The station decides `1007` from the Hello's `bleVersions` alone, before it validates the rest of the Hello against its own version's schema, since a Hello of another BLE version may carry members that schema does not know ([`VERSIONING.md`](../../../VERSIONING.md#ble-protocol-version)). It is the one refusal that is not authenticated, because no key exists yet: the app **MUST** treat it as an indication, not as evidence — it **MAY** show it and **MUST NOT** act on it beyond ending the attempt. Every refusal after the Challenge is an AuthResponse inside the AEAD channel ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)), authenticated by the channel — a third party cannot forge or inject it (finding N17).
+**A refusal before the session key (Normative).** A station that refuses a Hello — it supports none of the Hello's `bleVersions` (`1007 PROTOCOL_VERSION_MISMATCH`), or the Hello is malformed or carries an ephemeral key that fails validation, or the station cannot serve a handshake now, a connection whose ATT_MTU is below the 185 octets of [ble-transport.md §10](ble-transport.md#10-connection-parameters) among the causes (`2013 BLE_AUTH_FAILED`) — notifies, **instead of the Challenge**, a plaintext AuthResponse with `result: "Rejected"`, `errorCode` and `errorText`, fragmented by [ble-transport.md §11](ble-transport.md#11-fragmentation-protocol) and outside any secure frame, and then closes the connection. The station decides `1007` from the Hello's `bleVersions` alone, before it validates the rest of the Hello against its own version's schema, since a Hello of another BLE version may carry members that schema does not know ([`VERSIONING.md`](../../../VERSIONING.md#ble-protocol-version)). It is the one refusal that is not authenticated, because no key exists yet: the app **MUST** treat it as an indication, not as evidence — it **MAY** show it and **MUST NOT** act on it beyond ending the attempt. Every refusal after the Challenge is an AuthResponse inside the AEAD channel ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)), authenticated by the channel — a third party cannot forge or inject it (finding N17).
 
 **Example (Accepted):**
 
@@ -383,7 +383,7 @@ The codes a BLE response carries, for every BLE message, are listed once, in [Ch
       |    §6.5.3; --- = plaintext )          |
 ```
 
-> The Partial A and Partial B diagrams below share §8.1's Hello and Challenge, the same mandatory verification of the station's certificate and signature before any credential is sent, and the same AEAD channel (§6.5.3) for every post-Challenge message. They omit those details for brevity.
+> The Partial A and Partial B diagrams below share §8.1's Hello and Challenge, the same mandatory verification of the station's certificate and signature, and of the catalog's digest where the app chose from FFF2, before any credential is sent, and the same AEAD channel (§6.5.3) for every post-Challenge message. They omit those details for brevity.
 
 ### 8.2 Partial A Handshake (Station Offline, App Online)
 

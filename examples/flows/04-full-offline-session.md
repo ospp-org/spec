@@ -1,8 +1,10 @@
 # Flow 04: Full Offline BLE Session
 
+> **Status: EXPERIMENTAL.** This flow runs over the BLE surface, which is EXPERIMENTAL until its cryptographic construction has passed the review of [`06-security.md` Appendix B](../../spec/06-security.md#appendix-b--ble-cryptographic-review-checklist) — see [Release status](../../README.md#ble-is-experimental).
+
 ## Scenario
 
-It is a winter evening in Example City. Heavy snowfall has knocked out the internet at "Station Alpha -- Example City" and Bob's mobile carrier is also down in the area. Bob pulls into bay 1 and wants to use the Eco Program service. He opens the the app, which detects no internet connectivity. The app has a pre-armed OfflinePass (`opass_a8b9c0d1e2f3`) that was refreshed this morning while Bob was on WiFi. The app discovers the station via BLE, connects, reads station info and asks for the service catalog, performs the HELLO/CHALLENGE handshake — verifying the station's certificate and signature before it sends anything — authenticates with the OfflinePass and its device proof (the station validates it locally with the nine checks that apply), starts "Eco Program" on bay 1, monitors progress via BLE ServiceStatus notifications, and stops after 3 minutes. The station generates a signed receipt with ECDSA P-256 and increments the txCounter. The app asks for the receipt on FFF6 and stores it in the offline transaction log, to upload it to the server once it has a network.
+It is a winter evening in Example City. Heavy snowfall has knocked out the internet at "Station Alpha -- Example City" and Bob's mobile carrier is also down in the area. Bob pulls into bay 1 and wants to use the Eco Program service. He opens the the app, which detects no internet connectivity. The app has a pre-armed OfflinePass (`opass_a8b9c0d1e2f3`) that was refreshed this morning while Bob was on WiFi. The app discovers the station via BLE, connects, reads station info and asks for the service catalog, performs the HELLO/CHALLENGE handshake — verifying the station's certificate and signature, and the catalog's digest, before it sends anything — authenticates with the OfflinePass and its device proof (the station validates it locally with the nine checks that apply), starts "Eco Program" on bay 1, monitors progress via BLE ServiceStatus notifications, and stops after 3 minutes. The station generates a signed receipt with ECDSA P-256 and increments the txCounter. The app asks for the receipt on FFF6 and stores it in the offline transaction log, to upload it to the server once it has a network.
 
 ## Participants
 
@@ -20,7 +22,7 @@ It is a winter evening in Example City. Heavy snowfall has knocked out the inter
 - OfflinePass allowance: 100 credits total, 5 max uses, 30 credits max per transaction
 - Bob's OfflinePass counter is at 2 (he has done 2 previous offline sessions)
 - Station BLE is advertising the OSPP service UUID, with the name `OSPP-b2c3d4` (last 6 hex chars of station ID) in its scan response
-- Station holds its mTLS certificate, whose extended key usage carries `clientAuth` and `id-kp-osppBleStation`; the app holds the trust bundle of its last pass issuance — the Station CA set, each CA with its CRL ([`app-contract.md` §3.4](../../spec/profiles/offline/app-contract.md#34-the-trust-bundle))
+- Station holds its mTLS certificate, whose extended key usage carries `clientAuth`; the app holds the trust bundle of its last pass issuance — the Station CA set, each CA with its CRL ([`app-contract.md` §3.4](../../spec/profiles/offline/app-contract.md#34-the-trust-bundle))
 - Station holds the server key set (`OfflinePassPublicKey`) in NVS, including the key the pass's `keyId` names
 - Station `OfflineModeEnabled` configuration is `true`
 - Station is within its own offline limits: it holds 7 offline transactions the server has not yet answered `Accepted`, `Duplicate` or `Rejected`, well under its `OfflineTransactionLimit` (1000), and it has been offline for far less than its `OfflineWindowHours` (240). Both are station configuration, not pass fields ([`08-configuration.md` §5](../../spec/08-configuration.md#5-offline--ble-configuration-keys))
@@ -204,7 +206,7 @@ The app generates a fresh ephemeral P-256 key pair and a cryptographically rando
   "bleVersion": "0.3.0",
   "stationNonce": "nl+FBpL/lU0181wqYJgSi8QFcbi5ZZMRz0XrZhPUpvw=",
   "stationEphemeralPubKey": "A3QJ54K3U/UO3me2bm9t7v7KXx+WcEwQyJaoPrO82cA2",
-  "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+  "stationCertificate": "MIICAzCCAamgAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOBtDCBsTAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAjA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNIADBFAiA68HnSIWTR3JTm5kYtjZjERKezdDF2N/qyVrM9FHc2DgIhAOv5S9B8HOhYsQOnPW5Qne3CilfGv5/TnrQ6ujO1RK6Q",
   "stationConnectivity": "Offline",
   "availableServices": [
     {
@@ -229,7 +231,7 @@ The app generates a fresh ephemeral P-256 key pair and a cryptographically rando
     }
   ],
   "catalogDigest": "kR7SmaHNzwk56QSIJYzA+wXMZcQqUgLRHH2/fZ3SUfk=",
-  "stationSignature": "MEQCIBor51eIOuysLqXjSwvkd6XVbFmzGNWBBjZ8nk2tCHgYAiA6rjZr0hnYrhFX0tLvN5r0kJsiN/TAfJZGWacB3fGXMA=="
+  "stationSignature": "MEQCIFxgqOu9a3E2aAPaRayTNK7yje5IHY1Jq40IQo/7Xu9QAiA9lGDRQt+ldG3K6uQd87wCuHSRw69VIeSMxYKrXJrnAA=="
 }
 ```
 
@@ -239,7 +241,7 @@ The station chooses BLE version `0.3.0` from the Hello's list, generates its own
 
 ### Step 9: Station Verification and Session Key Derivation (18:32:13.200)
 
-Before it derives any key, and before Bob's pass can leave the phone, the app verifies the station ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)): the certificate chains to a Station CA of its trust bundle, is valid now, and is on no entry of that CA's CRL; it carries `digitalSignature` and `id-kp-osppBleStation`; its subject CN, `stn_a1b2c3d4`, is the station Bob is standing at; and `stationSignature` verifies under its key. It also confirms that the catalog Bob chose from is the one the Challenge's `catalogDigest` names, and that Eco Program is available on Bay 1 in `availableServices`. Had the certificate or the signature failed, the app would have aborted with `2013 BLE_AUTH_FAILED` and sent nothing; had the digest differed, it would have sent nothing, closed the connection and read FFF2 again on a new one ([`ble-handshake.md` §3](../../spec/profiles/offline/ble-handshake.md#3-step-2-challenge)).
+Before it derives any key, and before Bob's pass can leave the phone, the app verifies the station ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)): the certificate chains to a Station CA of its trust bundle, is valid now, and is on no entry of that CA's CRL; it carries `digitalSignature`; its subject CN, `stn_a1b2c3d4`, is a `stationId`, the station Bob is standing at; and `stationSignature` verifies under its key. It also confirms that the catalog Bob chose from is the one the Challenge's `catalogDigest` names, and that Eco Program is available on Bay 1 in `availableServices`. Had the certificate or the signature failed, the app would have aborted with `2013 BLE_AUTH_FAILED` and sent nothing; had the digest differed, it would have sent nothing, closed the connection, read FFF2 again on a new one, and had Bob choose again from that catalog and confirm the choice before a new handshake ([`ble-handshake.md` §3](../../spec/profiles/offline/ble-handshake.md#3-step-2-challenge)).
 
 Both the app and station then derive the BLE session key using HKDF-SHA256 over the one ECDH secret of the two ephemeral keys (the BLE LTK is **not** used — see `spec/06-security.md` §6.5):
 
@@ -291,7 +293,7 @@ This produces a 32-byte symmetric key used for the `sessionProof` HMAC in the ne
   "sessionProof": "hAW4BhA445dJmlLG78qcEn36DHEhkjIDNt3fZOGGh0c=",
   "deviceProof": {
     "format": "apple-appattest",
-    "signature": "MEUCIQCXpmgaeY3ujRhhS8bK74783dxeU/Z1tfiWwpW6KQ9tAwIgBp8RW5evYXI7f91yiJMFxcLf88BEW6lL+FcqRvGSCvc=",
+    "signature": "MEUCIQCO0EzSo7wAZ8a1BWHEaRFb92nxOPfJ+pbWMsfOeu9QcgIgdzKWIJpAn/s/mP+GZzqzlY8kN6WnBfMqCPVSbE5aMOo=",
     "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
   }
 }
@@ -704,7 +706,7 @@ The server, in the order of [`reconciliation.md` §2](../../spec/profiles/offlin
 1. Deduplicates by `offlineTxId` (`otx_a3b4c5d6e7f8d5fa9b53cfa58cb91fa5`). Whichever copy of a receipt arrives first — the station's TransactionEvent or the app's upload — may settle, and once one has settled the other is answered `Duplicate` ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload))
 2. Verifies the receipt signature with the receipt-signing key of the station the signed receipt names (`stationId`)
 3. Records txCounter 8 as forensic evidence (contiguous with the last known counter — noted, not gated on)
-4. Applies the reconcile-time gate: the OfflinePass was valid at the transaction's signed `endedAt`, read through the station's clock offset ([`reconciliation.md` §6.8](../../spec/profiles/offline/reconciliation.md#68-station-clock-offset))
+4. Applies the reconcile-time gate: the OfflinePass was valid at the transaction's signed `startedAt`, the transaction time of a wash its station validated, read through the station's clock offset ([`reconciliation.md` §6.8](../../spec/profiles/offline/reconciliation.md#68-station-clock-offset))
 5. Settles: recomputes the cost from the signed receipt — 30 credits, not above `maxCreditsPerTx` (30) — and debits 30 credits from Bob's wallet
 6. Scores the settled transaction for fraud ([`06-security.md` §7.4](../../spec/06-security.md#74-fraud-detection--offline-transactions)); the score is in the Normal band, so no `FraudDetected` record is written
 7. Creates a session record

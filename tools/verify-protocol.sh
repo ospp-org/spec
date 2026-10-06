@@ -10,7 +10,11 @@
 # went stale: `9 FAIL / 6 SKIP` was true at v0.20.0 and was still being quoted after 0.20.1
 # and 0.20.2 had closed three of them.
 #
-#   (this HEAD) 2026-10-06  (unreleased)  0 FAIL, 1 SKIP  (5642 checks, 5641 PASS) — the BLE
+#   (this HEAD) 2026-10-06  (unreleased)  0 FAIL, 1 SKIP  (5679 checks, 5678 PASS) — the BLE
+#                                  closing session: Gabi's eleven decisions of 2026-10-06, the freeze
+#                                  and their review. 37 more cross-reference links, all passing;
+#                                  the failure SET is unchanged.
+#   (superseded) 2026-10-06  (unreleased)  0 FAIL, 1 SKIP  (5642 checks, 5641 PASS) — the BLE
 #                                  follow-up: Gabi's ten decisions of 2026-10-05 and their review.
 #                                  Category 7 checks an offlineTxId against its 128-bit pattern,
 #                                  ^otx_[a-f0-9]{32,}$, where it had taken any readable form; the

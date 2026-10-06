@@ -64,6 +64,17 @@ negotiates the BLE version inside the transcript, and adds the phone's proof of 
 ([`06-security.md` §6.5.4](../spec/06-security.md#654-device-proof-of-possession)). Those are
 recorded where they are defined; this record covers the station's side.
 
+**Status note, 2026-10-06.** Decision item 1's purpose is withdrawn, and in item 4 the subject CN takes the place of the
+extended key usage. A station certificate's extended key usage is `clientAuth` alone, and the app accepts the
+certificate for the BLE signature because it chains to a Station CA of its bundle and its subject CN is a `stationId`,
+which a Station CA names in no certificate but a station's
+([`06-security.md` §4.4, §6.5.2](../spec/06-security.md#44-certificate-requirements)). That departs from RFC 5280
+§4.2.1.12 for one use and one relying party, OSPP's own app, so that no station certificate is re-issued for BLE; the
+separation from TLS below rests on the context of the signed content, not on a purpose, and is unchanged. A
+certificate a Station CA issues to a party that is not a station — the reference server's own MQTT client holds one —
+names no `stationId`, and the app refuses it. The consequence below, that a certificate issued without the purpose
+cannot serve BLE until it is renewed, no longer holds: every station certificate serves BLE as it was issued.
+
 ## One key, two signatures
 
 NIST's rule is *"In general, a single key shall be used for only one purpose (e.g., encryption,
@@ -118,7 +129,7 @@ evidence for the review, not a second condition.
 
 ## References
 
-- [`06-security.md`](../spec/06-security.md) §4.4 (certificate profile and `id-kp-osppBleStation`),
+- [`06-security.md`](../spec/06-security.md) §4.4 (certificate profile, and the subject that makes a certificate a station's),
   §6.5 (key schedule), §6.5.2 (station authentication), §6.5.4 (device proof), Appendix B
   (review checklist).
 - [`ble-handshake.md`](../spec/profiles/offline/ble-handshake.md) §3 (Challenge).

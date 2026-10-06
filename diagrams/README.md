@@ -261,7 +261,7 @@ sequenceDiagram
         Note over User,Station: ECDH Handshake
         User->>BLE: Hello {bleVersions, appNonce, appEphemeralPubKey}
         BLE-->>User: Challenge {bleVersion, stationNonce, stationEphemeralPubKey, stationCertificate, availableServices, catalogDigest, stationSignature}
-        User->>User: Verify certificate (Station CA, CRL, EKU), signature and catalog digest, else send no pass
+        User->>User: Verify certificate (Station CA, CRL, stationId), signature and catalog digest, else send no pass
     end
 
     rect rgb(255, 243, 224)

@@ -30,7 +30,10 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-10-06  (unreleased)  394 unbolded, 1463 bolded spans — the BLE follow-up.
+    (this HEAD) 2026-10-06  (unreleased)  394 unbolded, 1468 bolded spans — the BLE closing
+                                   session. Unbolded holds at 394: every keyword the session's
+                                   rules carry is bolded. 5 more bolded spans.
+    (superseded) 2026-10-06  (unreleased)  394 unbolded, 1463 bolded spans — the BLE follow-up.
                                    Unbolded holds at 394: every keyword the new rules carry is
                                    bolded, and a quoted RFC keyword was paraphrased rather than
                                    counted. 17 more bolded spans.

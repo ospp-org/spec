@@ -27,6 +27,6 @@
   "requestedDurationSeconds": 600,
   "deviceProof": {
     "format": "android-key",
-    "signature": "MEUCIQC7NV6XGcLqC2PDuF/WkpJtopgKqMUNU1e1+54iHe0s3QIgT4caDlnJ8AV6vB4sV3NQSElF690+Kgxd/SzvciodaV0="
+    "signature": "MEQCIE979qITtqKNjc4EawgHCRXAHsE1roA9jdV4r1dkUEvwAiBtpj2GKdEuzRveJib6HybmNTq+8uosklxJWEdsomMeXA=="
   }
 }

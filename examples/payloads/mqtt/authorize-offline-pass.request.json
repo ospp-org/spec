@@ -27,7 +27,7 @@
   "requestedDurationSeconds": 300,
   "deviceProof": {
     "format": "android-key",
-    "signature": "MEUCIQCFSPvxMaOHsdMEvM7vh0pI87mFQGoT4zIOWCW8nW3BggIgOEfJxn8XJwrKxbboAyCFBzuqgKjfAn+lNdWRtCL2C/U="
+    "signature": "MEUCIQC/c8s3XmzC7wSuRt2ccC2T7FpYy4POjmkTzcBZmDSQrAIgabFdUqizJloOHvG22uFPX2FwOT3y/yTB44koUp8K/qM="
   },
-  "transcriptHash": "tDpsIKURHzlmFo4qRMX6u0qguQXzJtkDx6jB3GR6rn0="
+  "transcriptHash": "QpBSk/jj/oVLzoDJRTK98jomTs6YK6ZPVydjuqjppsc="
 }

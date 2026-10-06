@@ -31,7 +31,7 @@ sequenceDiagram
         User->>BLE: Write FFF3: Hello {bleVersions, appNonce, appVersion, appEphemeralPubKey}
         BLE-->>User: Notify FFF4: Challenge {bleVersion, stationNonce, stationEphemeralPubKey, stationCertificate, stationConnectivity: "Offline", availableServices, catalogDigest, stationSignature}
         Note over User: Detects full offline scenario
-        User->>User: Verify certificate (Station CA, CRL, EKU), signature and catalog digest, else send no pass
+        User->>User: Verify certificate (Station CA, CRL, stationId), signature and catalog digest, else send no pass
         User->>User: Derive session key (ECDH + HKDF-SHA256)
     end
 

@@ -52,7 +52,7 @@ import { canonicalForm } from './canonical-form.mjs';
 import {
   runRfcAnchors, RFC_ANCHOR_SOURCES, BLE_VERSION,
   SALT_V3, KDF_LABEL_A2S, KDF_LABEL_S2A, SESSION_CONFIRM_LABEL,
-  STATION_SIGNATURE_CONTEXT, DEVICE_PROOF_LABEL, OID_OSPP_BLE_STATION,
+  STATION_SIGNATURE_CONTEXT, DEVICE_PROOF_LABEL,
   sha256, nonce96, wireBytes, ecdhSharedX, deriveKeyPair,
   transcriptHashOf, deriveSessionKeys, sessionProofMessage, sessionProofOf, hmacSha256,
   chachaPolySeal, chachaPolyOpen, isLowS, pemToDer, parseCertificate,
@@ -99,7 +99,7 @@ const PKI = {
   revokingCrl: 'conformance/test-keys/station-ca-test-crl-revoking.pem',
   stationKey: 'conformance/test-keys/station-mtls-test-key.pem',
   stationMtlsCert: 'conformance/test-keys/station-mtls-test-cert.pem',
-  noOsppEku: 'conformance/test-keys/station-mtls-test-cert-no-ospp-eku.pem',
+  bridgeForm: 'conformance/test-keys/station-mtls-test-cert-bridge-form.pem',
   revoked: 'conformance/test-keys/station-mtls-test-cert-revoked.pem',
   expired: 'conformance/test-keys/station-mtls-test-cert-expired.pem',
   noDigitalSignature: 'conformance/test-keys/station-mtls-test-cert-no-digital-signature.pem',
@@ -118,14 +118,14 @@ const certB64 = (k) => pemToDer(pkiText(k)).toString('base64');
 // that revokes serial 0A03 and, for the genuine certificate, the bundle's CRL too — both
 // current then. The expected verdicts are fixed here, from how each certificate was made
 // (conformance/test-keys/README.md); a disagreement stops the run. The OSPP-specific
-// checks (key usage, the OSPP purpose, P-256) are not openssl's to judge and are left to
-// the gate, which the negative cases exercise.
+// checks (key usage, P-256, a subject that names a station) are not openssl's to judge and
+// are left to the gate, which the negative cases exercise.
 function opensslCrossCheck() {
   const at = String(Math.floor(Date.parse(EVALUATION_TIME) / 1000));
   const expect = [
     ['stationMtlsCert', 'bundleCrl', 'OK'],
     ['stationMtlsCert', 'revokingCrl', 'OK'],
-    ['noOsppEku', 'revokingCrl', 'OK'],
+    ['bridgeForm', 'revokingCrl', 'OK'],
     ['noDigitalSignature', 'revokingCrl', 'OK'],
     ['p384Cert', 'revokingCrl', 'OK'],
     ['revoked', 'revokingCrl', 'certificate revoked'],
@@ -533,10 +533,10 @@ const STATION_CASES = [
   // Step 2.
   { id: 'certificate-revoked', step: 2, what: 'a certificate whose serial the CRL lists', challenge: resign(genuine, { cert: certB64('revoked') }), crl: 'revokingCrl' },
   // Step 3.
-  { id: 'certificate-without-ospp-purpose', step: 3, what: 'extended key usage clientAuth only, without id-kp-osppBleStation', challenge: resign(genuine, { cert: certB64('noOsppEku') }), crl: 'bundleCrl' },
   { id: 'certificate-without-digital-signature', step: 3, what: 'key usage keyAgreement, without digitalSignature', challenge: resign(genuine, { cert: certB64('noDigitalSignature') }), crl: 'bundleCrl' },
   { id: 'certificate-p384-key', step: 3, what: 'a P-384 key, signed with it', challenge: resign(genuine, { cert: certB64('p384Cert'), signer: 'p384', keyPem: pkiText('p384Key') }), crl: 'bundleCrl' },
   // Step 4.
+  { id: 'certificate-whose-subject-names-no-station', step: 4, what: 'a certificate the Station CA issued to a party that is not a station: the subject form of a server\'s broker client, csms-test-server-1, key usage digitalSignature and keyAgreement, extended key usage clientAuth, over the station key', challenge: resign(genuine, { cert: certB64('bridgeForm') }), crl: 'bundleCrl' },
   { id: 'certificate-names-another-station', step: 4, what: 'a genuine certificate of another station than the one the code scanned names', challenge: genuine, crl: 'bundleCrl', intendedStationId: 'stn_e5f6a7b8c9d0' },
   // Step 5.
   { id: 'replayed-certificate-signed-by-another-key', step: 5, what: 'a genuine certificate replayed, the Challenge signed by a key that is not its key (the station receipt key)', challenge: resign(genuine, { keyPem: pkiText('receiptKey') }), crl: 'bundleCrl' },
@@ -672,7 +672,6 @@ writeJson(`${CRYPTO_DIR}/ble-handshake-keyschedule.json`, {
     sessionKeyConfirmationLabel: SESSION_CONFIRM_LABEL.toString('utf-8'),
     stationSignatureContext: STATION_SIGNATURE_CONTEXT,
     deviceProofLabel: DEVICE_PROOF_LABEL,
-    idKpOsppBleStation: OID_OSPP_BLE_STATION,
     deviceProofFormats: FORMATS,
     appAttestAppId: APP_ATTEST_APP_ID,
   },

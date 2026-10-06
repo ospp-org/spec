@@ -22,7 +22,7 @@ Not every part of this specification is at the same maturity. Read this before i
 | Surface | Status in 0.44 | Basis |
 |---|---|---|
 | MQTT station↔server (Core, Transaction, Security, Device Management) | **Stable** | Implemented by a server and exercised by an independent station implementation |
-| HTTPS provisioning (`POST /api/v1/stations/provision`) | **Stable** | Implemented; error vocabulary and precedence chain covered by conformance cases. The station certificate's second purpose, `id-kp-osppBleStation`, serves only BLE and is **EXPERIMENTAL** with it |
+| HTTPS provisioning (`POST /api/v1/stations/provision`) | **Stable** | Implemented; error vocabulary and precedence chain covered by conformance cases |
 | Offline reconciliation, OfflinePass lifecycle | **Stable** | Implemented and exercised over MQTT — except what reads the BLE request, check #4's device proof and the estimated cost of checks #7 and #8, which is **EXPERIMENTAL** with it |
 | AuthorizeOfflinePass and SessionStarted, the Partial-B authorization and start report over MQTT | **EXPERIMENTAL** | Its request carries the device proof and the transcript hash of a BLE handshake, and changed incompatibly with the BLE wire revision |
 | Offline app–server contract — pass issuance and receipt upload over HTTPS ([`app-contract.md`](spec/profiles/offline/app-contract.md)) | **Draft** | Binds the server and the app, not the station |

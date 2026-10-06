@@ -1,5 +1,7 @@
 # Error Scenario 03: Offline Pass Expired
 
+> **Status: EXPERIMENTAL.** This scenario runs over the BLE surface, which is EXPERIMENTAL until its cryptographic construction has passed the review of [`06-security.md` Appendix B](../../spec/06-security.md#appendix-b--ble-cryptographic-review-checklist) — see [Release status](../../README.md#ble-is-experimental).
+
 ## Scenario
 
 Alice is at the station but her phone has no cellular signal. She attempts to start
@@ -129,7 +131,7 @@ The Challenge names this catalog by its digest.
   "bleVersion": "0.3.0",
   "stationNonce": "WmplP7lhWDDjNoOR711wziZf41PUY1my5fMgfCebSw8=",
   "stationEphemeralPubKey": "Aixha1rLYxgD96zylNnBbBI/dquE1q3cF37gEP+4nMyO",
-  "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+  "stationCertificate": "MIICAzCCAamgAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOBtDCBsTAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAjA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNIADBFAiA68HnSIWTR3JTm5kYtjZjERKezdDF2N/qyVrM9FHc2DgIhAOv5S9B8HOhYsQOnPW5Qne3CilfGv5/TnrQ6ujO1RK6Q",
   "stationConnectivity": "Offline",
   "availableServices": [
     {
@@ -149,12 +151,13 @@ The Challenge names this catalog by its digest.
     }
   ],
   "catalogDigest": "jlmpygkS+M1ixH7bJrWYFbxbTEmIJtNDtLu87NLl4d4=",
-  "stationSignature": "MEQCIHluwc6yLIlIYB4nOKGy6NtdbSIH33gheVB1iTD2zc4/AiBptYrZ+yI7GKGaNsbSrhsm6YXvEJx54MTEAk8aRZg7ng=="
+  "stationSignature": "MEUCIQCw4gEOZhSw3qJSpM2COht40XOxZvYtmKPOj1tEIigQzQIgC399IKWY2b2CZ/4DETccsiS1Vo2gWa+5B1aS2upNUNU="
 }
 ```
 
 The app verifies the station's certificate against a Station CA of its trust bundle and that CA's CRL,
-and the station's signature, before it sends the pass
+the station's signature, and that the Challenge's `catalogDigest` names the catalog Alice chose from, before it
+sends the pass
 ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)).
 Both pass: the station is genuine. What fails is Alice's own pass, below.
 
@@ -196,7 +199,7 @@ The `expiresAt` field clearly shows the pass expired more than a day ago.
   "sessionProof": "EtKD75H71pKdOC5mrEsIAS7a04p7oQzRcdNZv/G0uPA=",
   "deviceProof": {
     "format": "apple-appattest",
-    "signature": "MEQCIAqMeUwtfN5JmIHZ3x1L5yIr3OCjOIliScLu1LONJR4uAiAJQ2oGv5KVzIZbZVLJVeJct5KFi+qE6JEyrPPIA5gW5Q==",
+    "signature": "MEUCIQCEwW25CVvErj+iiv/VipbuMQPh7FTUDHfb83ht3NZEBgIgGkcGKv7wBF8kHQKB3PXqfkcW0lGl/1LbZ4W0LJkLK+M=",
     "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
   }
 }

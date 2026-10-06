@@ -1,5 +1,7 @@
 # Flow 05: Partial A Session (Phone Online, Station Offline)
 
+> **Status: EXPERIMENTAL.** This flow runs over the BLE surface, which is EXPERIMENTAL until its cryptographic construction has passed the review of [`06-security.md` Appendix B](../../spec/06-security.md#appendix-b--ble-cryptographic-review-checklist) — see [Release status](../../README.md#ble-is-experimental).
+
 ## Scenario
 
 Alice is at "Station Alpha -- Example City" and wants to start the Eco Program service on Bay 1. Her phone has 4G connectivity, but the station's MQTT connection is down due to an ISP fiber cut in the area. The station has been offline for about 20 minutes, but its BLE radio is advertising normally. Alice opens the app, which detects the station via BLE and reads that it reports `connectivity: "Offline"` — a hint the station's signed Challenge confirms. Since her phone is online, the app uses the **Partial A** strategy: it calls `POST /sessions/offline-auth` to obtain a server-signed ECDSA P-256 authorization, then delivers it to the station over BLE. The station verifies the signature locally with a key of the server key set (`OfflinePassPublicKey`) it holds. Alice runs a 3-minute Eco Program session on Bay 1, stops, and receives a signed receipt. Credits were pre-debited server-side when the authorization was issued; settlement is a refund-only true-up against that pre-debit, never above the authorization's `creditsAuthorized` and never a second debit ([`reconciliation.md` §8.2](../../spec/profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)).
@@ -21,7 +23,7 @@ Alice is at "Station Alpha -- Example City" and wants to start the Eco Program s
 - Alice's wallet balance: 120 credits
 - Station `stn_a1b2c3d4` has been offline (MQTT disconnected) for ~20 minutes
 - Station BLE is advertising the OSPP service UUID, with the name `OSPP-b2c3d4` in its scan response
-- Station holds its mTLS certificate, whose extended key usage carries `clientAuth` and `id-kp-osppBleStation`
+- Station holds its mTLS certificate, whose extended key usage carries `clientAuth`
 - Station holds the server key set (`OfflinePassPublicKey`) in NVS
 - Station `OfflineModeEnabled` does not matter here: it governs only whether the station accepts an OfflinePass on its own validation, and a ServerSignedAuth is authorized and debited by the server ([`08-configuration.md` §5](../../spec/08-configuration.md#5-offline--ble-configuration-keys))
 - Bay 1 status: `Available`
@@ -249,7 +251,7 @@ The station chooses the BLE version, generates its own nonce and ephemeral key, 
   "bleVersion": "0.3.0",
   "stationNonce": "/kLv1LXl1SeQiYke7YZChUTxp9jfhgRDkkf3CNbr8kY=",
   "stationEphemeralPubKey": "Ao3523QPEUTfo1iHGinnN3e5/DBUw9pmimYeTp7FsMoi",
-  "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+  "stationCertificate": "MIICAzCCAamgAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOBtDCBsTAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAjA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNIADBFAiA68HnSIWTR3JTm5kYtjZjERKezdDF2N/qyVrM9FHc2DgIhAOv5S9B8HOhYsQOnPW5Qne3CilfGv5/TnrQ6ujO1RK6Q",
   "stationConnectivity": "Offline",
   "availableServices": [
     {
@@ -269,11 +271,11 @@ The station chooses the BLE version, generates its own nonce and ephemeral key, 
     }
   ],
   "catalogDigest": "aTJKAIhKyFTwppylQPa+nBz8rl6KwwglWGonzrJX7D4=",
-  "stationSignature": "MEQCICQdjMlWwRCQNOnt1V9ahN1aHW9EtLggWDJIItLIHuLNAiAFshHsI/yM/GmsXe+9akHfVy+IHsGqtIYhMhJ3Roi/zQ=="
+  "stationSignature": "MEUCIQCfl02hXYehiFD7EW2Jr4AzcZ2SE/+BdKoJ+QtTtFEpnAIgfwblPdfHWjL0NHMIFBU6lvf8OadzN5gOkNGVlGkpbGo="
 }
 ```
 
-The `stationConnectivity: "Offline"` confirms the Partial A scenario. Before it relays anything, the app verifies the station against the trust bundle it received in Step 5 ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)): the certificate chains to a Station CA of the bundle, is on no entry of that CA's CRL, carries `id-kp-osppBleStation`, names `stn_a1b2c3d4` — the station the authorization is for — and `stationSignature` verifies under it; and the catalog Alice chose from is the one the Challenge's `catalogDigest` names ([`ble-handshake.md` §3](../../spec/profiles/offline/ble-handshake.md#3-step-2-challenge)). It then derives the BLE session key over the ephemeral ECDH secret (the BLE LTK is **not** used — see `spec/06-security.md` §6.5):
+The `stationConnectivity: "Offline"` confirms the Partial A scenario. Before it relays anything, the app verifies the station against the trust bundle it received in Step 5 ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)): the certificate chains to a Station CA of the bundle, is on no entry of that CA's CRL, names `stn_a1b2c3d4` in its subject CN — a `stationId`, the station the authorization is for — and `stationSignature` verifies under it; and the catalog Alice chose from is the one the Challenge's `catalogDigest` names ([`ble-handshake.md` §3](../../spec/profiles/offline/ble-handshake.md#3-step-2-challenge)). It then derives the BLE session key over the ephemeral ECDH secret (the BLE LTK is **not** used — see `spec/06-security.md` §6.5):
 
 ```
 SessionKey = HKDF-SHA256(
@@ -692,7 +694,7 @@ On the Operator Dashboard, Charlie sees:
 
 ## Key Design Decisions
 
-1. **Credits are debited server-side before the BLE handshake.** In Partial A, the server is reachable, so billing happens upfront at step 5. This means the station does not need to make credit decisions locally. The server pre-debits the maximum (50 credits for 5 minutes) and refunds the difference after actual usage is known. That maximum is the authorization's signed `creditsAuthorized`, and it caps what the session may be charged: the true-up is refund-only and never debits more, even if the tariff rose while the station was offline ([`reconciliation.md` §8.2](../../spec/profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)).
+1. **Credits are debited server-side before the BLE handshake.** In Partial A, the server is reachable, so billing happens upfront at step 5. This means the station does not need to make credit decisions locally. The server pre-debits the maximum (50 credits for 5 minutes) and refunds the difference after actual usage is known. That maximum is the authorization's signed `creditsAuthorized`, and it caps what the session may be charged: the true-up is refund-only and never debits more, even if the tariff rose while the station was offline ([`reconciliation.md` §8.2](../../spec/profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback)). That holds while the pre-debit stands: an authorization no receipt has reconciled by its `expiresAt` is refunded then, and a receipt that arrives afterwards is debited once, with no prior debit, up to the same maximum ([§6.7](../../spec/profiles/offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4)).
 
 2. **ECDSA P-256 signature provides server trust without connectivity.** The station trusts the authorization because it can verify the server's ECDSA P-256 signature with a key of the server key set (`OfflinePassPublicKey`) it holds — delivered at provisioning, at every boot and by ChangeConfiguration. No network round-trip is needed. During a key rotation the set holds both the old and the new key; there is no internally cached previous key and no grace period ([`06-security.md` §6.7](../../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)).
 

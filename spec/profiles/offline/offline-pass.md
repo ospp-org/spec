@@ -128,7 +128,7 @@ Processing **MUST** stop at the first failure.
 >
 > **What the server does about it.** The server's backstop for temporal validity is
 > [`reconciliation.md` §6.1](reconciliation.md#61-check-list) check #9, and it does not read the
-> station's clock alone: it judges the signed `endedAt` corrected by the offset the server measured
+> station's clock alone: it judges the signed `startedAt` corrected by the offset the server measured
 > when the station reconnected, for a receipt whose clock was synchronized, and flags the receipt for
 > review when its clock was not ([`reconciliation.md` §6.8](reconciliation.md#68-station-clock-offset)).
 > The signed times themselves are never rewritten. The guards that read no clock at all — checks
@@ -156,7 +156,7 @@ Processing **MUST** stop at the first failure.
 4. Stations store the latest `RevocationEpoch` in non-volatile memory. During validation check #3, any pass with `revocationEpoch` less than the stored epoch is rejected with `2004 OFFLINE_EPOCH_REVOKED`.
 5. A station that is offline when the epoch moves receives the new value when it reconnects, in the configuration of its BootNotification RESPONSE, or by ChangeConfiguration.
 
-**Per-user revocation is enforced where the server is reachable.** Revoking one user's passes — one pass, or every pass of a user the server has blocked — marks the passes revoked on the server, from a recorded revocation moment, and that mark is read wherever the server is in the loop: on the online path, at Partial-B authorize time ([`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks) check #12, `2014 OFFLINE_PASS_REVOKED`) and at reconciliation ([`reconciliation.md` §6.1](reconciliation.md#61-check-list) check #11, `2014`). **A revocation applies to the washes after its moment (Normative):** at reconciliation the server judges a wash's time through the station's clock offset ([`reconciliation.md` §6.8](reconciliation.md#68-station-clock-offset)), refuses a wash that ended after the revocation moment, and settles normally a wash that ended before it. A station validating offline has no server to ask and does not learn it.
+**Per-user revocation is enforced where the server is reachable.** Revoking one user's passes — one pass, or every pass of a user the server has blocked — marks the passes revoked on the server, from a recorded revocation moment, and that mark is read wherever the server is in the loop: on the online path, at Partial-B authorize time ([`authorize-offline-pass.md` §5](authorize-offline-pass.md#5-validation-checks) check #12, `2014 OFFLINE_PASS_REVOKED`) and at reconciliation ([`reconciliation.md` §6.1](reconciliation.md#61-check-list) check #11, `2014`). **A revocation applies to the washes accepted after its moment (Normative):** at reconciliation the server judges a wash at its transaction time, the moment the authorization of the wash was accepted ([`reconciliation.md` §6.1](reconciliation.md#61-check-list)) — its own acceptance for a Partial-B session, or for a transaction its station validated itself the signed `startedAt`, read through the station's clock offset ([`reconciliation.md` §6.8](reconciliation.md#68-station-clock-offset)) — refuses a wash accepted after the revocation moment, and settles normally a wash accepted before it, however long it ran. A station validating offline has no server to ask and does not learn it.
 
 **What an offline station can refuse, and what it cannot.** A station validating a pass with no server connection can refuse on what it holds:
 

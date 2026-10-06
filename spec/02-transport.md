@@ -657,7 +657,7 @@ BLE transport is part of the **Offline/BLE Profile** and is OPTIONAL. Stations t
 | TX power | 0 dBm | +4 dBm |
 | Range (open air) | 10 meters | 20 meters |
 | Simultaneous connections | 1 | 3 |
-| MTU | 23 bytes (default) | 247 bytes (negotiated) |
+| ATT_MTU | 185 octets, with the LE Data Packet Length Extension and a connection interval of at most 30 ms ([`profiles/offline/ble-transport.md` §10](profiles/offline/ble-transport.md#10-connection-parameters)) | 247 octets |
 | Advertising interval | 200ms | 200ms |
 
 ### 8.3 GATT Service Definition
@@ -670,9 +670,9 @@ The advertising data — Flags and the OSPP service UUID, with optional vendor m
 
 ### 8.5 MTU Negotiation
 
-After BLE connection is established, the app SHOULD request an MTU of **247 bytes**. The effective payload per ATT write/notification is `MTU - 3` = 244 bytes (3 bytes for ATT header).
+The connection's floor — an ATT_MTU of 185 to 247 octets, the LE Data Packet Length Extension and a connection interval of at most 30 ms — is defined once, in [`profiles/offline/ble-transport.md` §10](profiles/offline/ble-transport.md#10-connection-parameters). The effective payload per ATT write or notification is `ATT_MTU - 3` octets (3 for the ATT header).
 
-Every message is carried by the fragmentation protocol of [`profiles/offline/ble-transport.md` §11](profiles/offline/ble-transport.md#11-fragmentation-protocol), whose fragments carry `MTU - 6` octets of the message each ([§10](profiles/offline/ble-transport.md#10-mtu-negotiation) there).
+Every message is carried by the fragmentation protocol of [`profiles/offline/ble-transport.md` §11](profiles/offline/ble-transport.md#11-fragmentation-protocol), whose fragments carry `ATT_MTU - 6` octets of the message each ([§10](profiles/offline/ble-transport.md#10-connection-parameters) there).
 
 ### 8.6 Fragmentation
 
@@ -772,7 +772,7 @@ When the station has both MQTT and BLE available:
 | Offline | Online | Partial B ¹ | BLE (auth) + MQTT (validation) |
 | Offline | Offline | Full Offline | BLE only |
 
-> ¹ **Partial B** is REQUIRED of every station that implements the Offline / BLE profile ([`profiles/offline/README.md` §5](profiles/offline/README.md#5-compliance-requirements)). A station whose AuthorizeOfflinePass goes unanswered MAY fall back to validating the pass itself.
+> ¹ **Partial B** is REQUIRED of every station that implements the Offline / BLE profile ([`profiles/offline/README.md` §5](profiles/offline/README.md#5-compliance-requirements)). A station whose AuthorizeOfflinePass goes unanswered MAY fall back to validating the pass itself if its `OfflineModeEnabled` is `true` ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 6).
 
 ---
 
@@ -972,7 +972,7 @@ lenient parser.
 | Transport | Max Payload | Typical Size |
 |-----------|-------------|--------------|
 | MQTT | **64 512 bytes** — the envelope cap of §10.2.1, inside the 64 KB Maximum Packet Size of [§1.2](#12-connection-parameters) | 200–500 bytes |
-| BLE | Limited by MTU; fragmented if needed | 50–800 bytes |
+| BLE | 255 fragments of `ATT_MTU − 6` octets, 45,645 octets at the floor's ATT_MTU of 185 ([`profiles/offline/ble-transport.md` §11](profiles/offline/ble-transport.md#11-fragmentation-protocol)); the FFF2 catalog and a Challenge's `availableServices` at most 24,576 each (§4 there) | 50–800 bytes; a Challenge and the catalog several thousand |
 | HTTPS | No protocol limit; server MAY enforce 1 MB | Varies |
 
 #### 10.2.1 The envelope cap
