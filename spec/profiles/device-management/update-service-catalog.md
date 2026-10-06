@@ -71,6 +71,13 @@ party that can honour it:
    CATALOG_TOO_LARGE` remains available for a catalog the station can receive and cannot **keep**;
    see the note below.
 
+9a. A server **MUST NOT** publish an UpdateServiceCatalog to a station that declares the Offline / BLE
+   profile when the FFF2 value the station derives from it — every bay the station declared, each with
+   the services the catalog binds to it, in the OSPP Canonical Form — would exceed **24,576 octets**
+   ([`ble-transport.md` §4](../offline/ble-transport.md#4-available-services-fff2)). Such a station
+   refuses one that would with `5025 CATALOG_TOO_LARGE` and keeps the catalog it holds: it cannot serve
+   that catalog over BLE.
+
 **Coverage, which only the server can check, and the silence it must not read as a report.** Rule 8
 puts the refusal on the station and makes it **total**: one `bindings` entry naming a pair the station
 never declared costs the **whole** catalog, and the response schema is closed, so nothing on the wire

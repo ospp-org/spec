@@ -13,7 +13,7 @@ Verify the complete full-offline BLE session lifecycle: BLE scan and discovery, 
 
 ## References
 
-- `spec/profiles/offline/ble-transport.md` — the GATT service and its characteristics (§2), advertising (§9), MTU negotiation (§10), fragmentation (§11)
+- `spec/profiles/offline/ble-transport.md` — the GATT service and its characteristics (§2), advertising (§9), the connection floor (§10), fragmentation (§11)
 - `spec/profiles/offline/ble-handshake.md` — Hello, Challenge, authentication and AuthResponse; BLE version negotiation (§3)
 - **`spec/06-security.md` §6.5 — the NORMATIVE key-derivation construction. `ble-handshake.md` §6 mirrors it for convenience and states that on any discrepancy §6.5 governs; this case follows §6.5.**
 - **`spec/06-security.md` §6.5.2 — the station's certificate and signature, and the app verification gate that precedes any credential transmission; §6.5.4 — the device proof.**
@@ -51,7 +51,7 @@ Verify the complete full-offline BLE session lifecycle: BLE scan and discovery, 
 3. Client discovers the station. (State: SCANNING -> DISCOVERED)
 4. Initiate GATT connection. (State: DISCOVERED -> CONNECTING)
 5. Wait for GATT connection confirmation. (State: CONNECTING -> CONNECTED)
-6. Negotiate MTU (request 247 bytes; confirm negotiated MTU >= 185 bytes).
+6. Negotiate MTU (request 247 bytes or more; confirm the negotiated ATT_MTU is between 185 and 247 bytes, the station having answered 247), and confirm the station requests a link-layer data length of 251 octets and a connection interval of 15 to 30 ms ([`ble-transport.md` §10](../../../spec/profiles/offline/ble-transport.md#10-connection-parameters)).
 7. Discover the OSPP GATT service and all 6 characteristics (FFF1-FFF6), each the base UUID with its alias.
 8. Read FFF1 (Station Info): verify `stationId`, `stationModel`, `firmwareVersion` and `connectivity: "Offline"`, and that it carries nothing else.
 9. Subscribe to FFF2, write `0x01` to it, and verify the station notifies the service catalog, fragmented by [`ble-transport.md` §11](../../../spec/profiles/offline/ble-transport.md#11-fragmentation-protocol), including `svc_basic` on `bay_a1b2c3d4e5f6`. Choose `svc_basic` on `bay_a1b2c3d4e5f6` for 300 seconds.
