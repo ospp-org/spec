@@ -239,7 +239,12 @@ until its cryptographic construction has passed the review of
     step 4; [`07-errors.md` §3.2](spec/07-errors.md#32-authentication--authorization-errors-2xxx), the 2003 row; the
     decided record of the clock offset); and a Partial-A row "that expired unused" is said to have a receipt, where
     the row expired with no receipt reconciled ([`reconciliation.md` §6.7, §8 and §8.2](spec/profiles/offline/reconciliation.md#8-wallet-reconciliation);
-    the guide's step 5).
+    the guide's step 5). The third round left two more: rule 4a, boot-notification §5.2 rule 4, session-ended §5 rule
+    1 and start-service §6 rule 12 say the server settles a session whose bay is reported `Faulted` with `5113` after a
+    reboot as online does, and online settles the amount that way but at the end of its own timer, not at the report
+    ([`authorize-offline-pass.md` §6](spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4a);
+    and [`ble-transport.md`](spec/profiles/offline/ble-transport.md) cites the Bluetooth Core Specification as v5.4
+    in §10 and as v6.2 elsewhere, where Chapter 00's normative reference is v5.3.
 
 ---
 
