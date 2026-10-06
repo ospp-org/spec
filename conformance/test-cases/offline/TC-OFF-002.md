@@ -154,8 +154,8 @@ Withdrawn with check #5: a pass carries no station or organization scope ([`offl
 2. Wrong error code returned for a specific validation failure (e.g., `2003` instead of `2004` for epoch revocation).
 3. Counter replay (`2005`) is not flagged as Critical severity.
 4. A presentation that fails a check the station makes before it validates the pass is refused with another code, or its pass is validated first.
-4. No SecurityEvent is generated for signature failure or replay detection.
-5. A structurally invalid OfflinePass (missing required fields) is accepted.
-6. The positive control (valid pass) is rejected.
-7. Station does not update `lastSeenCounter` after a successful authentication.
-8. Rate limiting check (`minIntervalSec`) is not enforced.
+5. No SecurityEvent is generated for signature failure or replay detection.
+6. A structurally invalid OfflinePass (missing required fields) is accepted.
+7. The positive control (valid pass) is rejected.
+8. Station does not update `lastSeenCounter` after a successful authentication.
+9. Rate limiting check (`minIntervalSec`) is not enforced.

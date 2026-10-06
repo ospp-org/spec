@@ -404,7 +404,7 @@ The following messages do not require offline buffering. At reconnection, the st
 #### Hardware Requirements
 
 **Per-message sizing figures.** These are the largest **compact-JSON payload** of any vector in the `valid`
-conformance corpus for that message, measured at `efe009c` / `v0.24.1` and, for TransactionEvent, re-measured when the signed receipt gained four fields, rounded up. They exclude the MQTT
+conformance corpus for that message, measured at `efe009c` / `v0.24.1` and, for TransactionEvent, re-measured when the signed receipt gained four fields, and for SessionStarted measured when it was added, rounded up. They exclude the MQTT
 envelope and any framing a station adds. They are stated here so the arithmetic below can be checked rather
 than trusted:
 
@@ -412,6 +412,7 @@ than trusted:
 |---|---:|---:|
 | TransactionEvent (offline, pass-form) | 1235 B (`transaction-event-request-full.json`) | **1.3 KB** |
 | SessionEnded | 199 B (`session-ended-event-timer-expired.json`) | **0.25 KB** |
+| SessionStarted | 99 B (`session-started-event-minimal.json`) | **0.25 KB** |
 | SecurityEvent | 509 B (`security-event-server-signed-auth-replay.json`) | **0.6 KB** |
 
 The TransactionEvent figure is dominated by the signed `receipt` — 755 B of the 1073 B minimal vector — which
