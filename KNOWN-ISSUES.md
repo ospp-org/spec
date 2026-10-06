@@ -189,8 +189,8 @@ until its cryptographic construction has passed the review of
     enforces with `5025` ([TC-DM-008](conformance/test-cases/device-management/TC-DM-008.md), the note on `5025`).
 18. **Decision 8's reach.** The refund of a Partial-A authorization at its `expiresAt` meets most washes, which still
     run then: their receipts arrive after the refund, and the washes are debited again, with no prior debit. Flow 05's
-    own wash ends 2.7 seconds after `expiresAt`, so the true-up of the pre-debit its narrative settles is what
-    §6.7 now does only for a receipt that arrives by then. Whether the refund comes at `expiresAt`, as decided, or once
+    wash, run to its timer, would end 2.7 seconds after `expiresAt`; the flow's customer stops it earlier and its
+    receipt arrives before `expiresAt`, so the flow's own true-up of the pre-debit holds. Whether the refund comes at `expiresAt`, as decided, or once
     a wash started before it can have ended and its receipt been uploaded, is a question for the project's owner
     ([`reconciliation.md` §6.7](spec/profiles/offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4);
     [flow 05](examples/flows/05-partial-a-session.md)).
@@ -832,7 +832,11 @@ the gate at the amounts of rule 4b and is debited with no prior debit
 ([`reconciliation.md` §8.1](spec/profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
 The receipt is the session's own — the authorization's `(offlinePassId, passCounter)`, signed by the station that
 forwarded it — so check #13 passes it. A fallback record that arrives before the lapse settles the authorization
-through §8.2, and the authorization then does not lapse. **What follows is the record, as raised.**
+through §8.2, and the authorization then does not lapse. The rule applied departs from option (b) as raised below
+in three respects: the lapsed authorization keeps its `(offlinePassId, passCounter)` spent, so the receipt is the
+session's and not a transaction its station validated itself; it is charged at rule 4b's amounts; and it is judged
+at the server's acceptance ([`reconciliation.md` §6.1](spec/profiles/offline/reconciliation.md#61-check-list)).
+**What follows is the record, as raised.**
 
 **Raised 2026-10-06, by the review of the BLE follow-up.** A station whose AuthorizeOfflinePass goes unanswered
 within the handshake budget **MAY** fall back to validating the pass itself ([`authorize-offline-pass.md` §6](spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 6).

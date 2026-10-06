@@ -760,7 +760,7 @@ The station generates a signed receipt:
 }
 ```
 
-The app stores the receipt locally. The session was settled online, from the station's real-time reports; the app still uploads the receipt once it has connectivity, as it does every receipt it holds ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)), and the server answers that upload `Duplicate`, with no effect: the session settled once, on its SessionEnded ([`reconciliation.md` §3](../../spec/profiles/offline/reconciliation.md#3-deduplication-offlinetxid)).
+The app stores the receipt locally. The session was settled online, from the station's real-time reports; the app still uploads the receipt once it has connectivity, as it does every receipt it holds ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)), and the server answers that upload `Duplicate`, with no effect: the session settled once, on the server's close at the end of its authorized duration ([`reconciliation.md` §3](../../spec/profiles/offline/reconciliation.md#3-deduplication-offlinetxid)).
 
 ---
 
