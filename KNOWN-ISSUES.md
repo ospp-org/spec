@@ -1579,7 +1579,11 @@ never to rewrite.
 
 **What this closes.** The backstop no longer reads the station's clock alone. A station running days
 slow reports an `endedAt` that the offset measured at its reconnection corrects before check #9
-compares it, and a receipt the offset cannot describe is flagged rather than trusted. §9's drift row,
+compares it, and a receipt the offset cannot describe is flagged rather than trusted. **Superseded in part on
+2026-10-06:** checks #9 to #11 judge a pass at the moment the authorization of its wash was accepted — the signed
+`startedAt`, read through the offset, for a transaction its station validated itself, and the server's own acceptance,
+which needs no offset, for a Partial-B session — not at the signed `endedAt` (decision 10 of the BLE closing session;
+[`reconciliation.md` §6.1](spec/profiles/offline/reconciliation.md#61-check-list)). §9's drift row,
 quoted above as *"Use server time for billing, station time for audit"*, now reads *"Judge through the
 offset, never rewrite"*, and the tariff in force at `endedAt` is chosen through the offset too
 ([`reconciliation.md` §8.1](spec/profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).

@@ -1618,7 +1618,7 @@ OSPP uses one platform-wide **revocation epoch** for batch OfflinePass invalidat
 5. Every OfflinePass issued before the new epoch is now invalid, at every station
 6. Users must re-arm their OfflinePass (which will include the new epoch)
 
-**Per-user revocation is not an epoch.** Revoking one user's passes — one pass, or every pass of a user the server has blocked — marks them revoked on the server, which reads that mark wherever it is in the loop: at Partial-B authorize time, and at reconciliation for the washes after the revocation moment, judged through the station's clock offset — a wash before it settles normally. A station validating offline cannot learn it. What such a station can and cannot refuse is stated in [`offline-pass.md` §5](profiles/offline/offline-pass.md#5-revocation).
+**Per-user revocation is not an epoch.** Revoking one user's passes — one pass, or every pass of a user the server has blocked — marks them revoked on the server, which reads that mark wherever it is in the loop: at Partial-B authorize time, and at reconciliation for the washes whose authorization was accepted after the revocation moment ([`reconciliation.md` §6.1](profiles/offline/reconciliation.md#61-check-list)) — a wash accepted before it settles normally, however long it ran. A station validating offline cannot learn it. What such a station can and cannot refuse is stated in [`offline-pass.md` §5](profiles/offline/offline-pass.md#5-revocation).
 
 **Advantages over CRL:**
 - Constant-time check on station (`pass.epoch >= station.epoch`)
