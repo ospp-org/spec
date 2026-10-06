@@ -11,7 +11,8 @@
 >
 > `mqtt/authorize-offline-pass-request.schema.json`, `mqtt/authorize-offline-pass-response.schema.json` and
 > `common/device-proof.schema.json` are **EXPERIMENTAL** with them: the request carries the device proof and the
-> transcript hash of a BLE handshake, and changed incompatibly with the BLE wire revision.
+> transcript hash of a BLE handshake, and changed incompatibly with the BLE wire revision. So is
+> `mqtt/session-started-event.schema.json`, which reports the start of the Partial-B session such a request authorized.
 >
 > `common/offline-pass.schema.json` is **stable** and carries no station or organization scope: a
 > pass is valid at any station that accepts offline passes
@@ -32,7 +33,7 @@ This directory contains JSON Schema definitions for every message in the OSPP pr
 ```
 schemas/
 ├── common/                              23 shared type definitions ($ref targets)
-├── mqtt/                                47 MQTT message payload schemas
+├── mqtt/                                48 MQTT message payload schemas
 ├── ble/                                 16 BLE schemas (15 message types + secure frame) — EXPERIMENTAL
 ├── provisioning-request.schema.json     HTTP provisioning request (Flow §2)
 ├── provisioning-response.schema.json    HTTP provisioning response (Flow §2)
@@ -42,7 +43,7 @@ schemas/
 └── README.md                            This file
 ```
 
-**Total: 91 schema files.**
+**Total: 92 schema files.**
 
 ---
 
@@ -57,7 +58,7 @@ Shared definitions referenced by message schemas via `$ref`.
 | [`session-id.schema.json`](common/session-id.schema.json) | string | Session identifier (`sess_{uuid}`) |
 | [`service-id.schema.json`](common/service-id.schema.json) | string | Service identifier (`svc_{id}`) |
 | [`reservation-id.schema.json`](common/reservation-id.schema.json) | string | Reservation identifier (`rsv_{uuid}`) |
-| [`offline-tx-id.schema.json`](common/offline-tx-id.schema.json) | string | Offline transaction identifier (`otx_{uuid}`) |
+| [`offline-tx-id.schema.json`](common/offline-tx-id.schema.json) | string | Offline transaction identifier (`otx_` + at least 32 random hex digits, 128 bits) |
 | [`offline-pass-id.schema.json`](common/offline-pass-id.schema.json) | string | OfflinePass identifier (`opass_{uuid}`) |
 | [`user-id.schema.json`](common/user-id.schema.json) | string | User subject identifier (`sub_{id}`) |
 | [`device-id.schema.json`](common/device-id.schema.json) | string | Mobile device identifier |
@@ -317,7 +318,7 @@ if (!valid) {
 
 | Spec Chapter | Schema Coverage |
 |--------------|----------------|
-| [03 — Message Catalog](../spec/03-messages.md) | All 42 messages → 63 message schema files (REQUEST + RESPONSE + EVENT + common types) |
+| [03 — Message Catalog](../spec/03-messages.md) | All 43 messages → 64 message schema files (REQUEST + RESPONSE + EVENT + common types) |
 | [02 — Transport](../spec/02-transport.md) | `common/mqtt-envelope.schema.json` (envelope), `provisioning-response.schema.json` (MQTT connection parameters returned by provisioning) |
 | [04 — Protocol Flows](../spec/04-flows.md) | `provisioning-request.schema.json` + `provisioning-response.schema.json` (Flow §2) |
 | [06 — Security](../spec/06-security.md) | `common/offline-pass.schema.json`, `common/receipt.schema.json` |

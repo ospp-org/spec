@@ -29,7 +29,7 @@ sequenceDiagram
         Station->>Station: Buffer MeterValues to persistent storage
         Station->>Station: Buffer StatusNotifications
         Station->>Station: Complete active sessions (if possible)
-        Station->>Station: Buffer SessionEnded and TransactionEvents
+        Station->>Station: Buffer SessionStarted, SessionEnded and TransactionEvents
         Note over Station: Exponential backoff reconnection attempts<br/>1s → 2s → 4s → 8s → 16s → 30s cap
     end
 

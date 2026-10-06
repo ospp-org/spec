@@ -51,8 +51,8 @@ StationIdentity, as the README's release status said at `0.44.0`.
    identity the station presented — the binding SIGMA makes, in its basic form, by a MAC under a
    key derived from the shared secret, and without which a signed Diffie-Hellman exchange is
    open to identity misbinding ([Krawczyk, *SIGMA*, CRYPTO 2003](https://www.iacr.org/archive/crypto2003/27290399/27290399.pdf), §3.1, §5.1).
-4. **The app verifies before it sends anything.** The chain to the Station CA of its bundle, the
-   validity, the bundle's CRL, the key usage, the extended key usage, the curve, the subject CN
+4. **The app verifies before it sends anything.** The chain to a Station CA of its bundle, the
+   validity, that CA's CRL, the key usage, the extended key usage, the curve, the subject CN
    against an intended station where it holds one from an out-of-band channel, and the signature
    — before it derives the key and before any pass or authorization leaves the phone.
 5. **Withdrawn.** The StationIdentity document and its schema, the provisioning request's
@@ -108,10 +108,13 @@ station entered before this decision serves no one, and the station waits for it
 ## Review gate
 
 ADR-002 made the construction pass a cryptographic review — *"a cryptographer or an adversarial
-review on the final construction"* — before it is frozen. That gate is satisfied by an adversarial
+review on the final construction"* — before it is frozen. That gate is met by an adversarial
 review performed by the project's own team against the written checklist of
 [`06-security.md` Appendix B](../spec/06-security.md#appendix-b--ble-cryptographic-review-checklist),
-recorded item by item. The BLE profile stays EXPERIMENTAL until the review has passed.
+recorded item by item, once it has passed; it has not been performed. The BLE profile stays
+EXPERIMENTAL until its cryptographic construction has passed the review of Appendix B, and that is
+the one condition for leaving EXPERIMENTAL: an implementation that exercises the construction is
+evidence for the review, not a second condition.
 
 ## References
 

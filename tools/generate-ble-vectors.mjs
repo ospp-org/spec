@@ -58,7 +58,7 @@ import {
   chachaPolySeal, chachaPolyOpen, isLowS, pemToDer, parseCertificate,
   stationSignedContent, signStationChallenge, stationVerificationGate,
   deviceTestKey, deviceProofInput, deviceProofFormats, syntheticAuthenticatorData,
-  makeDeviceProof, verifyDeviceProof,
+  makeDeviceProof, verifyDeviceProof, catalogDigestOf, catalogCheck,
 } from './ble-crypto.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
@@ -104,6 +104,8 @@ const PKI = {
   expired: 'conformance/test-keys/station-mtls-test-cert-expired.pem',
   noDigitalSignature: 'conformance/test-keys/station-mtls-test-cert-no-digital-signature.pem',
   otherCa: 'conformance/test-keys/station-mtls-test-cert-other-ca.pem',
+  otherStationCa: 'conformance/test-keys/station-other-ca-test-cert.pem',
+  otherStationCaCrl: 'conformance/test-keys/station-other-ca-test-crl.pem',
   p384Cert: 'conformance/test-keys/station-mtls-test-cert-p384.pem',
   p384Key: 'conformance/test-keys/station-mtls-test-p384-key.pem',
   receiptKey: 'conformance/test-keys/station-test-key.pem',
@@ -129,12 +131,14 @@ function opensslCrossCheck() {
     ['revoked', 'revokingCrl', 'certificate revoked'],
     ['expired', 'revokingCrl', 'certificate has expired'],
     ['otherCa', 'revokingCrl', 'unable to get local issuer certificate'],
+    // The second CA of a two-CA set (06-security.md §4.2.1), with the CRL it issued.
+    ['otherCa', 'otherStationCaCrl', 'OK', 'otherStationCa'],
   ];
   let checked = 0;
-  for (const [k, crl, want] of expect) {
+  for (const [k, crl, want, ca = 'caCert'] of expect) {
     let out;
     try {
-      out = execFileSync('openssl', ['verify', '-attime', at, '-CAfile', `${ROOT}/${PKI.caCert}`, '-crl_check',
+      out = execFileSync('openssl', ['verify', '-attime', at, '-CAfile', `${ROOT}/${PKI[ca]}`, '-crl_check',
         '-CRLfile', `${ROOT}/${PKI[crl]}`, `${ROOT}/${PKI[k]}`], { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] });
     } catch (e) {
       out = `${e.stdout ?? ''}${e.stderr ?? ''}`;
@@ -173,6 +177,7 @@ const SCENARIOS = [
     source: `${OFFLINE_VALID}/offline-auth-request-full.json`,
     request: { bayId: 'bay_a1b2c3d4e5f6', serviceId: 'svc_basic', requestedDurationSeconds: 300 },
     // Every service the catalog of available-services-full.json binds to each bay.
+    catalog: `${OFFLINE_VALID}/available-services-full.json`,
     availableServices: [
       { bayId: 'bay_a1b2c3d4e5f6', serviceId: 'svc_basic', available: true },
       { bayId: 'bay_a1b2c3d4e5f6', serviceId: 'svc_premium', available: true },
@@ -185,6 +190,7 @@ const SCENARIOS = [
     name: 'minimal', label: 'MINIMAL', connectivity: 'Online', proof: 'apple', appVersion: '1.0.0',
     source: `${OFFLINE_VALID}/offline-auth-request-minimal.json`,
     request: { bayId: 'bay_c1d2e3f4a5b6', serviceId: 'svc_eco', requestedDurationSeconds: 60 },
+    catalog: { catalogVersion: '1', bays: [{ bayId: 'bay_c1d2e3f4a5b6', bayNumber: 1, services: [{ serviceId: 'svc_eco', serviceName: 'Eco Program', pricingType: 'PerMinute', priceCreditsPerMinute: 10 }] }] },
     availableServices: [{ bayId: 'bay_c1d2e3f4a5b6', serviceId: 'svc_eco', available: true }],
     forward: { file: null },
     fixtures: { hello: `${OFFLINE_VALID}/hello-minimal.json`, challenge: `${OFFLINE_VALID}/challenge-minimal.json`, oar: `${OFFLINE_VALID}/offline-auth-request-minimal.json`, frame: { file: `${OFFLINE_VALID}/ble-secure-frame-minimal.json`, index: 1 } },
@@ -193,6 +199,10 @@ const SCENARIOS = [
     name: 'forward-full', label: 'FORWARD_FULL', connectivity: 'Online', proof: 'android', appVersion: '3.0.1',
     source: `${SECURITY_VALID}/authorize-offline-pass-request-full.json`,
     request: { bayId: 'bay_f9e8d7c6b5a4', serviceId: 'svc_premium', requestedDurationSeconds: 600 },
+    catalog: { catalogVersion: '3', bays: [{ bayId: 'bay_f9e8d7c6b5a4', bayNumber: 1, services: [
+      { serviceId: 'svc_premium', serviceName: 'Premium Program', pricingType: 'PerMinute', priceCreditsPerMinute: 15 },
+      { serviceId: 'svc_basic', serviceName: 'Basic Program', pricingType: 'PerMinute', priceCreditsPerMinute: 8 },
+    ] }] },
     availableServices: [
       { bayId: 'bay_f9e8d7c6b5a4', serviceId: 'svc_premium', available: true },
       { bayId: 'bay_f9e8d7c6b5a4', serviceId: 'svc_basic', available: true },
@@ -203,6 +213,7 @@ const SCENARIOS = [
     name: 'forward-minimal', label: 'FORWARD_MINIMAL', connectivity: 'Online', proof: 'apple', appVersion: '3.0.1',
     source: `${SECURITY_VALID}/authorize-offline-pass-request-minimal.json`,
     request: { bayId: 'bay_a1b2c3d4e5f6', serviceId: 'svc_basic', requestedDurationSeconds: 120 },
+    catalog: `${OFFLINE_VALID}/available-services-minimal.json`,
     availableServices: [{ bayId: 'bay_a1b2c3d4e5f6', serviceId: 'svc_basic', available: true }],
     forward: { file: `${SECURITY_VALID}/authorize-offline-pass-request-minimal.json` },
   },
@@ -211,6 +222,7 @@ const SCENARIOS = [
     source: `${EX_BLE}/offline-auth-request.json`,
     request: { bayId: 'bay_a1b2c3d4e5f6', serviceId: 'svc_eco', requestedDurationSeconds: 300 },
     // Every service the catalog of examples/payloads/ble/available-services.json binds to each bay.
+    catalog: `${EX_BLE}/available-services.json`,
     availableServices: [
       { bayId: 'bay_a1b2c3d4e5f6', serviceId: 'svc_eco', available: true },
       { bayId: 'bay_a1b2c3d4e5f6', serviceId: 'svc_standard', available: true },
@@ -223,11 +235,13 @@ const SCENARIOS = [
     name: 'example-partial-b', label: 'EXAMPLE_PARTIAL_B', connectivity: 'Online', proof: 'android', appVersion: '2.1.0',
     source: `${EX_MQTT}/authorize-offline-pass.request.json`,
     request: { bayId: 'bay_a1b2c3d4', serviceId: 'svc_eco', requestedDurationSeconds: 300 },
+    catalog: { catalogVersion: '2026-02-13-01', bays: [{ bayId: 'bay_a1b2c3d4', bayNumber: 1, services: [{ serviceId: 'svc_eco', serviceName: 'Eco Program', pricingType: 'PerMinute', priceCreditsPerMinute: 10 }] }] },
     availableServices: [{ bayId: 'bay_a1b2c3d4', serviceId: 'svc_eco', available: true }],
     forward: { file: `${EX_MQTT}/authorize-offline-pass.request.json` },
   },
   {
     name: 'empty-catalog', label: 'EMPTY_CATALOG', connectivity: 'Offline', appVersion: '2.5.3',
+    catalog: `${OFFLINE_VALID}/available-services-no-catalog.json`,
     availableServices: [],
     fixtures: { hello: `${OFFLINE_VALID}/hello-empty-catalog.json`, challenge: `${OFFLINE_VALID}/challenge-empty-catalog.json` },
   },
@@ -259,7 +273,20 @@ function buildFrame(direction, keyRef, key, counter, characteristic, transcriptH
   };
 }
 
+// The FFF2 catalog a scenario's app read before the Hello: a fixture file, or a value
+// written above. Its bay-service pairs are the Challenge's availableServices, one for one.
+function catalogOf(sc) {
+  const value = typeof sc.catalog === 'string' ? readJson(sc.catalog) : sc.catalog;
+  if (!value || !Array.isArray(value.bays)) throw new Error(`scenario ${sc.name}: no FFF2 catalog`);
+  const pairs = (xs) => xs.map(([b, s]) => `${b}/${s}`).sort().join(',');
+  const fromCatalog = pairs(value.bays.flatMap((b) => b.services.map((s) => [b.bayId, s.serviceId])));
+  const fromChallenge = pairs(sc.availableServices.map((a) => [a.bayId, a.serviceId]));
+  if (fromCatalog !== fromChallenge) throw new Error(`scenario ${sc.name}: the catalog binds ${fromCatalog}, availableServices lists ${fromChallenge}`);
+  return { source: typeof sc.catalog === 'string' ? rel(sc.catalog) : 'inline', value };
+}
+
 function deriveScenario(sc) {
+  const catalog = catalogOf(sc);
   const appEph = deriveKeyPair(`OSPP_BLE_APP_EPH_${sc.label}_V1`);
   const stationEph = deriveKeyPair(`OSPP_BLE_STATION_EPH_${sc.label}_V1`);
   const appNonce = nonceFor(`OSPP_BLE_APP_NONCE_${sc.label}_V1`);
@@ -281,6 +308,7 @@ function deriveScenario(sc) {
     stationCertificate: certB64('stationMtlsCert'),
     stationConnectivity: sc.connectivity,
     availableServices: sc.availableServices,
+    catalogDigest: catalogDigestOf(catalog.value),
     stationSignature: '',
   };
   const helloWire = wireBytes(hello);
@@ -312,6 +340,13 @@ function deriveScenario(sc) {
       wireByteLength: challengeWire.length,
       signedContentHex: signedContent.toString('hex'),
       stationSignatureLowS: isLowS(challenge.stationSignature),
+    },
+    catalog: {
+      source: catalog.source,
+      value: catalog.value,
+      canonicalFormBase64: Buffer.from(canonicalForm(catalog.value), 'utf-8').toString('base64'),
+      digestBase64: challenge.catalogDigest,
+      construction: 'SHA-256( OSPP_Canonical_Form(the FFF2 catalog) ), Base64 (ble-handshake.md §3)',
     },
     gate: { at: EVALUATION_TIME, ok: true, stationId: gate.stationId },
     transcript: {
@@ -386,7 +421,7 @@ function deriveScenario(sc) {
     // A Full Offline session to its receipt: start, the ReceiptReady status, the
     // request for the receipt on FFF6 and the station's answer carrying it.
     const sessionId = `sess_${shortHex(`OSPP_BLE_SESSION_ID_${sc.label}_V1`, 8)}`;
-    const offlineTxId = `otx_${shortHex(`OSPP_BLE_OFFLINE_TX_ID_${sc.label}_V1`, 8)}`;
+    const offlineTxId = `otx_${shortHex(`OSPP_BLE_OFFLINE_TX_ID_${sc.label}_V1`, 16)}`; // 128 random bits (reconciliation.md 3 rule 1)
     const startReq = { type: 'StartServiceRequest', ...sc.request };
     const startResp = { type: 'StartServiceResponse', result: 'Accepted', sessionId, offlineTxId };
     const status = { bayId: sc.request.bayId, status: 'ReceiptReady', sessionId, elapsedSeconds: sc.request.requestedDurationSeconds, remainingSeconds: 0 };
@@ -491,6 +526,7 @@ const STATION_CASES = [
   { id: 'genuine-bundle-crl', positive: true, what: 'genuine Challenge, the bundle CRL', challenge: genuine, crl: 'bundleCrl' },
   { id: 'genuine-revoking-crl', positive: true, what: 'genuine Challenge, the CRL that revokes another certificate', challenge: genuine, crl: 'revokingCrl' },
   { id: 'genuine-intended-station', positive: true, what: 'genuine Challenge, the intended stationId of a scanned code equal to the certificate', challenge: genuine, crl: 'bundleCrl', intendedStationId: 'stn_a1b2c3d4' },
+  { id: 'second-ca-of-the-set', positive: true, what: 'the station key certified by the second CA of a two-CA set (06-security.md §4.2.1), judged against that set, each CA with its CRL', challenge: resign(genuine, { cert: certB64('otherCa') }), set: [['caCert', 'bundleCrl'], ['otherStationCa', 'otherStationCaCrl']] },
   // Step 1.
   { id: 'certificate-from-another-ca', step: 1, what: 'the station key, certified by a CA the bundle does not hold', challenge: resign(genuine, { cert: certB64('otherCa') }), crl: 'bundleCrl' },
   { id: 'certificate-expired', step: 1, what: 'a certificate that expired before the handshake', challenge: resign(genuine, { cert: certB64('expired') }), crl: 'bundleCrl' },
@@ -508,12 +544,14 @@ const STATION_CASES = [
   { id: 'available-services-altered', step: 5, what: 'availableServices altered after signing (bay 2 shown available)', challenge: (() => { const c = JSON.parse(JSON.stringify(genuine)); c.availableServices[2].available = true; return c; })(), crl: 'bundleCrl' },
   { id: 'connectivity-altered', step: 5, what: 'stationConnectivity altered after signing (Offline shown as Online, steering the app to Partial B)', challenge: { ...genuine, stationConnectivity: 'Online' }, crl: 'bundleCrl' },
   { id: 'ble-version-altered', step: 5, what: 'bleVersion altered after signing', challenge: { ...genuine, bleVersion: '0.2.1' }, crl: 'bundleCrl' },
+  { id: 'catalog-digest-altered', step: 5, what: 'catalogDigest altered after signing (the digest of another catalog, the minimal scenario\'s)', challenge: { ...genuine, catalogDigest: byName.minimal.out.challenge.message.catalogDigest }, crl: 'bundleCrl' },
 ];
 
 const stationCases = STATION_CASES.map((c) => {
+  const stationCas = c.set ? c.set.map(([ca, crl]) => ({ caCertPem: pkiText(ca), crlPem: pkiText(crl) })) : null;
   const r = stationVerificationGate({
-    challenge: c.challenge, helloBytes: fullHelloWire, caCertPem: pkiText('caCert'), crlPem: pkiText(c.crl),
-    at: EVALUATION_TIME, intendedStationId: c.intendedStationId ?? null,
+    challenge: c.challenge, helloBytes: fullHelloWire, caCertPem: pkiText('caCert'), crlPem: c.crl ? pkiText(c.crl) : null,
+    stationCas, at: EVALUATION_TIME, intendedStationId: c.intendedStationId ?? null,
   });
   if (c.positive && !r.ok) throw new Error(`positive control ${c.id} refused at step ${r.step}: ${r.reason}`);
   if (!c.positive && (r.ok || r.step !== c.step)) throw new Error(`negative case ${c.id}: expected refusal at step ${c.step}, got ${r.ok ? 'ACCEPTED' : `step ${r.step} (${r.reason})`}`);
@@ -521,7 +559,7 @@ const stationCases = STATION_CASES.map((c) => {
     id: c.id,
     what: c.what,
     hello: 'scenarios[full].hello',
-    crl: PKI[c.crl],
+    ...(c.set ? { stationCas: c.set.map(([ca, crl]) => ({ certificate: PKI[ca], crl: PKI[crl] })) } : { crl: PKI[c.crl] }),
     at: EVALUATION_TIME,
     intendedStationId: c.intendedStationId ?? null,
     challenge: c.challenge,
@@ -531,6 +569,25 @@ const stationCases = STATION_CASES.map((c) => {
 });
 const positives = stationCases.filter((c) => c.expected.ok).length;
 console.log(`✓ station gate: ${positives} positive controls accepted, ${stationCases.length - positives} negative cases refused at their step (of ${stationCases.length})`);
+
+// The catalog check (ble-handshake.md §3): the catalog the app read, judged against the
+// genuine Challenge of the full scenario. A positive control first.
+const fullCatalog = full.out.catalog.value;
+const editCatalog = (edit) => { const c = JSON.parse(JSON.stringify(fullCatalog)); edit(c); return c; };
+const CATALOG_CASES = [
+  { id: 'catalog-as-served', positive: true, what: 'the catalog the station serves, as the app read it', catalog: fullCatalog },
+  { id: 'catalog-price-altered', what: 'a price lowered on the way, the service unchanged', catalog: editCatalog((c) => { c.bays[0].services[0].priceCreditsPerMinute = 1; }) },
+  { id: 'catalog-bays-swapped', what: 'the two bays\' identifiers swapped under their numbers, so that "Bay 1" names bay 2', catalog: editCatalog((c) => { const a = c.bays[0].bayId; c.bays[0].bayId = c.bays[1].bayId; c.bays[1].bayId = a; }) },
+  { id: 'catalog-service-names-swapped', what: 'the names of two services of one bay swapped, so that the cheaper name stands for the dearer service', catalog: editCatalog((c) => { const s = c.bays[0].services; const n = s[0].serviceName; s[0].serviceName = s[1].serviceName; s[1].serviceName = n; }) },
+  { id: 'catalog-of-an-earlier-version', what: 'a catalog the station no longer serves: another catalogVersion, the services unchanged', catalog: editCatalog((c) => { c.catalogVersion = '2.0'; }) },
+];
+const catalogCases = CATALOG_CASES.map((c) => {
+  const r = catalogCheck({ challenge: genuine, catalog: c.catalog });
+  if (c.positive && !r.ok) throw new Error(`positive control ${c.id} refused: ${r.reason}`);
+  if (!c.positive && r.ok) throw new Error(`negative case ${c.id}: the catalog check accepted it`);
+  return { id: c.id, what: c.what, catalog: c.catalog, digestBase64: catalogDigestOf(c.catalog), expected: { ok: c.positive === true } };
+});
+console.log(`✓ catalog check: 1 positive control accepted, ${catalogCases.length - 1} altered catalogs refused (of ${catalogCases.length})`);
 
 // Device-proof cases: the proof of the 'full' (android) and 'minimal' (apple)
 // presentations, verified with one input changed at a time.
@@ -626,13 +683,18 @@ writeJson(`${CRYPTO_DIR}/ble-handshake-keyschedule.json`, {
     stationKey: PKI.stationKey,
     stationId: STATION_ID,
     receiptKey: PKI.receiptPub,
-    note: 'The app holds the Station CA certificate and its CRL from its trust bundle; the station presents its mTLS certificate in the Challenge and signs with its key. The receipt is signed with the separate station receipt key.',
+    note: 'The app holds a set of Station CAs, each with its CRL, from its trust bundle — here the test Station CA alone, and the other test CA as well where a case names a set; the station presents its mTLS certificate in the Challenge and signs with its key. The receipt is signed with the separate station receipt key.',
   },
   scenarios: derived.map((d) => d.out),
   stationAuthentication: {
     note: 'The app verification gate of 06-security.md §6.5.2, steps 1-6, over the Hello of the full scenario. Positive controls first: a refusal is evidence only when the same path accepts the genuine Challenge.',
     caCertificate: PKI.caCert,
     cases: stationCases,
+  },
+  catalogCases: {
+    note: 'The catalog check of ble-handshake.md §3: catalogDigest, under the station signature, against the SHA-256 of the OSPP Canonical Form of the FFF2 catalog the app read, judged against the genuine Challenge of the full scenario. A positive control first.',
+    challenge: 'scenarios[full].challenge',
+    cases: catalogCases,
   },
   deviceProofCases: {
     note: 'The device proof of 06-security.md §6.5.4, verified under the pass devicePublicKey with one input changed at a time. Positive controls first.',

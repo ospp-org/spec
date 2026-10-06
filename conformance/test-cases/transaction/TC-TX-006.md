@@ -32,7 +32,7 @@ Verify that the station correctly sends TransactionEvent messages for offline tr
 1. Observe the station sends the first TransactionEvent (txCounter=5):
    ```json
 {
-  "offlineTxId": "otx_d4e5f6a7b8c9",
+  "offlineTxId": "otx_d4e5f6a7b8c983e4dd389d512a5bc1f7",
   "offlinePassId": "opass_a8b9c0d1e2f3",
   "userId": "sub_xyz789",
   "bayId": "bay_c1d2e3f4a5b6",
@@ -42,8 +42,8 @@ Verify that the station correctly sends TransactionEvent messages for offline tr
   "durationSeconds": 298,
   "creditsCharged": 50,
   "receipt": {
-    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjMwMCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjo1MCwiZGV2aWNlSWQiOiJkZXZfZDRlNWY2YTciLCJkdXJhdGlvblNlY29uZHMiOjI5OCwiZW5kUmVhc29uIjoiTG9jYWwiLCJlbmRlZEF0IjoiMjAyNi0wMS0zMFQxNDowNTowMC4wMDBaIiwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2E4YjljMGQxZTJmMyIsIm9mZmxpbmVUeElkIjoib3R4X2Q0ZTVmNmE3YjhjOSIsInBhc3NDb3VudGVyIjozNiwic2VydmljZUlkIjoic3ZjX2VjbyIsInN0YXJ0ZWRBdCI6IjIwMjYtMDEtMzBUMTQ6MDA6MDAuMDAwWiIsInN0YXRpb25JZCI6InN0bl9hMWIyYzNkNCIsInR4Q291bnRlciI6NSwidXNlcklkIjoic3ViX3h5ejc4OSJ9",
-    "signature": "MEUCIQDTepfJXfoeTqspxbFmLCmkpXB8ziUk8ngizi5+Hq/nGgIgZfjJvkLYzNMak0Ss1jhpY2UBjcMv7oUom3/liHAoYAs=",
+    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjMwMCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjo1MCwiZGV2aWNlSWQiOiJkZXZfZDRlNWY2YTciLCJkdXJhdGlvblNlY29uZHMiOjI5OCwiZW5kUmVhc29uIjoiTG9jYWwiLCJlbmRlZEF0IjoiMjAyNi0wMS0zMFQxNDowNTowMC4wMDBaIiwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2E4YjljMGQxZTJmMyIsIm9mZmxpbmVUeElkIjoib3R4X2Q0ZTVmNmE3YjhjOTgzZTRkZDM4OWQ1MTJhNWJjMWY3IiwicGFzc0NvdW50ZXIiOjM2LCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic3RhcnRlZEF0IjoiMjAyNi0wMS0zMFQxNDowMDowMC4wMDBaIiwic3RhdGlvbklkIjoic3RuX2ExYjJjM2Q0IiwidHhDb3VudGVyIjo1LCJ1c2VySWQiOiJzdWJfeHl6Nzg5In0=",
+    "signature": "MEUCIQC3V/kdfjFOIMoYaIIY2WldsALQkboNh0SWuw5c/HukIwIgflOTZTU1+TZAWJHvd7j0LMY42MUPrwI1zo1JMttzkZI=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "txCounter": 5,
@@ -68,7 +68,7 @@ Verify that the station correctly sends TransactionEvent messages for offline tr
 ### Part B — Duplicate Response
 
 11. Simulate the station resending a previously accepted transaction (e.g., due to network glitch — station didn't receive the ACK for txCounter=5). The resend carries the **same signed `receipt.data`** as the original, which is what makes it a retransmission rather than a second claim (`reconciliation.md` §3).
-12. Observe the station sends TransactionEvent with `offlineTxId: "otx_d4e5f6a7b8c9"` and `txCounter: 5`.
+12. Observe the station sends TransactionEvent with `offlineTxId: "otx_d4e5f6a7b8c983e4dd389d512a5bc1f7"` and `txCounter: 5`.
 13. Send Duplicate response:
     ```json
     {

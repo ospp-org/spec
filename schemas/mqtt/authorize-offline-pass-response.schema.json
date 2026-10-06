@@ -39,7 +39,7 @@
       "type": "integer",
       "minimum": 1000,
       "maximum": 9999,
-      "description": "The registry code of the refusal: the code of the failed authorize-time check, 1005 INVALID_MESSAGE_FORMAT for a request that does not validate against its schema, or 6001 SERVER_INTERNAL_ERROR (spec/profiles/offline/authorize-offline-pass.md §4, §7). A server conforming to this revision carries it, with errorText, on every refusal, and the station relays both to the app in the BLE AuthResponse. Additive: a station accepts it before any server sends it (VERSIONING.md, 'Adding a REQUIRED field, and which side moves first')."
+      "description": "The registry code of the refusal: the code of the failed authorize-time check, 2002 OFFLINE_PASS_INVALID for a pass that does not validate against the OfflinePass schema, 1005 INVALID_MESSAGE_FORMAT for a request that does not validate against its schema elsewhere, or 6001 SERVER_INTERNAL_ERROR (spec/profiles/offline/authorize-offline-pass.md §4, §7). A server conforming to this revision carries it, with errorText, on every refusal, and the station relays both to the app in the BLE AuthResponse. Additive: a station accepts it before any server sends it (VERSIONING.md, 'Adding a REQUIRED field, and which side moves first')."
     },
     "errorText": {
       "type": "string",

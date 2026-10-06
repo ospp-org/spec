@@ -20,7 +20,7 @@ It is a winter evening in Example City. Heavy snowfall has knocked out the inter
 - OfflinePass allowance: 100 credits total, 5 max uses, 30 credits max per transaction
 - Bob's OfflinePass counter is at 2 (he has done 2 previous offline sessions)
 - Station BLE is advertising the OSPP service UUID, with the name `OSPP-b2c3d4` (last 6 hex chars of station ID) in its scan response
-- Station holds its mTLS certificate, whose extended key usage carries `clientAuth` and `id-kp-osppBleStation`; the app holds the trust bundle of its last pass issuance — the Station CA certificate and its CRL ([`app-contract.md` §3.4](../../spec/profiles/offline/app-contract.md#34-the-trust-bundle))
+- Station holds its mTLS certificate, whose extended key usage carries `clientAuth` and `id-kp-osppBleStation`; the app holds the trust bundle of its last pass issuance — the Station CA set, each CA with its CRL ([`app-contract.md` §3.4](../../spec/profiles/offline/app-contract.md#34-the-trust-bundle))
 - Station holds the server key set (`OfflinePassPublicKey`) in NVS, including the key the pass's `keyId` names
 - Station `OfflineModeEnabled` configuration is `true`
 - Station is within its own offline limits: it holds 7 offline transactions the server has not yet answered `Accepted`, `Duplicate` or `Rejected`, well under its `OfflineTransactionLimit` (1000), and it has been offline for far less than its `OfflineWindowHours` (240). Both are station configuration, not pass fields ([`08-configuration.md` §5](../../spec/08-configuration.md#5-offline--ble-configuration-keys))
@@ -37,10 +37,10 @@ It is a winter evening in Example City. Heavy snowfall has knocked out the inter
 18:32:05.000  App reads FFF1 (StationInfo) — shows which station it reached
 18:32:05.500  App asks for AvailableServices on FFF2 — displays service catalog
 18:32:12.000  Bob selects Bay 1, Eco Program, 3 min duration
+18:32:12.200  App requests biometric confirmation (Face ID), before the Hello
 18:32:12.500  App writes Hello to FFF3
 18:32:13.000  Station notifies Challenge on FFF4 (stationConnectivity: "Offline")
-18:32:13.200  App verifies the station's certificate and signature, derives session key
-18:32:14.000  App requests biometric confirmation (Face ID)
+18:32:13.200  App verifies the station's certificate, its signature and the catalog's digest, derives session key
 18:32:15.000  App writes OfflineAuthRequest to FFF3 with OfflinePass
 18:32:15.500  Station performs the nine OfflinePass checks — all pass
 18:32:16.000  Station notifies AuthResponse Accepted on FFF4
@@ -97,7 +97,7 @@ The app connects to the station over BLE. The BLE connection state transitions: 
 }
 ```
 
-The app shows Bob which station it reached. Nothing on FFF1 is authenticated, so the app relies on none of it ([`ble-transport.md` §3](../../spec/profiles/offline/ble-transport.md#3-station-info-fff1)): the station's identity is the certificate in its Challenge (Step 7), its connectivity is the Challenge's `stationConnectivity`, and the BLE version is the one the handshake negotiates.
+The app shows Bob which station it reached. Nothing on FFF1 is authenticated, so the app relies on none of it ([`ble-transport.md` §3](../../spec/profiles/offline/ble-transport.md#3-station-info-fff1)): the station's identity is the certificate in its Challenge (Step 8), its connectivity is the Challenge's `stationConnectivity`, and the BLE version is the one the handshake negotiates.
 
 ---
 
@@ -155,11 +155,26 @@ The app shows Bob which station it reached. Nothing on FFF1 is authenticated, so
 
 **What Bob sees:**
 
-The app displays two bay cards with their services and prices. Whether a bay can start now is not in the catalog: the station says so in its signed Challenge, which the app checks before it sends anything (Step 8). Under Bay 1, Bob sees "Eco Program (10 credits/min)" and "Standard Program (8 credits/min)". Before he chooses, the app shows the pass's limits, as it must ([`offline-pass.md` §2.1](../../spec/profiles/offline/offline-pass.md#21-offlineallowance-object)): 30 credits per session, 80 of 100 credits remaining, 3 of 5 uses remaining. He taps Bay 1, then selects "Eco Program". A duration picker appears, bounded at 3 minutes: the pass the app is already holding carries `offlineAllowance.maxCreditsPerTx` (30) in plaintext, so the app can read the limit and shape its offer to fit **before** it asks the station for anything — a request above a limit would be refused, never reduced. He sets it to 3 minutes (30 credits). The app shows: "Estimated cost: 30 credits. Estimated offline balance: 72 credits."
+The app displays two bay cards with their services and prices. Whether a bay can start now is not in the catalog: the station says so in its signed Challenge, which the app checks before it sends anything (Step 9). Under Bay 1, Bob sees "Eco Program (10 credits/min)" and "Standard Program (8 credits/min)". Before he chooses, the app shows the pass's limits, as it must ([`offline-pass.md` §2.1](../../spec/profiles/offline/offline-pass.md#21-offlineallowance-object)): 30 credits per session, 80 of 100 credits remaining, 3 of 5 uses remaining. He taps Bay 1, then selects "Eco Program". A duration picker appears, bounded at 3 minutes: the pass the app is already holding carries `offlineAllowance.maxCreditsPerTx` (30) in plaintext, so the app can read the limit and shape its offer to fit **before** it asks the station for anything — a request above a limit would be refused, never reduced. He sets it to 3 minutes (30 credits). The app shows: "Estimated cost: 30 credits. Estimated offline balance: 72 credits."
 
 ---
 
-### Step 6: App Writes Hello to FFF3 (18:32:12.500)
+### Step 6: Biometric Confirmation (18:32:12.200)
+
+**What Bob sees:**
+
+The app displays a biometric prompt:
+
+> **Confirm offline payment**
+> Eco Program - Bay 1
+> Estimated: 30 credits (3 min)
+> [Authenticate with Face ID]
+
+Bob looks at his phone. Face ID succeeds, before the Hello, so that the wait for Bob runs outside the 10-second handshake budget; the app holds the confirmation for the OfflinePass it sends inside the handshake ([`04-flows.md` §5a](../../spec/04-flows.md#5a-full-offline-session--ble)).
+
+---
+
+### Step 7: App Writes Hello to FFF3 (18:32:12.500)
 
 **BLE GATT Write:** Characteristic `6645FFF3-5AEB-4709-ACD5-02E03C3000F6`
 
@@ -179,7 +194,7 @@ The app generates a fresh ephemeral P-256 key pair and a cryptographically rando
 
 ---
 
-### Step 7: Station Notifies Challenge on FFF4 (18:32:13.000)
+### Step 8: Station Notifies Challenge on FFF4 (18:32:13.000)
 
 **BLE GATT Notify:** Characteristic `6645FFF4-5AEB-4709-ACD5-02E03C3000F6`
 
@@ -213,7 +228,8 @@ The app generates a fresh ephemeral P-256 key pair and a cryptographically rando
       "available": true
     }
   ],
-  "stationSignature": "MEUCIQDfp7VzRCrkP6OLfHw7QvExiFEQ/XlQ5rUcgXqpoHCMpQIgaUp3cnNdqfL34aMWJBfOJmqFt8kThDyekPe1ESKg7IQ="
+  "catalogDigest": "kR7SmaHNzwk56QSIJYzA+wXMZcQqUgLRHH2/fZ3SUfk=",
+  "stationSignature": "MEQCIBor51eIOuysLqXjSwvkd6XVbFmzGNWBBjZ8nk2tCHgYAiA6rjZr0hnYrhFX0tLvN5r0kJsiN/TAfJZGWacB3fGXMA=="
 }
 ```
 
@@ -221,9 +237,9 @@ The station chooses BLE version `0.3.0` from the Hello's list, generates its own
 
 ---
 
-### Step 8: Station Verification and Session Key Derivation (18:32:13.200)
+### Step 9: Station Verification and Session Key Derivation (18:32:13.200)
 
-Before it derives any key, and before Bob's pass can leave the phone, the app verifies the station ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)): the certificate chains to the Station CA of its trust bundle, is valid now, and is on no entry of the bundle's CRL; it carries `digitalSignature` and `id-kp-osppBleStation`; its subject CN, `stn_a1b2c3d4`, is the station Bob is standing at; and `stationSignature` verifies under its key. It also confirms that Eco Program is available on Bay 1 in `availableServices`. Had any of this failed, the app would have aborted with `2013 BLE_AUTH_FAILED` and sent nothing.
+Before it derives any key, and before Bob's pass can leave the phone, the app verifies the station ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)): the certificate chains to a Station CA of its trust bundle, is valid now, and is on no entry of that CA's CRL; it carries `digitalSignature` and `id-kp-osppBleStation`; its subject CN, `stn_a1b2c3d4`, is the station Bob is standing at; and `stationSignature` verifies under its key. It also confirms that the catalog Bob chose from is the one the Challenge's `catalogDigest` names, and that Eco Program is available on Bay 1 in `availableServices`. Had the certificate or the signature failed, the app would have aborted with `2013 BLE_AUTH_FAILED` and sent nothing; had the digest differed, it would have sent nothing, closed the connection and read FFF2 again on a new one ([`ble-handshake.md` §3](../../spec/profiles/offline/ble-handshake.md#3-step-2-challenge)).
 
 Both the app and station then derive the BLE session key using HKDF-SHA256 over the one ECDH secret of the two ephemeral keys (the BLE LTK is **not** used — see `spec/06-security.md` §6.5):
 
@@ -237,21 +253,6 @@ SessionKey = HKDF-SHA256(
 ```
 
 This produces a 32-byte symmetric key used for the `sessionProof` HMAC in the next step, for the `sessionKeyConfirmation` in the AuthResponse, and to expand the per-direction AEAD keys that encrypt every post-Challenge message.
-
----
-
-### Step 9: Biometric Confirmation (18:32:14.000)
-
-**What Bob sees:**
-
-The app displays a biometric prompt:
-
-> **Confirm offline payment**
-> Eco Program - Bay 1
-> Estimated: 30 credits (3 min)
-> [Authenticate with Face ID]
-
-Bob looks at his phone. Face ID succeeds. The app proceeds to send the OfflinePass.
 
 ---
 
@@ -290,7 +291,7 @@ Bob looks at his phone. Face ID succeeds. The app proceeds to send the OfflinePa
   "sessionProof": "hAW4BhA445dJmlLG78qcEn36DHEhkjIDNt3fZOGGh0c=",
   "deviceProof": {
     "format": "apple-appattest",
-    "signature": "MEQCIGeBV2FIirFTNiU4FCHk4mnoi6Sei9TpEOWdAVwEgOCwAiBU5mD+PI8untYHbd2fBKhVttn+qK8YDqi8LxCvt/D5nA==",
+    "signature": "MEUCIQCXpmgaeY3ujRhhS8bK74783dxeU/Z1tfiWwpW6KQ9tAwIgBp8RW5evYXI7f91yiJMFxcLf88BEW6lL+FcqRvGSCvc=",
     "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
   }
 }
@@ -380,7 +381,7 @@ The station controller:
   "type": "StartServiceResponse",
   "result": "Accepted",
   "sessionId": "sess_a8b9c0d1e2f3",
-  "offlineTxId": "otx_a3b4c5d6e7f8"
+  "offlineTxId": "otx_a3b4c5d6e7f8d5fa9b53cfa58cb91fa5"
 }
 ```
 
@@ -566,7 +567,7 @@ txCounter:           8 (station's 8th offline transaction)
 ```json
 {
   "type": "ReceiptRequest",
-  "offlineTxId": "otx_a3b4c5d6e7f8"
+  "offlineTxId": "otx_a3b4c5d6e7f8d5fa9b53cfa58cb91fa5"
 }
 ```
 
@@ -574,7 +575,7 @@ txCounter:           8 (station's 8th offline transaction)
 
 ```json
 {
-  "offlineTxId": "otx_a3b4c5d6e7f8",
+  "offlineTxId": "otx_a3b4c5d6e7f8d5fa9b53cfa58cb91fa5",
   "offlinePassId": "opass_a8b9c0d1e2f3",
   "passCounter": 3,
   "userId": "sub_bob2026",
@@ -591,8 +592,8 @@ txCounter:           8 (station's 8th offline transaction)
     "energyWh": 85
   },
   "receipt": {
-    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjE4MCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjozMCwiZGV2aWNlSWQiOiJkZXZpY2VfYjdjNGRlODlmMDEyMzQ1NiIsImR1cmF0aW9uU2Vjb25kcyI6MTgwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xM1QxODozNToxNy4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjozNzUsImVuZXJneVdoIjo4NSwibGlxdWlkTWwiOjMzNDAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2E4YjljMGQxZTJmMyIsIm9mZmxpbmVUeElkIjoib3R4X2EzYjRjNWQ2ZTdmOCIsInBhc3NDb3VudGVyIjozLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xM1QxODozMjoxNy4wMDBaIiwic3RhdGlvbklkIjoic3RuX2ExYjJjM2Q0IiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfYm9iMjAyNiJ9",
-    "signature": "MEQCICMak9WpvoXhB461m1fRcir+k0RKKG1swqI+oEt9bS2GAiAJKrmeam0uyUykofWMu5M8GokaX2Y7tSI3HDQxGBQ+SQ==",
+    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjE4MCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjozMCwiZGV2aWNlSWQiOiJkZXZpY2VfYjdjNGRlODlmMDEyMzQ1NiIsImR1cmF0aW9uU2Vjb25kcyI6MTgwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xM1QxODozNToxNy4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjozNzUsImVuZXJneVdoIjo4NSwibGlxdWlkTWwiOjMzNDAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2E4YjljMGQxZTJmMyIsIm9mZmxpbmVUeElkIjoib3R4X2EzYjRjNWQ2ZTdmOGQ1ZmE5YjUzY2ZhNThjYjkxZmE1IiwicGFzc0NvdW50ZXIiOjMsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDE4OjMyOjE3LjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9ib2IyMDI2In0=",
+    "signature": "MEQCIEgxpigsbpm5jHIGBrljkN5jcgBnYHIpsllNrNWQaCjUAiAcZv6sqe28SGDBHBHF9e+03aUv5Kd9eR+v+YMV8u1IGA==",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "txCounter": 8
@@ -658,7 +659,7 @@ When the station regains MQTT connectivity, it performs the reconciliation flow 
   "source": "Station",
   "protocolVersion": "0.3.0",
   "payload": {
-    "offlineTxId": "otx_a3b4c5d6e7f8",
+    "offlineTxId": "otx_a3b4c5d6e7f8d5fa9b53cfa58cb91fa5",
     "offlinePassId": "opass_a8b9c0d1e2f3",
     "passCounter": 3,
     "userId": "sub_bob2026",
@@ -669,8 +670,8 @@ When the station regains MQTT connectivity, it performs the reconciliation flow 
     "durationSeconds": 180,
     "creditsCharged": 30,
     "receipt": {
-      "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjE4MCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjozMCwiZGV2aWNlSWQiOiJkZXZpY2VfYjdjNGRlODlmMDEyMzQ1NiIsImR1cmF0aW9uU2Vjb25kcyI6MTgwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xM1QxODozNToxNy4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjozNzUsImVuZXJneVdoIjo4NSwibGlxdWlkTWwiOjMzNDAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2E4YjljMGQxZTJmMyIsIm9mZmxpbmVUeElkIjoib3R4X2EzYjRjNWQ2ZTdmOCIsInBhc3NDb3VudGVyIjozLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic3RhcnRlZEF0IjoiMjAyNi0wMi0xM1QxODozMjoxNy4wMDBaIiwic3RhdGlvbklkIjoic3RuX2ExYjJjM2Q0IiwidHhDb3VudGVyIjo4LCJ1c2VySWQiOiJzdWJfYm9iMjAyNiJ9",
-      "signature": "MEQCICMak9WpvoXhB461m1fRcir+k0RKKG1swqI+oEt9bS2GAiAJKrmeam0uyUykofWMu5M8GokaX2Y7tSI3HDQxGBQ+SQ==",
+      "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjE4MCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjozMCwiZGV2aWNlSWQiOiJkZXZpY2VfYjdjNGRlODlmMDEyMzQ1NiIsImR1cmF0aW9uU2Vjb25kcyI6MTgwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xM1QxODozNToxNy4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjozNzUsImVuZXJneVdoIjo4NSwibGlxdWlkTWwiOjMzNDAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2E4YjljMGQxZTJmMyIsIm9mZmxpbmVUeElkIjoib3R4X2EzYjRjNWQ2ZTdmOGQ1ZmE5YjUzY2ZhNThjYjkxZmE1IiwicGFzc0NvdW50ZXIiOjMsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDE4OjMyOjE3LjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9ib2IyMDI2In0=",
+      "signature": "MEQCIEgxpigsbpm5jHIGBrljkN5jcgBnYHIpsllNrNWQaCjUAiAcZv6sqe28SGDBHBHF9e+03aUv5Kd9eR+v+YMV8u1IGA==",
       "signatureAlgorithm": "ECDSA-P256-SHA256"
     },
     "txCounter": 8,
@@ -700,7 +701,7 @@ When the station regains MQTT connectivity, it performs the reconciliation flow 
 ```
 
 The server, in the order of [`reconciliation.md` §2](../../spec/profiles/offline/reconciliation.md#2-sync-procedure):
-1. Deduplicates by `offlineTxId` (`otx_a3b4c5d6e7f8`). Whichever copy of a receipt arrives first — the station's TransactionEvent or the app's upload — may settle, and once one has settled the other is answered `Duplicate` ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload))
+1. Deduplicates by `offlineTxId` (`otx_a3b4c5d6e7f8d5fa9b53cfa58cb91fa5`). Whichever copy of a receipt arrives first — the station's TransactionEvent or the app's upload — may settle, and once one has settled the other is answered `Duplicate` ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload))
 2. Verifies the receipt signature with the receipt-signing key of the station the signed receipt names (`stationId`)
 3. Records txCounter 8 as forensic evidence (contiguous with the last known counter — noted, not gated on)
 4. Applies the reconcile-time gate: the OfflinePass was valid at the transaction's signed `endedAt`, read through the station's clock offset ([`reconciliation.md` §6.8](../../spec/profiles/offline/reconciliation.md#68-station-clock-offset))
@@ -732,16 +733,16 @@ The station removes the transaction from its local queue.
      |<---------------------------------------|
      |                                        |
      |  user selects Bay 1 + Eco Program     |
+     |  biometric confirmation (Face ID)      |
      |                                        |
      |  Write FFF3: Hello                     |
      |--------------------------------------->|
      |  Notify FFF4: Challenge (offline,      |
-     |    certificate, signature)             |
+     |    certificate, digest, signature)     |
      |<---------------------------------------|
      |                                        |
-     |  verify certificate and signature      |
+     |  verify certificate, signature, digest |
      |  derive session key (ECDH + HKDF)      |
-     |  biometric confirmation (Face ID)      |
      |                                        |
      |  Write FFF3: OfflineAuthRequest       |
      |--------------------------------------->|

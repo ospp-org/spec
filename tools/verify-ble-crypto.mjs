@@ -39,7 +39,7 @@ import {
   sha256, hmacSha256, lp, nonce96, wireBytes, ecdhSharedX, hkdf, hkdfExpand,
   transcriptHashOf, sessionProofMessage, chachaPolySeal, chachaPolyOpen, validatePublicKey,
   isLowS, stationSignedContent, stationVerificationGate, certificatePublicKey,
-  deviceTestKey, deviceProofInput, deviceProofFormats, verifyDeviceProof,
+  deviceTestKey, deviceProofInput, deviceProofFormats, verifyDeviceProof, catalogDigestOf, catalogCheck,
 } from './ble-crypto.mjs';
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
@@ -133,6 +133,20 @@ for (const sc of oracle.scenarios) {
   assert(`gate accepts the Challenge at ${AT}`, gate.ok, gate.reason ?? '');
   check('gate stationId (certificate subject CN)', gate.stationId, sc.gate.stationId);
   check('stationId == trust.stationId', gate.stationId, oracle.trust.stationId);
+
+  // 3b'. The catalog the Challenge names (ble-handshake.md §3): its digest re-derived from
+  // the catalog's OSPP Canonical Form, and its bay-service pairs those of availableServices.
+  check('catalog canonical form', Buffer.from(canonicalForm(sc.catalog.value), 'utf-8'), fromB64(sc.catalog.canonicalFormBase64));
+  check('catalogDigest = SHA-256(canonical catalog)', catalogDigestOf(sc.catalog.value), sc.challenge.message.catalogDigest);
+  check('catalog digest recorded', sc.catalog.digestBase64, sc.challenge.message.catalogDigest);
+  if (sc.catalog.source !== 'inline') check(`catalog = ${sc.catalog.source}`, canonicalForm(readJson(sc.catalog.source)), canonicalForm(sc.catalog.value));
+  {
+    const pairs = (xs) => xs.map(([b, s]) => `${b}/${s}`).sort().join(',');
+    check('catalog pairs = availableServices pairs',
+      pairs(sc.catalog.value.bays.flatMap((b) => b.services.map((s) => [b.bayId, s.serviceId]))),
+      pairs(sc.challenge.message.availableServices.map((a) => [a.bayId, a.serviceId])));
+  }
+  assert('catalog check accepts the catalog the station serves', catalogCheck({ challenge: sc.challenge.message, catalog: sc.catalog.value }).ok);
 
   // 3c. Transcript (Pin 4) over the full wire Challenge.
   const transcriptHash = transcriptHashOf(helloWire, challengeWire);
@@ -240,8 +254,9 @@ console.log('\n═══ Station authentication — the app verification gate (�
   const neg = cases.filter((c) => !c.expected.ok);
   assert(`at least one positive control precedes the negatives (${pos.length} of ${cases.length})`, pos.length >= 1);
   let posOk = 0;
+  const setOf = (c) => (c.stationCas ? c.stationCas.map((e) => ({ caCertPem: read(e.certificate), crlPem: read(e.crl) })) : null);
   for (const c of pos) {
-    const r = stationVerificationGate({ challenge: c.challenge, helloBytes: helloWire, caCertPem, crlPem: read(c.crl), at: c.at, intendedStationId: c.intendedStationId });
+    const r = stationVerificationGate({ challenge: c.challenge, helloBytes: helloWire, caCertPem, crlPem: c.crl ? read(c.crl) : null, stationCas: setOf(c), at: c.at, intendedStationId: c.intendedStationId });
     assert(`positive control ${c.id}: accepted`, r.ok, r.reason ?? '');
     if (r.ok) posOk++;
   }
@@ -251,12 +266,42 @@ console.log('\n═══ Station authentication — the app verification gate (�
   } else {
     let refused = 0;
     for (const c of neg) {
-      const r = stationVerificationGate({ challenge: c.challenge, helloBytes: helloWire, caCertPem, crlPem: read(c.crl), at: c.at, intendedStationId: c.intendedStationId });
+      const r = stationVerificationGate({ challenge: c.challenge, helloBytes: helloWire, caCertPem, crlPem: c.crl ? read(c.crl) : null, stationCas: setOf(c), at: c.at, intendedStationId: c.intendedStationId });
       const ok = !r.ok && r.step === c.expected.step && r.errorCode === c.expected.errorCode;
       assert(`negative ${c.id}: refused at step ${c.expected.step} with ${c.expected.errorCode}`, ok, r.ok ? 'ACCEPTED' : `step ${r.step}: ${r.reason}`);
       if (ok) refused++;
     }
     console.log(`    ${refused}/${neg.length} negative cases refused at their step, after ${posOk}/${pos.length} positive controls`);
+  }
+}
+
+// ── 4b. The catalog check's cases ───────────────────────────────────────────
+console.log('\n═══ The catalog check (ble-handshake.md §3) ═══');
+{
+  const challenge = scenarioByName.full.challenge.message;
+  const cases = oracle.catalogCases.cases;
+  const pos = cases.filter((c) => c.expected.ok);
+  const neg = cases.filter((c) => !c.expected.ok);
+  assert(`at least one positive control precedes the negatives (${pos.length} of ${cases.length})`, pos.length >= 1);
+  let posOk = 0;
+  for (const c of pos) {
+    check(`${c.id}: digest re-derived`, catalogDigestOf(c.catalog), c.digestBase64);
+    const r = catalogCheck({ challenge, catalog: c.catalog });
+    assert(`positive control ${c.id}: accepted`, r.ok, r.reason ?? '');
+    if (r.ok) posOk++;
+  }
+  if (posOk !== pos.length) {
+    console.error('    ✗ a positive control was refused — the negative results below would prove nothing; stopping this section');
+    failures++;
+  } else {
+    let refused = 0;
+    for (const c of neg) {
+      check(`${c.id}: digest re-derived`, catalogDigestOf(c.catalog), c.digestBase64);
+      const r = catalogCheck({ challenge, catalog: c.catalog });
+      assert(`negative ${c.id}: refused`, !r.ok, 'ACCEPTED');
+      if (!r.ok) refused++;
+    }
+    console.log(`    ${refused}/${neg.length} altered catalogs refused, after ${posOk}/${pos.length} positive controls`);
   }
 }
 

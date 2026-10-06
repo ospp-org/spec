@@ -27,6 +27,11 @@
 //   - hello             (type "Hello": an appEphemeralPubKey that is not a valid
 //                        compressed P-256 point is replaced by one derived from the
 //                        document's label; a valid one is kept)
+//   - catalog-digest    (type "Challenge": catalogDigest := the SHA-256 of the OSPP
+//                        Canonical Form of the FFF2 catalog the document shows before
+//                        it — or of the one a `<!-- ospp-catalog: <path> -->` marker
+//                        before the Challenge names: a .json file, or the first
+//                        catalog block of a .md file; ble-handshake.md §3)
 //   - station-signature (type "Challenge": the same rule for stationEphemeralPubKey;
 //                        stationCertificate := the test station's mTLS certificate;
 //                        stationSignature := its key's signature over the Hello
@@ -42,8 +47,9 @@
 //                        derived one, and the same device proof)
 //   - ssa-nonce         (a ServerSignedAuth in a document with a Hello: its signed
 //                        appNonce claim follows that Hello's appNonce, check #2)
-//   - trust-bundle      (a trustBundle's stationCaCertificate and stationCaCrl := the
-//                        test Station CA's certificate and CRL)
+//   - trust-bundle      (the first entry of a trustBundle's stationCas: its
+//                        certificate and crl := the test Station CA's certificate
+//                        and CRL; any other entry is left as written)
 // Handshake nonces are not invented here: a document's Hello and Challenge nonces
 // come from tools/verify-test-nonces.mjs --write, or are typed; a placeholder stops
 // the run.
@@ -67,7 +73,7 @@ import { ecdsaSign, SIGNATURE_ALGORITHM } from '@ospp/protocol/server';
 import {
   deriveKeyPair, validatePublicKey, wireBytes, transcriptHashOf, signStationChallenge,
   parseCertificate, pemToDer, sha256, deviceTestKey, deviceProofInput, deviceProofFormats,
-  makeDeviceProof, syntheticAuthenticatorData,
+  makeDeviceProof, syntheticAuthenticatorData, catalogDigestOf,
 } from './ble-crypto.mjs';
 import { HANDSHAKES } from './verify-test-nonces.mjs';
 import { createRequire } from 'node:module';
@@ -414,6 +420,27 @@ function labelOf(file) {
 
 const isHello = (n) => n && n.type === 'Hello';
 const isChallenge = (n) => n && n.type === 'Challenge';
+// An FFF2 catalog (available-services.schema.json): no type, and bays that each carry
+// bayId, bayNumber and services.
+const isCatalog = (n) => n && typeof n === 'object' && !('type' in n) && Array.isArray(n.bays) && n.bays.length > 0 &&
+  n.bays.every((b) => b && typeof b === 'object' && 'bayId' in b && 'bayNumber' in b && Array.isArray(b.services));
+const CATALOG_DIRECTIVE = /<!--\s*ospp-catalog:\s*(\S+)\s*-->/g;
+// The catalog a marker names, relative to the repository root.
+function catalogNamed(file, ref) {
+  const text = readFileSync(ref, 'utf-8');
+  if (ref.endsWith('.json')) {
+    const value = JSON.parse(text);
+    if (!isCatalog(value)) throw new Error(`${file}: ospp-catalog: ${ref} is not an FFF2 catalog`);
+    return value;
+  }
+  for (const m of text.matchAll(/```json\s*\n([\s\S]*?)```/g)) {
+    try {
+      const value = JSON.parse(m[1]);
+      if (isCatalog(value)) return value;
+    } catch { /* not this block */ }
+  }
+  throw new Error(`${file}: ospp-catalog: ${ref} holds no FFF2 catalog block`);
+}
 const isOar = (n) => n && n.type === 'OfflineAuthRequest' && n.deviceProof && typeof n.deviceProof === 'object' &&
   n.offlinePass && typeof n.offlinePass.passId === 'string';
 // An AuthorizeOfflinePass REQUEST payload, bare or in its MQTT envelope.
@@ -424,7 +451,7 @@ const forwardTarget = (n) => {
 };
 const trustBundleOf = (n) => {
   const t = n && typeof n === 'object' && n.payload && typeof n.payload === 'object' ? n.payload : n;
-  return t && t.trustBundle && typeof t.trustBundle === 'object' && 'stationCaCertificate' in t.trustBundle ? t.trustBundle : null;
+  return t && t.trustBundle && typeof t.trustBundle === 'object' && Array.isArray(t.trustBundle.stationCas) ? t.trustBundle : null;
 };
 
 // A handshake message is signed only once it has the shape of its schema: a Hello or a
@@ -523,13 +550,16 @@ function processFile(file, { write = true } = {}) {
     const gap = original.slice(lastIndex, match.index);
     const found = [...gap.matchAll(SIGN_DIRECTIVE)];
     const directive = found.length ? found[found.length - 1][1] : undefined;
+    const named = [...gap.matchAll(CATALOG_DIRECTIVE)];
+    const catalogRef = named.length ? named[named.length - 1][1] : undefined;
     let parsed = null;
     try {
       parsed = JSON.parse(body);
     } catch {
       if (directive) throw new Error(`${file}: ospp-sign: ${directive} precedes a block that is not valid JSON`);
     }
-    blocks.push({ start: match.index, whole, open, body, close, gap, directive, parsed, before: parsed === null ? null : JSON.stringify(parsed), ops: [] });
+    if (catalogRef && !isChallenge(parsed)) throw new Error(`${file}: ospp-catalog: ${catalogRef} precedes a block that is not a Challenge`);
+    blocks.push({ start: match.index, whole, open, body, close, gap, directive, catalogRef, parsed, before: parsed === null ? null : JSON.stringify(parsed), ops: [] });
     lastIndex = match.index + whole.length;
   }
   stats.blocks = blocks.length;
@@ -539,13 +569,17 @@ function processFile(file, { write = true } = {}) {
   const docAppNonce = hellos.length ? hellos[0].parsed.appNonce : null;
 
   // 3. Document order: the handshake, the presentations and every standard signature.
-  const ctx = { hello: null, ordinal: -1, transcript: null, stationId: null, synthetic: 0 };
+  const ctx = { hello: null, ordinal: -1, transcript: null, stationId: null, synthetic: 0, catalog: null };
   const presentations = [];
   for (const b of blocks) {
     const node = b.parsed;
     if (node === null) continue;
     if (forwardTarget(node)) continue; // after the presentations (step 4)
 
+    if (isCatalog(node)) {
+      ctx.catalog = node;
+      continue;
+    }
     if (isHello(node)) {
       ctx.ordinal++;
       requireNonce(file, node, 'appNonce');
@@ -561,6 +595,11 @@ function processFile(file, { write = true } = {}) {
       requireNonce(file, node, 'stationNonce');
       if (!validKey(node.stationEphemeralPubKey)) node.stationEphemeralPubKey = ephemeral(label, ctx.ordinal, 'station');
       node.stationCertificate = STATION_MTLS_CERT_B64;
+      const catalog = b.catalogRef ? catalogNamed(file, b.catalogRef) : ctx.catalog;
+      if (!catalog) throw new Error(`${file}: a Challenge with no FFF2 catalog before it and no ospp-catalog marker — its catalogDigest names one`);
+      if (!('catalogDigest' in node)) throw new Error(`${file}: a Challenge without catalogDigest — write the member, after availableServices`);
+      node.catalogDigest = catalogDigestOf(catalog);
+      b.ops.push('catalog-digest');
       node.stationSignature = '';
       node.stationSignature = signStationChallenge(STATION_MTLS_KEY, wireBytes(ctx.hello), node);
       requireShape(file, 'schemas/ble/challenge.schema.json', node, 'Challenge');
@@ -595,8 +634,10 @@ function processFile(file, { write = true } = {}) {
     }
     const tb = trustBundleOf(node);
     if (tb) {
-      tb.stationCaCertificate = STATION_CA_CERT;
-      if ('stationCaCrl' in tb) tb.stationCaCrl = STATION_CA_CRL;
+      if (tb.stationCas.length > 0 && tb.stationCas[0] && typeof tb.stationCas[0] === 'object') {
+        tb.stationCas[0].certificate = STATION_CA_CERT;
+        tb.stationCas[0].crl = STATION_CA_CRL;
+      }
       b.ops.push('trust-bundle');
     }
     const flat = JSON.stringify(node);

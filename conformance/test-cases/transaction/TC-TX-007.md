@@ -98,18 +98,9 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
     - Payload validates against `schemas/mqtt/session-ended-event.schema.json`
 23. Verify no StopService RESPONSE is sent (this is autonomous from the server's perspective).
 
-### Part D — Offline Credit Exhausted (v0.4.0+)
+### Part D — Withdrawn: Offline Credit Exhausted
 
-> **This Part exercises the Offline / BLE profile, which is EXPERIMENTAL: it is no part of a Standard claim, runs only where the station declares the profile, and is recorded as skipped otherwise.**
-
-24. Configure the station for offline mode with an OfflinePass that has low remaining credits (e.g., enough for ~20 seconds of `svc_basic`).
-25. Send StartService with `durationSeconds: 300` via the BLE offline path (or simulate offline mode and a local StartService).
-26. Wait for the station to consume the available credits and stop the session autonomously.
-27. Observe SessionEnded EVENT from station. Validate:
-    - `payload.reason: "LocalOutOfCredit"`
-    - `payload.creditsCharged: 0` (MUST be zero)
-    - `payload.actualDurationSeconds` reflects elapsed time before exhaustion
-    - Payload validates against `schemas/mqtt/session-ended-event.schema.json`
+> **Withdrawn.** This Part had a station run a BLE session longer than its pass's remaining credits allowed, until the credits ran out. A station now estimates a presentation's cost from its requested duration and refuses one whose cost exceeds what the pass has left, with `4002` or `4004` — refused, never reduced ([`offline-pass.md` §4](../../../spec/profiles/offline/offline-pass.md#4-validation-checks-10) checks #7 and #8) — and starts a session for exactly the duration it authorized ([`ble-session.md` §1](../../../spec/profiles/offline/ble-session.md#1-starting-a-service) rule 2). A second presentation of the same pass is counted against the credits the first one already took, so a conforming station has no route to `LocalOutOfCredit`, and steps 24 to 27 could not be run. Their numbers are not reused. `LocalOutOfCredit` stays a value of the enum, and the expected results and failure criteria below still bind a station that reports it.
 
 ### Part E — Mid-Session Deauthorization (v0.4.0+)
 

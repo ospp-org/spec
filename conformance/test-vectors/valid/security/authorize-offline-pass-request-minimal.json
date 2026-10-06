@@ -27,8 +27,8 @@
   "requestedDurationSeconds": 120,
   "deviceProof": {
     "format": "apple-appattest",
-    "signature": "MEUCIQDVAYpfIj0rzkBCiqrNi0dmwaQA0sJv8llbRTHvImG5aAIgPDo2C3FxKqgGkre/XvhQIXU5mFcryXcD/q/iXxCo6Yo=",
+    "signature": "MEUCIQC+6y5ME+thUL/N/xy8FUTArqQT5uSy2SVAp4dYoGfnlAIgf0CT+YqIWvEb0jubrrdfb4lVRfZuAg5b383uheO2fQ8=",
     "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
   },
-  "transcriptHash": "2YJvBWg+jFS7jv6BxG8J5neL2Io2wyE3emuenrsZOrE="
+  "transcriptHash": "HRFiIFInf45/+jNLmEGXHLf7sVJvLoBwcGnrjtoNerI="
 }

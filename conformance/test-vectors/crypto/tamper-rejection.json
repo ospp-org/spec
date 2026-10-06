@@ -8,7 +8,7 @@
   },
   "specRef": "06-security.md §5.4, §6.5",
   "generatedBy": "tools/generate-tamper-vectors.mjs",
-  "count": 17,
+  "count": 18,
   "vectors": [
     {
       "id": "receipt-body-credits-raised",
@@ -21,28 +21,28 @@
       "mutation": "body.creditsCharged 200 → 201",
       "mutatedPointer": "receipt/data",
       "was": "200",
-      "now": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAxLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNSIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
+      "now": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAxLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNWEyYTYwYTNlMTU5YyIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
       "schema": "schemas/ble/receipt.schema.json",
       "portable": {
         "algorithm": "ECDSA-P256-SHA256",
         "key": "conformance/test-keys/station-test-pub.pem",
         "base": {
-          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNSIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
-          "signature": "MEUCIQD1loq9BuUTTPbtdejp5ytICvB+sLVtQ18qOI/G2nHp2gIgUHmlwJhyZHifwXwdmcEj5LKWLicdG4maPsPvBzQ/WEY=",
+          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNWEyYTYwYTNlMTU5YyIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
+          "signature": "MEUCIQC93crwarGXF75QZtWachgForEK9t63kG9fCKcxLBkAlgIgKQ21UVGGlwaa/bRmelYzdKee03rDnyI9gnuQAdoXkdg=",
           "key": "conformance/test-keys/station-test-pub.pem",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDt9+jMxZqDWv7r5TjeCFCsSRFOoK\nYKGn76DpptnXeBNFvrg8sNFA8lbsoVWKQQNp525SinXw6NrhBfeg5OmC7g==\n-----END PUBLIC KEY-----\n",
           "mustVerify": true
         },
         "tampered": {
-          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAxLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNSIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
-          "signature": "MEUCIQD1loq9BuUTTPbtdejp5ytICvB+sLVtQ18qOI/G2nHp2gIgUHmlwJhyZHifwXwdmcEj5LKWLicdG4maPsPvBzQ/WEY=",
+          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAxLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNWEyYTYwYTNlMTU5YyIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
+          "signature": "MEUCIQC93crwarGXF75QZtWachgForEK9t63kG9fCKcxLBkAlgIgKQ21UVGGlwaa/bRmelYzdKee03rDnyI9gnuQAdoXkdg=",
           "key": "conformance/test-keys/station-test-pub.pem",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDt9+jMxZqDWv7r5TjeCFCsSRFOoK\nYKGn76DpptnXeBNFvrg8sNFA8lbsoVWKQQNp525SinXw6NrhBfeg5OmC7g==\n-----END PUBLIC KEY-----\n",
           "mustVerify": false
         }
       },
       "document": {
-        "offlineTxId": "otx_e4d3c2b1a0f9e8d7c6b5",
+        "offlineTxId": "otx_e4d3c2b1a0f9e8d7c6b5a2a60a3e159c",
         "offlinePassId": "opass_e4d3c2b1a0f9e8d7",
         "passCounter": 59,
         "userId": "sub_e4d3c2b1a0f9e8d7c6b5a4938271e4d3",
@@ -59,8 +59,8 @@
           "energyWh": 3500
         },
         "receipt": {
-          "data": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAxLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNSIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
-          "signature": "MEUCIQD1loq9BuUTTPbtdejp5ytICvB+sLVtQ18qOI/G2nHp2gIgUHmlwJhyZHifwXwdmcEj5LKWLicdG4maPsPvBzQ/WEY=",
+          "data": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAxLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNWEyYTYwYTNlMTU5YyIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
+          "signature": "MEUCIQC93crwarGXF75QZtWachgForEK9t63kG9fCKcxLBkAlgIgKQ21UVGGlwaa/bRmelYzdKee03rDnyI9gnuQAdoXkdg=",
           "signatureAlgorithm": "ECDSA-P256-SHA256"
         },
         "txCounter": 8
@@ -76,29 +76,29 @@
       "what": "low bit of the final octet of the DER `s` scalar flipped; DER framing intact",
       "mutation": "signature[-1] ^= 0x01",
       "mutatedPointer": "receipt/signature",
-      "was": "MEUCIQD1loq9BuUTTPbtdejp5ytICvB+sLVtQ18qOI/G2nHp2gIgUHmlwJhyZHifwXwdmcEj5LKWLicdG4maPsPvBzQ/WEY=",
-      "now": "MEUCIQD1loq9BuUTTPbtdejp5ytICvB+sLVtQ18qOI/G2nHp2gIgUHmlwJhyZHifwXwdmcEj5LKWLicdG4maPsPvBzQ/WEc=",
+      "was": "MEUCIQC93crwarGXF75QZtWachgForEK9t63kG9fCKcxLBkAlgIgKQ21UVGGlwaa/bRmelYzdKee03rDnyI9gnuQAdoXkdg=",
+      "now": "MEUCIQC93crwarGXF75QZtWachgForEK9t63kG9fCKcxLBkAlgIgKQ21UVGGlwaa/bRmelYzdKee03rDnyI9gnuQAdoXkdk=",
       "schema": "schemas/ble/receipt.schema.json",
       "portable": {
         "algorithm": "ECDSA-P256-SHA256",
         "key": "conformance/test-keys/station-test-pub.pem",
         "base": {
-          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNSIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
-          "signature": "MEUCIQD1loq9BuUTTPbtdejp5ytICvB+sLVtQ18qOI/G2nHp2gIgUHmlwJhyZHifwXwdmcEj5LKWLicdG4maPsPvBzQ/WEY=",
+          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNWEyYTYwYTNlMTU5YyIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
+          "signature": "MEUCIQC93crwarGXF75QZtWachgForEK9t63kG9fCKcxLBkAlgIgKQ21UVGGlwaa/bRmelYzdKee03rDnyI9gnuQAdoXkdg=",
           "key": "conformance/test-keys/station-test-pub.pem",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDt9+jMxZqDWv7r5TjeCFCsSRFOoK\nYKGn76DpptnXeBNFvrg8sNFA8lbsoVWKQQNp525SinXw6NrhBfeg5OmC7g==\n-----END PUBLIC KEY-----\n",
           "mustVerify": true
         },
         "tampered": {
-          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNSIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
-          "signature": "MEUCIQD1loq9BuUTTPbtdejp5ytICvB+sLVtQ18qOI/G2nHp2gIgUHmlwJhyZHifwXwdmcEj5LKWLicdG4maPsPvBzQ/WEc=",
+          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNWEyYTYwYTNlMTU5YyIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
+          "signature": "MEUCIQC93crwarGXF75QZtWachgForEK9t63kG9fCKcxLBkAlgIgKQ21UVGGlwaa/bRmelYzdKee03rDnyI9gnuQAdoXkdk=",
           "key": "conformance/test-keys/station-test-pub.pem",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDt9+jMxZqDWv7r5TjeCFCsSRFOoK\nYKGn76DpptnXeBNFvrg8sNFA8lbsoVWKQQNp525SinXw6NrhBfeg5OmC7g==\n-----END PUBLIC KEY-----\n",
           "mustVerify": false
         }
       },
       "document": {
-        "offlineTxId": "otx_e4d3c2b1a0f9e8d7c6b5",
+        "offlineTxId": "otx_e4d3c2b1a0f9e8d7c6b5a2a60a3e159c",
         "offlinePassId": "opass_e4d3c2b1a0f9e8d7",
         "passCounter": 59,
         "userId": "sub_e4d3c2b1a0f9e8d7c6b5a4938271e4d3",
@@ -115,8 +115,8 @@
           "energyWh": 3500
         },
         "receipt": {
-          "data": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNSIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
-          "signature": "MEUCIQD1loq9BuUTTPbtdejp5ytICvB+sLVtQ18qOI/G2nHp2gIgUHmlwJhyZHifwXwdmcEj5LKWLicdG4maPsPvBzQ/WEc=",
+          "data": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNWEyYTYwYTNlMTU5YyIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
+          "signature": "MEUCIQC93crwarGXF75QZtWachgForEK9t63kG9fCKcxLBkAlgIgKQ21UVGGlwaa/bRmelYzdKee03rDnyI9gnuQAdoXkdk=",
           "signatureAlgorithm": "ECDSA-P256-SHA256"
         },
         "txCounter": 8
@@ -139,22 +139,22 @@
         "algorithm": "ECDSA-P256-SHA256",
         "key": "conformance/test-keys/server-test-pub.pem",
         "base": {
-          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNSIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
-          "signature": "MEUCIQD1loq9BuUTTPbtdejp5ytICvB+sLVtQ18qOI/G2nHp2gIgUHmlwJhyZHifwXwdmcEj5LKWLicdG4maPsPvBzQ/WEY=",
+          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNWEyYTYwYTNlMTU5YyIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
+          "signature": "MEUCIQC93crwarGXF75QZtWachgForEK9t63kG9fCKcxLBkAlgIgKQ21UVGGlwaa/bRmelYzdKee03rDnyI9gnuQAdoXkdg=",
           "key": "conformance/test-keys/station-test-pub.pem",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDt9+jMxZqDWv7r5TjeCFCsSRFOoK\nYKGn76DpptnXeBNFvrg8sNFA8lbsoVWKQQNp525SinXw6NrhBfeg5OmC7g==\n-----END PUBLIC KEY-----\n",
           "mustVerify": true
         },
         "tampered": {
-          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNSIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
-          "signature": "MEUCIQD1loq9BuUTTPbtdejp5ytICvB+sLVtQ18qOI/G2nHp2gIgUHmlwJhyZHifwXwdmcEj5LKWLicdG4maPsPvBzQ/WEY=",
+          "signedBytesBase64": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNWEyYTYwYTNlMTU5YyIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
+          "signature": "MEUCIQC93crwarGXF75QZtWachgForEK9t63kG9fCKcxLBkAlgIgKQ21UVGGlwaa/bRmelYzdKee03rDnyI9gnuQAdoXkdg=",
           "key": "conformance/test-keys/server-test-pub.pem",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/Hd\ngUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA==\n-----END PUBLIC KEY-----\n",
           "mustVerify": false
         }
       },
       "document": {
-        "offlineTxId": "otx_e4d3c2b1a0f9e8d7c6b5",
+        "offlineTxId": "otx_e4d3c2b1a0f9e8d7c6b5a2a60a3e159c",
         "offlinePassId": "opass_e4d3c2b1a0f9e8d7",
         "passCounter": 59,
         "userId": "sub_e4d3c2b1a0f9e8d7c6b5a4938271e4d3",
@@ -171,8 +171,8 @@
           "energyWh": 3500
         },
         "receipt": {
-          "data": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNSIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
-          "signature": "MEUCIQD1loq9BuUTTPbtdejp5ytICvB+sLVtQ18qOI/G2nHp2gIgUHmlwJhyZHifwXwdmcEj5LKWLicdG4maPsPvBzQ/WEY=",
+          "data": "eyJiYXlJZCI6ImJheV9mNmU1ZDRjM2IyYTEwOTg3IiwiYm9va2VkRHVyYXRpb25TZWNvbmRzIjo5MDAsImNsb2NrU3RhdGUiOiJTeW5jaHJvbml6ZWQiLCJjcmVkaXRzQ2hhcmdlZCI6MjAwLCJkZXZpY2VJZCI6ImRldl9lNGQzYzJiMSIsImR1cmF0aW9uU2Vjb25kcyI6OTAwLCJlbmRSZWFzb24iOiJUaW1lckV4cGlyZWQiLCJlbmRlZEF0IjoiMjAyNi0wMi0xNVQxNDo0NTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiY29uc3VtYWJsZU1sIjoxMjAwLCJlbmVyZ3lXaCI6MzUwMCwibGlxdWlkTWwiOjQ1NjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDciLCJvZmZsaW5lVHhJZCI6Im90eF9lNGQzYzJiMWEwZjllOGQ3YzZiNWEyYTYwYTNlMTU5YyIsInBhc3NDb3VudGVyIjo1OSwic2VydmljZUlkIjoic3ZjX3ByZW1pdW0iLCJzdGFydGVkQXQiOiIyMDI2LTAyLTE1VDE0OjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fZmYyZmM3NmUiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9lNGQzYzJiMWEwZjllOGQ3YzZiNWE0OTM4MjcxZTRkMyJ9",
+          "signature": "MEUCIQC93crwarGXF75QZtWachgForEK9t63kG9fCKcxLBkAlgIgKQ21UVGGlwaa/bRmelYzdKee03rDnyI9gnuQAdoXkdg=",
           "signatureAlgorithm": "ECDSA-P256-SHA256"
         },
         "txCounter": 8
@@ -239,7 +239,7 @@
         "sessionProof": "Z2CslLwYw8mNTbU2MPkHX4Ijy3oK5+5u+pWl8ycC0QY=",
         "deviceProof": {
           "format": "android-key",
-          "signature": "MEQCIHy3mCn7p/2/IvZ4z/P4ypgAit414qRMxB0obXIuJ3TNAiAuomdYYnhaN2A5c7Ta3zZoGGfYEWe9W6JouU9F40auZg=="
+          "signature": "MEQCIHWmYnYLiEPB7KvEwmfGQaUdzu385+tPHb9RIn32r2/MAiA62dqH8+IkKiCdznI5iyCKytFQEL/kr9DDzFRDC9PQdQ=="
         }
       }
     },
@@ -305,7 +305,7 @@
         "sessionProof": "Z2CslLwYw8mNTbU2MPkHX4Ijy3oK5+5u+pWl8ycC0Qc=",
         "deviceProof": {
           "format": "android-key",
-          "signature": "MEQCIHy3mCn7p/2/IvZ4z/P4ypgAit414qRMxB0obXIuJ3TNAiAuomdYYnhaN2A5c7Ta3zZoGGfYEWe9W6JouU9F40auZg=="
+          "signature": "MEQCIHWmYnYLiEPB7KvEwmfGQaUdzu385+tPHb9RIn32r2/MAiA62dqH8+IkKiCdznI5iyCKytFQEL/kr9DDzFRDC9PQdQ=="
         }
       }
     },
@@ -413,15 +413,15 @@
         "algorithm": "ECDSA-P256-SHA256",
         "key": "derived: the key in the document",
         "base": {
-          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUAN/w5a+kh33t4myzXrYpVwU2SIIjjpvLGuFbhO+hxoOI=",
-          "signature": "MEQCIDRzJnuqRRbY4IwdeAX/pP+ajdHnQw2I+QEfxsenbDKuAiAD0siOY72i5e4weFlUtWXpoZJC2Er7K/i2eqEjeXYFeA==",
+          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUASQ5OW/y4glQCAIOvZ8Sbo3TApyKmfXheX0PqE9aGg4o=",
+          "signature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV90=",
           "key": "derived: the key in the document",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAn\nOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcA==\n-----END PUBLIC KEY-----\n",
           "mustVerify": true
         },
         "tampered": {
-          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUAfOOByaaSoVnxnw2dpN7as41lMDVNVzez/wS2FaJlkMY=",
-          "signature": "MEQCIDRzJnuqRRbY4IwdeAX/pP+ajdHnQw2I+QEfxsenbDKuAiAD0siOY72i5e4weFlUtWXpoZJC2Er7K/i2eqEjeXYFeA==",
+          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUAhvp52k7yOgLzuwA5I63QvVKXWO15yuV4e44xwjf5KLs=",
+          "signature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV90=",
           "key": "derived: the key in the document",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAn\nOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcA==\n-----END PUBLIC KEY-----\n",
           "mustVerify": false
@@ -451,13 +451,14 @@
             "available": true
           }
         ],
-        "stationSignature": "MEQCIDRzJnuqRRbY4IwdeAX/pP+ajdHnQw2I+QEfxsenbDKuAiAD0siOY72i5e4weFlUtWXpoZJC2Er7K/i2eqEjeXYFeA=="
+        "catalogDigest": "Rh8Y+YN+oKEC9g2dD5GM5EI/0mHXN+A2ewwaZTz7erE=",
+        "stationSignature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV90="
       }
     },
     {
-      "id": "stationsignature-signature-bitflip",
+      "id": "stationsignature-body-catalog-digest-altered",
       "surface": "stationSignature",
-      "class": "SIG",
+      "class": "BODY",
       "base": "conformance/test-vectors/valid/offline/challenge-full.json",
       "key": "conformance/test-keys/station-ca-test-cert.pem",
       "baseKey": "conformance/test-keys/station-ca-test-cert.pem",
@@ -465,25 +466,26 @@
         "--hello",
         "conformance/test-vectors/valid/offline/hello-full.json"
       ],
-      "what": "stationSignature s-scalar bit flipped",
-      "mutation": "stationSignature[-1] ^= 0x01",
-      "mutatedPointer": "stationSignature",
-      "was": "MEQCIDRzJnuqRRbY4IwdeAX/pP+ajdHnQw2I+QEfxsenbDKuAiAD0siOY72i5e4weFlUtWXpoZJC2Er7K/i2eqEjeXYFeA==",
-      "now": "MEQCIDRzJnuqRRbY4IwdeAX/pP+ajdHnQw2I+QEfxsenbDKuAiAD0siOY72i5e4weFlUtWXpoZJC2Er7K/i2eqEjeXYFeQ==",
+      "signaturePointer": "stationSignature",
+      "what": "catalogDigest replaced by the digest of another catalog — the app judges the catalog it read against the signed digest, so an altered Challenge must be refused",
+      "mutation": "catalogDigest := the minimal Challenge's",
+      "mutatedPointer": "catalogDigest",
+      "was": "Rh8Y+YN+oKEC9g2dD5GM5EI/0mHXN+A2ewwaZTz7erE=",
+      "now": "07pUOHvXhU1hZzsh7JWMj9n7Z5D4TbhEEuSGILeGE1w=",
       "schema": "schemas/ble/challenge.schema.json",
       "portable": {
         "algorithm": "ECDSA-P256-SHA256",
         "key": "derived: the key in the document",
         "base": {
-          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUAN/w5a+kh33t4myzXrYpVwU2SIIjjpvLGuFbhO+hxoOI=",
-          "signature": "MEQCIDRzJnuqRRbY4IwdeAX/pP+ajdHnQw2I+QEfxsenbDKuAiAD0siOY72i5e4weFlUtWXpoZJC2Er7K/i2eqEjeXYFeA==",
+          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUASQ5OW/y4glQCAIOvZ8Sbo3TApyKmfXheX0PqE9aGg4o=",
+          "signature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV90=",
           "key": "derived: the key in the document",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAn\nOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcA==\n-----END PUBLIC KEY-----\n",
           "mustVerify": true
         },
         "tampered": {
-          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUAN/w5a+kh33t4myzXrYpVwU2SIIjjpvLGuFbhO+hxoOI=",
-          "signature": "MEQCIDRzJnuqRRbY4IwdeAX/pP+ajdHnQw2I+QEfxsenbDKuAiAD0siOY72i5e4weFlUtWXpoZJC2Er7K/i2eqEjeXYFeQ==",
+          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUAJ2CKyddLDBtlmpE1DCtY4PDDnPejCR1omHQ7rnQ4U0A=",
+          "signature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV90=",
           "key": "derived: the key in the document",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAn\nOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcA==\n-----END PUBLIC KEY-----\n",
           "mustVerify": false
@@ -513,7 +515,71 @@
             "available": false
           }
         ],
-        "stationSignature": "MEQCIDRzJnuqRRbY4IwdeAX/pP+ajdHnQw2I+QEfxsenbDKuAiAD0siOY72i5e4weFlUtWXpoZJC2Er7K/i2eqEjeXYFeQ=="
+        "catalogDigest": "07pUOHvXhU1hZzsh7JWMj9n7Z5D4TbhEEuSGILeGE1w=",
+        "stationSignature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV90="
+      }
+    },
+    {
+      "id": "stationsignature-signature-bitflip",
+      "surface": "stationSignature",
+      "class": "SIG",
+      "base": "conformance/test-vectors/valid/offline/challenge-full.json",
+      "key": "conformance/test-keys/station-ca-test-cert.pem",
+      "baseKey": "conformance/test-keys/station-ca-test-cert.pem",
+      "args": [
+        "--hello",
+        "conformance/test-vectors/valid/offline/hello-full.json"
+      ],
+      "what": "stationSignature s-scalar bit flipped",
+      "mutation": "stationSignature[-1] ^= 0x01",
+      "mutatedPointer": "stationSignature",
+      "was": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV90=",
+      "now": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV9w=",
+      "schema": "schemas/ble/challenge.schema.json",
+      "portable": {
+        "algorithm": "ECDSA-P256-SHA256",
+        "key": "derived: the key in the document",
+        "base": {
+          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUASQ5OW/y4glQCAIOvZ8Sbo3TApyKmfXheX0PqE9aGg4o=",
+          "signature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV90=",
+          "key": "derived: the key in the document",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAn\nOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcA==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": true
+        },
+        "tampered": {
+          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUASQ5OW/y4glQCAIOvZ8Sbo3TApyKmfXheX0PqE9aGg4o=",
+          "signature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV9w=",
+          "key": "derived: the key in the document",
+          "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAn\nOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcA==\n-----END PUBLIC KEY-----\n",
+          "mustVerify": false
+        }
+      },
+      "document": {
+        "type": "Challenge",
+        "bleVersion": "0.3.0",
+        "stationNonce": "eoQTd0FoObkoooF6h9mlyyyARv+s9OjTbhyhp2A+nWQ=",
+        "stationEphemeralPubKey": "A9tT1OlHC4jTuZVY8YkQAd1f7Kr/nKhvnxI+7VQt0HkY",
+        "stationCertificate": "MIICFzCCAb6gAwIBAgICCgEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNjAxMDEwMDAwMDBaFw0yNjEyMzEyMzU5NTlaMCsxEjAQBgNVBAoMCU9TUFAgVGVzdDEVMBMGA1UEAwwMc3RuX2ExYjJjM2Q0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAnOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcKOByTCBxjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAoBgNVHSUEITAfBggrBgEFBQcDAgYTadau1fTCl9KOm5GCxfv1z/qsYzA8BgNVHR8ENTAzMDGgL6AthitodHRwOi8vY3JsLm9zcHAtdGVzdC5pbnZhbGlkL3N0YXRpb24tY2EuY3JsMB0GA1UdDgQWBBQesPd2I89FqUwav1HnI6MMFu/wPjAfBgNVHSMEGDAWgBQXxwEaDwCqARDb92VgH180MkvGWDAKBggqhkjOPQQDAgNHADBEAiB/ntacff4AkpoCFeG36be3OPq/SnS36Yx4J0+xyD6S1wIgT2Cr612Wv5BpWdeXae80hgOpvRPvcZ9UQCs41T2eFSI=",
+        "stationConnectivity": "Offline",
+        "availableServices": [
+          {
+            "bayId": "bay_a1b2c3d4e5f6",
+            "serviceId": "svc_basic",
+            "available": true
+          },
+          {
+            "bayId": "bay_a1b2c3d4e5f6",
+            "serviceId": "svc_premium",
+            "available": true
+          },
+          {
+            "bayId": "bay_f6e5d4c3b2a1",
+            "serviceId": "svc_auxiliary",
+            "available": false
+          }
+        ],
+        "catalogDigest": "Rh8Y+YN+oKEC9g2dD5GM5EI/0mHXN+A2ewwaZTz7erE=",
+        "stationSignature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV9w="
       }
     },
     {
@@ -537,15 +603,15 @@
         "algorithm": "ECDSA-P256-SHA256",
         "key": "conformance/test-keys/station-other-ca-test-cert.pem",
         "base": {
-          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUAN/w5a+kh33t4myzXrYpVwU2SIIjjpvLGuFbhO+hxoOI=",
-          "signature": "MEQCIDRzJnuqRRbY4IwdeAX/pP+ajdHnQw2I+QEfxsenbDKuAiAD0siOY72i5e4weFlUtWXpoZJC2Er7K/i2eqEjeXYFeA==",
+          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUASQ5OW/y4glQCAIOvZ8Sbo3TApyKmfXheX0PqE9aGg4o=",
+          "signature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV90=",
           "key": "derived: the key in the document",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvW5xVrFUPqbSVgurekEFGU2vEdAn\nOKiJzzxcmZca3/sbE4e/85+t+d3uIbRGsrihNUJo/HPf/t6YnM1w8yTbcA==\n-----END PUBLIC KEY-----\n",
           "mustVerify": true
         },
         "tampered": {
-          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUAN/w5a+kh33t4myzXrYpVwU2SIIjjpvLGuFbhO+hxoOI=",
-          "signature": "MEQCIDRzJnuqRRbY4IwdeAX/pP+ajdHnQw2I+QEfxsenbDKuAiAD0siOY72i5e4weFlUtWXpoZJC2Er7K/i2eqEjeXYFeA==",
+          "signedBytesBase64": "ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIE9TUFAgQkxFIHN0YXRpb24sIENoYWxsZW5nZSBzaWduYXR1cmUASQ5OW/y4glQCAIOvZ8Sbo3TApyKmfXheX0PqE9aGg4o=",
+          "signature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV90=",
           "key": "conformance/test-keys/station-other-ca-test-cert.pem",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEMznoD73QwvrawFQ4BplrlGum7aw0\nyKPV8dboSvng4owKhT1Rl0gCk/ME6hASAWvYw/7BRgR89qUskkrURYTjww==\n-----END PUBLIC KEY-----\n",
           "mustVerify": false
@@ -575,7 +641,8 @@
             "available": false
           }
         ],
-        "stationSignature": "MEQCIDRzJnuqRRbY4IwdeAX/pP+ajdHnQw2I+QEfxsenbDKuAiAD0siOY72i5e4weFlUtWXpoZJC2Er7K/i2eqEjeXYFeA=="
+        "catalogDigest": "Rh8Y+YN+oKEC9g2dD5GM5EI/0mHXN+A2ewwaZTz7erE=",
+        "stationSignature": "MEUCIQDCVlBNlqUdFeSfk1I4Z3l1oj4O3xpr2NAqrPO/5lIy0AIgVgVXme5bPyOFWmYHngLdBjqSv//hDUrH0nUrKpuBV90="
       }
     },
     {
@@ -603,15 +670,15 @@
         "algorithm": "ECDSA-P256-SHA256",
         "key": "derived: the key in the document",
         "base": {
-          "signedBytesBase64": "ABhPU1BQIEJMRSBkZXZpY2UgcHJvb2YgdjEAIMmo9Ej3PhC45zuw+nM9ILAFdoxVrNyAhehJh0Nz+vivAAxzdG5fYTFiMmMzZDQAGm9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDdjNmI1AAE3ABBiYXlfYTFiMmMzZDRlNWY2AAlzdmNfYmFzaWMAAzMwMA==",
-          "signature": "MEQCIHy3mCn7p/2/IvZ4z/P4ypgAit414qRMxB0obXIuJ3TNAiAuomdYYnhaN2A5c7Ta3zZoGGfYEWe9W6JouU9F40auZg==",
+          "signedBytesBase64": "ABhPU1BQIEJMRSBkZXZpY2UgcHJvb2YgdjEAIJ6AHfq9vDyaQefvMY42nWwL2q7zFuIxyhlHMcly8UZrAAxzdG5fYTFiMmMzZDQAGm9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDdjNmI1AAE3ABBiYXlfYTFiMmMzZDRlNWY2AAlzdmNfYmFzaWMAAzMwMA==",
+          "signature": "MEQCIHWmYnYLiEPB7KvEwmfGQaUdzu385+tPHb9RIn32r2/MAiA62dqH8+IkKiCdznI5iyCKytFQEL/kr9DDzFRDC9PQdQ==",
           "key": "derived: the key in the document",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAETXAgFlQSOI+eoklpARWRQLE10FJE\nW6Kp0wzI15dYrlQ2ZBh9c7Lm5LnJ7JMuwJEC2yMb32qY0QLvAV/Iaw4MKg==\n-----END PUBLIC KEY-----\n",
           "mustVerify": true
         },
         "tampered": {
-          "signedBytesBase64": "ABhPU1BQIEJMRSBkZXZpY2UgcHJvb2YgdjEAIMmo9Ej3PhC45zuw+nM9ILAFdoxVrNyAhehJh0Nz+vivAAxzdG5fYTFiMmMzZDQAGm9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDdjNmI1AAE3ABBiYXlfYTFiMmMzZDRlNWY2AAlzdmNfYmFzaWMAAzYwMA==",
-          "signature": "MEQCIHy3mCn7p/2/IvZ4z/P4ypgAit414qRMxB0obXIuJ3TNAiAuomdYYnhaN2A5c7Ta3zZoGGfYEWe9W6JouU9F40auZg==",
+          "signedBytesBase64": "ABhPU1BQIEJMRSBkZXZpY2UgcHJvb2YgdjEAIJ6AHfq9vDyaQefvMY42nWwL2q7zFuIxyhlHMcly8UZrAAxzdG5fYTFiMmMzZDQAGm9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDdjNmI1AAE3ABBiYXlfYTFiMmMzZDRlNWY2AAlzdmNfYmFzaWMAAzYwMA==",
+          "signature": "MEQCIHWmYnYLiEPB7KvEwmfGQaUdzu385+tPHb9RIn32r2/MAiA62dqH8+IkKiCdznI5iyCKytFQEL/kr9DDzFRDC9PQdQ==",
           "key": "derived: the key in the document",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAETXAgFlQSOI+eoklpARWRQLE10FJE\nW6Kp0wzI15dYrlQ2ZBh9c7Lm5LnJ7JMuwJEC2yMb32qY0QLvAV/Iaw4MKg==\n-----END PUBLIC KEY-----\n",
           "mustVerify": false
@@ -647,7 +714,7 @@
         "sessionProof": "Z2CslLwYw8mNTbU2MPkHX4Ijy3oK5+5u+pWl8ycC0QY=",
         "deviceProof": {
           "format": "android-key",
-          "signature": "MEQCIHy3mCn7p/2/IvZ4z/P4ypgAit414qRMxB0obXIuJ3TNAiAuomdYYnhaN2A5c7Ta3zZoGGfYEWe9W6JouU9F40auZg=="
+          "signature": "MEQCIHWmYnYLiEPB7KvEwmfGQaUdzu385+tPHb9RIn32r2/MAiA62dqH8+IkKiCdznI5iyCKytFQEL/kr9DDzFRDC9PQdQ=="
         }
       }
     },
@@ -668,22 +735,22 @@
       "what": "deviceProof signature s-scalar bit flipped",
       "mutation": "deviceProof.signature[-1] ^= 0x01",
       "mutatedPointer": "deviceProof/signature",
-      "was": "MEQCIHy3mCn7p/2/IvZ4z/P4ypgAit414qRMxB0obXIuJ3TNAiAuomdYYnhaN2A5c7Ta3zZoGGfYEWe9W6JouU9F40auZg==",
-      "now": "MEQCIHy3mCn7p/2/IvZ4z/P4ypgAit414qRMxB0obXIuJ3TNAiAuomdYYnhaN2A5c7Ta3zZoGGfYEWe9W6JouU9F40auZw==",
+      "was": "MEQCIHWmYnYLiEPB7KvEwmfGQaUdzu385+tPHb9RIn32r2/MAiA62dqH8+IkKiCdznI5iyCKytFQEL/kr9DDzFRDC9PQdQ==",
+      "now": "MEQCIHWmYnYLiEPB7KvEwmfGQaUdzu385+tPHb9RIn32r2/MAiA62dqH8+IkKiCdznI5iyCKytFQEL/kr9DDzFRDC9PQdA==",
       "schema": "schemas/ble/offline-auth-request.schema.json",
       "portable": {
         "algorithm": "ECDSA-P256-SHA256",
         "key": "derived: the key in the document",
         "base": {
-          "signedBytesBase64": "ABhPU1BQIEJMRSBkZXZpY2UgcHJvb2YgdjEAIMmo9Ej3PhC45zuw+nM9ILAFdoxVrNyAhehJh0Nz+vivAAxzdG5fYTFiMmMzZDQAGm9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDdjNmI1AAE3ABBiYXlfYTFiMmMzZDRlNWY2AAlzdmNfYmFzaWMAAzMwMA==",
-          "signature": "MEQCIHy3mCn7p/2/IvZ4z/P4ypgAit414qRMxB0obXIuJ3TNAiAuomdYYnhaN2A5c7Ta3zZoGGfYEWe9W6JouU9F40auZg==",
+          "signedBytesBase64": "ABhPU1BQIEJMRSBkZXZpY2UgcHJvb2YgdjEAIJ6AHfq9vDyaQefvMY42nWwL2q7zFuIxyhlHMcly8UZrAAxzdG5fYTFiMmMzZDQAGm9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDdjNmI1AAE3ABBiYXlfYTFiMmMzZDRlNWY2AAlzdmNfYmFzaWMAAzMwMA==",
+          "signature": "MEQCIHWmYnYLiEPB7KvEwmfGQaUdzu385+tPHb9RIn32r2/MAiA62dqH8+IkKiCdznI5iyCKytFQEL/kr9DDzFRDC9PQdQ==",
           "key": "derived: the key in the document",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAETXAgFlQSOI+eoklpARWRQLE10FJE\nW6Kp0wzI15dYrlQ2ZBh9c7Lm5LnJ7JMuwJEC2yMb32qY0QLvAV/Iaw4MKg==\n-----END PUBLIC KEY-----\n",
           "mustVerify": true
         },
         "tampered": {
-          "signedBytesBase64": "ABhPU1BQIEJMRSBkZXZpY2UgcHJvb2YgdjEAIMmo9Ej3PhC45zuw+nM9ILAFdoxVrNyAhehJh0Nz+vivAAxzdG5fYTFiMmMzZDQAGm9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDdjNmI1AAE3ABBiYXlfYTFiMmMzZDRlNWY2AAlzdmNfYmFzaWMAAzMwMA==",
-          "signature": "MEQCIHy3mCn7p/2/IvZ4z/P4ypgAit414qRMxB0obXIuJ3TNAiAuomdYYnhaN2A5c7Ta3zZoGGfYEWe9W6JouU9F40auZw==",
+          "signedBytesBase64": "ABhPU1BQIEJMRSBkZXZpY2UgcHJvb2YgdjEAIJ6AHfq9vDyaQefvMY42nWwL2q7zFuIxyhlHMcly8UZrAAxzdG5fYTFiMmMzZDQAGm9wYXNzX2U0ZDNjMmIxYTBmOWU4ZDdjNmI1AAE3ABBiYXlfYTFiMmMzZDRlNWY2AAlzdmNfYmFzaWMAAzMwMA==",
+          "signature": "MEQCIHWmYnYLiEPB7KvEwmfGQaUdzu385+tPHb9RIn32r2/MAiA62dqH8+IkKiCdznI5iyCKytFQEL/kr9DDzFRDC9PQdA==",
           "key": "derived: the key in the document",
           "keyMaterial": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAETXAgFlQSOI+eoklpARWRQLE10FJE\nW6Kp0wzI15dYrlQ2ZBh9c7Lm5LnJ7JMuwJEC2yMb32qY0QLvAV/Iaw4MKg==\n-----END PUBLIC KEY-----\n",
           "mustVerify": false
@@ -719,7 +786,7 @@
         "sessionProof": "Z2CslLwYw8mNTbU2MPkHX4Ijy3oK5+5u+pWl8ycC0QY=",
         "deviceProof": {
           "format": "android-key",
-          "signature": "MEQCIHy3mCn7p/2/IvZ4z/P4ypgAit414qRMxB0obXIuJ3TNAiAuomdYYnhaN2A5c7Ta3zZoGGfYEWe9W6JouU9F40auZw=="
+          "signature": "MEQCIHWmYnYLiEPB7KvEwmfGQaUdzu385+tPHb9RIn32r2/MAiA62dqH8+IkKiCdznI5iyCKytFQEL/kr9DDzFRDC9PQdA=="
         }
       }
     },

@@ -41,7 +41,7 @@ Alice is at "Station Alpha -- Example City" and wants to start the Eco Program s
 14:30:06.000  Server responds with signedAuthorization, sessionId and the trust bundle
 14:30:06.500  App writes Hello to FFF3
 14:30:06.800  Station responds with Challenge on FFF4 (connectivity: "Offline")
-14:30:07.000  App verifies the station's certificate and signature against the bundle it just received
+14:30:07.000  App verifies the station's certificate and signature against the bundle it just received, and the catalog's digest
 14:30:07.200  App writes ServerSignedAuth to FFF3
 14:30:07.500  Station verifies ECDSA P-256 signature — valid
 14:30:07.600  Station sends AuthResponse (Accepted) on FFF4
@@ -197,12 +197,10 @@ X-Request-Id: req_offauth_7d8e9f01
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "trustBundle": {
-    "stationCaCertificate": "-----BEGIN CERTIFICATE-----\nMIIBiDCCAS6gAwIBAgICBVEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBU\nZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNTA5MDEwMDAw\nMDBaFw0zMDA4MzEyMzU5NTlaMDMxEjAQBgNVBAoMCU9TUFAgVGVzdDEdMBsGA1UE\nAwwUT1NQUCBUZXN0IFN0YXRpb24gQ0EwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNC\nAASV+9CgAE4tgTzAKWwxVGw9wkyvqJhltZhs/62oD8EQ144coXVZ5S7LcVowOBB6\nRCV30pndUexf5mPlLvNrPAYuozIwMDAdBgNVHQ4EFgQUF8cBGg8AqgEQ2/dlYB9f\nNDJLxlgwDwYDVR0TAQH/BAUwAwEB/zAKBggqhkjOPQQDAgNIADBFAiANwaaqU++e\nh+48Xbm+eIdx0Mewmx6Fi8TzTK7uRmr0IgIhAM7FlstK69gTH2I56MDw6st4gAnG\nfWr0/RyjuV++/a8j\n-----END CERTIFICATE-----\n",
-    "stationCaCrl": "-----BEGIN X509 CRL-----\nMIHLMHMCAQEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYD\nVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQRcNMjYwMjEwMDAwMDAwWhcNMjYwMjE3\nMDAwMDAwWqAPMA0wCwYDVR0UBAQCAhAAMAoGCCqGSM49BAMCA0gAMEUCIBn2bfLU\nLsyK7Ylqeam9kH9ZxjxZdbzegp90TJFf0XanAiEAxEIAKknqttpckEWPqEqPs5lp\nshMwikxb5J+KXtXQT9c=\n-----END X509 CRL-----\n",
-    "serverKeys": [
+    "stationCas": [
       {
-        "keyId": "YjX5pR0TzmU3ubs17wImQQ",
-        "publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgvQlIvxRxGjFmqpueMZYaGB+z/HdgUeQk7sNEWSoWWuQS4tkJH4ZlkMXQfu4k6BG13H7vgYBLutaX0fclQj5vA=="
+        "certificate": "-----BEGIN CERTIFICATE-----\nMIIBiDCCAS6gAwIBAgICBVEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBU\nZXN0MR0wGwYDVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQTAeFw0yNTA5MDEwMDAw\nMDBaFw0zMDA4MzEyMzU5NTlaMDMxEjAQBgNVBAoMCU9TUFAgVGVzdDEdMBsGA1UE\nAwwUT1NQUCBUZXN0IFN0YXRpb24gQ0EwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNC\nAASV+9CgAE4tgTzAKWwxVGw9wkyvqJhltZhs/62oD8EQ144coXVZ5S7LcVowOBB6\nRCV30pndUexf5mPlLvNrPAYuozIwMDAdBgNVHQ4EFgQUF8cBGg8AqgEQ2/dlYB9f\nNDJLxlgwDwYDVR0TAQH/BAUwAwEB/zAKBggqhkjOPQQDAgNIADBFAiANwaaqU++e\nh+48Xbm+eIdx0Mewmx6Fi8TzTK7uRmr0IgIhAM7FlstK69gTH2I56MDw6st4gAnG\nfWr0/RyjuV++/a8j\n-----END CERTIFICATE-----\n",
+        "crl": "-----BEGIN X509 CRL-----\nMIHLMHMCAQEwCgYIKoZIzj0EAwIwMzESMBAGA1UECgwJT1NQUCBUZXN0MR0wGwYD\nVQQDDBRPU1BQIFRlc3QgU3RhdGlvbiBDQRcNMjYwMjEwMDAwMDAwWhcNMjYwMjE3\nMDAwMDAwWqAPMA0wCwYDVR0UBAQCAhAAMAoGCCqGSM49BAMCA0gAMEUCIBn2bfLU\nLsyK7Ylqeam9kH9ZxjxZdbzegp90TJFf0XanAiEAxEIAKknqttpckEWPqEqPs5lp\nshMwikxb5J+KXtXQT9c=\n-----END X509 CRL-----\n"
       }
     ]
   },
@@ -213,7 +211,7 @@ X-Request-Id: req_offauth_7d8e9f01
 }
 ```
 
-The response carries the trust bundle too — the Station CA certificate, its CRL and the server key set — because Alice's phone needs it to authenticate the station before it relays the authorization, and a phone may hold no pass, and so no bundle, at all ([`app-contract.md` §5](../../spec/profiles/offline/app-contract.md#5-the-partial-a-authorization)). The app replaces the bundle it holds with this one.
+The response carries the trust bundle too — the Station CA set, each CA with its CRL — because Alice's phone needs it to authenticate the station before it relays the authorization, and a phone may hold no pass, and so no bundle, at all ([`app-contract.md` §5](../../spec/profiles/offline/app-contract.md#5-the-partial-a-authorization)). The app replaces the bundle it holds with this one.
 
 ---
 
@@ -270,11 +268,12 @@ The station chooses the BLE version, generates its own nonce and ephemeral key, 
       "available": true
     }
   ],
-  "stationSignature": "MEUCIQCCqWbvzuNDmcGN0nQ8eO8LocG8GH51GWhk+uURG5sFfAIgGXn1RbJHfo9OmVNMfzKniVvLheNM3kJHANzNxicLjRk="
+  "catalogDigest": "aTJKAIhKyFTwppylQPa+nBz8rl6KwwglWGonzrJX7D4=",
+  "stationSignature": "MEQCICQdjMlWwRCQNOnt1V9ahN1aHW9EtLggWDJIItLIHuLNAiAFshHsI/yM/GmsXe+9akHfVy+IHsGqtIYhMhJ3Roi/zQ=="
 }
 ```
 
-The `stationConnectivity: "Offline"` confirms the Partial A scenario. Before it relays anything, the app verifies the station against the trust bundle it received in Step 5 ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)): the certificate chains to the Station CA, is on no entry of the CRL, carries `id-kp-osppBleStation`, names `stn_a1b2c3d4` — the station the authorization is for — and `stationSignature` verifies under it. It then derives the BLE session key over the ephemeral ECDH secret (the BLE LTK is **not** used — see `spec/06-security.md` §6.5):
+The `stationConnectivity: "Offline"` confirms the Partial A scenario. Before it relays anything, the app verifies the station against the trust bundle it received in Step 5 ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)): the certificate chains to a Station CA of the bundle, is on no entry of that CA's CRL, carries `id-kp-osppBleStation`, names `stn_a1b2c3d4` — the station the authorization is for — and `stationSignature` verifies under it; and the catalog Alice chose from is the one the Challenge's `catalogDigest` names ([`ble-handshake.md` §3](../../spec/profiles/offline/ble-handshake.md#3-step-2-challenge)). It then derives the BLE session key over the ephemeral ECDH secret (the BLE LTK is **not** used — see `spec/06-security.md` §6.5):
 
 ```
 SessionKey = HKDF-SHA256(
@@ -364,7 +363,7 @@ The station's bay controller:
 1. Validates that Bay 1 is still `Available`
 2. Activates the dispenser relay on Bay 1
 3. Starts the session timer at 300 seconds
-4. Uses the server-issued session ID `sess_c4d5e6f7a8b9` from the verified claims ([`ble-session.md` §1](../../spec/profiles/offline/ble-session.md#1-starting-a-service)) and assigns offline transaction ID `otx_e5f6a7b8c9d0`
+4. Uses the server-issued session ID `sess_c4d5e6f7a8b9` from the verified claims ([`ble-session.md` §1](../../spec/profiles/offline/ble-session.md#1-starting-a-service)) and assigns offline transaction ID `otx_e5f6a7b8c9d0a78600c61fa2108392d8`
 
 **BLE Notify FFF4 [MSG-038]:**
 
@@ -373,7 +372,7 @@ The station's bay controller:
   "type": "StartServiceResponse",
   "result": "Accepted",
   "sessionId": "sess_c4d5e6f7a8b9",
-  "offlineTxId": "otx_e5f6a7b8c9d0"
+  "offlineTxId": "otx_e5f6a7b8c9d0a78600c61fa2108392d8"
 }
 ```
 
@@ -510,11 +509,11 @@ The station generates a signed receipt:
 
 ### Step 17: App Asks for the Receipt on FFF6 (14:33:03.500)
 
-**BLE Write FFF6 [MSG-041]:** `{"type": "ReceiptRequest", "offlineTxId": "otx_e5f6a7b8c9d0"}`, answered by a **ReceiptResponse [MSG-042]** notified on FFF6, `result: "Accepted"`, whose `receipt` [MSG-039] is:
+**BLE Write FFF6 [MSG-041]:** `{"type": "ReceiptRequest", "offlineTxId": "otx_e5f6a7b8c9d0a78600c61fa2108392d8"}`, answered by a **ReceiptResponse [MSG-042]** notified on FFF6, `result: "Accepted"`, whose `receipt` [MSG-039] is:
 
 ```json
 {
-  "offlineTxId": "otx_e5f6a7b8c9d0",
+  "offlineTxId": "otx_e5f6a7b8c9d0a78600c61fa2108392d8",
   "authId": "auth_c89731927892",
   "sessionId": "sess_c4d5e6f7a8b9",
   "userId": "sub_alice2026",
@@ -531,8 +530,8 @@ The station generates a signed receipt:
     "energyWh": 120
   },
   "receipt": {
-    "data": "eyJhdXRoSWQiOiJhdXRoX2M4OTczMTkyNzg5MiIsImJheUlkIjoiYmF5X2MxZDJlM2Y0YTViNiIsImJvb2tlZER1cmF0aW9uU2Vjb25kcyI6MzAwLCJjbG9ja1N0YXRlIjoiU3luY2hyb25pemVkIiwiY3JlZGl0c0NoYXJnZWQiOjI5LCJkZXZpY2VJZCI6ImRldmljZV9hOGYzYmMxMmU0NTY3ODkwIiwiZHVyYXRpb25TZWNvbmRzIjoxNzQsImVuZFJlYXNvbiI6IkxvY2FsIiwiZW5kZWRBdCI6IjIwMjYtMDItMTNUMTQ6MzM6MDIuNDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6NDcwLCJlbmVyZ3lXaCI6MTIwLCJsaXF1aWRNbCI6Mzk4MDB9LCJvZmZsaW5lVHhJZCI6Im90eF9lNWY2YTdiOGM5ZDAiLCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic2Vzc2lvbklkIjoic2Vzc19jNGQ1ZTZmN2E4YjkiLCJzdGFydGVkQXQiOiIyMDI2LTAyLTEzVDE0OjMwOjA4LjUwMFoiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJ0eENvdW50ZXIiOjgsInVzZXJJZCI6InN1Yl9hbGljZTIwMjYifQ==",
-    "signature": "MEUCIQC5Ont2E3TnPYbB7s3OMCFKGNc1NcWiHnCpcLM5SyGZrgIgLGs9bpdYUR02K+2gHZPgTPMLw3/sCoOMgK3vPO1D+yo=",
+    "data": "eyJhdXRoSWQiOiJhdXRoX2M4OTczMTkyNzg5MiIsImJheUlkIjoiYmF5X2MxZDJlM2Y0YTViNiIsImJvb2tlZER1cmF0aW9uU2Vjb25kcyI6MzAwLCJjbG9ja1N0YXRlIjoiU3luY2hyb25pemVkIiwiY3JlZGl0c0NoYXJnZWQiOjI5LCJkZXZpY2VJZCI6ImRldmljZV9hOGYzYmMxMmU0NTY3ODkwIiwiZHVyYXRpb25TZWNvbmRzIjoxNzQsImVuZFJlYXNvbiI6IkxvY2FsIiwiZW5kZWRBdCI6IjIwMjYtMDItMTNUMTQ6MzM6MDIuNDAwWiIsIm1ldGVyVmFsdWVzIjp7ImNvbnN1bWFibGVNbCI6NDcwLCJlbmVyZ3lXaCI6MTIwLCJsaXF1aWRNbCI6Mzk4MDB9LCJvZmZsaW5lVHhJZCI6Im90eF9lNWY2YTdiOGM5ZDBhNzg2MDBjNjFmYTIxMDgzOTJkOCIsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzZXNzaW9uSWQiOiJzZXNzX2M0ZDVlNmY3YThiOSIsInN0YXJ0ZWRBdCI6IjIwMjYtMDItMTNUMTQ6MzA6MDguNTAwWiIsInN0YXRpb25JZCI6InN0bl9hMWIyYzNkNCIsInR4Q291bnRlciI6OCwidXNlcklkIjoic3ViX2FsaWNlMjAyNiJ9",
+    "signature": "MEUCIQCgtFOnSTkKnisoia334eGuoaZmYTF2NDiHTKFM+C18AAIgK6Em6ctxkPYsBCDGWcvpyTzV2zMi5jLvOBzowsZVKxQ=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "txCounter": 8
@@ -655,9 +654,9 @@ On the Operator Dashboard, Charlie sees:
      |<---------------------|                          |
      |                      |                          |
      | -- Write FFF3: Hello -------------------------->|
-     |<-------- FFF4: Challenge (offline, certificate, signature)
+     |<-------- FFF4: Challenge (offline, certificate, digest, signature)
      |                      |                          |
-     |  verify certificate and signature (trust bundle) |
+     |  verify certificate, signature (trust bundle) and digest
      | -- Write FFF3: ServerSignedAuth ------------->|
      |                      |                  verify  |
      |                      |                 ECDSA P-256  |
@@ -697,7 +696,7 @@ On the Operator Dashboard, Charlie sees:
 
 2. **ECDSA P-256 signature provides server trust without connectivity.** The station trusts the authorization because it can verify the server's ECDSA P-256 signature with a key of the server key set (`OfflinePassPublicKey`) it holds — delivered at provisioning, at every boot and by ChangeConfiguration. No network round-trip is needed. During a key rotation the set holds both the old and the new key; there is no internally cached previous key and no grace period ([`06-security.md` §6.7](../../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)).
 
-3. **The signed authorization has a 5-minute expiry window.** The `expiresAt` field prevents replay attacks. If Alice takes more than 5 minutes between obtaining the authorization and presenting it to the station via BLE, the station will reject it. This is a deliberate trade-off between security and usability.
+3. **The signed authorization has a 5-minute expiry window.** The `expiresAt` field prevents replay attacks. If Alice takes more than 5 minutes between obtaining the authorization and presenting it to the station via BLE, the station will reject it, and it starts no session after `expiresAt`. A session started before it runs its whole duration, past `expiresAt` if it must: the server judges the authorization against the signed `startedAt` ([`reconciliation.md` §6.7](../../spec/profiles/offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4) check #9). This is a deliberate trade-off between security and usability.
 
 4. **The app's upload provides a fast reconciliation path.** Since Alice's phone is online, the app uploads the receipt at once ([`app-contract.md` §4](../../spec/profiles/offline/app-contract.md#4-receipt-upload)). This means the refund happens within seconds, not hours. Whichever copy of the station-signed receipt arrives first may settle: the station's TransactionEvent, sent when MQTT reconnects, carries the same signed data and is answered `Duplicate`.
 

@@ -423,7 +423,7 @@ When the MQTT connection is lost (PINGRESP timeout, TCP reset, broker unavailabl
 
 1. **Continue active sessions** — hardware operations MUST NOT stop due to MQTT loss. The station runs on its local timer and auto-stops when `durationSeconds` elapses.
 2. **Switch to BLE-available mode** — if not already advertising, ensure BLE is active for offline sessions.
-3. **Buffer outbound messages** — The station MUST buffer TransactionEvent, SessionEnded and SecurityEvent messages in persistent local storage per the categorized buffering policy in [01-architecture.md §6.5](../spec/01-architecture.md#65-offline-message-buffering). Regenerable messages (Heartbeat, StatusNotification, MeterValues, FirmwareStatusNotification, DiagnosticsNotification) MAY be discarded during offline operation as the station regenerates them at reconnection.
+3. **Buffer outbound messages** — The station MUST buffer TransactionEvent, SessionStarted, SessionEnded and SecurityEvent messages in persistent local storage per the categorized buffering policy in [01-architecture.md §6.5](../spec/01-architecture.md#65-offline-message-buffering). Regenerable messages (Heartbeat, StatusNotification, MeterValues, FirmwareStatusNotification, DiagnosticsNotification) MAY be discarded during offline operation as the station regenerates them at reconnection.
 4. **Attempt reconnection** with exponential backoff (see Section 4.5).
 5. **On successful reconnect** — follow the full boot sequence (Section 4.1): re-subscribe, BootNotification, StatusNotification per bay, then flush buffered messages. The BootNotification **MUST** carry `bootReason: "Reconnect"` when the firmware did not restart, and `uptimeSeconds` measured from the last actual boot — which therefore spans the outage. The boot is mandatory here because the HMAC session key is scoped to the MQTT session and arrives only in the boot response ([Chapter 06 §5.2](06-security.md)); a station that skipped it would reconnect keyless. OCPP-J advises the opposite for the same event, and [`boot-notification.md` §5.2](profiles/core/boot-notification.md) records why OSPP diverges.
 
@@ -484,7 +484,7 @@ OSPP uses MQTT 5.0 **Message Expiry Interval** to prevent stale commands from be
 | **Long-running commands** | UpdateFirmware, GetDiagnostics | 300s | 600s |
 | **Certificate renewal** | SignCertificate, CertificateInstall, TriggerCertificateRenewal | 30s | 60s |
 | **Periodic reporting** | MeterValues | 60s | 120s |
-| **Critical events** | BootNotification, TransactionEvent, SessionEnded, SecurityEvent, ConnectionLost (LWT) | — | **Never expires** |
+| **Critical events** | BootNotification, TransactionEvent, SessionEnded, SessionStarted, SecurityEvent, ConnectionLost (LWT) | — | **Never expires** |
 
 **Per-action overrides.** The actions below take an MQTT Expiry Interval different from the rest of their category:
 
@@ -511,6 +511,7 @@ The following messages MUST NOT have a Message Expiry Interval set:
 - **BootNotification** — always relevant, contains station identity
 - **TransactionEvent** — offline transaction reconciliation data must never be lost
 - **SessionEnded** — sole billing source for autonomous session termination (timer expiry, hardware fault, and other autonomous reasons); loss would cause irreversible billing data discrepancy
+- **SessionStarted** — the start of a Partial-B session, on which the server keys its authorized duration; without it the server lapses the authorization and refunds it ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4c)
 - **SecurityEvent** — security incidents must always be delivered
 - **ConnectionLost (LWT)** — disconnect detection must always be delivered
 
@@ -706,10 +707,11 @@ Mobile App (Central)                            Station (Peripheral)
        │                  appVersion, ephemeral key}    │
        │<─── Notify FFF4: Challenge {bleVersion, nonce, │
        │      ephemeral key, certificate, availability,│
-       │      stationSignature}                        │
+       │      catalogDigest, stationSignature}         │
        │                                               │
-       │  [App verifies the certificate and signature;  │
-       │   availability comes from the Challenge]       │
+       │  [App verifies the certificate, the signature │
+       │   and the catalog digest; availability comes  │
+       │   from the Challenge]                         │
        │                                               │
        │  [Handshake continues — see Offline Profile]   │
        │                                               │
@@ -979,7 +981,7 @@ An OSPP message on MQTT is one envelope, serialised to UTF-8, published as the w
 PUBLISH payload (§10.1). **That serialisation MUST NOT exceed 64 512 bytes (63 KiB).**
 
 **The bound is on the envelope and not on any field inside it, because no arrangement of
-field bounds can express it.** **Nine** of the 47 MQTT message schemas admit a member with no
+field bounds can express it.** **Nine** of the 48 MQTT message schemas admit a member with no
 size bound of its own — **11 such members**, of which **6 are arrays without `maxItems`**
 (`update-service-catalog-request.services`, `get-configuration-request.keys`,
 `get-configuration-response.configuration` and `.unknownKeys`,

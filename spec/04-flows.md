@@ -50,6 +50,8 @@ onward while this sentence asserted the two were the same:
 | MSG-018 | GetDiagnostics | MSG-038 | ServiceStatus (FFF5) |
 | MSG-019 | DiagnosticsNotification | MSG-039 | Receipt (FFF6) |
 | MSG-020 | SetMaintenanceMode | MSG-040 | SessionEnded |
+| MSG-041 | ReceiptRequest | MSG-043 | SessionStarted |
+| MSG-042 | ReceiptResponse | | |
 
 ### Diagram Notation
 
@@ -709,6 +711,9 @@ sequenceDiagram
 
 ## 5a. Full Offline Session — BLE
 
+> **EXPERIMENTAL — this entire flow.** It runs over the BLE construction, published for review,
+> **not** for implementation. See [Release status](../README.md#ble-is-experimental).
+
 **Description:** Both the phone and the station are offline. The user connects via BLE, authenticates with a pre-armed OfflinePass, and the station runs the service using only local validation. The transaction is reconciled when connectivity is restored.
 
 ### Preconditions
@@ -735,14 +740,13 @@ sequenceDiagram
     App->>SSP: Write FFF2 0x01 [MSG-028] AvailableServices
     SSP-->>App: Notify FFF2: {catalogVersion, bays: [{bayId, services, prices}]}
 
-    Note over App: User selects bay, service and duration
+    Note over App: User selects bay, service and duration, and confirms (biometric / PIN)
 
     App->>SSP: Write FFF3: Hello [MSG-029] (bleVersions)
-    SSP-->>App: Notify FFF4: Challenge [MSG-030] (certificate, availability, signature, connectivity: "Offline")
+    SSP-->>App: Notify FFF4: Challenge [MSG-030] (certificate, availability, catalog digest, signature, connectivity: "Offline")
 
-    Note over App: Verify certificate and signature, else abort with no pass sent
+    Note over App: Verify certificate, signature and catalog digest, else send no pass
     Note over App: Derive session key (ECDH + HKDF-SHA256)
-    Note over App: Biometric / PIN confirmation
 
     App->>SSP: Write FFF3: OfflineAuthRequest [MSG-031] (bay, service, duration, device proof)
     Note right of SSP: Station verifies the device proof and validates the OfflinePass (nine checks)
@@ -780,13 +784,13 @@ sequenceDiagram
 2. **App** establishes BLE connection
 3. **App** may read **StationInfo** [MSG-027] from FFF1 to show the customer which station it reached — unauthenticated, and relied on for nothing ([`ble-transport.md` §3](profiles/offline/ble-transport.md#3-station-info-fff1))
 4. **App** asks for **AvailableServices** [MSG-028] on FFF2 — displays the service catalog with prices
-5. User selects a bay, a service and a duration. Before the choice the app shows the pass's limits — per session, credits remaining, uses remaining — and a service above a limit is refused, never reduced ([`offline-pass.md` §2.1](profiles/offline/offline-pass.md#21-offlineallowance-object))
+5. User selects a bay, a service and a duration. Before the choice the app shows the pass's limits — per session, credits remaining, uses remaining — and a service above a limit is refused, never reduced ([`offline-pass.md` §2.1](profiles/offline/offline-pass.md#21-offlineallowance-object)). The user confirms the choice with biometrics or a PIN, before the Hello, so that the wait for the user runs outside the 10-second handshake budget
 6. **App** writes **HELLO** [MSG-029] to FFF3 with `bleVersions`, `appNonce`, `appVersion`, `appEphemeralPubKey` — nothing that identifies the device or its user
-7. **SSP** responds with **CHALLENGE** [MSG-030] on FFF4 with `bleVersion`, `stationNonce`, `stationEphemeralPubKey`, `stationCertificate`, `stationConnectivity: "Offline"`, `availableServices` and `stationSignature`
-8. **App** verifies `stationCertificate` against the Station CA certificate and CRL of its trust bundle, and `stationSignature` over the Hello and the Challenge ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)) — **aborts and sends no pass if either fails** — confirms that the chosen service is available on the chosen bay in `availableServices`, then derives the session key via ECDH P-256 + HKDF-SHA256 (`ikm = ee ‖ appNonce ‖ stationNonce`; the LTK is not used). The post-Challenge AEAD channel is now established.
-9. **App** requests biometric or PIN confirmation from the user
+7. **SSP** responds with **CHALLENGE** [MSG-030] on FFF4 with `bleVersion`, `stationNonce`, `stationEphemeralPubKey`, `stationCertificate`, `stationConnectivity: "Offline"`, `availableServices`, `catalogDigest` and `stationSignature`
+8. **App** verifies `stationCertificate` against a Station CA of its trust bundle and that CA's CRL, and `stationSignature` over the Hello and the Challenge ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)) — **aborts and sends no pass if either fails** — confirms that the catalog it chose from is the one the Challenge's `catalogDigest` names, and that the chosen service is available on the chosen bay in `availableServices`, then derives the session key via ECDH P-256 + HKDF-SHA256 (`ikm = ee ‖ appNonce ‖ stationNonce`; the LTK is not used). The post-Challenge AEAD channel is now established.
+9. **App** holds the user's biometric/PIN confirmation from step 5, and asks for none inside the handshake
 10. **App** writes **OfflineAuthRequest** [MSG-031] to FFF3 (inside the AEAD channel) with the OfflinePass, counter, `bayId`, `serviceId`, `requestedDurationSeconds`, `sessionProof` and `deviceProof`
-11. **SSP** validates the OfflinePass — the nine checks of [Chapter 06 §6.1.1](06-security.md#611-offlinepass-validation--10-checks): signature, expiry, epoch, device proof, limits, interval, counter — estimating the cost from the requested service and duration
+11. **SSP** refuses, before it validates the pass, a `sessionProof` that does not match, a bay it does not have, a service its catalog does not bind to a program of that bay and a duration above its `MaxSessionDurationSeconds` ([`ble-handshake.md` §4.1](profiles/offline/ble-handshake.md#41-offlineauthrequest-full-offline--partial-b)), then validates the OfflinePass — the nine checks of [Chapter 06 §6.1.1](06-security.md#611-offlinepass-validation--10-checks): signature, expiry, epoch, device proof, limits, interval, counter — estimating the cost from the requested service and duration
 12. **SSP** sends **AuthResponse** [MSG-033] `Accepted` on FFF4 with session key confirmation
 13. **App** writes **StartServiceRequest** [MSG-034] to FFF3 with the `bayId`, `serviceId` and `requestedDurationSeconds` of its OfflineAuthRequest
 14. **SSP** activates hardware, sends **StartServiceResponse** [MSG-035] `Accepted` with `sessionId` and `offlineTxId`
@@ -814,6 +818,11 @@ sequenceDiagram
 |:----:|-------|------|------------|
 | 7 | The station supports none of the Hello's BLE versions — a plaintext AuthResponse instead of the Challenge | `1007` | Display "App update needed", disconnect |
 | 8 | Certificate or station signature invalid | `2013` | Abort, send no pass, disconnect |
+| 8 | The catalog the app chose from is not the one the Challenge's `catalogDigest` names | — | Send no pass, disconnect, read FFF2 again, and have the user choose and confirm again ([`ble-handshake.md` §3](profiles/offline/ble-handshake.md#3-step-2-challenge)) |
+| 11 | `sessionProof` does not match | `2013` | Disconnect, retry the handshake |
+| 11 | Bay unknown to the station | `3005` | Display "Start refused", disconnect |
+| 11 | Service not bound to a program of the bay | `3004` | Read FFF2 again and choose from it |
+| 11 | Duration above the station's `MaxSessionDurationSeconds` | `3010` | Choose a shorter duration |
 | 11 | Signature invalid, or device proof invalid | `2002` | Display "Pass invalid", disconnect |
 | 11 | Pass expired, or older than this station's `OfflinePassMaxAge` | `2003` | Display "Pass not accepted here — go online to renew" |
 | 11 | Epoch revoked | `2004` | Display "Pass revoked" |
@@ -838,6 +847,9 @@ sequenceDiagram
 
 ## 5b. Partial A — Phone Online, Station Offline
 
+> **EXPERIMENTAL — this entire flow.** It runs over the BLE construction, published for review,
+> **not** for implementation. See [Release status](../README.md#ble-is-experimental).
+
 **Description:** The user's phone has internet, but the station is offline (MQTT disconnected). The app obtains a server-signed authorization and delivers it to the station via BLE.
 
 ### Preconditions
@@ -861,8 +873,8 @@ sequenceDiagram
 
     App->>SSP: BLE connect
     App->>SSP: Write FFF3: Hello [MSG-029]
-    SSP-->>App: Notify FFF4: Challenge [MSG-030] (certificate, signature, connectivity: "Offline")
-    Note over App: Verify certificate (bundle's Station CA and CRL) and signature, else abort
+    SSP-->>App: Notify FFF4: Challenge [MSG-030] (certificate, catalog digest, signature, connectivity: "Offline")
+    Note over App: Verify certificate (a Station CA of the bundle, its CRL) and signature, and the catalog digest if the app chose from FFF2, else abort
 
     App->>SSP: Write FFF3: ServerSignedAuth [MSG-032]
     Note right of SSP: Verify ECDSA P-256 signature
@@ -886,10 +898,10 @@ sequenceDiagram
 
 1. **App** sends `POST /sessions/offline-auth` to Server with `bayId` and `serviceId`
 2. **Server** validates the user, debits the issue-time pre-debit, signs the ServerSignedAuth authorization blob with ECDSA P-256 server key — the signed claims carry `durationSeconds` (the authorized duration: the station refuses a longer request and never reduces it — [`ble-session.md` §1](profiles/offline/ble-session.md#1-starting-a-service)) and `creditsAuthorized` (the pre-debit, and the cap on what the session may be charged: the server recomputes final billing per the Billing Authority §6 / reconciliation §8.2 and refunds any difference, never debiting more), alongside `authId`, `sessionId`, `bayId`, `serviceId`, `appNonce`, `issuedAt`, `expiresAt` (full claim set: `server-signed-auth-claims.schema.json`, finding N3)
-3. **Server** returns the `signedAuthorization` object, its `sessionId` and the trust bundle — the Station CA certificate, its CRL and the server key set — to the App ([`app-contract.md` §5](profiles/offline/app-contract.md#5-the-partial-a-authorization)), which replaces the bundle it holds and authenticates the station against it before it relays the authorization
+3. **Server** returns the `signedAuthorization` object, its `sessionId` and the trust bundle — the Station CA set, each CA with its CRL — to the App ([`app-contract.md` §5](profiles/offline/app-contract.md#5-the-partial-a-authorization)), which replaces the bundle it holds and authenticates the station against it before it relays the authorization
 4. **App** connects to the SSP via BLE
 5. **App** may read **StationInfo** [MSG-027] to show the customer which station it reached — unauthenticated; the Challenge's `stationConnectivity` is the connectivity it acts on
-6. **App** writes **HELLO** [MSG-029] → SSP responds with **CHALLENGE** [MSG-030]; the App verifies the station's certificate against the Station CA and CRL of the bundle it received at step 3, and the station's signature ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)), and relays nothing if either fails
+6. **App** writes **HELLO** [MSG-029] → SSP responds with **CHALLENGE** [MSG-030]; the App verifies the station's certificate against a Station CA of the bundle it received at step 3 and that CA's CRL, and the station's signature ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)), and — if it chose the bay and the service from the station's catalog on FFF2 — that the Challenge's `catalogDigest` names that catalog, and relays nothing if any fails
 7. **App** writes **ServerSignedAuth** [MSG-032] with the server-signed authorization blob and `sessionId`, inside the AEAD channel
 8. **SSP** verifies the ECDSA P-256 signature using a key of its `OfflinePassPublicKey` set ([Chapter 06 §6.7](06-security.md#67-server-signing-key-rotation-ecdsa-p-256))
 9. **SSP** sends **AuthResponse** [MSG-033] `Accepted`
@@ -906,6 +918,7 @@ sequenceDiagram
 | 6 | Station certificate or signature invalid | App aborts and relays nothing (`2013`) |
 | 8 | ECDSA P-256 signature invalid | SSP rejects — key mismatch or tampered auth |
 | 8 | Authorization expired | SSP rejects — user took too long between server call and BLE |
+| 10 | StartServiceRequest at or after the authorization's `expiresAt` | SSP refuses with `3006` and starts nothing: an authorization is used to start within its validity, and a session started before `expiresAt` runs its whole duration ([`ble-session.md` §1](profiles/offline/ble-session.md#1-starting-a-service) rule 2a) |
 
 ### Postconditions
 
@@ -918,6 +931,9 @@ sequenceDiagram
 ---
 
 ## 5c. Partial B — Phone Offline, Station Online
+
+> **EXPERIMENTAL — this entire flow.** It runs over the BLE construction, published for review,
+> **not** for implementation. See [Release status](../README.md#ble-is-experimental).
 
 **Description:** The user's phone is offline, but the station has MQTT connectivity. The app presents an OfflinePass via BLE, and the station forwards it to the server for real-time validation.
 
@@ -938,15 +954,13 @@ sequenceDiagram
     App->>SSP: BLE connect
     App->>SSP: Write FFF2 0x01 [MSG-028] AvailableServices
     SSP-->>App: Notify FFF2: {catalogVersion, bays: [{bayId, services, prices}]}
-    Note over App: User selects bay, service and duration
+    Note over App: User selects bay, service and duration, and confirms (biometric / PIN)
     App->>SSP: Write FFF3: Hello [MSG-029]
-    SSP-->>App: Notify FFF4: Challenge [MSG-030] (certificate, availability, signature, connectivity: "Online")
-    Note over App: Verify certificate and signature, else abort with no pass sent
-
-    Note over App: Biometric / PIN confirmation
+    SSP-->>App: Notify FFF4: Challenge [MSG-030] (certificate, availability, catalog digest, signature, connectivity: "Online")
+    Note over App: Verify certificate, signature and catalog digest, else send no pass
 
     App->>SSP: Write FFF3: OfflineAuthRequest [MSG-031] (bay, service, duration, device proof)
-    Note right of SSP: Verify the device proof
+    Note right of SSP: Verify sessionProof and device proof, refuse an unknown bay or service or a duration above MaxSessionDurationSeconds
 
     SSP->>Server: AuthorizeOfflinePass REQUEST [MSG-002]
     Note right of SSP: Forward pass, bay, service, duration, device proof and transcriptHash
@@ -956,6 +970,8 @@ sequenceDiagram
         SSP-->>App: Notify FFF4: AuthResponse (Accepted) [MSG-033]
         App->>SSP: Write FFF3: StartServiceRequest [MSG-034]
         SSP-->>App: Notify FFF4: StartServiceResponse (Accepted) [MSG-035]
+        SSP->>Server: SessionStarted EVENT [MSG-043] (sessionId, bayId, startedAt)
+        Note right of Server: Start window 30s at the station, 40s at the Server, else the authorization lapses (full refund)
 
         loop Service running
             SSP-->>App: Notify FFF5: ServiceStatus [MSG-038]
@@ -969,28 +985,32 @@ sequenceDiagram
 
 ### Happy Path
 
-1. **App** connects to SSP via BLE and asks for **AvailableServices** [MSG-028] on FFF2; the user selects a bay, a service and a duration, with the pass's limits shown ([`offline-pass.md` §2.1](profiles/offline/offline-pass.md#21-offlineallowance-object))
+1. **App** connects to SSP via BLE and asks for **AvailableServices** [MSG-028] on FFF2; the user selects a bay, a service and a duration, with the pass's limits shown ([`offline-pass.md` §2.1](profiles/offline/offline-pass.md#21-offlineallowance-object)), and confirms them with biometrics or a PIN — before the Hello, so that the wait for the user runs outside the 10-second handshake budget, which must also hold the server's round trip (steps 6 to 9)
 2. **App** may read **StationInfo** [MSG-027] to show the customer which station it reached — unauthenticated; the Challenge's `stationConnectivity` is the connectivity it acts on
-3. **App** writes **HELLO** [MSG-029] → SSP responds with **CHALLENGE** [MSG-030] (`stationConnectivity: "Online"`); the App verifies the station's certificate and signature ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)) and that the chosen service is available, and sends no pass if not
-4. **App** requests biometric/PIN confirmation
+3. **App** writes **HELLO** [MSG-029] → SSP responds with **CHALLENGE** [MSG-030] (`stationConnectivity: "Online"`); the App verifies the station's certificate and signature ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)), that the catalog it chose from is the one the Challenge's `catalogDigest` names, and that the chosen service is available, and sends no pass if not
+4. **App** holds the user's biometric/PIN confirmation from step 1, and asks for none inside the handshake
 5. **App** writes **OfflineAuthRequest** [MSG-031] with the OfflinePass, the counter, `bayId`, `serviceId`, `requestedDurationSeconds`, `sessionProof` and `deviceProof`
-6. **SSP** verifies the device proof, and does NOT validate the pass locally — instead forwards it to the Server via **AuthorizeOfflinePass REQUEST** [MSG-002] over MQTT, with the bay, the service, the duration, the device proof unchanged and the handshake's `transcriptHash`
+6. **SSP** verifies the `sessionProof` and the device proof, refuses a bay it does not have, a service its catalog does not bind to a program of that bay and a duration above its `MaxSessionDurationSeconds` ([`ble-handshake.md` §4.1](profiles/offline/ble-handshake.md#41-offlineauthrequest-full-offline--partial-b)), and does NOT validate the pass locally — instead forwards it to the Server via **AuthorizeOfflinePass REQUEST** [MSG-002] over MQTT, with the bay, the service, the duration, the device proof unchanged and the handshake's `transcriptHash`
 7. **Server** validates the pass ([`authorize-offline-pass.md` §5](profiles/offline/authorize-offline-pass.md#5-validation-checks) — signature, expiry, epoch, device proof, limits, rate, counter, individual revocation), estimating the cost from the requested service and duration, and debits the user's wallet by the `creditsAuthorized` of its answer
 8. **Server** sends **AuthorizeOfflinePass RESPONSE** [MSG-002] `Accepted` with `sessionId`, `durationSeconds` — the requested duration — and `creditsAuthorized`
 9. **SSP** relays result as **AuthResponse** [MSG-033] `Accepted` to App via BLE
-10. **App** writes **StartServiceRequest** [MSG-034] → SSP starts service
+10. **App** writes **StartServiceRequest** [MSG-034] → SSP starts service, at most 30 seconds after the acceptance, and reports the start to the Server with **SessionStarted** [MSG-043] ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4c)
 11. Service runs with **ServiceStatus** [MSG-038] updates, then stop/receipt
-12. Since the station is online, the session is tracked in real time by the Server and settled when the station reports its end — by service kind, never above the `creditsAuthorized` of the authorization, as a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)). If the station loses its connection, the loss does not end the session: the wash continues, and the station sends the session's end when it reconnects — its SessionEnded under the server's `sessionId`, or, when the server stopped the session, the StopService RESPONSE it sends again when the server repeats the REQUEST. The session settles once, on the first of its end records to arrive — that SessionEnded, the StopService RESPONSE when the server stopped the session, or the session's signed receipt, which the app uploads when it has a network — and the other is a duplicate ([`reconciliation.md` §3](profiles/offline/reconciliation.md#3-deduplication-offlinetxid)). If none has arrived by the end of the session's authorized duration, the server closes the session then without waiting for the station — as a session whose timer expired, or refunded in full when the wash never started — and every end record settles on the authorization's `creditsAuthorized` and `durationSeconds` ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4a and 4b). Either way the server applies no second debit, only a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback))
+12. Since the station is online, the session is tracked in real time by the Server and settled when the station reports its end — by service kind, never above the `creditsAuthorized` of the authorization, as a refund-only true-up against the authorize-time debit ([`reconciliation.md` §8](profiles/offline/reconciliation.md#8-wallet-reconciliation)). If the station loses its connection, the loss does not end the session: the wash continues, and the station sends the session's end when it reconnects — its SessionEnded under the server's `sessionId`, or, when the server stopped the session, the StopService RESPONSE it sends again when the server repeats the REQUEST. The session settles once, on the first of its end records to arrive — that SessionEnded, the StopService RESPONSE when the server stopped the session, or the session's signed receipt, which the app uploads when it has a network — and the other is a duplicate ([`reconciliation.md` §3](profiles/offline/reconciliation.md#3-deduplication-offlinetxid)). If none has arrived by the end of the session's authorized duration, counted from its SessionStarted, the server closes the session then without waiting for the station, as a session whose timer expired, and provisionally: an end record that arrives later trues the close down, never up. Every end record settles on the authorization's `creditsAuthorized` and `durationSeconds`, and an authorization whose SessionStarted has not arrived 40 seconds after its acceptance lapses, refunded in full ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4a to 4c). Either way the server applies no second debit, only a refund-only true-up against the authorize-time debit, or against what a close the server made charged ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback))
 
 ### Error Paths
 
 | Step | Error | Action |
 |:----:|-------|--------|
+| 3 | The catalog the app chose from is not the one the Challenge's `catalogDigest` names | App sends no pass, disconnects, reads FFF2 again, and has the user choose and confirm again ([`ble-handshake.md` §3](profiles/offline/ble-handshake.md#3-step-2-challenge)) |
 | 6 | MQTT send failure | SSP **MAY** fall back to local validation (like Full Offline) if its `OfflineModeEnabled` is `true`, within its own offline limits ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)) |
 | 6 | Device proof invalid | SSP refuses with `2002` and forwards nothing |
+| 6 | `sessionProof` does not match | SSP refuses with `2013` and forwards nothing |
+| 6 | Bay unknown, service not bound to a program of the bay, or duration above `MaxSessionDurationSeconds` | SSP refuses with `3005`, `3004` or `3010` and forwards nothing |
 | 7 | Pass rejected by server | SSP relays the rejection to App with the server's `errorCode`, `errorText` and `details` |
 | 7 | AuthorizeOfflinePass unanswered within the BLE handshake budget | SSP answers the app within the budget with `1010 MESSAGE_TIMEOUT`, or **MAY** fall back to local validation (degraded mode) if its `OfflineModeEnabled` is `true`, within its own offline limits ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)) |
 | 10 | StartServiceRequest other than the authorized duration | SSP refuses with `3010` above it and `3008` below it, and starts nothing ([`ble-session.md` §1](profiles/offline/ble-session.md#1-starting-a-service) rule 2) |
+| 10 | StartServiceRequest more than 30 seconds after the acceptance | SSP refuses with `3006` and starts nothing; with no SessionStarted 40 seconds after the acceptance, the Server lapses the authorization and refunds it in full ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4c) |
 
 ### Postconditions
 
@@ -1050,7 +1070,7 @@ The **CSMS (server) is the authoritative billing engine** for all sessions. The 
 The following rules are normative:
 
 - The station **MUST NOT** be the source of truth for monetary cost. The `creditsCharged` field reported by the station is **advisory** — it represents the station's estimate based on the service rate active at session start.
-- The server **MUST** recompute final billing using the actual duration and the tariff in force when the session ran, regardless of the station-reported `creditsCharged`. Implementations **MAY** accept the station value as-is when it matches the server-side recomputation; they **MUST NOT** accept it blindly when it diverges. **This binds the offline path too**, where the session ran with no server present and the duration arrives inside a signed receipt: [`reconciliation.md` §8.1](profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b) states the offline recomputation, including which tariff a server uses when it does not retain a catalog history for the transaction's instant. That is the one place this rule's *"in force when the session ran"* clause needs a stated fallback, and it is stated there rather than restated here.
+- The server **MUST** recompute final billing using the actual duration and the tariff in force when the session ran, regardless of the station-reported `creditsCharged` — and, for a record that arrives after a close the server made without the station's end record, as a refund-only true-up of that close (*A close the server makes without the station's end record is provisional*, below). Implementations **MAY** accept the station value as-is when it matches the server-side recomputation; they **MUST NOT** accept it blindly when it diverges. **This binds the offline path too**, where the session ran with no server present and the duration arrives inside a signed receipt: [`reconciliation.md` §8.1](profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b) states the offline recomputation, including which tariff a server uses when it does not retain a catalog history for the transaction's instant. That is the one place this rule's *"in force when the session ran"* clause needs a stated fallback, and it is stated there rather than restated here.
 - For sessions that end via `StopService` RESPONSE [MSG-006], the server uses the response's `actualDurationSeconds` (and `meterValues` when relevant) as billing input.
 - For sessions that end autonomously via `SessionEnded` EVENT [MSG-040] (timer expiry or hardware fault), the server uses the event's `actualDurationSeconds` as billing input and applies the refund policy described below.
 - Tariff lookup, currency conversion, tax handling, and any operator-specific pricing rules are server-side concerns. Stations remain unaware of the priced amount in user-facing currency.
@@ -1085,7 +1105,7 @@ This separation ensures that a misconfigured or compromised station cannot overc
 
 **A2 — MQTT disconnect during session:** SSP continues the service (does NOT stop the service). On reconnection, SSP re-boots (BootNotification [MSG-001]) and reports the session outcome.
 
-**A3 — StopService timeout:** If Server sends StopService and SSP does not respond within 10 seconds, Server marks the session as `failed`. SSP will report the actual outcome on next reconnection. A Partial-B session is not marked `failed`: the server repeats the StopService REQUEST once the station has reconnected, and settles the session on the first of its end records, or closes it at the end of its authorized duration ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4 and 4a).
+**A3 — StopService timeout:** If Server sends StopService and SSP does not respond within 10 seconds, Server marks the session as `failed`. SSP will report the actual outcome on next reconnection, and that outcome trues the server's settlement down, never up (*A close the server makes without the station's end record*, under [Settlement by Service Kind](#settlement-by-service-kind)). A Partial-B session is not marked `failed`: the server repeats the StopService REQUEST once the station has reconnected, and settles the session on the first of its end records, or closes it at the end of its authorized duration ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4 and 4a).
 
 ### The operator-disable policy
 
@@ -1137,7 +1157,7 @@ of by what was delivered.
 | All retry attempts fail | Full | 100% |
 | ACK_TIMEOUT (no response) | Full | 100% |
 | Hardware error during active (SessionEnded `reason=Fault`) | Partial (pro-rated) | Based on time used |
-| Station offline during active | Partial (pro-rated) | Based on time used — not a Partial-B session, which settles on the first of its end records, or is closed at the end of its authorized duration ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) |
+| Station offline during active | Partial (pro-rated) | Based on time used, provisionally: an end record that arrives later trues it down, never up ([Settlement by Service Kind](#settlement-by-service-kind)) — not a Partial-B session, which settles on the first of its end records, or is closed at the end of its authorized duration, provisionally too ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) |
 | Customer stop from the app over BLE (SessionEnded `reason=Local`) | Partial (pro-rated) | Based on time used, recomputed by the server (the event's `creditsCharged` is advisory) |
 | Offline credit exhausted mid-session (SessionEnded `reason=LocalOutOfCredit`) | Full | 100% (no charge — `creditsCharged` MUST be 0) |
 | Offline pass revoked mid-session (SessionEnded `reason=Deauthorized`) | Full | 100% (no charge — session not billable; `creditsCharged` MUST be 0) |
@@ -1185,6 +1205,8 @@ Only the `Local`, `Inactivity`, `Fault` and `OperatorStopped` rows diverge; `Tim
 **A stop the customer asks for from the app settles as the customer's stop.** A customer stops a session only through the app: online, by `POST /sessions/{id}/stop`, which the server carries out with a StopService [MSG-006]; over BLE, by a StopServiceRequest [MSG-036], which the station reports as `Local` — in the SessionEnded of a Partial-B session, or in the `endReason` of a signed receipt ([Chapter 06 §6.2](06-security.md#62-transaction-receipt-signing--ecdsa-p-256)). The first reaches a session only while the server can reach its station: a session the app started over BLE at a station that is offline — Full Offline, Partial A — is stopped over BLE. The server **MUST** settle that stop by service kind: a `UserDuration` session pays the time delivered, proportional to the second and rounded up to one credit — `ceil(actualDurationSeconds / 60 × priceCreditsPerMinute)`, the formula of [Chapter 03 §3](03-messages.md) — and a `FixedDuration` or `MultiUnit` session is charged in full. A stop the server issues because the customer asked for it is that stop, not an operator's; the next paragraph is the operator's.
 
 **A stop the server issues for an operator settles as `OperatorStopped`.** An operator can also end a session through the server rather than at the station — from an operator console, or by a station disable the server carries out — and the server then sends StopService [MSG-006]. That stop produces no SessionEnded ([Chapter 03 §5.4](03-messages.md#54-sessionended)) and StopService carries no reason, so only the server knows an operator asked for it. The server **MUST** settle such a session as it settles `OperatorStopped`, by service kind — pro-rata on delivered time for `UserDuration`, a full refund for `FixedDuration` and `MultiUnit` — and **MUST NOT** settle it as the customer's own stop. A stop the station refuses while the session is still running is not settled as `OperatorStopped`, because the operator did not end the service: the session settles as a delivered session of its kind — a `FixedDuration` or `MultiUnit` session keeps its full charge, and a `UserDuration` session is pro-rata on its delivered time. A `3006 SESSION_NOT_FOUND` refusal is not that case: the station holds no such session, which may already have ended ([`07-errors.md` §3.3](07-errors.md#33-session--bay-errors-3xxx)). The signed receipt of a BLE session the server stopped carries `endReason` `ServerStopped` ([Chapter 06 §6.2](06-security.md#62-transaction-receipt-signing--ecdsa-p-256)), and the server settles that session as this section settles the stop it issued.
+
+**A close the server makes without the station's end record is provisional (Normative).** The server closes some sessions without the station's record of their end: an online session whose StopService went unconfirmed (*A3*, above), whose station stayed away past `ConnectionLostGracePeriod` ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)), or which a real boot ended ([`boot-notification.md` §5.2](profiles/core/boot-notification.md#52-bootreason--seven-boots-and-one-non-boot)), each billed on the time delivered as the server knows it, and a Partial-B session at the end of its authorized duration or at a real boot ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4a and 4b). Such a close is provisional. When an end record of the session arrives after it — a SessionEnded, a StopService RESPONSE, a signed receipt — the server **MUST** settle that record as this section settles it, by service kind, as if it had arrived first, and **MUST** refund the difference when that is below what the close charged. **A charge never rises:** a record that settles at the close's amount or above it changes nothing. A customer who stopped a `UserDuration` wash early, or whose wash a `Fault` ended, on a station that was offline at the close, therefore pays what the record settles at by service kind — the pro-rata amount for a `UserDuration` stop or `Fault`, nothing for a `Fault` below the `faultFullRefundThreshold` of a `UserDuration` wash or for a `Fault` of a `FixedDuration` or `MultiUnit` one.
 
 **Delivery outcome (`MultiUnit`).** A `MultiUnit` session additionally records what physically happened — `Dispensed` on a clean `TimerExpired`, `Missed` on a `Fault`. When the physical outcome is genuinely ambiguous from control-plane signals alone (e.g. a mid-pulse voluntary stop) it is left unrecorded rather than guessed; settlement never depends on it (it stays derived from the kind). A jam the firmware does not itself detect runs the timer to expiry and is therefore billed as delivered; the corrective path is an operator-issued refund, not an automatic one.
 
@@ -1355,7 +1377,7 @@ sequenceDiagram
 
     Note over SSP: Active sessions continue running!
     Note over SSP: Switch to BLE-only mode
-    Note over SSP: Buffer TransactionEvent, SessionEnded, SecurityEvent (Ch. 01 §6.5)
+    Note over SSP: Buffer TransactionEvent, SessionStarted, SessionEnded, SecurityEvent (Ch. 01 §6.5)
 
     Broker->>Server: ConnectionLost (LWT) [MSG-011]
     Server->>Server: Mark station as Offline
@@ -1392,7 +1414,7 @@ sequenceDiagram
 2. **SSP** immediately takes these actions:
    - **Active sessions continue running** — the station MUST NOT stop a service due to connectivity loss
    - Switch to BLE-only mode for new sessions (if BLE is enabled)
-   - Buffer the messages it must keep — TransactionEvent, SessionEnded and SecurityEvent — per the categorized buffering policy of [Chapter 01 §6.5](01-architecture.md#65-offline-message-buffering); StatusNotification and MeterValues MAY be discarded, as they are regenerated at reconnection
+   - Buffer the messages it must keep — TransactionEvent, SessionStarted, SessionEnded and SecurityEvent — per the categorized buffering policy of [Chapter 01 §6.5](01-architecture.md#65-offline-message-buffering); StatusNotification and MeterValues MAY be discarded, as they are regenerated at reconnection
 3. **Broker** publishes the pre-configured **ConnectionLost** [MSG-011] LWT to the station's `to-server` topic
 4. **Server** receives the LWT and marks the station as `Offline`
 5. **SSP** begins reconnection with exponential backoff:
@@ -1800,6 +1822,7 @@ Consolidated timeout values across all flows:
 | ReserveBay | 5s | Session → failed |
 | Reserved → 3DS (web) | 3 min | CancelReservation |
 | Reserved → start (mobile) | 30s | CancelReservation |
+| Partial-B authorization → start | 30s at the station; 40s at the server | Station refuses the StartServiceRequest with `3006`; with no SessionStarted by then, Server lapses the authorization and refunds it in full ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4c) |
 | StartService (pending_ack) | 10s | Refund, session → failed |
 | StopService (stopping) | 10s | Session → failed; a Partial-B session stays open until the first of its end records, and no longer than the end of its authorized duration (§6) |
 | Active session (max) | durationSeconds | Station auto-stops |

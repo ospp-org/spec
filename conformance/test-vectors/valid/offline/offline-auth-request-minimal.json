@@ -28,7 +28,7 @@
   "sessionProof": "G7jn3V5239evl6QtKrc6W+y1tqn7qOTR3LHkVDFR5bE=",
   "deviceProof": {
     "format": "apple-appattest",
-    "signature": "MEUCIQD1Z1c/UAz7WcvHCXig0QgZafbf1n9PUIcvYRgrJaVc+AIgNynHOuTCpIJpFx8AUuSrgSoC/OmvB5LVTXQfreB9eBQ=",
+    "signature": "MEUCIQCjJKlA55Y7V74owyKDMa+7Xqdq5XB0HO7WgVxpgi+pswIgaEidyLhIS0S6lORkuRTlIdRHgjnAuwEjD3onbGJSPP0=",
     "authenticatorData": "bR2vgjWJbHy80iqDVEPONZjpIUj6ilROZ2f2ESHQEDAAAAAAAQ=="
   }
 }

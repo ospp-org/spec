@@ -61,15 +61,15 @@ Everything has a prefixed identifier:
 | Session | `sess_{uuid}` | `sess_f7e8d9c0` |
 | Reservation | `rsv_{uuid}` | `rsv_e5f6a7b8c9d0` |
 | User | `sub_{id}` | `sub_alice2026` |
-| Offline TX | `otx_{uuid}` | `otx_d4e5f6a7b8c9` |
+| Offline TX | `otx_` + 32+ random hex | `otx_d4e5f6a7b8c983e4dd389d512a5bc1f7` |
 | Offline Pass | `opass_{uuid}` | `opass_a8b9c0d1e2f3` |
 
 ### Message Model
 
-OSPP has **40 messages** across two transports:
+OSPP has **43 messages** across two transports:
 
-- **27 MQTT messages** — station-to-server and server-to-station
-- **13 BLE messages** — app-to-station (offline)
+- **28 MQTT messages** — station-to-server and server-to-station
+- **15 BLE messages** — app-to-station (offline)
 
 Every MQTT message is wrapped in an **envelope**:
 
@@ -137,7 +137,7 @@ Make sure you understand:
 | Chapter | What It Covers | Read When |
 |---------|---------------|-----------|
 | [02 — Transport](../spec/02-transport.md) | MQTT topics, QoS, TLS, BLE, envelope | First |
-| [03 — Messages](../spec/03-messages.md) | All 40 messages with field definitions | When implementing each message |
+| [03 — Messages](../spec/03-messages.md) | All 43 messages with field definitions | When implementing each message |
 | [04 — Flows](../spec/04-flows.md) | 15 end-to-end protocol flows | When implementing each flow |
 | [06 — Security](../spec/06-security.md) | Crypto, HMAC, OfflinePass, receipts | Before writing any crypto code |
 | [07 — Errors](../spec/07-errors.md) | 118 error codes, retry policies, circuit breaker | When implementing error handling |
@@ -271,7 +271,7 @@ LWT is exempt from HMAC signing (no session key at CONNECT time). Set Will Delay
 
 ### 2.5 Message Signing (HMAC-SHA256)
 
-**Sign everything.** Every message you send carries a `mac`, and every message you receive must have one you verify — 44 of the 47 message types. The three that do not are structural and you cannot opt anything else into their company:
+**Sign everything.** Every message you send carries a `mac`, and every message you receive must have one you verify — 45 of the 48 message types. The three that do not are structural and you cannot opt anything else into their company:
 
 | Exempt message | Why |
 |----------------|-----|
@@ -377,7 +377,7 @@ If MQTT drops during an active session:
 
 1. **Do NOT stop the hardware.** The service continues.
 2. Switch to BLE-available mode (accept offline sessions)
-3. Buffer the **MUST-buffer** categories — TransactionEvent (min 1000, **never** discard), SessionEnded (one per session that ended while you could not send, **never** discard — it is the sole billing source for a session that ended with no StopService to answer), SecurityEvent (200, FIFO). StatusNotification and MeterValues are **regenerable and MAY be discarded**; do not spend the buffer on them. The `MUST` storage level is **512 KB** — and **it does not hold the categories in this bullet.** [`01-architecture.md` §6.5](../spec/01-architecture.md#65-offline-message-buffering) derives what they cost: 1000 TransactionEvents (1.3 MB) + 1000 SessionEnded (250 KB) + 200 SecurityEvents (120 KB) + overhead = **~1.7 MB**, and §6.5 records the gap between the two as OPEN because raising a mandatory storage level changes the bill of materials of every station. **Size new hardware to the derived figure, not to the 512 KB level row.** At 90% of the TransactionEvent buffer, reject new StartService with `5111 BUFFER_FULL`; at 100%, enter degraded mode and refuse all new sessions (§6.5)
+3. Buffer the **MUST-buffer** categories — TransactionEvent (min 1000, **never** discard), SessionEnded (one per session that ended while you could not send, **never** discard — it is the sole billing source for a session that ended with no StopService to answer), SessionStarted (one per bay, **never** discard — the server keys a Partial-B session's authorized duration on it), SecurityEvent (200, FIFO). StatusNotification and MeterValues are **regenerable and MAY be discarded**; do not spend the buffer on them. The `MUST` storage level is **512 KB** — and **it does not hold the categories in this bullet.** [`01-architecture.md` §6.5](../spec/01-architecture.md#65-offline-message-buffering) derives what they cost: 1000 TransactionEvents (1.3 MB) + 1000 SessionEnded (250 KB) + 200 SecurityEvents (120 KB) + overhead = **~1.7 MB**, and §6.5 records the gap between the two as OPEN because raising a mandatory storage level changes the bill of materials of every station. **Size new hardware to the derived figure, not to the 512 KB level row.** At 90% of the TransactionEvent buffer, reject new StartService with `5111 BUFFER_FULL`; at 100%, enter degraded mode and refuse all new sessions (§6.5)
 4. Attempt reconnection with exponential backoff: 1s → 2s → 4s → 8s → 16s → 30s max, with 30% jitter
 5. On reconnect: Full boot sequence (BootNotification, StatusNotification per bay)
 6. Flush buffered messages after boot completes
@@ -407,9 +407,9 @@ App writes 0x01 to FFF2 → station notifies the catalog; user picks bay, servic
 App writes FFF3: Hello {bleVersions, appNonce, appVersion, appEphemeralPubKey}
 Station notifies FFF4: Challenge {bleVersion, stationNonce, stationEphemeralPubKey,
                                   stationCertificate, stationConnectivity,
-                                  availableServices, stationSignature}
-  → App verifies the certificate (Station CA, CRL, EKU) and the signature
-    (aborts, sends no pass, if either fails)
+                                  availableServices, catalogDigest, stationSignature}
+  → App verifies the certificate (Station CA, CRL, EKU) and the signature, and that
+    catalogDigest names the catalog the user chose from (sends no pass if any fails)
   → both derive SessionKey via ECDH + HKDF; AEAD channel established
 App writes FFF3: OfflineAuthRequest {offlinePass, counter, bayId, serviceId,
                  requestedDurationSeconds, sessionProof, deviceProof}  [AEAD-encrypted]
@@ -457,6 +457,8 @@ sessionProof = Base64( HMAC-SHA256( SessionKey,
 If the proof doesn't match, reject immediately — it means the sender didn't participate in the BLE handshake. The canonical formula lives in `spec/profiles/offline/ble-handshake.md` §4.1 (`spec/06-security.md` §6.5.1 points to it). The prior 4-input hex form (binding `bayId`/`serviceId`) is **withdrawn** in v0.6.0 — bay/service selection moved to the authenticated `StartService` step inside the AEAD channel.
 
 ### 2.10 OfflinePass Validation (10 checks, #5 withdrawn: a station performs nine)
+
+Before these checks, a station refuses a `sessionProof` that does not match (`2013`, §2.9), a bay it does not have (`3005`), a service its catalog does not bind to a program of that bay (`3004`) and a `requestedDurationSeconds` above its `MaxSessionDurationSeconds` (`3010`) ([`ble-handshake.md` §4.1](../spec/profiles/offline/ble-handshake.md#41-offlineauthrequest-full-offline--partial-b)); a Partial-B station refuses them, and a device proof that fails check #4, before it forwards the pass.
 
 When you receive an OfflineAuthRequest, validate the OfflinePass in this order:
 
@@ -875,7 +877,7 @@ When a station reconnects after being offline, it sends TransactionEvent REQUEST
 4. **Apply the reconcile-time gate** ([`reconciliation.md` §6](../spec/profiles/offline/reconciliation.md#6-reconcile-time-re-validation-gate)): eleven checks for a pass-form receipt (#1–#6, #9–#13; #7 and #8 are withdrawn), #1–#6 and #9 for the auth-form. Expiry, epoch and individual revocation are judged at the transaction's signed time — corrected by the station's clock offset for a `Synchronized` receipt, as signed and flagged for review for an `Unsynchronized` one ([§6.8](../spec/profiles/offline/reconciliation.md#68-station-clock-offset)). A pass-form transaction is never rejected because of which station, or which tenant's station, delivered it; only a Partial-A authorization, issued for one station, keeps that binding (check #4). The pass limits are **not** a gate here: the wash was delivered. The per-wash limit caps what it is charged; the pass-wide totals do not, and passing them feeds fraud scoring.
 5. **Settle** ([`reconciliation.md` §8](../spec/profiles/offline/reconciliation.md#8-wallet-reconciliation)): recompute the cost by service kind from the signed receipt (`endReason`, `durationSeconds`, `bookedDurationSeconds`; the station's `creditsCharged` is advisory; a Partial-B session's full charge and booked duration are its authorization's `creditsAuthorized` and `durationSeconds`, whichever of its records settles it), and never charge more than the station authorized for that wash — the pass's `maxCreditsPerTx`, the `creditsAuthorized` of Partial B, or the signed `creditsAuthorized` of Partial A. A wash that takes the pass past its `maxTotalCredits` or `maxUses` — two offline stations that could not see each other's use — is charged in full, and the wallet may go below zero. Where the wallet was debited at authorization (Partial A; a Partial-B session whose receipt arrives before its SessionEnded or StopService RESPONSE, or whose request timed out at a station that then validated the pass itself), settlement is a refund-only true-up, never a second debit. A debit may leave the wallet below zero: the transaction whose debit did so stays **pending** until a credit to the wallet covers it — no time limit, never written off — and every credit, a top-up or any other, releases pending transactions oldest first, closing each it covers in full and covering the last in part — a refund-only true-up first reduces its own transaction's pending part; no pass is issued while the balance is not positive ([§8.1](../spec/profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)).
 6. **Score the settled transaction** ([`06-security.md` §7.4](../spec/06-security.md#74-fraud-detection--offline-transactions)); scoring never changes the settled amount. For the Review, Alert and Block bands, record a server-originated `FraudDetected` SecurityEvent and take the band's action; alert the operator for Alert and Block. A Block-band wash stays settled and flagged: the user is charged, the user is blocked and every pass of the user revoked ([`reconciliation.md` §7](../spec/profiles/offline/reconciliation.md#7-fraud-detection)).
-7. **Respond with `Accepted`** to every transaction that passed steps 1–4, whatever its score (the TransactionEvent RESPONSE only has `status` and `reason`).
+7. **Respond with `Accepted`** to every transaction that passed steps 1–4, whatever its score (the TransactionEvent RESPONSE only has `status` and `reason`) — except the receipt of a Partial-B session that one of its end records, or the server's own close, already settled, which is `Duplicate` ([`reconciliation.md` §3](../spec/profiles/offline/reconciliation.md#3-deduplication-offlinetxid)).
 
 **Fraud scoring model.** The authoritative model — its factors, the cross-station cumulative `maxUses` / `maxTotalCredits` computation, the `0.00`–`1.00` score scale, and the threshold → action bands — is defined **once** in [`06-security.md` §7.4](../spec/06-security.md#74-fraud-detection--offline-transactions). This guide does not restate it (finding F3: one authoritative source; `reconciliation.md` §7 and `04-flows.md` §10 are the other two pointers).
 
@@ -939,10 +941,10 @@ Return `429 Too Many Requests` with a `Retry-After` header.
 
 Your app needs to:
 
-1. **Pre-arm an OfflinePass** while online — `POST /api/v1/offline/passes` with your `deviceId` and `devicePublicKey` ([`app-contract.md` §3](../spec/profiles/offline/app-contract.md#3-pass-issuance)). The device key is a P-256 key pair you generate once in the phone's hardware-backed keystore, with a non-exportable private key — on iOS, the App Attest key — and the platform attests it: obtain a one-time challenge (`POST /api/v1/offline/attestation-challenges`) before you generate it, and send the attestation as `deviceKeyAttestation` with the first pass request for that key; a phone that cannot hold and attest such a key gets no offline pass ([§3.2](../spec/profiles/offline/app-contract.md#32-the-device-key), [§3.6](../spec/profiles/offline/app-contract.md#36-device-key-attestation)). The response carries the pass and a **trust bundle** — the Station CA certificate and CRL and the server key set — which you replace on every issuance and with every Partial-A authorization, and never merge ([§3.4](../spec/profiles/offline/app-contract.md#34-the-trust-bundle), [§5](../spec/profiles/offline/app-contract.md#5-the-partial-a-authorization)). Request a fresh pass at app start, after each use and after each credit to the wallet you learn of, once you have uploaded the receipts you hold (step 8; [`offline-pass.md` §6](../spec/profiles/offline/offline-pass.md#6-lifecycle)). Store the pass securely (encrypted at rest, device keychain).
+1. **Pre-arm an OfflinePass** while online — `POST /api/v1/offline/passes` with your `deviceId` and `devicePublicKey` ([`app-contract.md` §3](../spec/profiles/offline/app-contract.md#3-pass-issuance)). The device key is a P-256 key pair you generate once in the phone's hardware-backed keystore, with a non-exportable private key — on iOS, the App Attest key — and the platform attests it: obtain a one-time challenge (`POST /api/v1/offline/attestation-challenges`) before you generate it, and send the attestation as `deviceKeyAttestation` with the first pass request for that key; a phone that cannot hold and attest such a key gets no offline pass ([§3.2](../spec/profiles/offline/app-contract.md#32-the-device-key), [§3.6](../spec/profiles/offline/app-contract.md#36-device-key-attestation)). The response carries the pass and a **trust bundle** — the Station CA set, each CA with its CRL — which you replace on every issuance and with every Partial-A authorization, and never merge ([§3.4](../spec/profiles/offline/app-contract.md#34-the-trust-bundle), [§5](../spec/profiles/offline/app-contract.md#5-the-partial-a-authorization)). Request a fresh pass at app start, after each use and after each credit to the wallet you learn of, once you have uploaded the receipts you hold (step 8; [`offline-pass.md` §6](../spec/profiles/offline/offline-pass.md#6-lifecycle)). Store the pass securely (encrypted at rest, device keychain).
 2. **Detect connectivity** — Know whether the phone and station are online/offline (4 scenarios).
 3. **BLE scanning** — Filter for service UUID `6645FFF0-5AEB-4709-ACD5-02E03C3000F6`.
-4. **HELLO/CHALLENGE handshake** — Offer the BLE versions you support, exchange nonces + per-handshake ephemeral P-256 keys, and put nothing in the Hello that identifies the phone or its user. Verify the station's certificate against the Station CA and CRL of your trust bundle, its extended key usage, and its signature over the Hello and the Challenge, before sending any pass ([`06-security.md` §6.5.2](../spec/06-security.md#652-station-authentication--the-stations-certificate)).
+4. **HELLO/CHALLENGE handshake** — Offer the BLE versions you support, exchange nonces + per-handshake ephemeral P-256 keys, and put nothing in the Hello that identifies the phone or its user. Verify the station's certificate against a Station CA of your trust bundle and that CA's CRL, its extended key usage, and its signature over the Hello and the Challenge, and compare the Challenge's `catalogDigest` with the SHA-256 of the canonical form of the catalog you read on FFF2, before sending any pass ([`06-security.md` §6.5.2](../spec/06-security.md#652-station-authentication--the-stations-certificate); [`ble-handshake.md` §3](../spec/profiles/offline/ble-handshake.md#3-step-2-challenge)). On a different digest, read FFF2 again on a new connection.
 5. **Derive session key** — `HKDF-SHA256(ee ‖ appNonce ‖ stationNonce)` over the one ECDH secret of the two ephemeral keys, with the transcript hash as `info` (the BLE LTK is **not** used); then send all post-Challenge messages through the ChaCha20-Poly1305 AEAD channel.
 6. **Authenticate** — Send OfflineAuthRequest (Full Offline, Partial B), with the bay, the service and the duration the customer chose and the device proof — a Keystore signature on Android, an App Attest assertion on iOS ([`06-security.md` §6.5.4](../spec/06-security.md#654-device-proof-of-possession)) — or ServerSignedAuth (Partial A). Before the customer chooses a service, show the pass's limits — the per-wash limit, the credits remaining and the uses remaining — and request nothing the pass cannot cover by your own count of the receipts you have read against it, uploaded or not, and nothing sooner than `minIntervalSec` after its last use; present only the latest pass you were issued; a request above a limit is refused, never reduced ([`offline-pass.md` §2.1](../spec/profiles/offline/offline-pass.md#21-offlineallowance-object)).
 7. **Store receipts** — After an offline session, store the signed receipt in a local transaction log.
@@ -1132,7 +1134,7 @@ Test the error scenarios in `/examples/error-scenarios/`:
 
 **Using TLS 0-RTT.** TLS 1.3 offers 0-RTT resumption, which is vulnerable to replay attacks. OSPP explicitly forbids it. Don't enable it.
 
-**Counting a bare `Accepted` as proof that a station took your new server key set.** `OfflinePassPublicKey` is the server's **key set** — every key a live pass may be signed under, each named by the `keyId` a pass carries — and every value replaces the whole set the station holds, with no cached previous key and no grace period ([`06-security.md` §6.7](../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)). Rotation runs on time, not on confirmations: a new key is published for at least the maximum pass lifetime (864000 s) plus your worst station sync gap before it signs anything, and an old key stays in the set until everything it signed — passes and ServerSignedAuth — has expired. What can still go wrong is the push. ChangeConfiguration is **atomic**: a `results` entry of `Accepted` is that key's *validation verdict*, and if any other entry in the same batch is `Rejected` or `NotSupported`, **the station stored nothing** — while still answering `Accepted` for your key. That station keeps its old set until the next push or its next boot, and if it goes offline first it refuses, with `2002`, every pass whose `keyId` its old set does not name.
+**Counting a bare `Accepted` as proof that a station took your new server key set.** `OfflinePassPublicKey` is the server's **key set** — every key a live pass may be signed under, each named by the `keyId` a pass carries — and every value replaces the whole set the station holds, with no cached previous key and no grace period ([`06-security.md` §6.7](../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)). Rotation runs on time, not on confirmations: a new key is published for at least your worst station sync gap before it signs anything, and an old key stays in the set until everything it signed — passes and ServerSignedAuth — has expired. What can still go wrong is the push. ChangeConfiguration is **atomic**: a `results` entry of `Accepted` is that key's *validation verdict*, and if any other entry in the same batch is `Rejected` or `NotSupported`, **the station stored nothing** — while still answering `Accepted` for your key. That station keeps its old set until the next push or its next boot, and if it goes offline first it refuses, with `2002`, every pass whose `keyId` its old set does not name.
 
 Two things follow, and the second is the one to implement:
 
@@ -1204,7 +1206,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** Message deduplication (1000+ IDs or 1 hour window)
 - [ ] **[MUST]** Exponential backoff with jitter for reconnection (1s → 30s max)
 - [ ] **[MUST]** Continue active sessions during MQTT disconnect (do NOT stop hardware)
-- [ ] **[MUST]** Buffer TransactionEvent (1000, never discard), SessionEnded (never discard) and SecurityEvent (200, FIFO) during disconnect; StatusNotification and MeterValues **MAY** be discarded. **512 KB** is the `MUST` storage level and does **not** hold that buffer — [`01-architecture.md` §6.5](../spec/01-architecture.md#65-offline-message-buffering) derives **~1.7 MB** and flags the gap as OPEN; build to the derived figure
+- [ ] **[MUST]** Buffer TransactionEvent (1000, never discard), SessionEnded (never discard), SessionStarted (never discard) and SecurityEvent (200, FIFO) during disconnect; StatusNotification and MeterValues **MAY** be discarded. **512 KB** is the `MUST` storage level and does **not** hold that buffer — [`01-architecture.md` §6.5](../spec/01-architecture.md#65-offline-message-buffering) derives **~1.7 MB** and flags the gap as OPEN; build to the derived figure
 - [ ] **[MUST]** Message expiry intervals set per action category
 - [ ] **[MUST]** 0-RTT TLS resumption NOT used
 - [ ] **[SHOULD]** Max Packet Size = 65,536 bytes
@@ -1224,7 +1226,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 
 ### Security
 
-- [ ] **[MUST]** HMAC-SHA256 on every message except BootNotification REQUEST/RESPONSE and the LWT (44 of 47); refuse to send rather than send unsigned when you hold no key
+- [ ] **[MUST]** HMAC-SHA256 on every message except BootNotification REQUEST/RESPONSE and the LWT (45 of 48); refuse to send rather than send unsigned when you hold no key
 - [ ] **[MUST]** Canonical JSON for HMAC: sorted keys (recursive), compact, UTF-8
 - [ ] **[MUST]** Constant-time HMAC comparison (timing-safe)
 - [ ] **[MUST]** Session key from BootNotification RESPONSE, stored in RAM only
@@ -1270,7 +1272,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[SHOULD]** Shared subscriptions (`$share/...`) for horizontal scaling
 - [ ] **[SHOULD]** Rate limiting on REST API
 - [ ] **[SHOULD]** Anti-abuse layers for web payment (5 layers)
-- [ ] **[MUST]** OfflinePass signing keys as a **key set** ([`06-security.md` §6.7](../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)): each new key published at least 864000 s plus the worst station sync gap before its first signature, each old key kept until everything it signed has expired, the whole set in every `Accepted` BootNotification RESPONSE. An `Accepted` inside a refused batch means the station stored nothing ([§6.2](#62-security-pitfalls))
+- [ ] **[MUST]** OfflinePass signing keys as a **key set** ([`06-security.md` §6.7](../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)): each new key published at least the worst station sync gap before its first signature, each old key kept until everything it signed has expired, the whole set in every `Accepted` BootNotification RESPONSE. An `Accepted` inside a refused batch means the station stored nothing ([§6.2](#62-security-pitfalls))
 
 ### Offline / BLE
 
@@ -1292,6 +1294,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[OFFLINE]** Persist offline state: pass usage counters, transaction log, session state
 - [ ] **[OFFLINE]** Refuse, never reduce: `4004` when the estimated cost exceeds `maxCreditsPerTx`, `4002` when it exceeds what remains of `maxTotalCredits` (checks #7 and #8 are rejects, not caps)
 - [ ] **[OFFLINE]** Reconciliation via TransactionEvent after connectivity restored
+- [ ] **[OFFLINE]** Partial B: start the wash no later than 30 seconds after the AuthorizeOfflinePass acceptance (`3006` after it), and report the start at once with SessionStarted [MSG-043] under its `sessionId` ([`authorize-offline-pass.md` §6](../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4c)
 
 ### User Agent
 
@@ -1307,6 +1310,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[OFFLINE]** Store OfflinePass encrypted at rest (device keychain)
 - [ ] **[OFFLINE]** Replace the trust bundle on every pass issuance and with every Partial-A authorization; never merge it with the one held
 - [ ] **[OFFLINE]** Show the pass's limits before the customer chooses a service
+- [ ] **[OFFLINE]** Compare the Challenge's `catalogDigest` with the digest of the catalog you read on FFF2 before you send a credential; on another digest, read FFF2 again on a new connection ([`ble-handshake.md` §3](../spec/profiles/offline/ble-handshake.md#3-step-2-challenge))
 - [ ] **[OFFLINE]** Store offline receipts locally
 - [ ] **[OFFLINE]** Upload every receipt when online (`POST /api/v1/offline/receipts`) until it is answered `Accepted`, `Duplicate` or `Rejected`
 - [ ] **[OFFLINE]** Biometric/PIN gate before offline authentication

@@ -115,7 +115,7 @@ specification. Where a definition involves a requirement, normative language
   which is REQUIRED ([Chapter 06 §4.4](06-security.md#44-certificate-requirements)), and whichever party
   terminates that certificate **MUST** read it, under a freshness bound and a bounded grace
   ([Chapter 06 §2.1.1](06-security.md#211-revocation-checking)). The mobile app reads the list its
-  trust bundle carries when it authenticates a station over BLE
+  trust bundle carries for the CA of a station's certificate when it authenticates the station over BLE
   ([Chapter 06 §6.5.2](06-security.md#652-station-authentication--the-stations-certificate)). Distinct
   from **Epoch Revocation**, which invalidates OfflinePasses and touches no certificate.
 

@@ -34,7 +34,7 @@ Verify that the station correctly performs offline transaction reconciliation af
 2. Observe the first TransactionEvent (txCounter=1):
    ```json
 {
-  "offlineTxId": "otx_a1b2c3d4e5f6",
+  "offlineTxId": "otx_a1b2c3d4e5f6d00b1ce6710722821c33",
   "offlinePassId": "opass_f1e2d3c4b5a6",
   "userId": "sub_alice001",
   "bayId": "bay_c1d2e3f4a5b6",
@@ -44,8 +44,8 @@ Verify that the station correctly performs offline transaction reconciliation af
   "durationSeconds": 298,
   "creditsCharged": 50,
   "receipt": {
-    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjMwMCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjo1MCwiZGV2aWNlSWQiOiJkZXZfYTFiMmMzZDQiLCJkdXJhdGlvblNlY29uZHMiOjI5OCwiZW5kUmVhc29uIjoiTG9jYWwiLCJlbmRlZEF0IjoiMjAyNi0wMS0zMFQxMDozNTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiZW5lcmd5V2giOjE1MCwibGlxdWlkTWwiOjQ1MjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2YxZTJkM2M0YjVhNiIsIm9mZmxpbmVUeElkIjoib3R4X2ExYjJjM2Q0ZTVmNiIsInBhc3NDb3VudGVyIjo0LCJzZXJ2aWNlSWQiOiJzdmNfZWNvIiwic3RhcnRlZEF0IjoiMjAyNi0wMS0zMFQxMDozMDowMC4wMDBaIiwic3RhdGlvbklkIjoic3RuX2ExYjJjM2Q0IiwidHhDb3VudGVyIjoxLCJ1c2VySWQiOiJzdWJfYWxpY2UwMDEifQ==",
-    "signature": "MEQCIG0gctawgyVBBiF8mrAB6twBeLss8eLSHqiezrNeiVykAiBEFRhsg0/RR7cMPvBfxjUox6kzpL7sfzCgXX8o+6UIqw==",
+    "data": "eyJiYXlJZCI6ImJheV9jMWQyZTNmNGE1YjYiLCJib29rZWREdXJhdGlvblNlY29uZHMiOjMwMCwiY2xvY2tTdGF0ZSI6IlN5bmNocm9uaXplZCIsImNyZWRpdHNDaGFyZ2VkIjo1MCwiZGV2aWNlSWQiOiJkZXZfYTFiMmMzZDQiLCJkdXJhdGlvblNlY29uZHMiOjI5OCwiZW5kUmVhc29uIjoiTG9jYWwiLCJlbmRlZEF0IjoiMjAyNi0wMS0zMFQxMDozNTowMC4wMDBaIiwibWV0ZXJWYWx1ZXMiOnsiZW5lcmd5V2giOjE1MCwibGlxdWlkTWwiOjQ1MjAwfSwib2ZmbGluZVBhc3NJZCI6Im9wYXNzX2YxZTJkM2M0YjVhNiIsIm9mZmxpbmVUeElkIjoib3R4X2ExYjJjM2Q0ZTVmNmQwMGIxY2U2NzEwNzIyODIxYzMzIiwicGFzc0NvdW50ZXIiOjQsInNlcnZpY2VJZCI6InN2Y19lY28iLCJzdGFydGVkQXQiOiIyMDI2LTAxLTMwVDEwOjMwOjAwLjAwMFoiLCJzdGF0aW9uSWQiOiJzdG5fYTFiMmMzZDQiLCJ0eENvdW50ZXIiOjEsInVzZXJJZCI6InN1Yl9hbGljZTAwMSJ9",
+    "signature": "MEUCIQCkZo/UWsYruF3WkJNR2NA/i7+rNJffIFMoTA9zTX5u2QIgHULL/RCYUtaSgYcLaUKnytnsmD2a9JSptvoSBGvX8M8=",
     "signatureAlgorithm": "ECDSA-P256-SHA256"
   },
   "txCounter": 1,
@@ -78,7 +78,7 @@ Verify that the station correctly performs offline transaction reconciliation af
     ```json
     {
       "status": "Duplicate",
-      "reason": "Transaction otx_a1b2c3d4e5f6 already reconciled"
+      "reason": "Transaction otx_a1b2c3d4e5f6d00b1ce6710722821c33 already reconciled"
     }
     ```
 18. Verify the station removes the transaction from its local queue.

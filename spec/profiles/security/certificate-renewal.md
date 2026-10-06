@@ -65,7 +65,7 @@ Station                                    Server                    CA
 4. The server forwards the CSR to the Certificate Authority (Station CA).
 5. The CA signs the certificate and returns it to the server.
 6. The server delivers the signed certificate (and optionally the CA chain) via CertificateInstall REQUEST.
-7. The station validates the certificate: chain verifies against known CA, CN matches its own station ID, key usage is correct, validity period is acceptable.
+7. The station validates the certificate: chain verifies against known CA, CN matches its own station ID, key usage is correct, extended key usage carries `clientAuth`, and `id-kp-osppBleStation` where the station implements the Offline / BLE profile ([`06-security.md` §4.4](../../06-security.md#44-certificate-requirements)), validity period is acceptable.
 8. The station installs the certificate to its secure element, TPM, or encrypted NVS.
 9. The station updates the `CertificateSerialNumber` configuration key.
 10. On the next TLS reconnection (or renegotiation), the station uses the new certificate.

@@ -38,16 +38,21 @@ before claiming conformance.
 > `TC-OFF-001`, `TC-OFF-002` and `TC-OFF-005` exercise that surface and are experimental artefacts with it.
 >
 > **Development, Standard and Extended are unaffected and remain claimable.** Their required cases —
-> `TC-CORE-*`, `TC-TX-*`, `TC-SEC-*` and `TC-DM-*` — run over MQTT and HTTPS, but for three Parts of
-> one case that apply only where the station declares the Offline / BLE profile. Two are worth naming:
+> `TC-CORE-*`, `TC-TX-*`, `TC-SEC-*` and `TC-DM-*` — run over MQTT and HTTPS, but for two Parts of
+> one case that apply only where the station declares the Offline / BLE profile, and one step's half that
+> checks a BLE purpose. Three are worth naming:
 >
 > - **`TC-TX-006`** is entirely offline *reconciliation*, but reconciliation runs over **MQTT**,
 >   is implemented, and is exercised against a second implementation. It stays Standard and is
 >   fully runnable.
-> - **`TC-TX-007`** Parts C, D and E end a session the app started over BLE, or one the station
->   ran offline: each exercises the EXPERIMENTAL profile, is no part of a Standard claim, runs only
+> - **`TC-TX-007`** Parts C and E end a session the app started over BLE, or one the station
+>   ran offline — Part D, an offline credit pool run dry, is withdrawn, since a station that refuses
+>   what a pass cannot cover never runs one dry: each exercises the EXPERIMENTAL profile, is no part of a Standard claim, runs only
 >   where the station declares the profile, and is recorded as skipped otherwise. The rest of the
 >   case runs over MQTT.
+> - **`TC-SEC-007`** step 14 checks two purposes on the station certificate: `clientAuth`, which the
+>   MQTT credential needs and the case's verdict counts, and `id-kp-osppBleStation`, which serves only
+>   BLE, is EXPERIMENTAL with it, and is reported without counting toward a Standard or Extended claim.
 >
 > **The ladder moved with the BLE wire revision.** Partial B is now required of every station that
 > implements the Offline / BLE profile, so the profile is taken whole at **Complete**, and

@@ -10,7 +10,12 @@
 # went stale: `9 FAIL / 6 SKIP` was true at v0.20.0 and was still being quoted after 0.20.1
 # and 0.20.2 had closed three of them.
 #
-#   (this HEAD) 2026-10-05  (unreleased)  0 FAIL, 1 SKIP  (5457 checks, 5456 PASS) — the BLE
+#   (this HEAD) 2026-10-06  (unreleased)  0 FAIL, 1 SKIP  (5642 checks, 5641 PASS) — the BLE
+#                                  follow-up: Gabi's ten decisions of 2026-10-05 and their review.
+#                                  Category 7 checks an offlineTxId against its 128-bit pattern,
+#                                  ^otx_[a-f0-9]{32,}$, where it had taken any readable form; the
+#                                  failure SET is unchanged. +185 checks, all passing.
+#   (superseded) 2026-10-05  (unreleased)  0 FAIL, 1 SKIP  (5457 checks, 5456 PASS) — the BLE
 #                                  wire revision. The whole failure SET leaves: ble-secure-frame has
 #                                  valid and invalid vectors, station-identity is withdrawn with the
 #                                  StationIdentity, and auth-response's creditsAuthorized is in
@@ -804,7 +809,7 @@ function category7() {
     subscriberId: /^sub_[a-f0-9_]{4,}$/,  // some examples use sub_alice2026 etc.
     serviceId: /^svc_[a-f0-9]{8,}$/,
     reservationId: /^rsv_[a-f0-9]{8,}$/,
-    offlineTxId: /^otx_[a-f0-9]{8,}$/,
+    offlineTxId: /^otx_[a-f0-9]{32,}$/, // 128 random bits, reconciliation.md 3 rule 1
     offlinePassId: /^opass_[a-f0-9]{8,}$/,
   };
 
@@ -816,7 +821,7 @@ function category7() {
     subscriberId: /^sub_[a-z0-9_]{3,}$/,
     serviceId: /^svc_[a-z0-9_]{3,}$/,
     reservationId: /^rsv_[a-z0-9_]{3,}$/,
-    offlineTxId: /^otx_[a-z0-9_]{3,}$/,
+    offlineTxId: /^otx_[a-f0-9]{32,}$/, // 128 random bits (reconciliation.md 3 rule 1): no readable form
     offlinePassId: /^opass_[a-z0-9_]{3,}$/,
     messageId: /^(?:boot|hb|evt|sec|tx|auth|cmd|msg|lwt)[-_][a-z0-9_-]{3,}$/,
     eventId: /^sec_[a-z0-9_]{3,}$/,

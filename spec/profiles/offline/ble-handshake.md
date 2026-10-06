@@ -7,7 +7,7 @@
 
 ## 1. Handshake Overview
 
-The BLE handshake establishes a secure, authenticated session between the mobile app and the station. It follows a four-step sequence: Hello, Challenge, Authentication, and AuthResponse. The station authenticates itself in the Challenge, with its certificate and a signature over the handshake; the two ephemeral keys agree the session key; and the app authenticates its user and device with the credential it presents inside the channel ([06-security.md §6.5](../../06-security.md#65-ble-session-key-derivation--hkdf-sha256), [§6.5.2](../../06-security.md#652-station-authentication--the-stations-certificate), [§6.5.4](../../06-security.md#654-device-proof-of-possession)). The handshake **MUST** complete within 10 seconds from the first Hello write; if it does not, both parties **MUST** abort: the station closes the connection without a response and logs `2013 BLE_AUTH_FAILED`.
+The BLE handshake establishes a secure, authenticated session between the mobile app and the station. It follows a four-step sequence: Hello, Challenge, Authentication, and AuthResponse — or, for an app that presents no credential, Hello, Challenge and one ReceiptRequest, which the station answers before it closes the connection ([ble-transport.md §8](ble-transport.md#8-receipt-fff6)). The station authenticates itself in the Challenge, with its certificate and a signature over the handshake; the two ephemeral keys agree the session key; and the app authenticates its user and device with the credential it presents inside the channel ([06-security.md §6.5](../../06-security.md#65-ble-session-key-derivation--hkdf-sha256), [§6.5.2](../../06-security.md#652-station-authentication--the-stations-certificate), [§6.5.4](../../06-security.md#654-device-proof-of-possession)). The handshake **MUST** complete within 10 seconds from the first Hello write; if it does not, both parties **MUST** abort: the station closes the connection without a response and logs `2013 BLE_AUTH_FAILED`.
 
 **Timing model (Non-normative).** The station measures the 10-second budget from **t₀ = reception of the first `Hello` write**; the app measures the same budget from when it issues that write. Implementers MAY apportion the budget across the four steps as internal sub-deadlines (for example, a small fixed share to reach `Challenge` and the remainder for `Authentication` + `AuthResponse`), but any such per-step figures are guidance only, not normative limits. The 5-second fragmentation/reassembly timeout ([ble-transport.md §11](ble-transport.md#11-fragmentation-protocol)) is a **per-message** bound that runs *inside* this total budget rather than in addition to it: a single message whose fragments take longer than 5 s aborts the session, and the handshake as a whole still has only the one 10-second envelope to complete.
 
@@ -63,11 +63,14 @@ The station responds to the Hello by sending a Challenge notification on charact
 | `stationCertificate` | string | Yes | The station's mTLS client certificate, DER, Base64 ([06-security.md §4.4](../../06-security.md#44-certificate-requirements)), carrying the extended key usage `id-kp-osppBleStation`. |
 | `stationConnectivity` | string | Yes | `"Online"` or `"Offline"` -- determines which auth path the app **MUST** use. |
 | `availableServices` | array | Yes | Every service the station's catalog binds to each of its bays, each `{bayId, serviceId, available}`, `available` saying whether the station can start it now — empty while the station holds no catalog. The app's one source of availability ([ble-transport.md §4](ble-transport.md#4-available-services-fff2)). |
+| `catalogDigest` | string | Yes | SHA-256 of the OSPP Canonical Form ([06-security.md §4.8](../../06-security.md#48-ospp-canonical-form)) of the catalog the station serves on FFF2 now, Base64 (44 chars) ([ble-transport.md §4](ble-transport.md#4-available-services-fff2)). It binds that catalog — its bays, their numbers, the services and their names and prices — to the handshake: the station signs it with the rest of the Challenge. |
 | `stationSignature` | string | Yes | The station's ECDSA P-256 signature, with its certificate key, over the Hello and this Challenge without this member ([06-security.md §6.5.2](../../06-security.md#652-station-authentication--the-stations-certificate)). |
 
 **Version selection (Normative).** The station **MUST** name in `bleVersion` a version that is in the Hello's `bleVersions`, the first of them it supports. If it supports none, it **MUST NOT** send a Challenge: it refuses the Hello with `1007 PROTOCOL_VERSION_MISMATCH` (§5) and closes the connection. An app that receives a Challenge whose `bleVersion` is not one it offered **MUST** abort the handshake and send no credential. This is the shape of TLS 1.3's version negotiation, where a client lists the versions it supports in preference order and *"Servers `MUST` only select a version of TLS present in that extension"* ([RFC 9846 §4.3.1](https://www.rfc-editor.org/rfc/rfc9846#section-4.3.1)), and of the Matter Bluetooth Transport Protocol's handshake ([Matter Specification 1.4.1](https://csa-iot.org/wp-content/uploads/2025/05/23-27349-007_matter-1-4-1-core-specification.pdf), §4.19.4.3).
 
 **The station's signature (Normative).** The station builds the signed content itself, from the Hello as it received it and from this Challenge, and signs it with the key of its certificate; it never signs a digest the app supplies ([06-security.md §6.5.2](../../06-security.md#652-station-authentication--the-stations-certificate), which defines the content).
+
+**The catalog check (Normative).** FFF2 is read before the Hello and outside the transcript ([ble-transport.md §4](ble-transport.md#4-available-services-fff2)); the Challenge's `catalogDigest` is what binds it. Before it sends a credential, an app that chose the bay, the service or the duration from the catalog it read on FFF2 **MUST** compare `catalogDigest` with the SHA-256 of the OSPP Canonical Form of that catalog. If they differ — a relay altered or replaced the catalog the app read, or the operator changed the station's catalog between the app's read and its Hello — the app **MUST NOT** send a credential: it closes the connection, reads FFF2 again on a new connection, has the customer choose again from that catalog and confirm the choice, and starts a new handshake: the confirmation given before the Hello was given against prices the station does not serve. An app that asks for a receipt in place of a credential ([ble-transport.md §8](ble-transport.md#8-receipt-fff6)) chose nothing from it and compares nothing.
 
 The `stationConnectivity` field is critical for path selection:
 - **`"Online"`** -- the station has MQTT connectivity. A phone with no network uses OfflineAuthRequest, which the station forwards to the server (Partial B).
@@ -75,10 +78,11 @@ The `stationConnectivity` field is critical for path selection:
 
 A phone and a station that are both online use the online session flow, not BLE.
 
-**App verification gate (Normative).** Before it derives the session key, and before it sends any OfflinePass or ServerSignedAuth, the app **MUST** pass the gate of [06-security.md §6.5.2](../../06-security.md#652-station-authentication--the-stations-certificate): the certificate chains to the Station CA of its trust bundle, is valid now, is on no entry of the bundle's CRL, carries `digitalSignature` and `id-kp-osppBleStation`, names the intended station where the app holds one from an out-of-band channel, and `stationSignature` verifies under it. On any failure it aborts with `2013 BLE_AUTH_FAILED` and sends no credential.
+**App verification gate (Normative).** Before it derives the session key, and before it sends any OfflinePass or ServerSignedAuth, the app **MUST** pass the gate of [06-security.md §6.5.2](../../06-security.md#652-station-authentication--the-stations-certificate): the certificate chains to a Station CA of its trust bundle, is valid now, is on no entry of that CA's CRL, carries `digitalSignature` and `id-kp-osppBleStation`, names the intended station where the app holds one from an out-of-band channel, and `stationSignature` verifies under it. On any failure it aborts with `2013 BLE_AUTH_FAILED` and sends no credential.
 
-**Example:**
+**Example**, whose `catalogDigest` names the catalog of the example in [ble-transport.md §4](ble-transport.md#4-available-services-fff2):
 
+<!-- ospp-catalog: spec/profiles/offline/ble-transport.md -->
 ```json
 {
   "type": "Challenge",
@@ -99,13 +103,14 @@ A phone and a station that are both online use the online session flow, not BLE.
       "available": true
     }
   ],
-  "stationSignature": "MEUCIQC6fzFIxpA+sw7OayxUe1/QSXNu93lwKzvbC2xGHZgLZAIgZxANFGOwJbYq0hO0bCqBqZl8gVhZSlFtgSLXbkht8JM="
+  "catalogDigest": "di1rJvk5MMuI0K6zbQb/pVJnc5QQB8NSFAENH+R5goI=",
+  "stationSignature": "MEUCIQCDMgEktywuiGPdndfl0zVDO/ixGnZ1XruNp1B6TahM1QIgUngZJRX3Ldv1KHkaW3UyhxyVPcE5nlQjRQEGyHHnwAs="
 }
 ```
 
 ## 4. Step 3: Authentication
 
-After receiving the Challenge and passing its verification gate (§3), the app **MUST** derive the session key (section 6) and then send one of two authentication messages depending on the connectivity scenario.
+After receiving the Challenge and passing its verification gate (§3), the app **MUST** derive the session key (section 6) and then send one of two authentication messages depending on the connectivity scenario — or, presenting no credential, one ReceiptRequest on FFF6 to read a receipt ([ble-transport.md §8](ble-transport.md#8-receipt-fff6)).
 
 ### 4.1 OfflineAuthRequest (Full Offline / Partial B)
 
@@ -124,7 +129,7 @@ Used when the app has a locally-stored OfflinePass. In the **Full Offline** scen
 | `sessionProof` | string | Yes | Base64-encoded HMAC-SHA256 (exactly 44 chars) binding this request to the derived session key. Canonical construction defined in this section. |
 | `deviceProof` | object | Yes | Proof that the phone holds the private key of the pass's `devicePublicKey`, over this handshake, the station, the pass, the counter and the requested service ([06-security.md §6.5.4](../../06-security.md#654-device-proof-of-possession); [`device-proof.schema.json`](../../../schemas/common/device-proof.schema.json)). |
 
-The bay, the service and the duration are chosen before the handshake, from the station's catalog (FFF2), with the pass's limits shown ([offline-pass.md §2.1](offline-pass.md#21-offlineallowance-object)); after the Challenge the app confirms that the chosen service is available on the chosen bay in its `availableServices`, and sends no request when it is not. The session's StartServiceRequest names the same bay and service ([ble-session.md §1](ble-session.md#1-starting-a-service)). A station refuses, before it validates or forwards the pass, a request naming a bay it does not have (`3005 BAY_NOT_FOUND`) or a service its catalog does not bind to a program of that bay (`3004 INVALID_SERVICE`): it can neither estimate the cost of such a service nor start it. It refuses the same way a `requestedDurationSeconds` above its `MaxSessionDurationSeconds` (`3010 MAX_DURATION_EXCEEDED`; [Chapter 08 §3](../../08-configuration.md#3-transaction-configuration-keys)): an authorization is for exactly the duration requested, and a Partial-B session starts only at that duration ([ble-session.md §1](ble-session.md#1-starting-a-service) rule 2), so one the station cannot run would never start.
+The bay, the service and the duration are chosen before the handshake, from the station's catalog (FFF2), with the pass's limits shown ([offline-pass.md §2.1](offline-pass.md#21-offlineallowance-object)); after the Challenge the app confirms that the catalog it chose from is the one the Challenge's `catalogDigest` names (§3) and that the chosen service is available on the chosen bay in its `availableServices`, and sends no request when either fails. The session's StartServiceRequest names the same bay and service ([ble-session.md §1](ble-session.md#1-starting-a-service)). A station refuses, before it validates or forwards the pass, a request naming a bay it does not have (`3005 BAY_NOT_FOUND`) or a service its catalog does not bind to a program of that bay (`3004 INVALID_SERVICE`): it can neither estimate the cost of such a service nor start it. It refuses the same way a `requestedDurationSeconds` above its `MaxSessionDurationSeconds` (`3010 MAX_DURATION_EXCEEDED`; [Chapter 08 §3](../../08-configuration.md#3-transaction-configuration-keys)): an authorization is for exactly the duration requested, and a Partial-B session starts only at that duration ([ble-session.md §1](ble-session.md#1-starting-a-service) rule 2), so one the station cannot run would never start.
 
 The `sessionProof` construction is **canonical and defined here** ([06-security.md §6.5.1](../../06-security.md#651-sessionproof-computation-normative) points to this section — finding N1):
 
@@ -172,7 +177,7 @@ The prior 4-input hex construction (which additionally bound `bayId`/`serviceId`
   "sessionProof": "ObgxpE1Ad+xl6P8fRWtBstqMY2Tjan9oK/LIWofxvrI=",
   "deviceProof": {
     "format": "android-key",
-    "signature": "MEUCIQDfTp/15zU4iuW3aCPcUe/qq3ackPumaoSax2kVvBQ2tQIgOsqsYzbUIOBJ1pZf5eJPWfr0gYsq+8uy2yw786evMsc="
+    "signature": "MEUCIQCuPvU1IfXnkwx3wHRvhXkFEOvgQKF2tYDaMtKHFTqb5QIgVn3kd+dkOBDPUHHpgVCncV+gckIrotS8AixULTVIazU="
   }
 }
 ```
@@ -220,7 +225,7 @@ The server **MUST** sign the authorization following the same canonical-form + E
    }
 ```
 
-The `appNonce` claim **MUST** equal the `appNonce` the app uses in the `Hello` message of this handshake (in either acquisition order — see §4.2) — the server reads it from the `POST /sessions/offline-auth` request body. The `expiresAt` claim **MUST** be no later than five minutes after `issuedAt`; `appNonce` provides the primary, clock-independent replay defence (§4.2.2 check #2) and `expiresAt` is a secondary bound.
+The `appNonce` claim **MUST** equal the `appNonce` the app uses in the `Hello` message of this handshake (in either acquisition order — see §4.2) — the server reads it from the `POST /sessions/offline-auth` request body. The `expiresAt` claim **MUST** be no later than five minutes after `issuedAt`; `appNonce` provides the primary, clock-independent replay defence (§4.2.2 check #2) and `expiresAt` is a secondary bound. The authorization is used to start within that validity: the station starts the session no later than `expiresAt` ([ble-session.md §1](ble-session.md#1-starting-a-service) rule 2a), and the session then runs its authorized duration, which may end after `expiresAt` — the server judges the authorization against the session's signed start ([reconciliation.md §6.7](reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4) check #9).
 
 #### 4.2.2 Verification (Station-Side)
 
@@ -349,13 +354,13 @@ The codes a BLE response carries, for every BLE message, are listed once, in [Ch
       |      stationEphemeralPubKey,          |
       |      stationCertificate,              |
       |      stationConnectivity: "Offline",  |
-      |      availableServices,               |
+      |      availableServices, catalogDigest,|
       |      stationSignature }               |
       |                                       |
       |  [App verifies the certificate        |
-      |   against its Station CA and CRL, and |
-      |   the signature; aborts if invalid —  |
-      |   no pass is sent]                    |
+      |   against its bundle's CAs and CRLs,  |
+      |   the signature and the catalog       |
+      |   digest; sends no pass on a failure] |
       |  [Both derive SessionKey via ECDH+    |
       |   HKDF; AEAD channel established]     |
       |                                       |
