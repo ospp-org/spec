@@ -73,7 +73,9 @@ party that can honour it:
 
 9a. A server **MUST NOT** publish an UpdateServiceCatalog to a station that declares the Offline / BLE
    profile when the FFF2 value the station derives from it — every bay the station declared, each with
-   the services the catalog binds to it, in the OSPP Canonical Form — would exceed **24,576 octets**
+   the services the catalog binds to it, in the OSPP Canonical Form — would exceed **24,576 octets**,
+   or when the `availableServices` of the Challenge the station would build from it — one entry for each
+   of those bay–service pairs, in the same form, every `available` counted `false` — would
    ([`ble-transport.md` §4](../offline/ble-transport.md#4-available-services-fff2)). Such a station
    refuses one that would with `5025 CATALOG_TOO_LARGE` and keeps the catalog it holds: it cannot serve
    that catalog over BLE.

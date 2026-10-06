@@ -972,7 +972,7 @@ lenient parser.
 | Transport | Max Payload | Typical Size |
 |-----------|-------------|--------------|
 | MQTT | **64 512 bytes** — the envelope cap of §10.2.1, inside the 64 KB Maximum Packet Size of [§1.2](#12-connection-parameters) | 200–500 bytes |
-| BLE | 255 fragments of `ATT_MTU − 6` octets, 45,645 octets at the floor's ATT_MTU of 185 ([`profiles/offline/ble-transport.md` §11](profiles/offline/ble-transport.md#11-fragmentation-protocol)); the FFF2 catalog at most 24,576 (§4 there) | 50–800 bytes; a Challenge and the catalog several thousand |
+| BLE | 255 fragments of `ATT_MTU − 6` octets, 45,645 octets at the floor's ATT_MTU of 185 ([`profiles/offline/ble-transport.md` §11](profiles/offline/ble-transport.md#11-fragmentation-protocol)); the FFF2 catalog and a Challenge's `availableServices` at most 24,576 each (§4 there) | 50–800 bytes; a Challenge and the catalog several thousand |
 | HTTPS | No protocol limit; server MAY enforce 1 MB | Varies |
 
 #### 10.2.1 The envelope cap
