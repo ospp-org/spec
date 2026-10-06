@@ -334,12 +334,12 @@ A station **MUST** support the three, **MUST** receive ATT PDUs of at most 247 o
 | Transfer | Octets | Fragments | At most |
 |---|--:|--:|--:|
 | FFF2 of a station with 8 bays and 15 services each | 16,867 | 95 | 2.85 s |
-| That station's handshake: its Hello, a Challenge of its 120 bay–service pairs, an OfflineAuthRequest and the AuthResponse | 12,045 | 70 | 2.40 s |
+| That station's handshake: its Hello, a Challenge of its 120 bay–service pairs, an OfflineAuthRequest and the AuthResponse | 12,011 | 70 | 2.40 s |
 | FFF2 at the limit of §4 | 24,576 | 138 | 4.14 s |
 | The largest Challenge §4 admits: its `availableServices` at 24,576 octets, its other members at their schemas' maxima | 27,116 | 152 | 4.56 s |
-| A handshake that carries that Challenge | 28,787 | 164 | 5.22 s |
+| A handshake that carries that Challenge | 28,753 | 164 | 5.22 s |
 
-Each message completes within the five seconds §11 rule 4 allows it, and each handshake within its ten ([ble-handshake.md §1](ble-handshake.md#1-handshake-overview)), whose rest is the station's own checks and, in Partial B, the server's answer. The figures are the floor's: a phone and a station that send several PDUs in a connection event, or run a shorter interval, transfer faster. They are the compact JSON of the committed BLE examples ([`examples/payloads/ble/`](../../../examples/payloads/ble/)) — the large station's Challenge with its 120 pairs in place of the example's own, and the largest Challenge at the bound of §4, its certificate, signature and every other member at the most its schema allows — and every message after the Challenge in its secure frame ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)), built from the example's plaintext: `n` the 16 Base64 characters of a 12-octet nonce, `ct` the Base64 of the plaintext and its 16-octet tag.
+Each message completes within the five seconds §11 rule 4 allows it, and each handshake within its ten ([ble-handshake.md §1](ble-handshake.md#1-handshake-overview)), whose rest is the station's own checks and, in Partial B, the server's answer. The figures are the floor's: a phone and a station that send several PDUs in a connection event, or run a shorter interval, transfer faster. They are the compact JSON of the committed BLE examples ([`examples/payloads/ble/`](../../../examples/payloads/ble/)) — the large station's Challenge with its 120 pairs in place of the example's own, and the largest Challenge at the bound of §4, its certificate, signature and every other member at the most its schema allows — and every message after the Challenge in its secure frame ([06-security.md §6.5.3](../../06-security.md#653-ble-aead-channel)), built from the example's plaintext: `n` its one-digit counter, `ct` the Base64 of the plaintext and its 16-octet tag.
 
 ## 11. Fragmentation Protocol
 

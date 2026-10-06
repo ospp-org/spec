@@ -189,8 +189,9 @@ never existed — and now names this ceiling.
 > `5103` against **5** actions — StartService, UpdateFirmware, GetDiagnostics,
 > UpdateServiceCatalog and CertificateInstall — and `5025` against **one**, this one. What they
 > shared was a word, not a condition. `5025` is also the code the envelope cap narrowed (§6, rule 9's note): its
-> *processing* ground is unreachable by construction, and the ground surviving there is precisely
-> the pre-write capacity judgement this discriminator names.
+> *processing* ground is unreachable by construction, and the grounds surviving there — the station's storage,
+> and at a station that declares the Offline / BLE profile the bounds of rule 9a — are both the pre-write
+> judgement this discriminator names.
 
 ## 8. Examples
 

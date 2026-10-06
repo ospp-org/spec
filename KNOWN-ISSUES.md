@@ -149,9 +149,9 @@ until its cryptographic construction has passed the review of
    transaction's signed `endedAt` is rejected, where a pass is now judged at the acceptance of its authorization
    ([`reconciliation.md` §6.7](spec/profiles/offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4),
    the #10 / #11 item; §6.1).
-5. **The boot settlement's interval.** Rule 4a settles a session a `RemoteReset` or a `FirmwareUpdate` ended from the
-   arrival of its SessionStarted to the station's disconnection, and says nothing of a boot with no disconnection
-   recorded ([`authorize-offline-pass.md` §6](spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4a).
+5. **The boot settlement's interval.** Rule 4a settles a session a `RemoteReset` or a `FirmwareUpdate` ended, and one
+   whose bay the StatusNotification after a boot reports `Available`, or `Faulted` with an outcome the station could not
+   determine, from the arrival of its SessionStarted to the station's disconnection, and says nothing of a boot with no disconnection recorded ([`authorize-offline-pass.md` §6](spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4a).
 6. **A service the server no longer prices.** A forwarded Partial-B request for a service the server's catalog no
    longer prices has no code to refuse it with ([`authorize-offline-pass.md` §5](spec/profiles/offline/authorize-offline-pass.md#5-validation-checks)
    checks #7 and #8).
@@ -219,7 +219,8 @@ until its cryptographic construction has passed the review of
     [`status-notification.md` §7](spec/profiles/core/status-notification.md#7-processing-rules) rule 5 lists the
     messages a station must not lose without SessionStarted, and cites Chapter 01 §7 for them. The decided record of
     the catalog digest has the app read FFF2 again after a mismatch, where the customer now chooses and confirms
-    again. The large station's 16,867 and 12,045 octets of §10 rest on a catalog that is not committed.
+    again. The large station's 16,867 octets of FFF2, 9,369 of `availableServices` and 12,011 of its handshake, in §4 and
+    §10, rest on a catalog that is not committed.
     [`offline-pass.md` §4](spec/profiles/offline/offline-pass.md#4-validation-checks-10) calls checks #10 to #13 guards
     that read no clock, where [`reconciliation.md` §6.8](spec/profiles/offline/reconciliation.md#68-station-clock-offset)
     judges #10 and #11 through the offset.

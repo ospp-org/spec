@@ -404,18 +404,18 @@ The following messages do not require offline buffering. At reconnection, the st
 #### Hardware Requirements
 
 **Per-message sizing figures.** These are the largest **compact-JSON payload** of any vector in the `valid`
-conformance corpus for that message, measured at `efe009c` / `v0.24.1` and, for TransactionEvent, re-measured when the signed receipt gained four fields, and for SessionStarted measured when it was added, rounded up. They exclude the MQTT
+conformance corpus for that message, measured at `efe009c` / `v0.24.1` and, for TransactionEvent, re-measured when the signed receipt gained four fields and again when `offlineTxId` grew to 128 bits, and for SessionStarted measured when it was added, rounded up. They exclude the MQTT
 envelope and any framing a station adds. They are stated here so the arithmetic below can be checked rather
 than trusted:
 
 | Message | Largest `valid` vector | Sizing figure |
 |---|---:|---:|
-| TransactionEvent (offline, pass-form) | 1235 B (`transaction-event-request-full.json`) | **1.3 KB** |
+| TransactionEvent (offline, pass-form) | 1275 B (`transaction-event-request-full.json`) | **1.3 KB** |
 | SessionEnded | 199 B (`session-ended-event-timer-expired.json`) | **0.25 KB** |
 | SessionStarted | 99 B (`session-started-event-minimal.json`) | **0.25 KB** |
 | SecurityEvent | 509 B (`security-event-server-signed-auth-replay.json`) | **0.6 KB** |
 
-The TransactionEvent figure is dominated by the signed `receipt` — 755 B of the 1073 B minimal vector — which
+The TransactionEvent figure is dominated by the signed `receipt` — 775 B of the 1109 B minimal vector — which
 is the non-repudiation artefact and **MUST** be retained byte-identically for retransmission
 ([Chapter 02 §5.3](02-transport.md)). It is not compressible away by a conformant implementation.
 
@@ -441,7 +441,7 @@ is the non-repudiation artefact and **MUST** be retained byte-identically for re
 > remains true of 512 KB and is no longer the relevant question: ~1.7 MB is still within a 4 MB part, ~3.4 MB
 > is not, once firmware and its A/B partition are accounted for ([`update-firmware.md` §7](profiles/device-management/update-firmware.md)).
 
-**The derivation above covers the three Category-1 buffers and nothing else, and a vendor sizing a part needs the
+**The derivation above covers the four Category-1 buffers and nothing else, and a vendor sizing a part needs the
 whole product.** Rate x retention x count x bytes was never taken across every obligation in this specification
 that requires a station to keep something. The Category-1 arithmetic is the largest term, not the only one; the
 rest were unbudgeted until 0.30.0, so a part sized to ~1.7 MB of *buffer* still has no line for the store the
