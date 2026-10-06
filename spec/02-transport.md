@@ -772,7 +772,7 @@ When the station has both MQTT and BLE available:
 | Offline | Online | Partial B ¹ | BLE (auth) + MQTT (validation) |
 | Offline | Offline | Full Offline | BLE only |
 
-> ¹ **Partial B** is REQUIRED of every station that implements the Offline / BLE profile ([`profiles/offline/README.md` §5](profiles/offline/README.md#5-compliance-requirements)). A station whose AuthorizeOfflinePass goes unanswered MAY fall back to validating the pass itself.
+> ¹ **Partial B** is REQUIRED of every station that implements the Offline / BLE profile ([`profiles/offline/README.md` §5](profiles/offline/README.md#5-compliance-requirements)). A station whose AuthorizeOfflinePass goes unanswered MAY fall back to validating the pass itself if its `OfflineModeEnabled` is `true` ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 6).
 
 ---
 

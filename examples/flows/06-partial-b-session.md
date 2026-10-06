@@ -1,6 +1,8 @@
 # Flow 06: Partial B Session (Phone Offline, Station Online)
 
-> **Compliance Level:** This flow is REQUIRED of every station that implements the Offline / BLE profile, which the **Complete** compliance level requires. When the server does not answer in time, the station refuses with `1010`, or **MAY** fall back to validating the pass itself if its `OfflineModeEnabled` is `true`, as in Full Offline (see [Flow 04](04-full-offline-session.md)).
+> **Status: EXPERIMENTAL.** This flow runs over the BLE surface, which is EXPERIMENTAL until its cryptographic construction has passed the review of [`06-security.md` Appendix B](../../spec/06-security.md#appendix-b--ble-cryptographic-review-checklist) — see [Release status](../../README.md#ble-is-experimental).
+
+> **Compliance Level:** This flow is REQUIRED of every station that implements the Offline / BLE profile, which the **Complete** compliance level requires — a level no station can claim while the profile is EXPERIMENTAL. When the server does not answer in time, the station refuses with `1010`, or **MAY** fall back to validating the pass itself if its `OfflineModeEnabled` is `true`, as in Full Offline (see [Flow 04](04-full-offline-session.md)).
 
 ## Scenario
 

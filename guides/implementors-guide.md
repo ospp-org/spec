@@ -377,12 +377,14 @@ If MQTT drops during an active session:
 
 1. **Do NOT stop the hardware.** The service continues.
 2. Switch to BLE-available mode (accept offline sessions)
-3. Buffer the **MUST-buffer** categories — TransactionEvent (min 1000, **never** discard), SessionEnded (one per session that ended while you could not send, **never** discard — it is the sole billing source for a session that ended with no StopService to answer), SessionStarted (one per bay, **never** discard — the server keys a Partial-B session's authorized duration on it), SecurityEvent (200, FIFO). StatusNotification and MeterValues are **regenerable and MAY be discarded**; do not spend the buffer on them. The `MUST` storage level is **512 KB** — and **it does not hold the categories in this bullet.** [`01-architecture.md` §6.5](../spec/01-architecture.md#65-offline-message-buffering) derives what they cost: 1000 TransactionEvents (1.3 MB) + 1000 SessionEnded (250 KB) + 200 SecurityEvents (120 KB) + overhead = **~1.7 MB**, and §6.5 records the gap between the two as OPEN because raising a mandatory storage level changes the bill of materials of every station. **Size new hardware to the derived figure, not to the 512 KB level row.** At 90% of the TransactionEvent buffer, reject new StartService with `5111 BUFFER_FULL`; at 100%, enter degraded mode and refuse all new sessions (§6.5)
+3. Buffer the **MUST-buffer** categories — TransactionEvent (min 1000, **never** discard), SessionEnded (min 1000, **never** discard — it is the sole billing source for a session that ended with no StopService to answer), SessionStarted (one per bay, **never** discard — the server keys a Partial-B session's authorized duration on it), SecurityEvent (200, FIFO). StatusNotification and MeterValues are **regenerable and MAY be discarded**; do not spend the buffer on them. The `MUST` storage level is **512 KB** — and **it does not hold the categories in this bullet.** [`01-architecture.md` §6.5](../spec/01-architecture.md#65-offline-message-buffering) derives what they cost: 1000 TransactionEvents (1.3 MB) + 1000 SessionEnded (250 KB) + 64 SessionStarted (16 KB) + 200 SecurityEvents (120 KB) + overhead = **~1.7 MB**, and §6.5 records the gap between the two as OPEN because raising a mandatory storage level changes the bill of materials of every station. **Size new hardware to the derived figure, not to the 512 KB level row.** At 90% of the TransactionEvent buffer, reject new StartService with `5111 BUFFER_FULL`; at 100%, enter degraded mode and refuse all new sessions (§6.5)
 4. Attempt reconnection with exponential backoff: 1s → 2s → 4s → 8s → 16s → 30s max, with 30% jitter
 5. On reconnect: Full boot sequence (BootNotification, StatusNotification per bay)
 6. Flush buffered messages after boot completes
 
 ### 2.8 Offline Mode (BLE)
+
+> **EXPERIMENTAL.** The BLE surface this part describes is EXPERIMENTAL until its cryptographic construction has passed the review of [`06-security.md` Appendix B](../spec/06-security.md#appendix-b--ble-cryptographic-review-checklist) — see [Release status](../README.md#ble-is-experimental).
 
 If your station supports the Offline profile, you need a BLE GATT service:
 
@@ -939,6 +941,8 @@ Return `429 Too Many Requests` with a `Retry-After` header.
 
 **Offline mode (if supported):**
 
+> **EXPERIMENTAL.** The BLE surface this part describes is EXPERIMENTAL until its cryptographic construction has passed the review of [`06-security.md` Appendix B](../spec/06-security.md#appendix-b--ble-cryptographic-review-checklist) — see [Release status](../README.md#ble-is-experimental).
+
 Your app needs to:
 
 1. **Pre-arm an OfflinePass** while online — `POST /api/v1/offline/passes` with your `deviceId` and `devicePublicKey` ([`app-contract.md` §3](../spec/profiles/offline/app-contract.md#3-pass-issuance)). The device key is a P-256 key pair you generate once in the phone's hardware-backed keystore, with a non-exportable private key — on iOS, the App Attest key — and the platform attests it: obtain a one-time challenge (`POST /api/v1/offline/attestation-challenges`) before you generate it, and send the attestation as `deviceKeyAttestation` with the first pass request for that key; a phone that cannot hold and attest such a key gets no offline pass ([§3.2](../spec/profiles/offline/app-contract.md#32-the-device-key), [§3.6](../spec/profiles/offline/app-contract.md#36-device-key-attestation)). The response carries the pass and a **trust bundle** — the Station CA set, each CA with its CRL — which you replace on every issuance and with every Partial-A authorization, and never merge ([§3.4](../spec/profiles/offline/app-contract.md#34-the-trust-bundle), [§5](../spec/profiles/offline/app-contract.md#5-the-partial-a-authorization)). Request a fresh pass at app start, after each use and after each credit to the wallet you learn of, once you have uploaded the receipts you hold (step 8; [`offline-pass.md` §6](../spec/profiles/offline/offline-pass.md#6-lifecycle)). Store the pass securely (encrypted at rest, device keychain).
@@ -1275,6 +1279,8 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** OfflinePass signing keys as a **key set** ([`06-security.md` §6.7](../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256)): each new key published at least the worst station sync gap before its first signature, each old key kept until everything it signed has expired, the whole set in every `Accepted` BootNotification RESPONSE. An `Accepted` inside a refused batch means the station stored nothing ([§6.2](#62-security-pitfalls))
 
 ### Offline / BLE
+
+> **EXPERIMENTAL.** The BLE surface this part describes is EXPERIMENTAL until its cryptographic construction has passed the review of [`06-security.md` Appendix B](../spec/06-security.md#appendix-b--ble-cryptographic-review-checklist) — see [Release status](../README.md#ble-is-experimental).
 
 - [ ] **[OFFLINE]** BLE 4.2+ (LESC pairing OPTIONAL — not a security premise; the app verifies your certificate and your signature instead)
 - [ ] **[OFFLINE]** GATT Service UUID: `6645FFF0-5AEB-4709-ACD5-02E03C3000F6`

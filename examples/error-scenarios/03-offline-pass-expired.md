@@ -1,5 +1,7 @@
 # Error Scenario 03: Offline Pass Expired
 
+> **Status: EXPERIMENTAL.** This scenario runs over the BLE surface, which is EXPERIMENTAL until its cryptographic construction has passed the review of [`06-security.md` Appendix B](../../spec/06-security.md#appendix-b--ble-cryptographic-review-checklist) — see [Release status](../../README.md#ble-is-experimental).
+
 ## Scenario
 
 Alice is at the station but her phone has no cellular signal. She attempts to start
@@ -154,7 +156,8 @@ The Challenge names this catalog by its digest.
 ```
 
 The app verifies the station's certificate against a Station CA of its trust bundle and that CA's CRL,
-and the station's signature, before it sends the pass
+the station's signature, and that the Challenge's `catalogDigest` names the catalog Alice chose from, before it
+sends the pass
 ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)).
 Both pass: the station is genuine. What fails is Alice's own pass, below.
 

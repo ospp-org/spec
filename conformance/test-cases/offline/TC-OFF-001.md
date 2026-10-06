@@ -137,8 +137,8 @@ Verify the complete full-offline BLE session lifecycle: BLE scan and discovery, 
 1. Station does not advertise the OSPP service UUID.
 2. GATT connection fails or MTU negotiation results in MTU < 185 bytes.
 3. Hello does not receive a Challenge response within 10 seconds.
-4. **The Challenge omits `stationCertificate`, `stationEphemeralPubKey` or `stationSignature`, or names a BLE version the Hello did not offer** — the app then has nothing to authenticate the station with.
-5. **The app transmits the OfflinePass without first verifying the certificate and the station's signature**, or transmits it after verification fails instead of aborting with `2013 BLE_AUTH_FAILED`. This is a failure of the test client, and it is the one that loses a credential to an impersonating station.
+4. **The Challenge omits `stationCertificate`, `stationEphemeralPubKey`, `stationSignature` or `catalogDigest`, or names a BLE version the Hello did not offer** — the app then has nothing to authenticate the station with.
+5. **The app transmits the OfflinePass without first verifying the certificate, the station's signature and the catalog's digest**, or transmits it after verification fails instead of aborting with `2013 BLE_AUTH_FAILED`. This is a failure of the test client, and it is the one that loses a credential to an impersonating station.
 6. The derived session key does not match the golden vector for the fixture inputs.
 7. AuthResponse is Rejected for a valid OfflinePass with a valid device proof.
 8. StartServiceResponse is Rejected when bay is Available and OfflinePass is authorized.

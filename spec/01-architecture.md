@@ -420,8 +420,8 @@ is the non-repudiation artefact and **MUST** be retained byte-identically for re
 
 | Level | Storage | Capacity it is sized for |
 |-------|---------|----------|
-| MUST | 512 KB dedicated to offline message buffering | **Does not reach the Category-1 floor above.** 1000 TransactionEvents (1.3 MB) + 1000 SessionEnded (250 KB) + 200 SecurityEvents (120 KB) + 20 KB overhead = **~1.7 MB**. |
-| SHOULD | 1 MB dedicated to offline message buffering | 2000 TransactionEvents + 2000 SessionEnded + 500 SecurityEvents = **~3.4 MB**. Intended to cover approximately 7 days of high-traffic operation without connectivity. |
+| MUST | 512 KB dedicated to offline message buffering | **Does not reach the Category-1 floor above.** 1000 TransactionEvents (1.3 MB) + 1000 SessionEnded (250 KB) + 64 SessionStarted, one per bay at the bound of 64 bays (16 KB) + 200 SecurityEvents (120 KB) + 20 KB overhead = **~1.7 MB**. |
+| SHOULD | 1 MB dedicated to offline message buffering | 2000 TransactionEvents + 2000 SessionEnded + 64 SessionStarted + 500 SecurityEvents = **~3.4 MB**. Intended to cover approximately 7 days of high-traffic operation without connectivity. |
 
 > **OPEN — the two storage levels do not hold the capacities this section mandates, and raising them is a
 > hardware-cost decision this revision does not take.** Until `0.25.0` the `MUST` row read *"1000

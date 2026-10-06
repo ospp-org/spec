@@ -574,7 +574,7 @@ for the Challenge at `d526f1d`.
 
 **Decided 2026-10-05, Gabi's decision 9 of the BLE follow-up: option (a).** A Partial-A authorization must be
 used to start within its validity, and the length of the wash after the start does not matter. The station
-starts the session no later than the signed `expiresAt`, and refuses a StartServiceRequest at or after it
+starts the session before the signed `expiresAt`, and refuses a StartServiceRequest at or after it
 with `3006 SESSION_NOT_FOUND` ([`ble-session.md` §1](spec/profiles/offline/ble-session.md#1-starting-a-service)
 rule 2a); reconcile-time check #9 compares `registry.expiresAt` with the signed `startedAt`
 ([`reconciliation.md` §6.7](spec/profiles/offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4)).
