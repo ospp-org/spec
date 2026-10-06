@@ -2170,7 +2170,7 @@ Pushes the complete service catalog to the station. This is a **full replacement
 | `3015` | `PAYLOAD_INVALID` — a payload-level value wrong in itself, such as an empty `catalogVersion`; a malformed service *entry* is `5023`, not this |
 | `5023` | `INVALID_CATALOG` — any entry failed validation (missing field, invalid pricing type, missing or conflicting price), or the catalog is internally inconsistent (duplicate `serviceId`) |
 | `5024` | `UNSUPPORTED_SERVICE` — the catalog names a service the station cannot run, or binds one to a bay or program ordinal it never declared; the whole catalog is refused, not the offending entry |
-| `5025` | `CATALOG_TOO_LARGE` — catalog exceeds station storage capacity |
+| `5025` | `CATALOG_TOO_LARGE` — catalog exceeds station storage capacity, or, at a station that declares the Offline / BLE profile, the BLE bounds of [`ble-transport.md` §4](profiles/offline/ble-transport.md#4-available-services-fff2) |
 | `5103` | `STORAGE_ERROR` — NVS write failed |
 
 ---

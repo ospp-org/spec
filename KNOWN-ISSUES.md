@@ -181,8 +181,10 @@ until its cryptographic construction has passed the review of
     ([flow 01](examples/flows/01-boot-sequence.md)); TC-OFF-003 and TC-OFF-004 carry `deviceId` placeholders
     in their TransactionEvent examples ([TC-OFF-003](conformance/test-cases/offline/TC-OFF-003.md);
     [TC-OFF-004](conformance/test-cases/offline/TC-OFF-004.md)).
-17. **Conformance.** No case tests that a station's `catalogDigest` follows a change of its catalog, or the connection
-    floor of [`ble-transport.md` §10](spec/profiles/offline/ble-transport.md#10-connection-parameters) beyond the MTU.
+17. **Conformance.** No case tests that a station's `catalogDigest` follows a change of its catalog, the connection
+    floor of [`ble-transport.md` §10](spec/profiles/offline/ble-transport.md#10-connection-parameters) beyond the MTU, or
+    the catalog bounds of [§4](spec/profiles/offline/ble-transport.md#4-available-services-fff2) there, which a station
+    enforces with `5025` ([TC-DM-008](conformance/test-cases/device-management/TC-DM-008.md), the note on `5025`).
 
 ---
 
