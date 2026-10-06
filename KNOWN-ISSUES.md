@@ -223,7 +223,21 @@ until its cryptographic construction has passed the review of
     §10, rest on a catalog that is not committed.
     [`offline-pass.md` §4](spec/profiles/offline/offline-pass.md#4-validation-checks-10) calls checks #10 to #13 guards
     that read no clock, where [`reconciliation.md` §6.8](spec/profiles/offline/reconciliation.md#68-station-clock-offset)
-    judges #10 and #11 through the offset.
+    judges #10 and #11 through the offset. The second review round left four more, each spanning several sites: two
+    restatements of the per-user revocation still say "the washes after" it, where check #11 judges the moment a
+    wash's authorization was accepted ([`reconciliation.md` §7](spec/profiles/offline/reconciliation.md#7-fraud-detection);
+    [`offline-pass.md` §6](spec/profiles/offline/offline-pass.md#6-lifecycle)); the lists of what a later Partial-B
+    record is a duplicate of omit the server's settlement at a boot in
+    [`session-ended.md` §5](spec/profiles/transaction/session-ended.md#5-processing-rules), the first bullet of
+    [`reconciliation.md` §3](spec/profiles/offline/reconciliation.md#3-deduplication-offlinetxid) rule 5,
+    [`offline-pass.md` §6](spec/profiles/offline/offline-pass.md#6-lifecycle) and the guide's reconciliation steps 2
+    and 7 ([implementors guide §3.6](guides/implementors-guide.md#36-offline-reconciliation)); the transaction time is
+    restated as two moments without §6.1's case of a wash a station ran on its own validation after the server had
+    accepted its request ([`offline-pass.md` §5](spec/profiles/offline/offline-pass.md#5-revocation); the guide's
+    step 4; [`07-errors.md` §3.2](spec/07-errors.md#32-authentication--authorization-errors-2xxx), the 2003 row; the
+    decided record of the clock offset); and a Partial-A row "that expired unused" is said to have a receipt, where
+    the row expired with no receipt reconciled ([`reconciliation.md` §6.7, §8 and §8.2](spec/profiles/offline/reconciliation.md#8-wallet-reconciliation);
+    the guide's step 5).
 
 ---
 
