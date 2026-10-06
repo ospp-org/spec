@@ -918,13 +918,13 @@ sequenceDiagram
 | 6 | Station certificate or signature invalid | App aborts and relays nothing (`2013`) |
 | 8 | ECDSA P-256 signature invalid | SSP rejects — key mismatch or tampered auth |
 | 8 | Authorization expired | SSP rejects — user took too long between server call and BLE |
-| 10 | StartServiceRequest at or after the authorization's `expiresAt` | SSP refuses with `3006` and starts nothing: an authorization is used to start within its validity, and a session started before `expiresAt` runs its whole duration ([`ble-session.md` §1](profiles/offline/ble-session.md#1-starting-a-service) rule 2a) |
+| 10 | StartServiceRequest at or after the authorization's `expiresAt` | SSP refuses with `3006` and starts nothing: an authorization is used to start within its validity, and a session started before `expiresAt` runs its whole duration ([`ble-session.md` §1](profiles/offline/ble-session.md#1-starting-a-service) rule 2a). Server refunds the unused authorization in full at its `expiresAt` ([`reconciliation.md` §6.7](profiles/offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4)) |
 
 ### Postconditions
 
 | Component | State |
 |-----------|-------|
-| User Wallet | Debited at step 2 (by Server) |
+| User Wallet | Debited at step 2 (by Server); refunded in full when the authorization's `expiresAt` passes with no receipt reconciling it ([`reconciliation.md` §6.7](profiles/offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4)) |
 | SSP | Has server-signed proof; transaction logged locally |
 | Server | Session created (status: pending — awaiting reconciliation) |
 
