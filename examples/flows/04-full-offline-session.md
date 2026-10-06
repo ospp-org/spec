@@ -37,10 +37,10 @@ It is a winter evening in Example City. Heavy snowfall has knocked out the inter
 18:32:05.000  App reads FFF1 (StationInfo) — shows which station it reached
 18:32:05.500  App asks for AvailableServices on FFF2 — displays service catalog
 18:32:12.000  Bob selects Bay 1, Eco Program, 3 min duration
+18:32:12.200  App requests biometric confirmation (Face ID), before the Hello
 18:32:12.500  App writes Hello to FFF3
 18:32:13.000  Station notifies Challenge on FFF4 (stationConnectivity: "Offline")
-18:32:13.200  App verifies the station's certificate and signature, derives session key
-18:32:14.000  App requests biometric confirmation (Face ID)
+18:32:13.200  App verifies the station's certificate, its signature and the catalog's digest, derives session key
 18:32:15.000  App writes OfflineAuthRequest to FFF3 with OfflinePass
 18:32:15.500  Station performs the nine OfflinePass checks — all pass
 18:32:16.000  Station notifies AuthResponse Accepted on FFF4
@@ -97,7 +97,7 @@ The app connects to the station over BLE. The BLE connection state transitions: 
 }
 ```
 
-The app shows Bob which station it reached. Nothing on FFF1 is authenticated, so the app relies on none of it ([`ble-transport.md` §3](../../spec/profiles/offline/ble-transport.md#3-station-info-fff1)): the station's identity is the certificate in its Challenge (Step 7), its connectivity is the Challenge's `stationConnectivity`, and the BLE version is the one the handshake negotiates.
+The app shows Bob which station it reached. Nothing on FFF1 is authenticated, so the app relies on none of it ([`ble-transport.md` §3](../../spec/profiles/offline/ble-transport.md#3-station-info-fff1)): the station's identity is the certificate in its Challenge (Step 8), its connectivity is the Challenge's `stationConnectivity`, and the BLE version is the one the handshake negotiates.
 
 ---
 
@@ -155,11 +155,26 @@ The app shows Bob which station it reached. Nothing on FFF1 is authenticated, so
 
 **What Bob sees:**
 
-The app displays two bay cards with their services and prices. Whether a bay can start now is not in the catalog: the station says so in its signed Challenge, which the app checks before it sends anything (Step 8). Under Bay 1, Bob sees "Eco Program (10 credits/min)" and "Standard Program (8 credits/min)". Before he chooses, the app shows the pass's limits, as it must ([`offline-pass.md` §2.1](../../spec/profiles/offline/offline-pass.md#21-offlineallowance-object)): 30 credits per session, 80 of 100 credits remaining, 3 of 5 uses remaining. He taps Bay 1, then selects "Eco Program". A duration picker appears, bounded at 3 minutes: the pass the app is already holding carries `offlineAllowance.maxCreditsPerTx` (30) in plaintext, so the app can read the limit and shape its offer to fit **before** it asks the station for anything — a request above a limit would be refused, never reduced. He sets it to 3 minutes (30 credits). The app shows: "Estimated cost: 30 credits. Estimated offline balance: 72 credits."
+The app displays two bay cards with their services and prices. Whether a bay can start now is not in the catalog: the station says so in its signed Challenge, which the app checks before it sends anything (Step 9). Under Bay 1, Bob sees "Eco Program (10 credits/min)" and "Standard Program (8 credits/min)". Before he chooses, the app shows the pass's limits, as it must ([`offline-pass.md` §2.1](../../spec/profiles/offline/offline-pass.md#21-offlineallowance-object)): 30 credits per session, 80 of 100 credits remaining, 3 of 5 uses remaining. He taps Bay 1, then selects "Eco Program". A duration picker appears, bounded at 3 minutes: the pass the app is already holding carries `offlineAllowance.maxCreditsPerTx` (30) in plaintext, so the app can read the limit and shape its offer to fit **before** it asks the station for anything — a request above a limit would be refused, never reduced. He sets it to 3 minutes (30 credits). The app shows: "Estimated cost: 30 credits. Estimated offline balance: 72 credits."
 
 ---
 
-### Step 6: App Writes Hello to FFF3 (18:32:12.500)
+### Step 6: Biometric Confirmation (18:32:12.200)
+
+**What Bob sees:**
+
+The app displays a biometric prompt:
+
+> **Confirm offline payment**
+> Eco Program - Bay 1
+> Estimated: 30 credits (3 min)
+> [Authenticate with Face ID]
+
+Bob looks at his phone. Face ID succeeds, before the Hello, so that the wait for Bob runs outside the 10-second handshake budget; the app holds the confirmation for the OfflinePass it sends inside the handshake ([`04-flows.md` §5a](../../spec/04-flows.md#5a-full-offline-session--ble)).
+
+---
+
+### Step 7: App Writes Hello to FFF3 (18:32:12.500)
 
 **BLE GATT Write:** Characteristic `6645FFF3-5AEB-4709-ACD5-02E03C3000F6`
 
@@ -179,7 +194,7 @@ The app generates a fresh ephemeral P-256 key pair and a cryptographically rando
 
 ---
 
-### Step 7: Station Notifies Challenge on FFF4 (18:32:13.000)
+### Step 8: Station Notifies Challenge on FFF4 (18:32:13.000)
 
 **BLE GATT Notify:** Characteristic `6645FFF4-5AEB-4709-ACD5-02E03C3000F6`
 
@@ -222,7 +237,7 @@ The station chooses BLE version `0.3.0` from the Hello's list, generates its own
 
 ---
 
-### Step 8: Station Verification and Session Key Derivation (18:32:13.200)
+### Step 9: Station Verification and Session Key Derivation (18:32:13.200)
 
 Before it derives any key, and before Bob's pass can leave the phone, the app verifies the station ([`06-security.md` §6.5.2](../../spec/06-security.md#652-station-authentication--the-stations-certificate)): the certificate chains to a Station CA of its trust bundle, is valid now, and is on no entry of that CA's CRL; it carries `digitalSignature` and `id-kp-osppBleStation`; its subject CN, `stn_a1b2c3d4`, is the station Bob is standing at; and `stationSignature` verifies under its key. It also confirms that the catalog Bob chose from is the one the Challenge's `catalogDigest` names, and that Eco Program is available on Bay 1 in `availableServices`. Had the certificate or the signature failed, the app would have aborted with `2013 BLE_AUTH_FAILED` and sent nothing; had the digest differed, it would have sent nothing, closed the connection and read FFF2 again on a new one ([`ble-handshake.md` §3](../../spec/profiles/offline/ble-handshake.md#3-step-2-challenge)).
 
@@ -238,21 +253,6 @@ SessionKey = HKDF-SHA256(
 ```
 
 This produces a 32-byte symmetric key used for the `sessionProof` HMAC in the next step, for the `sessionKeyConfirmation` in the AuthResponse, and to expand the per-direction AEAD keys that encrypt every post-Challenge message.
-
----
-
-### Step 9: Biometric Confirmation (18:32:14.000)
-
-**What Bob sees:**
-
-The app displays a biometric prompt:
-
-> **Confirm offline payment**
-> Eco Program - Bay 1
-> Estimated: 30 credits (3 min)
-> [Authenticate with Face ID]
-
-Bob looks at his phone. Face ID succeeds. The app proceeds to send the OfflinePass.
 
 ---
 
@@ -733,16 +733,16 @@ The station removes the transaction from its local queue.
      |<---------------------------------------|
      |                                        |
      |  user selects Bay 1 + Eco Program     |
+     |  biometric confirmation (Face ID)      |
      |                                        |
      |  Write FFF3: Hello                     |
      |--------------------------------------->|
      |  Notify FFF4: Challenge (offline,      |
-     |    certificate, signature)             |
+     |    certificate, digest, signature)     |
      |<---------------------------------------|
      |                                        |
-     |  verify certificate and signature      |
+     |  verify certificate, signature, digest |
      |  derive session key (ECDH + HKDF)      |
-     |  biometric confirmation (Face ID)      |
      |                                        |
      |  Write FFF3: OfflineAuthRequest       |
      |--------------------------------------->|

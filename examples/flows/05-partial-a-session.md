@@ -41,7 +41,7 @@ Alice is at "Station Alpha -- Example City" and wants to start the Eco Program s
 14:30:06.000  Server responds with signedAuthorization, sessionId and the trust bundle
 14:30:06.500  App writes Hello to FFF3
 14:30:06.800  Station responds with Challenge on FFF4 (connectivity: "Offline")
-14:30:07.000  App verifies the station's certificate and signature against the bundle it just received
+14:30:07.000  App verifies the station's certificate and signature against the bundle it just received, and the catalog's digest
 14:30:07.200  App writes ServerSignedAuth to FFF3
 14:30:07.500  Station verifies ECDSA P-256 signature — valid
 14:30:07.600  Station sends AuthResponse (Accepted) on FFF4
@@ -654,9 +654,9 @@ On the Operator Dashboard, Charlie sees:
      |<---------------------|                          |
      |                      |                          |
      | -- Write FFF3: Hello -------------------------->|
-     |<-------- FFF4: Challenge (offline, certificate, signature)
+     |<-------- FFF4: Challenge (offline, certificate, digest, signature)
      |                      |                          |
-     |  verify certificate and signature (trust bundle) |
+     |  verify certificate, signature (trust bundle) and digest
      | -- Write FFF3: ServerSignedAuth ------------->|
      |                      |                  verify  |
      |                      |                 ECDSA P-256  |

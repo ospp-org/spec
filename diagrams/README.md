@@ -320,7 +320,7 @@ sequenceDiagram
     rect rgb(255, 243, 224)
         Note over Station: Station buffers messages offline
         Station->>Station: Buffer MeterValues, StatusNotifications
-        Station->>Station: Complete sessions, buffer SessionEnded and TransactionEvents
+        Station->>Station: Complete sessions, buffer SessionStarted, SessionEnded and TransactionEvents
     end
 
     rect rgb(232, 245, 233)

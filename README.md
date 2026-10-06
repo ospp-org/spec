@@ -33,7 +33,9 @@ Not every part of this specification is at the same maturity. Read this before i
 The BLE surface — [`ble-transport.md`](spec/profiles/offline/ble-transport.md),
 [`ble-handshake.md`](spec/profiles/offline/ble-handshake.md),
 [`ble-session.md`](spec/profiles/offline/ble-session.md), the 16 schemas under
-[`schemas/ble/`](schemas/ble/), [Chapter 02 §8](spec/02-transport.md),
+[`schemas/ble/`](schemas/ble/), [Chapter 02 §8](spec/02-transport.md), the BLE messages of
+[Chapter 03 §7](spec/03-messages.md#7-offline--ble-operations), the flows of
+[Chapter 04 §5a to §5c](spec/04-flows.md#5a-full-offline-session--ble),
 [ADR-002](adr/ADR-002-ble-handshake-security-architecture.md) and
 [ADR-003](adr/ADR-003-ble-station-authentication-by-certificate.md), and conformance cases
 [TC-OFF-001](conformance/test-cases/offline/TC-OFF-001.md),

@@ -818,6 +818,7 @@ sequenceDiagram
 |:----:|-------|------|------------|
 | 7 | The station supports none of the Hello's BLE versions — a plaintext AuthResponse instead of the Challenge | `1007` | Display "App update needed", disconnect |
 | 8 | Certificate or station signature invalid | `2013` | Abort, send no pass, disconnect |
+| 8 | The catalog the app chose from is not the one the Challenge's `catalogDigest` names | — | Send no pass, disconnect, read FFF2 again, and have the user choose and confirm again ([`ble-handshake.md` §3](profiles/offline/ble-handshake.md#3-step-2-challenge)) |
 | 11 | `sessionProof` does not match | `2013` | Disconnect, retry the handshake |
 | 11 | Bay unknown to the station | `3005` | Display "Start refused", disconnect |
 | 11 | Service not bound to a program of the bay | `3004` | Read FFF2 again and choose from it |
@@ -872,8 +873,8 @@ sequenceDiagram
 
     App->>SSP: BLE connect
     App->>SSP: Write FFF3: Hello [MSG-029]
-    SSP-->>App: Notify FFF4: Challenge [MSG-030] (certificate, signature, connectivity: "Offline")
-    Note over App: Verify certificate (a Station CA of the bundle, its CRL) and signature, else abort
+    SSP-->>App: Notify FFF4: Challenge [MSG-030] (certificate, catalog digest, signature, connectivity: "Offline")
+    Note over App: Verify certificate (a Station CA of the bundle, its CRL) and signature, and the catalog digest if the app chose from FFF2, else abort
 
     App->>SSP: Write FFF3: ServerSignedAuth [MSG-032]
     Note right of SSP: Verify ECDSA P-256 signature
@@ -1001,6 +1002,7 @@ sequenceDiagram
 
 | Step | Error | Action |
 |:----:|-------|--------|
+| 3 | The catalog the app chose from is not the one the Challenge's `catalogDigest` names | App sends no pass, disconnects, reads FFF2 again, and has the user choose and confirm again ([`ble-handshake.md` §3](profiles/offline/ble-handshake.md#3-step-2-challenge)) |
 | 6 | MQTT send failure | SSP **MAY** fall back to local validation (like Full Offline) if its `OfflineModeEnabled` is `true`, within its own offline limits ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)) |
 | 6 | Device proof invalid | SSP refuses with `2002` and forwards nothing |
 | 6 | `sessionProof` does not match | SSP refuses with `2013` and forwards nothing |
@@ -1068,7 +1070,7 @@ The **CSMS (server) is the authoritative billing engine** for all sessions. The 
 The following rules are normative:
 
 - The station **MUST NOT** be the source of truth for monetary cost. The `creditsCharged` field reported by the station is **advisory** — it represents the station's estimate based on the service rate active at session start.
-- The server **MUST** recompute final billing using the actual duration and the tariff in force when the session ran, regardless of the station-reported `creditsCharged`. Implementations **MAY** accept the station value as-is when it matches the server-side recomputation; they **MUST NOT** accept it blindly when it diverges. **This binds the offline path too**, where the session ran with no server present and the duration arrives inside a signed receipt: [`reconciliation.md` §8.1](profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b) states the offline recomputation, including which tariff a server uses when it does not retain a catalog history for the transaction's instant. That is the one place this rule's *"in force when the session ran"* clause needs a stated fallback, and it is stated there rather than restated here.
+- The server **MUST** recompute final billing using the actual duration and the tariff in force when the session ran, regardless of the station-reported `creditsCharged` — and, for a record that arrives after a close the server made without the station's end record, as a refund-only true-up of that close (*A close the server makes without the station's end record is provisional*, below). Implementations **MAY** accept the station value as-is when it matches the server-side recomputation; they **MUST NOT** accept it blindly when it diverges. **This binds the offline path too**, where the session ran with no server present and the duration arrives inside a signed receipt: [`reconciliation.md` §8.1](profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b) states the offline recomputation, including which tariff a server uses when it does not retain a catalog history for the transaction's instant. That is the one place this rule's *"in force when the session ran"* clause needs a stated fallback, and it is stated there rather than restated here.
 - For sessions that end via `StopService` RESPONSE [MSG-006], the server uses the response's `actualDurationSeconds` (and `meterValues` when relevant) as billing input.
 - For sessions that end autonomously via `SessionEnded` EVENT [MSG-040] (timer expiry or hardware fault), the server uses the event's `actualDurationSeconds` as billing input and applies the refund policy described below.
 - Tariff lookup, currency conversion, tax handling, and any operator-specific pricing rules are server-side concerns. Stations remain unaware of the priced amount in user-facing currency.
@@ -1204,7 +1206,7 @@ Only the `Local`, `Inactivity`, `Fault` and `OperatorStopped` rows diverge; `Tim
 
 **A stop the server issues for an operator settles as `OperatorStopped`.** An operator can also end a session through the server rather than at the station — from an operator console, or by a station disable the server carries out — and the server then sends StopService [MSG-006]. That stop produces no SessionEnded ([Chapter 03 §5.4](03-messages.md#54-sessionended)) and StopService carries no reason, so only the server knows an operator asked for it. The server **MUST** settle such a session as it settles `OperatorStopped`, by service kind — pro-rata on delivered time for `UserDuration`, a full refund for `FixedDuration` and `MultiUnit` — and **MUST NOT** settle it as the customer's own stop. A stop the station refuses while the session is still running is not settled as `OperatorStopped`, because the operator did not end the service: the session settles as a delivered session of its kind — a `FixedDuration` or `MultiUnit` session keeps its full charge, and a `UserDuration` session is pro-rata on its delivered time. A `3006 SESSION_NOT_FOUND` refusal is not that case: the station holds no such session, which may already have ended ([`07-errors.md` §3.3](07-errors.md#33-session--bay-errors-3xxx)). The signed receipt of a BLE session the server stopped carries `endReason` `ServerStopped` ([Chapter 06 §6.2](06-security.md#62-transaction-receipt-signing--ecdsa-p-256)), and the server settles that session as this section settles the stop it issued.
 
-**A close the server makes without the station's end record is provisional (Normative).** The server closes some sessions without the station's record of their end: an online session whose StopService went unconfirmed (*A3*, above), whose station stayed away past `ConnectionLostGracePeriod` ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)), whose bay its station reported `Available` when it reconnected ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) rule 3), or which a real boot ended ([`boot-notification.md` §5.2](profiles/core/boot-notification.md#52-bootreason--seven-boots-and-one-non-boot)), each billed on the time delivered as the server knows it, and a Partial-B session at the end of its authorized duration or at a real boot ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4a and 4b). Such a close is provisional. When an end record of the session arrives after it — a SessionEnded, a StopService RESPONSE, a signed receipt — the server **MUST** settle that record as this section settles it, by service kind, as if it had arrived first, and **MUST** refund the difference when that is below what the close charged. **A charge never rises:** a record that settles at the close's amount or above it changes nothing. A customer who stopped a `UserDuration` wash early, or whose wash a `Fault` ended, on a station that was offline at the close, therefore pays what the record shows was delivered — the pro-rata amount, or nothing for a `FixedDuration` `Fault`.
+**A close the server makes without the station's end record is provisional (Normative).** The server closes some sessions without the station's record of their end: an online session whose StopService went unconfirmed (*A3*, above), whose station stayed away past `ConnectionLostGracePeriod` ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)), or which a real boot ended ([`boot-notification.md` §5.2](profiles/core/boot-notification.md#52-bootreason--seven-boots-and-one-non-boot)), each billed on the time delivered as the server knows it, and a Partial-B session at the end of its authorized duration or at a real boot ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4a and 4b). Such a close is provisional. When an end record of the session arrives after it — a SessionEnded, a StopService RESPONSE, a signed receipt — the server **MUST** settle that record as this section settles it, by service kind, as if it had arrived first, and **MUST** refund the difference when that is below what the close charged. **A charge never rises:** a record that settles at the close's amount or above it changes nothing. A customer who stopped a `UserDuration` wash early, or whose wash a `Fault` ended, on a station that was offline at the close, therefore pays what the record settles at by service kind — the pro-rata amount for a `UserDuration` stop or `Fault`, nothing for a `Fault` below the `faultFullRefundThreshold` of a `UserDuration` wash or for a `Fault` of a `FixedDuration` or `MultiUnit` one.
 
 **Delivery outcome (`MultiUnit`).** A `MultiUnit` session additionally records what physically happened — `Dispensed` on a clean `TimerExpired`, `Missed` on a `Fault`. When the physical outcome is genuinely ambiguous from control-plane signals alone (e.g. a mid-pulse voluntary stop) it is left unrecorded rather than guessed; settlement never depends on it (it stays derived from the kind). A jam the firmware does not itself detect runs the timer to expiry and is therefore billed as delivered; the corrective path is an operator-issued refund, not an automatic one.
 
@@ -1375,7 +1377,7 @@ sequenceDiagram
 
     Note over SSP: Active sessions continue running!
     Note over SSP: Switch to BLE-only mode
-    Note over SSP: Buffer TransactionEvent, SessionEnded, SecurityEvent (Ch. 01 §6.5)
+    Note over SSP: Buffer TransactionEvent, SessionStarted, SessionEnded, SecurityEvent (Ch. 01 §6.5)
 
     Broker->>Server: ConnectionLost (LWT) [MSG-011]
     Server->>Server: Mark station as Offline
@@ -1412,7 +1414,7 @@ sequenceDiagram
 2. **SSP** immediately takes these actions:
    - **Active sessions continue running** — the station MUST NOT stop a service due to connectivity loss
    - Switch to BLE-only mode for new sessions (if BLE is enabled)
-   - Buffer the messages it must keep — TransactionEvent, SessionEnded and SecurityEvent — per the categorized buffering policy of [Chapter 01 §6.5](01-architecture.md#65-offline-message-buffering); StatusNotification and MeterValues MAY be discarded, as they are regenerated at reconnection
+   - Buffer the messages it must keep — TransactionEvent, SessionStarted, SessionEnded and SecurityEvent — per the categorized buffering policy of [Chapter 01 §6.5](01-architecture.md#65-offline-message-buffering); StatusNotification and MeterValues MAY be discarded, as they are regenerated at reconnection
 3. **Broker** publishes the pre-configured **ConnectionLost** [MSG-011] LWT to the station's `to-server` topic
 4. **Server** receives the LWT and marks the station as `Offline`
 5. **SSP** begins reconnection with exponential backoff:

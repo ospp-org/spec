@@ -38,8 +38,9 @@ seconds (ten days) it is inert, and an operator arms it by lowering it
 | 10:30:00.000 | Alice opens the app, selects Bay 1, svc_eco |
 | 10:30:01.000 | App initiates BLE scan, discovers SSP-3000 |
 | 10:30:02.000 | App reads BLE characteristic FFF1 (station info + connectivity, unauthenticated) and asks for the catalog on FFF2 |
+| 10:30:02.500 | App confirms biometric (FaceID), before the Hello |
 | 10:30:03.000 | App sends HELLO, station responds with Challenge; app verifies the station's certificate and signature, and the catalog's digest |
-| 10:30:05.000 | App confirms biometric (FaceID), constructs OfflineAuthRequest |
+| 10:30:05.000 | App constructs OfflineAuthRequest |
 | 10:30:06.000 | App sends OfflineAuthRequest with expired OfflinePass |
 | 10:30:08.000 | Station validates OfflinePass -- check #2 fails (expired) |
 | 10:30:09.000 | Station sends AuthResponse (Rejected, OFFLINE_PASS_EXPIRED) |

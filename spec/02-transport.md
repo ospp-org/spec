@@ -707,10 +707,11 @@ Mobile App (Central)                            Station (Peripheral)
        │                  appVersion, ephemeral key}    │
        │<─── Notify FFF4: Challenge {bleVersion, nonce, │
        │      ephemeral key, certificate, availability,│
-       │      stationSignature}                        │
+       │      catalogDigest, stationSignature}         │
        │                                               │
-       │  [App verifies the certificate and signature;  │
-       │   availability comes from the Challenge]       │
+       │  [App verifies the certificate, the signature │
+       │   and the catalog digest; availability comes  │
+       │   from the Challenge]                         │
        │                                               │
        │  [Handshake continues — see Offline Profile]   │
        │                                               │

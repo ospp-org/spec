@@ -504,13 +504,13 @@ Charlie sees a reconciliation summary on his dashboard:
 |  Total credits debited: 114                                           |
 |  Users affected: 2                                                    |
 |                                                                        |
-|  +------------------------------------------------------------------+ |
-|  | #  | ID             | User    | Service   | Duration | Credits   | |
-|  |----|----------------|---------|------------|--------|-----------|  |
-|  | 1  | otx_a1b2c3d4c6b7798bbf5a1a447c52e848   | Alice  | Eco Program     | 5m     | 50       |  |
-|  | 2  | otx_e5f6a7b8d9c04c0edcfa092be0f1ec2d   | Bob| Standard Program | 3m     | 24       |  |
-|  | 3  | otx_a9b0c1d2e3f40a9c488a44d8b1ad77e4   | Alice  | Eco Program     | 4m     | 40       |  |
-|  +------------------------------------------------------------------+ |
+|  +------------------------------------------------------------------+  |
+|  | #  | ID              | User  | Service          | Dur. | Credits |  |
+|  |----|-----------------|-------|------------------|------|---------|  |
+|  | 1  | otx_a1b2...e848 | Alice | Eco Program      | 5m   | 50      |  |
+|  | 2  | otx_e5f6...ec2d | Bob   | Standard Program | 3m   | 24      |  |
+|  | 3  | otx_a9b0...77e4 | Alice | Eco Program      | 4m   | 40      |  |
+|  +------------------------------------------------------------------+  |
 |                                                                        |
 |  txCounter: CONTINUOUS (2 -> 5, no gaps)                             |
 |  Fraud scoring: NORMAL (max 0.10; Review starts at 0.30)             |
@@ -585,7 +585,8 @@ What this does **not** provide is a completeness guarantee. An operator suppress
      |------------------------------->|
      |                                |
      |  TransactionEvent #1           |
-     |  (otx_a1b2c3d4c6b7798bbf5a1a447c52e848, Alice, Eco Program)    |
+     |  (otx_a1b2...e848,             |
+     |   Alice, Eco Program)          |
      |------------------------------->|
      |                                | dedup, verify receipt signature
      |                                | record txCounter (forensic)
@@ -596,7 +597,8 @@ What this does **not** provide is a completeness guarantee. An operator suppress
      |<-------------------------------|
      |                                |
      |  TransactionEvent #2           |
-     |  (otx_e5f6a7b8d9c04c0edcfa092be0f1ec2d, Bob, Standard Program) |
+     |  (otx_e5f6...ec2d,             |
+     |   Bob, Standard Program)       |
      |------------------------------->|
      |                                | dedup, verify receipt signature
      |                                | record txCounter (forensic)
@@ -607,7 +609,8 @@ What this does **not** provide is a completeness guarantee. An operator suppress
      |<-------------------------------|
      |                                |
      |  TransactionEvent #3           |
-     |  (otx_a9b0c1d2e3f40a9c488a44d8b1ad77e4, Alice, Eco Program)    |
+     |  (otx_a9b0...77e4,             |
+     |   Alice, Eco Program)          |
      |------------------------------->|
      |                                | dedup, verify receipt signature
      |                                | record txCounter (forensic)

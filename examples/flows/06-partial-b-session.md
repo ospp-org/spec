@@ -42,7 +42,7 @@ Bob is at "Station Alpha -- Example City" and wants a deluxe treatment on Bay 2.
 15:10:04.500  App prompts biometric confirmation — Bob confirms with fingerprint
 15:10:05.000  App writes Hello to FFF3
 15:10:05.300  Station responds with Challenge on FFF4 (connectivity: "Online")
-15:10:05.500  App verifies the station's certificate and signature
+15:10:05.500  App verifies the station's certificate, its signature and the catalog's digest
 15:10:05.800  App writes OfflineAuthRequest to FFF3 (OfflinePass, bay, service, duration, device proof)
 15:10:06.000  Station verifies the device proof, forwards the pass to the server via MQTT AuthorizeOfflinePass
 15:10:06.600  Server validates pass, debits 48 credits from Bob's wallet
@@ -482,7 +482,7 @@ It then reports the bay's new state, a StatusNotification, which names the bay a
   "messageId": "msg_status_3b4c5d6e",
   "messageType": "Event",
   "action": "StatusNotification",
-  "timestamp": "2026-02-13T15:10:08.000Z",
+  "timestamp": "2026-02-13T15:10:08.100Z",
   "source": "Station",
   "protocolVersion": "0.3.0",
   "payload": {
@@ -841,7 +841,7 @@ On the Operator Dashboard, Charlie sees the session in real-time because the sta
 2. The session log shows the full lifecycle:
 
 ```
-[15:10:07] Session sess_d5e6f7a8b9c0 started (Partial B)
+[15:10:08] Session sess_d5e6f7a8b9c0 started (Partial B)
            User: Bob | Bay 2 | Deluxe Program
            Auth: OfflinePass opass_a8b9c0d1e2f3 (validated by server)
 
@@ -870,9 +870,9 @@ On the Operator Dashboard, Charlie sees the session in real-time because the sta
      | [biometric confirm]      |                          |
      |                          |                          |
      | -- Write FFF3: Hello --->|                          |
-     |<------ FFF4: Challenge (online, certificate, signature)
+     |<------ FFF4: Challenge (online, certificate, digest, signature)
      |                          |                          |
-     | [verify certificate and signature]                  |
+     | [verify certificate, signature and digest]          |
      | -- Write FFF3: OfflineAuthRequest ---------------->|
      |                          |  AuthorizeOfflinePass    |
      |                          |  REQUEST [MQTT] -------->|

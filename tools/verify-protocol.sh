@@ -10,11 +10,11 @@
 # went stale: `9 FAIL / 6 SKIP` was true at v0.20.0 and was still being quoted after 0.20.1
 # and 0.20.2 had closed three of them.
 #
-#   (this HEAD) 2026-10-06  (unreleased)  0 FAIL, 1 SKIP  (5635 checks, 5634 PASS) — the BLE
+#   (this HEAD) 2026-10-06  (unreleased)  0 FAIL, 1 SKIP  (5642 checks, 5641 PASS) — the BLE
 #                                  follow-up: Gabi's ten decisions of 2026-10-05 and their review.
 #                                  Category 7 checks an offlineTxId against its 128-bit pattern,
 #                                  ^otx_[a-f0-9]{32,}$, where it had taken any readable form; the
-#                                  failure SET is unchanged. +178 checks, all passing.
+#                                  failure SET is unchanged. +185 checks, all passing.
 #   (superseded) 2026-10-05  (unreleased)  0 FAIL, 1 SKIP  (5457 checks, 5456 PASS) — the BLE
 #                                  wire revision. The whole failure SET leaves: ble-secure-frame has
 #                                  valid and invalid vectors, station-identity is withdrawn with the

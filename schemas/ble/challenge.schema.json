@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/ble/challenge.schema.json",
   "title": "Challenge",
-  "description": "Challenge message notified by the station to the app on BLE characteristic FFF4, answering the Hello. Carries the BLE version the station chose, its nonce and ephemeral key, its certificate, its connectivity and the availability of its services, all signed by the station (06-security.md §6.5.2). It is the app's one source of availability.",
+  "description": "Challenge message notified by the station to the app on BLE characteristic FFF4, answering the Hello. Carries the BLE version the station chose, its nonce and ephemeral key, its certificate, its connectivity, the availability of its services and the digest of its FFF2 catalog, all signed by the station (06-security.md §6.5.2). It is the app's one source of availability.",
   "type": "object",
   "required": [
     "type",
