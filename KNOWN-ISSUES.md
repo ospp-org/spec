@@ -283,10 +283,10 @@ until its cryptographic construction has passed the review of
     station did not restart the server settles an online session on the SessionEnded the station replays after its
     bay reports, and closes it on the report only after a boot on which the station restarted, or at once on `5113
     OUTCOME_INDETERMINATE` ([`connection-lost.md` §6](spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect)
-    step 3). On the timing this is what
+    step 3). On the timing, on boots whose `uptimeSeconds` does not contradict their `bootReason`, this is what
     [`authorize-offline-pass.md` §6](spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4a does
-    for a Partial-B session: it waits for the end record after a `Reconnect` and settles on the report after any
-    other boot. On the figure it is not: the online close on a `Faulted` report, `5113` included, is the `Fault` row
+    for a Partial-B session: it waits for the end record after a `Reconnect` and settles on the report after a
+    reboot. On the figure it is not: the online close on a `Faulted` report, `5113` included, is the `Fault` row
     of *Settlement by Service Kind* ([`04-flows.md` §6](spec/04-flows.md#settlement-by-service-kind)) — a
     `UserDuration` session refunded in full below `faultFullRefundThreshold`, a `FixedDuration` or `MultiUnit`
     session refunded in full — where the Partial-B clause of

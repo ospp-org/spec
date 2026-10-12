@@ -1163,9 +1163,9 @@ of by what was delivered.
 | Offline pass revoked mid-session (SessionEnded `reason=Deauthorized`) | Full | 100% (no charge — session not billable; `creditsCharged` MUST be 0) |
 | Operator ended it (SessionEnded `reason=OperatorStopped`) | Partial (pro-rated) | Based on time used, recomputed by the server (the event's `creditsCharged` is advisory). The customer received a real wash and is billed for it; the operator's reason for ending it is not the customer's concern. |
 | Timer ran to completion (SessionEnded `reason=TimerExpired`) | None | Charge full pre-authorized amount (user received the booked duration regardless of meter values) |
-| If less than `faultFullRefundThreshold` of duration delivered AND reason=`Fault` | Full | 100% (override pro-rate) |
+| If less than `faultFullRefundThreshold` of duration delivered AND the service reported as faulted (scope below) | Full | 100% (override pro-rate) |
 
-> **Refund scope clarification:** The low-delivery override applies **only** to a service reported as faulted: a SessionEnded with reason `Fault`, or a bay reported `Faulted` on which the server closes a session no end record can reach ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3), on the estimated time delivered. It does **not** apply to `TimerExpired` sessions: a session that runs to its booked timer is billed for the full pre-authorized duration regardless of meter values, because the user received the time they paid for. The override formula is `actualDurationSeconds < faultFullRefundThreshold × durationSeconds`, evaluated against the booked `durationSeconds` from StartService.
+> **Refund scope clarification:** The low-delivery override applies **only** to a service reported as faulted: a SessionEnded with reason `Fault`, or a bay reported `Faulted` on which the server closes a session ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3), on the estimated time delivered. It does **not** apply to `TimerExpired` sessions: a session that runs to its booked timer is billed for the full pre-authorized duration regardless of meter values, because the user received the time they paid for. The override formula is `actualDurationSeconds < faultFullRefundThreshold × durationSeconds`, evaluated against the booked `durationSeconds` from StartService.
 >
 > **`faultFullRefundThreshold` (explicit, configurable product parameter — default `0.50`).** The fraction of the booked duration below which a `Fault`-terminated session is deemed to have delivered nothing of value and is refunded in full. This is a **product decision** — *below what fraction is the delivered service worthless?* — so it is a **named, documented, server-configurable value**, never a constant baked into an implementation. A conforming server **MUST** read it from configuration rather than from a compiled-in constant, and **MUST** ship `0.50` as the configured default (the historical "< 50%" rule) so that a server nobody has tuned behaves as this specification describes. Operators MAY set another value; doing so is a deliberate product choice, not a conformance failure.
 >
@@ -1443,7 +1443,7 @@ sequenceDiagram
 |-----------|-------|
 | SSP | Reconnected, boot accepted, normal operation |
 | Server | Station marked online, bay statuses updated, buffered events processed |
-| Sessions (if any were active during outage) | Settled on the replayed SessionEnded, or on the bay's report when no end record can come |
+| Sessions (if any were active during outage) | Settled on the SessionEnded the station replays, or on the bay's report after a boot on which the station restarted, or on `5113` |
 
 ---
 
