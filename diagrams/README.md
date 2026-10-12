@@ -358,7 +358,7 @@ sequenceDiagram
         Note over Station,Server: The station's replay has ended
     end
 
-    Note over Station,Server: Normal operation resumes
+    Note over Station,Server: Station fully recovered — its replay is over
 ```
 
 ---

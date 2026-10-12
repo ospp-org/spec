@@ -1408,7 +1408,7 @@ sequenceDiagram
     SSP->>Server: Heartbeat REQUEST [MSG-008], the first after the boot
     Note over SSP,Server: Sent once the broker has acknowledged the reports<br/>and the replay: the end of the replay
 
-    Note over SSP: Resume normal operation
+    Note over SSP: Heartbeats every heartbeatIntervalSec (commands answered since the Accepted)
 ```
 
 ### Happy Path
@@ -1822,7 +1822,7 @@ Consolidated timeout values across all flows:
 | MQTT CONNECT | 10s | Reconnect with backoff |
 | BootNotification | 30s | Wait 60s, retry |
 | Heartbeat | 30s | Log, continue |
-| Offline detection | 3.5 × heartbeatIntervalSec | Mark station offline |
+| Offline detection | 3.5 × heartbeatIntervalSec; between a boot answered `Accepted` and the station's first Heartbeat after it, the longer of that and 360 s ([`connection-lost.md` §4.2](profiles/core/connection-lost.md#42-heartbeat-timeout) rule 2) | Mark station offline |
 | ReserveBay | 5s | Session → failed |
 | Reserved → 3DS (web) | 3 min | CancelReservation |
 | Reserved → start (mobile) | 30s | CancelReservation |
