@@ -446,14 +446,14 @@ Last connection: 2026-02-13 10:00:03 UTC
      |--------------------------------->|--------------------------------->|
      |                                  |                                  | update bay map
      | reports acknowledged, nothing    |                                  |
-     | to replay: first Heartbeat       |                                  |
+     | to replay: first Heartbeat; the  |                                  |
+     | 30 s heartbeat timer starts here |                                  |
      |                                  |                                  |
      | Heartbeat REQUEST                |                                  |
      |--------------------------------->|--------------------------------->|
      |                                  |  Heartbeat RESPONSE              |
      |<---------------------------------|<---------------------------------|
-     | check clock drift, start the     |                                  |
-     | heartbeat timer (30 seconds)     |                                  |
+     | check clock drift                |                                  |
      |                                  |                                  |
 ```
 

@@ -325,9 +325,11 @@ until its cryptographic construction has passed the review of
     acknowledged (step 12). Path A4's *"after step 11"* therefore falls before the Heartbeat, as the rule requires,
     but its *"proceeds through the normal boot sequence first"* reads as the whole sequence, step 12 included. The
     [offline reconciliation of §10](spec/04-flows.md#10-offline--online-reconciliation), which begins once *"SSP boot
-    is complete"*, now reads as after step 10 and agrees, as do the reconnection flow of
-    [§9](spec/04-flows.md#9-error-recovery--reconnection) and [flow 11](examples/flows/11-reconciliation.md), which
-    send the transactions before the station's Heartbeat.
+    is complete"*, now reads as after step 10 and agrees, as does the reconnection flow of
+    [§9](spec/04-flows.md#9-error-recovery--reconnection), which sends the transactions before the station's
+    Heartbeat. [Flow 11](examples/flows/11-reconciliation.md) agrees on the order only: it sends its Heartbeat after
+    the transactions, but about six seconds after its last TransactionEvent, where the rule sends it at once, as it
+    was off the earlier rule too, which sent it one interval after the boot.
 
 ---
 
