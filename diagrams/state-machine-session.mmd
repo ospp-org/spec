@@ -14,7 +14,8 @@ stateDiagram-v2
 
     Active --> Stopping : StopService requested<br/>(user, server, or timer)
     Active --> Completed : SessionEnded EVENT [MSG-040]<br/>(Local, LocalOutOfCredit)
-    Active --> Failed : Hardware fault (SessionEnded EVENT [MSG-040])<br/>Connection lost (after grace period, not Partial B)<br/>Deauthorized (RevocationEpoch bump)
+    Active --> Failed : Hardware fault (SessionEnded EVENT [MSG-040])<br/>Deauthorized (RevocationEpoch bump)
+    Active --> Completed : Connection lost past the grace period<br/>(not Partial B), marked as an anomaly
     Active --> Completed : Partial B authorized duration ended<br/>with no end record
 
     Stopping --> Completed : Station confirms stop<br/>StopService RESPONSE (user stop)<br/>or SessionEnded EVENT [MSG-040] (timer expiry)
@@ -52,11 +53,11 @@ stateDiagram-v2
         Receipt generated
         Wallet debited for actual usage
         Unused credits refunded
+        Connection lost past the grace period: no refund,
+        the full amount charged, the close marked as an anomaly
     end note
 
     note right of Failed
         Refund initiated if payment was captured
         Partial refund based on last MeterValues
-        Connection lost past the grace period: no refund,
-        the full amount charged, the close marked as an anomaly
     end note
