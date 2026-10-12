@@ -1158,7 +1158,7 @@ of by what was delivered.
 | All retry attempts fail | Full | 100% |
 | ACK_TIMEOUT (no response) | Full | 100% |
 | Hardware error during active (SessionEnded `reason=Fault`) | Partial (pro-rated) | Based on time used |
-| Station offline during active, not back by the end of `ConnectionLostGracePeriod` | None | Charge full pre-authorized amount (the station runs the service to its end through the loss), and mark the close as an anomaly — not a Partial-B session, which settles on the first of its end records, or is closed at the end of its authorized duration ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) |
+| Station offline during active, or answered `Pending`, and not back with a boot answered `Accepted` by the end of `ConnectionLostGracePeriod` | None | Charge full pre-authorized amount (the station runs the service to its end through the loss), and mark the close as an anomaly — not a Partial-B session, which settles on the first of its end records, or is closed at the end of its authorized duration ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) |
 | Customer stop from the app over BLE (SessionEnded `reason=Local`) | Partial (pro-rated) | Based on time used, recomputed by the server (the event's `creditsCharged` is advisory) |
 | Offline credit exhausted mid-session (SessionEnded `reason=LocalOutOfCredit`) | Full | 100% (no charge — `creditsCharged` MUST be 0) |
 | Offline pass revoked mid-session (SessionEnded `reason=Deauthorized`) | Full | 100% (no charge — session not billable; `creditsCharged` MUST be 0) |
@@ -1439,6 +1439,7 @@ sequenceDiagram
 | TLS certificate expired during outage | SSP cannot reconnect — await manual certificate update |
 | Broker permanently unavailable | SSP operates in BLE-only mode indefinitely |
 | BootNotification `Rejected` after reconnect | Read the `errorCode`: the causes are the set [§4.1](07-errors.md#41-station--server-mqtt-actions) assigns to BootNotification. Decommissioning is **not** among them — it is out of scope ([Chapter 00 §1.3](00-introduction.md#13-out-of-scope)) — and the SSP **MUST** keep retrying per CORE-011 rather than await intervention |
+| BootNotification `Pending` after reconnect | The SSP is not back for its sessions: it replays and reports nothing while `Pending`, and the server keeps them on the recovery timer and closes them `completed`, charged in full and marked as an anomaly, when no boot is answered `Accepted` before it expires ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) |
 | Session completed during offline | SSP replays the session's buffered SessionEnded after the post-boot reports, and the server settles the session on it ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3) |
 
 ### Postconditions
@@ -1447,7 +1448,7 @@ sequenceDiagram
 |-----------|-------|
 | SSP | Reconnected, boot accepted, normal operation |
 | Server | Station marked online, bay statuses updated, buffered events processed |
-| Sessions (if any were active during outage) | Settled on the SessionEnded the station replays, or on the bay's report after a boot on which the station restarted, or on `5113` |
+| Sessions (if any were active during outage) | Settled on the SessionEnded the station replays or sends when the resumed wash ends, or on the bay's report once the station's replay has ended, or on `5113`; ended at the boot by a `RemoteReset` or a `FirmwareUpdate` ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3) |
 
 ---
 

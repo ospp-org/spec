@@ -16,6 +16,7 @@ stateDiagram-v2
     Active --> Completed : SessionEnded EVENT [MSG-040]<br/>(Local, LocalOutOfCredit)
     Active --> Failed : Hardware fault (SessionEnded EVENT [MSG-040])<br/>Deauthorized (RevocationEpoch bump)
     Active --> Completed : Connection lost past the grace period<br/>(not Partial B), marked as an anomaly
+    Active --> Completed : Booked duration ended after a boot<br/>that keeps the session, no end record
     Active --> Completed : Partial B authorized duration ended<br/>with no end record
 
     Stopping --> Completed : Station confirms stop<br/>StopService RESPONSE (user stop)<br/>or SessionEnded EVENT [MSG-040] (timer expiry)

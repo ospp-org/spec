@@ -277,16 +277,29 @@ until its cryptographic construction has passed the review of
     connection-lost row said the server reconciled the grace period's close on reconnect via TransactionEvent, and
     now says what an online reconnection does. Which sessions a TransactionEvent reports is offline text, so the
     two definitions wait for the freeze to end.
-24. **An online session whose bay is reported free or faulted after a reconnection settles on its replayed end record
-    since 2026-10-12, and the frozen sites that settle a rebooted Partial-B session reported `Faulted` with `5113`
-    as online does give a figure the online close no longer uses.** By Gabi's decision, after a boot on which the
-    station did not restart the server settles an online session on the SessionEnded the station replays after its
-    bay reports, and closes it on the report only after a boot on which the station restarted, or at once on `5113
-    OUTCOME_INDETERMINATE` ([`connection-lost.md` §6](spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect)
-    step 3). On the timing, on boots whose `uptimeSeconds` does not contradict their `bootReason`, this is what
-    [`authorize-offline-pass.md` §6](spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4a does
-    for a Partial-B session: it waits for the end record after a `Reconnect` and settles on the report after a
-    reboot. On the figure it is not: the online close on a `Faulted` report, `5113` included, is the `Fault` row
+24. **An online session whose bay is reported free or faulted after a reconnection settles on its end record since
+    2026-10-12, after a restart that keeps it too, and the frozen sites that settle a rebooted Partial-B session on
+    its report differ from it in timing and in figure.** By Gabi's decisions, after a boot answered `Accepted` that
+    keeps the session, any `bootReason` but `RemoteReset` and `FirmwareUpdate` and so a restart with `PowerOn`,
+    `Watchdog`, `ErrorRecovery`, `ManualReset` or `ScheduledReset` too, the server settles an online session on its
+    SessionEnded, replayed or sent when the resumed wash ends; a report of its bay settles it only when the server
+    processes the report after the station's replay has ended, which the station's first Heartbeat after the boot
+    marks; a session whose end record does not come closes as one whose timer expired, a full charge; and `5113
+    OUTCOME_INDETERMINATE` settles it at once
+    ([`connection-lost.md` §6](spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3). On the
+    timing, [`authorize-offline-pass.md` §6](spec/profiles/offline/authorize-offline-pass.md#6-processing-rules)
+    rule 4a now differs after a reboot: it waits for a Partial-B session's end record after a `Reconnect` only, and
+    after a reboot settles the session on the report, *"as it settles an online session so reported"*, an end record
+    the station replays after that report a duplicate. The frozen Partial-B clause of the `Available` bullet of
+    `connection-lost.md` §6 step 3,
+    [`boot-notification.md` §5.2](spec/profiles/core/boot-notification.md#52-bootreason--seven-boots-and-one-non-boot)
+    rule 4, whose Partial-B session *"follows the online rules exactly"*, and
+    [TC-OFF-005](conformance/test-cases/offline/TC-OFF-005.md) expected result 22 and failure criterion 26 say the
+    same, and [the decided record of the Partial-B reboot](#decided--a-station-reboot-during-a-partial-b-session-follows-the-online-boot-rules-the-six-reasons-that-keep-an-online-session-keep-it-and-remotereset-and-firmwareupdate-end-it) reads the online settlement as the
+    report's; until this date they agreed with online on boots whose `uptimeSeconds` does not contradict their
+    `bootReason`. On the figure they differ too: a session an online station lost in a restart closes in full, as
+    one whose timer expired, where they settle a Partial-B session so reported pro-rata on the time delivered; and
+    the online close on a `Faulted` report, `5113` included, is the `Fault` row
     of *Settlement by Service Kind* ([`04-flows.md` §6](spec/04-flows.md#settlement-by-service-kind)) — a
     `UserDuration` session refunded in full below `faultFullRefundThreshold`, a `FixedDuration` or `MultiUnit`
     session refunded in full — where the Partial-B clause of
