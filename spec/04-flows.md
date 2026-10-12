@@ -1343,7 +1343,7 @@ The Server MUST track the time of the last message it accepted from each station
 |-----------|---------------|
 | No message for 1 heartbeat interval | No action (network jitter) |
 | No message for 2 heartbeat intervals | Mark station as `degraded` (internal) |
-| No message for `heartbeatIntervalSec * 3.5`, or, between a boot answered `Accepted` and the station's first Heartbeat after it, for the longer of that and 330 s ([`connection-lost.md` §4.2](profiles/core/connection-lost.md#42-heartbeat-timeout) rule 2) | Mark station as `Offline` |
+| No message for `heartbeatIntervalSec * 3.5`, or, between a boot answered `Accepted` and the station's first Heartbeat after it, for the longer of that and 360 s ([`connection-lost.md` §4.2](profiles/core/connection-lost.md#42-heartbeat-timeout) rule 2) | Mark station as `Offline` |
 | ConnectionLost LWT [MSG-011] received | Immediately mark as `Offline` |
 | Station sends BootNotification [MSG-001] | Mark as `Online`, process boot sequence |
 

@@ -371,7 +371,7 @@ OSPP uses two complementary liveness mechanisms:
 
 - After boot, the station MUST send a Heartbeat REQUEST every `heartbeatIntervalSec` seconds (default: 30s, configurable via BootNotification response or ChangeConfiguration), counted from its first Heartbeat, which it sends once the broker has acknowledged its post-boot reports and every message it replays, and not before (§4.1 step 12; [`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4).
 - The server responds with `serverTime` for clock synchronization.
-- If the server does not receive a Heartbeat (or any message) from a station for **3.5 × heartbeatIntervalSec**, it MUST consider the station offline, except between a boot answered `Accepted` and the station's first Heartbeat after it, when the threshold is the longer of that and 330 s ([`connection-lost.md` §4.2](profiles/core/connection-lost.md#42-heartbeat-timeout) rule 2).
+- If the server does not receive a Heartbeat (or any message) from a station for **3.5 × heartbeatIntervalSec**, it MUST consider the station offline, except between a boot answered `Accepted` and the station's first Heartbeat after it, when the threshold is the longer of that and 360 s ([`connection-lost.md` §4.2](profiles/core/connection-lost.md#42-heartbeat-timeout) rule 2).
 
 These two mechanisms are intentionally redundant. MQTT keep-alive detects transport failures; OSPP heartbeat detects application-level hangs and provides clock sync.
 
@@ -1067,7 +1067,7 @@ All timestamps MUST use **ISO 8601** format with **millisecond precision** and *
 | Certificate expired | MQTT | TLS error | Log `1004` with `details.cause: expired`, alert operator |
 | CONNACK rejected | MQTT | MQTT reason code | Log reason, retry with backoff |
 | MQTT connection lost | MQTT | PINGRESP timeout / TCP reset | Continue BLE, buffer messages, backoff |
-| Keep-alive timeout (server side) | MQTT | No message, a Heartbeat or any other, for 3.5 × interval (between a boot answered `Accepted` and the first Heartbeat after it, the longer of that and 330 s) | Mark station offline, fire LWT |
+| Keep-alive timeout (server side) | MQTT | No message, a Heartbeat or any other, for 3.5 × interval (between a boot answered `Accepted` and the first Heartbeat after it, the longer of that and 360 s) | Mark station offline, fire LWT |
 | Message expired | MQTT | Message Expiry Interval | Discard, log warning |
 | Invalid JSON received | MQTT / BLE | JSON parse error | Log `1005` and discard. No reply is possible: the `messageId` cannot be read, and [07-errors §2.1](07-errors.md#21-mqtt-error-response) requires a RESPONSE to echo it. MAY be reported as an unsolicited EVENT ([07-errors §2.2](07-errors.md#22-mqtt-error-event)) |
 | Unknown action | MQTT / BLE | Action not recognized | If the action is known to the protocol but unsupported here, reply `status: "Rejected"` with `1006` on that action's RESPONSE (§2.1). If the action is unknown to the protocol, no RESPONSE schema exists — log `1006` and discard. MAY be reported as an unsolicited EVENT (§2.2) |
