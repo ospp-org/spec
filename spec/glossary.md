@@ -183,8 +183,9 @@ specification. Where a definition involves a requirement, normative language
 **Heartbeat**
 : A periodic liveness message sent by the station to the server. The heartbeat
   interval is configured by the server in the `BootNotification` response and
-  **MUST** be honored by the station. A missed heartbeat triggers server-side
-  alerting. See the [Core profile](profiles/core/README.md).
+  **MUST** be honored by the station. A station that sends no message the server
+  accepts, a heartbeat or any other, for 3.5 × the interval, or for 360 s during its
+  replay after a boot when that is longer, triggers server-side alerting. See the [Core profile](profiles/core/README.md).
 
 **HKDF (HMAC-based Key Derivation Function)**
 : A key derivation function defined in RFC 5869. OSPP uses HKDF-SHA256 to derive

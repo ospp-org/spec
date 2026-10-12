@@ -118,6 +118,7 @@ stateDiagram-v2
     Active --> Completed : SessionEnded (Local, LocalOutOfCredit)
     Active --> Failed : Hardware fault / Deauthorized
     Active --> Completed : Connection lost past the grace period (not Partial B), an anomaly
+    Active --> Completed : Booked duration ended after a boot that keeps the session, no end record
     Active --> Completed : Partial B authorized duration ended with no end record
 
     Stopping --> Completed : Station confirms stop
@@ -352,9 +353,12 @@ sequenceDiagram
         Server->>Server: Dedup, receipt signature, gate, settle, score<br/>(txCounter recorded, not gated)
         Server-->>Broker: TransactionEvent RESPONSE (Accepted)
         Broker-->>Station: Accepted
+        Station->>Broker: Heartbeat REQUEST, the first after the boot
+        Broker->>Server: Heartbeat [MSG-008]
+        Note over Station,Server: The station's replay has ended
     end
 
-    Note over Station,Server: Normal operation resumes
+    Note over Station,Server: Station fully recovered — its replay is over
 ```
 
 ---

@@ -220,8 +220,9 @@ Power on
     - Pending → **restricted state**: receive and ANSWER commands, originate nothing but BootNotification retries and a SignCertificate renewal, serve no customers; wait retryInterval, re-send BootNotification. Normal operation begins only after receiving `Accepted`
     - Timeout → wait 60s, retry
   → PUBLISH StatusNotification for EACH bay
-  → Start heartbeat timer
-  → Enter normal operation
+  → Enter normal operation (accept and answer commands from here)
+  → Replay what was buffered while the station could not send it, if anything
+  → Once the broker has acknowledged (PUBACK) all of it: PUBLISH the first Heartbeat, then start the heartbeat timer
 ```
 
 **Critical rules:**
@@ -380,7 +381,7 @@ If MQTT drops during an active session:
 3. Buffer the **MUST-buffer** categories — TransactionEvent (min 1000, **never** discard), SessionEnded (min 1000, **never** discard — it is the sole billing source for a session that ended with no StopService to answer), SessionStarted (one per bay, **never** discard — the server keys a Partial-B session's authorized duration on it), SecurityEvent (200, FIFO). StatusNotification and MeterValues are **regenerable and MAY be discarded**; do not spend the buffer on them. The `MUST` storage level is **512 KB** — and **it does not hold the categories in this bullet.** [`01-architecture.md` §6.5](../spec/01-architecture.md#65-offline-message-buffering) derives what they cost: 1000 TransactionEvents (1.3 MB) + 1000 SessionEnded (250 KB) + 64 SessionStarted (16 KB) + 200 SecurityEvents (120 KB) + overhead = **~1.7 MB**, and §6.5 records the gap between the two as OPEN because raising a mandatory storage level changes the bill of materials of every station. **Size new hardware to the derived figure, not to the 512 KB level row.** At 90% of the TransactionEvent buffer, reject new StartService with `5111 BUFFER_FULL`; at 100%, enter degraded mode and refuse all new sessions (§6.5)
 4. Attempt reconnection with exponential backoff: 1s → 2s → 4s → 8s → 16s → 30s max, with 30% jitter
 5. On reconnect: Full boot sequence (BootNotification, StatusNotification per bay)
-6. Flush buffered messages after boot completes
+6. Flush buffered messages after the StatusNotifications, and send the first Heartbeat only once the broker has acknowledged all of them: the server reads it as the end of the replay ([`connection-lost.md` §6](../spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4)
 
 ### 2.8 Offline Mode (BLE)
 
@@ -696,7 +697,7 @@ TriggerMessage [MSG-026] lets the server request the station to send a specific 
 
 1. Server sends TriggerMessage REQUEST with `requestedMessage` (and optional `bayId`)
 2. Station responds: `Accepted`, `Rejected`, or `NotImplemented`
-3. If `Accepted`, station MUST send the requested message within **5 seconds**
+3. If `Accepted`, station **MUST** send the requested message within **5 seconds**, except a `Heartbeat` requested during its replay after a boot, which it sends at the end of that replay ([`trigger-message.md` §5](../spec/profiles/core/trigger-message.md#5-processing-rules) rule 1)
 
 **Key rules:**
 - `NotImplemented` means the station doesn't support triggering this message type — it's a status value, not an error code
@@ -773,18 +774,20 @@ QoS: 1 (always)
    - `configuration` (key-value pairs): any overrides, and — for an Offline/BLE station, on every `Accepted` boot — the five offline keys: the whole server key set `OfflinePassPublicKey`, the platform `RevocationEpoch`, and the station's own `OfflineModeEnabled`, `OfflineWindowHours` and `OfflineTransactionLimit`, which is how a station that was offline or missed a push catches up ([`08-configuration.md` §8.3](../spec/08-configuration.md#83-configuration-via-bootnotification)) ([`06-security.md` §6.6](../spec/06-security.md#66-epoch-based-revocation), [§6.7](../spec/06-security.md#67-server-signing-key-rotation-ecdsa-p-256))
 6. Or respond `Pending` — for a station awaiting operator approval — with `serverTime`, `heartbeatIntervalSec`, **`retryInterval`**, and **`sessionKey`**. Both are schema-enforced: `boot-notification-response.schema.json` requires `sessionKey` for `Accepted` **and** `Pending`, and `retryInterval` for `Pending`. A `Pending` station answers signed commands — that channel is how the operator repairs whatever is holding the boot — and it cannot answer them without a key. A `Pending` response without one is schema-invalid, and a conforming station must treat it as malformed and refuse to enter `Pending` ([`boot-notification.md` §5.3](../spec/profiles/core/boot-notification.md)), so the approval window never opens and the station boot-loops.
 7. Mark station as online in your database, and store its clock offset: this BootNotification's envelope `timestamp` minus your receive time. The receipts of the offline period that just ended are judged through it ([`reconciliation.md` §6.8](../spec/profiles/offline/reconciliation.md#68-station-clock-offset))
+8. A station answered `Pending` is not back for its sessions: it replays and reports nothing. Keep its sessions on the `ConnectionLostGracePeriod` recovery timer, running from the start of its absence, the disconnection, or this boot when the station was back before it, and close them as its expiry does when no boot is answered `Accepted` before it ([`connection-lost.md` §5](../spec/profiles/core/connection-lost.md#5-server-side-handling)) — not a Partial-B session, which closes at the end of its authorized duration
 
 **On Heartbeat REQUEST:**
 
 1. Respond with `serverTime` — this keeps the station's clock synchronized. Maximum acceptable clock skew: **300 seconds**. Exceeding this triggers a `ClockSkew` SecurityEvent. Station SHOULD use NTP for time synchronization between heartbeats.
-2. Update "last seen" timestamp in your database
-3. If you haven't received a heartbeat in `3.5 × heartbeatIntervalSec` (default 105s), mark the station as offline
+2. Update the station's "last seen" timestamp in the database, and do the same on every other message of the station's that the server accepts, a signed one once its MAC has verified, but not on the ConnectionLost the broker publishes: the station sends no Heartbeat during its replay after a boot ([`connection-lost.md` §4.2](../spec/profiles/core/connection-lost.md#42-heartbeat-timeout) rule 1)
+3. If no message, a heartbeat or any other, has arrived from the station in `3.5 × heartbeatIntervalSec` (default 105s), mark the station as offline; between a boot answered `Accepted` and its first Heartbeat after it, wait for the longer of that and 360 s, since the server may take up to 60 s to answer a replayed TransactionEvent `RetryLater` and the station then waits out a backoff of up to 300 s ([`connection-lost.md` §4.2](../spec/profiles/core/connection-lost.md#42-heartbeat-timeout) rule 2)
+4. The first Heartbeat after a boot answered `Accepted` marks the end of the station's replay ([`connection-lost.md` §6](../spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4): from it on, a report of a bay as `Available` or `Faulted` settles the session it contradicts at once (step 3 there), and a report processed before it still waits for the session's SessionEnded. Where the server's consumers can process a station's messages out of order, process this Heartbeat after every message the station published before it
 
 **On ConnectionLost EVENT (LWT):**
 
 1. Mark the station as offline
 2. Check for active sessions on this station
-3. If sessions exist, start the `ConnectionLostGracePeriod` recovery timer for each — not for a Partial-B session, which the loss does not end and which closes at the end of its authorized duration — as [`connection-lost.md` §5](../spec/profiles/core/connection-lost.md#5-server-side-handling) states it: a station back before it expires is reconciled on the bay states it reports and on the SessionEnded it replays after them: that event settles a session its bay reports free or faulted, and the report settles it only after a boot on which the station restarted, or on `5113` ([§6](../spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect)); otherwise close the session `completed`, charge the full pre-authorized amount and mark the close as an anomaly — do NOT auto-refund. A SessionEnded the station sends after that close is ignored, the session already settled ([`05-state-machines.md` §3.3](../spec/05-state-machines.md#33-transition-table))
+3. If sessions exist, start the `ConnectionLostGracePeriod` recovery timer for each — not for a Partial-B session, which the loss does not end and which closes at the end of its authorized duration — as [`connection-lost.md` §5](../spec/profiles/core/connection-lost.md#5-server-side-handling) states it: a station back before it expires, with a boot answered `Accepted`, is reconciled on the bay states it reports and on the SessionEnded it replays after them: that event settles a session its bay reports free or faulted, a report processed after the station's replay has ended settles it, and the report it holds does not, unless it is `Faulted` with `5113` ([§6](../spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect)); otherwise close the session `completed`, charge the full pre-authorized amount and mark the close as an anomaly — do NOT auto-refund. A SessionEnded the station sends after that close is ignored, the session already settled ([`05-state-machines.md` §3.3](../spec/05-state-machines.md#33-transition-table))
 
 ### 3.4 Session Management (Online)
 
@@ -1179,9 +1182,9 @@ If you are auditing an existing implementation, the question to ask is narrow: *
 
 ### 6.5 Server Pitfalls
 
-**Auto-refunding when the station goes offline.** Don't. The station continues the session. If it reconnects within `ConnectionLostGracePeriod`, the session is reconciled on what it reports and replays; if it does not, the session closes `completed` at the full pre-authorized amount, marked as an anomaly ([`connection-lost.md` §5](../spec/profiles/core/connection-lost.md#5-server-side-handling)) — a Partial-B session runs on to the end of its authorized duration instead. Auto-refunding creates double-spend: the user got the service AND got the credits back.
+**Auto-refunding when the station goes offline.** Don't. The station continues the session. If it is back within `ConnectionLostGracePeriod`, with a boot answered `Accepted`, the session is reconciled on what it reports and replays; if it is not, the session closes `completed` at the full pre-authorized amount, marked as an anomaly ([`connection-lost.md` §5](../spec/profiles/core/connection-lost.md#5-server-side-handling)) — a Partial-B session runs on to the end of its authorized duration instead. Auto-refunding creates double-spend: the user got the service AND got the credits back.
 
-**Settling on the bay report after a reconnection.** The station reports its bays first and replays the SessionEnded it buffered after them, so a bay reported `Available` or `Faulted` there is not the delivery record of an online session: a wash that ran to its timer while the station was away is charged in full on its replayed SessionEnded. After a boot on which the station did not restart, settle the session on that SessionEnded, sell the bay to no one else until it arrives, and close the session as one whose timer expired if it has not come within a bounded grace after the later of the end of its booked duration and the boot. Settle on the report only after a boot on which the station restarted, which may have lost the session, and at once on `5113 OUTCOME_INDETERMINATE`, which no SessionEnded follows ([`connection-lost.md` §6](../spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect); [`boot-notification.md` §5.2](../spec/profiles/core/boot-notification.md#52-bootreason--seven-boots-and-one-non-boot) rule 3 decides which boot is a restart). A Partial-B session settles as [`authorize-offline-pass.md` §6](../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4a states.
+**Settling on the bay report after a reconnection.** The station reports its bays first and replays the SessionEnded it buffered after them, so a bay reported `Available` or `Faulted` there is not the delivery record of an online session: a wash that ran to its timer while the station was away is charged in full on its replayed SessionEnded. After a boot answered `Accepted` that keeps the session, every `bootReason` but `RemoteReset` and `FirmwareUpdate`, which end it, and any reason its uptime contradicts ([`boot-notification.md` §5.2](../spec/profiles/core/boot-notification.md#52-bootreason--seven-boots-and-one-non-boot) rule 3), do not settle on a report processed before the station's first Heartbeat after the boot, which marks the end of its replay: settle the session on its SessionEnded, replayed or sent when the resumed wash ends, sell the bay to no one else until it arrives, and close the session as one whose timer expired if it has not come within a bounded grace after the latest of the end of its booked duration, the boot, the end of the replay and, where the station restarted at a boot that kept it, the latest such boot plus that duration (a wash it resumed ends no later), or, when the replay does not end, within a longer bounded allowance after the latest of the others. A report processed after that Heartbeat settles the session at once, and so does a report of `Faulted` with `5113 OUTCOME_INDETERMINATE`, which no SessionEnded follows, after any boot ([`connection-lost.md` §6](../spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect)). A Partial-B session settles as [`authorize-offline-pass.md` §6](../spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4a states.
 
 **Not implementing circuit breakers.** If a station is unresponsive, every new StartService attempt will debit the wallet, wait 10 seconds, timeout, and refund. That's a terrible user experience. After 3 consecutive timeouts, stop trying — return `6002 ACK_TIMEOUT` immediately without debiting.
 
@@ -1255,7 +1258,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** Do NOT process commands while `Booting` or `Rejected`; DO answer them while `Pending`, refusing StartService/ReserveBay with `3002`
 - [ ] **[MUST]** Sync clock from BootNotification RESPONSE `serverTime`
 - [ ] **[MUST]** StatusNotification for each bay after boot
-- [ ] **[MUST]** Heartbeat at server-specified `heartbeatIntervalSec`
+- [ ] **[MUST]** First Heartbeat after a boot as soon as the post-boot StatusNotifications and the replay are acknowledged, and none before; then at server-specified `heartbeatIntervalSec`
 - [ ] **[MUST]** Compare Heartbeat RESPONSE `serverTime` against the local clock on every heartbeat
 - [ ] **[SHOULD]** Correct the clock when that drift exceeds 2 seconds (**[MUST]** log `5106 CLOCK_ERROR` above 5 minutes)
 - [ ] **[MUST]** Bay state machine: the 21 `Station` rows of [`05-state-machines.md` §2.3](../spec/05-state-machines.md#23-transition-table) — all of them, and none of the 6 `Server` rows. **`Unknown → Reserved` is one of them**: a station that rebooted holding a `Confirmed` reservation reports `Reserved`, and every count that said 20 was written before that row existed
@@ -1271,7 +1274,8 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** Server is authoritative billing engine (recompute credits, don't trust station)
 - [ ] **[MUST]** Full refund on any failure after wallet debit
 - [ ] **[MUST]** Do NOT auto-refund when station goes offline during active session
-- [ ] **[MUST]** Mark station offline after `3.5 × heartbeatIntervalSec` without heartbeat
+- [ ] **[MUST]** After a boot answered `Accepted` that keeps a session, settle it on its SessionEnded; a report of the bay processed after the station's first Heartbeat after the boot settles it, and one held before it does not, unless it is `Faulted` with `5113`; a `Pending` station is not back for its sessions ([`connection-lost.md` §6](../spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3)
+- [ ] **[MUST]** Mark station offline after `3.5 × heartbeatIntervalSec` without any message, a heartbeat or any other, and between a boot answered `Accepted` and the station's first Heartbeat after it only after the longer of that and 360 s
 - [ ] **[MUST]** Circuit breaker for station commands (3 timeouts → OPEN)
 - [ ] **[MUST]** Circuit breaker for payment processor (5 failures/60s → OPEN)
 - [ ] **[MUST]** Webhook HMAC-SHA512 verification (timing-safe)

@@ -222,7 +222,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
 
 | Status | Station Action |
 |--------|---------------|
-| `Accepted` | Sync clock → apply configuration → send StatusNotification per bay → start heartbeat → enter normal operation |
+| `Accepted` | Sync clock → apply configuration → send StatusNotification per bay → enter normal operation → replay what it buffered → the first Heartbeat once both are acknowledged, then the heartbeat timer ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4) |
 | `Rejected` | Enter the `Rejected` restricted state — refuse commands, send nothing but retries, serve no customers → wait `retryInterval` seconds → retry BootNotification |
 | `Pending` | Enter the `Pending` restricted state — **answer** commands, originate nothing but BootNotification retries and a SignCertificate [MSG-022] renewal, refuse StartService/ReserveBay with `3002 BAY_NOT_READY` → wait `retryInterval` seconds → retry BootNotification. See [Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states) |
 
@@ -943,7 +943,7 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
 | **Message Type** | REQUEST / RESPONSE |
 | **Topic (publish)** | `ospp/v1/stations/{station_id}/to-server` |
 | **Topic (reply)** | `ospp/v1/stations/{station_id}/to-station` |
-| **Trigger** | Timer fires every `heartbeatIntervalSec` seconds (from [BootNotification](#11-bootnotification) RESPONSE) |
+| **Trigger** | Timer fires every `heartbeatIntervalSec` seconds (from [BootNotification](#11-bootnotification) RESPONSE), counted from the first Heartbeat after the boot, which the station sends once its post-boot reports and its replay have been acknowledged ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4) |
 | **Expected Response** | Heartbeat RESPONSE |
 | **Timeout** | 30 seconds |
 | **Idempotency** | Yes — always safe to retry |
@@ -951,7 +951,7 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
 
 The heartbeat serves two purposes: (1) keep-alive signal proving the station is connected and responsive, and (2) clock synchronization via the server's `serverTime` response.
 
-The server **MUST** track the last heartbeat time per station. If no message is received for **3.5 × `heartbeatIntervalSec`** seconds, the server **MUST** treat the station as disconnected — [`heartbeat.md` §5](profiles/core/heartbeat.md) rule 4 and [CORE-007](profiles/core/README.md). (This summary previously said `SHOULD`, weakening the rule it summarises.)
+The server **MUST** track the time of the last message it accepted from each station, a Heartbeat or any other: a station sends no Heartbeat during its replay after a boot ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4). If no message is received for **3.5 × `heartbeatIntervalSec`** seconds, the server **MUST** treat the station as disconnected, between a boot answered `Accepted` and the station's first Heartbeat after it only once none has come for the longer of that and 360 s ([`connection-lost.md` §4.2](profiles/core/connection-lost.md#42-heartbeat-timeout) rule 2) — [`heartbeat.md` §7](profiles/core/heartbeat.md#7-processing-rules) rule 4 and [CORE-007](profiles/core/README.md). (This summary previously said `SHOULD`, weakening the rule it summarises.)
 
 #### REQUEST Payload
 
@@ -1199,7 +1199,7 @@ Reports the end of a session that was terminated autonomously by the station, wi
 6. **Inactivity:** The `SessionTimeout` idle timer elapsed with no user interaction, and the station stopped the service ([`08-configuration.md` §3](08-configuration.md#3-transaction-configuration-keys)).
 7. **Operator stop at the station:** An operator ended the session — a forced Reset, or a station disable the station carries out ([Chapter 04 §6](04-flows.md#the-operator-disable-policy)).
 
-The server **MUST** settle the session from this event rather than from StatusNotification — it **MUST NOT** rely solely on StatusNotification for billing calculations when this event is expected. After a boot on which the station restarted, which may have lost the session, the bay's report settles it ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3). The event's `actualDurationSeconds` and `meterValues` are the delivery record; its `creditsCharged` is **advisory input only**. The server **MUST** recompute the amount itself under the active tariff (see **Billing Authority** in [`04-flows.md §6`](04-flows.md)) and **MUST NOT** accept the station's figure as the charge.
+The server **MUST** settle the session from this event rather than from StatusNotification — it **MUST NOT** rely solely on StatusNotification for billing calculations when this event is expected. After a boot answered `Accepted` that keeps the session, a report of its bay settles it only when the server processes it after the end of the station's replay, or when it reports `Faulted` with `5113`, and a session whose SessionEnded does not come within a bounded grace after the latest of the end of its booked duration, the boot, the end of the replay and, where the station restarted at a boot that kept it, the latest such boot plus that duration, or, if the replay has not ended, within a longer bounded allowance after the latest of the others, closes as one whose timer expired ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3). The event's `actualDurationSeconds` and `meterValues` are the delivery record; its `creditsCharged` is **advisory input only**. The server **MUST** recompute the amount itself under the active tariff (see **Billing Authority** in [`04-flows.md §6`](04-flows.md)) and **MUST NOT** accept the station's figure as the charge.
 
 The server is the authoritative billing engine; the station's `creditsCharged` value is advisory and the server applies the active tariff to produce the final invoice. See [Billing Authority in `04-flows.md`](04-flows.md) for the normative statement of this separation.
 
@@ -2448,7 +2448,7 @@ DataTransfer is HMAC-signed like every other message ([Chapter 06 §5.6](06-secu
 | **Idempotency** | Yes — duplicate triggers for the same message type are safe |
 | **Message Expiry** | 60 seconds |
 
-Instructs the station to send a specific message immediately, outside of its normal schedule. After responding `Accepted`, the station MUST send the requested message within **5 seconds**.
+Instructs the station to send a specific message immediately, outside of its normal schedule. After responding `Accepted`, the station MUST send the requested message within **5 seconds**, except a Heartbeat requested before its first Heartbeat after a boot, which it sends as that first one ([`trigger-message.md` §5](profiles/core/trigger-message.md#5-processing-rules) rule 1).
 
 #### REQUEST Payload
 

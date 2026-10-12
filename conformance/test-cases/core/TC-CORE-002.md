@@ -32,7 +32,7 @@ Verify that the station correctly handles MQTT disconnection scenarios: graceful
 
 1. Command the station to send an MQTT DISCONNECT packet (e.g., via a controlled shutdown command).
 2. Verify that the broker does NOT publish the LWT message (graceful disconnect suppresses LWT per MQTT 5.0).
-3. Verify that the server detects the station as disconnected via missing heartbeats (no LWT received).
+3. Verify that the server detects the station as disconnected via the heartbeat timeout, no message for 3.5 × `heartbeatIntervalSec` (no LWT received).
 
 ### Part B — Ungraceful Loss with LWT
 
@@ -70,8 +70,8 @@ Verify that the station correctly handles MQTT disconnection scenarios: graceful
     - `status` is one of the six reportable states, and reflects the bay's **actual** state as the station observes it — including `Occupied` if a session survived the disconnection.
     - `status` is **not** `Unknown`. `Unknown` is the server's own bookkeeping for "I have no current report"; a station echoing it back reports nothing and leaves the bay refusing payment and StartService.
     - `previousStatus` is **absent**. The station's bays did not necessarily transition at all here — the station may never have rebooted — so there is no previous state to name, and the state the *server* is leaving is `Unknown`, which the field cannot carry.
-18. Wait `heartbeatIntervalSec` seconds (30s).
-19. Verify the station sends a Heartbeat within the expected interval (30s +/- 10%).
+18. Verify the station sends no Heartbeat before the broker has acknowledged the StatusNotifications of step 17 and every message it replays, and sends one as soon as it has, within 5 seconds: at once after the reports when it has nothing to replay ([`heartbeat.md` §7](../../../spec/profiles/core/heartbeat.md#7-processing-rules) rule 1).
+19. Verify the next Heartbeat follows `heartbeatIntervalSec` seconds after the first (30s +/- 10%).
 20. Verify the server marks the station as `Online`.
 
 ### Part D — Grace Period Edge (Reconnect Before Expiry)
@@ -84,7 +84,7 @@ Verify that the station correctly handles MQTT disconnection scenarios: graceful
 26. Observe the station sends BootNotification.
 27. Send BootNotification response with `status: "Accepted"`, carrying a `sessionKey`. Every acceptance does; a response without one is malformed and a conforming station refuses it (`TC-CORE-001` Part F).
 28. Verify the server did NOT mark the station as `Offline` (grace period was not exceeded).
-29. Verify the station resumes normal operation (Heartbeat, StatusNotification).
+29. Verify the station resumes normal operation (StatusNotification, then Heartbeat).
 
 ## Expected Results
 
@@ -94,7 +94,7 @@ Verify that the station correctly handles MQTT disconnection scenarios: graceful
 4. The server starts the `ConnectionLostGracePeriod` timer upon receiving ConnectionLost.
 5. After the grace period expires without reconnection, the server marks the station Offline.
 6. On reconnection, the station sends a fresh BootNotification as its first message.
-7. After BootNotification `Accepted`, the station resumes Heartbeat at the configured interval and sends StatusNotification for all bays, each carrying a determinate state — one of the six reportable values, never `Unknown` — and each omitting `previousStatus`. The server's `Unknown` for every bay on this station is cleared by these reports and by nothing else.
+7. After BootNotification `Accepted`, the station sends StatusNotification for all bays, each carrying a determinate state — one of the six reportable values, never `Unknown` — and each omitting `previousStatus`, then its first Heartbeat once they and anything it replays have been acknowledged, and the next at the configured interval. The server's `Unknown` for every bay on this station is cleared by these reports and by nothing else.
 8. If the station reconnects before the grace period expires (Part D), the server does NOT mark it Offline.
 
 ## Failure Criteria
@@ -102,7 +102,7 @@ Verify that the station correctly handles MQTT disconnection scenarios: graceful
 1. LWT is published after a graceful MQTT DISCONNECT.
 2. LWT payload is missing `stationId`.
 3. Station sends any message other than BootNotification as the first message after reconnection.
-4. Station does not resume Heartbeat after BootNotification `Accepted`.
+4. Station does not resume Heartbeat after BootNotification `Accepted`, or sends one before its post-boot StatusNotifications and its replay have been acknowledged, or does not send one within 5 seconds after the broker has acknowledged them.
 5. Server marks station Offline before `ConnectionLostGracePeriod` has elapsed.
 6. Server does NOT mark station Offline after `ConnectionLostGracePeriod` with no reconnection.
 7. Station does not include LWT in the MQTT CONNECT packet on reconnection.

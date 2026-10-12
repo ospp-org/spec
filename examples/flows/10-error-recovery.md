@@ -41,6 +41,7 @@ Station `stn_a1b2c3d4` is running an active Eco Program session (`sess_f7e8d9c0`
 10:03:16.000  Station: replays buffered MeterValues #1 (from 10:03:05)
 10:03:16.200  Station: replays buffered MeterValues #2 (from 10:03:10)
 10:03:16.400  Station: replays buffered StatusNotification #2 (current state)
+10:03:16.500  Station: first Heartbeat after the boot, everything above acknowledged: the replay is over
 10:03:16.600  Server: processes all buffered messages, session state reconciled
 10:03:20.000  Station: sends live MeterValues (normal 5s interval resumes)
 10:03:25.000  Station: sends live MeterValues
@@ -448,6 +449,7 @@ The server processes all buffered messages and confirms the session is intact:
 
 ```
 [10:03:16.600] INFO  Buffered message replay complete for stn_a1b2c3d4
+                     Replay ended by: the first Heartbeat after the boot (10:03:16.500)
                      Messages replayed: 4 (2 StatusNotification, 2 MeterValues)
                      Session sess_f7e8d9c0: RECONCILED
                        - Hardware ran continuously (no gap)
@@ -561,6 +563,9 @@ Station Timeline:
      |  replay: MeterValues #2  |                    |
      |------------------------->|------------------->|
      |  current: StatusNotif #2 |                    |
+     |------------------------->|------------------->|
+     |  Heartbeat (first after  |                    |
+     |  the boot: replay over)  |                    |
      |------------------------->|------------------->|
      |                          |                    | reconcile OK
      |                          |                    |

@@ -75,7 +75,10 @@ sequenceDiagram
         Server->>Server: Dedup → receipt signature → gate → settle → score<br/>(txCounter recorded, not gated)
         Server-->>Broker: TransactionEvent RESPONSE (Accepted)
         Broker-->>Station: TransactionEvent RESPONSE
+        Station->>Broker: Heartbeat REQUEST [MSG-008], the first after the boot<br/>(everything above acknowledged)
+        Broker->>Server: Heartbeat [MSG-008]
+        Server->>Server: The station's replay has ended
     end
 
-    Note over Station,Server: Station fully recovered — normal operation resumes
+    Note over Station,Server: Station fully recovered — its replay is over
     Note over Server: Reconciliation complete<br/>Billing updated, operator notified
