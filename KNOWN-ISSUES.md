@@ -315,18 +315,19 @@ until its cryptographic construction has passed the review of
     a late end record *"as a repeated SessionEnded is"*, the words `session-ended.md` §5 rule 4 replaced on the same
     date with *"a SessionEnded for a session already settled"*.
 25. **The station's first Heartbeat after a boot marks the end of its replay since 2026-10-12, and the frozen path
-    A4 of the boot flow begins the offline reconciliation after it.** The station sends no Heartbeat before its
-    post-boot StatusNotifications and every message it replays, its TransactionEvents included, have been
-    acknowledged ([`connection-lost.md` §6](spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect)
-    step 4; [`heartbeat.md` §7](spec/profiles/core/heartbeat.md#7-processing-rules) rule 1), and step 10 of
-    [`04-flows.md` §1](spec/04-flows.md#1-station-boot--registration) now replays and then sends that Heartbeat. Its
-    path A4 still begins the [offline reconciliation of §10](spec/04-flows.md#10-offline--online-reconciliation) of a
-    station with `pendingOfflineTransactions` after step 11, the entry into normal operation, so after the first
-    Heartbeat, where the replay that Heartbeat closes carries those TransactionEvents
-    ([`01-architecture.md` §6.5](spec/01-architecture.md#65-offline-message-buffering), *Reconnection Transmission
-    Order*, step 4). The reconnection flow of [§9](spec/04-flows.md#9-error-recovery--reconnection) and
-    [flow 11](examples/flows/11-reconciliation.md) send the transactions before the station's Heartbeat, as the rule
-    does.
+    A4 of the boot flow can still be read as beginning the offline reconciliation after it.** The station sends no
+    Heartbeat before its post-boot StatusNotifications and every message it replays, its TransactionEvents
+    included, have been acknowledged
+    ([`connection-lost.md` §6](spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4;
+    [`heartbeat.md` §7](spec/profiles/core/heartbeat.md#7-processing-rules) rule 1). The happy path of
+    [`04-flows.md` §1](spec/04-flows.md#1-station-boot--registration) now enters normal operation right after the
+    reports (step 10), replays (step 11) and sends that Heartbeat once the replay and an offline reconciliation are
+    acknowledged (step 12). Path A4's *"after step 11"* therefore falls before the Heartbeat, as the rule requires,
+    but its *"proceeds through the normal boot sequence first"* reads as the whole sequence, step 12 included. The
+    [offline reconciliation of §10](spec/04-flows.md#10-offline--online-reconciliation), which begins once *"SSP boot
+    is complete"*, now reads as after step 10 and agrees, as do the reconnection flow of
+    [§9](spec/04-flows.md#9-error-recovery--reconnection) and [flow 11](examples/flows/11-reconciliation.md), which
+    send the transactions before the station's Heartbeat.
 
 ---
 

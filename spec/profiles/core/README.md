@@ -31,7 +31,7 @@ The Core profile establishes the foundation upon which all other profiles — [T
 | CORE-004 | The station MUST send a StatusNotification for each bay immediately after BootNotification is accepted. | MUST |
 | CORE-005 | The station MUST send a StatusNotification within 1 second of any bay state change. | MUST |
 | CORE-006 | The station MUST configure an MQTT Last Will and Testament (LWT) message at connection time. | MUST |
-| CORE-007 | The server MUST detect station disconnection via LWT or heartbeat timeout (3.5× `heartbeatIntervalSec`). | MUST |
+| CORE-007 | The server MUST detect station disconnection via LWT or heartbeat timeout (3.5× `heartbeatIntervalSec`; between a boot answered `Accepted` and the station's first Heartbeat after it, the longer of that and 330 s, [ConnectionLost §4.2](connection-lost.md#42-heartbeat-timeout)). | MUST |
 | CORE-008 | The server MUST mark all bays as `Unknown` when a station disconnects. | MUST |
 | CORE-009 | The station MUST buffer StatusNotification events during MQTT disconnection (up to 1000 events or 24 hours (StatusNotification-specific recommendation)) and replay them on reconnection. | MUST |
 | CORE-010 | The station **MUST** compare the Heartbeat response `serverTime` against its local clock on every heartbeat, and **SHOULD** adjust the clock to match when the absolute drift exceeds 2 seconds. Drift exceeding 5 minutes **MUST** be logged as `5106 CLOCK_ERROR`. The 2-second figure is a quality target, not an interoperability boundary; the protocol's tolerance for station skew is 5 minutes ([Heartbeat §6](heartbeat.md#6-clock-synchronization)). | MUST / SHOULD |
