@@ -65,8 +65,8 @@ Verify that when a session is stopped before its natural expiry (early stop), th
 10. Observe StatusNotification transitions: `Occupied` -> `Finishing` -> `Available`.
 11. Calculate expected refund: `creditsAuthorized - creditsCharged`.
 12. Verify the refund is the pro-rated remainder, `creditsAuthorized - creditsCharged`, and **not** a
-    100% refund. The low-delivery override in `spec/04-flows.md` §6 is `Fault`-only: it is keyed on a
-    SessionEnded `reason` of `Fault`, and a session stopped by a server-commanded StopService emits no
+    100% refund. The low-delivery override in `spec/04-flows.md` §6 is `Fault`-only: it is keyed on the
+    service reported as faulted, and a session stopped by a server-commanded StopService emits no
     SessionEnded at all. A small delivered fraction does not by itself make a commanded stop free.
 
 ### Part B — Early Stop, Larger Fraction Delivered
