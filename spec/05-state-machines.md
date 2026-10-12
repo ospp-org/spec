@@ -906,7 +906,7 @@ The bay and session state machines are tightly coupled:
 | Active | Occupied | Bay MUST transition to `Occupied` when session becomes `Active` |
 | Stopping | Finishing | Bay MUST transition to `Finishing` when session enters `Stopping` |
 | Completed | Finishing, then Available, or Unknown | Bay MUST reach `Available` after session `Completed`, **via `Finishing`**. `Unknown` where the server closed the session at the end of `ConnectionLostGracePeriod` — that is the server's own inference, and the bay's real state is whatever the station's hardware is in |
-| Failed | Finishing then Available, or Faulted, or Unknown | `Faulted` where a hardware fault caused the failure. `Unknown` where the failure was connection loss — that is the server's own inference and the bay's real state is whatever the station's hardware is in. Otherwise the bay winds down through `Finishing` and reaches `Available` |
+| Failed | Finishing then Available, or Faulted, or Unknown | `Faulted` where a hardware fault caused the failure. `Unknown` where the session failed while its station's connection was lost — a start or a stop that timed out — that is the server's own inference and the bay's real state is whatever the station's hardware is in. Otherwise the bay winds down through `Finishing` and reaches `Available` |
 
 **There is no `Occupied → Available` edge, and this table used to assume one.** Every exit from
 `Occupied` in [§2.3](#23-transition-table) goes to `Finishing` or `Faulted` — the wind-down is

@@ -784,7 +784,7 @@ QoS: 1 (always)
 
 1. Mark the station as offline
 2. Check for active sessions on this station
-3. If sessions exist, mark them as `interrupted` — the station will report the outcome when it reconnects (do NOT auto-refund yet)
+3. If sessions exist, start the `ConnectionLostGracePeriod` recovery timer for each, as [`connection-lost.md` §5](../spec/profiles/core/connection-lost.md#5-server-side-handling) states it: a station back before it expires is reconciled on the bay states it reports ([§6](../spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect)); otherwise close the session `completed`, charge the full pre-authorized amount and mark the close as an anomaly — do NOT auto-refund. A SessionEnded the station sends after that close is ignored, the session already settled ([`05-state-machines.md` §3.3](../spec/05-state-machines.md#33-transition-table))
 
 ### 3.4 Session Management (Online)
 
@@ -1179,7 +1179,7 @@ If you are auditing an existing implementation, the question to ask is narrow: *
 
 ### 6.5 Server Pitfalls
 
-**Auto-refunding when the station goes offline.** Don't. The station continues the session. When it reconnects, it will report the actual outcome. Auto-refunding creates double-spend: the user got the service AND got the credits back.
+**Auto-refunding when the station goes offline.** Don't. The station continues the session. If it reconnects within `ConnectionLostGracePeriod`, the session is reconciled on what it reports; if it does not, the session closes `completed` at the full pre-authorized amount, marked as an anomaly ([`connection-lost.md` §5](../spec/profiles/core/connection-lost.md#5-server-side-handling)). Auto-refunding creates double-spend: the user got the service AND got the credits back.
 
 **Not implementing circuit breakers.** If a station is unresponsive, every new StartService attempt will debit the wallet, wait 10 seconds, timeout, and refund. That's a terrible user experience. After 3 consecutive timeouts, stop trying — return `6002 ACK_TIMEOUT` immediately without debiting.
 
