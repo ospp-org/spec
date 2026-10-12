@@ -220,7 +220,8 @@ Power on
     - Pending → **restricted state**: receive and ANSWER commands, originate nothing but BootNotification retries and a SignCertificate renewal, serve no customers; wait retryInterval, re-send BootNotification. Normal operation begins only after receiving `Accepted`
     - Timeout → wait 60s, retry
   → PUBLISH StatusNotification for EACH bay
-  → Start heartbeat timer
+  → Replay what was buffered while the station could not send it, if anything
+  → Once the broker has acknowledged (PUBACK) all of it: PUBLISH the first Heartbeat, then start the heartbeat timer
   → Enter normal operation
 ```
 
@@ -380,7 +381,7 @@ If MQTT drops during an active session:
 3. Buffer the **MUST-buffer** categories — TransactionEvent (min 1000, **never** discard), SessionEnded (min 1000, **never** discard — it is the sole billing source for a session that ended with no StopService to answer), SessionStarted (one per bay, **never** discard — the server keys a Partial-B session's authorized duration on it), SecurityEvent (200, FIFO). StatusNotification and MeterValues are **regenerable and MAY be discarded**; do not spend the buffer on them. The `MUST` storage level is **512 KB** — and **it does not hold the categories in this bullet.** [`01-architecture.md` §6.5](../spec/01-architecture.md#65-offline-message-buffering) derives what they cost: 1000 TransactionEvents (1.3 MB) + 1000 SessionEnded (250 KB) + 64 SessionStarted (16 KB) + 200 SecurityEvents (120 KB) + overhead = **~1.7 MB**, and §6.5 records the gap between the two as OPEN because raising a mandatory storage level changes the bill of materials of every station. **Size new hardware to the derived figure, not to the 512 KB level row.** At 90% of the TransactionEvent buffer, reject new StartService with `5111 BUFFER_FULL`; at 100%, enter degraded mode and refuse all new sessions (§6.5)
 4. Attempt reconnection with exponential backoff: 1s → 2s → 4s → 8s → 16s → 30s max, with 30% jitter
 5. On reconnect: Full boot sequence (BootNotification, StatusNotification per bay)
-6. Flush buffered messages after boot completes
+6. Flush buffered messages after the StatusNotifications, and send the first Heartbeat only once the broker has acknowledged all of them: the server reads it as the end of the replay ([`connection-lost.md` §6](../spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4)
 
 ### 2.8 Offline Mode (BLE)
 
@@ -696,7 +697,7 @@ TriggerMessage [MSG-026] lets the server request the station to send a specific 
 
 1. Server sends TriggerMessage REQUEST with `requestedMessage` (and optional `bayId`)
 2. Station responds: `Accepted`, `Rejected`, or `NotImplemented`
-3. If `Accepted`, station MUST send the requested message within **5 seconds**
+3. If `Accepted`, station **MUST** send the requested message within **5 seconds**, except a `Heartbeat` requested during its replay after a boot, which it sends at the end of that replay ([`trigger-message.md` §5](../spec/profiles/core/trigger-message.md#5-processing-rules) rule 1)
 
 **Key rules:**
 - `NotImplemented` means the station doesn't support triggering this message type — it's a status value, not an error code
@@ -777,8 +778,9 @@ QoS: 1 (always)
 **On Heartbeat REQUEST:**
 
 1. Respond with `serverTime` — this keeps the station's clock synchronized. Maximum acceptable clock skew: **300 seconds**. Exceeding this triggers a `ClockSkew` SecurityEvent. Station SHOULD use NTP for time synchronization between heartbeats.
-2. Update "last seen" timestamp in your database
-3. If you haven't received a heartbeat in `3.5 × heartbeatIntervalSec` (default 105s), mark the station as offline
+2. Update the station's "last seen" timestamp in the database, and do the same on every other message the station sends: it sends no Heartbeat during its replay after a boot ([`connection-lost.md` §4.2](../spec/profiles/core/connection-lost.md#42-heartbeat-timeout) rule 1)
+3. If no message, a heartbeat or any other, has arrived from the station in `3.5 × heartbeatIntervalSec` (default 105s), mark the station as offline
+4. The first Heartbeat after a boot answered `Accepted` marks the end of the station's replay ([`connection-lost.md` §6](../spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4). Where the server's consumers can process a station's messages out of order, process this Heartbeat after every message the station published before it
 
 **On ConnectionLost EVENT (LWT):**
 
@@ -1255,7 +1257,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** Do NOT process commands while `Booting` or `Rejected`; DO answer them while `Pending`, refusing StartService/ReserveBay with `3002`
 - [ ] **[MUST]** Sync clock from BootNotification RESPONSE `serverTime`
 - [ ] **[MUST]** StatusNotification for each bay after boot
-- [ ] **[MUST]** Heartbeat at server-specified `heartbeatIntervalSec`
+- [ ] **[MUST]** First Heartbeat after a boot as soon as the post-boot StatusNotifications and the replay are acknowledged, and none before; then at server-specified `heartbeatIntervalSec`
 - [ ] **[MUST]** Compare Heartbeat RESPONSE `serverTime` against the local clock on every heartbeat
 - [ ] **[SHOULD]** Correct the clock when that drift exceeds 2 seconds (**[MUST]** log `5106 CLOCK_ERROR` above 5 minutes)
 - [ ] **[MUST]** Bay state machine: the 21 `Station` rows of [`05-state-machines.md` §2.3](../spec/05-state-machines.md#23-transition-table) — all of them, and none of the 6 `Server` rows. **`Unknown → Reserved` is one of them**: a station that rebooted holding a `Confirmed` reservation reports `Reserved`, and every count that said 20 was written before that row existed
@@ -1271,7 +1273,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** Server is authoritative billing engine (recompute credits, don't trust station)
 - [ ] **[MUST]** Full refund on any failure after wallet debit
 - [ ] **[MUST]** Do NOT auto-refund when station goes offline during active session
-- [ ] **[MUST]** Mark station offline after `3.5 × heartbeatIntervalSec` without heartbeat
+- [ ] **[MUST]** Mark station offline after `3.5 × heartbeatIntervalSec` without any message, a heartbeat or any other
 - [ ] **[MUST]** Circuit breaker for station commands (3 timeouts → OPEN)
 - [ ] **[MUST]** Circuit breaker for payment processor (5 failures/60s → OPEN)
 - [ ] **[MUST]** Webhook HMAC-SHA512 verification (timing-safe)

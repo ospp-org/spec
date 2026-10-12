@@ -33,7 +33,7 @@ The Heartbeat request has an **empty payload** (`{}`). The station identity is d
 2. The server **MAY** update the interval at runtime via ChangeConfiguration with the key `HeartbeatIntervalSeconds`.
 3. When the interval changes, the station **MUST** apply the new value starting from the next heartbeat cycle. The station **MUST NOT** reset an in-progress timer; the new interval takes effect after the current cycle completes.
 4. A value arriving via **ChangeConfiguration** outside the 10--3600 second range is **rejected, not clamped**: [Chapter 08](../../08-configuration.md) §8.2 rule 4 requires `status: "Rejected"` with `5109 INVALID_CONFIGURATION_VALUE`, and [`TC-DM-006`](../../../conformance/test-cases/device-management/TC-DM-006.md) Part E tests exactly that. For an interval the station holds from any **other** source — a BootNotification RESPONSE from a non-conforming server, or a value recovered from NVS — the station **MUST** clamp it to the nearest boundary (10 or 3600) and log a `5102 CONFIGURATION_ERROR`. Values above 300 seconds are permitted but **SHOULD** only be used in low-bandwidth environments. The server **SHOULD** clamp values to operational needs.
-5. The station **MUST** send heartbeats regardless of other message traffic. Heartbeats **MUST NOT** be suppressed even if the station recently sent other messages.
+5. The station **MUST** send heartbeats regardless of other message traffic, from its first Heartbeat after a boot on (§7 rule 1). Heartbeats **MUST NOT** be suppressed even if the station recently sent other messages.
 
 ## 6. Clock Synchronization
 
@@ -89,11 +89,11 @@ The Heartbeat request has an **empty payload** (`{}`). The station identity is d
 
 ## 7. Processing Rules
 
-1. The station **MUST** send a Heartbeat every `heartbeatIntervalSec` seconds after receiving BootNotification `Accepted`.
+1. After receiving BootNotification `Accepted`, the station **MUST NOT** send a Heartbeat before the broker has acknowledged (PUBACK) its StatusNotification for each bay and every message it replays ([`connection-lost.md` §6](connection-lost.md#6-session-recovery-on-reconnect) steps 2 and 4), **MUST** send one as soon as it has, and **MUST** then send a Heartbeat every `heartbeatIntervalSec` seconds after that first one. That first Heartbeat marks the end of the station's replay; with nothing to replay it follows the StatusNotifications at once. A Heartbeat the server requests with TriggerMessage before then is sent as that first one ([`trigger-message.md` §5](trigger-message.md#5-processing-rules) rule 1).
 2. The station **MUST NOT** send Heartbeat messages before BootNotification has been accepted.
 3. If the server does not respond within 30 seconds, the station **MUST** log `1010 MESSAGE_TIMEOUT` and continue sending heartbeats at the configured interval.
-4. The server **MUST** track the last heartbeat timestamp per station. If no message is received for `3.5 × heartbeatIntervalSec` seconds, the server **MUST** treat the station as disconnected (see [ConnectionLost](connection-lost.md)).
-5. During MQTT reconnection backoff, the station **MUST NOT** send heartbeats. Heartbeats resume only after a successful BootNotification `Accepted` exchange on the new connection.
+4. The server **MUST** track, per station, the timestamp of the last message it received from it, a Heartbeat or any other ([`connection-lost.md` §4.2](connection-lost.md#42-heartbeat-timeout) rule 1): a station sends no Heartbeat during its replay after a boot (rule 1). If no message is received for `3.5 × heartbeatIntervalSec` seconds, the server **MUST** treat the station as disconnected (see [ConnectionLost](connection-lost.md)).
+5. During MQTT reconnection backoff, the station **MUST NOT** send heartbeats. Heartbeats resume only after a successful BootNotification `Accepted` exchange on the new connection, and once the station's post-boot reports and its replay have been acknowledged (rule 1).
 
 ## 8. Error Handling
 

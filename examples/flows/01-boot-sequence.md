@@ -43,10 +43,11 @@ It is 10:00 UTC on a cold February morning in Example City. A technician powers 
 10:00:03.300  StatusNotification sent for Bay 1 (Available)
 10:00:03.400  StatusNotification sent for Bay 2 (Available)
 10:00:03.500  StatusNotification sent for Bay 3 (Available)
-10:00:03.600  Heartbeat timer started (interval: 30s)
+10:00:03.550  Broker has acknowledged the three reports (PUBACK); nothing buffered to replay
 10:00:03.600  Station enters normal operation
-10:00:33.600  First Heartbeat REQUEST sent
-10:00:33.800  First Heartbeat RESPONSE received
+10:00:03.600  First Heartbeat REQUEST sent; heartbeat timer started (interval: 30s)
+10:00:03.800  First Heartbeat RESPONSE received
+10:00:33.600  Second Heartbeat REQUEST sent
 ```
 
 ## Step-by-Step Detail
@@ -341,15 +342,15 @@ The station reports each bay's current status. Bay 1 is clean and operational af
 
 ---
 
-### Step 10: Heartbeat Timer Starts (10:00:03.600)
+### Step 10: Normal Operation (10:00:03.600)
 
-The station enters normal operation. The LCD displays "Online - 3 bays available". The heartbeat timer is armed at 30-second intervals. The station is now ready to accept StartService, StopService, ChangeConfiguration, and other commands on its `to-station` topic.
+The station enters normal operation. The LCD displays "Online - 3 bays available". The broker has acknowledged the three reports and the station buffered nothing while it was off, so it has no replay to wait for: it sends its first Heartbeat now (step 11) and arms the heartbeat timer at 30-second intervals from it. The station is now ready to accept StartService, StopService, ChangeConfiguration, and other commands on its `to-station` topic.
 
 ---
 
-### Step 11: First Heartbeat (10:00:33.600)
+### Step 11: First Heartbeat (10:00:03.600)
 
-Thirty seconds after boot completes, the station sends its first heartbeat.
+As soon as its post-boot reports are acknowledged, with nothing to replay, the station sends its first heartbeat, which marks the end of its replay ([`heartbeat.md` §7](../../spec/profiles/core/heartbeat.md#7-processing-rules) rule 1). The next follows 30 seconds later.
 
 **MQTT Topic:** `ospp/v1/stations/stn_a1b2c3d4/to-server`
 
@@ -358,7 +359,7 @@ Thirty seconds after boot completes, the station sends its first heartbeat.
   "messageId": "msg_hb_7e8f9a0b",
   "messageType": "Request",
   "action": "Heartbeat",
-  "timestamp": "2026-02-13T10:00:33.600Z",
+  "timestamp": "2026-02-13T10:00:03.600Z",
   "source": "Station",
   "protocolVersion": "0.3.0",
   "payload": {}
@@ -372,11 +373,11 @@ Thirty seconds after boot completes, the station sends its first heartbeat.
   "messageId": "msg_hb_7e8f9a0b",
   "messageType": "Response",
   "action": "Heartbeat",
-  "timestamp": "2026-02-13T10:00:33.800Z",
+  "timestamp": "2026-02-13T10:00:03.800Z",
   "source": "Server",
   "protocolVersion": "0.3.0",
   "payload": {
-    "serverTime": "2026-02-13T10:00:33.800Z"
+    "serverTime": "2026-02-13T10:00:03.800Z"
   }
 }
 ```
@@ -444,15 +445,15 @@ Last connection: 2026-02-13 10:00:03 UTC
      | StatusNotification (Bay 3)       |                                  |
      |--------------------------------->|--------------------------------->|
      |                                  |                                  | update bay map
-     | start heartbeat timer            |                                  |
-     |                                  |                                  |
-     |         ... 30 seconds ...       |                                  |
+     | reports acknowledged, nothing    |                                  |
+     | to replay: first Heartbeat       |                                  |
      |                                  |                                  |
      | Heartbeat REQUEST                |                                  |
      |--------------------------------->|--------------------------------->|
      |                                  |  Heartbeat RESPONSE              |
      |<---------------------------------|<---------------------------------|
-     | check clock drift                |                                  |
+     | check clock drift, start the     |                                  |
+     | heartbeat timer (30 seconds)     |                                  |
      |                                  |                                  |
 ```
 

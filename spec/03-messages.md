@@ -222,7 +222,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
 
 | Status | Station Action |
 |--------|---------------|
-| `Accepted` | Sync clock → apply configuration → send StatusNotification per bay → start heartbeat → enter normal operation |
+| `Accepted` | Sync clock → apply configuration → send StatusNotification per bay → replay what it buffered → the first Heartbeat once both are acknowledged, then the heartbeat timer ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4) → enter normal operation |
 | `Rejected` | Enter the `Rejected` restricted state — refuse commands, send nothing but retries, serve no customers → wait `retryInterval` seconds → retry BootNotification |
 | `Pending` | Enter the `Pending` restricted state — **answer** commands, originate nothing but BootNotification retries and a SignCertificate [MSG-022] renewal, refuse StartService/ReserveBay with `3002 BAY_NOT_READY` → wait `retryInterval` seconds → retry BootNotification. See [Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states) |
 
@@ -943,7 +943,7 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
 | **Message Type** | REQUEST / RESPONSE |
 | **Topic (publish)** | `ospp/v1/stations/{station_id}/to-server` |
 | **Topic (reply)** | `ospp/v1/stations/{station_id}/to-station` |
-| **Trigger** | Timer fires every `heartbeatIntervalSec` seconds (from [BootNotification](#11-bootnotification) RESPONSE) |
+| **Trigger** | Timer fires every `heartbeatIntervalSec` seconds (from [BootNotification](#11-bootnotification) RESPONSE), counted from the first Heartbeat after the boot, which the station sends once its post-boot reports and its replay have been acknowledged ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4) |
 | **Expected Response** | Heartbeat RESPONSE |
 | **Timeout** | 30 seconds |
 | **Idempotency** | Yes — always safe to retry |
@@ -951,7 +951,7 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
 
 The heartbeat serves two purposes: (1) keep-alive signal proving the station is connected and responsive, and (2) clock synchronization via the server's `serverTime` response.
 
-The server **MUST** track the last heartbeat time per station. If no message is received for **3.5 × `heartbeatIntervalSec`** seconds, the server **MUST** treat the station as disconnected — [`heartbeat.md` §5](profiles/core/heartbeat.md) rule 4 and [CORE-007](profiles/core/README.md). (This summary previously said `SHOULD`, weakening the rule it summarises.)
+The server **MUST** track the time of the last message it received from each station, a Heartbeat or any other: a station sends no Heartbeat during its replay after a boot ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4). If no message is received for **3.5 × `heartbeatIntervalSec`** seconds, the server **MUST** treat the station as disconnected — [`heartbeat.md` §7](profiles/core/heartbeat.md#7-processing-rules) rule 4 and [CORE-007](profiles/core/README.md). (This summary previously said `SHOULD`, weakening the rule it summarises.)
 
 #### REQUEST Payload
 
@@ -2448,7 +2448,7 @@ DataTransfer is HMAC-signed like every other message ([Chapter 06 §5.6](06-secu
 | **Idempotency** | Yes — duplicate triggers for the same message type are safe |
 | **Message Expiry** | 60 seconds |
 
-Instructs the station to send a specific message immediately, outside of its normal schedule. After responding `Accepted`, the station MUST send the requested message within **5 seconds**.
+Instructs the station to send a specific message immediately, outside of its normal schedule. After responding `Accepted`, the station MUST send the requested message within **5 seconds**, except a Heartbeat requested before its first Heartbeat after a boot, which it sends as that first one ([`trigger-message.md` §5](profiles/core/trigger-message.md#5-processing-rules) rule 1).
 
 #### REQUEST Payload
 

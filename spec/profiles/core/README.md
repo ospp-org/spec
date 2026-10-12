@@ -27,7 +27,7 @@ The Core profile establishes the foundation upon which all other profiles — [T
 |----------------|---------------------------------------------------------------|-----------------|
 | CORE-001 | The station MUST send BootNotification as the first message after every MQTT connection. | MUST |
 | CORE-002 | The station MUST NOT send any message it originates — any EVENT, or any REQUEST other than BootNotification and SignCertificate [MSG-022] — before receiving a BootNotification `Accepted` response. Those two are the messages that repair the station's own standing rather than report on its work, and SignCertificate is exercisable only while `Pending`, the one restricted state holding the key it must be signed with. A RESPONSE to a server command is not originated by the station and is permitted while `Pending`, which is the state in which the station answers commands ([Chapter 05 §1.4](../../05-state-machines.md#14-the-restricted-states)). | MUST NOT |
-| CORE-003 | The station MUST send Heartbeat messages every `heartbeatIntervalSec` seconds after BootNotification is accepted. | MUST |
+| CORE-003 | The station MUST send Heartbeat messages every `heartbeatIntervalSec` seconds after BootNotification is accepted, the first as soon as its post-boot StatusNotifications and its replay have been acknowledged, and none before ([Heartbeat §7](heartbeat.md#7-processing-rules) rule 1). | MUST |
 | CORE-004 | The station MUST send a StatusNotification for each bay immediately after BootNotification is accepted. | MUST |
 | CORE-005 | The station MUST send a StatusNotification within 1 second of any bay state change. | MUST |
 | CORE-006 | The station MUST configure an MQTT Last Will and Testament (LWT) message at connection time. | MUST |
@@ -41,7 +41,7 @@ The Core profile establishes the foundation upon which all other profiles — [T
 
 ## 4. Message Flow
 
-The typical Core profile message flow after station power-on:
+The typical Core profile message flow after station power-on, with nothing buffered to replay: the first Heartbeat follows the reports as soon as the broker has acknowledged them ([Heartbeat §7](heartbeat.md#7-processing-rules) rule 1):
 
 ```
 Station                          Broker                          Server
@@ -54,6 +54,9 @@ Station                          Broker                          Server
   |                                |                               |
   |--- StatusNotification (bay1)->|------- forward --------------->|
   |--- StatusNotification (bay2)->|------- forward --------------->|
+  |                                |                               |
+  |--- Heartbeat REQ ------------>|------- forward --------------->|
+  |<-- Heartbeat RESP ------------|<------ serverTime ------------|
   |                                |                               |
   |  ... heartbeatIntervalSec ...     |                               |
   |                                |                               |
