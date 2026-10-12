@@ -1165,7 +1165,7 @@ of by what was delivered.
 | Timer ran to completion (SessionEnded `reason=TimerExpired`) | None | Charge full pre-authorized amount (user received the booked duration regardless of meter values) |
 | If less than `faultFullRefundThreshold` of duration delivered AND reason=`Fault` | Full | 100% (override pro-rate) |
 
-> **Refund scope clarification:** The low-delivery override applies **only** when SessionEnded reason is `Fault`. It does **not** apply to `TimerExpired` sessions: a session that runs to its booked timer is billed for the full pre-authorized duration regardless of meter values, because the user received the time they paid for. The override formula is `actualDurationSeconds < faultFullRefundThreshold × durationSeconds`, evaluated against the booked `durationSeconds` from StartService.
+> **Refund scope clarification:** The low-delivery override applies **only** to a service reported as faulted: a SessionEnded with reason `Fault`, or a bay reported `Faulted` on which the server closes a session no end record can reach ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3), on the estimated time delivered. It does **not** apply to `TimerExpired` sessions: a session that runs to its booked timer is billed for the full pre-authorized duration regardless of meter values, because the user received the time they paid for. The override formula is `actualDurationSeconds < faultFullRefundThreshold × durationSeconds`, evaluated against the booked `durationSeconds` from StartService.
 >
 > **`faultFullRefundThreshold` (explicit, configurable product parameter — default `0.50`).** The fraction of the booked duration below which a `Fault`-terminated session is deemed to have delivered nothing of value and is refunded in full. This is a **product decision** — *below what fraction is the delivered service worthless?* — so it is a **named, documented, server-configurable value**, never a constant baked into an implementation. A conforming server **MUST** read it from configuration rather than from a compiled-in constant, and **MUST** ship `0.50` as the configured default (the historical "< 50%" rule) so that a server nobody has tuned behaves as this specification describes. Operators MAY set another value; doing so is a deliberate product choice, not a conformance failure.
 >
@@ -1422,7 +1422,7 @@ sequenceDiagram
 6. On successful CONNACK, SSP subscribes to its `to-station` topic
 7. **SSP** sends **BootNotification REQUEST** [MSG-001] (same as fresh boot)
 8. **Server** accepts the boot, marks station as `Online`, returns session key
-9. **SSP** sends **StatusNotification** [MSG-009] for each bay (current status, which may include sessions that completed during offline)
+9. **SSP** sends **StatusNotification** [MSG-009] for each bay (each bay's current state)
 10. **SSP** replays any buffered events
 11. If `pendingOfflineTransactions > 0`, SSP begins [Offline → Online Reconciliation (Flow §10)](#10-offline--online-reconciliation)
 12. Resume normal operation (heartbeat, command processing)
@@ -1435,7 +1435,7 @@ sequenceDiagram
 | TLS certificate expired during outage | SSP cannot reconnect — await manual certificate update |
 | Broker permanently unavailable | SSP operates in BLE-only mode indefinitely |
 | BootNotification `Rejected` after reconnect | Read the `errorCode`: the causes are the set [§4.1](07-errors.md#41-station--server-mqtt-actions) assigns to BootNotification. Decommissioning is **not** among them — it is out of scope ([Chapter 00 §1.3](00-introduction.md#13-out-of-scope)) — and the SSP **MUST** keep retrying per CORE-011 rather than await intervention |
-| Session completed during offline | SSP reports final status via StatusNotification post-boot |
+| Session completed during offline | SSP replays the session's buffered SessionEnded after the post-boot reports, and the server settles the session on it ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3) |
 
 ### Postconditions
 
@@ -1443,7 +1443,7 @@ sequenceDiagram
 |-----------|-------|
 | SSP | Reconnected, boot accepted, normal operation |
 | Server | Station marked online, bay statuses updated, buffered events processed |
-| Sessions (if any were active during outage) | Statuses reconciled via StatusNotification |
+| Sessions (if any were active during outage) | Settled on the replayed SessionEnded, or on the bay's report when no end record can come |
 
 ---
 

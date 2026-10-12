@@ -277,17 +277,30 @@ until its cryptographic construction has passed the review of
     connection-lost row said the server reconciled the grace period's close on reconnect via TransactionEvent, and
     now says what an online reconnection does. Which sessions a TransactionEvent reports is offline text, so the
     two definitions wait for the freeze to end.
-24. **An online session whose bay is reported free or faulted after a reconnection waits for its replayed end record
-    since 2026-10-12, and the Partial-B rule for a rebooted station settles on the report.** By Gabi's decision, the
-    server holds such a report until the station's replay has ended - its first Heartbeat after the boot - and settles
-    an online session on the SessionEnded the replay carries, closing it on the report only when none arrived, or at once
-    on `5113 OUTCOME_INDETERMINATE` ([`connection-lost.md` §6](spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect)
-    step 3). For a Partial-B session whose station rebooted,
-    [`authorize-offline-pass.md` §6](spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4a settles
-    the session when the report after the boot names its bay `Available`, *"as it settles an online session so
-    reported"*, and makes an end record the station replays after that report a duplicate; the frozen clause of the
-    same §6 bullet says the same. Both read the online settlement as the close on the report, which an online session
-    now reaches only when no end record came.
+24. **An online session whose bay is reported free or faulted after a reconnection settles on its replayed end record
+    since 2026-10-12, and the frozen sites that settle a rebooted Partial-B session reported `Faulted` with `5113`
+    as online does give a figure the online close no longer uses.** By Gabi's decision, after a boot on which the
+    station did not restart the server settles an online session on the SessionEnded the station replays after its
+    bay reports, and closes it on the report only after a boot on which the station restarted, or at once on `5113
+    OUTCOME_INDETERMINATE` ([`connection-lost.md` §6](spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect)
+    step 3). On the timing this is what
+    [`authorize-offline-pass.md` §6](spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4a does
+    for a Partial-B session: it waits for the end record after a `Reconnect` and settles on the report after any
+    other boot. On the figure it is not: the online close on a `Faulted` report, `5113` included, is the `Fault` row
+    of *Settlement by Service Kind* ([`04-flows.md` §6](spec/04-flows.md#settlement-by-service-kind)) — a
+    `UserDuration` session refunded in full below `faultFullRefundThreshold`, a `FixedDuration` or `MultiUnit`
+    session refunded in full — where the Partial-B clause of
+    [`session-ended.md` §5](spec/profiles/transaction/session-ended.md#5-processing-rules) rule 1 and the Partial-B
+    sentence of [`start-service.md` §6](spec/profiles/transaction/start-service.md#6-processing-rules) rule 12 settle
+    a Partial-B session so reported as an online one, pro-rata on the time delivered,
+    [`boot-notification.md` §5.2](spec/profiles/core/boot-notification.md#52-bootreason--seven-boots-and-one-non-boot) rule 4 and
+    [TC-OFF-005](conformance/test-cases/offline/TC-OFF-005.md) expected result 22 and failure criterion 26 settle it
+    on the time delivered, and rule 4a's *"as online closes such a session"* now reaches the `Fault` row. Since the
+    same date the online close of a session reported `Faulted` with `5113` is at the report: the timing in item 20's
+    third-round finding and in the last clause of item 21, online's close at the end of its own timer, no longer
+    holds. [`reconciliation.md` §3](spec/profiles/offline/reconciliation.md#3-deduplication-offlinetxid) still ignores
+    a late end record *"as a repeated SessionEnded is"*, the words `session-ended.md` §5 rule 4 replaced on the same
+    date with *"a SessionEnded for a session already settled"*.
 
 ---
 
