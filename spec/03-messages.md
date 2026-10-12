@@ -1186,7 +1186,7 @@ Reports consumption telemetry during an active session. Sent at the interval con
 | **Trigger** | Session ends on the station without a StopService — the cases below |
 | **Expected Response** | None (EVENT — fire-and-forget) |
 | **Timeout** | N/A |
-| **Idempotency** | Yes — duplicate SessionEnded for same `sessionId` MUST be ignored by server |
+| **Idempotency** | Yes — a SessionEnded for a session already settled MUST be ignored by the server ([`session-ended.md` §5](profiles/transaction/session-ended.md#5-processing-rules) rule 4) |
 | **Message Expiry** | **Never expires** (Critical event — see [`02-transport.md §5.1`](02-transport.md)) |
 
 Reports the end of a session that was terminated autonomously by the station, without a server-initiated StopService command. Sent in any of the following cases:
