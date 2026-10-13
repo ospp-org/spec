@@ -62,14 +62,14 @@ sequenceDiagram
 
     %% Buffered message replay
     rect rgb(243, 229, 245)
-        Note over Station,Server: Phase 2 — Buffered Message Replay (FIFO order)
+        Note over Station,Server: Phase 2 — Buffered Message Replay (every SessionEnded first, then in order)
+        Station->>Broker: SessionEnded EVENT (buffered, sessionId, reason)
+        Broker->>Server: SessionEnded [MSG-040]
+        Server->>Server: Settle the session once (a later end record is a duplicate)
         Station->>Broker: MeterValues EVENT (buffered, t=10:02:30)
         Broker->>Server: MeterValues [MSG-010]
         Station->>Broker: MeterValues EVENT (buffered, t=10:03:30)
         Broker->>Server: MeterValues [MSG-010]
-        Station->>Broker: SessionEnded EVENT (buffered, sessionId, reason)
-        Broker->>Server: SessionEnded [MSG-040]
-        Server->>Server: Settle the session once (a later end record is a duplicate)
         Station->>Broker: TransactionEvent REQUEST (offlineTxId, receipt, txCounter)
         Broker->>Server: TransactionEvent [MSG-007]
         Server->>Server: Dedup → receipt signature → gate → settle → score<br/>(txCounter recorded, not gated)

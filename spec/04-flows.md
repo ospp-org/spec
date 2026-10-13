@@ -125,7 +125,7 @@ sequenceDiagram
         end
 
         Note over SSP: Enter normal operation
-        Note over SSP: Replay what it buffered, if anything
+        Note over SSP: Replay what it buffered, if anything,<br/>every SessionEnded first
         Note over SSP: Heartbeat every heartbeatIntervalSec,<br/>counted from the Accepted
 
     else Rejected
@@ -160,7 +160,7 @@ sequenceDiagram
 8. SSP synchronizes its clock to `serverTime`, applies any configuration overrides, stores the HMAC session key
 9. SSP sends one **StatusNotification EVENT** [MSG-009] per bay, reporting `bayNumber`, `status`, and every `programs[]` entry with its availability — programs, because a service is server-minted and at first boot the station has been told none
 10. SSP enters normal operation — ready to accept commands
-11. SSP replays any events it buffered while it could not send them ([Chapter 01 §6.5](01-architecture.md#65-offline-message-buffering))
+11. SSP replays any events it buffered while it could not send them, every SessionEnded first ([Chapter 01 §6.5](01-architecture.md#65-offline-message-buffering))
 12. SSP sends a **Heartbeat REQUEST** [MSG-008] every `heartbeatIntervalSec` seconds after the `Accepted` of step 7, whatever else it is sending ([`heartbeat.md` §7](profiles/core/heartbeat.md#7-processing-rules) rule 1)
 
 ### Alternative Paths
@@ -1161,7 +1161,7 @@ of by what was delivered.
 | All retry attempts fail | Full | 100% |
 | ACK_TIMEOUT (no response) | Full | 100% |
 | Hardware error during active, or a restart the station could not resume the wash after (SessionEnded `reason=Fault`) | Partial (pro-rated) | Based on time used |
-| No end record by the sweep's deadline: the end of the booked duration plus 60 seconds, and, while the station is away — offline, or answered `Pending` or `Rejected` and not back with a boot answered `Accepted` — `ConnectionLostGracePeriod` too ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)) | None | Charge full pre-authorized amount (the station runs the service to its end, through a loss of its connection too), and mark the close as an anomaly — not a Partial-B session, which settles on the first of its end records, or is closed at the end of its authorized duration ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) |
+| No end record by the sweep's deadline ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)): 60 seconds after the later of the session's end — the end of its booked duration, or, if later, the first boot answered `Accepted` after a restart plus the booked duration — and the station's last boot, once a message has arrived after that, while the station is not away; the session's end plus 60 seconds plus `ConnectionLostGracePeriod` while it is away — offline, or answered `Pending` or `Rejected` and not back with a boot answered `Accepted` | None | Charge full pre-authorized amount (the station runs the service to its end, through a loss of its connection too), and mark the close as an anomaly — not a Partial-B session, which settles on the first of its end records, or is closed at the end of its authorized duration ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) |
 | Customer stop from the app over BLE (SessionEnded `reason=Local`) | Partial (pro-rated) | Based on time used, recomputed by the server (the event's `creditsCharged` is advisory) |
 | Offline credit exhausted mid-session (SessionEnded `reason=LocalOutOfCredit`) | Full | 100% (no charge — `creditsCharged` MUST be 0) |
 | Offline pass revoked mid-session (SessionEnded `reason=Deauthorized`) | Full | 100% (no charge — session not billable; `creditsCharged` MUST be 0) |
@@ -1403,7 +1403,7 @@ sequenceDiagram
         SSP->>Server: StatusNotification EVENT [MSG-009]
     end
 
-    Note over SSP: Replay buffered events
+    Note over SSP: Replay buffered events, every SessionEnded first
 
     opt pendingOfflineTransactions > 0
         Note over SSP: Begin Flow §10 (Reconciliation)
@@ -1429,7 +1429,7 @@ sequenceDiagram
 7. **SSP** sends **BootNotification REQUEST** [MSG-001] (same as fresh boot)
 8. **Server** accepts the boot, marks station as `Online`, returns session key
 9. **SSP** sends **StatusNotification** [MSG-009] for each bay (each bay's current state)
-10. **SSP** replays any buffered events
+10. **SSP** replays any buffered events, every SessionEnded first ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4)
 11. If `pendingOfflineTransactions > 0`, SSP begins [Offline → Online Reconciliation (Flow §10)](#10-offline--online-reconciliation)
 12. **SSP** sends its **Heartbeat** [MSG-008] every `heartbeatIntervalSec` seconds after the boot was accepted, through the replay as at any other time ([`heartbeat.md` §7](profiles/core/heartbeat.md#7-processing-rules) rule 1); it has processed commands since then (step 8)
 
@@ -1441,8 +1441,8 @@ sequenceDiagram
 | TLS certificate expired during outage | SSP cannot reconnect — await manual certificate update |
 | Broker permanently unavailable | SSP operates in BLE-only mode indefinitely |
 | BootNotification `Rejected` after reconnect | Read the `errorCode`: the causes are the set [§4.1](07-errors.md#41-station--server-mqtt-actions) assigns to BootNotification. Decommissioning is **not** among them — it is out of scope ([Chapter 00 §1.3](00-introduction.md#13-out-of-scope)) — and the SSP **MUST** keep retrying per CORE-011 rather than await intervention. It is not back for its sessions, exactly as after a `Pending` boot (next row) |
-| BootNotification `Pending` after reconnect | The SSP is not back for its sessions: it replays and reports nothing while `Pending`, and the server holds them away, closing at the sweep, `completed`, charged in full and marked as an anomaly, a session whose end record has not arrived by the end of its booked duration plus 60 seconds plus `ConnectionLostGracePeriod` ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) — not a Partial-B session, which closes at the end of its authorized duration |
-| Session completed during offline | SSP replays the session's buffered SessionEnded after the post-boot reports, and the server settles the session on it ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3) |
+| BootNotification `Pending` after reconnect | The SSP is not back for its sessions: it replays and reports nothing while `Pending`, and the server holds them away, closing at the sweep, `completed`, charged in full and marked as an anomaly, a session whose end record has not arrived by its end — the end of its booked duration, or, if later, the first boot answered `Accepted` after a restart plus the booked duration — plus 60 seconds plus `ConnectionLostGracePeriod` ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) — not a Partial-B session, which closes at the end of its authorized duration |
+| Session completed during offline | SSP replays the session's buffered SessionEnded after the post-boot reports, first among its buffered session records, and the server settles the session on it ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3) |
 
 ### Postconditions
 
@@ -1831,7 +1831,7 @@ Consolidated timeout values across all flows:
 | StartService (pending_ack) | 10s | Refund, session → failed |
 | StopService (stopping) | 10s | Repeat the REQUEST, three attempts at most between two boots of the station; the session stays stopping until its end record or the sweep; a Partial-B session stays open until the first of its end records, and no longer than the end of its authorized duration (§6) |
 | Active session (max) | durationSeconds | Station auto-stops |
-| No end record (the sweep) | end of the booked duration + 60s, and + `ConnectionLostGracePeriod` while the station is away | Session → completed, full charge, marked as an anomaly ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)) |
+| No end record (the sweep) | 60s after the later of the session's end (the booked end, or, if later, the first boot answered `Accepted` after a restart + the booked duration) and the station's last boot, once a message has arrived after that, while the station is not away; the end + 60s + `ConnectionLostGracePeriod` while it is away | Session → completed, full charge, marked as an anomaly ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)) |
 | Session token (web) | 10 min | Session expired |
 | BayLock fallback | 3 min | Auto-released |
 | PaymentIntent pending | 5 min | Marked expired |

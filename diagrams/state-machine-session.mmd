@@ -20,8 +20,8 @@ stateDiagram-v2
     Active --> Completed : Partial B authorized duration ended<br/>with no end record
 
     Stopping --> Completed : Station confirms stop<br/>StopService RESPONSE (user stop)<br/>or SessionEnded EVENT [MSG-040] (timer expiry)
-    Stopping --> Completed : SessionEnded after a refused stop,<br/>or no end record by the sweep deadline
-    Stopping --> Failed : SessionEnded Fault or Deauthorized<br/>after a refused stop
+    Stopping --> Completed : SessionEnded after a refused or unanswered stop,<br/>or no end record by the sweep deadline
+    Stopping --> Failed : SessionEnded Fault or Deauthorized<br/>after a refused or unanswered stop
 
     Completed --> [*]
     Failed --> [*]

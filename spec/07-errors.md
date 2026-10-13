@@ -758,7 +758,7 @@ Attempt  Delay    Max Delay
 2. **Active sessions:** Active sessions MUST continue running during disconnection — do NOT stop hardware. The station operates autonomously.
 3. **BLE fallback:** The station MUST continue accepting BLE connections during MQTT disconnection.
 4. **Event buffering:** The station MUST buffer TransactionEvent, SessionStarted, SessionEnded and SecurityEvent messages per the categorized buffering policy in [01-architecture.md §6.5](../spec/01-architecture.md#65-offline-message-buffering). Regenerable messages (StatusNotification, MeterValues) MAY be discarded as they are regenerated at reconnection.
-5. **Reconnection sequence:** After MQTT reconnect → re-subscribe → BootNotification [MSG-001] → StatusNotification per bay [MSG-009] → replay buffered events → sync offline transactions [MSG-007].
+5. **Reconnection sequence:** After MQTT reconnect → re-subscribe → BootNotification [MSG-001] → StatusNotification per bay [MSG-009] → replay buffered events, every SessionEnded first → sync offline transactions [MSG-007].
 6. **Maximum offline duration:** If the station cannot reconnect within 72 hours, it SHOULD disable non-essential features (reservations, new sessions) and enter degraded offline-only mode.
 
 ### 5.2 BootNotification Retry

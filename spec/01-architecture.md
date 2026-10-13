@@ -472,7 +472,7 @@ Upon successful reconnection, the station transmits in the following order:
 1. BootNotification (fresh)
 2. StatusNotification per bay (fresh, current state)
 3. Buffered SecurityEvents (chronological)
-4. Buffered TransactionEvents, SessionStarted and SessionEnded events (chronological, interleaved by their own timestamps); after a restart, the SessionEnded of every session the station could not resume comes first among them, sent at once ([Chapter 05 §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rule 6)
+4. Buffered SessionEnded events first — every one the station buffered and, after a restart, that of every session it could not resume, sent at once ([Chapter 05 §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rule 6) — then its buffered TransactionEvents and SessionStarted events (chronological, interleaved by their own timestamps)
 5. Heartbeat at the configured interval, every `heartbeatIntervalSec` seconds from the BootNotification `Accepted`, whatever steps 2 to 4 are still sending ([`heartbeat.md` §7](profiles/core/heartbeat.md#7-processing-rules) rule 1)
 
 > **Why SessionEnded is named in step 4.** It is a Category-1 `MUST NOT discard` message above and was absent
@@ -481,6 +481,12 @@ Upon successful reconnection, the station transmits in the following order:
 > co-indexed — see the SessionEnded row of the Category-1 table — and because
 > [`session-ended.md` §6](profiles/transaction/session-ended.md) rule 6 orders SessionEnded only against the
 > StatusNotification that reports the bay's new state, which step 2 has already sent fresh.
+>
+> **Why every SessionEnded leads step 4.** The server's sweep closes a session whose end has passed 60 seconds
+> after the station's boot ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)), and a TransactionEvent backlog,
+> sent one at a time with a wait for each RESPONSE, can outlast that. A SessionEnded queued behind it would
+> arrive after the sweep had closed its session in full. The station has at most one online session per bay to
+> end, so sending the SessionEnded events first costs the backlog little.
 
 ### 6.6 Meter Reporting
 

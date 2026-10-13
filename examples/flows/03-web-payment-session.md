@@ -789,6 +789,6 @@ On the Operator Dashboard, the operator sees:
 
 4. **Anti-abuse: 5-layer defense.** Anonymous web payments are protected by: (1) IP rate limiting (5 sessions/30 min per IP), (2) device fingerprinting (3 sessions/30 min), (3) progressive CAPTCHA via Cloudflare Turnstile on suspicious patterns, (4) abandon scoring (5+ abandoned sessions trigger a 15-min block), and (5) bay lock only at `POST /pay/start` (browsing does not lock resources).
 
-5. **Natural completion via StatusNotification.** Unlike the mobile app flow where the user explicitly stops the session, web payment sessions run for the full pre-paid duration. The station auto-stops when the timer expires and reports completion through the standard StatusNotification state machine (Occupied -> Finishing -> Available). The server detects session completion from the Finishing notification.
+5. **Natural completion via SessionEnded.** Unlike the mobile app flow where the user explicitly stops the session, web payment sessions run for the full pre-paid duration. The station auto-stops when the timer expires, sends SessionEnded `TimerExpired`, and then reports the bay `Finishing` → `Available`. The server settles the session on the SessionEnded, and the bay reports only move the bay.
 
 6. **PG webhook HMAC verification.** The server verifies the `X-PG-Signature` header using HMAC-SHA512 with timing-safe comparison. Tampered or replayed webhooks are rejected silently, and a SecurityEvent is logged for investigation. The PaymentIntent has a 5-minute expiration window from creation to capture.

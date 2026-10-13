@@ -122,8 +122,8 @@ stateDiagram-v2
     Active --> Completed : Partial B authorized duration ended with no end record
 
     Stopping --> Completed : Station confirms stop
-    Stopping --> Completed : SessionEnded after a refused stop, or no end record by the sweep deadline
-    Stopping --> Failed : SessionEnded Fault or Deauthorized after a refused stop
+    Stopping --> Completed : SessionEnded after a refused or unanswered stop, or no end record by the sweep deadline
+    Stopping --> Failed : SessionEnded Fault or Deauthorized after a refused or unanswered stop
 
     Completed --> [*]
     Failed --> [*]
@@ -344,11 +344,11 @@ sequenceDiagram
     end
 
     rect rgb(243, 229, 245)
-        Note over Station,Server: Buffered Message Replay (FIFO)
-        Station->>Broker: Buffered MeterValues
-        Broker->>Server: MeterValues [MSG-010]
+        Note over Station,Server: Buffered Message Replay (every SessionEnded first)
         Station->>Broker: Buffered SessionEnded (sessionId, reason)
         Broker->>Server: SessionEnded [MSG-040]
+        Station->>Broker: Buffered MeterValues
+        Broker->>Server: MeterValues [MSG-010]
         Station->>Broker: TransactionEvent (offlineTxId, receipt, txCounter)
         Broker->>Server: TransactionEvent [MSG-007]
         Server->>Server: Dedup, receipt signature, gate, settle, score<br/>(txCounter recorded, not gated)
