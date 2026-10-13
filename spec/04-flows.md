@@ -126,7 +126,7 @@ sequenceDiagram
 
         Note over SSP: Enter normal operation
         Note over SSP: Replay what it buffered, if anything
-        Note over SSP: Once the broker has acknowledged the reports<br/>and the replay: first Heartbeat, then the heartbeat timer
+        Note over SSP: Heartbeat every heartbeatIntervalSec,<br/>counted from the Accepted
 
     else Rejected
         Server-->>SSP: BootNotification RESPONSE (Rejected, retryInterval, errorCode)
@@ -161,7 +161,7 @@ sequenceDiagram
 9. SSP sends one **StatusNotification EVENT** [MSG-009] per bay, reporting `bayNumber`, `status`, and every `programs[]` entry with its availability — programs, because a service is server-minted and at first boot the station has been told none
 10. SSP enters normal operation — ready to accept commands
 11. SSP replays any events it buffered while it could not send them ([Chapter 01 §6.5](01-architecture.md#65-offline-message-buffering))
-12. Once the broker has acknowledged the reports of step 9 and everything replayed, an offline reconciliation (A4) included, SSP sends its first **Heartbeat REQUEST** [MSG-008], at once on a boot with nothing to replay, and starts the heartbeat timer at `heartbeatIntervalSec` seconds ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4)
+12. SSP sends a **Heartbeat REQUEST** [MSG-008] every `heartbeatIntervalSec` seconds after the `Accepted` of step 7, whatever else it is sending ([`heartbeat.md` §7](profiles/core/heartbeat.md#7-processing-rules) rule 1)
 
 ### Alternative Paths
 
@@ -1341,13 +1341,13 @@ sequenceDiagram
 
 ### Station Offline Detection
 
-The Server MUST track the time of the last message it accepted from each station, a Heartbeat or any other: a station sends no Heartbeat during its replay after a boot ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4). Offline detection logic:
+The Server MUST track the time of the last message it accepted from each station, a Heartbeat or any other ([`connection-lost.md` §4.2](profiles/core/connection-lost.md#42-heartbeat-timeout) rule 1). Offline detection logic:
 
 | Condition | Server Action |
 |-----------|---------------|
 | No message for 1 heartbeat interval | No action (network jitter) |
 | No message for 2 heartbeat intervals | Mark station as `degraded` (internal) |
-| No message for `heartbeatIntervalSec * 3.5`, or, between a boot answered `Accepted` and the station's first Heartbeat after it, for the longer of that and 360 s ([`connection-lost.md` §4.2](profiles/core/connection-lost.md#42-heartbeat-timeout) rule 2) | Mark station as `Offline` |
+| No message for `heartbeatIntervalSec * 3.5` | Mark station as `Offline` |
 | ConnectionLost LWT [MSG-011] received | Immediately mark as `Offline` |
 | Station sends BootNotification [MSG-001] | Mark as `Online`, process boot sequence |
 
@@ -1409,10 +1409,7 @@ sequenceDiagram
         Note over SSP: Begin Flow §10 (Reconciliation)
     end
 
-    SSP->>Server: Heartbeat REQUEST [MSG-008], the first after the boot
-    Note over SSP,Server: Sent once the broker has acknowledged the reports<br/>and the replay: the end of the replay
-
-    Note over SSP: Heartbeats every heartbeatIntervalSec (commands answered since the Accepted)
+    Note over SSP: Heartbeats every heartbeatIntervalSec from the Accepted<br/>(commands answered since then)
 ```
 
 ### Happy Path
@@ -1434,7 +1431,7 @@ sequenceDiagram
 9. **SSP** sends **StatusNotification** [MSG-009] for each bay (each bay's current state)
 10. **SSP** replays any buffered events
 11. If `pendingOfflineTransactions > 0`, SSP begins [Offline → Online Reconciliation (Flow §10)](#10-offline--online-reconciliation)
-12. Once the broker has acknowledged the reports and everything replayed, **SSP** sends its first **Heartbeat** [MSG-008] after the boot, which marks the end of its replay ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4), and its heartbeats then follow every `heartbeatIntervalSec` seconds; it has processed commands since the boot was accepted (step 8)
+12. **SSP** sends its **Heartbeat** [MSG-008] every `heartbeatIntervalSec` seconds after the boot was accepted, through the replay as at any other time ([`heartbeat.md` §7](profiles/core/heartbeat.md#7-processing-rules) rule 1); it has processed commands since then (step 8)
 
 ### Error Paths
 
@@ -1826,7 +1823,7 @@ Consolidated timeout values across all flows:
 | MQTT CONNECT | 10s | Reconnect with backoff |
 | BootNotification | 30s | Wait 60s, retry |
 | Heartbeat | 30s | Log, continue |
-| Offline detection | 3.5 × heartbeatIntervalSec; between a boot answered `Accepted` and the station's first Heartbeat after it, the longer of that and 360 s ([`connection-lost.md` §4.2](profiles/core/connection-lost.md#42-heartbeat-timeout) rule 2) | Mark station offline |
+| Offline detection | 3.5 × heartbeatIntervalSec | Mark station offline |
 | ReserveBay | 5s | Session → failed |
 | Reserved → 3DS (web) | 3 min | CancelReservation |
 | Reserved → start (mobile) | 30s | CancelReservation |

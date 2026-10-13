@@ -359,7 +359,7 @@ A station participating in the OSPP protocol MUST fulfill the following core res
 
 ### 6.2 Heartbeat
 
-- The station MUST send a **Heartbeat** message at the interval specified by the server in the BootNotification response (`heartbeatIntervalSec`), its first after a boot once its post-boot reports and its replay have been acknowledged (§6.5, *Reconnection Transmission Order*).
+- The station MUST send a **Heartbeat** message at the interval specified by the server in the BootNotification response (`heartbeatIntervalSec`).
 - The server uses heartbeats for liveness detection and time synchronization. If the server receives no message from the station, a heartbeat or any other, within the expected window, it MAY publish a ConnectionLost event (supplemented by the MQTT Last Will and Testament).
 
 ### 6.3 Status Reporting
@@ -473,7 +473,7 @@ Upon successful reconnection, the station transmits in the following order:
 2. StatusNotification per bay (fresh, current state)
 3. Buffered SecurityEvents (chronological)
 4. Buffered TransactionEvents, SessionStarted and SessionEnded events (chronological, interleaved by their own timestamps); after a restart, the SessionEnded of every session the station could not resume comes first among them, sent at once ([Chapter 05 §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rule 6)
-5. Its first Heartbeat, once the broker has acknowledged every message of steps 2 to 4: the station **MUST NOT** send one before and **MUST** send it then, and sends the next every `heartbeatIntervalSec` seconds after it. That Heartbeat marks the end of the replay ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4).
+5. Heartbeat at the configured interval, every `heartbeatIntervalSec` seconds from the BootNotification `Accepted`, whatever steps 2 to 4 are still sending ([`heartbeat.md` §7](profiles/core/heartbeat.md#7-processing-rules) rule 1)
 
 > **Why SessionEnded is named in step 4.** It is a Category-1 `MUST NOT discard` message above and was absent
 > from this list, so the one ordering statement a station has for its reconnection flush did not mention a

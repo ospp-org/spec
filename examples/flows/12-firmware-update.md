@@ -45,7 +45,7 @@ Operator Charlie decides to update station `stn_a1b2c3d4` ("SSP-3000") from firm
 22:02:33.000  Station: BootNotification (firmware 1.3.0, bootReason: FirmwareUpdate)
 22:02:33.500  Server: Accepted
 22:02:40.000  Station: StatusNotification for all 3 bays (Available)
-22:02:40.300  Station: first Heartbeat, once the three reports are acknowledged (normal operations resume)
+22:02:45.000  Station: Heartbeat (normal operations resume)
 22:03:00.000  Server marks firmware update as completed
 22:03:00.500  Dashboard shows "Update successful - v1.3.0"
 ```
@@ -581,9 +581,9 @@ The server recognizes the firmware update boot, verifies the new firmware versio
 
 ---
 
-### Step 17: Normal Operations Resume (22:02:40.300)
+### Step 17: Normal Operations Resume (22:02:45.000)
 
-As soon as the broker has acknowledged its three reports, with nothing buffered to replay, the station sends its first heartbeat on the new firmware ([`heartbeat.md` §7](../../spec/profiles/core/heartbeat.md#7-processing-rules) rule 1).
+The station sends its first heartbeat on the new firmware.
 
 **MQTT Topic:** `ospp/v1/stations/stn_a1b2c3d4/to-server`
 
@@ -592,7 +592,7 @@ As soon as the broker has acknowledged its three reports, with nothing buffered 
   "messageId": "msg_hb_postfw_001",
   "messageType": "Request",
   "action": "Heartbeat",
-  "timestamp": "2026-02-13T22:02:40.300Z",
+  "timestamp": "2026-02-13T22:02:45.000Z",
   "source": "Station",
   "protocolVersion": "0.3.0",
   "payload": {}

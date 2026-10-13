@@ -71,7 +71,7 @@ level to enable rapid local development and testing.
 | Requirement | Test Case |
 |-------------|-----------|
 | Boot lifecycle (Accepted/Rejected/Pending) | TC-CORE-001 |
-| Heartbeat at configured interval | TC-CORE-001 (Part D) |
+| Heartbeat at configured interval | TC-CORE-001 (Part A) |
 | StatusNotification on every bay state change | TC-CORE-001 (Part C) |
 | Invalid bay transition accepted, recorded, the live session left to its end record | TC-CORE-003 |
 | LWT configured at MQTT CONNECT | TC-CORE-001 (Part A) |

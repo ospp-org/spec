@@ -215,14 +215,14 @@ Power on
   → SUBSCRIBE to "ospp/v1/stations/{station_id}/to-station" (QoS 1)
   → PUBLISH BootNotification REQUEST
   → Wait for RESPONSE (30s timeout)
-    - Accepted → sync clock, store sessionKey, apply config
+    - Accepted → sync clock, store sessionKey, apply config, start the heartbeat timer
     - Rejected → **restricted state**: accept no commands, send nothing but BootNotification retries, serve no customers; wait retryInterval, retry
     - Pending → **restricted state**: receive and ANSWER commands, originate nothing but BootNotification retries and a SignCertificate renewal, serve no customers; wait retryInterval, re-send BootNotification. Normal operation begins only after receiving `Accepted`
     - Timeout → wait 60s, retry
   → PUBLISH StatusNotification for EACH bay
   → Enter normal operation (accept and answer commands from here)
   → Replay what was buffered while the station could not send it, if anything
-  → Once the broker has acknowledged (PUBACK) all of it: PUBLISH the first Heartbeat, then start the heartbeat timer
+  → PUBLISH Heartbeat every heartbeatIntervalSec, counted from the Accepted, through the replay too
 ```
 
 **Critical rules:**
@@ -381,7 +381,7 @@ If MQTT drops during an active session:
 3. Buffer the **MUST-buffer** categories — TransactionEvent (min 1000, **never** discard), SessionEnded (min 1000, **never** discard — it is the sole billing source for a session that ended with no StopService to answer), SessionStarted (one per bay, **never** discard — the server keys a Partial-B session's authorized duration on it), SecurityEvent (200, FIFO). StatusNotification and MeterValues are **regenerable and MAY be discarded**; do not spend the buffer on them. The `MUST` storage level is **512 KB** — and **it does not hold the categories in this bullet.** [`01-architecture.md` §6.5](../spec/01-architecture.md#65-offline-message-buffering) derives what they cost: 1000 TransactionEvents (1.3 MB) + 1000 SessionEnded (250 KB) + 64 SessionStarted (16 KB) + 200 SecurityEvents (120 KB) + overhead = **~1.7 MB**, and §6.5 records the gap between the two as OPEN because raising a mandatory storage level changes the bill of materials of every station. **Size new hardware to the derived figure, not to the 512 KB level row.** At 90% of the TransactionEvent buffer, reject new StartService with `5111 BUFFER_FULL`; at 100%, enter degraded mode and refuse all new sessions (§6.5)
 4. Attempt reconnection with exponential backoff: 1s → 2s → 4s → 8s → 16s → 30s max, with 30% jitter
 5. On reconnect: Full boot sequence (BootNotification, StatusNotification per bay)
-6. Flush buffered messages after the StatusNotifications, and send the first Heartbeat only once the broker has acknowledged all of them: the server reads it as the end of the replay ([`connection-lost.md` §6](../spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4)
+6. Flush buffered messages after the StatusNotifications ([`connection-lost.md` §6](../spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4)
 
 ### 2.8 Offline Mode (BLE)
 
@@ -697,7 +697,7 @@ TriggerMessage [MSG-026] lets the server request the station to send a specific 
 
 1. Server sends TriggerMessage REQUEST with `requestedMessage` (and optional `bayId`)
 2. Station responds: `Accepted`, `Rejected`, or `NotImplemented`
-3. If `Accepted`, station **MUST** send the requested message within **5 seconds**, except a `Heartbeat` requested during its replay after a boot, which it sends at the end of that replay ([`trigger-message.md` §5](../spec/profiles/core/trigger-message.md#5-processing-rules) rule 1)
+3. If `Accepted`, station **MUST** send the requested message within **5 seconds**
 
 **Key rules:**
 - `NotImplemented` means the station doesn't support triggering this message type — it's a status value, not an error code
@@ -779,8 +779,8 @@ QoS: 1 (always)
 **On Heartbeat REQUEST:**
 
 1. Respond with `serverTime` — this keeps the station's clock synchronized. Maximum acceptable clock skew: **300 seconds**. Exceeding this triggers a `ClockSkew` SecurityEvent. Station SHOULD use NTP for time synchronization between heartbeats.
-2. Update the station's "last seen" timestamp in the database, and do the same on every other message of the station's that the server accepts, a signed one once its MAC has verified, but not on the ConnectionLost the broker publishes: the station sends no Heartbeat during its replay after a boot ([`connection-lost.md` §4.2](../spec/profiles/core/connection-lost.md#42-heartbeat-timeout) rule 1)
-3. If no message, a heartbeat or any other, has arrived from the station in `3.5 × heartbeatIntervalSec` (default 105s), mark the station as offline; between a boot answered `Accepted` and its first Heartbeat after it, wait for the longer of that and 360 s, since the server may take up to 60 s to answer a replayed TransactionEvent `RetryLater` and the station then waits out a backoff of up to 300 s ([`connection-lost.md` §4.2](../spec/profiles/core/connection-lost.md#42-heartbeat-timeout) rule 2)
+2. Update the station's "last seen" timestamp in the database, and do the same on every other message of the station's that the server accepts, a signed one once its MAC has verified, but not on the ConnectionLost the broker publishes ([`connection-lost.md` §4.2](../spec/profiles/core/connection-lost.md#42-heartbeat-timeout) rule 1)
+3. If no message, a heartbeat or any other, has arrived from the station in `3.5 × heartbeatIntervalSec` (default 105s), mark the station as offline ([`connection-lost.md` §4.2](../spec/profiles/core/connection-lost.md#42-heartbeat-timeout) rule 2)
 
 **On ConnectionLost EVENT (LWT):**
 
@@ -1257,7 +1257,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** Do NOT process commands while `Booting` or `Rejected`; DO answer them while `Pending`, refusing StartService/ReserveBay with `3002`
 - [ ] **[MUST]** Sync clock from BootNotification RESPONSE `serverTime`
 - [ ] **[MUST]** StatusNotification for each bay after boot
-- [ ] **[MUST]** First Heartbeat after a boot as soon as the post-boot StatusNotifications and the replay are acknowledged, and none before; then at server-specified `heartbeatIntervalSec`
+- [ ] **[MUST]** Heartbeat at server-specified `heartbeatIntervalSec`, counted from the BootNotification `Accepted`
 - [ ] **[MUST]** Compare Heartbeat RESPONSE `serverTime` against the local clock on every heartbeat
 - [ ] **[SHOULD]** Correct the clock when that drift exceeds 2 seconds (**[MUST]** log `5106 CLOCK_ERROR` above 5 minutes)
 - [ ] **[MUST]** Bay state machine: the 21 `Station` rows of [`05-state-machines.md` §2.3](../spec/05-state-machines.md#23-transition-table) — all of them, and none of the 6 `Server` rows. **`Unknown → Reserved` is one of them**: a station that rebooted holding a `Confirmed` reservation reports `Reserved`, and every count that said 20 was written before that row existed
@@ -1280,7 +1280,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** End a started session only on its end record — its SessionEnded, or the StopService RESPONSE of a stop the server asked for — or at the sweep; never on a bay report, a boot, a refused or unanswered StopService, or the station's absence ([`05-state-machines.md` §3.4](../spec/05-state-machines.md#34-timeouts))
 - [ ] **[MUST]** Sweep: close a session whose end record has not come 60 s after its end (or after the station's last boot, if later), and `ConnectionLostGracePeriod` later while the station is away — a disconnection, or a boot answered `Pending` or `Rejected` — `completed`, charged in full, marked as an anomaly ([`05-state-machines.md` §3.4](../spec/05-state-machines.md#34-timeouts))
 - [ ] **[MUST]** On a StopService timeout, repeat the REQUEST — three attempts at most between two boots of the station, and a new one after each boot answered `Accepted` — and never end the session on it ([`stop-service.md` §6](../spec/profiles/transaction/stop-service.md#6-processing-rules) rule 11)
-- [ ] **[MUST]** Mark station offline after `3.5 × heartbeatIntervalSec` without any message, a heartbeat or any other, and between a boot answered `Accepted` and the station's first Heartbeat after it only after the longer of that and 360 s
+- [ ] **[MUST]** Mark station offline after `3.5 × heartbeatIntervalSec` without any message, a heartbeat or any other
 - [ ] **[MUST]** Circuit breaker for station commands (3 timeouts → OPEN)
 - [ ] **[MUST]** Circuit breaker for payment processor (5 failures/60s → OPEN)
 - [ ] **[MUST]** Webhook HMAC-SHA512 verification (timing-safe)
