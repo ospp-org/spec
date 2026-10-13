@@ -8,6 +8,35 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+**Draft for the next release, normative: a started session ends only on its station's end record, or at the server's sweep.** The wire is unchanged: no field, value, error code or conformance vector moves, the schemas change in their descriptions only, and `protocolVersion` stays `0.3.0`. **Who must change: the station firmware and the server. Ship order: station firmware first, then servers.** The rule of [VERSIONING.md](VERSIONING.md#adding-a-required-field-and-which-side-moves-first) that a receiver accepts a form before any sender emits it is met already: every message a station on this revision sends, an earlier server accepts and settles. The server waits for the firmware because it settles nothing on a bay report any more, so the sessions of a station that does not yet report them across a restart are closed in full by the sweep. This draft covers this change only; the other changes merged since `0.44.0` have no entry yet.
+
+**What the station must send.**
+
+1. An end record for every session it started: the StopService RESPONSE of a stop the server asked for, and a SessionEnded for every other end ([`session-ended.md` §5](spec/profiles/transaction/session-ended.md#5-processing-rules) rule 1).
+2. A record of every live session in non-volatile storage — `sessionId`, `bayId`, start, booked duration, and the delivered time, updated at least every `MeterValuesSampleInterval` seconds — so that a restart loses none, and the delivered time it reports after one falls short by at most that interval ([`05-state-machines.md` §3.5](spec/05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rule 3).
+3. After any restart, for every session it held: the normal SessionEnded of the wash it resumed, when the wash ends; or, for a wash it cannot resume — its bay failed its self-test, the outcome is indeterminate, or the boot is a `RemoteReset` or a `FirmwareUpdate` — a SessionEnded `Fault` at once, with the delivered time it last persisted (rules 2 and 6 there), and so too for a damaged record that still names the session, its `sessionId` and `bayId`, with the delivered time it holds, or `0`; only a session it can no longer name is left to the sweep (rule 3 there). `Fault` now names a hardware fault or a restart the station could not resume the wash after, and settles on its existing row.
+4. After any boot, its buffered session records in this order: after a restart, the SessionEnded `Fault` of every session it could not resume (item 3), behind any MeterValues of that session it kept; then each online session's records, in that session's own order, its MeterValues and then its SessionEnded; and then its offline records, the TransactionEvents and the records of its Partial-B sessions ([`connection-lost.md` §6](spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4). The sweep closes a session whose end has passed 60 seconds after the station's boot, and a backlog of TransactionEvents can take longer than that; within a session the order is the one its `seqNo` counts.
+5. To a repeated StopService for a session it already stopped, its cached RESPONSE ([`stop-service.md` §6](spec/profiles/transaction/stop-service.md#6-processing-rules) rule 10).
+6. Heartbeats every `heartbeatIntervalSec` seconds after the BootNotification `Accepted`, through the replay as at any other time, as in `0.44.0` ([`heartbeat.md` §7](spec/profiles/core/heartbeat.md#7-processing-rules) rule 1). A station built to the first-Heartbeat rule merged on 2026-10-12 and never released, which held the first Heartbeat until its replay was acknowledged, sends them during its replay too.
+
+A forced Reset still settles every session first with `OperatorStopped`, and no installation begins while a session runs.
+
+**What the server does.**
+
+- **The end record or the sweep, nothing else.** It ends a started session only on that end record or at the sweep, and settles, closes or fails none on a StatusNotification, on a BootNotification of any `bootReason`, on a StopService refused or unanswered, or on the station's absence ([`05-state-machines.md` §3.4](spec/05-state-machines.md#34-timeouts)). A bay report updates the bay and records any disagreement, and the bay is not sold while its session is open. `TC-CORE-003` Part C now requires exactly that.
+- **The sweep.** A session whose end record has not arrived is closed `completed`, charged in full and marked as an anomaly: 60 seconds after the later of its end — its booked end, or, if later, the first boot answered `Accepted` after a restart plus the booked duration — and the station's last boot, once the station has sent a message since, while it is not away; and at its end plus 60 seconds plus `ConnectionLostGracePeriod` while it is away.
+- **A stop.** A refused StopService leaves the session `Stopping` until its SessionEnded or the sweep. An unanswered one is sent again under the same `messageId` with a fresh `timestamp`, at most three attempts while the station stays connected and a new one after each boot answered `Accepted` while the session is still `Stopping`, and never ends the session; a RESPONSE `Accepted` that arrives after its attempt's timeout, while the session is still open, settles it. The first end record to arrive settles a `Stopping` session: a SessionEnded of any reason, `TimerExpired` included, settles it at once by its reason, and a RESPONSE that arrives after it changes nothing, as a SessionEnded after an `Accepted` RESPONSE changes nothing; a conforming station cannot send both. A server resetting with `force` sends no StopService of its own ([`reset.md` §6](spec/profiles/device-management/reset.md#6-active-session-handling) rule 4).
+- **Away.** A station is away for its sessions from its disconnection, or from a boot answered `Pending` or, now, `Rejected`, until a boot answered `Accepted` ([`connection-lost.md` §5](spec/profiles/core/connection-lost.md#5-server-side-handling) step 4).
+- **Liveness.** Every accepted message counts, and the heartbeat timeout is 3.5 × `heartbeatIntervalSec` always, as in `0.44.0`.
+
+**Withdrawn with them, as rules that existed only to reconcile a bay's status with the end record:** the settlement of a session on a bay report, `5113` included, the end of a session at a `RemoteReset` or `FirmwareUpdate` boot, the `Failed` close on a StopService timeout, and the grace period counted from the disconnection. Three rules merged after `0.44.0` and never released go with them: the first Heartbeat after a boot as the end of the replay, the hold of a bay report until that end, and the 360 s heartbeat timeout during the replay. A Partial-B session is frozen text and keeps its own rules; [KNOWN-ISSUES.md](KNOWN-ISSUES.md) records where they now differ.
+
+---
+
 ## [0.44.0] — 2026-09-29
 
 ### Changed

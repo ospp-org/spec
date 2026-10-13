@@ -29,8 +29,6 @@ Verify that a station sends BootNotification as the first message after establis
 3. Station is in a clean boot state (no active sessions, no pending commands).
 4. Test harness is subscribed to all station MQTT topics and can inject responses.
 5. The station's `stationId` is registered in the server simulator's registry.
-6. The test harness controls the MQTT broker, or observes the PUBACKs it sends the station, so that it can time
-   the station's first Heartbeat against the acknowledgement of the post-boot reports.
 
 ## Steps
 
@@ -51,8 +49,8 @@ Verify that a station sends BootNotification as the first message after establis
    - the payload validates against `status-notification.schema.json`.
 9. Send a GetConfiguration command to the station.
 10. Verify that the station responds to the GetConfiguration command (confirming it accepts commands post-Accepted).
-11. Verify that the station sends no Heartbeat before the broker has acknowledged the StatusNotifications of step 8 and every message it replays, and sends one as soon as it has, within 5 seconds: at once after the reports on this clean boot, which has nothing to replay ([`heartbeat.md` §7](../../../spec/profiles/core/heartbeat.md#7-processing-rules) rule 1).
-12. Verify that the next Heartbeat follows `heartbeatIntervalSec` seconds after the first (heartbeatIntervalSec +/- 10%).
+11. Wait for `heartbeatIntervalSec` seconds after the `Accepted` of step 7.
+12. Verify that the station sends a Heartbeat message within the expected interval window (heartbeatIntervalSec +/- 10% after the `Accepted`), and the next `heartbeatIntervalSec` seconds after it ([`heartbeat.md` §7](../../../spec/profiles/core/heartbeat.md#7-processing-rules) rule 1).
 
 ### Part B — Rejected Response
 
@@ -134,7 +132,7 @@ Verify that a station sends BootNotification as the first message after establis
 2. The MQTT CONNECT packet includes a properly configured LWT on the station's ConnectionLost topic.
 3. The BootNotification request payload validates against the JSON schema.
 4. All required fields (`stationId`, `firmwareVersion`, `stationModel`, `stationVendor`, `bays`, `serialNumber`, `uptimeSeconds`, `pendingOfflineTransactions`, `timezone`, `bootReason`, `capabilities`, `networkInfo`) are present and correctly typed.
-5. After Accepted, the station adopts the `heartbeatIntervalSec`, sends its first Heartbeat once its post-boot reports are acknowledged, and then sends Heartbeat messages at the correct cadence.
+5. After Accepted, the station adopts the `heartbeatIntervalSec` and sends Heartbeat messages at the correct cadence, counted from the `Accepted`.
 6. After Accepted, the station publishes StatusNotification for every bay, each reporting a determinate state — one of the six reportable values, never `Unknown` — and each omitting `previousStatus`.
 7. After Rejected, the station enters the `Rejected` restricted state and does not process server commands.
 8. After Rejected, the station retries BootNotification at the specified `retryInterval`.
@@ -157,4 +155,3 @@ Verify that a station sends BootNotification as the first message after establis
 10. Station reports `Unknown` in `status` on any bay. `Unknown` is a state the station holds at power-on and resolves by self-test; reporting it transmits the absence of an answer in place of an answer, and leaves the server holding the bay where it refuses payment and StartService (`3002 BAY_NOT_READY`). A station that has not finished evaluating a bay has not yet satisfied result 6 — it reports when it knows.
 11. Station reports `services[]` on a StatusNotification, or omits a program the bay declared at provisioning instead of reporting it `available: false`.
 12. Station includes `previousStatus` on the post-boot report. The only truthful value there is `Unknown`, which is not a wire value; the field's absence is what marks this message as the boot report.
-13. Station sends its first Heartbeat after `Accepted` before the broker has acknowledged its post-boot StatusNotifications and every message it replays, or does not send it within 5 seconds after the broker has.

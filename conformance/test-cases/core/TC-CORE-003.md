@@ -14,8 +14,8 @@ Core Profile
 Verify that a server receiving a StatusNotification [MSG-009] whose transition is **not** in
 [`05-state-machines.md` §2.3](../../../spec/05-state-machines.md#23-transition-table) does all four
 of the things [§2.5](../../../spec/05-state-machines.md#25-invalid-transitions) requires: accepts
-the reported state, records the event where an operator can retrieve it, reconciles a session the
-new state contradicts, and does **not** reboot the station over it.
+the reported state, records the event where an operator can retrieve it, leaves a session the new
+state contradicts to its end record, and does **not** reboot the station over it.
 
 Each Part isolates one of the four. A server can fail exactly one and the case says which.
 
@@ -57,18 +57,23 @@ Each Part isolates one of the four. A server can fail exactly one and the case s
 7. Restart the server process. Repeat step 5. Verify the record survives — §2.5 rule 2 requires it
    be durable, and a record that a redeploy erases was never evidence.
 
-### Part C — A live session is reconciled, not stranded
+### Part C — A live session is left to its end record
 
 8. Return the bay to `Available` and start a session on it by the server's normal path, so that
    the server holds the session `Active` and the bay `Occupied`. Note the amount authorized.
 9. Emit StatusNotification with `status: "Available"`, `previousStatus: "Occupied"`.
    `Occupied → Available` is not in §2.3: the table's only exits from `Occupied` are `Finishing`
    and `Faulted`.
-10. Verify the bay reads `Available` (rule 1 still applies — the state is accepted).
-11. Verify the session is **no longer `Active`**. It **MUST** have reached a terminal state.
-12. Verify a settlement was produced for it under the refund policy — a charge, a refund, or both.
-    A session left `Active` against an `Available` bay is the failure this Part exists to catch.
-13. Verify the bay is not simultaneously offered as bookable while the session is still open.
+10. Verify the bay reads `Available` (rule 1 still applies — the state is accepted), and that the
+    disagreement between the bay and the live session is recorded where an operator can retrieve it
+    (rule 3).
+11. Verify the session is **still `Active`**, and nothing has been settled for it. The report is not
+    the session's end record, and the server **MUST NOT** end a session on one
+    ([§2.5](../../../spec/05-state-machines.md#25-invalid-transitions) rule 3; [§3.4](../../../spec/05-state-machines.md#34-timeouts)).
+12. Emit the session's SessionEnded EVENT [MSG-040] with `reason: "Fault"`, an
+    `actualDurationSeconds` and a `creditsCharged`. Verify the session reaches its terminal state on it
+    and is settled by the `Fault` row of the refund policy: the end record, not the report, ends it.
+13. Verify the bay was not offered as bookable while the session was open, between steps 9 and 12.
 
 ### Part D — No Reset is sent
 
@@ -84,7 +89,7 @@ Each Part isolates one of the four. A server can fail exactly one and the case s
 2. The server sends no response to the EVENT.
 3. The event is retrievable through an operator-facing surface, identifies station/bay/from/to, and
    survives a server restart.
-4. A session the accepted state contradicts reaches a terminal state and is settled.
+4. A session the accepted state contradicts stays live until its end record, and settles on that record.
 5. No Reset [MSG-015] is issued because of an invalid transition, at any repetition count.
 
 ## Failure Criteria
@@ -95,10 +100,10 @@ Each Part isolates one of the four. A server can fail exactly one and the case s
 2. The server answers the EVENT.
 3. The event reaches only a process log — nothing an operator can query, nothing an alert reads,
    nothing that survives a restart. §2.5 rule 2 is not satisfied by writing a line somewhere.
-4. **The session stays `Active` while the bay reads `Available`.** The customer has paid, the
-   station says the bay is not serving them, and the server is billing for a bay it is
-   simultaneously offering to the next customer. This is the defect the rule exists to prevent, and
-   accepting the bay state without it is worse than rejecting the report would have been.
+4. **The session is ended on the bay's report.** The server settles, closes or fails the session on a
+   StatusNotification, so a wash the station may still be running is billed or refunded on a report that
+   measures nothing; or it offers the bay for sale while the session is open. The station sends the
+   session's end record, and when none comes the sweep closes it.
 5. The server sends a Reset. Reset preserves everything the station has persisted, so it repairs no
    model disagreement; with `force` it ends a paying customer's session, on the strength of a
    report that may well have been true.

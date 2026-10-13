@@ -28,7 +28,7 @@ The TriggerMessage action allows the server to request the station to send a spe
 
 | Status | Meaning |
 |--------|---------|
-| `Accepted` | The station will send the requested message within 5 seconds, or, for a `Heartbeat` requested during its replay after a boot, at the end of that replay (§5 rule 1). |
+| `Accepted` | The station will send the requested message within 5 seconds. |
 | `Rejected` | The station cannot send the requested message at this time (e.g., no active session for MeterValues). |
 | `NotImplemented` | The station does not support triggering this message type. |
 
@@ -51,7 +51,7 @@ The TriggerMessage action allows the server to request the station to send a spe
 > also the only restricted state that can sign a SignCertificate, since `Rejected` holds no session
 > key. The rules below apply to an `Operational` station.
 
-1. After responding `Accepted`, the station MUST send the requested message within **5 seconds**, except a `Heartbeat` requested before its first Heartbeat after a boot, which it sends as that first one, once its post-boot reports and its replay have been acknowledged, and not before ([`connection-lost.md` §6](connection-lost.md#6-session-recovery-on-reconnect) step 4).
+1. After responding `Accepted`, the station MUST send the requested message within **5 seconds**.
 2. The triggered message is a normal message instance — it uses the same format, topic, and processing rules as if it were sent on schedule.
 3. If `requestedMessage` is `StatusNotification` and `bayId` is provided, the station MUST send a StatusNotification only for the specified bay.
 4. If `requestedMessage` is `MeterValues` and no session is active on the specified bay (or any bay if `bayId` is omitted), the station SHOULD respond `Rejected`.

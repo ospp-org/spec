@@ -41,7 +41,6 @@ Station `stn_a1b2c3d4` is running an active Eco Program session (`sess_f7e8d9c0`
 10:03:16.000  Station: replays buffered MeterValues #1 (from 10:03:05)
 10:03:16.200  Station: replays buffered MeterValues #2 (from 10:03:10)
 10:03:16.400  Station: replays buffered StatusNotification #2 (current state)
-10:03:16.500  Station: first Heartbeat after the boot, everything above acknowledged: the replay is over
 10:03:16.600  Server: processes all buffered messages, session state reconciled
 10:03:20.000  Station: sends live MeterValues (normal 5s interval resumes)
 10:03:25.000  Station: sends live MeterValues
@@ -275,7 +274,7 @@ After any reconnection, the station sends a BootNotification to re-announce itse
 
 ### Step 11: Server Responds Accepted (10:03:15.600)
 
-The server recognizes this as a reconnection rather than a cold boot from `bootReason: "Reconnect"` — the station is telling it directly that the firmware never restarted — corroborated by `uptimeSeconds: 86595`, which spans the outage. It keeps the session, as it would across a cold boot too: only a `RemoteReset` or a `FirmwareUpdate` ends one ([`boot-notification.md` §5.2](../../spec/profiles/core/boot-notification.md#52-bootreason--seven-boots-and-one-non-boot)). Before `Reconnect` existed the station had to pick a value that named a boot that never happened, and the server had to infer the truth from the uptime alone.
+The server recognizes this as a reconnection rather than a cold boot from `bootReason: "Reconnect"` — the station is telling it directly that the firmware never restarted — corroborated by `uptimeSeconds: 86595`, which spans the outage. It keeps the session, as it does across every boot: no boot ends a session, which ends on its end record or at the server's sweep ([`boot-notification.md` §5.2](../../spec/profiles/core/boot-notification.md#52-bootreason--seven-boots-and-one-non-boot) rule 3). Before `Reconnect` existed the station had to pick a value that named a boot that never happened, and the server had to infer the truth from the uptime alone.
 
 **MQTT Topic:** `ospp/v1/stations/stn_a1b2c3d4/to-station`
 
@@ -319,7 +318,7 @@ The server recognizes this as a reconnection rather than a cold boot from `bootR
 
 ### Step 12: Station Replays Buffered Messages (10:03:15.800 - 10:03:16.400)
 
-The station replays all buffered messages in chronological order. The server identifies buffered messages by comparing timestamps against the known disconnection period.
+The station replays its buffered messages, each online session's records first, in that session's own order, and its offline records after them ([`connection-lost.md` §6](../../spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4); this outage buffered no offline record and no SessionEnded, so the replay below is chronological. The server identifies buffered messages by comparing timestamps against the known disconnection period.
 
 **Buffered StatusNotification #1 (connectivity status during disconnect):**
 
@@ -449,7 +448,6 @@ The server processes all buffered messages and confirms the session is intact:
 
 ```
 [10:03:16.600] INFO  Buffered message replay complete for stn_a1b2c3d4
-                     Replay ended by: the first Heartbeat after the boot (10:03:16.500)
                      Messages replayed: 4 (2 StatusNotification, 2 MeterValues)
                      Session sess_f7e8d9c0: RECONCILED
                        - Hardware ran continuously (no gap)
@@ -564,9 +562,6 @@ Station Timeline:
      |------------------------->|------------------->|
      |  current: StatusNotif #2 |                    |
      |------------------------->|------------------->|
-     |  Heartbeat (first after  |                    |
-     |  the boot: replay over)  |                    |
-     |------------------------->|------------------->|
      |                          |                    | reconcile OK
      |                          |                    |
      |  MeterValues (live)      |                    |
@@ -595,6 +590,6 @@ Backoff formula: `min(initialDelay * 2^(attempt-1), maxDelay)` with `initialDela
 
 3. **Replay with timestamp comparison.** The server distinguishes between real-time and historical messages by comparing message timestamps against the known disconnection period. This prevents the server from acting on stale data as if it were current (e.g., triggering alerts for a status that has already changed).
 
-4. **BootNotification on reconnect.** Even for a brief disconnection, the station sends a BootNotification — the HMAC session key is scoped to the MQTT session and arrives only in that response, so a new session needs a new key. `bootReason: "Reconnect"` tells the server the firmware never restarted, and `uptimeSeconds` corroborates by spanning the outage; the session is kept, as it is across every boot but a `RemoteReset` or a `FirmwareUpdate`.
+4. **BootNotification on reconnect.** Even for a brief disconnection, the station sends a BootNotification — the HMAC session key is scoped to the MQTT session and arrives only in that response, so a new session needs a new key. `bootReason: "Reconnect"` tells the server the firmware never restarted, and `uptimeSeconds` corroborates by spanning the outage; the session is kept, as it is across every boot: no boot ends a session.
 
 5. **Server reconciliation.** After receiving all buffered messages, the server checks meter value continuity (values should be monotonically increasing) and duration continuity. Any gaps or anomalies would trigger a reconciliation alert.

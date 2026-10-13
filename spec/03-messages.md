@@ -222,7 +222,7 @@ The station MAY include a human-readable name configurable via `StationName` (se
 
 | Status | Station Action |
 |--------|---------------|
-| `Accepted` | Sync clock → apply configuration → send StatusNotification per bay → enter normal operation → replay what it buffered → the first Heartbeat once both are acknowledged, then the heartbeat timer ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4) |
+| `Accepted` | Sync clock → apply configuration → start heartbeat → send StatusNotification per bay → enter normal operation → replay what it buffered ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4) |
 | `Rejected` | Enter the `Rejected` restricted state — refuse commands, send nothing but retries, serve no customers → wait `retryInterval` seconds → retry BootNotification |
 | `Pending` | Enter the `Pending` restricted state — **answer** commands, originate nothing but BootNotification retries and a SignCertificate [MSG-022] renewal, refuse StartService/ReserveBay with `3002 BAY_NOT_READY` → wait `retryInterval` seconds → retry BootNotification. See [Chapter 05 §1.4](05-state-machines.md#14-the-restricted-states) |
 
@@ -943,7 +943,7 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
 | **Message Type** | REQUEST / RESPONSE |
 | **Topic (publish)** | `ospp/v1/stations/{station_id}/to-server` |
 | **Topic (reply)** | `ospp/v1/stations/{station_id}/to-station` |
-| **Trigger** | Timer fires every `heartbeatIntervalSec` seconds (from [BootNotification](#11-bootnotification) RESPONSE), counted from the first Heartbeat after the boot, which the station sends once its post-boot reports and its replay have been acknowledged ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4) |
+| **Trigger** | Timer fires every `heartbeatIntervalSec` seconds (from [BootNotification](#11-bootnotification) RESPONSE) |
 | **Expected Response** | Heartbeat RESPONSE |
 | **Timeout** | 30 seconds |
 | **Idempotency** | Yes — always safe to retry |
@@ -951,7 +951,7 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
 
 The heartbeat serves two purposes: (1) keep-alive signal proving the station is connected and responsive, and (2) clock synchronization via the server's `serverTime` response.
 
-The server **MUST** track the time of the last message it accepted from each station, a Heartbeat or any other: a station sends no Heartbeat during its replay after a boot ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4). If no message is received for **3.5 × `heartbeatIntervalSec`** seconds, the server **MUST** treat the station as disconnected, between a boot answered `Accepted` and the station's first Heartbeat after it only once none has come for the longer of that and 360 s ([`connection-lost.md` §4.2](profiles/core/connection-lost.md#42-heartbeat-timeout) rule 2) — [`heartbeat.md` §7](profiles/core/heartbeat.md#7-processing-rules) rule 4 and [CORE-007](profiles/core/README.md). (This summary previously said `SHOULD`, weakening the rule it summarises.)
+The server **MUST** track the time of the last message it accepted from each station, a Heartbeat or any other ([`connection-lost.md` §4.2](profiles/core/connection-lost.md#42-heartbeat-timeout) rule 1). If no message is received for **3.5 × `heartbeatIntervalSec`** seconds, the server **MUST** treat the station as disconnected — [`heartbeat.md` §7](profiles/core/heartbeat.md#7-processing-rules) rule 4 and [CORE-007](profiles/core/README.md). (This summary previously said `SHOULD`, weakening the rule it summarises.)
 
 #### REQUEST Payload
 
@@ -1189,17 +1189,17 @@ Reports consumption telemetry during an active session. Sent at the interval con
 | **Idempotency** | Yes — a SessionEnded for a session already settled MUST be ignored by the server ([`session-ended.md` §5](profiles/transaction/session-ended.md#5-processing-rules) rule 4) |
 | **Message Expiry** | **Never expires** (Critical event — see [`02-transport.md §5.1`](02-transport.md)) |
 
-Reports the end of a session that was terminated autonomously by the station, without a server-initiated StopService command. Sent in any of the following cases:
+Reports the end of a session that was terminated autonomously by the station, without a server-initiated StopService command. Sent in any of the following cases, and in each the station **MUST** send it ([`session-ended.md` §5](profiles/transaction/session-ended.md#5-processing-rules) rule 1):
 
 1. **Timer expiry:** The `durationSeconds` timer elapsed and the station auto-stopped the service.
-2. **Hardware fault:** A hardware fault occurred during an active session and the station auto-stopped the service.
+2. **Hardware fault, or a restart the station could not resume the wash after:** A hardware fault occurred during an active session and the station auto-stopped the service; or the station restarted with the session live and could not resume the wash, and reports it at once after the boot with the delivered time it last persisted ([Chapter 05 §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rules 3 and 6).
 3. **Customer stop over BLE:** The customer stopped the session from the app over BLE, with a StopServiceRequest [MSG-036] — a customer stops a session only through the app ([`04-flows.md` §6](04-flows.md#settlement-by-service-kind)).
 4. **Offline credit exhausted:** The station was operating in offline mode and the user's offline credit pool reached zero mid-session, forcing an immediate stop.
 5. **Mid-session deauthorization:** The user's offline pass was revoked (e.g., via a `RevocationEpoch` bump propagated through ChangeConfiguration) while the session was active; the station MUST stop the service when it detects the revocation.
 6. **Inactivity:** The `SessionTimeout` idle timer elapsed with no user interaction, and the station stopped the service ([`08-configuration.md` §3](08-configuration.md#3-transaction-configuration-keys)).
 7. **Operator stop at the station:** An operator ended the session — a forced Reset, or a station disable the station carries out ([Chapter 04 §6](04-flows.md#the-operator-disable-policy)).
 
-The server **MUST** settle the session from this event rather than from StatusNotification — it **MUST NOT** rely solely on StatusNotification for billing calculations when this event is expected. After a boot answered `Accepted` that keeps the session, a report of its bay settles it only when the server processes it after the end of the station's replay, or when it reports `Faulted` with `5113`, and a session whose SessionEnded does not come within a bounded grace after the latest of the end of its booked duration, the boot, the end of the replay and, where the station restarted at a boot that kept it, the latest such boot plus that duration, or, if the replay has not ended, within a longer bounded allowance after the latest of the others, closes as one whose timer expired ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3). The event's `actualDurationSeconds` and `meterValues` are the delivery record; its `creditsCharged` is **advisory input only**. The server **MUST** recompute the amount itself under the active tariff (see **Billing Authority** in [`04-flows.md §6`](04-flows.md)) and **MUST NOT** accept the station's figure as the charge.
+The server **MUST** settle the session from this event rather than from StatusNotification — it **MUST NOT** rely on StatusNotification for billing calculations, nor end the session on one, before or after a boot. A session whose SessionEnded has not come is closed by the sweep, `completed`, in full and marked as an anomaly ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)): 60 seconds after the later of its end — the end of its booked duration, or, if later, the first boot answered `Accepted` after a restart plus the booked duration — and the station's last boot, once a message from the station has arrived after that, while it is not away; and at its end plus 60 seconds plus `ConnectionLostGracePeriod` while it is away. The event's `actualDurationSeconds` and `meterValues` are the delivery record; its `creditsCharged` is **advisory input only**. The server **MUST** recompute the amount itself under the active tariff (see **Billing Authority** in [`04-flows.md §6`](04-flows.md)) and **MUST NOT** accept the station's figure as the charge.
 
 The server is the authoritative billing engine; the station's `creditsCharged` value is advisory and the server applies the active tariff to produce the final invoice. See [Billing Authority in `04-flows.md`](04-flows.md) for the normative statement of this separation.
 
@@ -1226,7 +1226,7 @@ This message is NOT sent when the session is stopped by a server-initiated StopS
 | Value | Description |
 |-------|-------------|
 | `TimerExpired` | Session `durationSeconds` elapsed; station auto-stopped. |
-| `Fault` | Hardware fault detected during active session; station auto-stopped. |
+| `Fault` | Hardware fault detected during active session; station auto-stopped. Also a restart the station could not resume the wash after: sent at once after the boot, with `actualDurationSeconds` the delivered time it last persisted ([Chapter 05 §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rule 6), and settled exactly as a hardware fault. |
 | `Local` | The customer stopped the session from the app over BLE, with a StopServiceRequest [MSG-036]. A customer stops a session only through the app: through the server, a StopService, which ends in its RESPONSE and no SessionEnded; over BLE, this reason. Distinguishes the customer's stop at the station from a server-routed StopService and from an operator's termination at the station. |
 | `LocalOutOfCredit` | Offline credit pool exhausted mid-session — `OfflinePass.maxTotalCredits` would be exceeded by the next meter reading or by elapsed time, forcing the station to stop. Session MUST be billed at zero (no valid credits available). |
 | `Deauthorized` | Offline pass revoked while the session was active — typically a `RevocationEpoch` bump propagated through ChangeConfiguration that invalidates the pass under which the session was authorized. Session MUST be billed at zero. |
@@ -1271,7 +1271,7 @@ This message is NOT sent when the session is stopped by a server-initiated StopS
 }
 ```
 
-> **Note:** SessionEnded is always followed by StatusNotification [MSG-009] reporting the new bay state (`Finishing` → `Available` for timer expiry, or `Faulted` for hardware fault). The server MUST process SessionEnded before acting on the subsequent StatusNotification.
+> **Note:** SessionEnded for a running wash is followed by StatusNotification [MSG-009] reporting the new bay state (`Finishing` → `Available` for timer expiry, or `Faulted` for hardware fault); one sent at once after a restart follows the post-boot report of its bay instead. The server MUST process SessionEnded before acting on the subsequent StatusNotification.
 
 ---
 
@@ -2448,7 +2448,7 @@ DataTransfer is HMAC-signed like every other message ([Chapter 06 §5.6](06-secu
 | **Idempotency** | Yes — duplicate triggers for the same message type are safe |
 | **Message Expiry** | 60 seconds |
 
-Instructs the station to send a specific message immediately, outside of its normal schedule. After responding `Accepted`, the station MUST send the requested message within **5 seconds**, except a Heartbeat requested before its first Heartbeat after a boot, which it sends as that first one ([`trigger-message.md` §5](profiles/core/trigger-message.md#5-processing-rules) rule 1).
+Instructs the station to send a specific message immediately, outside of its normal schedule. After responding `Accepted`, the station MUST send the requested message within **5 seconds**.
 
 #### REQUEST Payload
 

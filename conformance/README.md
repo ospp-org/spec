@@ -71,9 +71,9 @@ level to enable rapid local development and testing.
 | Requirement | Test Case |
 |-------------|-----------|
 | Boot lifecycle (Accepted/Rejected/Pending) | TC-CORE-001 |
-| Heartbeat at configured interval | TC-CORE-001 (Part D) |
+| Heartbeat at configured interval | TC-CORE-001 (Part A) |
 | StatusNotification on every bay state change | TC-CORE-001 (Part C) |
-| Invalid bay transition accepted, recorded, session reconciled | TC-CORE-003 |
+| Invalid bay transition accepted, recorded, the live session left to its end record | TC-CORE-003 |
 | LWT configured at MQTT CONNECT | TC-CORE-001 (Part A) |
 | DataTransfer status values (UnknownVendor / UnknownData) | TC-CORE-004 (Parts A--B) |
 | TriggerMessage, including refusal while restricted | TC-CORE-004 (Parts C--D) |

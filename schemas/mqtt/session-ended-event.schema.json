@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ospp-standard.org/schemas/v1/mqtt/session-ended-event.schema.json",
   "title": "SessionEnded",
-  "description": "Station notification reporting the autonomous end of a session due to timer expiry or hardware fault.",
+  "description": "Station notification reporting the end of a session the station decided itself, not a stop the server commanded: its timer, a hardware fault or a restart it could not resume the wash after, the customer's stop over BLE, offline credit exhausted, a revoked pass, inactivity, or an operator's stop at the station.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -30,7 +30,7 @@
         "OperatorStopped",
         "Inactivity"
       ],
-      "description": "Why the session ended autonomously. TimerExpired: durationSeconds elapsed. Fault: hardware fault detected. Local: the customer stopped the session from the app over BLE (StopServiceRequest); a customer stops a session only through the app. LocalOutOfCredit: offline credit pool exhausted mid-session. Deauthorized: offline pass revoked mid-session via RevocationEpoch bump. Inactivity: the SessionTimeout idle timer elapsed -- no user interaction within the window (MeterValues are the station's own telemetry and do NOT reset it; see 08-configuration.md SessionTimeout). Added in 0.31.0: the enum was closed at six and none of them was true of an idle stop, so the one event that reports it had no value to report it with. OperatorStopped: an operator ended the session deliberately -- a forced Reset, or a station disable. The station reports the time it delivered and the creditsCharged that time earned; the server settles it by service kind -- pro-rata on delivered time for UserDuration, a full refund for FixedDuration and MultiUnit (spec/04-flows.md 6, Settlement by Service Kind). See spec/03-messages.md 5.4 for full descriptions and spec/04-flows.md 6 for refund policy per reason."
+      "description": "Why the session ended autonomously. TimerExpired: durationSeconds elapsed. Fault: a hardware fault, or a restart the station could not resume the wash after, reported at once after the boot with the delivered time it last persisted (spec/05-state-machines.md 3.5); both settle on the Fault row. Local: the customer stopped the session from the app over BLE (StopServiceRequest); a customer stops a session only through the app. LocalOutOfCredit: offline credit pool exhausted mid-session. Deauthorized: offline pass revoked mid-session via RevocationEpoch bump. Inactivity: the SessionTimeout idle timer elapsed -- no user interaction within the window (MeterValues are the station's own telemetry and do NOT reset it; see 08-configuration.md SessionTimeout). Added in 0.31.0: the enum was closed at six and none of them was true of an idle stop, so the one event that reports it had no value to report it with. OperatorStopped: an operator ended the session deliberately -- a forced Reset, or a station disable. The station reports the time it delivered and the creditsCharged that time earned; the server settles it by service kind -- pro-rata on delivered time for UserDuration, a full refund for FixedDuration and MultiUnit (spec/04-flows.md 6, Settlement by Service Kind). See spec/03-messages.md 5.4 for full descriptions and spec/04-flows.md 6 for refund policy per reason."
     },
     "actualDurationSeconds": {
       "type": "integer",

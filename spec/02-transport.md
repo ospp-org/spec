@@ -340,7 +340,8 @@ The station MUST follow this sequence on power-on or reconnect:
 │  7. SUBSCRIBE to: ospp/v1/stations/{id}/to-station      │
 │  8. PUBLISH BootNotification REQUEST                    │
 │  9. Wait for BootNotification RESPONSE (timeout: 30s)   │
-│     ├── Accepted → sync clock, apply config → step 10   │
+│     ├── Accepted → sync clock, apply config, start      │
+│     │              the heartbeat timer → step 10        │
 │     ├── Rejected → restricted: refuse commands;         │
 │     │              wait retryInterval, goto step 8      │
 │     ├── Pending  → restricted: ANSWER commands, serve   │
@@ -348,8 +349,7 @@ The station MUST follow this sequence on power-on or reconnect:
 │     └── Timeout  → wait 60s, goto step 8                │
 │  10. PUBLISH StatusNotification per bay (with programs)  │
 │  11. Enter normal operation (accept commands)           │
-│  12. Replay buffered messages; once 10 and the replay   │
-│      are PUBACKed: first Heartbeat, then its timer      │
+│  12. Replay buffered messages, online sessions first    │
 │                                                         │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -369,9 +369,9 @@ OSPP uses two complementary liveness mechanisms:
 
 **OSPP Heartbeat (application level):**
 
-- After boot, the station MUST send a Heartbeat REQUEST every `heartbeatIntervalSec` seconds (default: 30s, configurable via BootNotification response or ChangeConfiguration), counted from its first Heartbeat, which it sends once the broker has acknowledged its post-boot reports and every message it replays, and not before (§4.1 step 12; [`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4).
+- After boot, the station MUST send a Heartbeat REQUEST every `heartbeatIntervalSec` seconds (default: 30s, configurable via BootNotification response or ChangeConfiguration), counted from the BootNotification `Accepted` ([`heartbeat.md` §7](profiles/core/heartbeat.md#7-processing-rules) rule 1).
 - The server responds with `serverTime` for clock synchronization.
-- If the server does not receive a Heartbeat (or any message) from a station for **3.5 × heartbeatIntervalSec**, it MUST consider the station offline, except between a boot answered `Accepted` and the station's first Heartbeat after it, when the threshold is the longer of that and 360 s ([`connection-lost.md` §4.2](profiles/core/connection-lost.md#42-heartbeat-timeout) rule 2).
+- If the server does not receive a Heartbeat (or any message) from a station for **3.5 × heartbeatIntervalSec**, it MUST consider the station offline.
 
 These two mechanisms are intentionally redundant. MQTT keep-alive detects transport failures; OSPP heartbeat detects application-level hangs and provides clock sync.
 
@@ -415,7 +415,7 @@ The station MUST configure an LWT message at MQTT CONNECT time:
 **Server processing on LWT receipt:**
 
 1. Mark all bays of the station as `Unknown` status.
-2. If any session is active, start a session timeout timer (per [Chapter 05](05-state-machines.md)) — not for a Partial-B session, which the loss does not end and which closes at the end of its authorized duration when no end record has arrived ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)).
+2. If any session is active, hold the station away for its sessions, which adds `ConnectionLostGracePeriod` to each one's sweep deadline ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)) — not for a Partial-B session, which the loss does not end and which closes at the end of its authorized duration when no end record has arrived ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)).
 3. Log the disconnect event.
 
 ### 4.4 Reconnection Strategy
@@ -426,7 +426,7 @@ When the MQTT connection is lost (PINGRESP timeout, TCP reset, broker unavailabl
 2. **Switch to BLE-available mode** — if not already advertising, ensure BLE is active for offline sessions.
 3. **Buffer outbound messages** — The station MUST buffer TransactionEvent, SessionStarted, SessionEnded and SecurityEvent messages in persistent local storage per the categorized buffering policy in [01-architecture.md §6.5](../spec/01-architecture.md#65-offline-message-buffering). Regenerable messages (Heartbeat, StatusNotification, MeterValues, FirmwareStatusNotification, DiagnosticsNotification) MAY be discarded during offline operation as the station regenerates them at reconnection.
 4. **Attempt reconnection** with exponential backoff (see Section 4.5).
-5. **On successful reconnect** — follow the full boot sequence (Section 4.1): re-subscribe, BootNotification, StatusNotification per bay, then flush buffered messages, and send the first Heartbeat once the broker has acknowledged all of them (§4.1 step 12). The BootNotification **MUST** carry `bootReason: "Reconnect"` when the firmware did not restart, and `uptimeSeconds` measured from the last actual boot — which therefore spans the outage. The boot is mandatory here because the HMAC session key is scoped to the MQTT session and arrives only in the boot response ([Chapter 06 §5.2](06-security.md)); a station that skipped it would reconnect keyless. OCPP-J advises the opposite for the same event, and [`boot-notification.md` §5.2](profiles/core/boot-notification.md) records why OSPP diverges.
+5. **On successful reconnect** — follow the full boot sequence (Section 4.1): re-subscribe, BootNotification, StatusNotification per bay, then flush buffered messages, each online session's records first, in that session's own order ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4). The BootNotification **MUST** carry `bootReason: "Reconnect"` when the firmware did not restart, and `uptimeSeconds` measured from the last actual boot — which therefore spans the outage. The boot is mandatory here because the HMAC session key is scoped to the MQTT session and arrives only in the boot response ([Chapter 06 §5.2](06-security.md)); a station that skipped it would reconnect keyless. OCPP-J advises the opposite for the same event, and [`boot-notification.md` §5.2](profiles/core/boot-notification.md) records why OSPP diverges.
 
 ### 4.5 Exponential Backoff with Jitter
 
@@ -1067,7 +1067,7 @@ All timestamps MUST use **ISO 8601** format with **millisecond precision** and *
 | Certificate expired | MQTT | TLS error | Log `1004` with `details.cause: expired`, alert operator |
 | CONNACK rejected | MQTT | MQTT reason code | Log reason, retry with backoff |
 | MQTT connection lost | MQTT | PINGRESP timeout / TCP reset | Continue BLE, buffer messages, backoff |
-| Keep-alive timeout (server side) | MQTT | No message, a Heartbeat or any other, for 3.5 × interval (between a boot answered `Accepted` and the first Heartbeat after it, the longer of that and 360 s) | Mark station offline, fire LWT |
+| Keep-alive timeout (server side) | MQTT | No message, a Heartbeat or any other, for 3.5 × interval | Mark station offline, fire LWT |
 | Message expired | MQTT | Message Expiry Interval | Discard, log warning |
 | Invalid JSON received | MQTT / BLE | JSON parse error | Log `1005` and discard. No reply is possible: the `messageId` cannot be read, and [07-errors §2.1](07-errors.md#21-mqtt-error-response) requires a RESPONSE to echo it. MAY be reported as an unsolicited EVENT ([07-errors §2.2](07-errors.md#22-mqtt-error-event)) |
 | Unknown action | MQTT / BLE | Action not recognized | If the action is known to the protocol but unsupported here, reply `status: "Rejected"` with `1006` on that action's RESPONSE (§2.1). If the action is unknown to the protocol, no RESPONSE schema exists — log `1006` and discard. MAY be reported as an unsolicited EVENT (§2.2) |

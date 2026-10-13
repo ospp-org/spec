@@ -115,20 +115,21 @@ stateDiagram-v2
     Authorized --> Failed : Partial B start not reported within 40s
 
     Active --> Stopping : StopService requested
-    Active --> Completed : SessionEnded (Local, LocalOutOfCredit)
-    Active --> Failed : Hardware fault / Deauthorized
-    Active --> Completed : Connection lost past the grace period (not Partial B), an anomaly
-    Active --> Completed : Booked duration ended after a boot that keeps the session, no end record
+    Active --> Completed : SessionEnded (Local, LocalOutOfCredit, OperatorStopped)
+    Active --> Failed : SessionEnded Fault (hardware, or a restart not resumed) / Deauthorized
+    Active --> Completed : No end record by the sweep deadline, station away (not Partial B), an anomaly
+    Active --> Completed : No end record by the sweep deadline, station connected, an anomaly
     Active --> Completed : Partial B authorized duration ended with no end record
 
     Stopping --> Completed : Station confirms stop
-    Stopping --> Failed : Stop timeout (10s, not Partial B)
+    Stopping --> Completed : SessionEnded after a refused or unanswered stop, or no end record by the sweep deadline
+    Stopping --> Failed : SessionEnded Fault or Deauthorized after a refused or unanswered stop
 
     Completed --> [*]
     Failed --> [*]
 ```
 
-**Key timeouts:** Pending ack 10s | StartService 10s | Max duration configurable (default 600s) | StopService confirm 10s | Connection lost grace 300s
+**Key timeouts:** Pending ack 10s | StartService 10s | Max duration configurable (default 600s) | StopService confirm 10s (repeated, never closes the session) | Sweep margin 60s | Connection lost grace 300s
 
 ---
 
@@ -343,7 +344,7 @@ sequenceDiagram
     end
 
     rect rgb(243, 229, 245)
-        Note over Station,Server: Buffered Message Replay (FIFO)
+        Note over Station,Server: Buffered Message Replay (each online session's records first, in their own order)
         Station->>Broker: Buffered MeterValues
         Broker->>Server: MeterValues [MSG-010]
         Station->>Broker: Buffered SessionEnded (sessionId, reason)
@@ -353,12 +354,9 @@ sequenceDiagram
         Server->>Server: Dedup, receipt signature, gate, settle, score<br/>(txCounter recorded, not gated)
         Server-->>Broker: TransactionEvent RESPONSE (Accepted)
         Broker-->>Station: Accepted
-        Station->>Broker: Heartbeat REQUEST, the first after the boot
-        Broker->>Server: Heartbeat [MSG-008]
-        Note over Station,Server: The station's replay has ended
     end
 
-    Note over Station,Server: Station fully recovered — its replay is over
+    Note over Station,Server: Normal operation resumes
 ```
 
 ---

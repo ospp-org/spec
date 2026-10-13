@@ -125,8 +125,8 @@ sequenceDiagram
         end
 
         Note over SSP: Enter normal operation
-        Note over SSP: Replay what it buffered, if anything
-        Note over SSP: Once the broker has acknowledged the reports<br/>and the replay: first Heartbeat, then the heartbeat timer
+        Note over SSP: Replay what it buffered, if anything,<br/>each online session's records first
+        Note over SSP: Heartbeat every heartbeatIntervalSec,<br/>counted from the Accepted
 
     else Rejected
         Server-->>SSP: BootNotification RESPONSE (Rejected, retryInterval, errorCode)
@@ -160,12 +160,12 @@ sequenceDiagram
 8. SSP synchronizes its clock to `serverTime`, applies any configuration overrides, stores the HMAC session key
 9. SSP sends one **StatusNotification EVENT** [MSG-009] per bay, reporting `bayNumber`, `status`, and every `programs[]` entry with its availability — programs, because a service is server-minted and at first boot the station has been told none
 10. SSP enters normal operation — ready to accept commands
-11. SSP replays any events it buffered while it could not send them ([Chapter 01 §6.5](01-architecture.md#65-offline-message-buffering))
-12. Once the broker has acknowledged the reports of step 9 and everything replayed, an offline reconciliation (A4) included, SSP sends its first **Heartbeat REQUEST** [MSG-008], at once on a boot with nothing to replay, and starts the heartbeat timer at `heartbeatIntervalSec` seconds ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4)
+11. SSP replays any events it buffered while it could not send them, each online session's records first, in that session's own order ([Chapter 01 §6.5](01-architecture.md#65-offline-message-buffering))
+12. SSP sends a **Heartbeat REQUEST** [MSG-008] every `heartbeatIntervalSec` seconds after the `Accepted` of step 7, whatever else it is sending ([`heartbeat.md` §7](profiles/core/heartbeat.md#7-processing-rules) rule 1)
 
 ### Alternative Paths
 
-**A1 — Rejected:** Server returns `Rejected` with `retryInterval`. The SSP waits `retryInterval` seconds and retries from step 6. The causes are the codes [Chapter 07 §4.1](07-errors.md#41-station--server-mqtt-actions) assigns to this message and no others — principally `2001 STATION_NOT_REGISTERED`, which its own registry row extends to a tenant move.
+**A1 — Rejected:** Server returns `Rejected` with `retryInterval`. The SSP waits `retryInterval` seconds and retries from step 6. While `Rejected`, as while `Pending` (A2), it is not back for its sessions: one it was running continues, and the server holds it away until a boot is answered `Accepted` ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling) step 4). The causes are the codes [Chapter 07 §4.1](07-errors.md#41-station--server-mqtt-actions) assigns to this message and no others — principally `2001 STATION_NOT_REGISTERED`, which its own registry row extends to a tenant move.
 
 > **Two causes this line used to name are not causes of a Boot `Rejected`, and each sends a reader to the wrong recovery.** A **revoked certificate** is refused at the connection, as `1004 CERTIFICATE_ERROR` — the code names *revoked* explicitly, the broker **MUST** verify the client certificate against the CA trust chain ([Chapter 02 §1.3](02-transport.md#13-tls-12-floor-13-recommended)) and, as of `0.27.0`, **MUST** establish that it has not been revoked ([Chapter 06 §2.1.1](06-security.md#211-revocation-checking)) — the second is the clause that actually makes this sentence true, and until it existed the chain obligation was the nearest thing to cite. `1004`'s recovery forbids entering provisioning mode or discarding credentials. A station refused there never sends a BootNotification, so it never receives this response; and no code in §4.1's BootNotification set names a revoked certificate, so a server that did answer here could not say why. A **decommissioned station** is not a thing this specification has: decommissioning and disposal are out of scope as of `0.25.0` ([Chapter 00 §1.3](00-introduction.md#13-out-of-scope)) — there is no terminal station state and no protocol event that ends a station's life. Both survived the `0.25.0` sweep that made the second of those decisions.
 
@@ -637,9 +637,10 @@ sequenceDiagram
         end
 
         Note over SSP: Timer expires
+        SSP->>Server: SessionEnded EVENT (TimerExpired) [MSG-040]
         SSP->>Server: StatusNotification (Finishing) [MSG-009]
         SSP->>Server: StatusNotification (Available) [MSG-009]
-        Server->>Server: Session → completed
+        Server->>Server: Session → completed, on the SessionEnded
 
     else All 4 retries fail
         Server->>SSP: CancelReservation REQUEST [MSG-004]
@@ -669,7 +670,7 @@ sequenceDiagram
 16. **Server** updates session to `active`
 17. **Browser** polls `GET /pay/sessions/{sessionToken}/status` for progress
 18. Timer expires → **SSP** auto-stops and sends **SessionEnded EVENT** [MSG-040] with `reason: "TimerExpired"`, then **StatusNotification** [MSG-009] `Finishing` then `Available`
-19. **Server** settles the session from SessionEnded — it is the billing record for an autonomous stop, and a server **MUST NOT** settle from StatusNotification alone ([Chapter 03 §5.4](03-messages.md)) — and marks it `completed`
+19. **Server** settles the session from SessionEnded — it is the billing record for an autonomous stop, and a server **MUST NOT** settle from StatusNotification ([Chapter 03 §5.4](03-messages.md)) — and marks it `completed`
 20. If `email` was provided, Server sends a receipt email
 
 ### Alternative Paths
@@ -1074,7 +1075,8 @@ The following rules are normative:
 - The station **MUST NOT** be the source of truth for monetary cost. The `creditsCharged` field reported by the station is **advisory** — it represents the station's estimate based on the service rate active at session start.
 - The server **MUST** recompute final billing using the actual duration and the tariff in force when the session ran, regardless of the station-reported `creditsCharged`. Implementations **MAY** accept the station value as-is when it matches the server-side recomputation; they **MUST NOT** accept it blindly when it diverges. **This binds the offline path too**, where the session ran with no server present and the duration arrives inside a signed receipt: [`reconciliation.md` §8.1](profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b) states the offline recomputation, including which tariff a server uses when it does not retain a catalog history for the transaction's instant. That is the one place this rule's *"in force when the session ran"* clause needs a stated fallback, and it is stated there rather than restated here.
 - For sessions that end via `StopService` RESPONSE [MSG-006], the server uses the response's `actualDurationSeconds` (and `meterValues` when relevant) as billing input.
-- For sessions that end autonomously via `SessionEnded` EVENT [MSG-040] (timer expiry or hardware fault), the server uses the event's `actualDurationSeconds` as billing input and applies the refund policy described below.
+- For sessions that end autonomously via `SessionEnded` EVENT [MSG-040] (timer expiry, a hardware fault or a restart the station could not resume the wash after, and the other reasons of [Chapter 03 §5.4](03-messages.md#54-sessionended)), the server uses the event's `actualDurationSeconds` as billing input and applies the refund policy described below.
+- A started session ends only on one of these two records, or at the server's sweep when neither has arrived by its deadline ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)): the server **MUST NOT** settle a session from a StatusNotification, a BootNotification, or a StopService the station refused or did not answer.
 - Tariff lookup, currency conversion, tax handling, and any operator-specific pricing rules are server-side concerns. Stations remain unaware of the priced amount in user-facing currency.
 
 This separation ensures that a misconfigured or compromised station cannot overcharge a user, and that pricing changes can be deployed server-side without firmware updates.
@@ -1107,7 +1109,7 @@ This separation ensures that a misconfigured or compromised station cannot overc
 
 **A2 — MQTT disconnect during session:** SSP continues the service (does NOT stop the service). On reconnection, SSP re-boots (BootNotification [MSG-001]) and reports the session outcome.
 
-**A3 — StopService timeout:** If Server sends StopService and SSP does not respond within 10 seconds, Server marks the session as `failed`. SSP will report the actual outcome on next reconnection. A Partial-B session is not marked `failed`: the server repeats the StopService REQUEST once the station has reconnected, and settles the session on the first of its end records, or closes it at the end of its authorized duration ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4 and 4a).
+**A3 — StopService refused or unanswered:** A refusal ends nothing: the session stays `stopping` and settles on the SessionEnded the SSP sends for it. If Server sends StopService and SSP does not respond within 10 seconds, Server sends the REQUEST again under the same `messageId`, re-composed with a fresh `timestamp`, at most three attempts while the SSP stays connected and a new one after each boot answered `Accepted`, and an SSP that did stop the session answers with its cached RESPONSE, the session's end record, which settles the session even when it arrives after its attempt's timeout, while the session is still open ([`stop-service.md` §6](profiles/transaction/stop-service.md#6-processing-rules) rules 10 and 11); when no end record comes, the sweep closes the session ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)). A Partial-B session is not marked `failed`: the server repeats the StopService REQUEST once the station has reconnected, and settles the session on the first of its end records, or closes it at the end of its authorized duration ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rules 4 and 4a).
 
 ### The operator-disable policy
 
@@ -1148,8 +1150,10 @@ on.
 
 Settling is not optional and not best-effort. A station that reboots first and
 reports afterwards has dropped the session on the floor: the server sees a
-connection loss and a live session, and the money is decided by a timeout instead
-of by what was delivered.
+connection loss and a live session, and the money is decided by the SessionEnded
+`Fault` the station sends after the boot
+([Chapter 05 §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rule 6),
+or by the sweep if none comes, instead of by the operator's stop.
 
 ### Refund Policy
 
@@ -1158,8 +1162,8 @@ of by what was delivered.
 | Station NACK on StartService | Full | 100% |
 | All retry attempts fail | Full | 100% |
 | ACK_TIMEOUT (no response) | Full | 100% |
-| Hardware error during active (SessionEnded `reason=Fault`) | Partial (pro-rated) | Based on time used |
-| Station offline during active, or answered `Pending`, and not back with a boot answered `Accepted` by the end of `ConnectionLostGracePeriod` | None | Charge full pre-authorized amount (the station runs the service to its end through the loss), and mark the close as an anomaly — not a Partial-B session, which settles on the first of its end records, or is closed at the end of its authorized duration ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) |
+| Hardware error during active, or a restart the station could not resume the wash after (SessionEnded `reason=Fault`) | Partial (pro-rated) | Based on time used |
+| No end record by the sweep's deadline ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)): 60 seconds after the later of the session's end — the end of its booked duration, or, if later, the first boot answered `Accepted` after a restart plus the booked duration — and the station's last boot, once a message has arrived after that, while the station is not away; the session's end plus 60 seconds plus `ConnectionLostGracePeriod` while it is away — offline, or answered `Pending` or `Rejected` and not back with a boot answered `Accepted` | None | Charge full pre-authorized amount (the station runs the service to its end, through a loss of its connection too), and mark the close as an anomaly — not a Partial-B session, which settles on the first of its end records, or is closed at the end of its authorized duration ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) |
 | Customer stop from the app over BLE (SessionEnded `reason=Local`) | Partial (pro-rated) | Based on time used, recomputed by the server (the event's `creditsCharged` is advisory) |
 | Offline credit exhausted mid-session (SessionEnded `reason=LocalOutOfCredit`) | Full | 100% (no charge — `creditsCharged` MUST be 0) |
 | Offline pass revoked mid-session (SessionEnded `reason=Deauthorized`) | Full | 100% (no charge — session not billable; `creditsCharged` MUST be 0) |
@@ -1167,7 +1171,7 @@ of by what was delivered.
 | Timer ran to completion (SessionEnded `reason=TimerExpired`) | None | Charge full pre-authorized amount (user received the booked duration regardless of meter values) |
 | If less than `faultFullRefundThreshold` of duration delivered AND the service reported as faulted (scope below) | Full | 100% (override pro-rate) |
 
-> **Refund scope clarification:** The low-delivery override applies **only** to a service reported as faulted: a SessionEnded with reason `Fault`, or a bay reported `Faulted` on which the server closes a session ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3), on the estimated time delivered. It does **not** apply to `TimerExpired` sessions: a session that runs to its booked timer is billed for the full pre-authorized duration regardless of meter values, because the user received the time they paid for. The override formula is `actualDurationSeconds < faultFullRefundThreshold × durationSeconds`, evaluated against the booked `durationSeconds` from StartService.
+> **Refund scope clarification:** The low-delivery override applies **only** to a service reported as faulted: a SessionEnded with reason `Fault`, a restart the station could not resume the wash after included. A bay reported `Faulted` closes no session ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3), so it never brings the override into play. It does **not** apply to `TimerExpired` sessions: a session that runs to its booked timer is billed for the full pre-authorized duration regardless of meter values, because the user received the time they paid for. The override formula is `actualDurationSeconds < faultFullRefundThreshold × durationSeconds`, evaluated against the booked `durationSeconds` from StartService.
 >
 > **`faultFullRefundThreshold` (explicit, configurable product parameter — default `0.50`).** The fraction of the booked duration below which a `Fault`-terminated session is deemed to have delivered nothing of value and is refunded in full. This is a **product decision** — *below what fraction is the delivered service worthless?* — so it is a **named, documented, server-configurable value**, never a constant baked into an implementation. A conforming server **MUST** read it from configuration rather than from a compiled-in constant, and **MUST** ship `0.50` as the configured default (the historical "< 50%" rule) so that a server nobody has tuned behaves as this specification describes. Operators MAY set another value; doing so is a deliberate product choice, not a conformance failure.
 >
@@ -1197,16 +1201,18 @@ For `UserDuration`, settlement is exactly the reason-keyed matrix above. `FixedD
 |---------------------|----------------|-------------------------------|
 | `TimerExpired` — delivered in full | Full charge | **Full charge** (same) |
 | `Local` — the customer stopped it from the app over BLE, mid-service | Pro-rata on delivered time | **Full charge** — a preset the user started is consumed |
-| `Fault` — hardware fault mid-service | Pro-rata (full refund if less than `faultFullRefundThreshold` delivered) | **Full refund** — a service the station broke delivered nothing of value |
+| `Fault` — hardware fault mid-service, or a restart the station could not resume the wash after | Pro-rata (full refund if less than `faultFullRefundThreshold` delivered) | **Full refund** — a service the station broke delivered nothing of value |
 | `LocalOutOfCredit` / `Deauthorized` | Full refund (`creditsCharged` MUST be `0`) | **Full refund** (same) |
 | `Inactivity` — idle timer elapsed mid-service | Pro-rata on delivered time | **Full charge** — a preset the user started is consumed |
 | `OperatorStopped` — operator ended it mid-service | Pro-rata on delivered time | **Full refund** — the operator, not the customer, cut the preset short, so none of it is consumed |
 
 Only the `Local`, `Inactivity`, `Fault` and `OperatorStopped` rows diverge; `TimerExpired` (full charge) and `LocalOutOfCredit` / `Deauthorized` (full refund) are already kind-invariant. An all-or-nothing override is always the pre-authorized amount **in full** or **`0`** — never a partial amount.
 
+**A wash a restart interrupted takes the `Fault` row.** A station that restarts with a session live and cannot resume the wash ends it at once with SessionEnded `Fault`, reporting as `actualDurationSeconds` the delivered time it last persisted ([Chapter 05 §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rules 3 and 6). The server **MUST** settle it exactly as a hardware fault — a `UserDuration` session pro-rata on that figure and refunded in full below `faultFullRefundThreshold`, a `FixedDuration` or `MultiUnit` session refunded in full — because the restart broke the service, as a fault does. No row of this section changes for it, and no `reason` value is added.
+
 **A stop the customer asks for from the app settles as the customer's stop.** A customer stops a session only through the app: online, by `POST /sessions/{id}/stop`, which the server carries out with a StopService [MSG-006]; over BLE, by a StopServiceRequest [MSG-036], which the station reports as `Local` — in the SessionEnded of a Partial-B session, or in the `endReason` of a signed receipt ([Chapter 06 §6.2](06-security.md#62-transaction-receipt-signing--ecdsa-p-256)). The first reaches a session only while the server can reach its station: a session the app started over BLE at a station that is offline — Full Offline, Partial A — is stopped over BLE. The server **MUST** settle that stop by service kind: a `UserDuration` session pays the time delivered, proportional to the second and rounded up to one credit — `ceil(actualDurationSeconds / 60 × priceCreditsPerMinute)`, the formula of [Chapter 03 §3](03-messages.md) — and a `FixedDuration` or `MultiUnit` session is charged in full. A stop the server issues because the customer asked for it is that stop, not an operator's; the next paragraph is the operator's.
 
-**A stop the server issues for an operator settles as `OperatorStopped`.** An operator can also end a session through the server rather than at the station — from an operator console, or by a station disable the server carries out — and the server then sends StopService [MSG-006]. That stop produces no SessionEnded ([Chapter 03 §5.4](03-messages.md#54-sessionended)) and StopService carries no reason, so only the server knows an operator asked for it. The server **MUST** settle such a session as it settles `OperatorStopped`, by service kind — pro-rata on delivered time for `UserDuration`, a full refund for `FixedDuration` and `MultiUnit` — and **MUST NOT** settle it as the customer's own stop. A stop the station refuses while the session is still running is not settled as `OperatorStopped`, because the operator did not end the service: the session settles as a delivered session of its kind — a `FixedDuration` or `MultiUnit` session keeps its full charge, and a `UserDuration` session is pro-rata on its delivered time. A `3006 SESSION_NOT_FOUND` refusal is not that case: the station holds no such session, which may already have ended ([`07-errors.md` §3.3](07-errors.md#33-session--bay-errors-3xxx)). The signed receipt of a BLE session the server stopped carries `endReason` `ServerStopped` ([Chapter 06 §6.2](06-security.md#62-transaction-receipt-signing--ecdsa-p-256)), and the server settles that session as this section settles the stop it issued.
+**A stop the server issues for an operator settles as `OperatorStopped`.** An operator can also end a session through the server rather than at the station — from an operator console, or by a station disable the server carries out — and the server then sends StopService [MSG-006]. That stop produces no SessionEnded ([Chapter 03 §5.4](03-messages.md#54-sessionended)) and StopService carries no reason, so only the server knows an operator asked for it. The server **MUST** settle such a session as it settles `OperatorStopped`, by service kind — pro-rata on delivered time for `UserDuration`, a full refund for `FixedDuration` and `MultiUnit` — and **MUST NOT** settle it as the customer's own stop. A stop the station refuses settles nothing, and is not settled as `OperatorStopped`, because the operator did not end the service: the session stays live and settles on the SessionEnded the station sends when it ends, by that event's reason, or, when none comes, at the sweep ([`stop-service.md` §6](profiles/transaction/stop-service.md#6-processing-rules) rule 11). A `3006 SESSION_NOT_FOUND` refusal names a session the station no longer holds, which may already have ended; its SessionEnded, not the refusal, is then its record ([`07-errors.md` §3.3](07-errors.md#33-session--bay-errors-3xxx)). The signed receipt of a BLE session the server stopped carries `endReason` `ServerStopped` ([Chapter 06 §6.2](06-security.md#62-transaction-receipt-signing--ecdsa-p-256)), and the server settles that session as this section settles the stop it issued.
 
 **Delivery outcome (`MultiUnit`).** A `MultiUnit` session additionally records what physically happened — `Dispensed` on a clean `TimerExpired`, `Missed` on a `Fault`. When the physical outcome is genuinely ambiguous from control-plane signals alone (e.g. a mid-pulse voluntary stop) it is left unrecorded rather than guessed; settlement never depends on it (it stays derived from the kind). A jam the firmware does not itself detect runs the timer to expiry and is therefore billed as delivered; the corrective path is an operator-issued refund, not an automatic one.
 
@@ -1337,13 +1343,13 @@ sequenceDiagram
 
 ### Station Offline Detection
 
-The Server MUST track the time of the last message it accepted from each station, a Heartbeat or any other: a station sends no Heartbeat during its replay after a boot ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4). Offline detection logic:
+The Server MUST track the time of the last message it accepted from each station, a Heartbeat or any other ([`connection-lost.md` §4.2](profiles/core/connection-lost.md#42-heartbeat-timeout) rule 1). Offline detection logic:
 
 | Condition | Server Action |
 |-----------|---------------|
 | No message for 1 heartbeat interval | No action (network jitter) |
 | No message for 2 heartbeat intervals | Mark station as `degraded` (internal) |
-| No message for `heartbeatIntervalSec * 3.5`, or, between a boot answered `Accepted` and the station's first Heartbeat after it, for the longer of that and 360 s ([`connection-lost.md` §4.2](profiles/core/connection-lost.md#42-heartbeat-timeout) rule 2) | Mark station as `Offline` |
+| No message for `heartbeatIntervalSec * 3.5` | Mark station as `Offline` |
 | ConnectionLost LWT [MSG-011] received | Immediately mark as `Offline` |
 | Station sends BootNotification [MSG-001] | Mark as `Online`, process boot sequence |
 
@@ -1399,16 +1405,13 @@ sequenceDiagram
         SSP->>Server: StatusNotification EVENT [MSG-009]
     end
 
-    Note over SSP: Replay buffered events
+    Note over SSP: Replay buffered events, each online session's records first
 
     opt pendingOfflineTransactions > 0
         Note over SSP: Begin Flow §10 (Reconciliation)
     end
 
-    SSP->>Server: Heartbeat REQUEST [MSG-008], the first after the boot
-    Note over SSP,Server: Sent once the broker has acknowledged the reports<br/>and the replay: the end of the replay
-
-    Note over SSP: Heartbeats every heartbeatIntervalSec (commands answered since the Accepted)
+    Note over SSP: Heartbeats every heartbeatIntervalSec from the Accepted<br/>(commands answered since then)
 ```
 
 ### Happy Path
@@ -1428,9 +1431,9 @@ sequenceDiagram
 7. **SSP** sends **BootNotification REQUEST** [MSG-001] (same as fresh boot)
 8. **Server** accepts the boot, marks station as `Online`, returns session key
 9. **SSP** sends **StatusNotification** [MSG-009] for each bay (each bay's current state)
-10. **SSP** replays any buffered events
+10. **SSP** replays any buffered events, each online session's records first, in that session's own order ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4)
 11. If `pendingOfflineTransactions > 0`, SSP begins [Offline → Online Reconciliation (Flow §10)](#10-offline--online-reconciliation)
-12. Once the broker has acknowledged the reports and everything replayed, **SSP** sends its first **Heartbeat** [MSG-008] after the boot, which marks the end of its replay ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4), and its heartbeats then follow every `heartbeatIntervalSec` seconds; it has processed commands since the boot was accepted (step 8)
+12. **SSP** sends its **Heartbeat** [MSG-008] every `heartbeatIntervalSec` seconds after the boot was accepted, through the replay as at any other time ([`heartbeat.md` §7](profiles/core/heartbeat.md#7-processing-rules) rule 1); it has processed commands since then (step 8)
 
 ### Error Paths
 
@@ -1439,9 +1442,9 @@ sequenceDiagram
 | All backoff attempts fail (30s cap reached) | Continue retrying every 30s + jitter indefinitely |
 | TLS certificate expired during outage | SSP cannot reconnect — await manual certificate update |
 | Broker permanently unavailable | SSP operates in BLE-only mode indefinitely |
-| BootNotification `Rejected` after reconnect | Read the `errorCode`: the causes are the set [§4.1](07-errors.md#41-station--server-mqtt-actions) assigns to BootNotification. Decommissioning is **not** among them — it is out of scope ([Chapter 00 §1.3](00-introduction.md#13-out-of-scope)) — and the SSP **MUST** keep retrying per CORE-011 rather than await intervention |
-| BootNotification `Pending` after reconnect | The SSP is not back for its sessions: it replays and reports nothing while `Pending`, and the server keeps them on the recovery timer and closes them `completed`, charged in full and marked as an anomaly, when no boot is answered `Accepted` before it expires ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) — not a Partial-B session, which closes at the end of its authorized duration |
-| Session completed during offline | SSP replays the session's buffered SessionEnded after the post-boot reports, and the server settles the session on it ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3) |
+| BootNotification `Rejected` after reconnect | Read the `errorCode`: the causes are the set [§4.1](07-errors.md#41-station--server-mqtt-actions) assigns to BootNotification. Decommissioning is **not** among them — it is out of scope ([Chapter 00 §1.3](00-introduction.md#13-out-of-scope)) — and the SSP **MUST** keep retrying per CORE-011 rather than await intervention. It is not back for its sessions, exactly as after a `Pending` boot (next row) |
+| BootNotification `Pending` after reconnect | The SSP is not back for its sessions: it replays and reports nothing while `Pending`, and the server holds them away, closing at the sweep, `completed`, charged in full and marked as an anomaly, a session whose end record has not arrived by its end — the end of its booked duration, or, if later, the first boot answered `Accepted` after a restart plus the booked duration — plus 60 seconds plus `ConnectionLostGracePeriod` ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) — not a Partial-B session, which closes at the end of its authorized duration |
+| Session completed during offline | SSP replays the session's buffered SessionEnded after the post-boot reports, behind the session's own buffered MeterValues and ahead of its buffered offline records, and the server settles the session on it ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3) |
 
 ### Postconditions
 
@@ -1449,7 +1452,7 @@ sequenceDiagram
 |-----------|-------|
 | SSP | Reconnected, boot accepted, normal operation |
 | Server | Station marked online, bay statuses updated, buffered events processed |
-| Sessions (if any were active during outage) | Settled on the SessionEnded the station replays or sends when the resumed wash ends, or on a report of the bay processed after the station's replay has ended, or on `5113`; ended at the boot by a `RemoteReset` or a `FirmwareUpdate` ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3) |
+| Sessions (if any were active during outage) | Settled on the SessionEnded the station replays, sends at once for a wash a restart interrupted, or sends when the resumed wash ends ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3); whatever the bays report and whatever the `bootReason`, a session whose end record has not come is closed by the sweep, `completed`, in full and marked as an anomaly ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)) |
 
 ---
 
@@ -1822,14 +1825,15 @@ Consolidated timeout values across all flows:
 | MQTT CONNECT | 10s | Reconnect with backoff |
 | BootNotification | 30s | Wait 60s, retry |
 | Heartbeat | 30s | Log, continue |
-| Offline detection | 3.5 × heartbeatIntervalSec; between a boot answered `Accepted` and the station's first Heartbeat after it, the longer of that and 360 s ([`connection-lost.md` §4.2](profiles/core/connection-lost.md#42-heartbeat-timeout) rule 2) | Mark station offline |
+| Offline detection | 3.5 × heartbeatIntervalSec | Mark station offline |
 | ReserveBay | 5s | Session → failed |
 | Reserved → 3DS (web) | 3 min | CancelReservation |
 | Reserved → start (mobile) | 30s | CancelReservation |
 | Partial-B authorization → start | 30s at the station; 40s at the server | Station refuses the StartServiceRequest with `3006`; with no SessionStarted by then, Server lapses the authorization and refunds it in full ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4c) |
 | StartService (pending_ack) | 10s | Refund, session → failed |
-| StopService (stopping) | 10s | Session → failed; a Partial-B session stays open until the first of its end records, and no longer than the end of its authorized duration (§6) |
+| StopService (stopping) | 10s | Send the REQUEST again under the same `messageId`, re-composed with a fresh `timestamp`, at most three attempts while the station stays connected and a new one after each boot answered `Accepted`; a late RESPONSE `Accepted` settles the session while it is still open; the session stays stopping until its end record or the sweep; a Partial-B session stays open until the first of its end records, and no longer than the end of its authorized duration (§6) |
 | Active session (max) | durationSeconds | Station auto-stops |
+| No end record (the sweep) | 60s after the later of the session's end (the booked end, or, if later, the first boot answered `Accepted` after a restart + the booked duration) and the station's last boot, once a message has arrived after that, while the station is not away; the end + 60s + `ConnectionLostGracePeriod` while it is away | Session → completed, full charge, marked as an anomaly ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)) |
 | Session token (web) | 10 min | Session expired |
 | BayLock fallback | 3 min | Auto-released |
 | PaymentIntent pending | 5 min | Marked expired |

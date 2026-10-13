@@ -312,7 +312,7 @@ If the station's modem recovers (e.g., after a watchdog-triggered modem reset), 
 station reconnects to MQTT and follows the standard reconnection flow:
 
 1. Station reconnects to MQTT broker (mTLS, `clean_start=false`).
-2. Station sends `BootNotification` REQUEST with `bootReason: "Reconnect"` if only the link recovered, or `"ErrorRecovery"` if the modem reset took the firmware with it. The two are different facts and the server records which; a session it holds is kept through either, since only a `RemoteReset` or a `FirmwareUpdate` ends one ([`boot-notification.md` §5.2](../../spec/profiles/core/boot-notification.md#52-bootreason--seven-boots-and-one-non-boot) rule 3).
+2. Station sends `BootNotification` REQUEST with `bootReason: "Reconnect"` if only the link recovered, or `"ErrorRecovery"` if the modem reset took the firmware with it. The two are different facts and the server records which; a session it holds is kept through either, as through every boot: no boot ends a session ([`boot-notification.md` §5.2](../../spec/profiles/core/boot-notification.md#52-bootreason--seven-boots-and-one-non-boot) rule 3).
 3. Server accepts the BootNotification, closes the circuit breaker, and marks the
    station as online.
 4. Station sends `StatusNotification` for each bay, reconciling server-side state.

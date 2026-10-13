@@ -359,7 +359,7 @@ A station participating in the OSPP protocol MUST fulfill the following core res
 
 ### 6.2 Heartbeat
 
-- The station MUST send a **Heartbeat** message at the interval specified by the server in the BootNotification response (`heartbeatIntervalSec`), its first after a boot once its post-boot reports and its replay have been acknowledged (§6.5, *Reconnection Transmission Order*).
+- The station MUST send a **Heartbeat** message at the interval specified by the server in the BootNotification response (`heartbeatIntervalSec`).
 - The server uses heartbeats for liveness detection and time synchronization. If the server receives no message from the station, a heartbeat or any other, within the expected window, it MAY publish a ConnectionLost event (supplemented by the MQTT Last Will and Testament).
 
 ### 6.3 Status Reporting
@@ -452,7 +452,7 @@ buffer sits in.
 | Cached StopService RESPONSE, cached SessionEnded and the terminal record, per session, for the **24-hour OSPP Session Retention Horizon** ([Chapter 02 §5.3](02-transport.md)) | sessions per station per day x one record each. The horizon's own text calls this *"one record per completed session"* and quantifies it no further |
 | The deduplication set: at least **1000** `messageId` values or one hour, whichever is larger ([Chapter 02 §3.3](02-transport.md)) | 1000 x the 64-character `messageId` bound, plus index |
 | Configuration: all 30 registry keys, persisted after every successful write ([Chapter 08 §8.4](08-configuration.md)) | bounded by §1.2's 500-character value ceiling |
-| The persisted `seqNo` per live session, and the command record rule 9 of [`start-service.md`](profiles/transaction/start-service.md) requires **before** energising | one record per bay |
+| The persisted `seqNo` per live session, the command record rule 9 of [`start-service.md`](profiles/transaction/start-service.md) requires **before** energising, and the session record and delivered time of [Chapter 05 §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rule 3 | one record per bay |
 | The server key set, `OfflinePassPublicKey` ([Chapter 06 §6.7](06-security.md)) — during a rotation the key being retired, the current key and the key published ahead of use | three keys of 124 characters |
 | Firmware: two partitions, because A/B is a **MUST** ([`update-firmware.md` §7](profiles/device-management/update-firmware.md)) | 2 x image size — the term that decides the part, and the one the 4 MB note below turns on |
 
@@ -472,15 +472,25 @@ Upon successful reconnection, the station transmits in the following order:
 1. BootNotification (fresh)
 2. StatusNotification per bay (fresh, current state)
 3. Buffered SecurityEvents (chronological)
-4. Buffered TransactionEvents, SessionStarted and SessionEnded events (chronological, interleaved by their own timestamps)
-5. Its first Heartbeat, once the broker has acknowledged every message of steps 2 to 4: the station **MUST NOT** send one before and **MUST** send it then, and sends the next every `heartbeatIntervalSec` seconds after it. That Heartbeat marks the end of the replay ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4).
+4. Buffered session records, in this order: after a restart, the SessionEnded of every session the station could not resume, sent at once ([Chapter 05 §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rule 6), behind any buffered MeterValues of that session it kept; then each online session's buffered records, session by session, in that session's own order — its MeterValues, then its SessionEnded; then the offline records — its TransactionEvents and the records of its Partial-B sessions, SessionStarted among them (chronological, interleaved by their own timestamps)
+5. Heartbeat at the configured interval, every `heartbeatIntervalSec` seconds from the BootNotification `Accepted`, whatever steps 2 to 4 are still sending ([`heartbeat.md` §7](profiles/core/heartbeat.md#7-processing-rules) rule 1)
 
 > **Why SessionEnded is named in step 4.** It is a Category-1 `MUST NOT discard` message above and was absent
 > from this list, so the one ordering statement a station has for its reconnection flush did not mention a
 > stream it is forbidden to drop. It shares step 4 rather than getting its own because the two are
-> co-indexed — see the SessionEnded row of the Category-1 table — and because
-> [`session-ended.md` §6](profiles/transaction/session-ended.md) rule 6 orders SessionEnded only against the
+> co-indexed — see the SessionEnded row of the Category-1 table — and because its place among the records of
+> the step is the one the next note gives;
+> [`session-ended.md` §5](profiles/transaction/session-ended.md#5-processing-rules) rule 6 orders it against the
 > StatusNotification that reports the bay's new state, which step 2 has already sent fresh.
+>
+> **Why the online sessions' records lead step 4, each session in its own order.** The server's sweep closes a
+> session whose end has passed 60 seconds after the station's boot
+> ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)), and a TransactionEvent backlog, sent one at a time with
+> a wait for each RESPONSE, can outlast that. A SessionEnded queued behind it would arrive after the sweep had
+> closed its session in full. The station has at most one online session per bay, so sending their records
+> first costs the backlog little. Within a session the records keep the order its `seqNo` counts
+> ([Chapter 02 §3.2](02-transport.md#32-message-ordering)), its MeterValues before its SessionEnded: a
+> SessionEnded ahead of them would show a receiver that checks the increment a gap that is not one.
 
 ### 6.6 Meter Reporting
 

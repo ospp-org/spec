@@ -38,7 +38,7 @@ The last of those is the point of Part D. OSPP has no remote factory reset and n
 6. Verify the station sends BootNotification as the first message after reconnect.
 7. Verify `firmwareVersion` is still `"1.2.5"` — a reboot preserves firmware.
 8. Verify `bootReason` is `"RemoteReset"`, the value that says the server asked for this return. A spontaneous restart carries a different member, and that distinction is why the value exists.
-9. Verify the station sends StatusNotification for every bay, then resumes Heartbeat ([`heartbeat.md` §7](../../../spec/profiles/core/heartbeat.md#7-processing-rules) rule 1).
+9. Verify the station sends StatusNotification for every bay, and resumes Heartbeat `heartbeatIntervalSec` seconds after the `Accepted` ([`heartbeat.md` §7](../../../spec/profiles/core/heartbeat.md#7-processing-rules) rule 1).
 
 ### Part B — An active session is refused without `force`
 

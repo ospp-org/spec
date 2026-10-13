@@ -184,8 +184,8 @@ specification. Where a definition involves a requirement, normative language
 : A periodic liveness message sent by the station to the server. The heartbeat
   interval is configured by the server in the `BootNotification` response and
   **MUST** be honored by the station. A station that sends no message the server
-  accepts, a heartbeat or any other, for 3.5 × the interval, or for 360 s during its
-  replay after a boot when that is longer, triggers server-side alerting. See the [Core profile](profiles/core/README.md).
+  accepts, a heartbeat or any other, for 3.5 × the interval triggers server-side
+  alerting. See the [Core profile](profiles/core/README.md).
 
 **HKDF (HMAC-based Key Derivation Function)**
 : A key derivation function defined in RFC 5869. OSPP uses HKDF-SHA256 to derive
@@ -358,7 +358,9 @@ specification. Where a definition involves a requirement, normative language
 **REQUEST**
 : A message type that initiates an operation and expects exactly one **RESPONSE**
   correlated by the same `messageId`. If no RESPONSE is received within the
-  configured timeout, the sender **SHOULD** retry with the same `messageId`.
+  configured timeout, the sender **SHOULD** retry with the same `messageId`; a server
+  whose StopService went unanswered is bound to it by
+  [`stop-service.md` §6](profiles/transaction/stop-service.md#6-processing-rules) rule 11.
   See [Chapter 03, Conventions](03-messages.md).
 
 **Reservation**
@@ -392,8 +394,10 @@ specification. Where a definition involves a requirement, normative language
 
 **Session**
 : An active usage period at a **Bay** during which a **Subscriber** consumes one or
-  more **Services**. A session begins with `StartService`, ends with `StopService`
-  or timeout, and is identified by the `sess_` prefix followed by 8 or more
+  more **Services**. A session begins with `StartService` and ends on its station's
+  end record — the `StopService` RESPONSE of a stop the server asked for, or
+  `SessionEnded` for every other end — or, when none comes, at the server's sweep
+  ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)). It is identified by the `sess_` prefix followed by 8 or more
   lowercase hexadecimal characters. The
   session lifecycle is governed by the Session FSM.
   See [Chapter 05-state-machines](05-state-machines.md) and the
