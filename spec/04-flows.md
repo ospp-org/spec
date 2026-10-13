@@ -125,7 +125,7 @@ sequenceDiagram
         end
 
         Note over SSP: Enter normal operation
-        Note over SSP: Replay what it buffered, if anything,<br/>every SessionEnded first
+        Note over SSP: Replay what it buffered, if anything,<br/>each online session's records first
         Note over SSP: Heartbeat every heartbeatIntervalSec,<br/>counted from the Accepted
 
     else Rejected
@@ -160,7 +160,7 @@ sequenceDiagram
 8. SSP synchronizes its clock to `serverTime`, applies any configuration overrides, stores the HMAC session key
 9. SSP sends one **StatusNotification EVENT** [MSG-009] per bay, reporting `bayNumber`, `status`, and every `programs[]` entry with its availability — programs, because a service is server-minted and at first boot the station has been told none
 10. SSP enters normal operation — ready to accept commands
-11. SSP replays any events it buffered while it could not send them, every SessionEnded first ([Chapter 01 §6.5](01-architecture.md#65-offline-message-buffering))
+11. SSP replays any events it buffered while it could not send them, each online session's records first, in that session's own order ([Chapter 01 §6.5](01-architecture.md#65-offline-message-buffering))
 12. SSP sends a **Heartbeat REQUEST** [MSG-008] every `heartbeatIntervalSec` seconds after the `Accepted` of step 7, whatever else it is sending ([`heartbeat.md` §7](profiles/core/heartbeat.md#7-processing-rules) rule 1)
 
 ### Alternative Paths
@@ -1405,7 +1405,7 @@ sequenceDiagram
         SSP->>Server: StatusNotification EVENT [MSG-009]
     end
 
-    Note over SSP: Replay buffered events, every SessionEnded first
+    Note over SSP: Replay buffered events, each online session's records first
 
     opt pendingOfflineTransactions > 0
         Note over SSP: Begin Flow §10 (Reconciliation)
@@ -1431,7 +1431,7 @@ sequenceDiagram
 7. **SSP** sends **BootNotification REQUEST** [MSG-001] (same as fresh boot)
 8. **Server** accepts the boot, marks station as `Online`, returns session key
 9. **SSP** sends **StatusNotification** [MSG-009] for each bay (each bay's current state)
-10. **SSP** replays any buffered events, every SessionEnded first ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4)
+10. **SSP** replays any buffered events, each online session's records first, in that session's own order ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4)
 11. If `pendingOfflineTransactions > 0`, SSP begins [Offline → Online Reconciliation (Flow §10)](#10-offline--online-reconciliation)
 12. **SSP** sends its **Heartbeat** [MSG-008] every `heartbeatIntervalSec` seconds after the boot was accepted, through the replay as at any other time ([`heartbeat.md` §7](profiles/core/heartbeat.md#7-processing-rules) rule 1); it has processed commands since then (step 8)
 
@@ -1444,7 +1444,7 @@ sequenceDiagram
 | Broker permanently unavailable | SSP operates in BLE-only mode indefinitely |
 | BootNotification `Rejected` after reconnect | Read the `errorCode`: the causes are the set [§4.1](07-errors.md#41-station--server-mqtt-actions) assigns to BootNotification. Decommissioning is **not** among them — it is out of scope ([Chapter 00 §1.3](00-introduction.md#13-out-of-scope)) — and the SSP **MUST** keep retrying per CORE-011 rather than await intervention. It is not back for its sessions, exactly as after a `Pending` boot (next row) |
 | BootNotification `Pending` after reconnect | The SSP is not back for its sessions: it replays and reports nothing while `Pending`, and the server holds them away, closing at the sweep, `completed`, charged in full and marked as an anomaly, a session whose end record has not arrived by its end — the end of its booked duration, or, if later, the first boot answered `Accepted` after a restart plus the booked duration — plus 60 seconds plus `ConnectionLostGracePeriod` ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) — not a Partial-B session, which closes at the end of its authorized duration |
-| Session completed during offline | SSP replays the session's buffered SessionEnded after the post-boot reports, first among its buffered session records, and the server settles the session on it ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3) |
+| Session completed during offline | SSP replays the session's buffered SessionEnded after the post-boot reports, behind the session's own buffered MeterValues and ahead of its buffered offline records, and the server settles the session on it ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3) |
 
 ### Postconditions
 

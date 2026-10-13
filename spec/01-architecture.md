@@ -472,21 +472,25 @@ Upon successful reconnection, the station transmits in the following order:
 1. BootNotification (fresh)
 2. StatusNotification per bay (fresh, current state)
 3. Buffered SecurityEvents (chronological)
-4. Buffered SessionEnded events first — every one the station buffered and, after a restart, that of every session it could not resume, sent at once ([Chapter 05 §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rule 6) — then its buffered TransactionEvents and SessionStarted events (chronological, interleaved by their own timestamps)
+4. Buffered session records, in this order: after a restart, the SessionEnded of every session the station could not resume, sent at once ([Chapter 05 §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rule 6), behind any buffered MeterValues of that session it kept; then each online session's buffered records, session by session, in that session's own order — its MeterValues, then its SessionEnded; then the offline records — its TransactionEvents and the records of its Partial-B sessions, SessionStarted among them (chronological, interleaved by their own timestamps)
 5. Heartbeat at the configured interval, every `heartbeatIntervalSec` seconds from the BootNotification `Accepted`, whatever steps 2 to 4 are still sending ([`heartbeat.md` §7](profiles/core/heartbeat.md#7-processing-rules) rule 1)
 
 > **Why SessionEnded is named in step 4.** It is a Category-1 `MUST NOT discard` message above and was absent
 > from this list, so the one ordering statement a station has for its reconnection flush did not mention a
 > stream it is forbidden to drop. It shares step 4 rather than getting its own because the two are
-> co-indexed — see the SessionEnded row of the Category-1 table — and because
-> [`session-ended.md` §6](profiles/transaction/session-ended.md) rule 6 orders SessionEnded only against the
+> co-indexed — see the SessionEnded row of the Category-1 table — and because its place among the records of
+> the step is the one the next note gives;
+> [`session-ended.md` §5](profiles/transaction/session-ended.md#5-processing-rules) rule 6 orders it against the
 > StatusNotification that reports the bay's new state, which step 2 has already sent fresh.
 >
-> **Why every SessionEnded leads step 4.** The server's sweep closes a session whose end has passed 60 seconds
-> after the station's boot ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)), and a TransactionEvent backlog,
-> sent one at a time with a wait for each RESPONSE, can outlast that. A SessionEnded queued behind it would
-> arrive after the sweep had closed its session in full. The station has at most one online session per bay to
-> end, so sending the SessionEnded events first costs the backlog little.
+> **Why the online sessions' records lead step 4, each session in its own order.** The server's sweep closes a
+> session whose end has passed 60 seconds after the station's boot
+> ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)), and a TransactionEvent backlog, sent one at a time with
+> a wait for each RESPONSE, can outlast that. A SessionEnded queued behind it would arrive after the sweep had
+> closed its session in full. The station has at most one online session per bay, so sending their records
+> first costs the backlog little. Within a session the records keep the order its `seqNo` counts
+> ([Chapter 02 §3.2](02-transport.md#32-message-ordering)), its MeterValues before its SessionEnded: a
+> SessionEnded ahead of them would show a receiver that checks the increment a gap that is not one.
 
 ### 6.6 Meter Reporting
 

@@ -349,7 +349,7 @@ The station MUST follow this sequence on power-on or reconnect:
 │     └── Timeout  → wait 60s, goto step 8                │
 │  10. PUBLISH StatusNotification per bay (with programs)  │
 │  11. Enter normal operation (accept commands)           │
-│  12. Replay buffered messages, every SessionEnded first │
+│  12. Replay buffered messages, online sessions first    │
 │                                                         │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -426,7 +426,7 @@ When the MQTT connection is lost (PINGRESP timeout, TCP reset, broker unavailabl
 2. **Switch to BLE-available mode** — if not already advertising, ensure BLE is active for offline sessions.
 3. **Buffer outbound messages** — The station MUST buffer TransactionEvent, SessionStarted, SessionEnded and SecurityEvent messages in persistent local storage per the categorized buffering policy in [01-architecture.md §6.5](../spec/01-architecture.md#65-offline-message-buffering). Regenerable messages (Heartbeat, StatusNotification, MeterValues, FirmwareStatusNotification, DiagnosticsNotification) MAY be discarded during offline operation as the station regenerates them at reconnection.
 4. **Attempt reconnection** with exponential backoff (see Section 4.5).
-5. **On successful reconnect** — follow the full boot sequence (Section 4.1): re-subscribe, BootNotification, StatusNotification per bay, then flush buffered messages, every SessionEnded first ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4). The BootNotification **MUST** carry `bootReason: "Reconnect"` when the firmware did not restart, and `uptimeSeconds` measured from the last actual boot — which therefore spans the outage. The boot is mandatory here because the HMAC session key is scoped to the MQTT session and arrives only in the boot response ([Chapter 06 §5.2](06-security.md)); a station that skipped it would reconnect keyless. OCPP-J advises the opposite for the same event, and [`boot-notification.md` §5.2](profiles/core/boot-notification.md) records why OSPP diverges.
+5. **On successful reconnect** — follow the full boot sequence (Section 4.1): re-subscribe, BootNotification, StatusNotification per bay, then flush buffered messages, each online session's records first, in that session's own order ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4). The BootNotification **MUST** carry `bootReason: "Reconnect"` when the firmware did not restart, and `uptimeSeconds` measured from the last actual boot — which therefore spans the outage. The boot is mandatory here because the HMAC session key is scoped to the MQTT session and arrives only in the boot response ([Chapter 06 §5.2](06-security.md)); a station that skipped it would reconnect keyless. OCPP-J advises the opposite for the same event, and [`boot-notification.md` §5.2](profiles/core/boot-notification.md) records why OSPP diverges.
 
 ### 4.5 Exponential Backoff with Jitter
 

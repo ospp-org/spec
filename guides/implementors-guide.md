@@ -221,7 +221,7 @@ Power on
     - Timeout → wait 60s, retry
   → PUBLISH StatusNotification for EACH bay
   → Enter normal operation (accept and answer commands from here)
-  → Replay what was buffered while the station could not send it, if anything, every SessionEnded first
+  → Replay what was buffered while the station could not send it, if anything, each online session's records first
   → PUBLISH Heartbeat every heartbeatIntervalSec, counted from the Accepted, through the replay too
 ```
 
@@ -381,7 +381,7 @@ If MQTT drops during an active session:
 3. Buffer the **MUST-buffer** categories — TransactionEvent (min 1000, **never** discard), SessionEnded (min 1000, **never** discard — it is the sole billing source for a session that ended with no StopService to answer), SessionStarted (one per bay, **never** discard — the server keys a Partial-B session's authorized duration on it), SecurityEvent (200, FIFO). StatusNotification and MeterValues are **regenerable and MAY be discarded**; do not spend the buffer on them. The `MUST` storage level is **512 KB** — and **it does not hold the categories in this bullet.** [`01-architecture.md` §6.5](../spec/01-architecture.md#65-offline-message-buffering) derives what they cost: 1000 TransactionEvents (1.3 MB) + 1000 SessionEnded (250 KB) + 64 SessionStarted (16 KB) + 200 SecurityEvents (120 KB) + overhead = **~1.7 MB**, and §6.5 records the gap between the two as OPEN because raising a mandatory storage level changes the bill of materials of every station. **Size new hardware to the derived figure, not to the 512 KB level row.** At 90% of the TransactionEvent buffer, reject new StartService with `5111 BUFFER_FULL`; at 100%, enter degraded mode and refuse all new sessions (§6.5)
 4. Attempt reconnection with exponential backoff: 1s → 2s → 4s → 8s → 16s → 30s max, with 30% jitter
 5. On reconnect: Full boot sequence (BootNotification, StatusNotification per bay)
-6. Flush buffered messages after the StatusNotifications, every SessionEnded first ([`connection-lost.md` §6](../spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4)
+6. Flush buffered messages after the StatusNotifications, each online session's records first, in that session's own order ([`connection-lost.md` §6](../spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4)
 
 ### 2.8 Offline Mode (BLE)
 

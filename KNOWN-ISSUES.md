@@ -287,7 +287,8 @@ until its cryptographic construction has passed the review of
     runs); the station reports every session it held across a restart, by its normal SessionEnded when the
     resumed wash ends or by a SessionEnded `Fault` at once with the delivered time it persisted; and a session
     whose end record does not come is closed by the sweep, `completed`, in full and marked as an anomaly, 60
-    seconds after its end, and `ConnectionLostGracePeriod` later while its station is away
+    seconds after the later of its end and the station's last boot, and at its end plus 60 seconds plus
+    `ConnectionLostGracePeriod` while its station is away
     ([`05-state-machines.md` §3.4](spec/05-state-machines.md#34-timeouts); [`connection-lost.md` §6](spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3). From 2026-10-12 to
     2026-10-13 the online text settled a session on a report processed after the station's replay, on `5113` at
     once, and at a `RemoteReset` or `FirmwareUpdate` boot, and the frozen text was measured against that. Now:
@@ -336,9 +337,10 @@ until its cryptographic construction has passed the review of
       delivered"*), in
       [the decided record of decision 7](#decided--a-boot-that-a-station-reports-after-the-server-closed-its-partial-b-session-changes-nothing)
       (*"a `bootReason` that names a boot ends the session"*), and in item 22's lead, which still times the
-      online close by the end of `ConnectionLostGracePeriod`, where the sweep times it now. With the Partial-B
-      tail of `session-ended.md` rule 1 gone from the online text, no sentence says what the `5113` SecurityEvent
-      means for a Partial-B session the server settles on its estimate.
+      online close by the end of `ConnectionLostGracePeriod`, where the sweep times it now. With the clause of
+      `session-ended.md` rule 1's Partial-B tail that gave the SecurityEvent its meaning gone (*"in the
+      indeterminate case a SecurityEvent says the closing figure is unmeasured"*), no sentence says what the
+      `5113` SecurityEvent means for a Partial-B session the server settles on its estimate.
 25. **The station's first Heartbeat after a boot marked the end of its replay from 2026-10-12 to 2026-10-13, and
     the rule is withdrawn; frozen flow 11 still sends its Heartbeat off the interval.** The rule existed only for
     the server's hold of a bay report until the end of the replay, which item 24's change removed, and
@@ -349,21 +351,24 @@ until its cryptographic construction has passed the review of
     [Flow 11](examples/flows/11-reconciliation.md) sends its Heartbeat at 14:00:15, 12.2 seconds after its boot
     was answered `Accepted` with a 30-second interval, where the rule sends the first one 30 seconds after the
     `Accepted`, as it did before 2026-10-12.
-26. **Since 2026-10-13 the station replays every SessionEnded first among its buffered session records, and the
-    offline messages of the frozen surface follow them.** The server's sweep closes a session whose end has passed
-    60 seconds after the station's boot, and a backlog of TransactionEvents can outlast that, so the SessionEnded
-    events go ahead of the TransactionEvents, SessionStarted and MeterValues, which keep their own order after them
+26. **Since 2026-10-13 the station replays each online session's buffered records first, each session in its own
+    order, and the offline messages of the frozen surface follow them.** The server's sweep closes a session whose
+    end has passed 60 seconds after the station's boot, and a backlog of TransactionEvents can outlast that, so
+    each online session's MeterValues and then its SessionEnded go ahead of the TransactionEvents and of the records
+    of the Partial-B sessions, which follow chronologically, by their own timestamps; after a restart the
+    SessionEnded `Fault` of every session the station could not resume goes first of all
     ([`connection-lost.md` §6](spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4;
-    [`01-architecture.md` §6.5](spec/01-architecture.md#65-offline-message-buffering) step 4, which interleaved the
-    session records by their own timestamps until then). No frozen text orders the offline transactions against a
-    SessionEnded: [`reconciliation.md` §2](spec/profiles/offline/reconciliation.md#2-sync-procedure) sends them
-    after the boot's `Accepted`, in ascending `txCounter` as a preference, so none contradicts the new order. A
-    Partial-B session whose SessionStarted and SessionEnded the station both buffered now reports its end before
-    its start. Replayed after the 40-second lapse of
-    [`authorize-offline-pass.md` §6](spec/profiles/offline/authorize-offline-pass.md#6-processing-rules) rule 4c,
-    both records change nothing, as before. Replayed within it, the SessionEnded reaches a session still
-    `Authorized`, from which [`05-state-machines.md` §3.3](spec/05-state-machines.md#33-transition-table) lists
-    no transition on an end record, while rule 4c reads *"An authorization one of whose end records settled the
+    [`01-architecture.md` §6.5](spec/01-architecture.md#65-offline-message-buffering) step 4, which interleaved all
+    the session records by their own timestamps until then). No frozen text orders the offline transactions against
+    an online session's records: [`reconciliation.md` §2](spec/profiles/offline/reconciliation.md#2-sync-procedure)
+    sends them after the boot's `Accepted`, in ascending `txCounter` as a preference, so none contradicts the new
+    order. A Partial-B session's own records keep their order, its SessionStarted before its SessionEnded, except
+    where a restart ended it: the SessionEnded `Fault` the station sends first for a Partial-B session it could not
+    resume (item 24, last bullet) comes ahead of a SessionStarted it still buffers. Replayed after the 40-second
+    lapse of [`authorize-offline-pass.md` §6](spec/profiles/offline/authorize-offline-pass.md#6-processing-rules)
+    rule 4c, both records change nothing, as before. Replayed within it, the SessionEnded reaches a session still
+    `Authorized`, from which [`05-state-machines.md` §3.3](spec/05-state-machines.md#33-transition-table) lists no
+    transition on an end record, while rule 4c reads *"An authorization one of whose end records settled the
     session before the lapse does not lapse"*.
 
 ---
@@ -499,9 +504,11 @@ answer to all three schemas plus the profile prose that mirrors them
 
 **The rule.** A session is ended only by its station's end record. A bay's status report never settles, closes
 or fails a session — after a reconnection or a restart, on `Available` or on `Faulted` — and no boot ends one.
-The only fallback is the server's sweep: a session whose end record has not arrived by the end of its booked
-duration plus a 60-second margin, and `ConnectionLostGracePeriod` more while its station is away, is closed
-`completed`, charged in full, the close marked as an anomaly ([`05-state-machines.md` §3.4](spec/05-state-machines.md#34-timeouts)). After any
+The only fallback is the server's sweep: a session whose end record has not arrived 60 seconds after the later
+of its end and its station's last boot, or by its end plus 60 seconds plus `ConnectionLostGracePeriod` while
+the station is away, is closed `completed`, charged in full, the close marked as an anomaly, its end being the
+end of its booked duration or, if later, the first boot answered `Accepted` after a restart plus the booked
+duration ([`05-state-machines.md` §3.4](spec/05-state-machines.md#34-timeouts)). After any
 restart the station reports every session it held: the resumed wash by its normal SessionEnded, a wash it could
 not resume by a SessionEnded at once with the delivered time, settled by the existing rows
 ([§3.5](spec/05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rules 2, 3 and 6).

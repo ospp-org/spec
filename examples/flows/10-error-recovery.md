@@ -318,7 +318,7 @@ The server recognizes this as a reconnection rather than a cold boot from `bootR
 
 ### Step 12: Station Replays Buffered Messages (10:03:15.800 - 10:03:16.400)
 
-The station replays all buffered messages in chronological order. The server identifies buffered messages by comparing timestamps against the known disconnection period.
+The station replays its buffered messages, each online session's records first, in that session's own order, and its offline records after them ([`connection-lost.md` §6](../../spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4); this outage buffered no offline record and no SessionEnded, so the replay below is chronological. The server identifies buffered messages by comparing timestamps against the known disconnection period.
 
 **Buffered StatusNotification #1 (connectivity status during disconnect):**
 
