@@ -26,7 +26,7 @@ Operator Charlie decides to update station `stn_a1b2c3d4` ("SSP-3000") from firm
 
 ```
 22:00:00.000  Charlie clicks "Update firmware" on dashboard
-22:00:00.500  Server validates: no active sessions, firmware URL valid
+22:00:00.500  Server validates: firmware URL valid (it does not check the bays; the station gates the install)
 22:00:01.000  Server sends UpdateFirmware REQUEST via MQTT
 22:00:01.300  Station responds: Accepted
 22:00:02.000  Station sends FirmwareStatusNotification: Downloading (0%)
@@ -96,9 +96,10 @@ Charlie clicks "Confirm update".
 
 The server validates:
 1. Station is online and connected
-2. No active sessions on any bay
-3. Firmware v1.3.0 binary exists on CDN and checksum is valid
-4. Station hardware model is compatible with this firmware version
+2. Firmware v1.3.0 binary exists on CDN and checksum is valid
+3. Station hardware model is compatible with this firmware version
+
+It does not check the bays: UpdateFirmware goes out at once, whatever they are doing, and the station gates the install ([`update-firmware.md` §5](../../spec/profiles/device-management/update-firmware.md#5-processing-rules) rules 1 and 7).
 
 **MQTT Topic:** `ospp/v1/stations/stn_a1b2c3d4/to-station`
 

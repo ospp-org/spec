@@ -129,7 +129,7 @@ stateDiagram-v2
     Failed --> [*]
 ```
 
-**Key timeouts:** Pending ack 10s | StartService 10s | Max duration configurable (default 600s) | StopService confirm 10s (repeated, never closes the session) | Sweep margin 60s | Connection lost grace 300s
+**Key timeouts:** Pending ack 10s | StartService 10s | Max duration configurable (default 600s) | StopService confirm 10s (repeated, never closes the session) | Sweep margin 60s by default (the server's setting) | Connection lost grace 300s
 
 ---
 

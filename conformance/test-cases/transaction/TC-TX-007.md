@@ -12,7 +12,7 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
 
 - `spec/03-messages.md` §5.4 — SessionEnded EVENT [MSG-040]
 - `spec/04-flows.md` §6 — Session Stop & Completion (timer expiry and fault paths)
-- `spec/05-state-machines.md` §3.3 — Session SM transitions: Timer elapsed, Hardware fault
+- `spec/05-state-machines.md` §3.3 — Session SM transitions: *Timer elapsed*, and *Hardware fault, or a restart not resumed*
 - `spec/05-state-machines.md` §2.3 — the bay transition table (canonical): every exit from `Occupied` is to `Finishing` or `Faulted`, never straight to `Available`
 - `schemas/mqtt/session-ended-event.schema.json`
 - `spec/07-errors.md` §7.4 — Refund policies
@@ -121,7 +121,7 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
 
 ## Expected Results
 
-1. Station sends SessionEnded EVENT autonomously when timer elapses, hardware faults, the customer stops it from the app over BLE, offline credits are exhausted, or the offline pass is revoked mid-session — without waiting for StopService. It does the same after a restart for every session it held: at the end of a wash it resumed, or at once, with `reason: "Fault"`, for one it could not resume (`spec/05-state-machines.md` §3.5); this case runs no restart.
+1. Station sends SessionEnded EVENT autonomously when timer elapses, hardware faults, the customer stops it from the app over BLE, offline credits are exhausted, or the offline pass is revoked mid-session — without waiting for StopService. It does the same after a restart for every online or Partial-B session it held: at the end of a wash it resumed, or at once, with `reason: "Fault"`, for one it could not resume (`spec/05-state-machines.md` §3.5); this case runs no restart.
 2. SessionEnded `reason` is one of `"TimerExpired"`, `"Fault"`, `"Local"`, `"LocalOutOfCredit"`, `"Deauthorized"`.
    `"OperatorStopped"` is the sixth member of the enum and is deliberately **out of scope here**:
    this case verifies AUTONOMOUS termination — the station deciding on its own — and an operator
@@ -148,5 +148,5 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
 4. `actualDurationSeconds` deviates more than 3 seconds from real elapsed time.
 5. StatusNotification is received BEFORE SessionEnded EVENT.
 6. SessionEnded payload fails JSON schema validation.
-7. Station sends SessionEnded for a server-initiated StopService (SessionEnded MUST NOT be sent when StopService command was received).
+7. Station sends SessionEnded for a server-initiated StopService (SessionEnded MUST NOT be sent for a session that ended on a StopService the station accepted; after a stop it refused or never acted on, the session ends with a SessionEnded — `session-ended.md` §5 rule 1).
 8. Station emits non-zero `creditsCharged` for `LocalOutOfCredit` or `Deauthorized` reasons.

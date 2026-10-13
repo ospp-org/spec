@@ -472,7 +472,7 @@ Upon successful reconnection, the station transmits in the following order:
 1. BootNotification (fresh)
 2. StatusNotification per bay (fresh, current state)
 3. Buffered SecurityEvents (chronological)
-4. Buffered session records, in this order: after a restart, the SessionEnded of every session the station could not resume, sent at once ([Chapter 05 §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rule 6), behind any buffered MeterValues of that session it kept; then each online session's buffered records, session by session, in that session's own order — its MeterValues, then its SessionEnded; then the offline records — its TransactionEvents and the records of its Partial-B sessions, SessionStarted among them (chronological, interleaved by their own timestamps)
+4. Buffered session records, in this order: after a restart, the SessionEnded of every online or Partial-B session the station could not resume, sent at once ([Chapter 05 §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rule 6), behind any buffered MeterValues of that session it kept; then each online session's buffered records, session by session, in that session's own order — its MeterValues, then its SessionEnded; then the offline records — its TransactionEvents and the records of its Partial-B sessions, SessionStarted among them (chronological, interleaved by their own timestamps)
 5. Heartbeat at the configured interval, every `heartbeatIntervalSec` seconds from the BootNotification `Accepted`, whatever steps 2 to 4 are still sending ([`heartbeat.md` §7](profiles/core/heartbeat.md#7-processing-rules) rule 1)
 
 > **Why SessionEnded is named in step 4.** It is a Category-1 `MUST NOT discard` message above and was absent
@@ -484,8 +484,8 @@ Upon successful reconnection, the station transmits in the following order:
 > StatusNotification that reports the bay's new state, which step 2 has already sent fresh.
 >
 > **Why the online sessions' records lead step 4, each session in its own order.** The server's sweep closes a
-> session whose end has passed 60 seconds after the station's boot
-> ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)), and a TransactionEvent backlog, sent one at a time with
+> session whose end has passed once the sweep margin after the station's boot has run out, a setting of the
+> server's, 60 seconds by default ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)), and a TransactionEvent backlog, sent one at a time with
 > a wait for each RESPONSE, can outlast that. A SessionEnded queued behind it would arrive after the sweep had
 > closed its session in full. The station has at most one online session per bay, so sending their records
 > first costs the backlog little. Within a session the records keep the order its `seqNo` counts
