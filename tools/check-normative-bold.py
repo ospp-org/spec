@@ -30,19 +30,21 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-10-13  (unreleased)  390 unbolded, 1493 bolded spans — the final review of that
+    (this HEAD) 2026-10-13  (unreleased)  390 unbolded, 1494 bolded spans — the final review of that
                                    change, the sweep margin made a setting of the server's, and the
                                    install gate restated as a wait. Unbolded FALLS BY ONE and BASELINE
                                    follows it down to 390: `05-state-machines.md` §6.3's *Station reboots*
                                    row, whose plain `MUST` restated the gate as sessions the station ends,
-                                   now says it waited for them; every keyword the change adds is bolded. The
-                                   companion rises by ONE, the `MUST` that has a station send a session's
-                                   end record when the session ends, and after a boot in the replay order,
-                                   whatever the sweep margin's value (`05-state-machines.md` §3.4), a
-                                   `MUST NOT` until review round 1 made it testable; the StopService
-                                   re-send of `stop-service.md` §6 rule 11 keeps its three bolded spans in
-                                   its new wording, and the restart rules keep theirs in their new scope.
-                                   RE-DERIVED on this tree.
+                                   now says the reboot waits for them; every keyword the change adds is
+                                   bolded. The companion rises by TWO: the `MUST NOT` of §7.4 that holds
+                                   the firmware reboot while a session runs, the gate that row's plain
+                                   `MUST` carried, restored bolded by review round 1; and the `MUST` that
+                                   has a station send a session's end record when the session ends, and
+                                   after a boot in the replay order, whatever the sweep margin's value
+                                   (`05-state-machines.md` §3.4), a `MUST NOT` until review round 1 made
+                                   it testable. The StopService re-send of `stop-service.md` §6 rule 11
+                                   keeps its three bolded spans in its new wording, and the restart rules
+                                   keep theirs in their new scope. RE-DERIVED on this tree.
     (superseded) 2026-10-13  (unreleased)  391 unbolded, 1492 bolded spans — one source of truth for
                                    ending a session. Unbolded FALLS BY THREE and BASELINE follows it
                                    down to 391: `05-state-machines.md` 34 -> 31, the three plain

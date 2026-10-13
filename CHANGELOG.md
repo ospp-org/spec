@@ -23,7 +23,7 @@ as described in [VERSIONING.md](VERSIONING.md).
 5. To a repeated StopService for a session it already stopped, its cached RESPONSE ([`stop-service.md` §6](spec/profiles/transaction/stop-service.md#6-processing-rules) rule 10). The repeat is the server's: when a StopService's RESPONSE does not come, the server sends it again at its timeout, and at once after each boot answered `Accepted` (rule 11 there).
 6. Heartbeats every `heartbeatIntervalSec` seconds after the BootNotification `Accepted`, through the replay as at any other time, as in `0.44.0` ([`heartbeat.md` §7](spec/profiles/core/heartbeat.md#7-processing-rules) rule 1). A station built to the first-Heartbeat rule merged on 2026-10-12 and never released, which held the first Heartbeat until its replay was acknowledged, sends them during its replay too.
 
-A forced Reset still settles every session first with `OperatorStopped`, and no installation begins while a session runs.
+A forced Reset still settles every session first with `OperatorStopped`, and no installation begins while a session runs, nor its reboot: a session begun during the install holds the reboot until it ends by its own end record ([`05-state-machines.md` §7.4](spec/05-state-machines.md#74-firmware-update----bay-constraint)).
 
 **What the server does.**
 

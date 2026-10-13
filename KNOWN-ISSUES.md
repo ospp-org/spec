@@ -294,8 +294,8 @@ until its cryptographic construction has passed the review of
     frozen sites that end a rebooted Partial-B session on a bay report or at a boot differ from it.** By Gabi's
     decision, a bay's StatusNotification never settles, closes or fails an online session, whatever it reports
     and whatever boot came before it; no boot ends one, `RemoteReset` and `FirmwareUpdate` included, since the
-    station's own end record is the end (a forced Reset's `OperatorStopped`, and no installation while a session
-    runs); the station reports every session it held across a restart, an online one by its normal SessionEnded
+    station's own end record is the end (a forced Reset's `OperatorStopped`, and no installation, nor its reboot,
+    while a session runs); the station reports every session it held across a restart, an online one by its normal SessionEnded
     when the resumed wash ends or by a SessionEnded `Fault` at once with the delivered time it persisted; and a session
     whose end record does not come is closed by the sweep, `completed`, in full and marked as an anomaly, the
     sweep margin, 60 seconds by default, after the later of its end and the station's last boot, once a message
@@ -321,10 +321,12 @@ until its cryptographic construction has passed the review of
       session that *"follows the online rules exactly"*, settled on the post-boot report *"as online settles such a
       session"* and ended by a `RemoteReset` or a `FirmwareUpdate`, *"before which the station ends every active
       session"*, where the online text has the station end them before a `RemoteReset` and, before a
-      `FirmwareUpdate`, wait until every session ended by its own end record, no installation beginning while a
-      session runs ([`update-firmware.md` §5](spec/profiles/device-management/update-firmware.md#5-processing-rules)
-      rule 7); the decided record of the Partial-B reboot reads the update the same way (*"the station ends every
-      active session before such a boot"*).
+      `FirmwareUpdate`, wait until every session, one begun during the install included, ended by its own end
+      record, no installation beginning while a session runs
+      ([`update-firmware.md` §5](spec/profiles/device-management/update-firmware.md#5-processing-rules) rule 7;
+      [`05-state-machines.md` §7.4](spec/05-state-machines.md#74-firmware-update----bay-constraint)); the decided
+      record of the Partial-B reboot and rule 4a itself read the update the same way (*"the station ends every
+      active session before such a boot"*, rule 4a citing §7.4).
       [`session-ended.md` §5](spec/profiles/transaction/session-ended.md#5-processing-rules) rule 1 settles one *"as for an online one, pro-rata"* on that report,
       and [`start-service.md` §6](spec/profiles/transaction/start-service.md#6-processing-rules) rule 12 settles
       one *"as an online one is"* when its bay is reported `Faulted` with `5113`, where an online one settles on

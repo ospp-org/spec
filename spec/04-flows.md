@@ -1220,7 +1220,7 @@ Only the `Local`, `Inactivity`, `Fault` and `OperatorStopped` rows diverge; `Tim
 
 | Component | State |
 |-----------|-------|
-| SSP Bay | `Available` (or `Faulted` if hardware error) |
+| SSP Bay | `Available` (or `Faulted` after a hardware fault; after a restart not resumed, the state its post-boot report gives) |
 | Server Session | `completed` (or `failed`) |
 | User Wallet | Final balance = pre-auth - actual charge (unused portion refunded) |
 
