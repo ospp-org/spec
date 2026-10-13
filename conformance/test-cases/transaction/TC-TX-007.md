@@ -148,5 +148,5 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
 4. `actualDurationSeconds` deviates more than 3 seconds from real elapsed time.
 5. StatusNotification is received BEFORE SessionEnded EVENT.
 6. SessionEnded payload fails JSON schema validation.
-7. Station sends SessionEnded for a server-initiated StopService (SessionEnded MUST NOT be sent when StopService command was received).
+7. Station sends SessionEnded for a server-initiated StopService (SessionEnded MUST NOT be sent for a session that ended on a StopService the station accepted; after a stop it refused or never acted on, the session ends with a SessionEnded — `session-ended.md` §5 rule 1).
 8. Station emits non-zero `creditsCharged` for `LocalOutOfCredit` or `Deauthorized` reasons.

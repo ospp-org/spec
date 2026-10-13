@@ -811,12 +811,14 @@ QoS: 1 (always)
 
 **On session completion:**
 
-When you receive StopService RESPONSE (user-initiated stop):
+On StopService RESPONSE `Accepted` (the stop the server asked for, on time or late, while the session is open), for a user-initiated stop:
 
 1. Calculate final billing as the customer's stop, by service kind: for `UserDuration`, `creditsCharged = ceil(actualDurationSeconds / 60 * priceCreditsPerMinute)`; a `FixedDuration` or `MultiUnit` session is charged in full ([`04-flows.md` §6](../spec/04-flows.md#settlement-by-service-kind))
 2. Refund unused portion: `refund = preAuthAmount - creditsCharged`
 3. Update session to `completed`
 4. Update bay status to `Available`
+
+A RESPONSE `Rejected` settles nothing: the session stays `stopping` until its SessionEnded or the sweep ([`stop-service.md` §6](../spec/profiles/transaction/stop-service.md#6-processing-rules) rule 11).
 
 When you receive SessionEnded EVENT [MSG-040], switch on `reason`. **The arms below are the `UserDuration` case.** If the session's service kind is `FixedDuration` or `MultiUnit`, settlement is all-or-nothing and three of these arms change — see *Settlement by Service Kind* in [`04-flows.md §6`](../spec/04-flows.md), which governs. Do not implement this list without reading that section first: it is the pro-rata baseline, not the whole rule.
 
@@ -1279,7 +1281,7 @@ Check off each requirement as you implement it. Items marked **[MUST]** are mand
 - [ ] **[MUST]** Do NOT auto-refund when station goes offline during active session
 - [ ] **[MUST]** End a started session only on its end record — its SessionEnded, or the StopService RESPONSE of a stop the server asked for — or at the sweep; never on a bay report, a boot, a refused or unanswered StopService, or the station's absence ([`05-state-machines.md` §3.4](../spec/05-state-machines.md#34-timeouts))
 - [ ] **[MUST]** Sweep: close a session whose end record has not come 60 s after its end — the booked end, or the first boot answered `Accepted` after a restart plus the booked duration — or after the station's last boot, if later, once a message has arrived after that, while the station is not away, or 60 s plus `ConnectionLostGracePeriod` after its end while the station is away — a disconnection, or a boot answered `Pending` or `Rejected` — `completed`, charged in full, marked as an anomaly ([`05-state-machines.md` §3.4](../spec/05-state-machines.md#34-timeouts))
-- [ ] **[MUST]** Never end a session on a StopService timeout: send the REQUEST again under the same `messageId`, re-composed with a fresh `timestamp`, at most three attempts while the station stays connected and a new one after each boot answered `Accepted` while the session is still `Stopping`, and settle the session on the first end record to arrive, a RESPONSE `Accepted` that comes after its attempt's timeout included ([`stop-service.md` §6](../spec/profiles/transaction/stop-service.md#6-processing-rules) rule 11)
+- [ ] **[MUST]** Never end a session on a StopService timeout: send the REQUEST again at the timeout, under the same `messageId`, re-composed with a fresh `timestamp` — at most three attempts while the station stays connected, each at the previous one's timeout, none on a timeout while the server holds the station disconnected, and a new connected period of up to three after each boot answered `Accepted` while the session is still `Stopping` and its stop unanswered, the first at once at the boot — and settle the session on the first end record to arrive, a RESPONSE `Accepted` that comes after its attempt's timeout included ([`stop-service.md` §6](../spec/profiles/transaction/stop-service.md#6-processing-rules) rule 11)
 - [ ] **[MUST]** Mark station offline after `3.5 × heartbeatIntervalSec` without any message, a heartbeat or any other
 - [ ] **[MUST]** Circuit breaker for station commands (3 timeouts → OPEN)
 - [ ] **[MUST]** Circuit breaker for payment processor (5 failures/60s → OPEN)
