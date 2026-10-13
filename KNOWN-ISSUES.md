@@ -563,7 +563,10 @@ descriptions only, and the next release carries the change from the draft at the
 value.** The rule's first text fixed it at 60 seconds. A server sets it; a station sends a session's end record
 when the session ends, and after a boot in the order of
 [`connection-lost.md` §6](spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4, whatever
-its value ([`05-state-machines.md` §3.4](spec/05-state-machines.md#34-timeouts)).
+the margin's value: it relies on no value of it
+([`05-state-machines.md` §3.4](spec/05-state-machines.md#34-timeouts)). No floor is set: a server that sets the
+margin shorter than the time a station's end record, or the RESPONSE of a StopService it sends again, needs to
+reach it closes such a session in full, with the anomaly mark, and a longer one holds the bay longer.
 
 **Withdrawn, each because it existed only to reconcile a bay's status with the end record:** the first
 Heartbeat after a boot as the end of the replay, with its acknowledgement wait and its TriggerMessage

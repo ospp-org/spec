@@ -36,8 +36,10 @@ Measurement points, so the number is never quoted without one:
                                    follows it down to 390: `05-state-machines.md` §6.3's *Station reboots*
                                    row, whose plain `MUST` restated the gate as sessions the station ends,
                                    now says it waited for them; every keyword the change adds is bolded. The
-                                   companion rises by ONE, the `MUST NOT` that has a station rely on no
-                                   value of the sweep margin (`05-state-machines.md` §3.4); the StopService
+                                   companion rises by ONE, the `MUST` that has a station send a session's
+                                   end record when the session ends, and after a boot in the replay order,
+                                   whatever the sweep margin's value (`05-state-machines.md` §3.4), a
+                                   `MUST NOT` until review round 1 made it testable; the StopService
                                    re-send of `stop-service.md` §6 rule 11 keeps its three bolded spans in
                                    its new wording, and the restart rules keep theirs in their new scope.
                                    RE-DERIVED on this tree.
