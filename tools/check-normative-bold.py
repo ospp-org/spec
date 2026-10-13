@@ -30,7 +30,15 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-10-13  (unreleased)  391 unbolded, 1492 bolded spans — one source of truth for
+    (this HEAD) 2026-10-13  (unreleased)  391 unbolded, 1493 bolded spans — the final review of that
+                                   change, and the sweep margin made a setting of the server's.
+                                   Unbolded holds at 391: every keyword the change adds is bolded. The
+                                   companion rises by ONE, the `MUST NOT` that has a station rely on no
+                                   value of the sweep margin (`05-state-machines.md` §3.4); the StopService
+                                   re-send of `stop-service.md` §6 rule 11 keeps its three bolded spans in
+                                   its new wording, and the restart rules keep theirs in their new scope.
+                                   RE-DERIVED on this tree.
+    (superseded) 2026-10-13  (unreleased)  391 unbolded, 1492 bolded spans — one source of truth for
                                    ending a session. Unbolded FALLS BY THREE and BASELINE follows it
                                    down to 391: `05-state-machines.md` 34 -> 31, the three plain
                                    keywords of §3.5 rule 3 (orphan on an unrecoverable reboot), which

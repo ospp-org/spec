@@ -484,8 +484,8 @@ Upon successful reconnection, the station transmits in the following order:
 > StatusNotification that reports the bay's new state, which step 2 has already sent fresh.
 >
 > **Why the online sessions' records lead step 4, each session in its own order.** The server's sweep closes a
-> session whose end has passed 60 seconds after the station's boot
-> ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)), and a TransactionEvent backlog, sent one at a time with
+> session whose end has passed once the sweep margin after the station's boot has run out, a setting of the
+> server's, 60 seconds by default ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)), and a TransactionEvent backlog, sent one at a time with
 > a wait for each RESPONSE, can outlast that. A SessionEnded queued behind it would arrive after the sweep had
 > closed its session in full. The station has at most one online session per bay, so sending their records
 > first costs the backlog little. Within a session the records keep the order its `seqNo` counts

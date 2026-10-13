@@ -296,9 +296,10 @@ until its cryptographic construction has passed the review of
     station's own end record is the end (a forced Reset's `OperatorStopped`, and no installation while a session
     runs); the station reports every session it held across a restart, an online one by its normal SessionEnded
     when the resumed wash ends or by a SessionEnded `Fault` at once with the delivered time it persisted; and a session
-    whose end record does not come is closed by the sweep, `completed`, in full and marked as an anomaly, 60
-    seconds after the later of its end and the station's last boot, once a message from the station has arrived
-    after that, and at its end plus 60 seconds plus `ConnectionLostGracePeriod` while its station is away
+    whose end record does not come is closed by the sweep, `completed`, in full and marked as an anomaly, the
+    sweep margin, 60 seconds by default, after the later of its end and the station's last boot, once a message
+    from the station has arrived after that, and at its end plus the margin plus `ConnectionLostGracePeriod` while
+    its station is away
     ([`05-state-machines.md` §3.4](spec/05-state-machines.md#34-timeouts); [`connection-lost.md` §6](spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3). From 2026-10-12 to
     2026-10-13 the online text settled a session on a report processed after the station's replay, on `5113` at
     once, and at a `RemoteReset` or `FirmwareUpdate` boot, and the frozen text was measured against that. Now:
@@ -363,7 +364,8 @@ until its cryptographic construction has passed the review of
     `Accepted`, as it did before 2026-10-12.
 26. **Since 2026-10-13 the station replays each online session's buffered records first, each session in its own
     order, and the offline messages of the frozen surface follow them.** The server's sweep closes a session whose
-    end has passed 60 seconds after the station's boot, and a backlog of TransactionEvents can outlast that, so
+    end has passed once its sweep margin after the station's boot has run out, 60 seconds by default, and a
+    backlog of TransactionEvents can outlast that, so
     each online session's MeterValues and then its SessionEnded go ahead of the TransactionEvents and of the records
     of the Partial-B sessions, which follow chronologically, by their own timestamps; after a restart the
     SessionEnded `Fault` of every online or Partial-B session the station could not resume goes first of all,
@@ -512,13 +514,13 @@ answer to all three schemas plus the profile prose that mirrors them
 
 ## DECIDED — a started session ends only on its station's end record or at the sweep, and every session a station held across a restart is reported
 
-**Decided 2026-10-13, by Gabi: the rule of the session's brief, his three answers of the same day, and G15.**
+**Decided 2026-10-13, by Gabi: the rule of the session's brief, his three answers of the same day, G15 and G18.**
 
 **The rule.** A session is ended only by its station's end record. A bay's status report never settles, closes
 or fails a session — after a reconnection or a restart, on `Available` or on `Faulted` — and no boot ends one.
-The only fallback is the server's sweep: a session whose end record has not arrived 60 seconds after the later
-of its end and its station's last boot, once a message from the station has arrived after that, or by its end
-plus 60 seconds plus `ConnectionLostGracePeriod` while the station is away, is closed `completed`, charged in full, the close marked as an anomaly, its end being the
+The only fallback is the server's sweep: a session whose end record has not arrived the sweep margin after the
+later of its end and its station's last boot, once a message from the station has arrived after that, or by its
+end plus the margin plus `ConnectionLostGracePeriod` while the station is away, is closed `completed`, charged in full, the close marked as an anomaly, its end being the
 end of its booked duration or, if later, the first boot answered `Accepted` after a restart plus the booked
 duration ([`05-state-machines.md` §3.4](spec/05-state-machines.md#34-timeouts)). After any
 restart the station reports every session it held, each by the record its kind of session uses: an online or
@@ -549,6 +551,12 @@ descriptions only, and the next release carries the change from the draft at the
 
 **G15: a boot answered `Rejected` is an away period exactly like `Pending`**
 ([`connection-lost.md` §5](spec/profiles/core/connection-lost.md#5-server-side-handling) step 4).
+
+**G18: the sweep margin is a setting of the server's, 60 seconds by default, and no station relies on its
+value.** The rule's first text fixed it at 60 seconds. A server sets it; a station sends a session's end record
+when the session ends, and after a boot in the order of
+[`connection-lost.md` §6](spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4, whatever
+its value ([`05-state-machines.md` §3.4](spec/05-state-machines.md#34-timeouts)).
 
 **Withdrawn, each because it existed only to reconcile a bay's status with the end record:** the first
 Heartbeat after a boot as the end of the replay, with its acknowledgement wait and its TriggerMessage
