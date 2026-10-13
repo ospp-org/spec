@@ -30,7 +30,15 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-10-06  (unreleased)  394 unbolded, 1468 bolded spans — the BLE closing
+    (this HEAD) 2026-10-13  (unreleased)  391 unbolded, 1501 bolded spans — one source of truth for
+                                   ending a session. Unbolded FALLS BY THREE and BASELINE follows it
+                                   down to 391: `05-state-machines.md` 34 -> 31, the three plain
+                                   keywords of §3.5 rule 3 (orphan on an unrecoverable reboot), which
+                                   the change rewrites as the persisted session record and bolds; every
+                                   keyword the change adds is bolded on the way in. The companion is
+                                   RE-DERIVED on this tree: 1481 at the merge of the G11 follow-ups
+                                   (`cf1a505`), whose sessions added no row.
+    (superseded) 2026-10-06  (unreleased)  394 unbolded, 1468 bolded spans — the BLE closing
                                    session. Unbolded holds at 394: every keyword the session's
                                    rules carry is bolded. 5 more bolded spans.
     (superseded) 2026-10-06  (unreleased)  394 unbolded, 1463 bolded spans — the BLE follow-up.
@@ -306,7 +314,7 @@ import re
 import sys
 from collections import Counter
 
-BASELINE = 394
+BASELINE = 391
 
 KEYWORD = re.compile(r'\b(MUST NOT|MUST|SHALL NOT|SHALL)\b')
 FENCE = re.compile(r'```.*?```', re.S)

@@ -452,7 +452,7 @@ buffer sits in.
 | Cached StopService RESPONSE, cached SessionEnded and the terminal record, per session, for the **24-hour OSPP Session Retention Horizon** ([Chapter 02 §5.3](02-transport.md)) | sessions per station per day x one record each. The horizon's own text calls this *"one record per completed session"* and quantifies it no further |
 | The deduplication set: at least **1000** `messageId` values or one hour, whichever is larger ([Chapter 02 §3.3](02-transport.md)) | 1000 x the 64-character `messageId` bound, plus index |
 | Configuration: all 30 registry keys, persisted after every successful write ([Chapter 08 §8.4](08-configuration.md)) | bounded by §1.2's 500-character value ceiling |
-| The persisted `seqNo` per live session, and the command record rule 9 of [`start-service.md`](profiles/transaction/start-service.md) requires **before** energising | one record per bay |
+| The persisted `seqNo` per live session, the command record rule 9 of [`start-service.md`](profiles/transaction/start-service.md) requires **before** energising, and the session record and delivered time of [Chapter 05 §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rule 3 | one record per bay |
 | The server key set, `OfflinePassPublicKey` ([Chapter 06 §6.7](06-security.md)) — during a rotation the key being retired, the current key and the key published ahead of use | three keys of 124 characters |
 | Firmware: two partitions, because A/B is a **MUST** ([`update-firmware.md` §7](profiles/device-management/update-firmware.md)) | 2 x image size — the term that decides the part, and the one the 4 MB note below turns on |
 
@@ -472,7 +472,7 @@ Upon successful reconnection, the station transmits in the following order:
 1. BootNotification (fresh)
 2. StatusNotification per bay (fresh, current state)
 3. Buffered SecurityEvents (chronological)
-4. Buffered TransactionEvents, SessionStarted and SessionEnded events (chronological, interleaved by their own timestamps)
+4. Buffered TransactionEvents, SessionStarted and SessionEnded events (chronological, interleaved by their own timestamps); after a restart, the SessionEnded of every session the station could not resume comes first among them, sent at once ([Chapter 05 §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rule 6)
 5. Its first Heartbeat, once the broker has acknowledged every message of steps 2 to 4: the station **MUST NOT** send one before and **MUST** send it then, and sends the next every `heartbeatIntervalSec` seconds after it. That Heartbeat marks the end of the replay ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4).
 
 > **Why SessionEnded is named in step 4.** It is a Category-1 `MUST NOT discard` message above and was absent

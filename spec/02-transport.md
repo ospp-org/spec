@@ -415,7 +415,7 @@ The station MUST configure an LWT message at MQTT CONNECT time:
 **Server processing on LWT receipt:**
 
 1. Mark all bays of the station as `Unknown` status.
-2. If any session is active, start a session timeout timer (per [Chapter 05](05-state-machines.md)) — not for a Partial-B session, which the loss does not end and which closes at the end of its authorized duration when no end record has arrived ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)).
+2. If any session is active, hold the station away for its sessions, which adds `ConnectionLostGracePeriod` to each one's sweep deadline ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)) — not for a Partial-B session, which the loss does not end and which closes at the end of its authorized duration when no end record has arrived ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)).
 3. Log the disconnect event.
 
 ### 4.4 Reconnection Strategy

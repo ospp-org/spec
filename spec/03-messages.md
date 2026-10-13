@@ -1189,17 +1189,17 @@ Reports consumption telemetry during an active session. Sent at the interval con
 | **Idempotency** | Yes — a SessionEnded for a session already settled MUST be ignored by the server ([`session-ended.md` §5](profiles/transaction/session-ended.md#5-processing-rules) rule 4) |
 | **Message Expiry** | **Never expires** (Critical event — see [`02-transport.md §5.1`](02-transport.md)) |
 
-Reports the end of a session that was terminated autonomously by the station, without a server-initiated StopService command. Sent in any of the following cases:
+Reports the end of a session that was terminated autonomously by the station, without a server-initiated StopService command. Sent in any of the following cases, and in each the station **MUST** send it ([`session-ended.md` §5](profiles/transaction/session-ended.md#5-processing-rules) rule 1):
 
 1. **Timer expiry:** The `durationSeconds` timer elapsed and the station auto-stopped the service.
-2. **Hardware fault:** A hardware fault occurred during an active session and the station auto-stopped the service.
+2. **Hardware fault, or a restart the station could not resume the wash after:** A hardware fault occurred during an active session and the station auto-stopped the service; or the station restarted with the session live and could not resume the wash, and reports it at once after the boot with the delivered time it last persisted ([Chapter 05 §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rules 3 and 6).
 3. **Customer stop over BLE:** The customer stopped the session from the app over BLE, with a StopServiceRequest [MSG-036] — a customer stops a session only through the app ([`04-flows.md` §6](04-flows.md#settlement-by-service-kind)).
 4. **Offline credit exhausted:** The station was operating in offline mode and the user's offline credit pool reached zero mid-session, forcing an immediate stop.
 5. **Mid-session deauthorization:** The user's offline pass was revoked (e.g., via a `RevocationEpoch` bump propagated through ChangeConfiguration) while the session was active; the station MUST stop the service when it detects the revocation.
 6. **Inactivity:** The `SessionTimeout` idle timer elapsed with no user interaction, and the station stopped the service ([`08-configuration.md` §3](08-configuration.md#3-transaction-configuration-keys)).
 7. **Operator stop at the station:** An operator ended the session — a forced Reset, or a station disable the station carries out ([Chapter 04 §6](04-flows.md#the-operator-disable-policy)).
 
-The server **MUST** settle the session from this event rather than from StatusNotification — it **MUST NOT** rely solely on StatusNotification for billing calculations when this event is expected. After a boot answered `Accepted` that keeps the session, a report of its bay settles it only when the server processes it after the end of the station's replay, or when it reports `Faulted` with `5113`, and a session whose SessionEnded does not come within a bounded grace after the latest of the end of its booked duration, the boot, the end of the replay and, where the station restarted at a boot that kept it, the latest such boot plus that duration, or, if the replay has not ended, within a longer bounded allowance after the latest of the others, closes as one whose timer expired ([`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3). The event's `actualDurationSeconds` and `meterValues` are the delivery record; its `creditsCharged` is **advisory input only**. The server **MUST** recompute the amount itself under the active tariff (see **Billing Authority** in [`04-flows.md §6`](04-flows.md)) and **MUST NOT** accept the station's figure as the charge.
+The server **MUST** settle the session from this event rather than from StatusNotification — it **MUST NOT** rely on StatusNotification for billing calculations, nor end the session on one, before or after a boot. A session whose SessionEnded has not come by the sweep's deadline — the end of its booked duration, or the station's last boot if later, plus 60 seconds, and `ConnectionLostGracePeriod` more while the station is away — is closed `completed`, in full, and marked as an anomaly ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)). The event's `actualDurationSeconds` and `meterValues` are the delivery record; its `creditsCharged` is **advisory input only**. The server **MUST** recompute the amount itself under the active tariff (see **Billing Authority** in [`04-flows.md §6`](04-flows.md)) and **MUST NOT** accept the station's figure as the charge.
 
 The server is the authoritative billing engine; the station's `creditsCharged` value is advisory and the server applies the active tariff to produce the final invoice. See [Billing Authority in `04-flows.md`](04-flows.md) for the normative statement of this separation.
 
@@ -1226,7 +1226,7 @@ This message is NOT sent when the session is stopped by a server-initiated StopS
 | Value | Description |
 |-------|-------------|
 | `TimerExpired` | Session `durationSeconds` elapsed; station auto-stopped. |
-| `Fault` | Hardware fault detected during active session; station auto-stopped. |
+| `Fault` | Hardware fault detected during active session; station auto-stopped. Also a restart the station could not resume the wash after: sent at once after the boot, with `actualDurationSeconds` the delivered time it last persisted ([Chapter 05 §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rule 6), and settled exactly as a hardware fault. |
 | `Local` | The customer stopped the session from the app over BLE, with a StopServiceRequest [MSG-036]. A customer stops a session only through the app: through the server, a StopService, which ends in its RESPONSE and no SessionEnded; over BLE, this reason. Distinguishes the customer's stop at the station from a server-routed StopService and from an operator's termination at the station. |
 | `LocalOutOfCredit` | Offline credit pool exhausted mid-session — `OfflinePass.maxTotalCredits` would be exceeded by the next meter reading or by elapsed time, forcing the station to stop. Session MUST be billed at zero (no valid credits available). |
 | `Deauthorized` | Offline pass revoked while the session was active — typically a `RevocationEpoch` bump propagated through ChangeConfiguration that invalidates the pass under which the session was authorized. Session MUST be billed at zero. |
@@ -1271,7 +1271,7 @@ This message is NOT sent when the session is stopped by a server-initiated StopS
 }
 ```
 
-> **Note:** SessionEnded is always followed by StatusNotification [MSG-009] reporting the new bay state (`Finishing` → `Available` for timer expiry, or `Faulted` for hardware fault). The server MUST process SessionEnded before acting on the subsequent StatusNotification.
+> **Note:** SessionEnded for a running wash is followed by StatusNotification [MSG-009] reporting the new bay state (`Finishing` → `Available` for timer expiry, or `Faulted` for hardware fault); one sent at once after a restart follows the post-boot report of its bay instead. The server MUST process SessionEnded before acting on the subsequent StatusNotification.
 
 ---
 
