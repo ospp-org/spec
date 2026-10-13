@@ -318,7 +318,12 @@ until its cryptographic construction has passed the review of
       bullet settles an online session"*, and the bullet settles none: its own close of a Partial-B session is
       the one the clause can mean. [`boot-notification.md` §5.2](spec/profiles/core/boot-notification.md#52-bootreason--seven-boots-and-one-non-boot) rule 4 has a Partial-B
       session that *"follows the online rules exactly"*, settled on the post-boot report *"as online settles such a
-      session"* and ended by a `RemoteReset` or a `FirmwareUpdate`.
+      session"* and ended by a `RemoteReset` or a `FirmwareUpdate`, *"before which the station ends every active
+      session"*, where the online text has the station end them before a `RemoteReset` and, before a
+      `FirmwareUpdate`, wait until every session ended by its own end record, no installation beginning while a
+      session runs ([`update-firmware.md` §5](spec/profiles/device-management/update-firmware.md#5-processing-rules)
+      rule 7); the decided record of the Partial-B reboot reads the update the same way (*"the station ends every
+      active session before such a boot"*).
       [`session-ended.md` §5](spec/profiles/transaction/session-ended.md#5-processing-rules) rule 1 settles one *"as for an online one, pro-rata"* on that report,
       and [`start-service.md` §6](spec/profiles/transaction/start-service.md#6-processing-rules) rule 12 settles
       one *"as an online one is"* when its bay is reported `Faulted` with `5113`, where an online one settles on

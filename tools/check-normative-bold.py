@@ -30,9 +30,12 @@ that the count may fall and must not rise. Lower it as sections get bolded.
 
 Measurement points, so the number is never quoted without one:
 
-    (this HEAD) 2026-10-13  (unreleased)  391 unbolded, 1493 bolded spans — the final review of that
-                                   change, and the sweep margin made a setting of the server's.
-                                   Unbolded holds at 391: every keyword the change adds is bolded. The
+    (this HEAD) 2026-10-13  (unreleased)  390 unbolded, 1493 bolded spans — the final review of that
+                                   change, the sweep margin made a setting of the server's, and the
+                                   install gate restated as a wait. Unbolded FALLS BY ONE and BASELINE
+                                   follows it down to 390: `05-state-machines.md` §6.3's *Station reboots*
+                                   row, whose plain `MUST` restated the gate as sessions the station ends,
+                                   now says it waited for them; every keyword the change adds is bolded. The
                                    companion rises by ONE, the `MUST NOT` that has a station rely on no
                                    value of the sweep margin (`05-state-machines.md` §3.4); the StopService
                                    re-send of `stop-service.md` §6 rule 11 keeps its three bolded spans in
@@ -330,7 +333,7 @@ import re
 import sys
 from collections import Counter
 
-BASELINE = 391
+BASELINE = 390
 
 KEYWORD = re.compile(r'\b(MUST NOT|MUST|SHALL NOT|SHALL)\b')
 FENCE = re.compile(r'```.*?```', re.S)
