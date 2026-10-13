@@ -74,7 +74,7 @@ All seven actions in this profile are REQUIRED for OSPP compliance at Standard l
 1. Accept and correctly process **ReserveBay**, **CancelReservation**, **StartService**, and **StopService** REQUEST messages from the server.
 2. Send **MeterValues** EVENT messages at the configured interval during active sessions (if `meterValuesSupported` is `true`).
 3. Send **TransactionEvent** REQUEST messages for all pending offline transactions after reconnection.
-4. Send a **SessionEnded** EVENT for every session that ends without a server-initiated StopService, every session held across a restart included, and buffer it rather than discard it when it cannot be sent ([`session-ended.md`](session-ended.md)).
+4. Send a **SessionEnded** EVENT for every session that ends without a server-initiated StopService, every online or Partial-B session held across a restart included, and buffer it rather than discard it when it cannot be sent ([`session-ended.md`](session-ended.md)).
 
 ### 4.2 Timing Constraints
 

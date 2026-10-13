@@ -163,13 +163,23 @@ until its cryptographic construction has passed the review of
 9. **Persistence against resumption.** A station **SHOULD** persist a BLE session's state, and **MUST** resume a
    session after a reboot; 05's session machine has no boot row ([`01-architecture.md` §6.5](spec/01-architecture.md#65-offline-message-buffering);
    [`05-state-machines.md` §3.3, §3.5](spec/05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience)).
-   Since 2026-10-13 the record and delivered time of every session a station runs **MUST** persist (§3.5 rule 3
-   there), a BLE session's included, so the BLE `SHOULD` is the weaker of two persistence rules for one session.
+   Since 2026-10-13 the record and delivered time of every online or Partial-B session a station runs **MUST**
+   persist (§3.5 rule 3 there), so for a Partial-B session the BLE `SHOULD` is the weaker of two persistence rules;
+   a Full Offline or Partial-A session has the `SHOULD` alone, rule 3 naming the sessions of the session machine
+   only (item 11).
 10. **A stop from a new connection.** A customer who loses the BLE connection cannot stop the wash from a new one: a
     session command is honoured only on the connection whose handshake authenticated the session
     ([`ble-transport.md` §12](spec/profiles/offline/ble-transport.md#12-connection-lifecycle-and-isolation)).
 11. **SessionEnded for a Full Offline or Partial-A session**: whether a station emits it is not stated
-    ([`session-ended.md` §5](spec/profiles/transaction/session-ended.md#5-processing-rules)).
+    ([`session-ended.md` §5](spec/profiles/transaction/session-ended.md#5-processing-rules)). The restart rules
+    written on 2026-10-13, rule 1's restart sentence there and rules 3 and 6 of
+    [`05-state-machines.md` §3.5](spec/05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience),
+    name the sessions of the session machine only, online and Partial-B: they ask no SessionEnded `Fault` after a
+    restart for a Full Offline or Partial-A session, whose end
+    [`01-architecture.md` §6.5](spec/01-architecture.md#65-offline-message-buffering) reports in the next
+    TransactionEvent, its receipt signing `endReason` `Fault`, so one record reports that end and which record
+    settles it is not left open. Whether a station emits a SessionEnded for such a session stays as unstated as
+    above.
 12. **The Partial-A request and its discovery.** The body of `POST /sessions/offline-auth` is defined only by
     example, and nothing tells an app whether a station supports Partial A
     ([`04-flows.md` §5b](spec/04-flows.md#5b-partial-a--phone-online-station-offline);
@@ -284,8 +294,8 @@ until its cryptographic construction has passed the review of
     decision, a bay's StatusNotification never settles, closes or fails an online session, whatever it reports
     and whatever boot came before it; no boot ends one, `RemoteReset` and `FirmwareUpdate` included, since the
     station's own end record is the end (a forced Reset's `OperatorStopped`, and no installation while a session
-    runs); the station reports every session it held across a restart, by its normal SessionEnded when the
-    resumed wash ends or by a SessionEnded `Fault` at once with the delivered time it persisted; and a session
+    runs); the station reports every session it held across a restart, an online one by its normal SessionEnded
+    when the resumed wash ends or by a SessionEnded `Fault` at once with the delivered time it persisted; and a session
     whose end record does not come is closed by the sweep, `completed`, in full and marked as an anomaly, 60
     seconds after the later of its end and the station's last boot, once a message from the station has arrived
     after that, and at its end plus 60 seconds plus `ConnectionLostGracePeriod` while its station is away
@@ -325,8 +335,8 @@ until its cryptographic construction has passed the review of
     - **A rebooted Partial-B station now also sends the session's SessionEnded**
       ([`session-ended.md` §5](spec/profiles/transaction/session-ended.md#5-processing-rules) rule 1;
       [`05-state-machines.md` §3.5](spec/05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience)
-      rules 2, 3 and 6): at once with `Fault` for a wash it could not resume, first among its session records and
-      so before a SessionStarted it still buffers ([`01-architecture.md` §6.5](spec/01-architecture.md#65-offline-message-buffering)
+      rules 2, 3 and 6): at once with `Fault` for a wash it could not resume, first among its session records,
+      behind only any MeterValues of that session it kept, and so before a SessionStarted it still buffers ([`01-architecture.md` §6.5](spec/01-architecture.md#65-offline-message-buffering)
       step 4). Rule 4a (*"an end record the station replays after that report ... is a duplicate"*), the frozen
       tail of the `Available` bullet of `connection-lost.md` §6 step 3, and
       [`reconciliation.md` §3](spec/profiles/offline/reconciliation.md#3-deduplication-offlinetxid) rule 5 with its
@@ -356,15 +366,17 @@ until its cryptographic construction has passed the review of
     end has passed 60 seconds after the station's boot, and a backlog of TransactionEvents can outlast that, so
     each online session's MeterValues and then its SessionEnded go ahead of the TransactionEvents and of the records
     of the Partial-B sessions, which follow chronologically, by their own timestamps; after a restart the
-    SessionEnded `Fault` of every session the station could not resume goes first of all
+    SessionEnded `Fault` of every online or Partial-B session the station could not resume goes first of all,
+    behind only any MeterValues of its own the station kept
     ([`connection-lost.md` §6](spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4;
     [`01-architecture.md` §6.5](spec/01-architecture.md#65-offline-message-buffering) step 4, which interleaved all
     the session records by their own timestamps until then). No frozen text orders the offline transactions against
     an online session's records: [`reconciliation.md` §2](spec/profiles/offline/reconciliation.md#2-sync-procedure)
     sends them after the boot's `Accepted`, in ascending `txCounter` as a preference, so none contradicts the new
     order. A Partial-B session's own records keep their order, its SessionStarted before its SessionEnded, except
-    where a restart ended it: the SessionEnded `Fault` the station sends first for a Partial-B session it could not
-    resume (item 24, last bullet) comes ahead of a SessionStarted it still buffers. Replayed after the 40-second
+    where a restart ended it: its kept MeterValues and its SessionEnded `Fault`, which the station sends first for
+    a Partial-B session it could not resume (item 24, last bullet), come ahead of a SessionStarted it still
+    buffers. Replayed after the 40-second
     lapse of [`authorize-offline-pass.md` §6](spec/profiles/offline/authorize-offline-pass.md#6-processing-rules)
     rule 4c, both records change nothing, as before. Replayed within it, the SessionEnded reaches a session still
     `Authorized`, from which [`05-state-machines.md` §3.3](spec/05-state-machines.md#33-transition-table) lists no
@@ -509,9 +521,15 @@ of its end and its station's last boot, once a message from the station has arri
 plus 60 seconds plus `ConnectionLostGracePeriod` while the station is away, is closed `completed`, charged in full, the close marked as an anomaly, its end being the
 end of its booked duration or, if later, the first boot answered `Accepted` after a restart plus the booked
 duration ([`05-state-machines.md` §3.4](spec/05-state-machines.md#34-timeouts)). After any
-restart the station reports every session it held: the resumed wash by its normal SessionEnded, a wash it could
-not resume by a SessionEnded at once with the delivered time, settled by the existing rows
-([§3.5](spec/05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rules 2, 3 and 6).
+restart the station reports every session it held, each by the record its kind of session uses: an online or
+Partial-B session's resumed wash by its normal SessionEnded, and a wash it could not resume by a SessionEnded at
+once with the delivered time, settled by the existing rows
+([§3.5](spec/05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rules 2, 3 and 6);
+a Full Offline or Partial-A session by its next TransactionEvent, its receipt signing `endReason` `Fault`
+([`01-architecture.md` §6.5](spec/01-architecture.md#65-offline-message-buffering)). The restart rules name
+the sessions of the session machine only
+([the BLE freeze](#open--ble-is-frozen-until-the-mobile-app-and-the-station-firmware-are-built-and-every-further-ble-finding-is-collected-here),
+item 11).
 
 **Answer 1: the StopService RESPONSE stays the end record of a stop the server asked for.** The server closes no
 stop on its own: a refusal leaves the session `Stopping` until its SessionEnded or the sweep, and a lost
@@ -1219,8 +1237,8 @@ constrains how the table may speak, not how much it says.
 
 ## DECIDED (0.32.0) — a start that energised, a boot that cannot say what happened, and the two remedies that were refused
 
-**Superseded in part on 2026-10-13** ([DECIDED](#decided--a-started-session-ends-only-on-its-stations-end-record-or-at-the-sweep-and-every-session-a-station-held-across-a-restart-is-reported)). The station now persists every live session
-and its delivered time, and ends one it cannot resume after a restart, the indeterminate one included, with
+**Superseded in part on 2026-10-13** ([DECIDED](#decided--a-started-session-ends-only-on-its-stations-end-record-or-at-the-sweep-and-every-session-a-station-held-across-a-restart-is-reported)). The station now persists every live online or
+Partial-B session and its delivered time, and ends one it cannot resume after a restart, the indeterminate one included, with
 SessionEnded `Fault`, so `session-ended.md` rule 1's two reboot exclusions and the `MUST NOT emit` of §3.5
 rule 6 are withdrawn, rule 3's orphan is scoped to a session the station can no longer name, its `sessionId` or
 `bayId` lost, which no station can report and the sweep closes, and the SecurityEvent of `start-service.md`
