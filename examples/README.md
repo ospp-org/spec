@@ -79,8 +79,8 @@ Naming convention: `{action}.{type}.json`
 | File | Scenario | Key Messages |
 |------|----------|-------------|
 | `01-boot-sequence.md` | Station power-on and registration | BootNotification, StatusNotification, Heartbeat |
-| `02-online-session.md` | Complete online service session | StartService, MeterValues, StopService |
-| `03-web-payment-session.md` | Session initiated via web payment | HTTP payment, StartService, SessionCompleted |
+| `02-online-session.md` | Complete online service session | StartService, MeterValues, SessionEnded |
+| `03-web-payment-session.md` | Session initiated via web payment | HTTP payment, StartService, SessionEnded |
 | `04-full-offline-session.md` | Full offline BLE session | BLE handshake, OfflinePass, Receipt |
 | `05-partial-a-session.md` | Partial A: phone online, station offline | Server-signed auth via BLE |
 | `06-partial-b-session.md` | Partial B: phone offline, station online | OfflinePass via BLE, server validation |

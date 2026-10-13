@@ -520,7 +520,7 @@ After the drain cycle completes (about 1.4 seconds), bay 1 returns to `Available
 
 ### Step 16: Server Finalizes Session (10:05:11.000)
 
-The server receives the Finishing notification with final meter values and billing data. It calculates:
+The server settles the session on the SessionEnded of 10:05:09.200 (`reason: TimerExpired`), the session's end record, which carries the delivered duration and the final meter values; the Finishing and Available reports only move the bay. It calculates:
 
 | Field | Value |
 |-------|-------|
@@ -697,8 +697,11 @@ On the Operator Dashboard, Charlie sees:
      |                      |                          | stop dispenser
      |                      |                          | drain cycle
      |                      |                          |
+     |                      |  SessionEnded            |
+     |                      |  (TimerExpired, 300 s,   |
+     |                      |  final meter values)     |
+     |                      |<-------------------------|
      |                      |  StatusNotif (Finishing)  |
-     |                      |  + final meter values    |
      |                      |<-------------------------|
      |                      |                          |
      |                      | calculate billing        |

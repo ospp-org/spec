@@ -239,7 +239,7 @@ Each profile defines a subset of protocol actions. Implementations declare which
 
 > **Note:** MSG-027–039, MSG-041 and MSG-042 are the 15 BLE messages, listed separately below.
 > SessionStarted [MSG-043] reports the start of a Partial-B session, the one session the app starts over BLE while the server is reachable; it is EXPERIMENTAL with AuthorizeOfflinePass ([`authorize-offline-pass.md` §6](spec/profiles/offline/authorize-offline-pass.md#6-processing-rules)).
-> SessionEnded [MSG-040] is emitted autonomously by the station on session termination — timer expiry or fault — rather than in reply to a command. It is a **Transaction** action ([`session-ended.md`](spec/profiles/transaction/session-ended.md)); until 0.13.0 it belonged to no profile at all, so a station implementing every profile exactly as written still would not have implemented the sole billing source for autonomous terminations.
+> SessionEnded [MSG-040] is emitted autonomously by the station on session termination — timer expiry, a fault, a restart the station could not resume the wash after, and every other end the station decides — rather than in reply to a command. It is a **Transaction** action ([`session-ended.md`](spec/profiles/transaction/session-ended.md)); until 0.13.0 it belonged to no profile at all, so a station implementing every profile exactly as written still would not have implemented the sole billing source for autonomous terminations.
 
 **15 BLE Messages:** StationInfo (FFF1), AvailableServices (FFF2), HELLO, CHALLENGE, OfflineAuthRequest, ServerSignedAuth, AuthResponse, START/StopServiceRequest/RESPONSE, ServiceStatus (FFF5), Receipt, ReceiptRequest and ReceiptResponse (FFF6)
 

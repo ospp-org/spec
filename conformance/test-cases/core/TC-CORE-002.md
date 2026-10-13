@@ -48,7 +48,7 @@ Verify that the station correctly handles MQTT disconnection scenarios: graceful
    }
    ```
 9. Verify the payload contains `stationId` (REQUIRED per `spec/03-messages.md` §5.5).
-10. Verify the server receives the ConnectionLost event and starts the `ConnectionLostGracePeriod` timer (300s).
+10. Verify the server receives the ConnectionLost event and holds the station away for its sessions; with none open (precondition 6), `ConnectionLostGracePeriod` (300s) lengthens no session's deadline here.
 11. Wait 300 seconds without the station reconnecting.
 12. Verify the server marks the station as `Offline`.
 
@@ -91,7 +91,7 @@ Verify that the station correctly handles MQTT disconnection scenarios: graceful
 1. Graceful MQTT DISCONNECT does not trigger LWT delivery.
 2. Ungraceful TCP drop causes the broker to publish ConnectionLost after Will Delay Interval.
 3. The ConnectionLost LWT payload contains both `stationId` and `reason` fields.
-4. The server starts the `ConnectionLostGracePeriod` timer upon receiving ConnectionLost.
+4. The server holds the station away for its sessions upon receiving ConnectionLost.
 5. After the grace period expires without reconnection, the server marks the station Offline.
 6. On reconnection, the station sends a fresh BootNotification as its first message.
 7. After BootNotification `Accepted`, the station sends StatusNotification for all bays, each carrying a determinate state — one of the six reportable values, never `Unknown` — and each omitting `previousStatus`, then its first Heartbeat once they and anything it replays have been acknowledged, and the next at the configured interval. The server's `Unknown` for every bay on this station is cleared by these reports and by nothing else.

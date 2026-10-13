@@ -13,14 +13,15 @@ stateDiagram-v2
     Authorized --> Failed : Partial B start not reported<br/>within 40s
 
     Active --> Stopping : StopService requested<br/>(user, server, or timer)
-    Active --> Completed : SessionEnded EVENT [MSG-040]<br/>(Local, LocalOutOfCredit)
-    Active --> Failed : Hardware fault (SessionEnded EVENT [MSG-040])<br/>Deauthorized (RevocationEpoch bump)
-    Active --> Completed : Connection lost past the grace period<br/>(not Partial B), marked as an anomaly
-    Active --> Completed : Booked duration ended after a boot<br/>that keeps the session, no end record
+    Active --> Completed : SessionEnded EVENT [MSG-040]<br/>(Local, LocalOutOfCredit, OperatorStopped)
+    Active --> Failed : SessionEnded EVENT [MSG-040] Fault<br/>(hardware, or a restart not resumed),<br/>Deauthorized (RevocationEpoch bump)
+    Active --> Completed : No end record by the sweep deadline,<br/>station away (not Partial B), marked as an anomaly
+    Active --> Completed : No end record by the sweep deadline,<br/>station connected, marked as an anomaly
     Active --> Completed : Partial B authorized duration ended<br/>with no end record
 
     Stopping --> Completed : Station confirms stop<br/>StopService RESPONSE (user stop)<br/>or SessionEnded EVENT [MSG-040] (timer expiry)
-    Stopping --> Failed : Stop timeout (10s) or station unresponsive<br/>(not Partial B)
+    Stopping --> Completed : SessionEnded after a refused stop,<br/>or no end record by the sweep deadline
+    Stopping --> Failed : SessionEnded Fault or Deauthorized<br/>after a refused stop
 
     Completed --> [*]
     Failed --> [*]
@@ -54,11 +55,11 @@ stateDiagram-v2
         Receipt generated
         Wallet debited for actual usage
         Unused credits refunded
-        Connection lost past the grace period (not Partial B): no refund,
+        No end record by the sweep deadline (not Partial B): no refund,
         the full amount charged, the close marked as an anomaly
     end note
 
     note right of Failed
         Refund initiated if payment was captured
-        Partial refund based on last MeterValues
+        SessionEnded Fault: settled by the Fault row
     end note

@@ -48,6 +48,7 @@ A man pulls into bay 2 of "Station Alpha -- Example City". He does not have the 
 14:23:46.000  Station sends MeterValues (3 min mark)
 14:24:46.000  Station sends MeterValues (4 min mark)
 14:25:46.000  Timer expires (300s), station auto-stops the service
+14:25:46.100  Station sends SessionEnded EVENT (reason: TimerExpired, 300 s)
 14:25:46.200  Station sends StatusNotification: Occupied -> Finishing
 14:25:48.000  Station sends StatusNotification: Finishing -> Available
 14:25:48.500  Server marks session as completed
@@ -614,7 +615,7 @@ After the drain cycle completes (~2 seconds), bay 2 returns to Available.
 
 ### Step 19: Server Marks Session Complete (14:25:48.500)
 
-The server processes the completion:
+The server settles the session on the station's SessionEnded of 14:25:46.100, the end record of a timer expiry; the Finishing and Available reports only move the bay:
 
 | Field | Value |
 |-------|-------|
@@ -763,6 +764,9 @@ On the Operator Dashboard, the operator sees:
      |                    |         ...               |                        |
      |                    |                          |                        |
      |                    |                          | timer expires          |
+     |                    |  SessionEnded (Timer-    |                        |
+     |                    |  Expired, 300 s)         |                        |
+     |                    |<-------------------------|                        |
      |                    |  StatusNotif (Finishing)  |                        |
      |                    |<-------------------------|                        |
      |                    |  StatusNotif (Available)  |                        |

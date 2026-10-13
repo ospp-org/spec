@@ -6,7 +6,7 @@ Transaction Profile
 
 ## Purpose
 
-Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a session ends autonomously — either by timer expiry or hardware fault — and that the event payload contains accurate billing data (`actualDurationSeconds`, `creditsCharged`, `meterValues`).
+Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a session ends autonomously — by timer expiry or hardware fault, among the ends the station decides — and that the event payload contains accurate billing data (`actualDurationSeconds`, `creditsCharged`, `meterValues`).
 
 ## References
 
@@ -121,7 +121,7 @@ Verify that a station correctly sends SessionEnded EVENT [MSG-040] when a sessio
 
 ## Expected Results
 
-1. Station sends SessionEnded EVENT autonomously when timer elapses, hardware faults, the customer stops it from the app over BLE, offline credits are exhausted, or the offline pass is revoked mid-session — without waiting for StopService.
+1. Station sends SessionEnded EVENT autonomously when timer elapses, hardware faults, the customer stops it from the app over BLE, offline credits are exhausted, or the offline pass is revoked mid-session — without waiting for StopService. It does the same after a restart for every session it held: at the end of a wash it resumed, or at once, with `reason: "Fault"`, for one it could not resume (`spec/05-state-machines.md` §3.5); this case runs no restart.
 2. SessionEnded `reason` is one of `"TimerExpired"`, `"Fault"`, `"Local"`, `"LocalOutOfCredit"`, `"Deauthorized"`.
    `"OperatorStopped"` is the sixth member of the enum and is deliberately **out of scope here**:
    this case verifies AUTONOMOUS termination — the station deciding on its own — and an operator

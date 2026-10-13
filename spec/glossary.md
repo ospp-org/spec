@@ -392,8 +392,10 @@ specification. Where a definition involves a requirement, normative language
 
 **Session**
 : An active usage period at a **Bay** during which a **Subscriber** consumes one or
-  more **Services**. A session begins with `StartService`, ends with `StopService`
-  or timeout, and is identified by the `sess_` prefix followed by 8 or more
+  more **Services**. A session begins with `StartService` and ends on its station's
+  end record — the `StopService` RESPONSE of a stop the server asked for, or
+  `SessionEnded` for every other end — or, when none comes, at the server's sweep
+  ([Chapter 05 §3.4](05-state-machines.md#34-timeouts)). It is identified by the `sess_` prefix followed by 8 or more
   lowercase hexadecimal characters. The
   session lifecycle is governed by the Session FSM.
   See [Chapter 05-state-machines](05-state-machines.md) and the

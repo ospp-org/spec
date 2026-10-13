@@ -115,20 +115,21 @@ stateDiagram-v2
     Authorized --> Failed : Partial B start not reported within 40s
 
     Active --> Stopping : StopService requested
-    Active --> Completed : SessionEnded (Local, LocalOutOfCredit)
-    Active --> Failed : Hardware fault / Deauthorized
-    Active --> Completed : Connection lost past the grace period (not Partial B), an anomaly
-    Active --> Completed : Booked duration ended after a boot that keeps the session, no end record
+    Active --> Completed : SessionEnded (Local, LocalOutOfCredit, OperatorStopped)
+    Active --> Failed : SessionEnded Fault (hardware, or a restart not resumed) / Deauthorized
+    Active --> Completed : No end record by the sweep deadline, station away (not Partial B), an anomaly
+    Active --> Completed : No end record by the sweep deadline, station connected, an anomaly
     Active --> Completed : Partial B authorized duration ended with no end record
 
     Stopping --> Completed : Station confirms stop
-    Stopping --> Failed : Stop timeout (10s, not Partial B)
+    Stopping --> Completed : SessionEnded after a refused stop, or no end record by the sweep deadline
+    Stopping --> Failed : SessionEnded Fault or Deauthorized after a refused stop
 
     Completed --> [*]
     Failed --> [*]
 ```
 
-**Key timeouts:** Pending ack 10s | StartService 10s | Max duration configurable (default 600s) | StopService confirm 10s | Connection lost grace 300s
+**Key timeouts:** Pending ack 10s | StartService 10s | Max duration configurable (default 600s) | StopService confirm 10s (repeated, never closes the session) | Sweep margin 60s | Connection lost grace 300s
 
 ---
 

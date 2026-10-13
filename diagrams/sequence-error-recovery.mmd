@@ -15,12 +15,12 @@ sequenceDiagram
         Note over Station,Server: ⚠️ Connection Lost
         Station--xBroker: TCP connection drops
         Broker->>Server: ConnectionLost EVENT (LWT) [MSG-011]
-        Server->>Server: Mark station offline<br/>Start recovery timer (300s; a Partial-B session's<br/>is its authorized duration)
+        Server->>Server: Mark station offline, away for its sessions<br/>(sweep deadline + 300s; a Partial-B session's<br/>is its authorized duration)
 
         Note over Server: Server-side handling
         Server->>Server: Mark all bays as Unknown
         Server->>Server: Alert operators (push/email)
-        Server->>Server: Suspend active sessions<br/>(grace period running; a Partial-B session<br/>runs to its authorized duration)
+        Server->>Server: Sessions run on, none ended by the loss<br/>(the grace is added; a Partial-B session<br/>runs to its authorized duration)
     end
 
     %% Station buffers messages while offline
@@ -45,7 +45,7 @@ sequenceDiagram
         Broker->>Server: BootNotification REQUEST
         Server-->>Broker: BootNotification RESPONSE (Accepted)
         Broker-->>Station: BootNotification RESPONSE
-        Server->>Server: Cancel recovery timer<br/>Mark station online
+        Server->>Server: Station back for its sessions (Accepted)<br/>Mark station online
     end
 
     %% Status reconciliation
@@ -57,7 +57,7 @@ sequenceDiagram
         Broker->>Server: StatusNotification [MSG-009]
         Station->>Broker: StatusNotification EVENT (Bay 3: Faulted)
         Broker->>Server: StatusNotification [MSG-009]
-        Server->>Server: Reconcile bay states<br/>Resolve Unknown → actual state
+        Server->>Server: Update the bays: Unknown → actual state<br/>(a report ends no session)
     end
 
     %% Buffered message replay
