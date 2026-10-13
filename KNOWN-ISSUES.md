@@ -287,8 +287,8 @@ until its cryptographic construction has passed the review of
     runs); the station reports every session it held across a restart, by its normal SessionEnded when the
     resumed wash ends or by a SessionEnded `Fault` at once with the delivered time it persisted; and a session
     whose end record does not come is closed by the sweep, `completed`, in full and marked as an anomaly, 60
-    seconds after the later of its end and the station's last boot, and at its end plus 60 seconds plus
-    `ConnectionLostGracePeriod` while its station is away
+    seconds after the later of its end and the station's last boot, once a message from the station has arrived
+    after that, and at its end plus 60 seconds plus `ConnectionLostGracePeriod` while its station is away
     ([`05-state-machines.md` §3.4](spec/05-state-machines.md#34-timeouts); [`connection-lost.md` §6](spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 3). From 2026-10-12 to
     2026-10-13 the online text settled a session on a report processed after the station's replay, on `5113` at
     once, and at a `RemoteReset` or `FirmwareUpdate` boot, and the frozen text was measured against that. Now:
@@ -505,8 +505,8 @@ answer to all three schemas plus the profile prose that mirrors them
 **The rule.** A session is ended only by its station's end record. A bay's status report never settles, closes
 or fails a session — after a reconnection or a restart, on `Available` or on `Faulted` — and no boot ends one.
 The only fallback is the server's sweep: a session whose end record has not arrived 60 seconds after the later
-of its end and its station's last boot, or by its end plus 60 seconds plus `ConnectionLostGracePeriod` while
-the station is away, is closed `completed`, charged in full, the close marked as an anomaly, its end being the
+of its end and its station's last boot, once a message from the station has arrived after that, or by its end
+plus 60 seconds plus `ConnectionLostGracePeriod` while the station is away, is closed `completed`, charged in full, the close marked as an anomaly, its end being the
 end of its booked duration or, if later, the first boot answered `Accepted` after a restart plus the booked
 duration ([`05-state-machines.md` §3.4](spec/05-state-machines.md#34-timeouts)). After any
 restart the station reports every session it held: the resumed wash by its normal SessionEnded, a wash it could
