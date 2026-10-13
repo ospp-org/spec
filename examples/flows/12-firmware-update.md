@@ -45,9 +45,9 @@ Operator Charlie decides to update station `stn_a1b2c3d4` ("SSP-3000") from firm
 22:02:33.000  Station: BootNotification (firmware 1.3.0, bootReason: FirmwareUpdate)
 22:02:33.500  Server: Accepted
 22:02:40.000  Station: StatusNotification for all 3 bays (Available)
-22:02:45.000  Station: Heartbeat (normal operations resume)
-22:03:00.000  Server marks firmware update as completed
-22:03:00.500  Dashboard shows "Update successful - v1.3.0"
+22:03:03.500  Station: Heartbeat, 30 s after the Accepted (normal operations resume)
+22:03:05.000  Server marks firmware update as completed
+22:03:05.500  Dashboard shows "Update successful - v1.3.0"
 ```
 
 ## Step-by-Step Detail
@@ -581,9 +581,9 @@ The server recognizes the firmware update boot, verifies the new firmware versio
 
 ---
 
-### Step 17: Normal Operations Resume (22:02:45.000)
+### Step 17: Normal Operations Resume (22:03:03.500)
 
-The station sends its first heartbeat on the new firmware.
+The station sends its first heartbeat on the new firmware, 30 seconds after the `Accepted` of step 15 ([`heartbeat.md` §7](../../spec/profiles/core/heartbeat.md#7-processing-rules) rule 1).
 
 **MQTT Topic:** `ospp/v1/stations/stn_a1b2c3d4/to-server`
 
@@ -592,7 +592,7 @@ The station sends its first heartbeat on the new firmware.
   "messageId": "msg_hb_postfw_001",
   "messageType": "Request",
   "action": "Heartbeat",
-  "timestamp": "2026-02-13T22:02:45.000Z",
+  "timestamp": "2026-02-13T22:03:03.500Z",
   "source": "Station",
   "protocolVersion": "0.3.0",
   "payload": {}
@@ -601,7 +601,7 @@ The station sends its first heartbeat on the new firmware.
 
 ---
 
-### Step 18: Server Marks Update Complete (22:03:00.000)
+### Step 18: Server Marks Update Complete (22:03:05.000)
 
 **Server firmware update record:**
 
@@ -637,7 +637,7 @@ The station sends its first heartbeat on the new firmware.
 
 ---
 
-### What Charlie Sees -- Final Dashboard State (22:03:00.500)
+### What Charlie Sees -- Final Dashboard State (22:03:05.500)
 
 ```
 +----------------------------------------------------------------------+

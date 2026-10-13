@@ -39,14 +39,14 @@ It is 10:00 UTC on a cold February morning in Example City. A technician powers 
 10:00:02.750  SUBACK received
 10:00:02.800  BootNotification REQUEST published
 10:00:03.100  BootNotification RESPONSE received — Accepted
+10:00:03.100  Heartbeat timer started (interval: 30s)
 10:00:03.200  Clock synchronized, session key stored, config applied
 10:00:03.300  StatusNotification sent for Bay 1 (Available)
 10:00:03.400  StatusNotification sent for Bay 2 (Available)
 10:00:03.500  StatusNotification sent for Bay 3 (Available)
-10:00:03.600  Heartbeat timer started (interval: 30s)
 10:00:03.600  Station enters normal operation
-10:00:33.600  First Heartbeat REQUEST sent
-10:00:33.800  First Heartbeat RESPONSE received
+10:00:33.100  First Heartbeat REQUEST sent
+10:00:33.300  First Heartbeat RESPONSE received
 ```
 
 ## Step-by-Step Detail
@@ -227,7 +227,7 @@ The station processes the response:
 1. **Clock sync:** Sets internal RTC to `2026-02-13T10:00:03.100Z`
 2. **Session key:** Stores the HMAC session key for message signing
 3. **Config:** Applies `MeterValuesInterval=60`, `MaxOfflineTransactions=1000`, the server key set `OfflinePassPublicKey`, `RevocationEpoch=42`, `OfflineModeEnabled=true`, `OfflineWindowHours=240` and `OfflineTransactionLimit=1000`
-4. **Heartbeat:** Configures heartbeat timer to fire every 30 seconds
+4. **Heartbeat:** Starts the heartbeat timer, which fires every 30 seconds from this `Accepted`
 
 ---
 
@@ -341,15 +341,15 @@ The station reports each bay's current status. Bay 1 is clean and operational af
 
 ---
 
-### Step 10: Heartbeat Timer Starts (10:00:03.600)
+### Step 10: Normal Operation (10:00:03.600)
 
-The station enters normal operation. The LCD displays "Online - 3 bays available". The heartbeat timer is armed at 30-second intervals. The station is now ready to accept StartService, StopService, ChangeConfiguration, and other commands on its `to-station` topic.
+The station enters normal operation. The LCD displays "Online - 3 bays available". The heartbeat timer has run since the `Accepted` of step 6. The station is now ready to accept StartService, StopService, ChangeConfiguration, and other commands on its `to-station` topic.
 
 ---
 
-### Step 11: First Heartbeat (10:00:33.600)
+### Step 11: First Heartbeat (10:00:33.100)
 
-Thirty seconds after boot completes, the station sends its first heartbeat ([`heartbeat.md` §7](../../spec/profiles/core/heartbeat.md#7-processing-rules) rule 1).
+Thirty seconds after the `Accepted` of step 6, the station sends its first heartbeat ([`heartbeat.md` §7](../../spec/profiles/core/heartbeat.md#7-processing-rules) rule 1).
 
 **MQTT Topic:** `ospp/v1/stations/stn_a1b2c3d4/to-server`
 
@@ -358,7 +358,7 @@ Thirty seconds after boot completes, the station sends its first heartbeat ([`he
   "messageId": "msg_hb_7e8f9a0b",
   "messageType": "Request",
   "action": "Heartbeat",
-  "timestamp": "2026-02-13T10:00:33.600Z",
+  "timestamp": "2026-02-13T10:00:33.100Z",
   "source": "Station",
   "protocolVersion": "0.3.0",
   "payload": {}
@@ -372,11 +372,11 @@ Thirty seconds after boot completes, the station sends its first heartbeat ([`he
   "messageId": "msg_hb_7e8f9a0b",
   "messageType": "Response",
   "action": "Heartbeat",
-  "timestamp": "2026-02-13T10:00:33.800Z",
+  "timestamp": "2026-02-13T10:00:33.300Z",
   "source": "Server",
   "protocolVersion": "0.3.0",
   "payload": {
-    "serverTime": "2026-02-13T10:00:33.800Z"
+    "serverTime": "2026-02-13T10:00:33.300Z"
   }
 }
 ```
@@ -435,6 +435,7 @@ Last connection: 2026-02-13 10:00:03 UTC
      |  BootNotification RESPONSE       |                                  |
      |<---------------------------------|                                  |
      |                                  |                                  |
+     | start heartbeat timer,           |                                  |
      | sync clock, store session key    |                                  |
      |                                  |                                  |
      | StatusNotification (Bay 1)       |                                  |
@@ -444,9 +445,8 @@ Last connection: 2026-02-13 10:00:03 UTC
      | StatusNotification (Bay 3)       |                                  |
      |--------------------------------->|--------------------------------->|
      |                                  |                                  | update bay map
-     | start heartbeat timer            |                                  |
      |                                  |                                  |
-     |         ... 30 seconds ...       |                                  |
+     |  ... 30 s after the Accepted ... |                                  |
      |                                  |                                  |
      | Heartbeat REQUEST                |                                  |
      |--------------------------------->|--------------------------------->|

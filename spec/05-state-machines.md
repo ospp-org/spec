@@ -503,7 +503,7 @@ stateDiagram-v2
 | **Pending** | Session has been initiated by the user (mobile app or web payment). The server is verifying payment authorization or credit balance. |
 | **Authorized** | Payment or credits have been verified. The server is sending StartService [MSG-005] to the station and awaiting acknowledgment — or, for a Partial-B session, awaiting its SessionStarted [MSG-043]. |
 | **Active** | The station has accepted the StartService command, or reported a Partial-B start with SessionStarted, and is delivering the service. MeterValues [MSG-010] are being sent periodically. The session duration timer is running. |
-| **Stopping** | The session is ending — either a StopService [MSG-006] command has been sent (user-initiated or server-initiated), or the `durationSeconds` timer elapsed and the station auto-stopped without any command. The station is performing hardware wind-down. A stop the station refuses or does not answer leaves the session here until its end record or the sweep ([§3.3](#33-transition-table), *Stop refused or unanswered*). |
+| **Stopping** | The session is ending — either a StopService [MSG-006] command has been sent (user-initiated or server-initiated), or the `durationSeconds` timer elapsed and the station auto-stopped without any command. The station is performing hardware wind-down, except after a stop it refused or has not acted on, which leaves the session here, its wash running, until its end record or the sweep ([§3.3](#33-transition-table), *Stop refused or unanswered*). |
 | **Completed** | The session has ended normally. The station has confirmed the stop, final MeterValues have been received, and the receipt has been generated. The server also closes here, at the sweep, a session whose end record has not arrived by its deadline: charged in full, the close marked as an anomaly ([§3.4](#34-timeouts)) — not a Partial-B session, which the loss does not end ([§3.3](#33-transition-table)). |
 | **Failed** | The session terminated abnormally due to an error, timeout, or fault. The server MUST initiate a refund if payment was collected and no service was delivered. |
 
@@ -922,7 +922,7 @@ The bay and session state machines are tightly coupled:
 |---------------|-------------------|---------------|
 | Authorized | Available or Reserved | Bay MUST be in `Available` (direct start) or `Reserved` (with matching `reservationId`) for StartService to succeed |
 | Active | Occupied | Bay MUST transition to `Occupied` when session becomes `Active` |
-| Stopping | Finishing | Bay MUST transition to `Finishing` when session enters `Stopping` |
+| Stopping | Finishing, or Occupied | Bay MUST transition to `Finishing` when the session enters `Stopping`, except on a stop the station refused or has not acted on: that session runs on, and its bay stays `Occupied` |
 | Completed | Finishing, then Available, or Unknown | Bay MUST reach `Available` after session `Completed`, **via `Finishing`**. `Unknown` where the sweep closed the session while its station was away ([§3.4](#34-timeouts)) — that is the server's own inference, and the bay's real state is whatever the station's hardware is in |
 | Failed | Finishing then Available, or Faulted, or Unknown | `Faulted` where a hardware fault caused the failure. `Unknown` where the session failed while its station's connection was lost — a start that timed out — that is the server's own inference and the bay's real state is whatever the station's hardware is in. Otherwise the bay winds down through `Finishing` and reaches `Available` |
 

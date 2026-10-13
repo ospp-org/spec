@@ -670,7 +670,7 @@ sequenceDiagram
 16. **Server** updates session to `active`
 17. **Browser** polls `GET /pay/sessions/{sessionToken}/status` for progress
 18. Timer expires → **SSP** auto-stops and sends **SessionEnded EVENT** [MSG-040] with `reason: "TimerExpired"`, then **StatusNotification** [MSG-009] `Finishing` then `Available`
-19. **Server** settles the session from SessionEnded — it is the billing record for an autonomous stop, and a server **MUST NOT** settle from StatusNotification alone ([Chapter 03 §5.4](03-messages.md)) — and marks it `completed`
+19. **Server** settles the session from SessionEnded — it is the billing record for an autonomous stop, and a server **MUST NOT** settle from StatusNotification ([Chapter 03 §5.4](03-messages.md)) — and marks it `completed`
 20. If `email` was provided, Server sends a receipt email
 
 ### Alternative Paths
@@ -1150,8 +1150,10 @@ on.
 
 Settling is not optional and not best-effort. A station that reboots first and
 reports afterwards has dropped the session on the floor: the server sees a
-connection loss and a live session, and the money is decided by a timeout instead
-of by what was delivered.
+connection loss and a live session, and the money is decided by the SessionEnded
+`Fault` the station sends after the boot
+([Chapter 05 §3.5](05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience) rule 6),
+or by the sweep if none comes, instead of by the operator's stop.
 
 ### Refund Policy
 
