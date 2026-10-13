@@ -544,7 +544,7 @@ not the timer close, because each rewritten restatement names the sweep.
 
 **What it costs.** A station that reports nothing — a non-conforming one, or one whose storage lost the
 record — has its session closed in full at the sweep, with the anomaly mark, and holds its bay until then. The
-frozen Partial-B text keeps its own rules, and where they now differ is item 24 of [the BLE freeze](#open--ble-is-frozen-until-the-mobile-app-and-the-station-firmware-are-built-and-every-further-ble-finding-is-collected-here).
+frozen Partial-B text keeps its own rules, and where they now differ is items 24 to 26 of [the BLE freeze](#open--ble-is-frozen-until-the-mobile-app-and-the-station-firmware-are-built-and-every-further-ble-finding-is-collected-here).
 
 ---
 

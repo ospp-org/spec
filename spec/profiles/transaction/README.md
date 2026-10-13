@@ -100,8 +100,8 @@ RESPONSE reaches the server no later than that `timestamp` plus the value above.
 > table can therefore disagree about whether the same station answered in time — and because
 > StartService and StopService are the two commands that move money, the disagreement is about
 > whether a session was ever authorised, or when a stop is asked again: a StopService RESPONSE
-> `Accepted` that arrives after its timeout still settles a session that is open, and the timeout only
-> starts the next attempt ([`stop-service.md` §6](stop-service.md#6-processing-rules) rule 11).
+> `Accepted` that arrives after its timeout still settles a session that is open, and the timeout decides only
+> whether a next attempt goes out ([`stop-service.md` §6](stop-service.md#6-processing-rules) rule 11).
 > Naming the instant costs no field: `timestamp` is already required on every message, is already
 > what [Chapter 02 §5.1](../../02-transport.md#51-expiry-rules) measures **Station Max Age**
 > against, and is inside the canonicalized body, so it is signed.

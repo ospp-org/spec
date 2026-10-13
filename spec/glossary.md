@@ -359,8 +359,8 @@ specification. Where a definition involves a requirement, normative language
 : A message type that initiates an operation and expects exactly one **RESPONSE**
   correlated by the same `messageId`. If no RESPONSE is received within the
   configured timeout, the sender **SHOULD** retry with the same `messageId`; a server
-  whose StopService went unanswered is bound to
-  ([`stop-service.md` §6](profiles/transaction/stop-service.md#6-processing-rules) rule 11).
+  whose StopService went unanswered is bound to it by
+  [`stop-service.md` §6](profiles/transaction/stop-service.md#6-processing-rules) rule 11.
   See [Chapter 03, Conventions](03-messages.md).
 
 **Reservation**
