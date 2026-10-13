@@ -991,6 +991,7 @@ When errors occur during the session lifecycle, the following refund rules apply
 | All StartService retry attempts fail (web) | 1010, 6002 | Full (credits or local currency) | 100% |
 | ACK_TIMEOUT (mobile) | 6002 | Full (credits) | 100% |
 | Hardware error during active session, reported by SessionEnded `Fault`, which a bay report does not replace | 5001–5009 | Partial (pro-rated) | Based on time delivered |
+| A restart the station could not resume the wash after, reported by SessionEnded `Fault` at once after the boot | — | Partial (pro-rated) | Based on the delivered time it last persisted |
 | Station offline, or answered `Pending` or `Rejected`, during an active session whose end record has not arrived by the sweep's deadline | 1001 (followed by the sweep) | None | Full pre-authorized amount charged (the station runs the service to its end through the loss), and the close marked as an anomaly — not a Partial-B session, which settles on the first of its end records, or is closed at the end of its authorized duration ([`connection-lost.md` §5](profiles/core/connection-lost.md#5-server-side-handling)) |
 | Low-delivery override | — | See [`04-flows.md §6`](04-flows.md) | Defined there, and **not restated here**: it is scoped to a service reported as faulted, a SessionEnded `reason` of `Fault`, and its threshold is a configurable parameter, both of which this table has previously got wrong by restating them |
 | Payment processor refund failure | 4007 | Manual refund queue | Per original amount |
