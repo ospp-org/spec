@@ -164,7 +164,7 @@ until its cryptographic construction has passed the review of
    session after a reboot; 05's session machine has no boot row ([`01-architecture.md` §6.5](spec/01-architecture.md#65-offline-message-buffering);
    [`05-state-machines.md` §3.3, §3.5](spec/05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience)).
    Since 2026-10-13 the record and delivered time of every session a station runs **MUST** persist (§3.5 rule 3
-   there), a BLE session's included, so the BLE **SHOULD** is the weaker of two persistence rules for one session.
+   there), a BLE session's included, so the BLE `SHOULD` is the weaker of two persistence rules for one session.
 10. **A stop from a new connection.** A customer who loses the BLE connection cannot stop the wash from a new one: a
     session command is honoured only on the connection whose handshake authenticated the session
     ([`ble-transport.md` §12](spec/profiles/offline/ble-transport.md#12-connection-lifecycle-and-isolation)).
