@@ -170,17 +170,23 @@ until its cryptographic construction has passed the review of
 10. **A stop from a new connection.** A customer who loses the BLE connection cannot stop the wash from a new one: a
     session command is honoured only on the connection whose handshake authenticated the session
     ([`ble-transport.md` §12](spec/profiles/offline/ble-transport.md#12-connection-lifecycle-and-isolation)).
-11. **SessionEnded for a Full Offline or Partial-A session**: whether a station emits it is not stated
-    ([`session-ended.md` §5](spec/profiles/transaction/session-ended.md#5-processing-rules)). The restart rules
-    written on 2026-10-13, rule 1's restart sentence there and rules 3 and 6 of
+11. **SessionEnded for a Full Offline or Partial-A session — DECIDED 2026-10-21, by Gabi, option (a).** A Full
+    Offline or Partial-A session is ended and settled by its signed TransactionEvent alone, and its station sends
+    no SessionEnded for it: SessionEnded is sent for online and Partial-B sessions only, which rule 1's first
+    sentence of [`session-ended.md` §5](spec/profiles/transaction/session-ended.md#5-processing-rules) now states.
+    The restart rules of 2026-10-13, rule 1's restart sentence there and rules 3 and 6 of
     [`05-state-machines.md` §3.5](spec/05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience),
-    name the sessions of the session machine only, online and Partial-B: they ask no SessionEnded `Fault` after a
-    restart for a Full Offline or Partial-A session, one a restart interrupted being reported as
-    [`01-architecture.md` §6.5](spec/01-architecture.md#65-offline-message-buffering) states, in its
-    TransactionEvent, its signed receipt recording `endReason` `Fault`. Whether rule 1's first sentence, which
-    01 §6.5's Category-1 row reads as one SessionEnded per offline transaction, asks a SessionEnded of such a
-    session as well, after a restart or not, stays as unstated as above, and with it which of the two records
-    settles a Partial-A session.
+    already named the sessions of the session machine only, online and Partial-B, one a restart interrupted
+    being reported as [`01-architecture.md` §6.5](spec/01-architecture.md#65-offline-message-buffering) states,
+    in its TransactionEvent, its signed receipt recording `endReason` `Fault`. The options weighed were (b), rule
+    1 universal with the TransactionEvent settling and the SessionEnded informational, and (c), rule 1 universal
+    with a Partial-A session settled on its SessionEnded, which contradicted
+    [`reconciliation.md` §8](spec/profiles/offline/reconciliation.md#8-wallet-reconciliation) and dropped the
+    receipt's signature as evidence. **Left for the end of the freeze:** 01 §6.5's Category-1 SessionEnded row
+    still reads rule 1 as one SessionEnded per offline transaction — the two streams co-indexed one-for-one over
+    an outage — and the storage levels budget the 1000 SessionEnded beside the 1000 TransactionEvents; both are
+    frozen text and are restated when the freeze ends. The floor itself stands, since online and Partial-B
+    sessions that end while the station cannot transmit still buffer their SessionEnded.
 12. **The Partial-A request and its discovery.** The body of `POST /sessions/offline-auth` is defined only by
     example, and nothing tells an app whether a station supports Partial A
     ([`04-flows.md` §5b](spec/04-flows.md#5b-partial-a--phone-online-station-offline);
