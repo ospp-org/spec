@@ -294,8 +294,8 @@ until its cryptographic construction has passed the review of
     frozen sites that end a rebooted Partial-B session on a bay report or at a boot differ from it.** By Gabi's
     decision, a bay's StatusNotification never settles, closes or fails an online session, whatever it reports
     and whatever boot came before it; no boot ends one, `RemoteReset` and `FirmwareUpdate` included, since the
-    station's own end record is the end (a forced Reset's `OperatorStopped`, and no installation, nor its reboot,
-    while a session runs); the station reports every session it held across a restart, an online one by its normal SessionEnded
+    station's own end record is the end (a forced Reset's `OperatorStopped`, and no installation while a session runs,
+    nor a session begun from the write to the reboot); the station reports every session it held across a restart, an online one by its normal SessionEnded
     when the resumed wash ends or by a SessionEnded `Fault` at once with the delivered time it persisted; and a session
     whose end record does not come is closed by the sweep, `completed`, in full and marked as an anomaly, the
     sweep margin, 60 seconds by default, after the later of its end and the station's last boot, once a message
@@ -321,8 +321,8 @@ until its cryptographic construction has passed the review of
       session that *"follows the online rules exactly"*, settled on the post-boot report *"as online settles such a
       session"* and ended by a `RemoteReset` or a `FirmwareUpdate`, *"before which the station ends every active
       session"*, where the online text has the station end them before a `RemoteReset` and, before a
-      `FirmwareUpdate`, wait until every session, one begun during the install included, ended by its own end
-      record, no installation beginning while a session runs
+      `FirmwareUpdate`, wait until every session ended by its own end record and begin none from the write to
+      the reboot
       ([`update-firmware.md` §5](spec/profiles/device-management/update-firmware.md#5-processing-rules) rule 7;
       [`05-state-machines.md` §7.4](spec/05-state-machines.md#74-firmware-update----bay-constraint)); the decided
       record of the Partial-B reboot and rule 4a itself read the update the same way (*"the station ends every
@@ -4190,6 +4190,16 @@ value — a schema change, and breaking — the stall rule was **scoped**: the s
 from the later of the last notification and the moment the gate opens
 (`firmware-status.md` §6 rule 3). `TC-DM-002`'s criterion 6 — a station that stops handling sessions
 during the download — becomes **reachable** for the first time under this reading.
+
+**And no session begins during the write (Gabi, 2026-10-21).** From the start of the partition write until the
+reboot the station begins no session, StartService and ReserveBay answered `3002` and no BLE session
+authorized, so option 2's "never write flash during one" holds for a session that would have begun after the
+gate opened as well, and no session runs when the station reboots
+([`05-state-machines.md` §7.4](spec/05-state-machines.md#74-firmware-update----bay-constraint)). The draft merged on
+2026-10-13 let such a session begin and held the reboot until it ended, a silent wait in `Installed` the stall
+rule did not exempt; that wait has no case now. The cost: a start or a reservation asked during the write is
+refused, retryably, for as long as the write and the reboot last. A server that has the station's `Installing`
+may give the same answer itself.
 
 Sites moved: `05-state-machines.md` §6.3's `Verified -> Installing` condition, §6.5 rule 5, §7.4;
 `update-firmware.md` §3 and §5 rules 1, 5 and 7; `03-messages.md` §6.4. The record of the three

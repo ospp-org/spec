@@ -304,7 +304,7 @@ Firmware update progress:
 
 ### Step 10: FirmwareStatusNotification -- Installing (22:01:10.000)
 
-The station begins writing the firmware to partition B. During this phase, the station is still operational on partition A but will not accept new sessions as a safety precaution.
+The station begins writing the firmware to partition B. During this phase, the station is still operational on partition A but begins no session until it reboots: a start or a reservation is answered `Rejected` with `3002 BAY_NOT_READY` ([Chapter 05 §7.4](../../spec/05-state-machines.md#74-firmware-update----bay-constraint)).
 
 **MQTT Topic:** `ospp/v1/stations/stn_a1b2c3d4/to-server`
 
@@ -786,7 +786,7 @@ Downloading --------+----> Downloaded -----> Installing --------> Installing (10
 
 2. **Checksum + signature verification.** The firmware binary is verified with both a SHA-256 checksum (integrity) and an ECDSA-P256-SHA256 signature (authenticity). This prevents both corruption and unauthorized firmware from being installed.
 
-3. **Session acceptance disabled during install.** While the firmware is being written to flash, the station refuses new session requests. This prevents a session from starting and then being interrupted by the reboot.
+3. **Session acceptance disabled during install.** From the start of the write until the reboot, the station refuses new session requests with `3002` ([Chapter 05 §7.4](../../spec/05-state-machines.md#74-firmware-update----bay-constraint)). This keeps flash from being written while a session runs, and the reboot from coming while one does.
 
 4. **Graceful MQTT disconnect before reboot.** The station disconnects cleanly from MQTT before rebooting, so the broker does not publish an LWT (which would trigger false offline alerts). The server knows the station is rebooting due to the firmware update and suppresses alerts for the expected reboot window.
 
