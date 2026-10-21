@@ -172,8 +172,8 @@ until its cryptographic construction has passed the review of
     ([`ble-transport.md` §12](spec/profiles/offline/ble-transport.md#12-connection-lifecycle-and-isolation)).
 11. **SessionEnded for a Full Offline or Partial-A session — DECIDED 2026-10-21, by Gabi, option (a).** A Full
     Offline or Partial-A session is ended and settled by its signed TransactionEvent alone, and its station sends
-    no SessionEnded for it: SessionEnded is sent for online and Partial-B sessions only, which rule 1's first
-    sentence of [`session-ended.md` §5](spec/profiles/transaction/session-ended.md#5-processing-rules) now states.
+    no SessionEnded for it: SessionEnded is sent for online and Partial-B sessions only, which rule 1 of
+    [`session-ended.md` §5](spec/profiles/transaction/session-ended.md#5-processing-rules) now states.
     The restart rules of 2026-10-13, rule 1's restart sentence there and rules 3 and 6 of
     [`05-state-machines.md` §3.5](spec/05-state-machines.md#35-per-session-sequence-number-seqno-and-crash-resilience),
     already named the sessions of the session machine only, online and Partial-B, one a restart interrupted
