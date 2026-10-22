@@ -1,6 +1,6 @@
 # OSPP JSON Schemas
 
-> **OSPP Version:** 0.44.0 | **JSON Schema Draft:** 2020-12
+> **OSPP Version:** 0.45.0 | **JSON Schema Draft:** 2020-12
 >
 > **The 16 schemas under [`ble/`](ble/) are EXPERIMENTAL artefacts** — published for review, not
 > for implementation, and subject to incompatible change without a MAJOR bump. Every BLE response

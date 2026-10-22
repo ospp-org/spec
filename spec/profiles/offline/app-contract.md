@@ -1,6 +1,6 @@
 # Offline App–Server Contract
 
-> **Status:** Draft | **OSPP Version:** 0.44.0
+> **Status:** Draft | **OSPP Version:** 0.45.0
 
 ## 1. Overview
 
