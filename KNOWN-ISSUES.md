@@ -1,7 +1,7 @@
 # OSPP Known Issues
 
-**Date:** 2026-10-13
-**Specification-document version:** 0.44.0 (release tag `v0.44.0`)
+**Date:** 2026-10-22
+**Specification-document version:** 0.45.0 (release tag `v0.45.0`)
 **Status:** no blocker open, **20** non-blocking issues open, **43** decisions recorded (two of
 them reversing another, one of the two in part), and one named defect **class** with **eighteen** instances, **four** still open. **The counts are
 re-derived from the headings on every release, never incremented** — the `0.43.0` revision read 27

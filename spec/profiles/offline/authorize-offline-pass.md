@@ -1,6 +1,6 @@
 # AuthorizeOfflinePass
 
-> **Status: EXPERIMENTAL** | **OSPP Version:** 0.44.0
+> **Status: EXPERIMENTAL** | **OSPP Version:** 0.45.0
 >
 > Published for review, **not** for implementation: its request carries the device proof and the
 > transcript hash of the BLE handshake, which is EXPERIMENTAL, and changed incompatibly with the BLE
