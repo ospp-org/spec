@@ -921,13 +921,13 @@ sequenceDiagram
 | 6 | Station certificate or signature invalid | App aborts and relays nothing (`2013`) |
 | 8 | ECDSA P-256 signature invalid | SSP rejects — key mismatch or tampered auth |
 | 8 | Authorization expired | SSP rejects — user took too long between server call and BLE |
-| 10 | StartServiceRequest at or after the authorization's `expiresAt` | SSP refuses with `3006` and starts nothing: an authorization is used to start within its validity, and a session started before `expiresAt` runs its whole duration ([`ble-session.md` §1](profiles/offline/ble-session.md#1-starting-a-service) rule 2a). Server refunds the unused authorization in full at its `expiresAt` ([`reconciliation.md` §6.7](profiles/offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4)) |
+| 10 | StartServiceRequest at or after the authorization's `expiresAt` | SSP refuses with `3006` and starts nothing: an authorization is used to start within its validity, and a session started before `expiresAt` runs its whole duration ([`ble-session.md` §1](profiles/offline/ble-session.md#1-starting-a-service) rule 2a). The server refunds nothing at `expiresAt`: no receipt comes for a session never started, so at the sweep's deadline the server closes it charged in full and marked as an anomaly, for an operator to review ([`reconciliation.md` §6.7](profiles/offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4)) |
 
 ### Postconditions
 
 | Component | State |
 |-----------|-------|
-| User Wallet | Debited at step 2 (by Server); refunded in full when the authorization's `expiresAt` passes with no receipt reconciling it, and debited once more, with no prior debit, by the receipt of a wash started before `expiresAt` that arrives after that refund ([`reconciliation.md` §6.7](profiles/offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4)) |
+| User Wallet | Debited at step 2 (by Server); the debit stands until the session's receipt arrives — the authorization's expiry refunds nothing — and the receipt, whenever it arrives, refunds only the difference when the wash delivered less; a session no receipt has reached by the sweep's deadline is closed charged in full and marked as an anomaly ([`reconciliation.md` §6.7](profiles/offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4)) |
 | SSP | Has server-signed proof; transaction logged locally |
 | Server | Session created (status: pending — awaiting reconciliation) |
 
@@ -1516,7 +1516,7 @@ sequenceDiagram
    - **Step 2:** Verify ECDSA P-256 receipt signature — reject if it does not verify; never scored ([`reconciliation.md` §5](profiles/offline/reconciliation.md#5-receipt-signature-verification))
    - **Step 3:** Record `txCounter` as forensic evidence — never gated on. If discontinuous: WARNING + operator alert on the **station**, process anyway (`profiles/offline/reconciliation.md` §4.2)
    - **Step 4:** Apply the reconcile-time gate — was the OfflinePass valid at transaction time: epoch, expiry, individual revocation, read through the station's clock offset ([`reconciliation.md` §6](profiles/offline/reconciliation.md#6-reconcile-time-re-validation-gate)). Limits are not a gate here: the per-wash limit caps what a wash is charged, the pass-wide totals cap nothing, and both feed fraud scoring
-   - **Step 5:** Settle — recompute by service kind from the signed receipt, never above what the authorization allowed, and debit the user wallet — or, where the authorization already debited it and the debit stands, refund only ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback); one a lapse or an expiry refunded is debited once, with no prior debit, by [§8.1](profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)) — (negative balance allowed; a debit that leaves it below zero leaves the transaction pending until a credit to the wallet covers it)
+   - **Step 5:** Settle — recompute by service kind from the signed receipt, never above what the authorization allowed, and debit the user wallet — or, where the authorization already debited it and the debit stands, refund only ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback); one a Partial-B lapse refunded is debited once, with no prior debit, by [§8.1](profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)) — (negative balance allowed; a debit that leaves it below zero leaves the transaction pending until a credit to the wallet covers it)
    - **Step 6:** Run fraud scoring on the settled transaction (see below)
    - **Step 7:** Create session record
 6. Server responds `Accepted`

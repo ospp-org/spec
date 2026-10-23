@@ -570,7 +570,7 @@ This table maps which error codes can appear in the RESPONSE or rejection of eac
 | MeterValues [MSG-010] | *(EVENT — no RESPONSE)* |
 | SessionStarted [MSG-043] | *(EVENT — no RESPONSE)* |
 | TransactionEvent [MSG-007] | **2002**, **2003**, **2004**, **2005**, **2014**, **2016**, **2017**, 1005, 3015, 6001 — **recorded, not transmitted** ([`reconciliation.md` §6.4](profiles/offline/reconciliation.md#64-response)) |
-| AuthorizeOfflinePass [MSG-002] | **2002**, **2003**, **2004**, **2005**, **2014**, 1005, 4002, 4003, 4004, 6001 ([`authorize-offline-pass.md` §7](profiles/offline/authorize-offline-pass.md#7-error-codes)) |
+| AuthorizeOfflinePass [MSG-002] | **2002**, **2003**, **2004**, **2005**, **2014**, 1005, 2008, 3001, 3003, 3004, 3005, 3010, 4002, 4003, 4004, 6001 ([`authorize-offline-pass.md` §7](profiles/offline/authorize-offline-pass.md#7-error-codes)) |
 | FirmwareStatusNotification [MSG-017] | *(EVENT — no RESPONSE)* |
 | DiagnosticsNotification [MSG-019] | *(EVENT — no RESPONSE)* |
 | SignCertificate [MSG-022] | **4010**, **4012**, **4013**, 1005, 6001 |
@@ -622,7 +622,7 @@ This table maps which error codes can appear in the RESPONSE or rejection of eac
 |-------------|---------------------|
 | AuthResponse (→ Hello, refused before the session key, in plaintext) | **2013**, 1007 |
 | AuthResponse (→ OfflineAuthRequest, validated by the station) | **2002**, **2003**, **2004**, **2005**, **2013**, 3004, 3005, 3010, 4002, 4003, 4004 |
-| AuthResponse (→ OfflineAuthRequest, Partial B) | **2002**, **2003**, **2004**, **2005**, **2014**, **2013**, 1005, 1010, 3004, 3005, 3010, 4002, 4003, 4004, 6001 — the server's code relayed unchanged — `6001` from a server that sends `reason` alone — or `1010` when its answer did not come ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)) |
+| AuthResponse (→ OfflineAuthRequest, Partial B) | **2002**, **2003**, **2004**, **2005**, **2014**, **2013**, 1005, 1010, 2008, 3001, 3003, 3004, 3005, 3010, 4002, 4003, 4004, 6001 — the server's code relayed unchanged — `6001` from a server that sends `reason` alone — or `1010` when its answer did not come ([`authorize-offline-pass.md` §6](profiles/offline/authorize-offline-pass.md#6-processing-rules)) |
 | AuthResponse (→ ServerSignedAuth) | **2002**, **2018**, **2013** |
 | StartServiceResponse | **3001**, **3002**, **3004**, **3009**, **3010**, 3003, 3005, 3006, 3007, 3008, 5103, 5000–5009 |
 | StopServiceResponse | **3006**, **3007** |

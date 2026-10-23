@@ -449,11 +449,17 @@ This example is the forward of a later presentation of the pass of §7.5, with c
 | `2003` | `OFFLINE_PASS_EXPIRED` — pass has expired, or is older than the forwarding station's `OfflinePassMaxAge` |
 | `2004` | `OFFLINE_EPOCH_REVOKED` — revocation epoch is newer than pass epoch |
 | `2005` | `OFFLINE_COUNTER_REPLAY` — counter replay detected |
+| `2008` | `ACTION_NOT_PERMITTED` — offline use is not enabled at the forwarding station (a refusal before the checks) |
 | `2014` | `OFFLINE_PASS_REVOKED` — the pass is revoked on the server, individually or by a block on its user |
+| `3001` | `BAY_BUSY` — a live session holds the bay (a refusal before the checks) |
+| `3003` | `SERVICE_UNAVAILABLE` — the forwarding station is disabled (`details.cause` `disabled`), or it reported the program bound to the service on the bay unavailable (`station-reported`) (a refusal before the checks) |
+| `3004` | `INVALID_SERVICE` — the service is not one the station carries, or the server no longer prices it there (a refusal before the checks) |
+| `3005` | `BAY_NOT_FOUND` — the bay is not a bay of the forwarding station (a refusal before the checks) |
+| `3010` | `MAX_DURATION_EXCEEDED` — the duration exceeds the station's `MaxSessionDurationSeconds` (a refusal before the checks) |
 | `4002` | `OFFLINE_LIMIT_EXCEEDED` — max uses or max credits exceeded |
 | `4003` | `OFFLINE_RATE_LIMITED` — min interval between transactions not met |
 | `4004` | `OFFLINE_PER_TX_EXCEEDED` — per-transaction credit limit exceeded |
-| `6001` | `SERVER_INTERNAL_ERROR` — server-side processing failure |
+| `6001` | `SERVER_INTERNAL_ERROR` — a failure of the server's own processing, never a refusal it decided |
 
 ---
 
@@ -868,7 +874,7 @@ Each transaction includes a **signed receipt** (ECDSA P-256) carrying a monotoni
 2. Verify ECDSA receipt signature — reject if it does not verify; never scored
 3. Record `txCounter` (WARNING if the sequence is discontinuous, process anyway)
 4. Apply the reconcile-time gate (was the pass valid at transaction time, read through the station's clock offset?)
-5. Settle: recompute the cost by service kind from the signed receipt, never above what the authorization allowed, and debit the user wallet — or, where the authorization already debited it and the debit stands, refund only ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback); one a lapse or an expiry refunded is debited once, with no prior debit, by [§8.1](profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)) — (a debit that leaves it below zero leaves the transaction pending until a credit to the wallet covers it)
+5. Settle: recompute the cost by service kind from the signed receipt, never above what the authorization allowed, and debit the user wallet — or, where the authorization already debited it and the debit stands, refund only ([`reconciliation.md` §8.2](profiles/offline/reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback); one a Partial-B lapse refunded is debited once, with no prior debit, by [§8.1](profiles/offline/reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b)) — (a debit that leaves it below zero leaves the transaction pending until a credit to the wallet covers it)
 6. Run fraud scoring ([Chapter 06 §7.4](06-security.md#74-fraud-detection--offline-transactions)) — record `FraudDetected` and act on the band; the settled amount does not change
 7. Create session record
 8. Respond `Accepted`
