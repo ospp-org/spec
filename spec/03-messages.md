@@ -2790,7 +2790,7 @@ The app MUST request biometric or PIN confirmation from the user before sending 
 6. fewer than `maxUses` transactions already counted against this pass
 7. credits already counted plus this transaction's estimated cost not above `maxTotalCredits`
 8. `maxCreditsPerTx` not exceeded for this transaction
-9. `minIntervalSec` elapsed since last transaction from this pass
+9. `minIntervalSec` elapsed since the acceptance of the last transaction from this pass (start to start)
 10. `counter` > `lastSeenCounter` (anti-replay)
 
 #### Example

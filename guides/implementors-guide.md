@@ -475,7 +475,7 @@ When you receive an OfflineAuthRequest, validate the OfflinePass in this order:
 | 6 | Uses | `4002` | The transactions already counted against this pass on your station are fewer than `maxUses` |
 | 7 | Total credits | `4002` | Credits already counted for this pass **plus** this request's estimated cost do not exceed `maxTotalCredits` |
 | 8 | Per-TX credits | `4004` | Requested service cost <= `maxCreditsPerTx` |
-| 9 | Interval | `4003` | Time since last TX from this pass >= `minIntervalSec` |
+| 9 | Interval | `4003` | Time since the acceptance of the last TX from this pass >= `minIntervalSec` (start to start) |
 | 10 | Counter | `2005` | `counter` > last seen counter for this pass on your station |
 
 **Stop at the first failure.** Don't reveal which checks passed.
