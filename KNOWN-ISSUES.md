@@ -411,8 +411,7 @@ until its cryptographic construction has passed the review of
     ([`offline-pass.md` §4](spec/profiles/offline/offline-pass.md#4-validation-checks-10), and the `minIntervalSec`
     row of its §2.2), the authorize-time check #9
     ([`authorize-offline-pass.md` §5](spec/profiles/offline/authorize-offline-pass.md#5-validation-checks)), and the
-    reconcile-time backstop `RapidConsecutive`, which compares two transactions' acceptances, each the moment
-    [`reconciliation.md` §6.1](spec/profiles/offline/reconciliation.md#61-check-list) check #9 judges it at
+    reconcile-time backstop `RapidConsecutive`, which compares two transactions' acceptances
     ([`06-security.md` §7.4](spec/06-security.md#74-fraud-detection--offline-transactions), and its §6.1.1 check 9
     and pass-constraints row); and their restatements, in the 4003 row of
     [`07-errors.md`](spec/07-errors.md), the check list of [`03-messages.md`](spec/03-messages.md) §7, the
