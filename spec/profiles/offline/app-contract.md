@@ -146,10 +146,10 @@ The server debits the authorization's `creditsAuthorized` when it issues it, and
 
 **Rules (Normative).**
 
-1. **The server MUST refund the issue-time debit at once**, in full, and record the authorization `cancelled`: its session is closed as not delivered, charged nothing — whether no receipt has reached it yet or the server has closed it charged in full at the sweep's deadline (§6.7), whose charge is then reversed.
+1. **The server MUST refund the issue-time debit at once**, in full, and record the authorization `cancelled`: its session is closed as not delivered, charged nothing — whether no receipt has reached it yet or the server has closed it charged in full at the sweep's deadline ([`reconciliation.md` §6.7](reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4)), whose charge is then reversed.
 2. **A second cancel of the same authorization MUST be answered as the first**, and refunds nothing more.
 3. **A receipt of a cancelled authorization says the wash happened.** The server **MUST** settle it, through the gate, as a transaction with no prior debit: the cost recomputed and capped at the signed `creditsAuthorized` ([`reconciliation.md` §8.2](reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback) rule 2), debited as [§8.1](reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b) debits one — a part the wallet does not cover pending — and **MUST** flag the session for fraud review, where an operator sees it. A receipt that arrives after the cancel is answered `Accepted`, as any receipt that settles.
-4. **A cancel MUST be refused once a receipt has settled the authorization** — the debit was the wash's — and once nothing is left to refund. The user's own authorizations alone are cancelled: another user's is answered as one that does not exist.
+4. **A cancel MUST be refused once a receipt has settled the authorization** — the debit was the wash's — and once its debit has been returned another way. The user's own authorizations alone are cancelled: another user's is answered as one that does not exist.
 
 **Response.** `200 OK` with `data`: `authId`, `sessionId`, `status` (`cancelled`), `refundedCredits` (the issue-time debit, refunded once), `cancelledAt` and `wallet.balance`.
 
@@ -159,7 +159,7 @@ The server debits the authorization's `creditsAuthorized` when it issues it, and
 |:---:|---|---|
 | `401` | `2009 JWT_EXPIRED`, `2010 JWT_INVALID` | The app is not authenticated. |
 | `403` | `2008 ACTION_NOT_PERMITTED` | Offline use is not enabled on this server. |
-| `404` | `3006 SESSION_NOT_FOUND` | The authorization cannot be cancelled: `details.reason` is `settled` — its receipt settled it, the session "has already been completed" — `refunded_at_expiry`, or `unknown` (not the user's, or none). |
+| `404` | `3006 SESSION_NOT_FOUND` | The authorization cannot be cancelled: `details.reason` is `settled` — its receipt settled it, the session "has already been completed" — or `unknown` (not the user's, or none); a debit returned another way is refused the same, with the server's own reason. |
 
 ## 6. Related Schemas
 
