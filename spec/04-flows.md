@@ -927,7 +927,7 @@ sequenceDiagram
 
 | Component | State |
 |-----------|-------|
-| User Wallet | Debited at step 2 (by Server); the debit stands until the session's receipt arrives — the authorization's expiry refunds nothing — and the receipt, whenever it arrives, refunds only the difference when the wash delivered less; a session no receipt has reached by the sweep's deadline is closed charged in full and marked as an anomaly ([`reconciliation.md` §6.7](profiles/offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4)) |
+| User Wallet | Debited at step 2 (by Server); the debit stands until the session's receipt arrives — the authorization's expiry refunds nothing — and the receipt, whenever it arrives, refunds only the difference when the wash delivered less; a session no receipt has reached by the sweep's deadline is closed charged in full and marked as an anomaly ([`reconciliation.md` §6.7](profiles/offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4)); an authorization the app cancels unused is refunded at once, and a receipt of it after the cancel is charged and flagged for fraud review ([`app-contract.md` §5.1](profiles/offline/app-contract.md#51-cancelling-an-unused-authorization)) |
 | SSP | Has server-signed proof; transaction logged locally |
 | Server | Session created (status: pending — awaiting reconciliation) |
 
