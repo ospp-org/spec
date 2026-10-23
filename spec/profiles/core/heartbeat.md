@@ -74,8 +74,8 @@ The Heartbeat request has an **empty payload** (`{}`). The station identity is d
    > and it inherits the wall clock's correction risk in exchange for surviving at all. Two rules in
    > this specification are of that kind and are deliberately **not** monotonic:
    > `constraints.minIntervalSec` (check #9 of [`06-security.md` §6.1.1](../../06-security.md)),
-   > which compares against the instant of the last transaction from a pass — a value the station is
-   > required to persist — and `CertificateRenewalThresholdDays`, which is a distance from a
+   > which compares against the instant the last transaction from a pass was accepted — a value the
+   > station is required to persist — and `CertificateRenewalThresholdDays`, which is a distance from a
    > certificate's `notAfter` and therefore lives on the certificate's own scale.
    > `OfflineWindowHours` is monotonic **because** it bounds one continuous offline stretch;
    > a station that reboots has not continued that stretch, it has started a new one.

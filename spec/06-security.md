@@ -1140,7 +1140,7 @@ The OfflinePass is a server-signed credential that authorizes offline service us
 | `offlineAllowance.maxCreditsPerTx` | integer | Maximum credits per single transaction |
 | `offlineAllowance.allowedServiceTypes` | array | **WITHDRAWN (`0.25.0`)** — accepted and ignored for one transition step; no longer `required`, no longer issued, read by no check. See §6.1.1. |
 | `constraints` | object | The rate constraint — see below |
-| `constraints.minIntervalSec` | integer | Minimum seconds between transactions from this pass |
+| `constraints.minIntervalSec` | integer | Minimum seconds between transactions from this pass, acceptance to acceptance (start to start) |
 | `signatureAlgorithm` | string | Signature algorithm identifier. MUST be `"ECDSA-P256-SHA256"` for v0.1. |
 | `signature` | string | ECDSA P-256 signature over the OSPP Canonical Form ([§4.8](#48-ospp-canonical-form)) of all fields above **excluding `signature` and `signatureAlgorithm`** (Base64-encoded, RFC 6979 deterministic nonces). The exclusion is not optional and is not new: it is what [`offline-pass.md` §2](profiles/offline/offline-pass.md#2-offlinepass-fields) states, and what the signer and verifier in `tools/` both implement — `signature` cannot cover itself, and `signatureAlgorithm` is pinned to one `const` by [`offline-pass.schema.json`](../schemas/common/offline-pass.schema.json), so there is no algorithm for an attacker to substitute. |
 
@@ -1188,7 +1188,7 @@ Processing **MUST** stop at the first failure, and the validator **MUST** reject
 | 6 | **Max uses** | `4002` | The transactions **already** counted against this pass **MUST** be fewer than `maxUses`. A pass therefore permits `maxUses` transactions in total. |
 | 7 | **Max total credits** | `4002` | The credits already counted **plus** this transaction's estimated cost **MUST NOT** exceed `maxTotalCredits`. A pass therefore permits `maxTotalCredits` credits in total. The cost is estimated from the BLE request, and is **EXPERIMENTAL** with it. |
 | 8 | **Max per-tx credits** | `4004` | This transaction's estimated cost **MUST NOT** exceed `maxCreditsPerTx`. The cost is estimated from the BLE request, and is **EXPERIMENTAL** with it. |
-| 9 | **Min interval** | `4003` | Time since last transaction from this pass MUST be >= `minIntervalSec` |
+| 9 | **Min interval** | `4003` | Time since the acceptance of the last transaction from this pass MUST be >= `minIntervalSec`, counted start to start, never from that transaction's end |
 | 10 | **Counter anti-replay (station-local horizon)** | `2005` | `counter` MUST be strictly greater than `lastSeenCounter` for this pass on this station. See the counter-model note below. |
 
 **Implementation note:** Implementations SHOULD perform structural and temporal checks before cryptographic verification to mitigate denial-of-service. The error code returned SHOULD correspond to the first failed check in the canonical order (1–10).
@@ -1749,7 +1749,7 @@ During reconciliation ([Flow §10](04-flows.md#10-offline--online-reconciliation
 | Invalid timestamps | `InvalidTimestamps` | +0.50 | Timestamps out of order, in the future, or impossibly spaced, read through the station's clock offset ([`reconciliation.md` §6.8](profiles/offline/reconciliation.md#68-station-clock-offset)) |
 | Duration exceeds allowance | `DurationExceedsAllowance` | +0.20 | The signed `durationSeconds` exceeds the signed `bookedDurationSeconds`, or the station's `MaxSessionDurationSeconds` ([Chapter 08 §3](08-configuration.md#3-transaction-configuration-keys)) |
 | High offline frequency | `HighOfflineFrequency` | +0.20 | > 10 transactions from same user in 24 hours |
-| Rapid consecutive (< `minIntervalSec`) | `RapidConsecutive` | +0.15 | Two transactions for the same `offlinePassId` spaced less than `minIntervalSec` apart — the reconcile-time backstop for the per-pass rate limit (station and authorize-time hard check, `4003`) |
+| Rapid consecutive (< `minIntervalSec`) | `RapidConsecutive` | +0.15 | Two transactions for the same `offlinePassId` whose acceptances are spaced less than `minIntervalSec` apart, start to start — the reconcile-time backstop for the per-pass rate limit (station and authorize-time hard check, `4003`), which counts the same way |
 | Exceeds per-tx credit limit | `ExceedsPerTxLimit` | +0.15 | The server's recomputed cost, before the settlement cap, exceeds the pass's `maxCreditsPerTx` or the authorization's `creditsAuthorized` |
 | First use of this station | `FirstUseOfStation` | +0.10 | A transaction at a station the user has not used before. Weak on its own — a pass is valid at any station that accepts offline passes ([`offline-pass.md` §2.3](profiles/offline/offline-pass.md#23-scope-any-station-that-accepts-offline-passes-normative)) |
 | Cumulative uses exceed `maxUses` (cross-station) | `CumulativeUsesExceeded` | +0.30 | Total settled transactions for this `offlinePassId` across **all** stations — reconciled, or settled online as a Partial-B session — exceed `maxUses` |
