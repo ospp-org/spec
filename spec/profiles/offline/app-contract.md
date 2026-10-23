@@ -8,7 +8,8 @@ The offline model depends on these exchanges between the mobile app and the serv
 
 - **pass issuance** (§3) — the server returns an OfflinePass together with the **trust bundle** the app needs while it has no network, for a device key whose hardware backing the platform has attested (§3.6);
 - **receipt upload** (§4) — the app sends the server its own copy of every receipt a station signed for it;
-- **the trust bundle of a Partial-A authorization** (§5) — the server's answer that carries a ServerSignedAuth carries the trust bundle too.
+- **the trust bundle of a Partial-A authorization** (§5) — the server's answer that carries a ServerSignedAuth carries the trust bundle too;
+- **the cancel of an unused Partial-A authorization** (§5.1) — the app cancels an authorization it did not use, and the server refunds its debit at once.
 
 Everything else between the app and the server remains implementation-specific ([Chapter 02 §9](../../02-transport.md#9-https-transport-server--clients)). Each uses the transport rules of [Chapter 02 §9.1](../../02-transport.md#91-general-requirements) and the mobile-app JWT of [Chapter 02 §9.2.1](../../02-transport.md#921-mobile-app--jwt-bearer); an error is answered with the REST Error Object of [Chapter 07 §2.4](../../07-errors.md#24-rest-api-error-response).
 
@@ -134,6 +135,31 @@ A receipt the server refuses on its merits — a signature that does not verify,
 When the phone is online and the station is not, the app obtains a ServerSignedAuth from the server — `POST /sessions/offline-auth` ([`04-flows.md` §5b](../../04-flows.md#5b-partial-a--phone-online-station-offline); [`ble-handshake.md` §4.2](ble-handshake.md#42-serversignedauth-partial-a)) — and relays it to the station over BLE. Before it relays it, it authenticates the station against a trust bundle ([`06-security.md` §6.5.2](../../06-security.md#652-station-authentication--the-stations-certificate)), and the phone may hold no pass, and so no bundle, at all.
 
 **The phone receives the trust bundle with its authorization (Normative).** The server's response that carries the authorization — its `signedAuthorization` and `sessionId` — **MUST** also carry `trustBundle`, the object of §3.4, current at that moment: the Station CA set, each CA with its CRL. The app **MUST** replace the bundle it holds with it, as on every issuance, and authenticates the station against it before it relays the authorization. This document defines that member of the response; the request and the authorization are those of [`04-flows.md` §5b](../../04-flows.md#5b-partial-a--phone-online-station-offline) and [`ble-handshake.md` §4.2](ble-handshake.md#42-serversignedauth-partial-a).
+
+### 5.1 Cancelling an unused authorization
+
+`POST /api/v1/sessions/offline-auth/{authId}/cancel`
+
+The server debits the authorization's `creditsAuthorized` when it issues it, and the debit stands until the session's receipt arrives ([`reconciliation.md` §6.7](reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4)). An authorization the app does not use — the customer leaves, the station refuses the start, the app withholds the credential — has no receipt. The app cancels it.
+
+**Request.** No body; `authId` is the one the authorization was issued with. The mobile-app JWT of [Chapter 02 §9.2.1](../../02-transport.md#921-mobile-app--jwt-bearer) names the user.
+
+**Rules (Normative).**
+
+1. **The server MUST refund the issue-time debit at once**, in full, and record the authorization `cancelled`: its session is closed as not delivered, charged nothing — whether no receipt has reached it yet or the server has closed it charged in full at the sweep's deadline (§6.7), whose charge is then reversed.
+2. **A second cancel of the same authorization MUST be answered as the first**, and refunds nothing more.
+3. **A receipt of a cancelled authorization says the wash happened.** The server **MUST** settle it, through the gate, as a transaction with no prior debit: the cost recomputed and capped at the signed `creditsAuthorized` ([`reconciliation.md` §8.2](reconciliation.md#82-prior-authorization-debit-settle-once-true-up--partial-a-partial-b-offline-fallback) rule 2), debited as [§8.1](reconciliation.md#81-no-prior-debit-full-offline--direct-partial-b) debits one — a part the wallet does not cover pending — and **MUST** flag the session for fraud review, where an operator sees it. A receipt that arrives after the cancel is answered `Accepted`, as any receipt that settles.
+4. **A cancel MUST be refused once a receipt has settled the authorization** — the debit was the wash's — and once nothing is left to refund. The user's own authorizations alone are cancelled: another user's is answered as one that does not exist.
+
+**Response.** `200 OK` with `data`: `authId`, `sessionId`, `status` (`cancelled`), `refundedCredits` (the issue-time debit, refunded once), `cancelledAt` and `wallet.balance`.
+
+**Refusals.**
+
+| HTTP | Code | When |
+|:---:|---|---|
+| `401` | `2009 JWT_EXPIRED`, `2010 JWT_INVALID` | The app is not authenticated. |
+| `403` | `2008 ACTION_NOT_PERMITTED` | Offline use is not enabled on this server. |
+| `404` | `3006 SESSION_NOT_FOUND` | The authorization cannot be cancelled: `details.reason` is `settled` — its receipt settled it, the session "has already been completed" — `refunded_at_expiry`, or `unknown` (not the user's, or none). |
 
 ## 6. Related Schemas
 

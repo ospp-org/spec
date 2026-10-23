@@ -475,6 +475,34 @@ until its cryptographic construction has passed the review of
 
 ---
 
+## OPEN — freeze item 31: a command the broker delivers to no one is answered by its timeout, and nothing says what a server does sooner
+
+**Raised 2026-10-23, by the session after the offline arc, with its data.** A server publishes a command to a station
+that holds no MQTT session — offline longer than its session's hour ([`02-transport.md` §1.2](spec/02-transport.md)),
+or never connected. The broker accepts the PUBLISH and delivers it to no one: MQTT 5's PUBACK reason code `0x10`, *No
+matching subscribers*; EMQX 5.8.6 answers its publish API `202 {"reason_code":16}` and counts the message in
+`messages.dropped.no_subscriber`. The specification gives such a command what it gives every command no answer
+reaches — its response timeout and that timeout's handling ([`02-transport.md` §5](spec/02-transport.md#5-message-expiry);
+[`04-flows.md` Appendix A](spec/04-flows.md#appendix-a--timeout-reference); the StopService re-sends of
+[`stop-service.md` §6](spec/profiles/transaction/stop-service.md#6-processing-rules) rules 10 and 11 are timed by it) —
+and a REST door refuses a command for a station it knows is offline with `6003 STATION_OFFLINE`. It says nothing of
+the broker's answer: [`02-transport.md` Appendix A](spec/02-transport.md) requires reason codes for structured error
+reporting in PUBACK, and no clause says what a publisher does with `0x10`.
+
+**The data.** One such drop on every full run of the reference deployment's scenario corpus on UAT, 2026-10-21 to
+2026-10-23, each firing its broker-drop alert. The reference server now reads the answer, logs and counts it, subtracts
+it from that alert, and shows the operator the command as undelivered from that moment; the command keeps the timeout
+the specification gives it, and nothing on the wire changed.
+
+**The options.** (a) The timeout is the answer, as the text stands: a StartService the station never received fails at
+its timeout, a StopService is not re-sent on a timeout while the station's connection is lost and is re-sent after its
+next accepted boot. (b) The answer settles the command at once, as its timeout would, and a REST door that dispatched
+it answers `6003` — sooner, and it ends the timing rules 10 and 11 of `stop-service.md` §6 count on. (c) The server
+holds a command answered `0x10` and sends it again after the station's next accepted boot, within its Message Expiry
+— a queue the specification has for StopService alone. The reference server implements (a).
+
+---
+
 ## CLOSED — the BLE surface was not implementable as written (two defects)
 
 **Closed 2026-10-05, by the BLE wire revision (BLE protocol version `0.3.0`).** Both open defects are
@@ -1208,6 +1236,17 @@ The refund at `expiresAt` and the re-debit of a late receipt, decision 8's two h
 it: an authorization never used — a start the station refused with `3006` after `expiresAt`, a credential the app
 withheld on another catalog digest — has no receipt, so it stays charged and marked, and the operator's review of
 the mark is where it is resolved. Item 18 of the BLE list records the question this answers.
+
+**The app's cancel, decided 2026-10-23 by Gabi, takes the other half of the question below.** The app cancels an
+authorization it did not use — `POST /api/v1/sessions/offline-auth/{authId}/cancel`, the release the record below names
+as the second option — and the server refunds the issue-time debit at once, the session closed as not delivered,
+charged nothing, whether open or already closed charged in full
+([`app-contract.md` §5.1](spec/profiles/offline/app-contract.md#51-cancelling-an-unused-authorization)). A receipt of a
+cancelled authorization says the wash happened: it settles as a transaction with no prior debit, recomputed and capped
+at the signed `creditsAuthorized`, and the session is flagged for fraud review. No cancel and no receipt: as above, the
+debit stands and the mark is reviewed. A cancel after a receipt settled the authorization is refused, `3006`. The
+auth-form's checks #10 and #11 named a row *cancelled before the wash* as refused `2014`; a row the app cancelled is
+no longer refused on its status ([`reconciliation.md` §6.7](spec/profiles/offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4)).
 
 **Decision 8 of 2026-10-06, as it stood until then (superseded).** The server refunds the issue-time debit of a
 Partial-A authorization in full at its `expiresAt` when no receipt has reconciled it by then, and marks its registry

@@ -663,6 +663,7 @@ This is the one table of the codes BLE responses carry; the BLE documents point 
 | `POST /api/v1/offline/passes` | 401, 402, 403 | 2008, 2009, 2010, 4001 |
 | `POST /api/v1/offline/receipts` | 401, 403 | 2008, 2009, 2010 |
 | `POST /sessions/offline-auth` | 400, 401, 402, 403 | 2008, 2009, 2010, 4001 |
+| `POST /sessions/offline-auth/{authId}/cancel` | 401, 403, 404 | 2008, 2009, 2010, 3006 |
 | `POST /webhooks/payment-gateway/notification` | 401 | 4008 |
 | `POST /api/v1/stations/provision` | 400, 401, 409, 422 | 2019, 4010, 4015, 4016, 4017, 4018, 4019, 4020 |
 
