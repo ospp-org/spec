@@ -210,7 +210,7 @@ BASELINE = """
 4.2 | DataTransfer                       | 1010                            | profile    | D1: the waiting sender's own timeout, never a response value
 4.2 | TriggerMessage                     | 1010                            | profile    | D1: the waiting sender's own timeout, never a response value
 4.3 | AuthResponse (→ OfflineAuthRequest, validated by the station) | 2013, 3004, 3005, 3010 | §4 | D4: ble-handshake.md §4.1 prose — 3004/3005 and 3010 refused before the pass is validated, 2013 for a sessionProof that does not match; offline-pass.md §4 lists the pass checks only
-4.3 | AuthResponse (→ OfflineAuthRequest, Partial B) | 1010, 2013, 3004, 3005, 3010 | §4 | D4: authorize-offline-pass.md §6 rule 6 prose (1010, the station's own timeout) and ble-handshake.md §4.1 (2013, 3004, 3005, 3010, refused before the forward); §7 lists the server's codes
+4.3 | AuthResponse (→ OfflineAuthRequest, Partial B) | 1010, 2013 | §4 | D4: authorize-offline-pass.md §6 rule 6 prose (1010, the station's own timeout) and ble-handshake.md §4.1 (2013, refused before the forward); §7 lists the server's codes, the station's own refusals before the forward (3004, 3005, 3010) among them since the server answers the same conditions with the same codes (D7, 2026-10-23)
 4.3 | AuthResponse (→ ServerSignedAuth)  | 2013                            | §4         | D4: an AEAD or channel failure ends any handshake with 2013 (06-security.md §6.5.3); §4.2.2 lists the claim checks
 """
 
