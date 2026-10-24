@@ -513,7 +513,18 @@ holds a command answered `0x10` and sends it again after the station's next acce
 
 ---
 
-## OPEN — freeze item 32: no point at which a reconnected station's offline records are complete, so an unused Partial-A authorization is refunded only by an operator
+## DECIDED — freeze item 32: no point at which a reconnected station's offline records are complete, so an unused Partial-A authorization is refunded only by an operator
+
+**Decided by Gabi on 2026-10-24: option (c), as built.** No automatic refund and no completeness signal: an unused
+Partial-A authorization is refunded only by an operator, from the anomaly mark of the session the sweep closed charged
+in full, the customer's declaration read beside the mark
+([`app-contract.md` §5.1](spec/profiles/offline/app-contract.md#51-cancelling-an-unused-authorization) rule 4;
+[`reconciliation.md` §6.7](spec/profiles/offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4)).
+No wire change, no station obligation, no SDK release. **Re-evaluated when BLE is unfrozen:** options (a) and (b) are
+obligations of the station, which runs a Partial-A wash over the BLE surface frozen until the mobile app and the station
+firmware are built (the entry *OPEN — BLE is frozen until the mobile app and the station firmware are built*, above), so
+the decision is taken up again with the firmware when that work begins. The reference server implements it
+(csms-server, 2026-10-24). **What follows is the record, as raised.**
 
 **Raised 2026-10-24, by the session that built Gabi's decision of that day, with its data.** Gabi decided that no money
 leaves before the station says what happened: the app's cancel of a Partial-A authorization records its customer's
