@@ -475,7 +475,17 @@ until its cryptographic construction has passed the review of
 
 ---
 
-## OPEN — freeze item 31: a command the broker delivers to no one is answered by its timeout, and nothing says what a server does sooner
+## DECIDED — freeze item 31: a command the broker delivers to no one is failed at once with `6003`, exactly like a command to a station known to be offline
+
+**Decided by Gabi on 2026-10-24: option (b).** A command the broker answers `0x10` *No matching subscribers* — the station
+dropped before the server knew — is settled at once, as its timeout would settle it, and a REST endpoint that dispatched
+it answers `502` `6003 STATION_OFFLINE`, as for a station the server knows to be offline; a StopService is not sent again
+until the station's next accepted boot, the broker having said its connection is lost
+([`02-transport.md` §5.4](spec/02-transport.md#54-a-command-the-broker-delivers-to-no-one), the `6003` row of
+[`07-errors.md` §3.6](spec/07-errors.md#36-server-errors-6xxx), and [`stop-service.md` §6](spec/profiles/transaction/stop-service.md#6-processing-rules)
+rule 11). No wire change: PUBACK reason codes were already required (Appendix A of Chapter 02), and `6003` was already the
+door's answer for an offline station. The reference server implements it (csms-server, 2026-10-24). **What follows is
+the record, as raised.**
 
 **Raised 2026-10-23, by the session after the offline arc, with its data.** A server publishes a command to a station
 that holds no MQTT session — offline longer than its session's hour ([`02-transport.md` §1.2](spec/02-transport.md)),
@@ -500,6 +510,47 @@ next accepted boot. (b) The answer settles the command at once, as its timeout w
 it answers `6003` — sooner, and it ends the timing rules 10 and 11 of `stop-service.md` §6 count on. (c) The server
 holds a command answered `0x10` and sends it again after the station's next accepted boot, within its Message Expiry
 — a queue the specification has for StopService alone. The reference server implements (a).
+
+---
+
+## OPEN — freeze item 32: no point at which a reconnected station's offline records are complete, so an unused Partial-A authorization is refunded only by an operator
+
+**Raised 2026-10-24, by the session that built Gabi's decision of that day, with its data.** Gabi decided that no money
+leaves before the station says what happened: the app's cancel of a Partial-A authorization records its customer's
+declaration that it was not used, and refunds nothing ([`app-contract.md` §5.1](spec/profiles/offline/app-contract.md#51-cancelling-an-unused-authorization));
+the authorization's receipt, when it comes, settles it. An authorization no receipt reaches would be refunded
+automatically *when the station reconnects and its offline records for the period are complete* — **if the specification
+gave the server an observable point at which they are. It does not**, so the automatic refund is not specified, and an
+unused authorization is refunded only by an operator, from the anomaly mark of the session the sweep closed charged in
+full ([`reconciliation.md` §6.7](spec/profiles/offline/reconciliation.md#67-partial-a-reconciliation-auth-form--findings-n2--n3--q4)).
+
+**The data — what the specification has, measured on `main` `2a42647`.**
+
+- BootNotification's `pendingOfflineTransactions` is a count, *"Number of offline transactions queued for sync"*
+  ([`boot-notification.md` §3](spec/profiles/core/boot-notification.md)). The server *"notes the pending count and prepares"*
+  ([`reconciliation.md` §2](spec/profiles/offline/reconciliation.md#2-sync-procedure) step 2), *"SHOULD schedule offline
+  transaction synchronization"* (`boot-notification.md` §5 rule 8), and *"SHOULD expect TransactionEvent messages"*
+  ([`transaction-event.md` §7.3](spec/profiles/transaction/transaction-event.md)). No rule binds the station to the count,
+  says which records it covers, or lets the server conclude anything when that many have arrived.
+- No message ends the sync: the station *"clears its local sync queue"* ([`04-flows.md` §10](spec/04-flows.md#10-offline--online-reconciliation),
+  happy path step 9) and tells the server nothing.
+- `txCounter` is *"**not** a completeness proof and is not used as one"* ([`06-security.md` §6.3](spec/06-security.md),
+  note 3, and §6.3.1), and *"There is no server-side 'last reconciled counter' watermark"* (`reconciliation.md` §4.2 rule 2).
+- The count is a boot's, not an authorization's: an authorization is valid at most five minutes and its session runs its
+  `durationSeconds` after a start before `expiresAt` ([`ble-handshake.md` §4.2.1](spec/profiles/offline/ble-handshake.md)), so it
+  can be running at the reconnection, its record following the flush, or start after it on a station that drops again;
+  a transaction whose retries fail is sent *"on the next successful connection"* (`reconciliation.md` §2, retry logic).
+- Records can be lost with the hardware: a station replaced between its offline period and its sync has every offline
+  transaction of the old serial flagged for manual review ([`reconciliation.md` §9](spec/profiles/offline/reconciliation.md#9-conflict-resolution)).
+
+**The options.** (a) Make the count a completeness count: a station **MUST** count, at every boot it sends, every offline
+transaction it holds that has no terminal answer, and send exactly those after the boot is accepted; a server **MAY** then
+refund an authorization whose latest end — its `expiresAt` plus its `durationSeconds`, on the station's clock as that
+boot's offset measures it ([`reconciliation.md` §6.8](spec/profiles/offline/reconciliation.md#68-station-clock-offset)) —
+precedes a boot it accepted, once that boot's count has been answered with no receipt of it. No wire change, a station obligation. (b) A wire marker: the
+station states the end of its sync and the period it covers, on a new EVENT or a field of the last TransactionEvent — a
+wire change and an SDK release. (c) As built: no automatic refund; the operator refunds from the mark, and the customer's
+declaration is what the operator reads beside it. The reference server implements (c).
 
 ---
 
