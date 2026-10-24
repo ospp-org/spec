@@ -545,8 +545,9 @@ full ([`reconciliation.md` §6.7](spec/profiles/offline/reconciliation.md#67-par
 
 **The options.** (a) Make the count a completeness count: a station **MUST** count, at every boot it sends, every offline
 transaction it holds that has no terminal answer, and send exactly those after the boot is accepted; a server **MAY** then
-refund an authorization whose latest end — its `expiresAt` plus its `durationSeconds` — precedes a boot it accepted, once
-that boot's count has been answered with no receipt of it. No wire change, a station obligation. (b) A wire marker: the
+refund an authorization whose latest end — its `expiresAt` plus its `durationSeconds`, on the station's clock as that
+boot's offset measures it ([`reconciliation.md` §6.8](spec/profiles/offline/reconciliation.md#68-station-clock-offset)) —
+precedes a boot it accepted, once that boot's count has been answered with no receipt of it. No wire change, a station obligation. (b) A wire marker: the
 station states the end of its sync and the period it covers, on a new EVENT or a field of the last TransactionEvent — a
 wire change and an SDK release. (c) As built: no automatic refund; the operator refunds from the mark, and the customer's
 declaration is what the operator reads beside it. The reference server implements (c).
