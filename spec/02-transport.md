@@ -539,6 +539,18 @@ The horizon is **independent of MQTT session lifetime** — a station that disco
 
 **Cross-references:** `spec/profiles/transaction/README.md §4.3` (StopService idempotency) and `spec/profiles/transaction/stop-service.md §6` (Processing Rules) require retention for at least this horizon.
 
+### 5.4 A Command the Broker Delivers to No One
+
+A server publishes a command at QoS 1, and the broker answers the PUBLISH with its PUBACK. Reason code `0x10` *No matching subscribers* says the broker delivered it to no one: the station holds no MQTT session the broker could queue it in — offline longer than its Session Expiry Interval (§1.2), or never connected — so the command will not reach it, and no answer to it can come.
+
+1. **The server MUST settle such a command at once, as its response timeout would settle it** — a StartService fails its session as never started, refunded in full; a ReserveBay cancels its reservation; a command whose timeout settles nothing settles nothing — and record it as delivered to no one.
+2. **A REST endpoint that dispatched the command MUST answer `502` `6003 STATION_OFFLINE`**, exactly as it answers a command for a station it already knows to be offline ([Chapter 07 §4.4](07-errors.md#44-rest-api-endpoints)). The station dropped before the server knew; the broker's answer is how it knows.
+3. **A StopService is not sent again until the station's next boot answered `Accepted`.** `0x10` says the station's connection is lost, and a stop is not repeated on a timeout while it is ([`stop-service.md` §6](profiles/transaction/stop-service.md#6-processing-rules) rule 11); the boot begins its next connected period, and the attempt then.
+
+Every other PUBACK — `0x00` *Success* — leaves the command to its answer and its timeout. A message that is not a command (a RESPONSE or an EVENT) delivered to no one is lost to the station, and the server SHOULD log and count it; it has nothing to settle.
+
+> **Why the broker's answer, and not the timeout.** Until this revision the specification gave such a command what it gives every command no answer reaches — its timeout — and said nothing of the broker's answer, though Appendix A requires reason codes in PUBACK for exactly this kind of structured error reporting. The timeout reached the same settlement seconds later, and in the meantime the door had told its caller the command was sent. Settling at once and answering `6003` gives the caller the answer it gets for a station the server knows to be offline, and gives the station nothing it would not have had: the command never reached it (freeze item 31, decided 2026-10-24, [`KNOWN-ISSUES.md`](../KNOWN-ISSUES.md)).
+
 ---
 
 ## 6. Access Control (ACL)
@@ -1069,6 +1081,7 @@ All timestamps MUST use **ISO 8601** format with **millisecond precision** and *
 | MQTT connection lost | MQTT | PINGRESP timeout / TCP reset | Continue BLE, buffer messages, backoff |
 | Keep-alive timeout (server side) | MQTT | No message, a Heartbeat or any other, for 3.5 × interval | Mark station offline, fire LWT |
 | Message expired | MQTT | Message Expiry Interval | Discard, log warning |
+| Command delivered to no one | MQTT | PUBACK reason code `0x10` *No matching subscribers* | Settle the command at once, as its timeout would; a REST endpoint that dispatched it answers `502` `6003` (Section 5.4) |
 | Invalid JSON received | MQTT / BLE | JSON parse error | Log `1005` and discard. No reply is possible: the `messageId` cannot be read, and [07-errors §2.1](07-errors.md#21-mqtt-error-response) requires a RESPONSE to echo it. MAY be reported as an unsolicited EVENT ([07-errors §2.2](07-errors.md#22-mqtt-error-event)) |
 | Unknown action | MQTT / BLE | Action not recognized | If the action is known to the protocol but unsupported here, reply `status: "Rejected"` with `1006` on that action's RESPONSE (§2.1). If the action is unknown to the protocol, no RESPONSE schema exists — log `1006` and discard. MAY be reported as an unsolicited EVENT (§2.2) |
 | Protocol version mismatch | MQTT | Declared `protocolVersion` not in the server's supported set (exact match) | Log `1007`, record `supportedVersions`, stay in the `Rejected` restricted state and keep retrying BootNotification at `retryInterval` per [CORE-011](profiles/core/README.md) — the station cannot deliver service, but it MUST NOT stop retrying |
@@ -1091,7 +1104,7 @@ All timestamps MUST use **ISO 8601** format with **millisecond precision** and *
 | Message Expiry Interval | Stale command expiry (30s–600s) | MUST |
 | Will Delay Interval | 10s grace period for LWT | MUST |
 | Shared Subscriptions | Server horizontal scaling | SHOULD (production) |
-| Reason Codes | Structured error reporting in CONNACK/PUBACK | MUST |
+| Reason Codes | Structured error reporting in CONNACK/PUBACK; a PUBACK `0x10` to a command settles it at once (Section 5.4) | MUST |
 | Maximum Packet Size | 64 KB packet ceiling; the 64 512-byte envelope cap of §10.2.1 sits inside it | SHOULD |
 | Receive Maximum | Flow control (10 in-flight messages) | SHOULD |
 | Topic Alias | Bandwidth optimization for high-frequency topics (MeterValues, Heartbeat). Stations **MAY** negotiate topic aliases with the broker to reduce per-message overhead. | MAY |
