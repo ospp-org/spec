@@ -565,7 +565,19 @@ declaration is what the operator reads beside it. The reference server implement
 
 ---
 
-## OPEN — freeze item 33: no rule for a station's own message the broker answers `0x10`, nor for the one MQTT discards when the broker kept no session
+## DECIDED — freeze item 33: a station keeps every message the broker did not acknowledge with success, and resends it after the reconnection through the replay
+
+**Decided by Gabi on 2026-10-25.** Any message the broker did not acknowledge with success (PUBACK `0x00`) — a PUBACK
+`0x10` *No matching subscribers* included, and a message in flight when the station reconnects with *Session Present*
+`0` — stays in the station's buffer and is resent after the reconnection through the existing replay
+([`02-transport.md` §5.5](spec/02-transport.md#55-a-station-message-the-broker-does-not-acknowledge-with-success);
+[`01-architecture.md` §6.5](spec/01-architecture.md#65-offline-message-buffering);
+[`connection-lost.md` §6](spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4): with its
+original `messageId`, after the BootNotification is answered `Accepted` and the bays are reported; a BootNotification,
+StatusNotification or Heartbeat is replaced by the fresh one the replay sends. Option (c) below, for every message of
+the station, not the Category-1 ones alone. No wire change, no SDK release; a station obligation, in the `[Unreleased]`
+station-side summary of [`CHANGELOG.md`](CHANGELOG.md). The reference simulator implements it (ts-station-simulator,
+2026-10-25). **What follows is the record, as raised.**
 
 **Raised 2026-10-25, by the session of the broker recreate, with its data. Gabi's to decide.** When a broker restarts
 and loses its sessions, the server's subscription goes with them until it subscribes again. A station message that
