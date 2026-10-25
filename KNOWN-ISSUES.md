@@ -565,6 +565,57 @@ declaration is what the operator reads beside it. The reference server implement
 
 ---
 
+## OPEN — freeze item 33: no rule for a station's own message the broker answers `0x10`, nor for the one MQTT discards when the broker kept no session
+
+**Raised 2026-10-25, by the session of the broker recreate, with its data. Gabi's to decide.** When a broker restarts
+and loses its sessions, the server's subscription goes with them until it subscribes again. A station message that
+reaches the broker before that is acknowledged and delivered to no one — MQTT 5's PUBACK reason code `0x10`, *No
+matching subscribers*, a success code — and a station takes it as sent.
+
+**What the specification already guarantees.** A reconnecting station sends its BootNotification first and nothing else
+until it is answered ([`connection-lost.md` §6](spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect)
+step 1; [`02-transport.md` §4.1](spec/02-transport.md#41-initial-connection), the critical rule), repeats an unanswered
+one after 60 s (§4.1 step 9), and replays its buffered records — every SessionEnded among them, never discarded
+([`01-architecture.md` §6.5](spec/01-architecture.md#65-offline-message-buffering)) — only after the boot is answered
+`Accepted` (step 4), which cannot happen before the server receives it. And the broker requirement covers the rest:
+*"persistent sessions MUST survive single-node failure"* and *"QoS 1 messages in flight MUST be persisted to disk or
+replicated"* ([`02-transport.md` §7.2](spec/02-transport.md#72-high-availability)). A broker that keeps the server's
+session and subscription across its restart never answers `0x10` to a station message while that session lives. The
+reference deployment does since 2026-10-25 (csms-server, EMQX durable sessions) — for the server's sessions only: its
+broker, EMQX 5.8.6, never publishes the delayed will of a durable session, and the Will Delay Interval every station sets
+is a MUST (Appendix A), so the stations' sessions stay in memory and are lost at a restart, as before.
+
+**The gaps.**
+
+- **A station message answered `0x10`.** [`02-transport.md` §5.4](spec/02-transport.md#54-a-command-the-broker-delivers-to-no-one)
+  says what a *server* does with `0x10` to a command; no clause says what a station does with it on its own message. A
+  Category-1 EVENT — SessionEnded, SessionStarted, SecurityEvent — has no response to wait for, so a station that takes
+  the PUBACK as delivery ends its buffering of a message nobody received. It reaches no one whenever no server session
+  matches the topic: a broker that does not meet §7.2, or a server session expired after the Session Expiry Interval.
+- **A message in flight when the broker lost its sessions.** A client that reconnects with session state and receives
+  *Session Present* `0` "MUST discard its Session State if it continues with the Network Connection" (MQTT 5.0
+  §3.2.2.1.1, [MQTT-3.2.2-5]) — its unacknowledged QoS 1 PUBLISHes included. §6.5 governs what a station buffers while it
+  *cannot* transmit; it does not say whether a Category-1 message the station transmitted and never saw acknowledged
+  is still its to replay, so a station that follows MQTT to the letter loses the SessionEnded it had in flight — at the
+reference deployment, whose stations' sessions die with a restart, still.
+
+**The data — the reference deployment's UAT, 2026-10-25, its broker's sessions in memory** (one recreate, five stations
+with session traffic, the server's subscriber held back until 8 s after the broker was healthy — in phase with the
+stations it had won their reconnect race by 11 ms; the broker's trace of every PUBLISH and the reason code of its PUBACK): 247 station messages acknowledged, 19 of them `0x10` and delivered to no one — 3 SessionEnded,
+6 StatusNotification, 10 Heartbeat — the three sessions closed by the server's sweep, charged in full. The stations were
+the reference simulator in its scenario mode, which sends what its file sends without booting first; its connected mode
+boots first. With the server's sessions durable, the same recreate: none (csms-server `TODO.md` §A0 item 12).
+
+**The options.** (a) As the text stands: §7.2 is the guarantee, and a station has no rule for `0x10`. (b) A station
+treats `0x10` on its own Category-1 message as not delivered: it keeps it buffered and replays it after its next boot
+answered `Accepted`, as connection-lost.md §6 step 4 replays — a station obligation. (c) (b), and a station keeps every
+Category-1 message it transmitted without an acknowledgement when MQTT discards its session state, to replay the same
+way — §6.5 extended to the message in flight; one the server did receive comes again, a duplicate
+[`02-transport.md` §3.3](spec/02-transport.md#33-deduplication) discards. No wire change in any of them. The reference server implements (a), on the broker's side, for its own
+sessions.
+
+---
+
 ## CLOSED — the BLE surface was not implementable as written (two defects)
 
 **Closed 2026-10-05, by the BLE wire revision (BLE protocol version `0.3.0`).** Both open defects are
