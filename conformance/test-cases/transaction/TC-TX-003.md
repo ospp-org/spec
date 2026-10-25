@@ -14,7 +14,7 @@ Verify that when a session is stopped before its natural expiry (early stop), th
 - `spec/profiles/transaction/stop-service.md` — StopService response with `actualDurationSeconds` and `creditsCharged`
 - `spec/profiles/transaction/meter-values.md` — MeterValues for progress verification
 - `spec/04-flows.md` §6 — Refund Policy: the governing matrix, and the low-delivery override, which is `Fault`-only and therefore does **not** apply to a server-commanded stop
-- `spec/03-messages.md` §3.4 — the credit formula `ceil(actualDurationSeconds / 60 * priceCreditsPerMinute)`
+- `spec/03-messages.md` §3.4 — the credit formula `ceil(actualDurationSeconds / 60 * priceCreditsPerMinute)`, exact and computed in integers
 - `spec/07-errors.md` §3.3 — Error code 3006 `SESSION_NOT_FOUND`, 3007 `SESSION_MISMATCH`
 - `spec/profiles/transaction/stop-service.md` §6 rule 10 — the cached StopService RESPONSE and the OSPP Session Retention Horizon
 - `spec/05-state-machines.md` §2.3 — the bay transition table (canonical): a bay leaves `Occupied` only via `Finishing`
@@ -59,7 +59,10 @@ Verify that when a session is stopped before its natural expiry (early stop), th
    - `creditsCharged` — should be the delivered time priced by the normative credit formula,
      `ceil(actualDurationSeconds / 60 * priceCreditsPerMinute)` (`spec/03-messages.md` §3.4).
      Note this is rounded up to one credit, so it is **not** a strict linear proportion of
-     `creditsAuthorized`
+     `creditsAuthorized`. The harness computes the expected value in integers, as §3.4 requires: the
+     integer quotient of `actualDurationSeconds * priceCreditsPerMinute + 59` by 60 — never the formula
+     evaluated as written in floating point, which accepts a station that reports 56 for 33 seconds at
+     100 credits per minute, where 55 is owed
 8. Verify `creditsCharged` < `creditsAuthorized` (50 credits).
 9. Verify `actualDurationSeconds` < `durationSeconds` (300 seconds).
 10. Observe StatusNotification transitions: `Occupied` -> `Finishing` -> `Available`.
@@ -102,7 +105,8 @@ Verify that when a session is stopped before its natural expiry (early stop), th
 
 1. `actualDurationSeconds` accurately reflects the real elapsed time between start and stop (+/- 3 seconds).
 2. `creditsCharged` equals `ceil(actualDurationSeconds / 60 * priceCreditsPerMinute)` — the delivered time
-   priced by the normative credit formula, rounded up to one credit.
+   priced by the normative credit formula, rounded up to one credit, computed in integers: 55 for 33 seconds
+   at 100 credits per minute.
 3. `creditsCharged` < `creditsAuthorized` when the session is stopped early.
 4. Final MeterValues in StopService response are >= the last periodic MeterValues reading (monotonically increasing).
 5. Both commanded stops settle pro-rata, as a `UserDuration` session's stop does: the refund is
@@ -118,7 +122,9 @@ Verify that when a session is stopped before its natural expiry (early stop), th
 
 1. `creditsCharged` equals `creditsAuthorized` despite early stop (full charge on partial service).
 2. `actualDurationSeconds` does not match the real elapsed time (> 3 seconds deviation).
-3. `creditsCharged` does not match the normative credit formula for the delivered time.
+3. `creditsCharged` does not match the normative credit formula for the delivered time, computed in integers —
+   one credit above it, as 56 for 33 seconds at 100 credits per minute, is the formula divided first in binary
+   floating point.
 4. Final meter values in StopService response are less than the last periodic MeterValues reading.
 5. Station does not return to `Available` after early stop.
 6. Station returns `3006` to a duplicate StopService inside the retention horizon instead of the cached
