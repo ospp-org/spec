@@ -551,6 +551,18 @@ A PUBACK `0x00` *Success* leaves the command to its answer and its timeout. A me
 
 > **Why the broker's answer, and not the timeout.** Until this revision the specification gave such a command what it gives every command no answer reaches — its timeout — and said nothing of the broker's answer, though Appendix A requires reason codes in PUBACK for exactly this kind of structured error reporting. The timeout reached the same settlement seconds later, and in the meantime the door had told its caller the command was sent. Settling at once and answering `6003` gives the caller the answer it gets for a station the server knows to be offline, and gives the station nothing it would not have had: the command never reached it (freeze item 31, decided 2026-10-24, [`KNOWN-ISSUES.md`](../KNOWN-ISSUES.md)).
 
+### 5.5 A Station Message the Broker Does Not Acknowledge with Success
+
+A station publishes its messages at QoS 1, and only a PUBACK with reason code `0x00` *Success* tells it the broker accepted the message for a subscriber. The broker's other answers do not: `0x10` *No matching subscribers* — a success code to MQTT — says it delivered the message to no one, the server holding no subscription it matched; a reason code of `0x80` or above refuses it. And a message still unacknowledged when the station reconnects to a broker that kept no session for it — CONNACK *Session Present* `0` — is one the broker holds no record of, which MQTT 5 has the client discard from its session state ([MQTT-3.2.2-5]).
+
+1. **The station MUST keep in its buffer every message the broker did not acknowledge with `0x00`** — answered by a PUBACK with any other reason code, or not answered before a reconnection whose CONNACK carries *Session Present* `0` — whatever its kind and its category in [Chapter 01 §6.5](01-architecture.md#65-offline-message-buffering). Discarding its MQTT session state does not discard the message.
+2. **The station MUST resend it after its next reconnection, through the replay** of [`connection-lost.md` §6](profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4 — after its BootNotification is answered `Accepted` and its bays are reported, never before — **with its original `messageId`**, so that a copy the server did receive is discarded as a duplicate (§3.3). A message of a kind the replay sends fresh — a BootNotification, a StatusNotification, a Heartbeat — is not resent: the fresh one takes its place. A message the replay names nowhere is resent at the end of step 4, in the order it was first sent.
+3. **A resent message the broker again does not acknowledge with `0x00` stays in the buffer**, for the replay after the reconnection that follows.
+
+The replay keeps each session's records in the order §3.2 requires, so a later record of a session one of whose records is in the buffer goes out behind it, in the same replay.
+
+> **Why the station keeps it.** A station took a `0x10` for delivery and ended its buffering of a message nobody received. At a broker restart that lost the server's subscription, the reference deployment's UAT acknowledged 19 station messages `0x10` in one recreate, three SessionEnded among them, and the server's sweep closed those three sessions charged in full (2026-10-25). §7.2 asks a broker to keep the server's session across a restart, and a station cannot know whether its broker does. Decided by Gabi on 2026-10-25 (freeze item 33, [`KNOWN-ISSUES.md`](../KNOWN-ISSUES.md)).
+
 ---
 
 ## 6. Access Control (ACL)

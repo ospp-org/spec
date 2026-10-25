@@ -465,6 +465,10 @@ Buffered messages MUST be stored in persistent local storage (survives reboot an
 
 **BLE offline session persistence:** The station **SHOULD** persist offline session state (ServiceStatus updates, elapsed time, meter readings) to non-volatile storage after each ServiceStatus update. On unexpected restart, the station **SHOULD** recover partial session data and include it in the next TransactionEvent reconciliation. Its signed receipt records how the session ended — `endReason` `Fault` — and the state of the clock that stamped it — `clockState`, `Unsynchronized` until the station's clock has been set from the server again ([Chapter 06 §6.2](06-security.md#62-transaction-receipt-signing--ecdsa-p-256)).
 
+#### A message the broker did not acknowledge with success
+
+**A station MUST also keep in this buffer every message the broker did not acknowledge with PUBACK `0x00`** — a `0x10` *No matching subscribers*, any other reason code, or a message in flight at a reconnection the broker answered *Session Present* `0` — whatever its category above, and resend it after its next reconnection through the replay below, with its original `messageId` ([Chapter 02 §5.5](02-transport.md#55-a-station-message-the-broker-does-not-acknowledge-with-success); freeze item 33, decided 2026-10-25).
+
 #### Reconnection Transmission Order
 
 Upon successful reconnection, the station transmits in the following order:

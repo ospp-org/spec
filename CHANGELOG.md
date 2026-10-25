@@ -8,6 +8,14 @@ as described in [VERSIONING.md](VERSIONING.md).
 
 ---
 
+## [Unreleased]
+
+### For station firmware — the online session (normative)
+
+- **A message the broker did not acknowledge with success is kept and resent after the reconnection** (freeze item 33, decided by Gabi on 2026-10-25). Only a PUBACK `0x00` *Success* releases a station's message: one answered `0x10` *No matching subscribers* — a success code to MQTT, which means no server received it — or any other reason code, and one still in flight when the station reconnects to a broker that kept no session (CONNACK *Session Present* `0`, which MQTT 5 has the client discard from its session state), stays in the station's buffer whatever its category, and is resent after the next reconnection through the replay: after the BootNotification is answered `Accepted` and the bays are reported, with its original `messageId`, a copy the server did receive being a duplicate it discards; a BootNotification, StatusNotification or Heartbeat is replaced by the fresh one the replay sends ([`02-transport.md` §5.5](spec/02-transport.md#55-a-station-message-the-broker-does-not-acknowledge-with-success), [`01-architecture.md` §6.5](spec/01-architecture.md#65-offline-message-buffering), [`connection-lost.md` §6](spec/profiles/core/connection-lost.md#6-session-recovery-on-reconnect) step 4). A station that took a `0x10` for delivery lost the SessionEnded it had sent while the server's subscription was gone, and the server's sweep closed the session charged in full. No wire change.
+
+---
+
 ## [0.45.0] — 2026-10-22
 
 **MINOR, breaking on `0.x` — a started session ends only on its station's end record or at the server's sweep, and the offline model and BLE protocol version `0.3.0` are published frozen, pending implementation.** [`VERSIONING.md`](VERSIONING.md) permits the breaking changes between `0.x` minors, and each is listed under *Removed* or named below. The MQTT `protocolVersion` stays `0.3.0`. The wire moves: 18 schemas change their constraints, 7 are added and 1 is removed; `2006` and `2015` leave the error registry (118 codes); `OfflineWindowHours` and `OfflineTransactionLimit` join the configuration registry and `StationIdentityCertificate` leaves it (29 keys); SessionStarted [MSG-043] is the 48th message type, and 45 of the 48 are signed.
