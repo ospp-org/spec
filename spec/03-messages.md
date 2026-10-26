@@ -762,6 +762,8 @@ Upon `Accepted`, the station MUST:
 
 **Credits charged formula:** `creditsCharged = ceil(actualDurationSeconds / 60 * priceCreditsPerMinute)` for `PerMinute` pricing, or `priceCreditsFixed` for `Fixed` pricing.
 
+**The formula is exact, and it is computed in integers.** A station reporting `creditsCharged` and a server settling a session **MUST** compute it with integer arithmetic, in an integer type wide enough for the product: the product `actualDurationSeconds * priceCreditsPerMinute` first, then divided by 60 and rounded up to a whole credit — the integer quotient of `actualDurationSeconds * priceCreditsPerMinute + 59` by 60. It **MUST NOT** be evaluated as it is written in binary floating point, dividing first: in IEEE 754 double precision `33 / 60 * 100` is `55.00000000000001`, and its ceiling is 56. *Worked example:* 33 seconds at 100 credits per minute is 33 × 100 = 3300 credit-seconds, and 3300 / 60 = 55 exactly, so `creditsCharged` is **55**, not 56; 34 seconds is 3400 / 60 = 56⅔, rounded up to 57. Every place this specification applies the formula — to a duration delivered, requested or booked — computes it so.
+
 #### Example
 
 **REQUEST payload:**
